@@ -1,8 +1,24 @@
-# Unit 3: AXI-Stream
+# Module 03 — AXI-Stream
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** AXI(memory-mapped)와 AXI-Stream(점대점 단방향 스트림)의 본질적 차이를 설명할 수 있다.
+    - **Apply** TUSER / TKEEP / TLAST를 활용해 패킷/프레임 경계를 정확히 표시하는 시퀀스를 작성할 수 있다.
+    - **Implement** Master/Slave AXI-Stream 인터페이스의 핸드셰이크 + 데이터 hold 규칙을 코드로 구현할 수 있다.
+    - **Decide** AXI-Stream이 적절한 시나리오(DSP, AI accelerator, network packet) vs AXI memory-mapped가 적절한 시나리오를 구분할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 02 — AXI](02_axi.md) (VALID/READY 핸드셰이크)
+    - 패킷 / 프레임 / 스트림 같은 데이터 형태에 대한 일반 지식
+
+## 왜 이 모듈이 중요한가
+
+**AXI-Stream은 데이터 패스의 공용어**입니다. AI 가속기의 weight/activation 흐름, DSP filter chain, 네트워크 IP의 packet 흐름이 모두 AXI-Stream으로 이동합니다. memory-mapped와 다른 사고방식이 필요 — **주소가 없는 대신 TLAST로 데이터의 경계를 표시**합니다. TKEEP으로 unaligned data를 표현하는 패턴과, packet 중간에 데이터를 stall할 때의 신호 hold 규칙이 검증의 함정입니다.
 
 ## 핵심 개념
 **AXI-Stream = 주소 없는 단방향 스트리밍 프로토콜. 연속적 데이터 흐름(패킷, 프레임, 샘플)을 고속으로 전달. AXI(메모리 매핑)와 달리 주소 개념이 없으며, 데이터의 시작/끝을 TLAST로 표시.**
@@ -370,6 +386,22 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
 
 5. TID와 TDEST가 모두 있을 때, 라우팅에 사용되는 것은?
    <details><summary>정답</summary>TDEST. TID는 스트림 식별(같은 출력 포트에서 스트림을 구분), TDEST는 물리적 라우팅 목적지 결정.</details>
+
+---
+
+## 핵심 정리
+
+- **주소 없는 단방향 스트림**: AXI-Stream은 점대점. memory-mapped 모델 아니므로 read/write 구분도 없음.
+- **핸드셰이크는 AXI와 동일**: TVALID/TREADY 규칙도 동일 — VALID는 READY 기다리지 않고 올린다.
+- **TLAST가 패킷 경계**: 프레임/패킷의 마지막 beat에서 1. 없으면 단일 무한 스트림.
+- **TKEEP으로 unaligned 표현**: 마지막 beat에서 일부 바이트만 유효할 때 비트 위치별 마스크.
+- **TVALID=1 동안 데이터 유지 의무**: TREADY=0 stall 중 TDATA/TLAST/TKEEP 변경 금지 — 가장 흔한 protocol 위반.
+- **TID vs TDEST**: TID = 스트림 구분(virtual channel), TDEST = 물리 라우팅 목적지.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_axi_stream_quiz.md)
+- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_axi/">

@@ -1,8 +1,26 @@
-# Unit 2: AXI (Advanced eXtensible Interface)
+# Module 02 — AXI (Advanced eXtensible Interface)
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** AXI의 5채널 구조(AW/W/B/AR/R)와 각 채널의 독립성을 화이트보드로 그리며 설명할 수 있다.
+    - **Implement** VALID/READY 핸드셰이크의 3가지 패턴(VALID-first, READY-first, 동시)과 데드락 방지 규칙을 코드로 구현할 수 있다.
+    - **Apply** Burst(FIXED/INCR/WRAP), Outstanding, ID 기반 Out-of-Order 트래픽 시나리오를 검증 시퀀스로 작성할 수 있다.
+    - **Analyze** WSTRB / AxCACHE / AxPROT / AxQOS / Exclusive Access의 의미와 검증 영향을 분석할 수 있다.
+    - **Distinguish** AXI3와 AXI4의 핵심 차이(WID 제거, AxLEN 확장, QoS/REGION)를 식별할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01 — APB & AHB](01_apb_ahb.md) (handshake / wait state 개념)
+    - SystemVerilog interface, modport 기본
+    - FIFO와 outstanding transaction 개념
+
+## 왜 이 모듈이 중요한가
+
+**AXI는 현대 SoC의 사실상 표준**입니다. NoC 기반 인터커넥트, 메모리 컨트롤러, GPU/CPU 트랜잭션, 가속기 IP 연결 모두 AXI로 흐릅니다. 검증에서 AXI를 깊이 이해하지 못하면 timing, throughput, OoO 시나리오에서 silent bug를 놓치기 쉽습니다. 특히 **VALID/READY 데드락**과 **outstanding 응답 매칭** 두 가지가 AXI 검증의 핵심 위험 영역입니다.
 
 ## 핵심 개념
 **AXI = AMBA에서 가장 고성능인 버스. 5개 독립 채널(AW/W/B/AR/R), Out-of-Order 완료, Burst, Outstanding 트랜잭션으로 최대 대역폭 달성. CPU↔MC, IP↔IP 고성능 연결의 사실상 표준.**
@@ -466,6 +484,23 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
 
 5. AXI4 INCR burst에서 AxLEN=0xFF이면 총 전송 바이트 수는? (AxSIZE=3'b011, 8 bytes)
    <details><summary>정답</summary>(0xFF + 1) × 8 = 256 × 8 = 2048 bytes = 2KB. AXI4에서 단일 burst로 전송 가능한 최대량.</details>
+
+---
+
+## 핵심 정리
+
+- **5채널 분리 = full-duplex의 본질**: Read와 Write 동시 진행 가능. 각 채널이 독립적이라 throughput 극대화.
+- **VALID/READY 데드락 방지 규칙**: VALID는 READY를 기다리지 않고 올라가야 한다. Source가 "READY 올 때까지 VALID 안 올림"은 절대 금지.
+- **Burst 인코딩 함정**: AxLEN은 N-1 (16-beat = 15). AXI4 INCR 최대 256-beat, FIXED/WRAP은 16-beat 제한.
+- **OoO는 ID 기반**: 같은 ID 내에서는 in-order, ID 간 OoO. Scoreboard도 per-ID 큐로 매칭.
+- **WSTRB는 byte-level write 제어**: AXI write에서 WSTRB 무시 = 의도와 다른 바이트 덮어쓰기.
+- **AxCACHE/AxPROT는 변조 가능성 표시**: Modifiable=0이면 Interconnect 분할/병합/재정렬 금지. Device 레지스터에 필수.
+- **AXI4 vs AXI3**: AXI4는 WID 제거(write interleaving 폐지), AxLEN 확장(256), QoS/REGION 추가.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_axi_quiz.md) — 5문항으로 이해도 점검
+- ➡️ [**Module 03 — AXI-Stream**](03_axi_stream.md) — 주소 없는 패킷 전송 모델
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_apb_ahb/">

@@ -4,6 +4,23 @@
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** APB와 AHB의 핸드셰이크/성능/용도 차이를 구분할 수 있다.
+    - **Trace** APB 트랜잭션의 SETUP → ACCESS → IDLE 흐름과 AHB의 ADDRESS → DATA 파이프라인을 시퀀스 다이어그램으로 그릴 수 있다.
+    - **Implement** AHB-to-APB Bridge의 동작 원리를 코드 또는 의사코드로 설명할 수 있다.
+    - **Identify** APB 버전 진화(APB3 → APB4 → APB5)에서 추가된 신호와 그 동기를 매핑할 수 있다.
+
+!!! info "사전 지식"
+    - 디지털 회로 기본 (클럭, 동기 FSM)
+    - Read/Write 트랜잭션의 일반적 의미
+    - SoC top-level 구조에 대한 감각 (CPU ↔ 인터커넥트 ↔ peripheral)
+
+## 왜 이 모듈이 중요한가
+
+**APB는 SoC 레지스터 접근의 사실상 표준**입니다. 거의 모든 IP의 control/status 레지스터는 APB로 노출됩니다. AHB는 ARM 초창기 인터커넥트로 레거시 IP 통합 시 자주 만나며, 단순한 dual-port memory access의 이해 모델로 가치가 있습니다. **둘을 함께 이해하면 AHB-to-APB Bridge라는 SoC 통합의 표준 패턴을 자연스럽게 익힐 수 있습니다**.
+
 ## APB (Advanced Peripheral Bus)
 
 ### 핵심 개념
@@ -384,6 +401,21 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
 
 5. AHB-to-APB Bridge에서 AHB INCR4 burst는 APB 측에서 어떻게 처리되는가?
    <details><summary>정답</summary>4개의 독립적인 APB 단일 전송으로 분해된다. APB는 burst를 지원하지 않으므로.</details>
+
+---
+
+## 핵심 정리
+
+- **APB는 단순함이 무기**: SETUP→ACCESS 2단계, PSEL/PENABLE/PREADY만으로 동작 → 게이트 비용 최소
+- **AHB는 파이프라인**: 주소-데이터 1 cycle 차이. HREADY=0 시 stall — 모든 신호 유지가 핵심 (가장 흔한 버그가 stall 중 신호 변경)
+- **AHB-to-APB Bridge**: AHB burst를 APB 단일 전송 N개로 분해. 면적과 성능의 trade-off
+- **버전 진화**: APB3에서 PREADY/PSLVERR 정식화, APB4에서 PSTRB(byte write)/PPROT, APB5에서 wakeup/user/parity
+- **DV pitfall**: AHB Wait State 중 HADDR/HWDATA 변경, APB SETUP 단계에서 PSEL=0, HRESP ERROR 1-cycle 처리
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_apb_ahb_quiz.md) — 5문항으로 이해도 점검
+- ➡️ [**Module 02 — AXI**](02_axi.md) — 5채널 / Burst / Outstanding의 핵심
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

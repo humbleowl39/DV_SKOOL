@@ -1,8 +1,21 @@
-# AMBA Protocols — Quick Reference Card
+# Module 04 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트. 정독용이 아니라 면접/코드 리뷰/디버그 중에 빠르게 확인하는 용도.
+
+    **이 페이지에서 빠르게 떠올릴 수 있어야 하는 것:**
+
+    - **Recall** APB / AHB / AXI / AXI-Stream 핵심 차이
+    - **Recall** 핸드셰이크 데드락 방지 규칙
+    - **Recall** AXI 5채널 신호 매핑
+    - **Reference** SoC 내 프로토콜 위치, 흔한 DV 버그 패턴
+
+!!! info "사전 지식"
+    - [Module 01-03](01_apb_ahb.md) 학습 완료 후 이 카드를 보면 효과 극대화
 
 ## 한줄 요약
 ```
@@ -184,6 +197,17 @@ AXI-Stream:
 | AXI4에서 WID가 사라진 이유? | Write Interleaving 제거 → WID 불필요 (복잡도 대비 이득 미미) |
 | WSTRB 전부 0이면? | 유효 전송이나 실질 쓰기 없음 — Burst 중 beat skip용 |
 | TKEEP과 WSTRB 차이? | 동일 개념 (바이트 마스크) but TKEEP은 AXI-Stream, WSTRB은 AXI Write |
+
+---
+
+## 코스 마무리
+
+3개 모듈 + Quick Ref를 완료했습니다. 다음을 권장합니다:
+
+1. **퀴즈 풀어보기** — [퀴즈 인덱스](quiz/index.md)
+2. **글로서리 스캔** — 모르는 용어 점검: [용어집](glossary.md)
+3. **실전 적용** — 본인의 검증 환경에서 VALID/READY 데드락 패턴 검사
+4. **다음 토픽** — UVM 위에 AMBA를 올린 [UVM 코스](../../uvm/), 또는 메모리 서브시스템 [MMU](../../mmu/) / [DRAM](../../dram_ddr/)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_axi_stream/">
