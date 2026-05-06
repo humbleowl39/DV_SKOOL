@@ -481,3 +481,92 @@
 .parallel-grid > .phase-step {
   margin: 0;
 }
+
+/* ===========================================================
+   모바일 반응형 (≤ 600px)
+   =========================================================== */
+@media (max-width: 600px) {
+  /* Prev/Next 네비: 세로 스택 */
+  .chapter-nav {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+  .chapter-nav .nav-next {
+    grid-column: 1;
+    text-align: left;
+  }
+
+  /* Path chain: 알약을 가로 1열로 풀폭 + 화살표는 90도 회전(아래방향) */
+  .path-pill {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .path-arrow {
+    width: 100%;
+    transform: rotate(90deg);
+    padding: 0.1rem 0;
+    font-size: 1.2rem;
+  }
+
+  /* Layered mini grid: 더 좁은 min */
+  .layered-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.4rem;
+  }
+
+  /* Course header / stats: 여백 축소 */
+  .course-header {
+    padding: 1rem 1.1rem;
+  }
+  .course-stats {
+    gap: 0.9rem;
+  }
+
+  /* H2 위 여백 축소 */
+  .md-typeset h2 {
+    margin-top: 1.6rem;
+  }
+
+  /* 트리 다이어그램: 들여쓰기 축소 */
+  .tree-diagram {
+    padding: 0.7rem 0.9rem;
+    font-size: 0.82rem;
+  }
+  .tree-diagram ul {
+    padding-left: 1rem;
+  }
+  .tree-tag {
+    font-size: 0.68rem;
+  }
+
+  /* 코스 카드: 패딩 축소 */
+  .course-card {
+    padding: 0.9rem 1rem;
+  }
+  .course-card .course-card-title {
+    font-size: 0.95rem;
+  }
+
+  /* Phase grid 컬럼: 패딩 축소 */
+  .phase-col {
+    padding: 0.8rem;
+  }
+
+  /* Glossary term: 들여쓰기 축소 */
+  .glossary-term {
+    padding: 0.8rem 1rem;
+  }
+}
+
+/* ===========================================================
+   초소형 화면 (≤ 380px) — 추가 축소
+   =========================================================== */
+@media (max-width: 380px) {
+  .meta-badge {
+    font-size: 0.72rem;
+    padding: 0.2rem 0.5rem;
+  }
+  .course-card-num {
+    font-size: 0.66rem;
+  }
+}
