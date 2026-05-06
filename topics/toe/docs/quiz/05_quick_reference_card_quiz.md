@@ -1,23 +1,48 @@
-# Quiz: TOE — Quick Reference Card
+# Quiz — Module 05: TOE Quick Reference
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 05 본문으로 돌아가기](../05_quick_reference_card.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../05_quick_reference_card.md)
+## Q1. (Recall)
+
+TCP 3-way handshake와 4-way close 흐름을 sequence로 답하세요.
+
+??? answer "정답 / 해설"
+    **3-way open**: SYN → SYN/ACK → ACK
+    **4-way close**: FIN → ACK → FIN → ACK
+
+    Active close 측은 TIME_WAIT 상태로 2 × MSL (Maximum Segment Lifetime) 대기.
+
+## Q2. (Recall)
+
+5-tuple은 어떤 필드들로 구성되나?
+
+??? answer "정답 / 해설"
+    **Source IP + Source Port + Destination IP + Destination Port + Protocol**. RSS hash, connection table key 등에 사용.
+
+## Q3. (Apply)
+
+MTU=1500일 때 TCP MSS는?
+
+??? answer "정답 / 해설"
+    MSS = MTU - IP header (20) - TCP header (20) = **1460 bytes**. (옵션이 있으면 더 작아짐, e.g., timestamp option 12 bytes → MSS=1448).
+
+## Q4. (Apply)
+
+LRO를 적용 시 latency-sensitive 워크로드에 미치는 영향은?
+
+??? answer "정답 / 해설"
+    LRO는 다수 segment를 합쳐서 SW로 한 번에 전달 → **latency 증가** (첫 segment가 다음 segment 대기). Throughput에는 유리하지만 RPC, real-time 워크로드는 LRO disable 권장.
+
+## Q5. (Evaluate)
+
+다음 중 Production NIC silicon에 가장 위험한 결함은?
+
+- [ ] A. Throughput 5% 저하
+- [ ] B. Connection table SRAM ECC 미적용
+- [ ] C. RTO 10% 더 길게
+- [ ] D. RSS distribution 약간 비균등
+
+??? answer "정답 / 해설"
+    **B**. ECC 없이 SRAM bit flip → connection state corruption → silent data integrity 사고. Production data center에서 cosmic ray + 시간 = inevitable. 검증보다 ECC 적용이 mitigation. A/C/D는 성능 영향이지만 silent 아님.

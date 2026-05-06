@@ -1,23 +1,49 @@
-# Quiz: TOE 아키텍처
+# Quiz — Module 02: TOE Architecture
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 02 본문으로 돌아가기](../02_toe_architecture.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../02_toe_architecture.md)
+## Q1. (Remember)
+
+TOE Connection Table의 key는?
+
+??? answer "정답 / 해설"
+    **4-tuple**: source IP + source port + destination IP + destination port. 또는 이 4 필드의 hash.
+
+## Q2. (Understand)
+
+TX/RX path를 분리하는 이유는?
+
+??? answer "정답 / 해설"
+    Full-duplex 동작 + 독립 pipeline → 한 방향 stall이 다른 방향에 영향 없음. 100Gbps 양방향 동시 처리 위해 필수.
+
+## Q3. (Apply)
+
+TOE가 1M concurrent connection을 지원할 때, 어떻게 메모리 hierarchy를 구성?
+
+??? answer "정답 / 해설"
+    - **Active connection** (수천): on-chip SRAM (1-cycle access)
+    - **Idle connection** (수십만~수백만): off-chip DRAM (latency 큼)
+    - **LRU eviction**: SRAM에서 idle된 connection은 DRAM으로 이동
+    - **Hash-based lookup**: 4-tuple hash → SRAM lookup, miss면 DRAM fetch
+
+## Q4. (Analyze)
+
+Stateless offload (TSO/LRO)와 stateful offload의 검증 난이도 차이는?
+
+??? answer "정답 / 해설"
+    - **Stateless**: 패킷 단위 transformation. 입력 → 출력 단순 mapping. 검증 비교적 쉬움.
+    - **Stateful**: state machine, retransmission timer, ordering buffer 등 시간/순서 의존. 검증이 시뮬 시간 + corner case 폭발.
+
+## Q5. (Evaluate)
+
+다음 중 TOE의 silent corruption 위험이 가장 큰 시나리오는?
+
+- [ ] A. Connection table SRAM bit flip
+- [ ] B. Packet drop count overflow
+- [ ] C. RTO 5% 더 늦게
+- [ ] D. RSS hash distribution 균등하지 않음
+
+??? answer "정답 / 해설"
+    **A**. SRAM bit flip이 connection state field에 발생하면 잘못된 state로 transition → 이미 close된 connection이 다시 ESTABLISHED라고 판단 등 → 데이터 corruption 가능. ECC가 없으면 catch 불가. C/D는 성능, B는 logging.

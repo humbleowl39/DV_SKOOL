@@ -1,8 +1,14 @@
-# TOE — Quick Reference Card
+# Module 05 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트.
+
+!!! info "사전 지식"
+    - [Module 01-04](01_tcp_ip_and_toe_concept.md)
 
 ## TOE 한줄 요약
 ```
@@ -64,6 +70,12 @@ TIME_WAIT: 2 × MSL (120초)
 Checksum Offload ⊂ TSO/LRO ⊂ TOE ⊂ RDMA (TCP 우회)
 (부분)            (중간)      (전체)  (다른 범주)
 ```
+
+---
+
+## 코스 마무리
+
+[퀴즈](quiz/index.md) · [용어집](glossary.md) · 다음: [Ethernet DCMAC](../../ethernet_dcmac/), [UVM](../../uvm/).
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_toe_dv_methodology/">

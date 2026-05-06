@@ -1,8 +1,24 @@
-# Unit 1: TCP/IP 기본 + TOE 개념
+# Module 01 — TCP/IP & TOE Concept
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** TCP/IP 스택 처리 단계와 host CPU의 부하 발생 지점 식별
+    - **Distinguish** Partial offload (checksum, segmentation) vs Full offload (state machine 전체) 차이
+    - **Quantify** 100GbE에서 TOE 없이 CPU가 처리해야 하는 cycle 수 계산
+    - **Identify** TOE의 등장 동기 (HPC, RDMA, hyperscale data center)
+
+!!! info "사전 지식"
+    - TCP/IP 스택 (3-way handshake, ACK, sliding window)
+    - NIC 동작 일반 원리
+
+## 왜 이 모듈이 중요한가
+
+**100GbE 시대에 host CPU는 TCP/IP만으로 압도**됩니다. TOE는 이를 HW로 옮겨 CPU를 다른 워크로드에 활용 가능하게 함. 검증의 출발점은 어떤 기능을 offload하는가(scope)와 host와의 interface 모델 이해.
 
 ## 핵심 개념
 **TOE = TCP/IP 프로토콜 처리를 CPU에서 전용 HW로 이전(Offload)하여, CPU 부하를 줄이고 네트워크 처리량을 극대화하는 엔진. 100Gbps+ 서버 환경에서 CPU가 TCP 처리에 압도되는 문제를 해결.**
@@ -212,6 +228,21 @@ TSO는 Segmentation(대용량 데이터를 MSS 단위로 분할 + 헤더 생성)
 
 RDMA는 양쪽 모두 RDMA NIC + 전용 SW 스택이 필요하고, 기존 TCP 기반 애플리케이션(HTTP, NVMe-oF over TCP, 일반 소켓 앱 등)과 호환되지 않는다. 또한 RDMA는 보통 손실 없는(lossless) 네트워크를 전제한다. 반면 TOE는 기존 TCP 소켓 API와 호환되면서 성능을 높이므로, 레거시 애플리케이션 호환이 필요하거나 일반 인터넷/데이터센터 환경(손실 가능)에서 사용된다.
 </details>
+
+---
+
+## 핵심 정리
+
+- **TOE = TCP/IP HW offload**. Host CPU 부하 ↓ + throughput ↑.
+- **Partial offload**: checksum, TSO/LRO (segment offload), simple cases. 일반 NIC도 지원.
+- **Full offload**: connection state machine 전체 HW. RDMA / iWARP 등 특수 NIC.
+- **동기**: 100GbE에서 packet rate가 1.5M pps/Gbps → CPU cycle/packet 한도 초과.
+- **활용**: HPC, hyperscale (AWS Nitro, Azure SmartNIC), storage networks.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_tcp_ip_and_toe_concept_quiz.md)
+- ➡️ [**Module 02 — TOE Architecture**](02_toe_architecture.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

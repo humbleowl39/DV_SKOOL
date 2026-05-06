@@ -1,8 +1,20 @@
-# Unit 4: TOE DV 검증 전략
+# Module 04 — TOE DV Methodology
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** TOE 검증 환경 (UVM env + traffic generator + reference model + error injector) 설계
+    - **Apply** Connection state coverage (TCP state machine 모든 transition 커버)
+    - **Implement** Packet loss / reorder / duplication error injection 시나리오
+    - **Plan** Performance regression (concurrent connection, throughput, latency)
+
+!!! info "사전 지식"
+    - [Module 01-03](01_tcp_ip_and_toe_concept.md)
+    - [UVM](../../uvm/), [AXI-Stream](../../amba_protocols/03_axi_stream/)
 
 ## 핵심 개념
 **TOE 검증 = 프로토콜 준수(TCP/IP RFC) + 기능 정확성(상태 머신, 데이터 무결성) + 성능(처리량, 지연) + 에러 복구(패킷 손실, 재전송). 네트워크 프로토콜의 비결정론적 특성(패킷 손실, 순서 변경, 지연)이 검증 난이도를 높이는 핵심 요인.**
@@ -453,6 +465,22 @@ Assertion이 한 번도 fail하지 않은 것은 두 가지 가능성이 있다:
 
 TCP는 상태 기반 프로토콜이므로, Network Agent의 응답은 DUT의 출력에 의존한다. 예를 들어 ACK의 ack_num은 DUT가 실제로 보낸 seq_num + len이어야 한다. Pre-programmed 방식은 DUT의 실제 동작을 예측해서 미리 만들어야 하는데, DUT가 재전송/OOO/Window 조정 등을 할 경우 예측이 불가능하다. Reactive 패턴은 DUT 출력을 Monitor가 관찰하고 Responder가 실시간으로 적절한 응답을 생성하므로, DUT의 어떤 동작에도 유연하게 대응할 수 있다.
 </details>
+
+---
+
+## 핵심 정리
+
+- **검증 4축**: Protocol compliance (RFC 793/1323), Functional correctness, Performance, Error recovery.
+- **State machine coverage**: TCP 11 state + 모든 transition (LISTEN → SYN_RCVD → ESTABLISHED 등).
+- **Error injection**: packet loss, reorder, duplication, corruption. RTO, fast retransmit, dup ACK 검증.
+- **Reference model**: TCP reference (Linux kernel TCP 또는 Python scapy) — DUT 응답 비교.
+- **Performance**: concurrent connection scaling, throughput at line rate, latency under load.
+- **Long-duration**: real network 시뮬레이션 (수백만 packet × 시간)으로 corner case 발견.
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_toe_dv_methodology_quiz.md)
+- ➡️ [**Module 05 — Quick Reference Card**](05_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_toe_key_functions/">
