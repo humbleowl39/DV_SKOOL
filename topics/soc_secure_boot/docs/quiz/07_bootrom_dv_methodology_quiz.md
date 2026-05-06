@@ -1,23 +1,63 @@
-# Quiz: BootROM DV 검증 방법론
+# Quiz — Module 06: BootROM DV Methodology
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 06 본문으로 돌아가기](../07_bootrom_dv_methodology.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../07_bootrom_dv_methodology.md)
+## Q1. (Remember)
+
+BootROM 검증의 시나리오 매트릭스 axes는?
+
+??? answer "정답 / 해설"
+    - **Boot device**: eMMC, UFS, QSPI NOR, USB recovery
+    - **OTP config**: security on/off, ROTPK 변형
+    - **Image**: golden, corrupted, unsigned, version mismatch
+
+    3D matrix → 모든 cell이 expected behavior와 매칭되어야 sign-off.
+
+## Q2. (Understand)
+
+BootROM은 mask ROM이라 bug fix가 silicon revision인 이유로, 검증 신뢰성이 일반 IP보다 훨씬 더 중요하다. 이를 위한 추가 검증 활동 3가지는?
+
+??? answer "정답 / 해설"
+    1. **Formal verification**: 작은 BootROM에 적용 가능 (state space 작음). Connectivity, deadlock, security property 증명.
+    2. **Code coverage 100%**: line + branch + condition 모두. Statement 누락은 즉 silicon defect.
+    3. **External pen-test**: Production 직전 외부 보안팀이 fault injection / side-channel 시도.
+
+## Q3. (Apply)
+
+Golden image와 함께 작성해야 하는 error injection 시나리오는?
+
+??? answer "정답 / 해설"
+    - **Signature corrupted** (bit flip)
+    - **Unsigned image**
+    - **Version mismatch (rollback)**
+    - **Image truncated** (length 짧음)
+    - **ROTPK hash mismatch** (다른 키로 서명)
+    - **Boot device fail** (timeout, no response)
+    - **Crypto engine fail** (HW bug 시뮬)
+    - **OTP corrupt** (bit flip via TB injection)
+
+## Q4. (Analyze)
+
+BootROM DV에서 가장 catch하기 어려운 silent bug는?
+
+??? answer "정답 / 해설"
+    **부분적 timing race condition**. 예:
+    - 정상 sequence는 통과
+    - PVT corner나 특정 image 크기에서만 race 발생
+    - Field에서 random fail로 발현
+
+    catch: PVT corner sweep + image variant matrix + long-duration regression. + formal로 race 증명 시도.
+
+## Q5. (Evaluate)
+
+다음 중 Zero-Defect Silicon 달성을 위해 가장 critical한 활동은?
+
+- [ ] A. Code coverage 100%
+- [ ] B. Functional coverage 95%
+- [ ] C. Formal connectivity check
+- [ ] D. 위 모두
+
+??? answer "정답 / 해설"
+    **D**. BootROM의 immutability → 검증의 모든 layer가 필요. Code coverage는 line 누락 방지, functional coverage는 시나리오 누락 방지, formal은 spec 위반 (deadlock, connectivity)을 catch. 어느 하나라도 빠지면 silent bug 가능. + external pen-test로 보안 공격 가능성 확인.

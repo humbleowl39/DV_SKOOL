@@ -1,8 +1,20 @@
-# Unit 7: BootROM DV 검증 방법론
+# Module 06 — BootROM DV Methodology
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** BootROM DV 환경 (UVM env + virtual sequencer + functional coverage)
+    - **Apply** Boot scenario matrix (boot mode × OTP config × image variant) 닫는 전략
+    - **Implement** Golden image + corrupted/unsigned image error injection
+    - **Plan** Coverage-driven verification으로 Zero-Defect Silicon 달성
+
+!!! info "사전 지식"
+    - [Module 01-05](01_hardware_root_of_trust.md)
+    - [UVM](../../uvm/), [AMBA](../../amba_protocols/)
 
 ## 핵심 개념
 **BootROM 검증 = 이론(Unit 1~5)을 실제 실리콘 품질로 전환하는 엔지니어링. Legacy SV 환경의 한계를 UVM 프레임워크로 극복하고, Coverage-Driven 방법론으로 Zero-Defect Silicon을 달성하는 과정.**
@@ -449,6 +461,21 @@ Post-silicon Bring-up 시나리오:
 
 **Q: Zero-Defect Silicon을 어떻게 달성했는가?**
 > "Coverage-Driven 방법론과 구조적 Negative Test 전략의 조합이다. Positive(정상 부팅) 100%는 기본이고, 5개 공격 카테고리(Crypto, Rollback, Fault, Input, Config)별 Negative 시나리오를 체계적으로 커버했다. 결과적으로 Post-silicon Bring-up에서 BootROM 관련 이슈 제로를 달성하여, 비-ROM 이슈의 빠른 Root Cause 분리를 가능하게 했다."
+
+---
+
+## 핵심 정리
+
+- **BootROM DV의 특수성**: BootROM은 silicon에 mask로 fixed → bug = silicon revision (수억 원). Defect Zero가 절대 목표.
+- **Scenario matrix**: Boot mode (eMMC/UFS/QSPI/USB) × OTP config (security on/off, ROTPK 변형) × Image (golden/corrupted/unsigned/version mismatch).
+- **Reference model**: Golden image의 expected boot path를 SystemVerilog/Python으로 모델링.
+- **Error injection**: 서명 corrupted, version old, ROTPK mismatch, image truncated, fail-over trigger.
+- **Coverage-driven**: 모든 시나리오가 covered + 모든 fail path가 expected behavior. Sign-off의 핵심.
+
+## 코스 마무리
+
+- 📝 [**Module 06 퀴즈**](quiz/07_bootrom_dv_methodology_quiz.md)
+- 다음: [퀴즈 인덱스](../quiz/) · [용어집](../glossary/) · 다른 토픽: [ARM Security](../../arm_security/), [UVM](../../uvm/)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../06_quick_reference_card/">

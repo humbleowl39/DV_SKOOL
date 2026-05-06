@@ -1,8 +1,20 @@
-# Unit 4: Boot Device & Boot Mode (부팅 장치와 부팅 모드)
+# Module 04 — Boot Device & Boot Mode
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Identify** 주요 boot device (eMMC, UFS, QSPI NOR, NAND) 특성 비교
+    - **Apply** Boot mode strap (pinstrap) + OTP override 우선순위
+    - **Plan** Fallback boot 경로 설계 (primary fail → secondary)
+    - **Distinguish** Cold boot, warm boot, recovery boot 흐름 차이
+
+!!! info "사전 지식"
+    - [Module 01-03](01_hardware_root_of_trust.md)
+    - 스토리지 인터페이스 일반
 
 ## 핵심 개념
 **Boot Mode는 OTP > Pinstrap > Default 우선순위로 결정된다. 각 부팅 장치는 프로토콜 복잡도와 초기화 시간이 다르다. OTP는 양산 후 변경 불가이므로, Fallback 경로는 사전에 설계되어야 한다.**
@@ -375,6 +387,24 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 
 **Q: Boot Image의 FIP 포맷이 왜 중요한가?**
 > "FIP(Firmware Image Package)는 BL2, BL31, BL32, BL33과 각각의 인증서를 하나의 패키지로 묶는 ARM TF-A 표준이다. UUID 기반 검색으로 이미지 오프셋 하드코딩 없이 유연하게 이미지를 찾을 수 있고, 벤더 확장도 가능하다. DV 관점에서는 FIP 파싱의 Negative 시나리오 — 손상된 ToC, 잘린 이미지, 잘못된 UUID — 가 중요한 검증 항목이다."
+
+---
+
+## 핵심 정리
+
+- **Boot mode 우선순위**: OTP > Pinstrap > Default. OTP는 양산 후 변경 불가 → 신중히 설계.
+- **Boot device**:
+  - **QSPI NOR**: 가장 단순, 빠른 boot, 작은 capacity
+  - **eMMC**: 모바일 표준, embedded
+  - **UFS**: 고속 모바일/서버, 복잡한 protocol
+  - **NAND raw**: 큰 capacity, ECC 필수
+- **Fallback**: primary boot fail (서명 fail, device fail) → secondary 시도. 양산 후 recovery 가능.
+- **Boot 종류**: Cold (POR + 전체 init), Warm (reset, DRAM 유지), Recovery (USB/SD에서 복구 image).
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_boot_device_and_boot_mode_quiz.md)
+- ➡️ [**Module 05 — Attack Surface & Defense**](05_attack_surface_and_defense.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_crypto_in_boot/">

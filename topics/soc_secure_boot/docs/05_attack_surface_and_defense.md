@@ -1,8 +1,20 @@
-# Unit 5: 공격 표면과 방어
+# Module 05 — Attack Surface & Defense
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Identify** Secure Boot의 공격 표면 카테고리 (Fault Injection, Side-Channel, Rollback, TOCTOU, JTAG)
+    - **Apply** 다층 방어 (HW: glitch detector / SRAM lock, SW: 이중 검증 / anti-rollback, 설계: key hierarchy / crypto agility)
+    - **Trace** 실제 공격 사례 (Glitchy Descriptor on iPhone, FROST attack 등)
+    - **Plan** Threat model을 작성해 우선순위 결정
+
+!!! info "사전 지식"
+    - [Module 01-04](01_hardware_root_of_trust.md)
+    - 보안 취약점 / 공격 모델 일반
 
 ## 핵심 개념
 **Secure Boot 공격 표면은 다층적(FI, Rollback, Side-Channel, JTAG, TOCTOU)이다. 방어도 다층 접근이 필요: HW (글리치 감지, SRAM Lock) + SW (이중 검증, Anti-Rollback) + 설계 (키 계층, Crypto Agility).**
@@ -306,6 +318,23 @@ endclass
 
 **Q: BootROM 검증 엔지니어로서 Negative Test 전략을 설명하라.**
 > "공격 유형별로 분류한다: (1) Crypto 실패 — 잘못된 서명, 불량 인증서, ROTPK 불일치. (2) 버전 공격 — Anti-RB Counter 미만으로 Rollback. (3) HW 변조 — verify 결과 Force-flip, TOCTOU 메모리 쓰기. (4) 입력 손상 — 잘린 이미지, 초과 크기 버퍼. (5) 설정 — Secure Boot ON 상태에서 미서명 FW, JTAG 비활성화 시 접근 시도. 각 시나리오에서 예상 응답(abort, fallback, lockdown)을 검증한다."
+
+---
+
+## 핵심 정리
+
+- **공격 표면**: Fault Injection (전압/클럭 글리치, 레이저), Side-Channel (전력/EM/timing), Rollback (이전 버전 강제), TOCTOU (verify ↔ use 사이 race), JTAG (debug port).
+- **다층 방어**:
+  - **HW**: glitch detector, SRAM lock-down, key isolation, anti-tamper mesh
+  - **SW**: 이중 검증, anti-rollback counter, secure storage
+  - **설계**: key hierarchy (개별 침해가 전체 영향 안 가게), crypto agility (RSA → PQC 마이그레이션 대비)
+- **Threat model**: Production attacker (cheap, scalable) vs nation-state attacker (expensive, targeted) — 방어 수준 결정.
+- **실 사례**: Glitchy Descriptor (iPhone bootloader bypass), Spectre/Meltdown (TEE 누출).
+
+## 다음 단계
+
+- 📝 [**Module 05 퀴즈**](quiz/05_attack_surface_and_defense_quiz.md)
+- ➡️ [**Module 06 — BootROM DV**](07_bootrom_dv_methodology.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_boot_device_and_boot_mode/">

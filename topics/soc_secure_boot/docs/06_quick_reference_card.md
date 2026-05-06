@@ -1,8 +1,14 @@
-# SoC Secure Boot Flow — Quick Reference Card
+# Module 07 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트 — Boot flow / 암호 알고리즘 / 공격 패턴 / DV 체크리스트.
+
+!!! info "사전 지식"
+    - [Module 01-06](01_hardware_root_of_trust.md)
 
 ## 부팅 흐름 한줄 요약
 ```
@@ -154,6 +160,13 @@ Flash교체 → 서명 검증 (항상 활성)
 | ARM TrustZone 심화 | EL3/S-EL1/NS-EL1 전환 메커니즘 상세 |
 | UFS/eMMC 프로토콜 | 부팅 장치 VIP 설계에 직접 필요 |
 | PQC 전환 실무 | 하이브리드 서명 구현 방법 |
+
+---
+
+## 다음 단계
+
+- 📝 [**Quick Ref 퀴즈**](quiz/06_quick_reference_card_quiz.md)
+- ➡️ [**Module 06 — BootROM DV**](07_bootrom_dv_methodology.md) (DV 방법론)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../05_attack_surface_and_defense/">

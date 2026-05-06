@@ -1,8 +1,20 @@
-# Unit 3: Secure Boot 암호학 — 서명 검증과 키 관리
+# Module 03 — Crypto in Boot
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** Hash (무결성), MAC (무결성+인증), 비대칭 서명 (인증성+부인방지) 차이
+    - **Apply** RSA-2048/4096, ECDSA (P-256/P-384), SHA-256/384를 boot signature에 적용
+    - **Trace** Anti-rollback의 역할 (이전 버전으로 downgrade 차단)
+    - **Identify** Key hierarchy (ROTPK / NS-BL key / runtime key)와 lifecycle
+
+!!! info "사전 지식"
+    - 해시 / 비대칭 키 기본
+    - [Module 01-02](01_hardware_root_of_trust.md)
 
 ## 핵심 개념
 **Secure Boot 검증 = Hash (무결성) + Digital Signature (인증성)**
@@ -244,6 +256,21 @@ Host SoC (BootROM)            Partner Chip
 
 **Q: ROTPK가 침해되면 어떻게 되는가?**
 > "최악의 시나리오 — 공격자가 어떤 악성 펌웨어든 정당한 것으로 서명할 수 있다. 대응: OTP 다중 슬롯 키 폐기(사전 할당), 키 계층으로 피해 범위 제한, Anti-Rollback 카운터 증가와 함께 FW 업데이트. 근본적 한계: OTP 슬롯은 유한하다. 예방이 가장 중요하다 — HSM 저장, 에어갭 서명, 접근 감사."
+
+---
+
+## 핵심 정리
+
+- **Hash + Signature**: hash로 무결성, signature로 인증성. boot image = hash + RSA/ECDSA 서명.
+- **알고리즘 선택**: RSA-2048 (legacy), RSA-4096 (current), ECDSA P-256/P-384 (smaller signature, faster). SHA-256/384.
+- **Key hierarchy**: ROTPK (OTP에 hash로 저장) → NS-BL key → runtime key (PKI tree).
+- **Anti-rollback**: 이전 버전 image로 downgrade 차단 (security patch 우회 방지). OTP fuse counter 사용.
+- **HSM 키 관리**: Production private key는 HSM (Hardware Security Module)에서만 사용. Key 추출 불가.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_crypto_in_boot_quiz.md)
+- ➡️ [**Module 04 — Boot Device & Boot Mode**](04_boot_device_and_boot_mode.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_chain_of_trust_boot_stages/">

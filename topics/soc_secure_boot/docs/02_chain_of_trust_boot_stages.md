@@ -1,8 +1,20 @@
-# Unit 2: Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)
+# Module 02 — Chain of Trust & Boot Stages
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** 부팅 단계 (BootROM → BL1 → BL2 → BL31 → BL33 → kernel)별 책임 분리
+    - **Apply** 각 단계의 verify-then-execute 패턴 (서명 검증 후 jump)
+    - **Identify** 한 단계의 침해가 어떻게 다음 단계로 전파되는지 (또는 차단되는지)
+    - **Distinguish** Verified Boot (서명만) vs Measured Boot (TPM PCR 누적)
+
+!!! info "사전 지식"
+    - [Module 01](01_hardware_root_of_trust.md)
+    - 비대칭 서명 검증 흐름
 
 ## 핵심 개념
 **Chain of Trust = 각 단계가 다음 단계를 인증한 후에만 제어권을 넘긴다. 신뢰는 전파되는 것이지, 생성되는 것이 아니다. 어떤 단계가 침해되면 그 이후의 모든 것은 무효.**
@@ -355,6 +367,21 @@ BL2 DRAM 초기화 단계:
 
 **Q: BL2에서 DRAM Training을 수행하는 이유는?**
 > "DRAM Training은 PVT 변동과 보드 배선 차이를 보상하여 수 GHz 데이터 버스의 타이밍 마진을 확보하는 과정이다. 코드만 수십~수백 KB에 달하고, DRAM 종류(DDR4/5, LPDDR4/5)별로 알고리즘이 다르며, 새 DRAM 벤더 지원을 위해 업데이트가 필요하다. BL1(ROM)에 넣으면 크기 부담 + 버그 수정 불가이므로, BL2(Flash, 업데이트 가능)에서 수행한다."
+
+---
+
+## 핵심 정리
+
+- **단계별 책임**: BootROM (HW RoT) → BL1 (trusted boot init) → BL2 (DRAM init + load BL31/BL33) → BL31 (EL3 secure monitor) → BL33 (U-Boot/non-secure) → kernel.
+- **Verify-then-execute**: 각 단계는 다음 단계 image의 서명을 검증 후에만 jump. 검증 실패 = halt 또는 fail-safe boot.
+- **Trust 전파**: 신뢰는 전파됨 (생성 안 됨). HW RoT가 trust anchor, 그 외는 검증된 chain.
+- **Verified Boot vs Measured Boot**: Verified는 서명만 (boot 진행 또는 차단), Measured는 TPM PCR에 hash 누적 (정책은 OS 결정).
+- **BL31 (Secure Monitor)**: ARM TrustZone EL3, secure/non-secure world 전환 관리.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_chain_of_trust_boot_stages_quiz.md)
+- ➡️ [**Module 03 — Crypto in Boot**](03_crypto_in_boot.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_hardware_root_of_trust/">

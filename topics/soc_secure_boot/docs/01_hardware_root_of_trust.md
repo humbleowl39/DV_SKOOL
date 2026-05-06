@@ -1,8 +1,21 @@
-# Unit 1: Hardware Root of Trust (하드웨어 신뢰 기반)
+# Module 01 — Hardware Root of Trust
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Define** Hardware Root of Trust (HW RoT)와 그 구성 요소 (BootROM, OTP, eFuse, secure key storage)를 설명
+    - **Trace** ROTPK (Root of Trust Public Key) hash가 OTP에 어떻게 저장되고 boot 시 verification에 쓰이는지
+    - **Distinguish** OTP / eFuse / Mask ROM의 차이와 각각의 immutability 속성
+    - **Identify** HW RoT의 trust anchor가 깨지면 어떤 보안 영향이 발생하는지
+
+!!! info "사전 지식"
+    - 암호 해시 (SHA-256) 기본
+    - 비대칭 키 (public/private)
+    - 부팅 sequence 일반
 
 ## 핵심 개념
 **HW RoT = BootROM (변경 불가능한 코드) + OTP (ROTPK 해시 + 보안 설정)**
@@ -364,6 +377,21 @@ otp_model.rotpk_hash.set(expected_hash);
 
 **Q: Secure Boot Lifecycle 전환 시 검증해야 할 핵심 포인트는?**
 > "비가역적 전환이므로 세 가지를 검증한다: (1) Development→Production 전환 후 Secure Boot가 강제 활성화되는지. (2) Production 상태에서 JTAG Open/USB DL 우회가 불가능한지. (3) ROTPK가 테스트 키에서 양산 키로 올바르게 전환되었는지. 특히 전환 중간 상태 — 예를 들어 Secure Boot은 ON인데 ROTPK가 미기록인 상태 — 가 안전하게 처리되는지가 DV의 핵심 Negative 시나리오다."
+
+---
+
+## 핵심 정리
+
+- **HW RoT = BootROM + OTP/eFuse**. BootROM은 mask ROM (제조 시 결정 + 변경 불가), OTP는 1회 쓰기만 가능.
+- **ROTPK hash** OTP에 저장. Boot 시 BootROM이 BL1 image의 서명을 검증할 때 ROTPK hash와 비교.
+- **Mask ROM**: 제조 layout으로 결정, 변경 불가. **OTP (One-Time Programmable)**: e-fuse blow로 1회 쓰기. 둘 다 immutable.
+- **Trust anchor 손상**: ROTPK hash 변경 가능하면 공격자 키로 서명 우회 가능 → 모든 chain 무용.
+- **물리적 보안**: OTP는 die에 분산 배치, fault injection 저항 setup.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_hardware_root_of_trust_quiz.md)
+- ➡️ [**Module 02 — Chain of Trust**](02_chain_of_trust_boot_stages.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">
