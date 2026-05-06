@@ -1,8 +1,25 @@
-# Unit 4: RAG (Retrieval-Augmented Generation)
+# Module 04 — RAG (Retrieval-Augmented Generation)
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) RAG 의 기본 4-step (chunk · index · retrieve · generate) 을 나열할 수 있다.
+2. (Understand) RAG 가 fine-tune 보다 비용/유지보수에서 유리한 시나리오를 설명할 수 있다.
+3. (Apply) Hybrid 검색 + Re-ranker 를 적용한 RAG 파이프라인을 설계할 수 있다.
+4. (Analyze) RAG 응답이 실패하는 단계(retrieval / context window / generation) 를 진단할 수 있다.
+5. (Evaluate) RAGAS / 자체 metrics 로 RAG 시스템 품질을 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 02 (prompt) · Module 03 (embedding/vector DB)
+- 검색 시스템 평가 지표 (precision@k, recall@k)
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은 방법이 RAG 다. Fine-tune 은 비싸고 느리며 라이프사이클이 길지만, RAG 는 인덱스만 갱신하면 곧장 반영된다. 사내 IP / 코드 / 문서를 LLM 으로 활용하려는 거의 모든 프로젝트의 표준 패턴이다.
+
+---
 
 ## 핵심 개념
 **RAG = LLM에 외부 지식을 검색하여 주입하는 아키텍처. LLM의 학습 데이터에 없는 최신/도메인 정보를 활용하면서, Fine-tuning의 비용과 Hallucination을 줄이는 실용적 접근법.**
@@ -239,6 +256,22 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 
 **Q: RAG에서 검색 품질을 어떻게 보장하는가?**
 > "세 가지 전략: (1) Hybrid 검색 — Dense(의미) + Sparse(키워드) 결합으로 각각의 약점 보완. (2) 도메인 특화 Chunking — IP 스펙의 섹션/테이블/시퀀스 단위 분할로 의미 보존. (3) Re-ranking — 초기 Top-20을 Cross-encoder로 정밀 재정렬하여 최종 Top-5의 정확도 향상."
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **RAG = LLM + 외부 검색** — 가중치 변경 없이 도메인 지식 활용.
+- **Chunking** — 문서를 의미 단위로 자르는 것이 retrieval 품질의 출발점.
+- **Hybrid 검색** — dense + sparse(BM25) 결합으로 OOV / 약어를 보완.
+- **Re-ranking** — top-20 을 cross-encoder 로 정밀 재정렬 → top-5 의 정확도 ↑.
+- **품질 평가** — Faithfulness, Answer Relevance, Context Recall (RAGAS).
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Agent Architecture →](../05_agent_architecture/) — RAG 가 도구 호출과 결합되어 자율 agent 가 된다.
+- 퀴즈: [Module 04 Quiz](../quiz/04_rag_quiz/) — RAG 4단계, 실패 진단 5문항.
+- 실습: 자기 회사 spec 문서로 RAG 시스템을 만들고, 30개 query 에 대해 RAGAS metric 측정.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_embedding_vectordb/">

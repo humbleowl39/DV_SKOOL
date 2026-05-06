@@ -1,8 +1,22 @@
-# AI Engineering for DV — Quick Reference Card
+# Module 08 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) 7개 모듈의 핵심 키워드를 즉시 떠올릴 수 있다.
+2. (Apply) 면접/리뷰에서 30초 이내 답변할 수 있는 답변 템플릿을 갖춘다.
+3. (Evaluate) 자기 시스템의 부족한 영역(LLM 선택, RAG 품질, Agent 통제) 을 cheat sheet 와 비교 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01 ~ 07.
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+복습 + 인터뷰/리뷰 직전의 1-page cheat sheet. 학습한 내용을 빠르게 인덱스화한다.
+
+---
 
 ## 핵심 정리
 
@@ -121,6 +135,20 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 | LoRA Fine-tuning 실습 | DV 도메인 모델 적응 |
 | Evaluation Framework | RAG 품질 평가 자동화 (RAGAS 등) |
 | Multi-Agent System | 복잡한 DV 워크플로 자동화 |
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **LLM 호출만이 끝이 아니다** — Prompt → RAG → Agent → Eval 의 4축으로 구성.
+- **품질의 상한 = 검색 품질** — RAG 의 retrieval 단계가 제일 먼저 깨진다.
+- **Agent loop 는 비용 폭주에 취약** — max-step / budget guard 필수.
+- **계측 없는 도입은 운영 부채** — 도입 첫날부터 metric 수집 파이프라인을 만들어라.
+
+## 다음 단계 (Next Steps)
+
+- 퀴즈로 마무리: [전체 Quiz Index](../quiz/) — 8개 모듈 각 5문항씩, 총 40문항.
+- 추가 학습: LangChain/LangGraph, LoRA fine-tune, RAGAS, Multi-agent system.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../07_dv_application/">

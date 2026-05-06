@@ -1,8 +1,26 @@
-# Unit 1: LLM 기본 구조
+# Module 01 — LLM Fundamentals
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Transformer 의 self-attention, position embedding, FFN 의 역할을 정의할 수 있다.
+2. (Understand) "다음 토큰 확률 예측" 이 어떻게 임의 길이의 텍스트 생성으로 이어지는지 설명할 수 있다.
+3. (Apply) 주어진 시나리오(코드 생성, 요약, 추론) 에 적합한 모델 크기/형태(MoE, Quantization) 를 선택할 수 있다.
+4. (Analyze) Context window, KV cache, batch size 가 latency/throughput 에 미치는 영향을 분해할 수 있다.
+5. (Evaluate) 제품 상황(클라우드 API vs on-prem) 에 맞는 LLM 배포 전략을 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Python · NumPy 기본
+- 신경망의 기본 개념 (forward pass, gradient descent)
+- 토큰 / 임베딩 / softmax 라는 단어를 들어 본 적이 있어야 함
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+LLM 을 "마법 박스" 가 아니라 **자기회귀 토큰 생성기** 로 이해해야 prompt, context, throttling, memory cost 같은 실무 결정을 합리적으로 할 수 있다. 이 모듈은 이후 prompt engineering / RAG / agent 모듈의 모든 결정을 떠받치는 토대다.
+
+---
 
 ## 핵심 개념
 **LLM = Transformer 아키텍처 기반의 대규모 언어 모델. Self-Attention으로 입력 토큰 간 관계를 학습하고, 다음 토큰을 확률적으로 예측하는 방식으로 텍스트를 생성한다.**
@@ -560,6 +578,22 @@ Temperature 효과:
 
 **Q: 로컬 LLM 배포 시 Quantization을 어떻게 활용하는가?**
 > "반도체 IP 보안상 클라우드 API를 쓸 수 없을 때, INT4/INT8 양자화로 모델 크기를 1/4~1/8로 줄여 사내 GPU에서 실행한다. 예: Llama 3 70B를 INT4로 양자화하면 ~35GB로 A100 1장에서 실행 가능하며, 코드 생성 품질은 FP16 대비 95% 이상 유지된다. AWQ나 GPTQ 같은 고급 양자화 기법으로 정밀도 손실을 최소화한다."
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Transformer = Self-Attention + Position Encoding + FFN** — 토큰 간 관계를 한 번의 행렬곱으로 계산.
+- **자기회귀 생성** — "다음 토큰 확률 분포 → 샘플링" 의 반복.
+- **Context window 는 비싸다** — 길이의 제곱으로 메모리/연산 증가, KV cache 가 큰 요인.
+- **MoE / Quantization** — 활성 파라미터 ↓, 메모리 ↓ 를 통해 큰 모델을 실용적으로 만든다.
+- **모델 = 정책 결정의 출발점이 아니라 도구** — 프롬프트/검색/도구 호출 설계가 실제 품질을 만든다.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Prompt Engineering →](../02_prompt_engineering/) — 같은 모델로도 결과를 바꾸는 입력 설계 기법.
+- 퀴즈: [Module 01 Quiz](../quiz/01_llm_fundamentals_quiz/) — Transformer, MoE, Quantization 5문항.
+- 실습: 동일 프롬프트를 3개 모델 크기(7B / 70B / API frontier) 로 돌려 latency · 품질 · 비용 표를 만들어 본다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

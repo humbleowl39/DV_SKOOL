@@ -1,8 +1,25 @@
-# Unit 2: Prompt Engineering & In-Context Learning
+# Module 02 — Prompt Engineering & In-Context Learning
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Zero-shot / Few-shot / CoT / Self-Consistency 의 정의를 구분할 수 있다.
+2. (Understand) Few-shot 예시가 왜 모델 가중치 변경 없이 동작을 바꿀 수 있는지 설명할 수 있다.
+3. (Apply) 분류·요약·코드 생성 task 각각에 적합한 prompt 패턴을 작성할 수 있다.
+4. (Analyze) 동일 task 의 prompt 두 개를 정확도 / token cost / robustness 로 비교 분석할 수 있다.
+5. (Evaluate) Prompt vs Fine-tune 결정을 비용·일관성·통제 측면에서 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01 — LLM Fundamentals (자기회귀 생성, context window)
+- 기본 NLP 용어 (token, classification, summarization)
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+LLM 활용에서 가장 큰 ROI 는 **모델 변경 없이 입력만으로 출력을 통제하는 능력**이다. 모든 RAG / Agent 시스템의 마지막 단은 결국 prompt 다. 이 모듈은 학습자가 "왜 이 prompt 가 더 잘 동작하는지" 를 가설 → 실험 → 검증 사이클로 다룰 수 있게 만든다.
+
+---
 
 ## 핵심 개념
 **Prompt Engineering = 모델 가중치 변경 없이, 입력(프롬프트)만으로 LLM의 출력을 원하는 방향으로 유도하는 기법. 가장 비용 효율적인 LLM 활용법이며, RAG/Agent의 기반.**
@@ -396,6 +413,22 @@ DV 적용:
 
 **Q: Prompt Chaining은 왜 단일 프롬프트보다 효과적인가?**
 > "세 가지 이유: (1) 에러 격리 — 한 단계 실패 시 해당 단계만 재실행, 전체 재생성 불필요. (2) 중간 검증 — 각 단계 출력을 확인하고 다음 단계 진행, 오류 전파 방지. (3) 복잡도 분산 — 하나의 어려운 문제를 여러 쉬운 문제로 분해하여 각각의 정확도를 높인다. DAC 논문의 TB 자동화 파이프라인(RTL 파싱→인터페이스 추출→코드 생성→컴파일 검증)이 이 패턴이다."
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Prompt = 모델 동작 통제의 최저 비용 수단** — 가중치 변경 없이 즉각 반영.
+- **Few-shot** — 형식·스타일·라벨 분포를 예시로 전달.
+- **CoT (Chain-of-Thought)** — 모델이 중간 추론 단계를 출력하면 정확도가 오른다.
+- **Self-Consistency** — 같은 prompt 를 여러 번 샘플링 → 다수결로 robust.
+- **Pipeline 분해** — 한 prompt 에 모든 일을 시키지 말고 단계로 쪼개라.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Embedding & Vector DB →](../03_embedding_vectordb/) — context 를 외부에서 끌어오기 위한 검색 기반.
+- 퀴즈: [Module 02 Quiz](../quiz/02_prompt_engineering_quiz/) — Few-shot, CoT, prompt 비교 5문항.
+- 실습: 자기 task 1개에 zero-shot / few-shot / CoT / self-consistency 4가지를 모두 적용해 정확도와 토큰 비용을 표로 정리한다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_llm_fundamentals/">

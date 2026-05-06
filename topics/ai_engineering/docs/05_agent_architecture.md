@@ -1,8 +1,25 @@
-# Unit 5: Agent 아키텍처
+# Module 05 — Agent Architecture
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Agent 의 4 구성요소 (LLM brain · Tool · Memory · Planner) 를 정의할 수 있다.
+2. (Understand) ReAct, Plan-and-Execute, Reflexion 패턴을 비교 설명할 수 있다.
+3. (Apply) 다단계 task 를 tool-call 과 memory 로 분해해 동작 가능한 agent loop 를 작성할 수 있다.
+4. (Analyze) Agent 가 무한 루프 / 비용 폭주 / 도구 오용에 빠지는 원인을 분석할 수 있다.
+5. (Evaluate) MCP 같은 표준이 실무 도입에 가져오는 장단점을 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 02 (prompt) · Module 04 (RAG)
+- 기본 함수 호출 / API 디자인 감각
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+LLM 단일 호출로 풀 수 없는 작업(다단계 추론, 환경 상호작용, 자기 점검) 을 풀려면 **agent 패턴** 이 필요하다. DV / 코딩 / 분석 자동화 등 거의 모든 실무 응용은 결국 agent 형태로 수렴한다.
+
+---
 
 ## 핵심 개념
 **Agent = LLM이 외부 도구(Tool)를 사용하고, 계획(Plan)을 세우고, 기억(Memory)을 유지하면서 복잡한 작업을 자율적으로 수행하는 시스템. 단순 Q&A를 넘어 실제 행동을 취하는 AI.**
@@ -592,6 +609,22 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 
 **Q: MCP란 무엇이고 DV에서의 가치는?**
 > "Model Context Protocol은 Anthropic이 제안한 LLM-도구 연결 표준이다. USB-C처럼 하나의 표준으로 어떤 LLM/Agent에서든 도구를 사용할 수 있게 한다. DV에서의 가치는 VCS 컴파일러, FAISS 검색, 파형 분석기 등을 MCP Server로 한 번 구현하면, Claude Code, VS Code Copilot, 커스텀 Agent 어디서든 동일하게 사용 가능하다는 것이다."
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Agent = LLM + Tool + Memory + Planner** — 한 단계 호출이 아닌 loop.
+- **ReAct** — 추론(Reason) 과 행동(Act) 을 번갈아 가며 외부와 상호작용.
+- **Plan-and-Execute** — 먼저 plan 을 만들고 step-by-step 실행 (장시간 task 에 유리).
+- **Reflexion** — 결과를 모델이 스스로 평가/수정.
+- **MCP** — 도구 인터페이스 표준화. 에이전트 간 도구 재사용 가능.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Strategy Selection →](../06_strategy_selection/) — prompt vs RAG vs fine-tune 결정 기준.
+- 퀴즈: [Module 05 Quiz](../quiz/05_agent_architecture_quiz/) — Agent 패턴, MCP 5문항.
+- 실습: 자기 워크플로우 1개를 ReAct loop 로 구현하고, 비용/실패율을 직접 계측한다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_rag/">

@@ -1,8 +1,26 @@
-# Unit 3: Embedding & Vector DB (FAISS)
+# Module 03 — Embedding & Vector DB
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Embedding, ANN, FAISS, BGE 의 정의를 구분할 수 있다.
+2. (Understand) Cosine similarity 가 왜 의미 검색의 표준이 되었는지 설명할 수 있다.
+3. (Apply) 사내 코드/문서를 chunk → embed → FAISS index 로 만드는 파이프라인을 설계할 수 있다.
+4. (Analyze) IVF · HNSW · PQ 의 메모리/지연/정확도 trade-off 를 데이터 규모별로 분석할 수 있다.
+5. (Evaluate) 검색 품질을 MRR / nDCG 로 평가하고, 임베딩 모델 후보를 선정할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–02 (LLM 기본, prompt)
+- 기본 선형대수 (벡터 내적, 노름)
+- 검색 시스템에 대한 직관 (precision / recall)
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰 수 없다. **임베딩 + 벡터 DB 가 외부 메모리** 역할을 한다. 이 두 컴포넌트의 품질이 RAG / Agent 시스템의 상한선이다.
+
+---
 
 ## 핵심 개념
 **Embedding = 텍스트를 의미를 보존하는 고차원 벡터로 변환. Vector DB = 이 벡터들을 저장하고, 의미적 유사도로 빠르게 검색하는 데이터베이스. RAG의 핵심 인프라.**
@@ -371,6 +389,22 @@ DV 도메인 권장:
 
 **Q: Embedding 모델을 어떻게 비교/선택하나?**
 > "MTEB(Massive Text Embedding Benchmark)가 표준이다. 56개 데이터셋에서 Retrieval, STS, Classification 등 8개 태스크 성능을 종합 평가한다. DV 도메인에서는 보안 요구사항(로컬 실행 필수)이 가장 먼저 필터링 기준이 되고, 그 다음 Retrieval 성능, 마지막으로 모델 크기/속도를 고려한다. 로컬 실행 시 BGE-large(326MB, Retrieval 54.3)가 성능-크기 균형이 좋다."
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Embedding = 의미를 좌표로** — 의미가 비슷한 텍스트가 가까운 벡터.
+- **ANN 알고리즘** — IVF (cluster), HNSW (graph), PQ (compression). 선택은 데이터 규모와 메모리 예산.
+- **FAISS** — Facebook AI 의 표준 ANN 라이브러리. 수십~수억 벡터를 단일 머신에서 처리.
+- **임베딩 모델 선정** — MTEB 벤치마크 + 도메인 특화 fine-tune 검토.
+- **품질 평가** — top-k recall, MRR, nDCG. retrieval 이 망가지면 LLM 이 아무리 좋아도 답이 망가진다.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [RAG →](../04_rag/) — embedding/vector DB 를 LLM 호출과 결합.
+- 퀴즈: [Module 03 Quiz](../quiz/03_embedding_vectordb_quiz/) — ANN, FAISS, 모델 선택 5문항.
+- 실습: 자기 프로젝트 문서 1000개를 chunking → embedding → FAISS index → top-5 검색까지 직접 만들고, 5개 query 에 대해 정성 평가.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_prompt_engineering/">
