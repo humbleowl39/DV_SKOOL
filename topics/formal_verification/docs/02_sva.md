@@ -1,8 +1,26 @@
-# Unit 2: SVA (SystemVerilog Assertions)
+# Module 02 — SVA (SystemVerilog Assertions)
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Construct** SVA `property` / `sequence`를 사용해 안전성(safety) 프로퍼티와 라이브니스(liveness) 프로퍼티를 작성할 수 있다.
+    - **Apply** 핵심 SVA 연산자(`|->`, `|=>`, `##N`, `##[1:N]`, `[*]`, `[=]`, `[->]`, `throughout`, `within`)를 시나리오에 매핑할 수 있다.
+    - **Implement** Bind를 사용해 RTL을 수정하지 않고 외부에서 SVA를 적용할 수 있다.
+    - **Detect** Vacuous Pass를 cover property로 식별하고 방지할 수 있다.
+    - **Use** Local Variable을 시퀀스 내에서 데이터 캡처/비교에 활용할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01 — Formal Fundamentals](01_formal_fundamentals.md)
+    - SystemVerilog `module` / `interface` / `clocking block`
+    - DUT의 spec/protocol 문서를 읽고 규칙을 추출하는 능력
+
+## 왜 이 모듈이 중요한가
+
+**SVA는 검증의 spec language**입니다. 자연어로 적힌 protocol 규칙을 SVA로 옮기면 시뮬과 Formal 양쪽에서 자동 검증됩니다. 단, **Vacuous Pass**(전제가 한 번도 참이 되지 않음)는 SVA의 가장 흔한 함정 — assert가 PASS인데 사실은 아무것도 검증한 게 없는 상태. **Cover와 짝**으로 작성하는 습관이 핵심입니다.
 
 ## 핵심 개념
 **SVA = 설계의 기대 동작을 시간적 관계로 표현하는 선언적 언어. 시뮬레이션과 Formal 모두에서 동작하며, assert(버그 검출), assume(입력 제약), cover(도달성 확인)의 세 역할.**
@@ -488,6 +506,22 @@ SVA에서 존재하지 않는 신호를 참조하면:
 
 **Q: SVA에서 Local Variable은 언제 사용하는가?**
 > "시퀀스의 특정 시점에서 값을 캡처하여 나중 시점과 비교해야 할 때 사용한다. 예를 들어 'write한 데이터가 read에서 정확히 나오는가'를 검증하려면, write 시점의 data를 로컬 변수에 저장하고 read 시점에 비교한다. 로컬 변수는 sequence 안에서만 선언 가능하고, 여러 시퀀스 인스턴스가 동시에 활성화되면 각각 독립적인 변수를 가진다."
+
+---
+
+## 핵심 정리
+
+- **SVA 3가지 역할**: `assert`(버그 검출), `assume`(Formal 입력 제약), `cover`(도달성). assert와 cover는 항상 짝으로.
+- **Implication**: `|->` (overlapped, 같은 cycle), `|=>` (non-overlapped, 다음 cycle). Antecedent와 Consequent의 시점 차이에 주의.
+- **시간 연산**: `##N` (정확히 N cycle 후), `##[1:N]` (1~N cycle 사이), `[*N]` (정확히 N번), `[->N]` (N번 발생까지).
+- **Vacuous Pass 방지**: 모든 assert에 짝지은 cover. cover가 UNCOVERED면 antecedent 미발생 → assert는 의미 없는 PASS.
+- **Bind**: RTL을 수정하지 않고 외부에서 SVA 모듈을 instance에 부착. 비침습적 검증의 표준.
+- **Local Variable**: sequence 안에서만 선언 가능. write 시 데이터 캡처 → read 시 비교 같은 패턴에 필수.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_sva_quiz.md)
+- ➡️ [**Module 03 — JasperGold & Strategy**](03_jaspergold_and_strategy.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_formal_fundamentals/">

@@ -1,8 +1,21 @@
-# Formal Verification — Quick Reference Card
+# Module 04 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트 — 면접 / 코드 리뷰 / 디버그 중 빠른 확인용.
+
+    **떠올릴 수 있어야 하는 것:**
+
+    - **Recall** SVA 핵심 연산자 (`|->`, `|=>`, `##N`, `[*N]`, `[->N]`, `throughout`)
+    - **Recall** Vacuous Pass / Over-constraint 식별 패턴
+    - **Recall** Convergence 순서 (Cut Point → Blackbox → Abstraction → Assume)
+    - **Reference** Sign-off 5가지 기준
+
+!!! info "사전 지식"
+    - [Module 01-03](01_formal_fundamentals.md) 학습 후 활용
 
 ## 한줄 요약
 ```
@@ -138,6 +151,17 @@ BOUNDED → ① Blackbox → ② Abstraction → ③ Helper Assert
     YES → Formal 강력 추천 ✓
     NO → 시뮬레이션으로 충분
 ```
+
+---
+
+## 코스 마무리
+
+3개 모듈 + Quick Ref 완료. 다음을 권장:
+
+1. **퀴즈 풀어보기** — [퀴즈 인덱스](quiz/index.md)
+2. **글로서리 점검** — [용어집](glossary.md)
+3. **실전 적용** — 본인 프로젝트의 simple FSM에 SVA 5개 + cover 5개 작성해서 PROVEN 시도
+4. **다른 토픽** — DV 환경에서의 [UVM](../../uvm/) 연계, 프로토콜 레벨 [AMBA](../../amba_protocols/) 검증과 조합
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_jaspergold_and_strategy/">

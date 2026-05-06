@@ -1,8 +1,25 @@
-# Unit 3: JasperGold 활용 + DV 전략
+# Module 03 — JasperGold & DV Strategy
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Apply** JasperGold 워크플로(elaborate → assume → assert → run → analyze)를 따라 단순 IP의 formal 검증을 실행할 수 있다.
+    - **Identify** JasperGold의 주요 App(Apex/Functional/CDC/Coverage/Equivalence) 중 시나리오별 적합한 도구를 선택할 수 있다.
+    - **Apply** Convergence 전략(Cut Point, Blackbox, Abstraction, Assume tightening)을 BOUNDED 결과에 대해 적용할 수 있다.
+    - **Diagnose** Counterexample을 분석해 RTL 버그 vs Assume 부족(false negative)을 구분할 수 있다.
+    - **Justify** Sign-off 기준(PROVEN/BOUNDED, Cover, Assume 감사, COI, Property 완전성)을 문서화 형식으로 설명할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01](01_formal_fundamentals.md), [Module 02](02_sva.md)
+    - 시뮬레이션 기반 검증 워크플로 이해
+
+## 왜 이 모듈이 중요한가
+
+**Formal 도구 사용은 "PROVEN 받기"와 다릅니다**. 실무에서 BOUNDED를 PROVEN으로 만드는 작업이 시간의 80%를 차지하고, Assume 작성과 감사가 검증 신뢰성의 핵심입니다. **잘못된 Assume = silent false PROVEN** — Formal 엔지니어의 핵심 역량은 도구 조작이 아니라 **Convergence 전략 + Sign-off 책임**입니다.
 
 ## 핵심 개념
 **JasperGold = Cadence의 Formal Verification 도구. Property Checking, Equivalence Checking, Connectivity Checking 등을 지원. 실무에서는 Formal을 "시뮬레이션 보완 전략"으로 위치시키고, 제어 로직/프로토콜/보안에 집중 적용.**
@@ -401,6 +418,22 @@ assert property (@(posedge clk) disable iff (rst)
 
 **Q: Formal 디버깅에서 Counterexample을 어떻게 활용하는가?**
 > "Counterexample은 Formal의 가장 큰 장점이다. 엔진이 Property 위반을 유발하는 최소 입력 시퀀스를 자동 생성하므로, (1) 반례 파형에서 위반 시점을 확인하고, (2) 엔진이 생성한 입력의 의미를 파악하고, (3) RTL 코드에서 해당 경로의 로직을 추적하여 버그를 확정한다. 단, FAILED인데 실제 버그가 아닌 경우(False Negative)도 있다 — 이는 Assume 부족으로 불가능한 입력이 사용된 것이므로, 스펙을 확인한 후 assume을 추가한다."
+
+---
+
+## 핵심 정리
+
+- **JasperGold 워크플로**: elaborate → assume(입력 제약) → assert(spec 규칙) → run → analyze.
+- **App 선택**: 일반 property는 JG-Apex, RTL2RTL은 Equivalence Checking, CDC 검증은 CDC App, Connectivity는 Connectivity App.
+- **BOUNDED → PROVEN**: Cut Point로 분할, Blackbox로 무관 영역 제거, Abstraction으로 카운터/데이터 축소, Assume tightening으로 입력 공간 축소.
+- **CEX 분석 3단계**: 위반 시점 확인 → 엔진 입력 의미 파악 → RTL 경로 추적. False negative 의심되면 Assume 부족인지 점검.
+- **Sign-off 기준**: (1) assert PROVEN/BOUNDED 정당성, (2) cover COVERED, (3) Assume 감사, (4) COI 검토, (5) Property 완전성. 5개 모두 문서화.
+- **Assume의 양면성**: 실제 환경 제약 모델링은 필요하지만 over-constraint는 false PROVEN. Spec과 1:1 매핑 + 대응 cover 작성.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_jaspergold_and_strategy_quiz.md)
+- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_sva/">

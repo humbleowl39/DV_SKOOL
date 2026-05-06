@@ -4,6 +4,24 @@
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** Simulation과 Formal의 본질적 차이(샘플링 vs 증명)를 설명할 수 있다.
+    - **Interpret** Formal의 3가지 결과(PROVEN, BOUNDED, CEX)의 의미와 각 결과를 받았을 때 다음 행동을 결정할 수 있다.
+    - **Identify** Formal이 강력한 영역(corner case, control logic, protocol)과 약한 영역(data path, large state space)을 구분할 수 있다.
+    - **Explain** Induction의 동작 원리와 BOUNDED→PROVEN 전환 조건을 설명할 수 있다.
+    - **Apply** State Explosion 대응 기법(Blackbox, Cut Point, Abstraction, Symmetry)을 시나리오에 매핑할 수 있다.
+
+!!! info "사전 지식"
+    - SystemVerilog 기본 (module, interface)
+    - 시뮬레이션 기반 검증 경험 (UVM 또는 directed)
+    - 명제 논리, 상태 머신 기본
+
+## 왜 이 모듈이 중요한가
+
+**Formal은 "모든 입력에 대해 증명"하는 검증**입니다. Simulation은 시드별 샘플링이라 corner case를 놓칠 수 있지만 Formal은 PROVEN이면 수학적으로 모든 케이스를 커버한 것. 단, **PROVEN의 의미를 잘못 해석하면 false confidence**로 이어집니다 — Vacuous Pass, Over-constraint, Blackbox 영역 등의 함정을 이해해야 sign-off가 의미를 가집니다.
+
 ## 핵심 개념
 **Formal Verification = 수학적 증명으로 설계의 모든 가능한 입력/상태에서 속성(Property)이 성립함을 보장. 시뮬레이션이 "샘플링"이라면, Formal은 "전수 검사".**
 
@@ -340,6 +358,22 @@ Formal의 근본 한계:
 
 **Q: State Explosion은 어떻게 대응하는가?**
 > "핵심은 상태 공간 축소이다. (1) Blackboxing — 검증 대상이 아닌 모듈을 빈 박스로 교체. (2) Data/Counter Abstraction — 데이터 폭이나 카운터 범위를 축소. (3) Assume — 입력을 실제 환경 범위로 제한. (4) Cut Point — 큰 설계를 블록 단위로 분할하여 각각 증명. 이 기법들을 조합하여 Formal이 수렴(PROVEN)하도록 만드는 것이 Formal 엔지니어의 핵심 역량이다."
+
+---
+
+## 핵심 정리
+
+- **Sim = 샘플링, Formal = 증명**: Sim은 시드/입력 조합을 일부 샘플; Formal은 가능한 모든 입력에 대해 명제를 증명.
+- **3가지 결과**: PROVEN(완전 증명), BOUNDED(N cycle 내 위반 없음), CEX(반례 발견). BOUNDED는 PROVEN과 다름 — 이후 N+1 cycle은 미증명.
+- **Induction**: Base case(reset 직후) + Inductive step(N→N+1)이 모두 통과하면 무한 cycle PROVEN. Inductive step 실패가 BOUNDED의 흔한 원인.
+- **Formal 적합 영역**: FSM, 프로토콜 핸드셰이크, FIFO/Arbiter, 보안 로직 (제어 위주, 상태 공간 관리 가능).
+- **Formal 부적합 영역**: 큰 데이터 패스, 곱셈기/큰 메모리 (state explosion).
+- **State Explosion 대응**: Blackbox, Abstraction, Assume, Cut Point — 조합 사용이 핵심.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_formal_fundamentals_quiz.md)
+- ➡️ [**Module 02 — SVA**](02_sva.md) — 실제 assertion 작성
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">
