@@ -1,8 +1,25 @@
-# Unit 6: Dynamic Programming (DP)
+# Module 06 — Dynamic Programming
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) DP 의 두 조건(Optimal Substructure, Overlapping Subproblems) 을 정의할 수 있다.
+2. (Understand) Top-down (memoization) 과 Bottom-up (tabulation) 을 비교 설명할 수 있다.
+3. (Apply) 1D DP (Climbing Stairs, House Robber), 2D DP (LCS, Edit Distance) 를 구현할 수 있다.
+4. (Analyze) DP 의 state 정의가 잘못된 경우의 증상(중복 / 무한 / 답 누락) 을 진단할 수 있다.
+5. (Evaluate) 같은 문제에 DP / Greedy / DFS+memo 의 trade-off 를 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–05
+- 재귀 + memoization 한 번이라도 작성한 경험
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+DP 는 면접관이 reasoning depth 를 가장 좋아하는 패턴이다. 상태 정의 → 점화식 → 베이스 케이스 → 구현 → 최적화 의 다섯 단계 표준 풀이를 만들 수 있으면 거의 모든 DP 문제를 풀 수 있다. 또한 운영 코드(parsing, scoring, scheduling) 에서도 자주 등장한다.
+
+---
 
 ## DP란?
 
@@ -283,6 +300,22 @@ module unit6_dp;
 endmodule
 
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **DP 두 조건** — Optimal Substructure + Overlapping Subproblems.
+- **5단계 표준 풀이** — state 정의 → 점화식 → base case → 구현(memo / tabulation) → 공간 최적화.
+- **State 정의가 잘못되면 모두 잘못된다** — 중복 / 누락 / 무한 → state 재설계.
+- **Memoization vs Tabulation** — 재귀가 자연스러우면 memo, iteration 이 자연스러우면 tabulation.
+- **공간 최적화** — 보통 1D DP 는 O(N) → O(1), 2D DP 는 O(N×M) → O(min(N,M)) 으로 줄일 수 있다.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Interview Strategy →](../07_interview_strategy/) — 모듈 1~6 을 면접 시간 안에 적용하는 법.
+- 퀴즈: [Module 06 Quiz](../quiz/06_dynamic_programming_explained_quiz/) — 5문항.
+- 실습: "Climbing Stairs", "House Robber", "LCS", "Edit Distance", "Coin Change" 모두 5단계 표준 풀이로 작성.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../05_tree_bfs_dfs_explained/">

@@ -1,8 +1,25 @@
-# Unit 1: Big-O 복잡도 & 패턴 사고법
+# Module 01 — Big-O Complexity & Pattern Thinking
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) O(1), O(log N), O(N), O(N log N), O(N²) 의 의미와 대표 알고리즘을 매핑할 수 있다.
+2. (Understand) Time / Space complexity 가 입력 크기 N 의 함수로 어떻게 증가하는지 설명할 수 있다.
+3. (Apply) 주어진 코드 한 함수의 worst-case 시간/공간 복잡도를 손으로 계산할 수 있다.
+4. (Analyze) "패턴 사고법" 의 5단계 (입력→제약→패턴 매핑→복잡도→코드) 를 새 문제에 적용할 수 있다.
+5. (Evaluate) 두 가지 풀이의 복잡도와 가독성/엣지케이스 측면을 비교 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- 배열 / 반복문 / 함수 호출 같은 기초 프로그래밍 개념
+- 로그·지수의 기본 직관
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+빅테크 코딩 인터뷰의 핵심 평가 기준은 **올바른 복잡도** + **올바른 패턴 선택** 이다. Big-O 직관이 없으면 매번 처음부터 풀이를 만들어야 하지만, 입력 크기를 보고 "이건 N log N 안에 풀려야 하니 정렬 + 이진 탐색 패턴이다" 라고 매핑할 수 있으면 풀이의 절반은 끝난 것이다.
+
+---
 
 ## 왜 패턴인가?
 
@@ -278,6 +295,22 @@ module unit1_big_o;
 endmodule
 
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **상수항 / 하한 항 무시** — 입력이 커질수록 지배 항(highest order) 만 살아남는다.
+- **N 의 크기로 패턴이 정해진다** — N≤10 → 백트래킹, N≤10⁴ → O(N²), N≤10⁶ → O(N log N), N≤10⁹ → O(log N) 또는 수학.
+- **Best / Average / Worst** 는 다르다 — 면접에서는 worst case 가 기본.
+- **공간 복잡도** 도 동일 분석 — 재귀 호출 stack 도 공간이다.
+- **패턴 사고법** 으로 30초 안에 후보 알고리즘 군을 좁힌다.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Array & Hash Map →](../02_array_hashmap_explained/) — 가장 자주 등장하는 자료구조 패턴.
+- 퀴즈: [Module 01 Quiz](../quiz/01_big_o_explained_quiz/) — Big-O, 패턴 매핑 5문항.
+- 실습: 평소 푸는 LeetCode 5문제를 풀기 전, 입력 제약만 보고 "후보 패턴 → 목표 복잡도" 를 적어 본 뒤 풀이와 비교한다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

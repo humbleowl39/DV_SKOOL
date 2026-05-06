@@ -1,8 +1,25 @@
-# Unit 3: Two Pointers & Sliding Window
+# Module 03 — Two Pointers & Sliding Window
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Two Pointers 와 Sliding Window 의 정의를 구분할 수 있다.
+2. (Understand) 정렬된 배열에서 Two Pointers 가 O(N) 으로 가능한 이유를 설명할 수 있다.
+3. (Apply) "최대 부분 합", "K-개 distinct 부분", "정렬된 배열 짝 찾기" 같은 전형 문제를 풀 수 있다.
+4. (Analyze) Window 의 expand / shrink 조건을 invariant 로 명세할 수 있다.
+5. (Evaluate) Two Pointers vs Hash Map vs Sorting 의 trade-off 를 비교 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–02 (Big-O, Hash Map)
+- 배열 인덱스 조작에 대한 자신감
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+Two Pointers / Sliding Window 는 **메모리를 쓰지 않고 O(N) 으로** 푸는 강력한 도구다. Hash Map 으로 풀리는 많은 문제가 정렬 + Two Pointers 로 더 간결해지고, 부분 배열/문자열 문제는 거의 모두 sliding window 로 일반화된다.
+
+---
 
 ## Two Pointers — 언제 사용하는가?
 
@@ -334,6 +351,22 @@ module unit3_tp_sw;
 endmodule
 
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Two Pointers** — 보통 정렬된 배열 / 양 끝에서 좁혀가는 구조.
+- **Sliding Window** — 부분 배열/문자열의 invariant 유지 (window expand → 조건 위반 → shrink).
+- **Window 조건의 명세** — invariant 를 글로 적어 보면 버그가 줄어든다.
+- **메모리 ↓** — hash map 풀이 대비 공간을 거의 쓰지 않는다.
+- **정렬 비용 고려** — 입력이 정렬 가능하면 O(N log N) + O(N) 이 hash map 의 O(N) 보다 종종 깔끔.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Stack & Binary Search →](../04_stack_binary_search_explained/) — 정렬된 배열의 또 다른 도구.
+- 퀴즈: [Module 03 Quiz](../quiz/03_two_pointers_sliding_window_explained_quiz/) — 5문항.
+- 실습: "Longest Substring Without Repeating", "Minimum Window Substring", "3Sum" 을 모두 풀고 invariant 를 주석으로 적는다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_array_hashmap_explained/">

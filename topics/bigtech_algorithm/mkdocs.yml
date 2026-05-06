@@ -56,17 +56,24 @@ plugins:
 nav:
   - "코스 홈": index.md
   - "학습 모듈":
-      - "Unit 1: Big-O 복잡도 & 패턴 사고법": 01_big_o_explained.md
-      - "Unit 2: Array & Hash Map (연관 배열)": 02_array_hashmap_explained.md
-      - "Unit 3: Two Pointers & Sliding Window": 03_two_pointers_sliding_window_explained.md
-      - "Unit 4: Stack & Binary Search": 04_stack_binary_search_explained.md
-      - "Unit 5: Tree & BFS/DFS": 05_tree_bfs_dfs_explained.md
-      - "Unit 6: Dynamic Programming (DP)": 06_dynamic_programming_explained.md
-      - "Unit 7: 면접 전략": 07_interview_strategy.md
+      - "Module 01 — Big-O & Pattern Thinking": 01_big_o_explained.md
+      - "Module 02 — Array & Hash Map": 02_array_hashmap_explained.md
+      - "Module 03 — Two Pointers & Sliding Window": 03_two_pointers_sliding_window_explained.md
+      - "Module 04 — Stack & Binary Search": 04_stack_binary_search_explained.md
+      - "Module 05 — Tree & BFS/DFS": 05_tree_bfs_dfs_explained.md
+      - "Module 06 — Dynamic Programming": 06_dynamic_programming_explained.md
+      - "Module 07 — Interview Strategy": 07_interview_strategy.md
   - "코스 개요": _legacy_overview.md
   - "용어집": glossary.md
   - "퀴즈":
       - "퀴즈 인덱스": quiz/index.md
+      - "Module 01 Quiz": quiz/01_big_o_explained_quiz.md
+      - "Module 02 Quiz": quiz/02_array_hashmap_explained_quiz.md
+      - "Module 03 Quiz": quiz/03_two_pointers_sliding_window_explained_quiz.md
+      - "Module 04 Quiz": quiz/04_stack_binary_search_explained_quiz.md
+      - "Module 05 Quiz": quiz/05_tree_bfs_dfs_explained_quiz.md
+      - "Module 06 Quiz": quiz/06_dynamic_programming_explained_quiz.md
+      - "Module 07 Quiz": quiz/07_interview_strategy_quiz.md
 
 markdown_extensions:
   - abbr

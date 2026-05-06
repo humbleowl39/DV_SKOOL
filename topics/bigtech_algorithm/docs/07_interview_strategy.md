@@ -1,8 +1,25 @@
-# Unit 7: 면접 전략
+# Module 07 — Interview Strategy
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) 빅테크 코딩 인터뷰 45분의 표준 타임라인 5단계를 적을 수 있다.
+2. (Understand) 면접관이 평가하는 4축 (Correctness, Complexity, Code Quality, Communication) 을 설명할 수 있다.
+3. (Apply) 한 문제를 받아 5분 내에 입력→패턴→복잡도→approach 까지 구두로 구성할 수 있다.
+4. (Analyze) 자기 모의 면접 녹음을 4축 기준으로 분석할 수 있다.
+5. (Evaluate) "다 못 풀어도 통과하는 답안" 과 "다 풀어도 떨어지는 답안" 을 비교 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–06 (Big-O, Hash Map, Two Pointers, Stack/BS, Tree/BFS-DFS, DP)
+- 모의 면접 1회 이상 경험 (없으면 이 모듈을 마치고 진행 권장)
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+알고리즘 실력 ≠ 면접 통과. **시간 관리 + 의사소통 + 엣지케이스 인지** 가 같이 필요하다. 이 모듈은 1~6 의 도구들을 45분 안에 작동시키는 메타-스킬을 만든다.
+
+---
 
 ## 45분 타임라인
 
@@ -151,6 +168,22 @@ Week 3 (Medium 도전):
   Day 6: Right Side View (#199) — BFS
   Day 7: Group Anagrams (#49) — Hash Map
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **45분 타임라인** — 1) 이해/clarify (5분) → 2) 예시/엣지 (5분) → 3) 접근 + 복잡도 합의 (5분) → 4) 코드 (20분) → 5) 검증/리뷰 (10분).
+- **4축 평가** — Correctness · Complexity · Code Quality · Communication. 모두 합쳐서 채점된다.
+- **소리 내 사고하기** — 면접관은 코드보다 사고 흐름을 본다.
+- **엣지케이스 먼저 적기** — 빈 입력, 한 원소, 중복, overflow 를 적는 행위 자체가 평가 점수.
+- **다 풀지 못해도 패스 가능** — 잘 정의된 접근 + 부분 코드 + 명확한 의사소통 > 완성된 코드 + 침묵.
+
+## 다음 단계 (Next Steps)
+
+- 퀴즈로 마무리: [전체 Quiz Index](../quiz/) — 7개 모듈 각 5문항씩, 총 35문항.
+- 실습: 모의 면접 3회 진행 후 녹음을 4축 기준으로 self-review.
+- 추가 자료: LeetCode Top Interview 150, Cracking the Coding Interview, NeetCode Roadmap.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../06_dynamic_programming_explained/">

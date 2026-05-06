@@ -1,8 +1,25 @@
-# Unit 2: Array & Hash Map (연관 배열)
+# Module 02 — Array & Hash Map
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Array 와 Hash Map 의 lookup / insert / delete 평균/최악 복잡도를 적을 수 있다.
+2. (Understand) Hash collision 이 왜 발생하며 Java/Python/C++ 가 어떻게 다루는지 설명할 수 있다.
+3. (Apply) Two-Sum / Group Anagrams / Subarray Sum 같은 전형 문제를 hash map 으로 O(N) 해결할 수 있다.
+4. (Analyze) "왜 array 만으론 O(N²) 인 문제가 hash map 으로 O(N) 이 되는가" 를 trace 할 수 있다.
+5. (Evaluate) Hash map 사용이 부적합한 경우(순서 의존, 메모리 제약) 를 판단할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01 — Big-O 와 패턴 사고법
+- Array indexing, mutability, Python dict / Java HashMap 한 가지 친숙성
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+LeetCode Easy / Medium 의 30~40% 는 hash map 한 자료구조로 O(N) 풀이가 가능하다. 이 모듈은 "어떤 신호가 보이면 hash map 을 꺼내는가" 를 명확히 만들어 면접 첫 풀이를 빠르게 시작할 수 있게 한다.
+
+---
 
 ## 왜 Hash Map인가?
 
@@ -287,6 +304,22 @@ module unit2_array_hashmap;
 endmodule
 
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Array** : index-by-position 이 강점, 순서 보존, lookup-by-value 는 O(N).
+- **Hash Map** : key 기반 평균 O(1) lookup. 순서 보존이 필요하면 LinkedHashMap / dict (Python 3.7+) 사용.
+- **신호 → hash map** : "두 원소의 합 / 짝 / 이전 등장 위치" 같이 lookup 이 핵심이면 hash map 후보.
+- **Collision** 은 Java(체이닝→트리) / Python(open addressing) / C++ (체이닝) 처리 방식이 다르다.
+- **메모리 trade-off** — hash map 은 시간을 사기 위해 공간을 쓴다. 메모리 제약이 빡빡하면 다른 패턴 검토.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Two Pointers & Sliding Window →](../03_two_pointers_sliding_window_explained/) — 정렬 가능한 입력에서 더 적은 메모리로 푸는 패턴.
+- 퀴즈: [Module 02 Quiz](../quiz/02_array_hashmap_explained_quiz/) — 5문항.
+- 실습: Two-Sum, Group Anagrams, Longest Consecutive Sequence 를 모두 hash map 으로 풀어 보고 시간/공간 비교.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_big_o_explained/">

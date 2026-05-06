@@ -1,8 +1,25 @@
-# Unit 4: Stack & Binary Search
+# Module 04 — Stack & Binary Search
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Stack push/pop 의 LIFO 원리와 Binary Search 의 lower_bound / upper_bound 차이를 적을 수 있다.
+2. (Understand) Monotonic Stack 이 왜 "다음 큰 원소" 류 문제를 O(N) 으로 푸는지 설명할 수 있다.
+3. (Apply) Valid Parentheses, Daily Temperatures, Search-in-Rotated-Array 같은 전형 문제를 풀 수 있다.
+4. (Analyze) Binary Search 변형(범위, parametric search) 을 invariant 로 정형화할 수 있다.
+5. (Evaluate) Stack vs Recursion / Binary Search vs Hash 의 trade-off 를 비교할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–03
+- 재귀와 반복의 동등성 직관
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+Stack 은 **이전 상태를 미루어 두었다 다시 쓰는** 가장 단순하지만 강력한 도구이고, Binary Search 는 **단조성(monotonicity)** 만 있다면 어디든 통하는 보편적 패턴이다. 이 둘을 패턴으로 익히면 면접에서 "이게 stack/이진 탐색 문제인지" 를 인지하는 시간이 크게 줄어든다.
+
+---
 
 ## Stack — 언제 사용하는가?
 
@@ -344,6 +361,22 @@ module unit4_stack_bsearch;
 endmodule
 
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **Stack** — LIFO. Bracket matching, monotonic stack 류 문제의 단골 도구.
+- **Monotonic Stack** — "다음 큰/작은 원소" 류 문제를 O(N) 으로 푼다.
+- **Binary Search 의 본질 = 단조성** — sorted 가 아니라 "조건 함수가 단조" 면 적용 가능 (parametric search).
+- **lower_bound / upper_bound** 차이 명확히 — off-by-one 의 주요 원인.
+- **재귀 vs Stack** — 깊이 큰 트리에서 재귀는 stack overflow 위험, 명시적 stack 으로 변환.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Tree & BFS/DFS →](../05_tree_bfs_dfs_explained/).
+- 퀴즈: [Module 04 Quiz](../quiz/04_stack_binary_search_explained_quiz/) — 5문항.
+- 실습: "Daily Temperatures", "Search-in-Rotated-Array", "Find Peak Element", "Median of Two Sorted Arrays" 풀이.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_two_pointers_sliding_window_explained/">

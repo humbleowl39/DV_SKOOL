@@ -1,8 +1,25 @@
-# Unit 5: Tree & BFS/DFS
+# Module 05 — Tree & BFS/DFS
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) Tree, Binary Tree, BST 의 정의와 BFS/DFS (preorder/inorder/postorder) 의 차이를 적을 수 있다.
+2. (Understand) BFS 가 최단 경로를, DFS 가 경로 합/조합 을 자연스럽게 다루는 이유를 설명할 수 있다.
+3. (Apply) Level Order Traversal, LCA, Path Sum 같은 전형 문제를 BFS/DFS 로 풀 수 있다.
+4. (Analyze) 재귀 DFS 의 시간/공간 복잡도와 명시적 stack 변환을 분석할 수 있다.
+5. (Evaluate) "BFS 가 좋은가, DFS 가 좋은가" 를 메모리/조기 종료 관점에서 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–04
+- 재귀의 호출 stack 동작 이해
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+Tree / Graph 탐색은 **가장 큰 문제 군** 이다. 상속 / 트리 / 의존성 / 그래프 모두 같은 패턴 (BFS / DFS) 으로 풀린다. 이 모듈은 "이 문제가 BFS 인지 DFS 인지" 를 빠르게 분류하는 직관을 만든다.
+
+---
 
 ## 트리 기본 용어
 
@@ -457,6 +474,22 @@ module unit5_tree;
 endmodule
 
 ```
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **BFS** — Queue, level by level. 최단 경로 / 가장 가까운 X 류 문제.
+- **DFS** — Stack 또는 재귀, 깊이 우선. 경로 합 / 조합 / Path Reconstruction.
+- **Inorder traversal of BST = sorted** — 자주 활용되는 성질.
+- **메모리** — BFS 는 가장 넓은 level 만큼, DFS 는 깊이만큼.
+- **방문 표시 (visited)** — 그래프에서 무한 루프 방지의 핵심.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Dynamic Programming →](../06_dynamic_programming_explained/).
+- 퀴즈: [Module 05 Quiz](../quiz/05_tree_bfs_dfs_explained_quiz/) — 5문항.
+- 실습: "Binary Tree Level Order Traversal", "Validate BST", "LCA", "Word Ladder" 풀이.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_stack_binary_search_explained/">
