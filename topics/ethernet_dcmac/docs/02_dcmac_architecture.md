@@ -1,8 +1,24 @@
-# Unit 2: DCMAC 아키텍처
+# Module 02 — DCMAC Architecture
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** DCMAC 블럭 (TX/RX MAC + PCS + FEC + multi-channel) 구조를 설명.
+    - **Apply** Segmented 인터페이스(PHY 측)와 AXI-Stream(host 측) 데이터 흐름.
+    - **Identify** RS-FEC, KR-FEC, 자동 negotiation, link training의 역할.
+    - **Implement** Multi-channel (4×100G, 8×50G PAM4 등) 구성 시나리오.
+
+!!! info "사전 지식"
+    - [Module 01](01_ethernet_fundamentals.md)
+    - [AXI-Stream](../../amba_protocols/03_axi_stream/) (host interface)
+
+## 왜 이 모듈이 중요한가
+
+**DCMAC은 데이터센터 NIC의 핵심**. 400G 라인 레이트에서 multi-channel + RS-FEC 동시 처리는 검증이 가장 어려운 영역. SerDes lane mismatch나 FEC corner case가 silent throughput 저하를 만듭니다.
 
 ## 핵심 개념
 **DCMAC = AMD(Xilinx)의 100/200/400GbE 하드 IP MAC. FPGA/ASIC에 통합되어 라인 레이트 Ethernet 프레임 처리를 제공. 상위 계층(TOE, IP)과 AXI-Stream으로, 하위 계층(PCS/PHY)과 Segmented 인터페이스로 연결.**
@@ -389,6 +405,23 @@ MangoBoost Data Path:
 
 **Q: DCMAC 레지스터 검증에서 주의할 점은?**
 > "세 가지: (1) 통계 카운터의 Read-on-Clear 특성 — 읽기 순서를 잘못하면 값이 사라지므로 Latch-on-Read 구현을 검증. (2) Config 레지스터 적용 시점 — Write 직후 적용인지, 다음 프레임부터인지. (3) Reset Value — 모든 레지스터가 리셋 후 스펙상의 기본값을 가지는지. RAL frontdoor/backdoor 양쪽으로 확인한다."
+
+---
+
+## 핵심 정리
+
+- **DCMAC = MAC + PCS + FEC 통합 IP**. 100/200/400GbE 라인 레이트 처리.
+- **Segmented 인터페이스 (PHY측)**: multi-segment data per cycle for high BW.
+- **AXI-Stream (host측)**: TUSER/TKEEP/TLAST로 frame 경계 표시.
+- **RS-FEC (Reed-Solomon)**: RS(528,514) — 14 비트 패리티로 burst error 복원. 100/400GbE 표준.
+- **Auto-negotiation**: link partner 간 speed/duplex/FEC 협상.
+- **Link Training**: PCS 동기화, lane alignment, BER 측정.
+- **Multi-channel**: 4×100G or 8×50G PAM4 — lane mapping과 ordering 정확성이 핵심.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_dcmac_architecture_quiz.md)
+- ➡️ [**Module 03 — DV Methodology**](03_dcmac_dv_methodology.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_ethernet_fundamentals/">

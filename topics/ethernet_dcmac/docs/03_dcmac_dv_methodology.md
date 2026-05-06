@@ -1,8 +1,24 @@
-# Unit 3: DCMAC DV 검증 전략
+# Module 03 — DCMAC DV Methodology
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** DCMAC DV 환경 (UVM env + traffic generator + scoreboard + FEC injector)을 설계.
+    - **Apply** Frame integrity (FCS), AXI-Stream protocol, Pause/PFC flow control 시나리오.
+    - **Implement** RS-FEC error injection (within / beyond correction limit) 시나리오.
+    - **Plan** Performance regression (line-rate throughput, IFG enforcement, latency).
+
+!!! info "사전 지식"
+    - [Module 01-02](01_ethernet_fundamentals.md)
+    - [UVM](../../uvm/), [AXI-Stream](../../amba_protocols/03_axi_stream/)
+
+## 왜 이 모듈이 중요한가
+
+**DCMAC 검증은 라인 레이트 throughput + 무결성 동시 보장**. Multi-channel + RS-FEC 조합이 만드는 corner case가 많고, IFG 위반 같은 protocol 위반은 silent.
 
 ## 핵심 개념
 **DCMAC 검증 = 프레임 무결성(FCS) + AXI-S 프로토콜 준수 + 흐름 제어(Pause/PFC) + 에러 처리 + E2E 데이터 패스. UVM 환경을 from scratch로 구축한 경험이 이력서 핵심.**
@@ -579,6 +595,21 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
 
 **Q: 레지스터 검증은 어떻게 접근했나?**
 > "UVM RAL을 구축하고 세 가지를 검증했다. (1) Reset Value — 모든 레지스터의 리셋 후 값이 스펙과 일치하는지 RAL mirror로 자동 확인. (2) Access Policy — RW/RO/W1C 등 각 필드의 접근 정책이 올바른지. (3) Functional — 통계 카운터가 실제 트래픽과 일치하는지, Config 변경이 올바른 시점에 적용되는지. 특히 통계 카운터의 Read-on-Clear 특성 때문에 읽기 순서/타이밍 검증이 까다로웠다."
+
+---
+
+## 핵심 정리
+
+- **검증 4축**: Frame integrity (FCS), AXI-S protocol, Flow control (Pause/PFC), Error handling.
+- **Traffic generator**: random + directed (min frame, max frame, jumbo, VLAN, pause). Line-rate 시나리오.
+- **Scoreboard**: TX frame을 capture → RX에서 FCS 검증, ordering, payload match.
+- **RS-FEC injection**: within correction limit (수정 가능, hidden), beyond limit (drop, error counter ↑).
+- **Performance**: line-rate throughput, IFG enforcement, multi-channel parallelism.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_dcmac_dv_methodology_quiz.md)
+- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_dcmac_architecture/">

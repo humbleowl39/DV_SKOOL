@@ -1,8 +1,14 @@
-# Ethernet & DCMAC — Quick Reference Card
+# Module 04 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트. **Recall**: Ethernet frame, RS-FEC, AXI-S, multi-channel, 면접 골든 룰.
+
+!!! info "사전 지식"
+    - [Module 01-03](01_ethernet_fundamentals.md)
 
 ## 한줄 요약
 ```
@@ -94,6 +100,12 @@ Host ↔ [PCIe/DMA] ↔ TOE ↔ [AXI-S] ↔ DCMAC ↔ [SerDes] ↔ Network
         mmu_ko/      toe_ko/    ethernet_dcmac_ko/
         ← 학습 자료가 전체 데이터 패스를 커버 →
 ```
+
+---
+
+## 코스 마무리
+
+3개 모듈 + Quick Ref 완료. [퀴즈](quiz/index.md) · [용어집](glossary.md) · 다음: [TOE](../../toe/), [UVM](../../uvm/).
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_dcmac_dv_methodology/">

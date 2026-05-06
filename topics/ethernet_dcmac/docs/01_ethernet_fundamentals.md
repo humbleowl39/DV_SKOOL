@@ -1,8 +1,24 @@
-# Unit 1: Ethernet 기본 + 프레임 구조
+# Module 01 — Ethernet Fundamentals
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** Ethernet frame structure (Preamble/SFD/DA/SA/Type/Payload/FCS) + IFG.
+    - **Distinguish** GbE / 10GbE / 100GbE / 400GbE의 PCS/FEC 차이 + lane width 변화.
+    - **Apply** VLAN tag, jumbo frame, pause frame을 시나리오에 매핑.
+    - **Identify** Ethernet OAM (operations, administration, maintenance) 기본 frame.
+
+!!! info "사전 지식"
+    - OSI 모델 (L1/L2)
+    - 패킷/프레임 일반 용어 (header, payload, CRC)
+
+## 왜 이 모듈이 중요한가
+
+**Ethernet은 데이터센터의 backbone**. 100/400GbE로 진화하며 PCS/FEC가 점점 복잡해짐. DCMAC 검증의 출발점은 frame 구조와 lane mapping을 정확히 이해하는 것.
 
 ## 핵심 개념
 **Ethernet = LAN/데이터센터의 사실상 표준 L2 프로토콜. MAC(Media Access Control)이 프레임 생성/파싱/에러 검출을 담당하고, PHY가 물리적 전송을 담당.**
@@ -346,6 +362,22 @@ DV 관점:
 
 **Q: Segmented 인터페이스란 무엇이고 왜 필요한가?**
 > "기존 MII는 한 사이클에 하나의 프레임만 처리하므로 짧은 프레임이 연속되면 IFG 오버헤드가 커진다. Segmented 인터페이스는 하나의 버스 사이클 내에 여러 프레임의 세그먼트를 담을 수 있어 IFG를 최소화하고 대역폭 활용률을 극대화한다. 100G+에서 라인 레이트 달성에 필수적이다."
+
+---
+
+## 핵심 정리
+
+- **Frame 구조**: Preamble (7 bytes) + SFD (1) + DA (6) + SA (6) + Type/Length (2) + Payload (46-1500) + FCS (4). 최소 64 bytes (without preamble), 최대 1518 (or jumbo 9000+).
+- **MAC vs PHY**: MAC = frame 생성/파싱/CRC, PHY = 물리 전송 + PCS/FEC.
+- **Speeds**: GbE (1G, 1 lane) → 10GbE → 100GbE (4×25G) → 400GbE (8×50G PAM4).
+- **VLAN**: 802.1Q, 4-byte tag → frame 길이 + 4. QoS priority bits (PCP).
+- **Jumbo frame**: 1500 → 9000+ bytes payload, throughput 효율 ↑.
+- **Pause frame**: 802.3x, 흐름 제어 (수신단이 송신단에 일시 정지 요청).
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_ethernet_fundamentals_quiz.md)
+- ➡️ [**Module 02 — DCMAC Architecture**](02_dcmac_architecture.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">
