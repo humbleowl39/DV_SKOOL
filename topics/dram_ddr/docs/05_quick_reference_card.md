@@ -1,8 +1,21 @@
-# DRAM Memory Controller & DDR4/5 — Quick Reference Card
+# Module 05 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트 — 면접 / 코드 리뷰 / 디버그 중 빠르게.
+
+    **떠올릴 수 있어야 하는 것:**
+
+    - **Recall** Timing parameter (tRCD/tCAS/tRP/tRAS/tRC/tFAW/tREFI)
+    - **Recall** ACT/RD/WR/PRE/REF 명령 흐름
+    - **Recall** DDR4 vs DDR5 차이 핵심
+    - **Reference** Training 종류 + 흔한 DV 버그
+
+!!! info "사전 지식"
+    - [Module 01-04](01_dram_fundamentals_ddr.md)
 
 ## 한줄 요약
 ```
@@ -130,6 +143,16 @@ dram_ddr_ko:        BL2 → [MC 설정] → [Training] → DRAM 사용 가능
 ufs_hci_ko:         UFS → BL2 이미지 로드 → BL2가 DRAM 초기화
 → 세 자료가 부팅 시퀀스에서 연결됨
 ```
+
+---
+
+## 코스 마무리
+
+4개 모듈 + Quick Ref 완료. 다음:
+
+1. [퀴즈 인덱스](quiz/index.md)
+2. [용어집](glossary.md)
+3. 다른 토픽: [MMU](../../mmu/), [UVM 검증](../../uvm/), [Formal](../../formal_verification/)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_dram_dv_methodology/">

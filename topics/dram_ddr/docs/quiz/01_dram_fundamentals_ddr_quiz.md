@@ -1,23 +1,46 @@
-# Quiz: DRAM 기본 원리 + DDR4/5
+# Quiz — Module 01: DRAM Fundamentals + DDR4/5
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 01 본문으로 돌아가기](../01_dram_fundamentals_ddr.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../01_dram_fundamentals_ddr.md)
+## Q1. (Remember)
+
+DRAM의 한 cell은 어떤 기본 회로 요소로 구성되나?
+
+??? answer "정답 / 해설"
+    **1 capacitor + 1 access transistor (1T1C)**. 커패시터에 전하를 저장하여 1비트 저장. 누설 때문에 주기적 refresh 필수.
+
+## Q2. (Understand)
+
+ACT → RD → PRE 명령 시퀀스에서 각 명령의 역할은?
+
+??? answer "정답 / 해설"
+    - **ACT**: row 데이터를 sense amplifier로 가져옴 (row open).
+    - **RD**: open된 row의 column을 읽음 (가능한 여러 번).
+    - **PRE**: row를 닫고 bank를 다음 ACT 가능 상태로 (precharge).
+
+## Q3. (Apply)
+
+DDR4 vs DDR5 핵심 차이 4가지를 들어보세요.
+
+??? answer "정답 / 해설"
+    1. **2-channel split**: DDR5 single 64-bit → dual 32-bit channels (HPC BW ↑)
+    2. **Bank Group**: 4→8 (interleaving 기회 ↑)
+    3. **on-die ECC**: DDR5는 SECDED on-die 표준
+    4. **VDD**: 1.2V → 1.1V (전력 ↓)
+    5. (추가) Refresh: refresh granularity 향상
+
+## Q4. (Analyze)
+
+같은 bank에 연속 access하면 throughput이 떨어지는 이유는?
+
+??? answer "정답 / 해설"
+    같은 bank에서 다른 row에 access하려면 PRE → ACT 필요 (tRP + tRCD 비용). 같은 row면 row hit이지만 다른 row면 row miss → 수십 cycle 패널티. **다른 bank로 분산하면 동시 ACT 가능** → BLP 활용.
+
+## Q5. (Evaluate)
+
+LPDDR5에서 WCK를 CK와 분리한 동기는?
+
+??? answer "정답 / 해설"
+    **전력 절감**. 명령(CK)은 저주파로 충분, 데이터(WCK)만 고주파. 같은 클럭이면 CK도 불필요한 고주파 토글 → 전력 낭비. WCK는 traffic 있을 때만 토글, idle 시 정지로 추가 절감.

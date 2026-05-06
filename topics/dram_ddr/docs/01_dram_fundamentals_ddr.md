@@ -1,8 +1,24 @@
-# Unit 1: DRAM 기본 원리 + DDR4/5
+# Module 01 — DRAM Fundamentals + DDR4/5
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** DRAM cell의 capacitor 동작 + Bank/Row/Column 계층 + sense amplifier 흐름을 설명할 수 있다.
+    - **Trace** ACT → RD/WR → PRE → REF의 전체 명령 시퀀스와 각 단계의 timing parameter를 그릴 수 있다.
+    - **Distinguish** DDR4와 DDR5의 핵심 차이(2-channel split, on-die ECC, refresh 모드)를 식별할 수 있다.
+    - **Apply** Burst length, prefetch, bank group 개념을 throughput 계산에 적용할 수 있다.
+
+!!! info "사전 지식"
+    - 디지털 회로 기본 (synchronous logic, FIFO)
+    - 캐시 / 메모리 계층 일반 지식
+
+## 왜 이 모듈이 중요한가
+
+**DRAM은 시스템 성능의 가장 큰 병목**이고 가장 오해 많은 영역. Cell이 capacitor라는 것, refresh 필요한 이유, ACT-RD-PRE의 timing 의존성을 이해하지 못하면 Memory Controller도 PHY도 검증 못 합니다. **DDR4 → DDR5 전환은 서버/HPC에 가장 큰 변화** — 2-channel split이 BW 시장을 재정의했습니다.
 
 ## 핵심 개념
 **DRAM = 커패시터에 전하를 저장하여 1비트를 기억하는 휘발성 메모리. 구조적으로 Bank → Row → Column 계층으로 접근하며, 주기적 Refresh가 필수. DDR은 클럭의 상승/하강 엣지 모두에서 데이터를 전송하여 대역폭을 2배로 활용.**
@@ -385,6 +401,22 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
 
 **Q: LPDDR5에서 WCK가 CK와 분리된 이유는?**
 > "LPDDR5는 명령 버스(CK)와 데이터 버스(WCK)의 클럭을 분리했다. 명령은 상대적으로 저속으로 충분하므로 CK는 낮은 주파수, WCK는 CK의 2배 또는 4배 주파수로 데이터만 고속 전송한다. 이를 통해 불필요한 고속 토글을 줄여 전력을 절감하면서도 데이터 대역폭을 확보한다. DVFSC와 결합하면 부하에 따라 WCK 주파수를 동적으로 변경하여 추가 절전이 가능하다."
+
+---
+
+## 핵심 정리
+
+- **Cell = capacitor + access transistor**: 전하가 누설되므로 주기적 refresh 필수.
+- **계층 구조**: Bank Group → Bank → Row → Column. Bank는 동시에 여러 개 active 가능 → parallelism의 원천.
+- **명령 시퀀스**: ACT(row open) → RD/WR (col access, 가능한 여러 번) → PRE(close) → REF(주기적). 각 단계 timing 종속.
+- **Timing parameter 핵심**: tRCD(ACT→RD), tCAS/CL(RD→data), tRP(PRE→ACT), tRAS(ACT→PRE 최소), tRC(ACT→ACT 같은 row), tREFI(refresh 주기).
+- **DDR4 → DDR5 변화**: 2-channel split (32-bit channel 2개로 분리), on-die ECC, BG 4→8 (interleaving), VDD 1.2V→1.1V.
+- **LPDDR5 WCK**: 명령(CK)과 데이터(WCK) 클럭 분리로 불필요한 고속 토글 회피 → 전력 절감.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_dram_fundamentals_ddr_quiz.md)
+- ➡️ [**Module 02 — Memory Controller**](02_memory_controller.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

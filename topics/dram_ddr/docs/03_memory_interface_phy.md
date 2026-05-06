@@ -1,8 +1,25 @@
-# Unit 3: Memory Interface / PHY
+# Module 03 — Memory Interface / PHY
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** PHY의 주요 블럭(DLL/PLL, DQ/CA TX/RX, Training engine, ZQ calibration)을 그릴 수 있다.
+    - **Apply** Write Leveling, Read DQ Training, CA Training, ZQ Calibration의 순서와 목적을 시나리오에 매핑.
+    - **Analyze** PVT(Process/Voltage/Temperature) 변동이 timing margin에 미치는 영향과 보정 메커니즘.
+    - **Distinguish** CTLE / DFE 같은 equalization 기법과 적용 위치(Write/Read).
+    - **Identify** DDR4 → DDR5에서 추가된 Training 항목과 동기.
+
+!!! info "사전 지식"
+    - [Module 01-02](01_dram_fundamentals_ddr.md)
+    - 아날로그/디지털 인터페이스 기본 (signal integrity 개념)
+
+## 왜 이 모듈이 중요한가
+
+**PHY는 MC와 DRAM 사이의 물리 계층**으로, 고속(4800+ MT/s)에서 신호 무결성이 가장 큰 도전. **Training 실패 = silent corruption** — silicon이 동작하는 것처럼 보이지만 데이터 변조. PVT 변동(같은 칩이라도 온도 다르면 timing 변경)을 보정하는 것이 검증의 가장 미묘한 영역입니다.
 
 ## 핵심 개념
 **Memory Interface(MI) / PHY = MC의 명령을 DDR 전기 신호로 변환하고, 고속 데이터 전송을 위한 타이밍 캘리브레이션(Training)을 수행하는 물리 계층. PVT(공정/전압/온도) 변동에도 안정적인 데이터 수신을 보장하는 것이 핵심.**
@@ -351,6 +368,22 @@ ZQ Calibration:
 
 **Q: DDR4 대비 DDR5에서 추가된 Training 항목은?**
 > "CA Training(CS Training)이 가장 중요한 추가 항목이다. DDR5에서 CA 버스가 멀티플렉싱으로 변경되어 타이밍 마진이 축소되었기 때문이다. 또한 DFE 계수 Training, Read/Write Preamble Training이 추가되었다. LPDDR5에서는 WCK2CK Training(WCK-CK 위상 정렬)과 CBT(Command Bus Training)가 추가된다."
+
+---
+
+## 핵심 정리
+
+- **PHY = 명령/데이터의 전기적 변환 + 캘리브레이션**: DLL/PLL로 클럭 위상 정렬, ZQ로 임피던스 보정.
+- **Training 종류**: Write Leveling(CK-DQS 정렬), Read DQ Training(eye center), CA Training(CMD bus margin), VREF Training.
+- **PVT 보정**: 온도/전압 변동에 따라 timing 변경 → 주기적 ZQ + retraining.
+- **Equalization**: 고속 신호의 ISI 제거. CTLE(아날로그) + DFE(디지털). Write에는 DRAM 측 DFE, Read에는 PHY 측 CTLE+DFE.
+- **DDR5 추가 Training**: CA Training (CA 멀티플렉싱), DFE 계수, Preamble. LPDDR5는 WCK2CK + CBT 추가.
+- **Initialization 흐름**: BootROM에서 PHY power-up → BL2가 Training 수행 (코드 큼, PVT 의존). Training 완료 후 정상 traffic 시작.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_memory_interface_phy_quiz.md)
+- ➡️ [**Module 04 — DV Methodology**](04_dram_dv_methodology.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_memory_controller/">

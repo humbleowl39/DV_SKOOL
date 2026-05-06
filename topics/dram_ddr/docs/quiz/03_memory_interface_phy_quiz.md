@@ -1,23 +1,57 @@
-# Quiz: Memory Interface / PHY
+# Quiz — Module 03: Memory Interface / PHY
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 03 본문으로 돌아가기](../03_memory_interface_phy.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../03_memory_interface_phy.md)
+## Q1. (Remember)
+
+PHY Training의 핵심 4가지 종류를 답하세요.
+
+??? answer "정답 / 해설"
+    1. **Write Leveling (WL)**: CK ↔ DQS 위상 정렬
+    2. **Read DQ Training**: read eye center 찾기
+    3. **CA Training**: CMD bus margin (DDR5에서 중요)
+    4. **VREF Training**: reference voltage 최적화
+
+    + ZQ Calibration: 임피던스 보정.
+
+## Q2. (Understand)
+
+PVT 변동이 timing에 미치는 영향과 보정 방법은?
+
+??? answer "정답 / 해설"
+    **영향**: 시리콘 process variation, 전압 droop, 온도 변화 모두 신호 propagation delay 변경 → eye 위치 이동.
+
+    **보정**: 주기적 retraining (긴 시간 후), 온도 monitoring으로 trigger, ZQ Calibration (임피던스). 모든 보정은 traffic 일시 중단 또는 idle 시 수행.
+
+## Q3. (Apply)
+
+CTLE와 DFE의 차이와 각각의 적용 위치는?
+
+??? answer "정답 / 해설"
+    - **CTLE (Continuous Time Linear Equalizer)**: 아날로그 고주파 부스트로 신호 왜곡 보정. 모든 비트에 동등 적용.
+    - **DFE (Decision Feedback Equalizer)**: 이전 비트의 ISI를 디지털로 제거. 비트별로 동작.
+
+    적용:
+    - **DRAM 수신단 (Write)**: DFE
+    - **PHY 수신단 (Read)**: CTLE + DFE 조합
+
+## Q4. (Analyze)
+
+DDR5에서 CA Training이 새로 필수가 된 이유는?
+
+??? answer "정답 / 해설"
+    DDR5는 CA bus가 **multiplexed** (저속에서 적어진 핀 수). 멀티플렉싱으로 timing 마진 축소 → 별도 training 없이는 잘못된 명령 디코딩 가능. Training으로 CA의 setup/hold 마진 최적화.
+
+## Q5. (Evaluate)
+
+Training 실패의 silent corruption은 어떻게 catch하는가?
+
+??? answer "정답 / 해설"
+    - **Functional**: training 후 data integrity test (write/read pattern). Pattern mismatch면 fail.
+    - **Performance**: training 후 BW/latency가 spec 이하면 sub-optimal training 의심.
+    - **Assertion**: training 완료 sequence가 spec과 일치하는지 SVA로 검증.
+    - **Corner cases**: PVT corner (cold/hot, low/high VDD)에서 training 동작 확인.
+
+    Silent corruption의 흔한 패턴: training이 marginal pass → 정상 traffic은 OK이지만 stress 상황에서 fail.

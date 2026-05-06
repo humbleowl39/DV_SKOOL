@@ -1,8 +1,26 @@
-# Unit 2: Memory Controller 아키텍처
+# Module 02 — Memory Controller
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Apply** Row Hit / Bank-level parallelism / Bank Group interleaving 개념을 throughput 최적화에 적용할 수 있다.
+    - **Implement** Read/Write reordering, Write batching, batch drain의 스케줄러 정책을 설계할 수 있다.
+    - **Plan** Refresh scheduling (per-bank, fine-grain), tREFI 충족 + 트래픽 영향 최소화 전략을 수립할 수 있다.
+    - **Apply** ECC (SECDED, on-die ECC) 구현 시 코드 종류와 검증 시나리오 매핑.
+    - **Diagnose** QoS / Aging / Bandwidth Regulation으로 multi-master starvation 방지 기법.
+
+!!! info "사전 지식"
+    - [Module 01 — DRAM Fundamentals](01_dram_fundamentals_ddr.md)
+    - AXI / handshake 기본
+    - Scheduler / FIFO 일반 지식
+
+## 왜 이 모듈이 중요한가
+
+**MC는 SoC 성능의 가장 직접적인 결정자**입니다. CPU/GPU/Display 등 모든 마스터의 메모리 access가 통과. 잘못된 스케줄링 정책 하나가 BW 50% 저하를 만들 수 있고, refresh 누락은 데이터 손실, write batching 부족은 R↔W 전환 폭증 → throughput 절벽. **검증의 핵심은 functional correctness + performance regression**.
 
 ## 핵심 개념
 **Memory Controller(MC) = SoC의 메모리 접근 요청을 DRAM 명령(ACT/RD/WR/PRE/REF)으로 변환하고, 타이밍 제약을 준수하면서 처리량을 최대화하는 스케줄러. 성능의 핵심은 Row Hit 극대화와 Bank-level Parallelism 활용.**
@@ -382,6 +400,23 @@ MC의 역할:
 
 **Q: DRAM 초기화 시퀀스의 핵심 단계는?**
 > "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → MRS 명령으로 Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → ZQ Calibration(임피던스 보정) → Training(WL, DQ, Eye, VREF) → Refresh 시작. 특히 MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
+
+---
+
+## 핵심 정리
+
+- **MC = scheduler + 명령 변환기**: AXI request → ACT/RD/WR/PRE/REF 시퀀스로 변환, timing 종속성 준수.
+- **Row Hit 극대화**: 같은 row에 연속 access면 PRE-ACT 회피 → throughput ↑.
+- **Bank-level parallelism**: 다른 bank에 동시 ACT 가능. BG 분산으로 tCCD_S 활용.
+- **Read/Write reordering + Write batching**: R↔W 전환 비용(tWTR/tRTW) 회피. Watermark로 batch 시점 제어.
+- **Refresh scheduling**: tREFI 내 모든 row REF, 트래픽 영향 최소화. per-bank refresh로 다른 bank는 계속 동작.
+- **QoS**: AXI QoS + Aging + Bandwidth Regulation. Display 같은 실시간 마스터는 Urgent 우선.
+- **Initialization**: tPW → RESET → CKE → MRS → ZQ → Training → Refresh start. MRS 순서는 JEDEC 표준.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_memory_controller_quiz.md)
+- ➡️ [**Module 03 — PHY**](03_memory_interface_phy.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_dram_fundamentals_ddr/">

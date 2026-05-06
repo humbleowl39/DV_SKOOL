@@ -1,8 +1,24 @@
-# Unit 4: DRAM DV 검증 전략
+# Module 04 — DRAM DV Methodology
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** DRAM/MC 검증 환경 (Behavioral Model + Traffic Generator + Reference Scoreboard) 아키텍처를 설계할 수 있다.
+    - **Apply** Timing Compliance Check (SVA bind), Refresh check, ECC injection 시나리오를 작성할 수 있다.
+    - **Implement** Performance Reference로 Bandwidth / Latency 회귀를 측정.
+    - **Plan** Training 시퀀스 검증 시나리오 (PVT corner, retraining trigger).
+
+!!! info "사전 지식"
+    - [Module 01-03](01_dram_fundamentals_ddr.md) DRAM/MC/PHY 전반
+    - [UVM](../../uvm/), [Formal](../../formal_verification/) 코스
+
+## 왜 이 모듈이 중요한가
+
+**DRAM 검증은 타이밍 + 무결성 + 성능의 동시 검증**으로 일반 IP보다 복잡. tRC/tFAW/tREFI 등 수십 개의 timing constraint를 모두 trace해야 하고, ECC injection / refresh 누락 / training 실패 같은 silent corruption 시나리오를 빠짐없이 다뤄야 합니다.
 
 ## 핵심 개념
 **DRAM MC/MI 검증 = 타이밍 준수 + 데이터 무결성 + 스케줄링 정확성 + Training 동작 + Refresh + 전력 관리. DRAM 프로토콜의 엄격한 타이밍 제약과 방대한 상태 조합이 검증 난이도를 높이는 핵심 요인.**
@@ -415,6 +431,23 @@ Resume:
 
 **Q: DDR5 On-die ECC 검증은 어떻게 하나?**
 > "DRAM Behavioral Model에서 단일 비트 에러를 주입하고, Read 시 수정된 값이 반환되는지 확인한다(투명성). 2-bit 이상 에러는 On-die ECC로 수정 불가하므로, 외부 SECDED ECC의 검출과 에러 인터럽트 발생을 검증한다. 또한 MC의 ECC Scrubbing이 주기적으로 모든 주소를 순회하며 에러를 교정하는지 확인한다."
+
+---
+
+## 핵심 정리
+
+- **3축 검증**: 타이밍 (timing constraint 준수) + 무결성 (data correctness, ECC) + 성능 (BW, latency).
+- **DRAM Behavioral Model**: JEDEC 명령 sequence를 모사. write/read 응답 + refresh + training 응답.
+- **Timing SVA**: tRCD/tCAS/tRP/tRC/tRAS/tFAW/tREFI 등 수십 개 + violation count cover.
+- **Traffic Generator**: 순차/랜덤/realistic mix. CPU-like (cache line burst) + GPU-like (large block) 시나리오.
+- **Performance Reference**: AXI 요청 시점 + 응답 시점 timestamp → BW/Latency. 이론 대비 효율%, QoS별 latency.
+- **ECC injection**: 1-bit (correctable) + 2-bit (detectable but not correctable) → 수정/검출/인터럽트 동작 검증.
+- **Training 검증**: PVT corner에서 sequence 정상 종료, retraining trigger 발생 시 동작.
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_dram_dv_methodology_quiz.md)
+- ➡️ [**Module 05 — Quick Reference Card**](05_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_memory_interface_phy/">

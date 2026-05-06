@@ -670,7 +670,7 @@ def build_topic(
 
 def main() -> None:
     # Topics with hand-crafted deep enhancement — never regenerate.
-    SKIP = {"uvm", "amba_protocols", "formal_verification", "mmu"}
+    SKIP = {"uvm", "amba_protocols", "formal_verification", "mmu", "dram_ddr"}
 
     DST.mkdir(parents=True, exist_ok=True)
     for src_name, slug, site_name, site_desc, level, prereqs in TOPICS:
