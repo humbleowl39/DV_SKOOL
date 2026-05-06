@@ -1,8 +1,24 @@
-# Unit 3: UPIU와 명령 처리 흐름
+# Module 03 — UPIU & Command Flow
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Identify** UPIU의 6가지 종류 (Command/Response/Data In/Out/Task Mgmt/Query/NOP/Reject) 및 용도.
+    - **Trace** READ / WRITE / QUERY UPIU의 전체 흐름을 host와 device 양측에서 추적.
+    - **Apply** Task Tag (0-31)와 LUN으로 multi-command + multi-LU 시나리오를 작성.
+    - **Distinguish** Sense Data, Response Code, Status Code의 의미와 fault 처리.
+
+!!! info "사전 지식"
+    - [Module 01-02](01_ufs_protocol_stack.md)
+    - SCSI CDB 기본 (READ/WRITE/INQUIRY 등)
+
+## 왜 이 모듈이 중요한가
+
+**UPIU는 UFS의 통신 단위**. 모든 명령/응답/데이터가 UPIU로 캡슐화되므로 검증의 거의 모든 시나리오가 UPIU 정합성 + flow 정확성으로 귀결. **Task Tag 매칭 오류 = 잘못된 응답 매핑** — driver가 잘못된 command에 응답을 받으면 데이터 corruption 직결.
 
 ## 핵심 개념
 **UPIU = UFS의 명령/데이터/응답을 담는 표준 패킷 형식. HCI가 SCSI CDB를 Command UPIU로 감싸서 전송하고, Device가 Response/Data UPIU로 응답. Task Tag(0~31)로 동시 32개 명령을 식별.**
@@ -340,6 +356,23 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 
 **Q: WRITE에서 RTT(Ready to Transfer) UPIU가 필요한 이유는?**
 > "Device의 내부 Write 버퍼 관리를 위해서다. Host가 일방적으로 데이터를 밀어넣으면 Device 버퍼 오버플로가 발생할 수 있다. RTT는 Device가 '이 만큼의 데이터를 보내도 된다'고 허가하는 흐름 제어 메커니즘이다. RTT의 Data Transfer Count 필드가 허용 크기를 지정하며, 대용량 WRITE는 여러 번의 RTT→Data-Out 반복으로 진행된다. READ에는 RTT가 없는 이유는 Host가 PRDT로 DMA 버퍼를 미리 할당해놓기 때문이다."
+
+---
+
+## 핵심 정리
+
+- **UPIU 6종**: Command, Response, Data In/Out, Task Management, Query, NOP, Reject. 모든 명령은 UPIU로 캡슐.
+- **UPIU 헤더**: Transaction Type, Flags, LUN, Task Tag, Command Set Type, Total EHS Length 등.
+- **Task Tag (0-31)**: queue depth 32 — Task Tag로 동시 명령 식별. response의 Task Tag로 매칭.
+- **READ flow**: Command UPIU (host→device) → Data In UPIU N개 (device→host) → Response UPIU.
+- **WRITE flow**: Command UPIU → Ready-To-Transfer UPIU (device→host) → Data Out UPIU N개 (host→device) → Response UPIU.
+- **QUERY**: device 속성 read/write (descriptor, attribute, flag).
+- **Sense Data**: 명령 실패 시 상세 fail 원인. SCSI sense key + ASC/ASCQ.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_upiu_command_flow_quiz.md)
+- ➡️ [**Module 04 — DV Methodology**](04_hci_dv_methodology.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_hci_architecture/">

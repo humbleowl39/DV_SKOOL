@@ -1,23 +1,54 @@
-# Quiz: UFS HCI 아키텍처
+# Quiz — Module 02: HCI Architecture
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 02 본문으로 돌아가기](../02_hci_architecture.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../02_hci_architecture.md)
+## Q1. (Remember)
+
+UTRD의 크기와 핵심 필드는?
+
+??? answer "정답 / 해설"
+    - **크기**: 32 bytes
+    - **핵심 필드**: command UPIU pointer, response UPIU pointer, command descriptor base address (CDB), data buffer pointer, status word, OCS (Overall Command Status).
+
+## Q2. (Understand)
+
+Doorbell ring부터 명령 완료까지의 흐름을 4단계로 답하세요.
+
+??? answer "정답 / 해설"
+    1. **SW**: UTRD slot 작성 + UPIU 메모리 작성
+    2. **SW**: UTRLDBR의 해당 slot 비트 set (doorbell ring)
+    3. **HCI**: UTRD fetch → UPIU 추출 → UniPro로 전송 → device 응답 수신
+    4. **HCI**: UTRD에 OCS 작성 + interrupt 발생 → SW가 응답 처리
+
+## Q3. (Apply)
+
+Interrupt aggregation의 trade-off는?
+
+??? answer "정답 / 해설"
+    **장점**: 여러 명령 완료를 모아서 한 인터럽트로 → CPU overhead ↓ (특히 high-throughput).
+
+    **단점**: 첫 완료 명령의 latency ↑ (timer/counter 대기). 실시간 sensitive 워크로드에는 부적합.
+
+    **튜닝**: counter (N개 명령 모임) + timer (T시간 후 강제 trigger) 조합.
+
+## Q4. (Analyze)
+
+UFS HCI register 중 UTRLBA와 UTMRLBA의 역할 차이는?
+
+??? answer "정답 / 해설"
+    - **UTRLBA**: 일반 명령용 UTRD list base address. READ/WRITE 등 user data 명령.
+    - **UTMRLBA**: Task Management용 UTRD list base address. ABORT, RESET 등 control 명령. Out-of-band처럼 정상 명령 큐와 격리되어 빠른 처리 가능.
+
+## Q5. (Evaluate)
+
+다음 중 silent corruption 위험이 가장 큰 시나리오는?
+
+- [ ] A. Doorbell write가 늦게 도달
+- [ ] B. UTRD의 Command UPIU pointer가 잘못된 메모리 주소
+- [ ] C. UTRD list slot이 모두 사용 중
+- [ ] D. Interrupt aggregation timer 만료
+
+??? answer "정답 / 해설"
+    **B**. HCI가 잘못된 UPIU를 fetch → 잘못된 SCSI command 발행 → 잘못된 LBA에 read/write → silent corruption. A/C/D는 throughput/latency 영향이지만 데이터 corruption 아님.

@@ -1,23 +1,49 @@
-# Quiz: UFS HCI — Quick Reference Card
+# Quiz — Module 05: UFS HCI Quick Reference
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 05 본문으로 돌아가기](../05_quick_reference_card.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../05_quick_reference_card.md)
+## Q1. (Recall)
+
+UFS 5계층의 약어와 한 줄 책임:
+
+??? answer "정답 / 해설"
+    - **Application** — SCSI command 발행
+    - **UTP/UPIU** — frame 캡슐화 (transport)
+    - **UniPro** — link/network (MIPI)
+    - **M-PHY** — physical 시리얼 (MIPI)
+    - **Storage** — NAND flash media
+
+## Q2. (Recall)
+
+Queue depth 최대값과 식별 메커니즘은?
+
+??? answer "정답 / 해설"
+    Queue depth = **32** (UFS spec). 식별: **Task Tag (5-bit, 0-31)**. Driver가 free Task Tag 할당해 명령 발행, response의 Task Tag로 매칭.
+
+## Q3. (Apply)
+
+UTRD 어디에 sense data가 저장되나?
+
+??? answer "정답 / 해설"
+    UTRD 자체에는 저장 안 됨. UTRD는 Response UPIU의 메모리 pointer를 보유. **Response UPIU** 안에 sense data가 포함되어, driver가 그 위치를 읽어 sense key/ASC/ASCQ 파싱.
+
+## Q4. (Apply)
+
+UFS 4.0의 raw bandwidth는 (HS Gear-5, 2 lane)?
+
+??? answer "정답 / 해설"
+    Gear-5 = 23.32 Gb/s/lane. 2 lane → **약 46 Gb/s ≈ 5.8 GB/s** raw. UPIU/UniPro overhead 제외 후 실효 약 4-5 GB/s.
+
+## Q5. (Evaluate)
+
+다음 중 UFS 특징이 **아닌** 것은?
+
+- [ ] A. Full-duplex
+- [ ] B. SCSI command 기반
+- [ ] C. Queue depth 32
+- [ ] D. PCIe 인터페이스
+
+??? answer "정답 / 해설"
+    **D**. UFS는 **MIPI M-PHY** 시리얼 인터페이스. PCIe는 NVMe. M-PHY는 모바일/저전력에 최적화 (보통 1-4 lane).

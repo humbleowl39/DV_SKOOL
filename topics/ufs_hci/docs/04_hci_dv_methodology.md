@@ -1,8 +1,24 @@
-# Unit 4: UFS HCI DV 검증 전략
+# Module 04 — HCI DV Methodology
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** UFS HCI 검증 환경 (UFS device model + host driver + AXI host interface) 아키텍처를 설계할 수 있다.
+    - **Apply** UTRD/UPIU coverage, register coverage, command queue coverage 시나리오를 작성.
+    - **Implement** Error injection (CRC error, timeout, abort, reset) 시나리오와 복구 검증.
+    - **Plan** Performance 검증 (queue depth × command type matrix, throughput regression).
+
+!!! info "사전 지식"
+    - [Module 01-03](01_ufs_protocol_stack.md)
+    - [UVM](../../uvm/), [AXI](../../amba_protocols/02_axi/)
+
+## 왜 이 모듈이 중요한가
+
+**UFS HCI 검증은 host-device 양방향**. driver-side (register/UTRD) + device-side (UPIU/UniPro) 모두 검증해야 silent corruption 회피. 특히 **error 복구 시나리오** (timeout, abort, reset)는 production silicon의 robustness를 좌우.
 
 ## 핵심 개념
 **UFS HCI 검증 = 레지스터 정확성 + UTRD/UPIU 변환 정확성 + DMA 무결성 + 명령 큐잉 + 에러 복구. SW Driver 관점의 인터페이스(레지스터/메모리)와 Device 관점의 프로토콜(UPIU)을 양 끝에서 동시에 검증.**
@@ -656,6 +672,22 @@ Resume:
 
 **Q: Error Injection은 어떻게 수행하는가?**
 > "에러는 TB의 Device Agent와 UniPro Agent에서 주입하며, DUT RTL은 절대 수정하지 않는다. (1) Device 응답 에러 — Response UPIU의 Status를 CHECK_CONDITION/BUSY로 조작. (2) 불완전 전송 — 요청 크기보다 적은 데이터 반환 → Residual Count 정확성. (3) 링크 에러 — UniPro CRC 에러 주입 → 재전송 투명성, Link Down → IS[UE]. (4) 타임아웃 — Response 의도적 지연 → Task Management 복구 경로. 정상→에러→정상 패턴으로 에러 후 복구까지 검증한다."
+
+---
+
+## 핵심 정리
+
+- **양방향 검증**: driver-side (register/UTRD) + device-side (UPIU/UniPro) 모두.
+- **UFS Device Model**: UPIU 응답을 spec대로 생성. Storage state machine + LU 모델.
+- **Coverage 3축**: register coverage + UPIU type coverage + queue depth coverage.
+- **Error injection**: CRC error, timeout, abort, reset, sense data variations. 복구 동작 확인.
+- **Performance**: Queue depth × Command type matrix + Random/Sequential mix.
+- **Driver compatibility**: Linux UFS driver 시뮬레이션으로 SW-HW 인터페이스 검증.
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_hci_dv_methodology_quiz.md)
+- ➡️ [**Module 05 — Quick Reference Card**](05_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_upiu_command_flow/">

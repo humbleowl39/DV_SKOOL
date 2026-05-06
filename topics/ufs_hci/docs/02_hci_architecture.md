@@ -1,8 +1,25 @@
-# Unit 2: UFS HCI 아키텍처
+# Module 02 — HCI Architecture
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** UFS HCI의 핵심 요소(UTRD, UTMRD, doorbell register, interrupt aggregator)를 그릴 수 있다.
+    - **Trace** SW driver의 명령 제출 → UTRD 작성 → doorbell ring → HCI 처리 흐름을 추적.
+    - **Apply** Interrupt aggregation, multi-queue 활용으로 throughput 최적화 시나리오를 설계.
+    - **Identify** UFS HCI register map의 핵심 영역(HCS/IS/UTRLBA/UTMRLBA 등).
+
+!!! info "사전 지식"
+    - [Module 01](01_ufs_protocol_stack.md)
+    - DMA / queue-based command 모델
+    - register-based HW interface (PCIe/AHB 비슷)
+
+## 왜 이 모듈이 중요한가
+
+**HCI는 SW와 UFS HW 사이의 표준 contract** (JEDEC JESD223). HCI 검증은 driver-side와 device-side의 인터페이스 정확성 + queue 관리 + interrupt 효율을 모두 보장. **UTRD parsing 오류 = silent corruption** — driver가 보낸 명령을 HCI가 잘못 해석하면 storage write/read에 직접 영향.
 
 ## 핵심 개념
 **UFS HCI = SW Driver(UFSHCD)와 UFS 프로토콜 사이의 HW 인터페이스. SW가 레지스터/메모리를 통해 SCSI 명령을 제출하면, HCI가 UPIU로 변환하여 UniPro/M-PHY를 통해 UFS Device에 전달. JEDEC JESD223 표준.**
@@ -409,6 +426,22 @@ SDB vs MCQ 비교:
 
 **Q: UIC Command로 Gear를 변경하는 과정을 설명하라.**
 > "UIC Command는 HCI가 UniPro DME 레이어를 제어하는 인터페이스다. Gear 변경 과정: (1) DME_SET으로 PA_TxGear, PA_RxGear를 원하는 Gear 값으로 설정. (2) DME_SET으로 PA_PWRMode를 FAST로 설정하면 UniPro가 M-PHY Gear 전환을 시작. (3) IS[UPMS] (Power Mode Status) 인터럽트 대기. (4) HCS에서 새로운 Power Mode 확인. 각 DME_SET마다 IS[UCCS]로 완료를 확인해야 하며, Gear 전환 중에는 명령 발행을 자제해야 한다."
+
+---
+
+## 핵심 정리
+
+- **HCI register map**: HCS (status), IS (interrupt), UTRLBA (UTRD list base), UTMRLBA (Task Management list base), CAP (capabilities).
+- **UTRD (UTP Transfer Request Descriptor)**: SW가 작성하는 32-byte 구조 — 명령 + UPIU pointer + response pointer.
+- **UTMRD**: Task Management 명령용 (abort, reset 등).
+- **Doorbell**: SW가 UTRD 작성 후 doorbell register write로 HCI에 알림.
+- **Interrupt aggregation**: 여러 명령 완료를 모아서 한 인터럽트로 → CPU overhead 감소. Counter / timer 기반 trigger.
+- **Multi-queue**: UFS는 queue depth 32. HCI가 동시에 32 명령 처리 가능.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_hci_architecture_quiz.md)
+- ➡️ [**Module 03 — UPIU & Command Flow**](03_upiu_command_flow.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_ufs_protocol_stack/">

@@ -1,8 +1,24 @@
-# Unit 1: UFS 프로토콜 스택
+# Module 01 — UFS Protocol Stack
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** UFS 프로토콜 스택 (Application/UTP/UPIU/UniPro/M-PHY)을 그릴 수 있다.
+    - **Distinguish** 각 계층의 책임과 데이터 변환 흐름 (host application → physical signal)을 추적할 수 있다.
+    - **Compare** UFS와 eMMC/SATA/NVMe의 핵심 차이를 표로 정리할 수 있다.
+    - **Identify** UFS 버전(2.x → 4.x) 진화의 핵심 변경점.
+
+!!! info "사전 지식"
+    - 스토리지 프로토콜 일반 (SCSI 기본, queue 모델)
+    - 시리얼 인터페이스 기본 (PHY 개념)
+
+## 왜 이 모듈이 중요한가
+
+**UFS는 모바일/서버 스토리지의 표준**입니다. eMMC를 대체하며 NAND flash + controller + UniPro/M-PHY를 통합. 검증의 출발점은 5계층 스택을 정확히 이해하고 각 계층의 책임을 분리하는 것.
 
 ## 핵심 개념
 **UFS = SCSI 명령을 UniPro 링크 위에서 M-PHY 시리얼 인터페이스로 전달하는 3계층 프로토콜. eMMC 대비 고속(2.9GB/s+), Full-duplex, 명령 큐잉(최대 32개)을 지원하는 모바일/서버 스토리지 표준.**
@@ -325,6 +341,22 @@ BootROM의 UFS 부팅 시퀀스 (soc_secure_boot_ko Unit 4와 연결):
 
 **Q: M-PHY HS 모드에서 CDR이 왜 중요한가?**
 > "HS 모드는 별도 클럭 라인 없이 데이터에 클럭을 임베딩하여 전송한다. RX 측의 CDR 회로가 수신 데이터 에지에서 클럭을 복원해야 정확한 샘플링이 가능하다. CDR Lock이 실패하면 모든 데이터가 오류가 된다. Gear가 높을수록(G3→G4) 주파수가 높아져 CDR Lock이 까다로워지고, Eye Opening이 좁아져 정밀한 Calibration이 필수적이다."
+
+---
+
+## 핵심 정리
+
+- **5계층**: Application (SCSI command) → UTP (transport) → UPIU (frame) → UniPro (link/network) → M-PHY (physical).
+- **UPIU**: 명령/데이터/응답을 fixed-size frame으로 캡슐화. SCSI command + UFS-specific (Query, NOP, Reject 등).
+- **UniPro**: link/network/transport layer의 통합. PHY-agnostic, MIPI 표준.
+- **M-PHY**: 시리얼 PHY, full-duplex (TX/RX 분리), HS Gear 1-4, PWM 모드.
+- **UFS vs eMMC vs NVMe**: UFS는 SCSI 기반, queue depth 32, full-duplex. NVMe는 register 기반, queue 수 매우 많음.
+- **UFS 진화**: 2.x → 3.x (HS Gear-3) → 4.x (HS Gear-5, 23Gb/s) — 매 버전 BW 2배.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_ufs_protocol_stack_quiz.md)
+- ➡️ [**Module 02 — HCI Architecture**](02_hci_architecture.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

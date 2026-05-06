@@ -1,8 +1,20 @@
-# UFS HCI — Quick Reference Card
+# Module 05 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트.
+
+    **떠올릴 수 있어야 하는 것:**
+
+    - **Recall** UFS 5계층 + UPIU 6종
+    - **Recall** UTRD 형식, doorbell 흐름
+    - **Recall** Task Tag 매칭, queue depth
+
+!!! info "사전 지식"
+    - [Module 01-04](01_ufs_protocol_stack.md)
 
 ## 한줄 요약
 ```
@@ -127,6 +139,12 @@ soc_secure_boot_ko/ Unit 4: Boot Device 초기화 (UFS 부팅 시퀀스)
 ufs_hci_ko/: HCI 내부 동작 상세
 → 두 자료가 상호 보완
 ```
+
+---
+
+## 코스 마무리
+
+4개 모듈 + Quick Ref 완료. [퀴즈](quiz/index.md) · [용어집](glossary.md) · 다음 토픽: [DRAM/DDR](../../dram_ddr/) (storage backbone), [UVM](../../uvm/) (검증 인프라).
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_hci_dv_methodology/">

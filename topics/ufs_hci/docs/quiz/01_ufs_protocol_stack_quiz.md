@@ -1,23 +1,50 @@
-# Quiz: UFS 프로토콜 스택
+# Quiz — Module 01: UFS Protocol Stack
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 01 본문으로 돌아가기](../01_ufs_protocol_stack.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../01_ufs_protocol_stack.md)
+## Q1. (Remember)
+
+UFS 프로토콜 스택의 5계층을 위에서 아래로 나열하세요.
+
+??? answer "정답 / 해설"
+    1. **Application** (SCSI command)
+    2. **UTP / UPIU** (transport, UFS frame)
+    3. **UniPro** (link/network/transport, MIPI 표준)
+    4. **M-PHY** (physical, MIPI 표준)
+    5. **Storage media** (NAND flash)
+
+## Q2. (Understand)
+
+UFS와 NVMe의 가장 큰 차이는?
+
+??? answer "정답 / 해설"
+    - **UFS**: SCSI command 기반, queue depth 32, MIPI M-PHY (시리얼)
+    - **NVMe**: register 기반, 수많은 queue (HW 제한 내), PCIe (시리얼)
+
+    UFS는 모바일/임베디드 (전력 효율), NVMe는 서버/PC (높은 throughput).
+
+## Q3. (Apply)
+
+UFS 4.0의 HS Gear-5 throughput은?
+
+??? answer "정답 / 해설"
+    HS Gear-5 = 23.32 Gb/s per lane. UFS는 보통 2 lane (TX 2 + RX 2) → **약 46 Gb/s = 5.8 GB/s** raw. UPIU overhead 제외 후 실효 약 4-5 GB/s.
+
+## Q4. (Analyze)
+
+UPIU 형식이 SCSI CDB를 그대로 사용하지 않고 캡슐화하는 이유는?
+
+??? answer "정답 / 해설"
+    1. **UFS-specific 명령 추가**: Query (descriptor read/write), NOP, Reject 등 SCSI 외 명령
+    2. **Task Tag 추가**: queue depth 32 식별
+    3. **Header 표준화**: LUN, command set type, flags 등 UFS 단위에서 필요한 메타데이터
+    4. **Future extension**: EHS (Extra Header Segment)로 확장 여지
+
+## Q5. (Evaluate)
+
+UFS가 eMMC를 대체한 가장 결정적 이유는?
+
+??? answer "정답 / 해설"
+    **Full-duplex + Command Queuing**. eMMC는 half-duplex (TX/RX 시분할), command queuing 없음 (command 1개씩 처리). UFS는 동시 32 command + TX/RX 분리 → 모바일 워크로드의 IOPS와 latency 모두 ↑. 추가로 시리얼 인터페이스로 EMI/PCB 라우팅 유리.

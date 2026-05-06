@@ -1,23 +1,64 @@
-# Quiz: UFS HCI DV 검증 전략
+# Quiz — Module 04: HCI DV Methodology
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 04 본문으로 돌아가기](../04_hci_dv_methodology.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../04_hci_dv_methodology.md)
+## Q1. (Remember)
+
+UFS HCI 검증의 양방향 검증 두 측은?
+
+??? answer "정답 / 해설"
+    - **Driver-side**: Register/UTRD/메모리 인터페이스
+    - **Device-side**: UPIU/UniPro/M-PHY 측 응답
+
+## Q2. (Understand)
+
+UFS Device Model이 검증에서 하는 역할은?
+
+??? answer "정답 / 해설"
+    - SCSI command를 받아 spec대로 응답 (Read/Write/Query)
+    - LU별 storage state 모델링 (가상 NAND 영역)
+    - 에러 시나리오 inject (CRC, timeout, sense data variants)
+    - UPIU 응답 형식 정확성 검증의 reference
+
+## Q3. (Apply)
+
+다음 시나리오의 검증 기법을 매핑하세요.
+
+| 시나리오 | 기법 |
+|----------|------|
+| (a) UTRD field accuracy | ? |
+| (b) Queue depth 32 동작 | ? |
+| (c) CRC error 복구 | ? |
+| (d) Linux driver 호환성 | ? |
+
+??? answer "정답 / 해설"
+    - (a) **UTRD field assertion** + reference compare in scoreboard
+    - (b) **Multi-command sequence** + queue depth coverage
+    - (c) **Error injection** in M-PHY layer + 복구 sequence 검증
+    - (d) **Linux UFS driver 시뮬레이션** (real driver code on virtual SoC)
+
+## Q4. (Analyze)
+
+UFS 검증에서 가장 catch 어려운 silent bug 카테고리는?
+
+??? answer "정답 / 해설"
+    **Race condition between SW driver and HW HCI**. 예:
+    - SW가 doorbell ring 직후 다른 slot 업데이트 → HCI fetch 시점에 따라 다른 결과
+    - SW가 UTRD 작성 완료 전에 doorbell ring → HCI가 incomplete 데이터 fetch
+    - Multi-core SW에서 같은 slot을 두 thread가 동시 업데이트
+
+    검증: SW timing variance (delay injection), thread scheduling chaos.
+
+## Q5. (Evaluate)
+
+다음 중 Production silicon에 가장 위험한 결함은?
+
+- [ ] A. Performance 5% 저하
+- [ ] B. Linux 5.0 driver와 5.10 driver 모두 동작하지만 5.15에서 fail
+- [ ] C. CRC error 복구 50% 성공
+- [ ] D. Boot LU read 1% 실패
+
+??? answer "정답 / 해설"
+    **D**. Boot 실패는 system 자체가 부팅 안 됨 → 디바이스 brick. 1% rate라도 production scale에서 수만 대 영향. C는 복구 메커니즘이지만 부분적 fail라 silent하게 진행. A는 성능, B는 호환성으로 mitigation 가능.
