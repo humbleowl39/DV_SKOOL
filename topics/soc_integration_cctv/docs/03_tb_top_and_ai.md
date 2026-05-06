@@ -1,8 +1,20 @@
-# Unit 3: TB Top 환경 구축 + AI 자동화
+# Module 03 — TB Top & AI Automation
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Plan** TB Top 환경의 재사용성을 위한 layered architecture 설계
+    - **Apply** AI (LLM) 자동화로 sequence/coverage gap/디버그를 보조하는 workflow 도입
+    - **Identify** AI 자동화의 한계와 인간 검토 필수 영역 (silent corruption, race condition)
+    - **Implement** RAL + multi-clock domain + 다양한 IP를 통합한 TB Top 구조
+
+!!! info "사전 지식"
+    - [Module 01-02](01_soc_top_integration.md)
+    - LLM 사용 경험 ([AI Engineering 코스](../../ai_engineering/) 참고)
 
 ## 핵심 개념
 **TB Top = SoC 전체를 감싸는 검증 환경으로 여러 프로젝트에 재사용 가능하도록 설계. AI 자동화 = CCTV 매트릭스의 Gap을 자동 발견하고 테스트 생성까지 수행. 이 둘의 조합이 SoC 통합 검증의 효율을 극대화.**
@@ -805,6 +817,21 @@ JSON Config 파일 1개만 교체하면 된다. Config에 IP 목록, Memory Map,
 
 → 1에서 걸러지지 않은 Gap = 실제 누락이므로 반드시 검증 수행
 </details>
+
+---
+
+## 핵심 정리
+
+- **TB Top 재사용성**: 프로젝트마다 IP 종류는 다르지만 통합 패턴은 비슷 → layered TB (Common 부분 + 프로젝트별 customization).
+- **AI 자동화 활용 영역**: (1) coverage gap → targeted sequence 생성, (2) 디버그 시 log/wave 분석, (3) RAL 자동 생성, (4) spec → constraint 자동 변환.
+- **AI 한계**: silent corruption, race condition, timing-sensitive bug는 human inspection 필수. AI는 hypothesis 제안, 검증은 사람.
+- **RAL 통합**: 모든 IP의 register map을 단일 RAL block으로 통합 → CPU SW 모델과 동등한 access pattern.
+- **Workflow**: spec change → AI가 sequence 초안 생성 → reviewer → 시뮬 → 회귀 자동화.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_tb_top_and_ai_quiz.md)
+- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_common_task_cctv/">

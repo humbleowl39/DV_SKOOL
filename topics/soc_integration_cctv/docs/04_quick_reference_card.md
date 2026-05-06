@@ -1,8 +1,14 @@
-# SoC Integration & CCTV — Quick Reference Card
+# Module 04 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트.
+
+!!! info "사전 지식"
+    - [Module 01-03](01_soc_top_integration.md)
 
 ## 한줄 요약
 ```
@@ -152,6 +158,12 @@ mmu_ko Unit 4:                sysMMU = Common Task의 대표 항목
 
 → ai_engineering_ko가 "어떻게(AI)" / soc_integration_cctv_ko가 "무엇을(CCTV)"
 ```
+
+---
+
+## 코스 마무리
+
+[퀴즈](quiz/index.md) · [용어집](glossary.md) · 다음: [UVM](../../uvm/), [AI Engineering](../../ai_engineering/).
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_tb_top_and_ai/">

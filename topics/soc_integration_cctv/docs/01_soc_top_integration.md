@@ -1,8 +1,24 @@
-# Unit 1: SoC Top Integration 검증
+# Module 01 — SoC Top Integration
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** IP-level DV vs SoC-level DV의 검증 책임 차이를 설명
+    - **Identify** Top-level만 catch되는 결함 (connectivity, clock domain, interrupt routing, memory map, power)
+    - **Design** Multi-IP UVM env에 multiple agent + virtual sequencer 통합 구조
+    - **Plan** Multi-clock / multi-power domain SoC의 reset / handshake 시나리오
+
+!!! info "사전 지식"
+    - [UVM](../../uvm/) Module 01-06
+    - SoC architecture 일반
+
+## 왜 이 모듈이 중요한가
+
+**SoC integration bug는 가장 비싸게 잡힙니다**. IP-level은 모두 PASS인데 통합 후 connectivity 한 줄 누락 → silicon revision 또는 software workaround. Top-level DV는 IP DV가 catch 못 하는 issue category 전체를 책임집니다.
 
 ## 핵심 개념
 **SoC Top 검증 = IP 단위에서 검증할 수 없는 "IP 간 상호작용"을 확인하는 단계. Connectivity, Clock/Reset, Interrupt, Memory Map, Power Domain 등 통합에서만 드러나는 문제를 검증. IP DV가 "각 부품이 정상"이라면, Top DV는 "부품을 조립한 완제품이 정상"인지 확인.**
@@ -617,6 +633,21 @@ PLL Lock → Bus Fabric → Memory Controller (+ DRAM Init 완료 대기) → CP
 
 **Q: Memory Map 검증에서 어떤 시나리오를 포함했나?**
 > "3단계로 진행했다. (1) 각 IP의 Base Address에 R/W 접근하여 OKAY 응답 확인, (2) 미할당 주소 접근 시 DECERR 응답 확인, (3) 주소 경계에서 정확히 잘리는지 boundary test. 특히 주소 중첩은 두 slave가 동시 응답하여 버스 프로토콜 위반으로 이어지므로, IP-XACT 메타데이터와 실제 RTL의 주소 디코더를 크로스 체크했다."
+
+---
+
+## 핵심 정리
+
+- **IP DV vs Top DV**: IP는 부품 정확성, Top은 조립 정확성 (IP 간 상호작용).
+- **Top-only 결함**: connectivity (signal mis-route), clock domain (CDC), interrupt routing, memory map decoding, power domain isolation.
+- **Multi-IP UVM env**: env에 여러 agent + virtual sequencer가 sub-sequencer 핸들 보유.
+- **Multi-clock**: 각 clock domain마다 별도 agent + clocking block. Reset sequence가 모든 domain에서 정상 deassert.
+- **Power domain**: ON/OFF 시퀀스, isolation cell 동작, retention register.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_soc_top_integration_quiz.md)
+- ➡️ [**Module 02 — Common Task & CCTV**](02_common_task_cctv.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

@@ -1,8 +1,20 @@
-# Unit 2: Common Task & CCTV (Common Task Coverage Verification)
+# Module 02 — Common Task & CCTV
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Identify** SoC 내 Common Task (sysMMU, Security/Access Control, DVFS, Clock Gating 등) 구분
+    - **Apply** CCTV (Common Task Coverage Verification) 패턴으로 모든 IP에 task 적용 추적
+    - **Implement** 재사용 가능한 sequence library + virtual sequencer
+    - **Plan** Coverage matrix (IP × Common Task) 닫는 전략
+
+!!! info "사전 지식"
+    - [Module 01](01_soc_top_integration.md)
+    - UVM Sequence Library 패턴
 
 ## 핵심 개념
 **Common Task = SoC 내 모든(또는 대부분의) IP에 공통적으로 적용되는 검증 항목 (sysMMU, Security/Access Control, DVFS, Clock Gating 등). CCTV = 이 Common Task가 모든 IP에 대해 빠짐없이 수행되었는지 추적하는 Coverage 방법론. DVCon 2025 논문의 핵심 주제.**
@@ -676,6 +688,21 @@ Gap C: Technical Gap
 
 **Q: sysMMU 통합 검증에서 가장 중요한 시나리오는?**
 > "Bypass→Enable 전환이다. 부트로더에서는 sysMMU Bypass로 동작하다가 OS가 Enable로 전환하는데, 이 시점에 진행 중인 DMA 트랜잭션과 Page Table 설정의 Race Condition이 발생할 수 있다. 타이밍 의존적 간헐 버그로, Silicon에서 디버그하면 수 주가 걸린다. Pre-silicon에서 반드시 검증해야 한다."
+
+---
+
+## 핵심 정리
+
+- **Common Task 후보**: sysMMU access, Security 권한 검사, DVFS transition, Clock Gating, Power Domain ON/OFF.
+- **CCTV 매트릭스**: IP × Common Task의 2D coverage. 모든 cell이 covered 되어야 sign-off.
+- **재사용 sequence library**: 한 sequence가 여러 IP의 sequencer에 generic하게 동작 (parametric).
+- **Virtual sequencer**: sub-sequencer 핸들 + Common Task별 wrapper sequence.
+- **Coverage 자동 누적**: 각 IP test가 자기 Common Task 영역을 mark → 통합 시 매트릭스 자동 업데이트.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_common_task_cctv_quiz.md)
+- ➡️ [**Module 03 — TB Top & AI**](03_tb_top_and_ai.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_soc_top_integration/">
