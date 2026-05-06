@@ -17,27 +17,27 @@ TCP/IP 스택 기본, NIC 동작 원리, AMBA 인터커넥트
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_tcp_ip_and_toe_concept.md">
+  <a class="course-card" href="01_tcp_ip_and_toe_concept/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">TCP/IP 기본 + TOE 개념</div>
     <div class="course-card-meta">⏱ 10분 학습</div>
   </a>
-  <a class="course-card" href="02_toe_architecture.md">
+  <a class="course-card" href="02_toe_architecture/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">TOE 아키텍처</div>
     <div class="course-card-meta">⏱ 17분 학습</div>
   </a>
-  <a class="course-card" href="03_toe_key_functions.md">
+  <a class="course-card" href="03_toe_key_functions/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">TOE 핵심 기능 상세</div>
     <div class="course-card-meta">⏱ 23분 학습</div>
   </a>
-  <a class="course-card" href="04_toe_dv_methodology.md">
+  <a class="course-card" href="04_toe_dv_methodology/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">TOE DV 검증 전략</div>
     <div class="course-card-meta">⏱ 23분 학습</div>
   </a>
-  <a class="course-card" href="05_quick_reference_card.md">
+  <a class="course-card" href="05_quick_reference_card/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">TOE — Quick Reference Card</div>
     <div class="course-card-meta">⏱ 3분 학습</div>

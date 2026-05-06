@@ -36,43 +36,43 @@
 순차 학습을 권장합니다 (특히 1→4까지). 5~7은 토픽 단위로도 가능합니다.
 
 <div class="course-grid">
-  <a class="course-card" href="01_architecture_and_phase.md">
+  <a class="course-card" href="01_architecture_and_phase/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">UVM 아키텍처 &amp; Phase</div>
     <div class="course-card-desc">클래스 계층, Phase 실행 모델, Top-Down vs Bottom-Up</div>
     <div class="course-card-meta">⏱ 약 17분 · Mermaid 다이어그램 포함</div>
   </a>
-  <a class="course-card" href="02_agent_driver_monitor.md">
+  <a class="course-card" href="02_agent_driver_monitor/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Agent / Driver / Monitor</div>
     <div class="course-card-desc">DUT 인터페이스 컴포넌트, Active/Passive 분리, VIF 연결</div>
     <div class="course-card-meta">⏱ 약 16분</div>
   </a>
-  <a class="course-card" href="03_sequence_and_item.md">
+  <a class="course-card" href="03_sequence_and_item/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">Sequence &amp; Sequence Item</div>
     <div class="course-card-desc">자극 생성 모델, body() 패턴, Virtual Sequence 조합</div>
     <div class="course-card-meta">⏱ 약 17분</div>
   </a>
-  <a class="course-card" href="04_config_db_factory.md">
+  <a class="course-card" href="04_config_db_factory/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">config_db &amp; Factory</div>
     <div class="course-card-desc">계층 설정 전달, Type/Instance Override 의사결정</div>
     <div class="course-card-meta">⏱ 약 17분</div>
   </a>
-  <a class="course-card" href="05_tlm_scoreboard_coverage.md">
+  <a class="course-card" href="05_tlm_scoreboard_coverage/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">TLM, Scoreboard, Coverage</div>
     <div class="course-card-desc">Analysis Port 통신, 비교 모델, 커버리지 클로저</div>
     <div class="course-card-meta">⏱ 약 18분</div>
   </a>
-  <a class="course-card" href="06_practical_patterns.md">
+  <a class="course-card" href="06_practical_patterns/">
     <div class="course-card-num">Module 06</div>
     <div class="course-card-title">실무 패턴 &amp; 안티패턴</div>
     <div class="course-card-desc">현장에서 반복되는 좋은 설계 vs 피해야 할 함정</div>
     <div class="course-card-meta">⏱ 약 16분</div>
   </a>
-  <a class="course-card" href="07_quick_reference_card.md">
+  <a class="course-card" href="07_quick_reference_card/">
     <div class="course-card-num">Module 07</div>
     <div class="course-card-title">Quick Reference Card</div>
     <div class="course-card-desc">실무 치트시트 — 매크로, 패턴, 디버그 팁</div>

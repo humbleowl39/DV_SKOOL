@@ -17,37 +17,37 @@ Hardware Root of Trust, chain of trust, crypto, attack surface, BootROM DV
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_hardware_root_of_trust.md">
+  <a class="course-card" href="01_hardware_root_of_trust/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">Hardware Root of Trust (하드웨어 신뢰 기반)</div>
     <div class="course-card-meta">⏱ 19분 학습</div>
   </a>
-  <a class="course-card" href="02_chain_of_trust_boot_stages.md">
+  <a class="course-card" href="02_chain_of_trust_boot_stages/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)</div>
     <div class="course-card-meta">⏱ 16분 학습</div>
   </a>
-  <a class="course-card" href="03_crypto_in_boot.md">
+  <a class="course-card" href="03_crypto_in_boot/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">Secure Boot 암호학 — 서명 검증과 키 관리</div>
     <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
-  <a class="course-card" href="04_boot_device_and_boot_mode.md">
+  <a class="course-card" href="04_boot_device_and_boot_mode/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">Boot Device & Boot Mode (부팅 장치와 부팅 모드)</div>
     <div class="course-card-meta">⏱ 16분 학습</div>
   </a>
-  <a class="course-card" href="05_attack_surface_and_defense.md">
+  <a class="course-card" href="05_attack_surface_and_defense/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">공격 표면과 방어</div>
     <div class="course-card-meta">⏱ 14분 학습</div>
   </a>
-  <a class="course-card" href="06_quick_reference_card.md">
+  <a class="course-card" href="06_quick_reference_card/">
     <div class="course-card-num">Module 06</div>
     <div class="course-card-title">SoC Secure Boot Flow — Quick Reference Card</div>
     <div class="course-card-meta">⏱ 7분 학습</div>
   </a>
-  <a class="course-card" href="07_bootrom_dv_methodology.md">
+  <a class="course-card" href="07_bootrom_dv_methodology/">
     <div class="course-card-num">Module 07</div>
     <div class="course-card-title">BootROM DV 검증 방법론</div>
     <div class="course-card-meta">⏱ 24분 학습</div>

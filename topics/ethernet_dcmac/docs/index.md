@@ -17,22 +17,22 @@ OSI 모델, MAC/PHY 분리 개념, 네트워크 패킷 구조
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_ethernet_fundamentals.md">
+  <a class="course-card" href="01_ethernet_fundamentals/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">Ethernet 기본 + 프레임 구조</div>
     <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
-  <a class="course-card" href="02_dcmac_architecture.md">
+  <a class="course-card" href="02_dcmac_architecture/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">DCMAC 아키텍처</div>
     <div class="course-card-meta">⏱ 15분 학습</div>
   </a>
-  <a class="course-card" href="03_dcmac_dv_methodology.md">
+  <a class="course-card" href="03_dcmac_dv_methodology/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">DCMAC DV 검증 전략</div>
     <div class="course-card-meta">⏱ 21분 학습</div>
   </a>
-  <a class="course-card" href="04_quick_reference_card.md">
+  <a class="course-card" href="04_quick_reference_card/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">Ethernet & DCMAC — Quick Reference Card</div>
     <div class="course-card-meta">⏱ 6분 학습</div>

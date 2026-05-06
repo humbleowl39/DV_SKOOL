@@ -17,27 +17,27 @@ Universal Flash Storage — 프로토콜 스택, HCI 아키텍처, UPIU command 
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_ufs_protocol_stack.md">
+  <a class="course-card" href="01_ufs_protocol_stack/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">UFS 프로토콜 스택</div>
     <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
-  <a class="course-card" href="02_hci_architecture.md">
+  <a class="course-card" href="02_hci_architecture/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">UFS HCI 아키텍처</div>
     <div class="course-card-meta">⏱ 18분 학습</div>
   </a>
-  <a class="course-card" href="03_upiu_command_flow.md">
+  <a class="course-card" href="03_upiu_command_flow/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">UPIU와 명령 처리 흐름</div>
     <div class="course-card-meta">⏱ 14분 학습</div>
   </a>
-  <a class="course-card" href="04_hci_dv_methodology.md">
+  <a class="course-card" href="04_hci_dv_methodology/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">UFS HCI DV 검증 전략</div>
     <div class="course-card-meta">⏱ 27분 학습</div>
   </a>
-  <a class="course-card" href="05_quick_reference_card.md">
+  <a class="course-card" href="05_quick_reference_card/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">UFS HCI — Quick Reference Card</div>
     <div class="course-card-meta">⏱ 5분 학습</div>

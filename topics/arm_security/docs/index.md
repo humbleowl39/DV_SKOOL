@@ -17,27 +17,27 @@ ARMv8-A 아키텍처 기초, 권한 모델, secure boot 개요
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_exception_level_trustzone.md">
+  <a class="course-card" href="01_exception_level_trustzone/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">Exception Level & TrustZone</div>
     <div class="course-card-meta">⏱ 18분 학습</div>
   </a>
-  <a class="course-card" href="02_world_switch_soc_infra.md">
+  <a class="course-card" href="02_world_switch_soc_infra/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">보안 상태 전환 & SoC 보안 인프라</div>
     <div class="course-card-meta">⏱ 18분 학습</div>
   </a>
-  <a class="course-card" href="02a_secure_enclave_and_tee_hierarchy.md">
+  <a class="course-card" href="02a_secure_enclave_and_tee_hierarchy/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">Unit 2A: Secure Enclave & TEE 계층 구조</div>
     <div class="course-card-meta">⏱ 23분 학습</div>
   </a>
-  <a class="course-card" href="03_secure_boot_connection.md">
+  <a class="course-card" href="03_secure_boot_connection/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">Secure Boot에서의 보안 레벨 적용</div>
     <div class="course-card-meta">⏱ 21분 학습</div>
   </a>
-  <a class="course-card" href="04_quick_reference_card.md">
+  <a class="course-card" href="04_quick_reference_card/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">ARM Security Architecture — Quick Reference Card</div>
     <div class="course-card-meta">⏱ 7분 학습</div>

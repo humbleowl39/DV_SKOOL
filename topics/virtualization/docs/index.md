@@ -17,47 +17,47 @@ OS 기본, 가상메모리/페이지테이블, 인터럽트/예외
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_virtualization_fundamentals.md">
+  <a class="course-card" href="01_virtualization_fundamentals/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">가상화 기본 개념</div>
     <div class="course-card-meta">⏱ 8분 학습</div>
   </a>
-  <a class="course-card" href="01a_system_architecture_evolution.md">
+  <a class="course-card" href="01a_system_architecture_evolution/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지</div>
     <div class="course-card-meta">⏱ 23분 학습</div>
   </a>
-  <a class="course-card" href="02_cpu_virtualization.md">
+  <a class="course-card" href="02_cpu_virtualization/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">CPU 가상화</div>
     <div class="course-card-meta">⏱ 12분 학습</div>
   </a>
-  <a class="course-card" href="03_memory_virtualization.md">
+  <a class="course-card" href="03_memory_virtualization/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">메모리 가상화</div>
     <div class="course-card-meta">⏱ 10분 학습</div>
   </a>
-  <a class="course-card" href="04_io_virtualization.md">
+  <a class="course-card" href="04_io_virtualization/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">I/O 가상화</div>
     <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
-  <a class="course-card" href="05_hypervisor_types.md">
+  <a class="course-card" href="05_hypervisor_types/">
     <div class="course-card-num">Module 06</div>
     <div class="course-card-title">Hypervisor 유형</div>
     <div class="course-card-meta">⏱ 9분 학습</div>
   </a>
-  <a class="course-card" href="06_strict_vs_passthrough.md">
+  <a class="course-card" href="06_strict_vs_passthrough/">
     <div class="course-card-num">Module 07</div>
     <div class="course-card-title">Strict System vs Hypervisor Pass-through</div>
     <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
-  <a class="course-card" href="07_containers_and_modern.md">
+  <a class="course-card" href="07_containers_and_modern/">
     <div class="course-card-num">Module 08</div>
     <div class="course-card-title">컨테이너와 현대 가상화</div>
     <div class="course-card-meta">⏱ 10분 학습</div>
   </a>
-  <a class="course-card" href="08_quick_reference_card.md">
+  <a class="course-card" href="08_quick_reference_card/">
     <div class="course-card-num">Module 09</div>
     <div class="course-card-title">Quick Reference Card</div>
     <div class="course-card-meta">⏱ 12분 학습</div>

@@ -17,22 +17,22 @@ SystemVerilog, 시뮬레이션 기반 검증 경험, 명제 논리 기본
 ## 학습 모듈
 
 <div class="course-grid">
-  <a class="course-card" href="01_formal_fundamentals.md">
+  <a class="course-card" href="01_formal_fundamentals/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">Formal Verification 기본 개념</div>
     <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
-  <a class="course-card" href="02_sva.md">
+  <a class="course-card" href="02_sva/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">SVA (SystemVerilog Assertions)</div>
     <div class="course-card-meta">⏱ 15분 학습</div>
   </a>
-  <a class="course-card" href="03_jaspergold_and_strategy.md">
+  <a class="course-card" href="03_jaspergold_and_strategy/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">JasperGold 활용 + DV 전략</div>
     <div class="course-card-meta">⏱ 17분 학습</div>
   </a>
-  <a class="course-card" href="04_quick_reference_card.md">
+  <a class="course-card" href="04_quick_reference_card/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">Formal Verification — Quick Reference Card</div>
     <div class="course-card-meta">⏱ 6분 학습</div>

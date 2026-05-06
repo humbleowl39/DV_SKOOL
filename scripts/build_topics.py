@@ -243,8 +243,10 @@ def make_course_home(
 
     cards_html = '<div class="course-grid">\n'
     for i, c in enumerate(chapters, 1):
+        # MkDocs use_directory_urls=true → strip .md, append /
+        href_dir = c["href"][:-3] + "/" if c["href"].endswith(".md") else c["href"]
         cards_html += (
-            f'  <a class="course-card" href="{c["href"]}">\n'
+            f'  <a class="course-card" href="{href_dir}">\n'
             f'    <div class="course-card-num">Module {i:02d}</div>\n'
             f'    <div class="course-card-title">{c["title"]}</div>\n'
             f'    <div class="course-card-meta">⏱ {c["time"]}분 학습</div>\n'

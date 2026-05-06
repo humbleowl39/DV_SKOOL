@@ -245,3 +245,74 @@
   background: rgba(255, 235, 59, 0.25);
   color: inherit;
 }
+
+/* ===========================================================
+   Mermaid — 다크모드 대비 강화
+   =========================================================== */
+.md-typeset .mermaid {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+/* 라이트모드: 약한 배경 박스로 다이어그램 영역 분리 */
+.md-typeset .mermaid svg {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+  padding: 0.5rem;
+  max-width: 100%;
+}
+
+/* 다크모드: 노드/라벨 가독성 강화 */
+[data-md-color-scheme="slate"] .md-typeset .mermaid svg {
+  background: rgba(255, 255, 255, 0.04);
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid .label,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .nodeLabel,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .edgeLabel {
+  color: #1a1a1a !important;
+  fill: #1a1a1a !important;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid .edgeLabel {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid .edgePath .path,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .flowchart-link {
+  stroke: #aab2c0 !important;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid marker path {
+  fill: #aab2c0 !important;
+  stroke: #aab2c0 !important;
+}
+
+/* classDiagram (UVM 클래스 계층) — 다크모드용 명시 색상 */
+[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup rect,
+[data-md-color-scheme="slate"] .md-typeset .mermaid g.classGroup rect {
+  fill: #e3f2fd !important;
+  stroke: #1976d2 !important;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup .title,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup text {
+  fill: #0d2a4a !important;
+  color: #0d2a4a !important;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup line {
+  stroke: #1976d2 !important;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid .relation {
+  stroke: #aab2c0 !important;
+}
+[data-md-color-scheme="slate"] .md-typeset .mermaid #arrowhead path {
+  fill: #aab2c0 !important;
+  stroke: #aab2c0 !important;
+}
+
+/* classDef 미적용 노드의 폴백(라이트 fill + 다크 텍스트) */
+[data-md-color-scheme="slate"] .md-typeset .mermaid .node rect,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .node polygon,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .node ellipse,
+[data-md-color-scheme="slate"] .md-typeset .mermaid .node circle {
+  fill: #f5f7fa;
+  stroke: #607d8b;
+}
