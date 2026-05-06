@@ -386,11 +386,11 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
    <details><summary>정답</summary>4개의 독립적인 APB 단일 전송으로 분해된다. APB는 burst를 지원하지 않으므로.</details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_axi.md">
+  <a class="nav-next" href="../02_axi/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">AXI (Advanced eXtensible Interface)</div>
   </a>

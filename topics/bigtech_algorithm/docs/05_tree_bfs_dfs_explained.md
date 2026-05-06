@@ -459,11 +459,11 @@ endmodule
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_stack_binary_search_explained.md">
+  <a class="nav-prev" href="../04_stack_binary_search_explained/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Stack & Binary Search</div>
   </a>
-  <a class="nav-next" href="06_dynamic_programming_explained.md">
+  <a class="nav-next" href="../06_dynamic_programming_explained/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Dynamic Programming (DP)</div>
   </a>

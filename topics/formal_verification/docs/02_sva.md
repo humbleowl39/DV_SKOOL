@@ -490,11 +490,11 @@ SVA에서 존재하지 않는 신호를 참조하면:
 > "시퀀스의 특정 시점에서 값을 캡처하여 나중 시점과 비교해야 할 때 사용한다. 예를 들어 'write한 데이터가 read에서 정확히 나오는가'를 검증하려면, write 시점의 data를 로컬 변수에 저장하고 read 시점에 비교한다. 로컬 변수는 sequence 안에서만 선언 가능하고, 여러 시퀀스 인스턴스가 동시에 활성화되면 각각 독립적인 변수를 가진다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_formal_fundamentals.md">
+  <a class="nav-prev" href="../01_formal_fundamentals/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Formal Verification 기본 개념</div>
   </a>
-  <a class="nav-next" href="03_jaspergold_and_strategy.md">
+  <a class="nav-next" href="../03_jaspergold_and_strategy/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">JasperGold 활용 + DV 전략</div>
   </a>

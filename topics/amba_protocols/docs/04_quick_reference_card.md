@@ -186,11 +186,11 @@ AXI-Stream:
 | TKEEP과 WSTRB 차이? | 동일 개념 (바이트 마스크) but TKEEP은 AXI-Stream, WSTRB은 AXI Write |
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_axi_stream.md">
+  <a class="nav-prev" href="../03_axi_stream/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">AXI-Stream</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

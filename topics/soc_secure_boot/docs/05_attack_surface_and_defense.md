@@ -308,11 +308,11 @@ endclass
 > "공격 유형별로 분류한다: (1) Crypto 실패 — 잘못된 서명, 불량 인증서, ROTPK 불일치. (2) 버전 공격 — Anti-RB Counter 미만으로 Rollback. (3) HW 변조 — verify 결과 Force-flip, TOCTOU 메모리 쓰기. (4) 입력 손상 — 잘린 이미지, 초과 크기 버퍼. (5) 설정 — Secure Boot ON 상태에서 미서명 FW, JTAG 비활성화 시 접근 시도. 각 시나리오에서 예상 응답(abort, fallback, lockdown)을 검증한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_boot_device_and_boot_mode.md">
+  <a class="nav-prev" href="../04_boot_device_and_boot_mode/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Boot Device & Boot Mode (부팅 장치와 부팅 모드)</div>
   </a>
-  <a class="nav-next" href="06_quick_reference_card.md">
+  <a class="nav-next" href="../06_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">SoC Secure Boot Flow — Quick Reference Card</div>
   </a>

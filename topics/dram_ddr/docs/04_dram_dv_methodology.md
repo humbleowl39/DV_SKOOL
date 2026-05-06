@@ -417,11 +417,11 @@ Resume:
 > "DRAM Behavioral Model에서 단일 비트 에러를 주입하고, Read 시 수정된 값이 반환되는지 확인한다(투명성). 2-bit 이상 에러는 On-die ECC로 수정 불가하므로, 외부 SECDED ECC의 검출과 에러 인터럽트 발생을 검증한다. 또한 MC의 ECC Scrubbing이 주기적으로 모든 주소를 순회하며 에러를 교정하는지 확인한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_memory_interface_phy.md">
+  <a class="nav-prev" href="../03_memory_interface_phy/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Memory Interface / PHY</div>
   </a>
-  <a class="nav-next" href="05_quick_reference_card.md">
+  <a class="nav-next" href="../05_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">DRAM Memory Controller & DDR4/5 — Quick Reference Card</div>
   </a>

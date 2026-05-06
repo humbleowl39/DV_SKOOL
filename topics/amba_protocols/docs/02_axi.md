@@ -468,11 +468,11 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
    <details><summary>정답</summary>(0xFF + 1) × 8 = 256 × 8 = 2048 bytes = 2KB. AXI4에서 단일 burst로 전송 가능한 최대량.</details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_apb_ahb.md">
+  <a class="nav-prev" href="../01_apb_ahb/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">APB & AHB</div>
   </a>
-  <a class="nav-next" href="03_axi_stream.md">
+  <a class="nav-next" href="../03_axi_stream/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">AXI-Stream</div>
   </a>

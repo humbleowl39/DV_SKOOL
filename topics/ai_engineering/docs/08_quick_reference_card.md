@@ -123,11 +123,11 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 | Multi-Agent System | 복잡한 DV 워크플로 자동화 |
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="07_dv_application.md">
+  <a class="nav-prev" href="../07_dv_application/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">DV/EDA 도메인 적용 사례</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

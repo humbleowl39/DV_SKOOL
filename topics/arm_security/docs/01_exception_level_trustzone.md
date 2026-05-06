@@ -486,11 +486,11 @@ Hypervisor Stage 2:
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_world_switch_soc_infra.md">
+  <a class="nav-next" href="../02_world_switch_soc_infra/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">보안 상태 전환 & SoC 보안 인프라</div>
   </a>

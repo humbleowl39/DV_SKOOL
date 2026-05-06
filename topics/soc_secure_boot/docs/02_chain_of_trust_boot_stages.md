@@ -357,11 +357,11 @@ BL2 DRAM 초기화 단계:
 > "DRAM Training은 PVT 변동과 보드 배선 차이를 보상하여 수 GHz 데이터 버스의 타이밍 마진을 확보하는 과정이다. 코드만 수십~수백 KB에 달하고, DRAM 종류(DDR4/5, LPDDR4/5)별로 알고리즘이 다르며, 새 DRAM 벤더 지원을 위해 업데이트가 필요하다. BL1(ROM)에 넣으면 크기 부담 + 버그 수정 불가이므로, BL2(Flash, 업데이트 가능)에서 수행한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_hardware_root_of_trust.md">
+  <a class="nav-prev" href="../01_hardware_root_of_trust/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Hardware Root of Trust (하드웨어 신뢰 기반)</div>
   </a>
-  <a class="nav-next" href="03_crypto_in_boot.md">
+  <a class="nav-next" href="../03_crypto_in_boot/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Secure Boot 암호학 — 서명 검증과 키 관리</div>
   </a>

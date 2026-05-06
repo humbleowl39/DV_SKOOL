@@ -253,11 +253,11 @@ BootROM 검증에서의 config_db 활용:
 - ➡️ [**Module 05 — TLM, Scoreboard, Coverage**](05_tlm_scoreboard_coverage.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_sequence_and_item.md">
+  <a class="nav-prev" href="../03_sequence_and_item/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Sequence & Sequence Item</div>
   </a>
-  <a class="nav-next" href="05_tlm_scoreboard_coverage.md">
+  <a class="nav-next" href="../05_tlm_scoreboard_coverage/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">TLM, Scoreboard, Coverage</div>
   </a>

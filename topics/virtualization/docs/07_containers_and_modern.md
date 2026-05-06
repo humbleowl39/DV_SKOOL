@@ -256,11 +256,11 @@ Timeline:
 > "네 가지 전략이다. (1) 최소 커널(~5MB) — 필요 기능만 포함하여 ~125ms 부팅. (2) 최소 디바이스 — VirtIO 네트워크/블록만 에뮬레이션, 공격 표면 최소화. (3) KVM 기반 격리 — VT-x/ARM EL2로 VM 수준 메모리/CPU 격리, 커널 비공유로 container escape 없음. (4) 낮은 오버헤드 — VM당 ~5MB, 서버당 수천 개 동시 실행. AWS Lambda와 Fargate가 이 기술로 서버리스의 보안과 성능을 모두 확보했다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="06_strict_vs_passthrough.md">
+  <a class="nav-prev" href="../06_strict_vs_passthrough/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Strict System vs Hypervisor Pass-through</div>
   </a>
-  <a class="nav-next" href="08_quick_reference_card.md">
+  <a class="nav-next" href="../08_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Quick Reference Card</div>
   </a>

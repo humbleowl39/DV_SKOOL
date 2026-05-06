@@ -150,11 +150,11 @@ uvm_ko = 모든 DV 자료의 "검증 방법론" 기반
 4. **다른 토픽** — UVM은 도구. 실제 검증 대상에 적용하려면 [AMBA Protocols](../../amba_protocols/), [MMU](../../mmu/), [Formal Verification](../../formal_verification/) 등을 함께
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="06_practical_patterns.md">
+  <a class="nav-prev" href="../06_practical_patterns/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">UVM 실무 패턴 & 안티패턴</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

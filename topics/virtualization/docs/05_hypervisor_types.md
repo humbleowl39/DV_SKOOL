@@ -228,11 +228,11 @@ ARM VHE 이후:
 > "Xen Hypervisor는 Micro-kernel 철학으로 CPU 스케줄링, 메모리 관리, VM 격리만 담당하고 디바이스 드라이버나 관리 인터페이스가 없다. Dom0이 담당하는 것: (1) HW 드라이버 — 물리 디바이스 드라이버는 Dom0의 Linux 커널이 보유, (2) VM 관리 — xl 등 도구로 VM 생성/삭제, (3) I/O 중재 — DomU의 I/O를 para-virtualized backend로 처리, (4) 부팅 — Xen 부팅 후 Dom0이 먼저 시작하여 나머지 DomU 생성. Dom0 없이는 디바이스 사용도 VM 생성도 불가능하다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_io_virtualization.md">
+  <a class="nav-prev" href="../04_io_virtualization/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">I/O 가상화</div>
   </a>
-  <a class="nav-next" href="06_strict_vs_passthrough.md">
+  <a class="nav-next" href="../06_strict_vs_passthrough/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Strict System vs Hypervisor Pass-through</div>
   </a>

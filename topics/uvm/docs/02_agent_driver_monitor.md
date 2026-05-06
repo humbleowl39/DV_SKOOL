@@ -483,11 +483,11 @@ Security Driver: force/release로 DUT 내부 신호에 직접 접근
 - ➡️ [**Module 03 — Sequence & Sequence Item**](03_sequence_and_item.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_architecture_and_phase.md">
+  <a class="nav-prev" href="../01_architecture_and_phase/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">UVM 아키텍처 & Phase</div>
   </a>
-  <a class="nav-next" href="03_sequence_and_item.md">
+  <a class="nav-next" href="../03_sequence_and_item/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Sequence & Sequence Item</div>
   </a>

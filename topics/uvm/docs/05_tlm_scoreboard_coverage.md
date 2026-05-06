@@ -605,11 +605,11 @@ endgroup
 - ➡️ [**Module 06 — 실무 패턴 & 안티패턴**](06_practical_patterns.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_config_db_factory.md">
+  <a class="nav-prev" href="../04_config_db_factory/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">config_db & Factory</div>
   </a>
-  <a class="nav-next" href="06_practical_patterns.md">
+  <a class="nav-next" href="../06_practical_patterns/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">UVM 실무 패턴 & 안티패턴</div>
   </a>

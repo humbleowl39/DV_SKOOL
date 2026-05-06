@@ -605,11 +605,11 @@ Hypervisor 입장:
 > "AxUSER(ARUSER/AWUSER)는 AXI 트랜잭션에 'VM 정체성(identity)'을 부여하는 메커니즘이다. 디바이스가 메모리 접근 시 AxUSER에 SW 엔티티 정보를 실어 보내면, IOMMU가 이를 읽고 해당 VM의 Stage 1 PT로 VA→IPA, Stage 2 PT로 IPA→PA 변환을 수행한다. AxUSER 없이는 IOMMU가 어떤 VM의 접근인지 구분 불가. ARM SMMU에서는 이것이 StreamID에 해당하며, Stream Table Entry(STE)를 인덱싱하여 디바이스/VM별 변환 설정을 찾는다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_virtualization_fundamentals.md">
+  <a class="nav-prev" href="../01_virtualization_fundamentals/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">가상화 기본 개념</div>
   </a>
-  <a class="nav-next" href="02_cpu_virtualization.md">
+  <a class="nav-next" href="../02_cpu_virtualization/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">CPU 가상화</div>
   </a>

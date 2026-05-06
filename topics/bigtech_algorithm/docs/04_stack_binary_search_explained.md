@@ -346,11 +346,11 @@ endmodule
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_two_pointers_sliding_window_explained.md">
+  <a class="nav-prev" href="../03_two_pointers_sliding_window_explained/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Two Pointers & Sliding Window</div>
   </a>
-  <a class="nav-next" href="05_tree_bfs_dfs_explained.md">
+  <a class="nav-next" href="../05_tree_bfs_dfs_explained/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Tree & BFS/DFS</div>
   </a>

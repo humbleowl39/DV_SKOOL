@@ -241,11 +241,11 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 > "세 가지 전략: (1) Hybrid 검색 — Dense(의미) + Sparse(키워드) 결합으로 각각의 약점 보완. (2) 도메인 특화 Chunking — IP 스펙의 섹션/테이블/시퀀스 단위 분할로 의미 보존. (3) Re-ranking — 초기 Top-20을 Cross-encoder로 정밀 재정렬하여 최종 Top-5의 정확도 향상."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_embedding_vectordb.md">
+  <a class="nav-prev" href="../03_embedding_vectordb/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Embedding & Vector DB (FAISS)</div>
   </a>
-  <a class="nav-next" href="05_agent_architecture.md">
+  <a class="nav-next" href="../05_agent_architecture/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Agent 아키텍처</div>
   </a>

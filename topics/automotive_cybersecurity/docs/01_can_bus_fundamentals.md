@@ -413,11 +413,11 @@ bit 7: 둘 다 `1` → 동일
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_automotive_soc_security.md">
+  <a class="nav-next" href="../02_automotive_soc_security/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Automotive SoC Security (차량 SoC 보안 아키텍처)</div>
   </a>

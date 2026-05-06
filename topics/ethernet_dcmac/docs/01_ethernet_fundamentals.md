@@ -348,11 +348,11 @@ DV 관점:
 > "기존 MII는 한 사이클에 하나의 프레임만 처리하므로 짧은 프레임이 연속되면 IFG 오버헤드가 커진다. Segmented 인터페이스는 하나의 버스 사이클 내에 여러 프레임의 세그먼트를 담을 수 있어 IFG를 최소화하고 대역폭 활용률을 극대화한다. 100G+에서 라인 레이트 달성에 필수적이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_dcmac_architecture.md">
+  <a class="nav-next" href="../02_dcmac_architecture/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">DCMAC 아키텍처</div>
   </a>

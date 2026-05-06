@@ -372,11 +372,11 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
    <details><summary>정답</summary>TDEST. TID는 스트림 식별(같은 출력 포트에서 스트림을 구분), TDEST는 물리적 라우팅 목적지 결정.</details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_axi.md">
+  <a class="nav-prev" href="../02_axi/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">AXI (Advanced eXtensible Interface)</div>
   </a>
-  <a class="nav-next" href="04_quick_reference_card.md">
+  <a class="nav-next" href="../04_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">AMBA Protocols — Quick Reference Card</div>
   </a>

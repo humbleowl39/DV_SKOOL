@@ -190,6 +190,26 @@ def inject_chapter_meta(md_text: str, level: str) -> str:
     return "".join(out) if inserted else (meta_html + md_text)
 
 
+def chapter_to_dir_href(href: str) -> str:
+    """
+    Convert filename-based href used inside chapter pages to a directory URL
+    that's relative to the chapter's rendered location.
+
+    With MkDocs use_directory_urls=true, a chapter file `01_foo.md` is served
+    at `/<topic>/01_foo/`. Sibling links must therefore go up one level:
+        index.md         → ../
+        quiz/index.md    → ../quiz/
+        02_bar.md        → ../02_bar/
+    """
+    if href == "index.md":
+        return "../"
+    if href == "quiz/index.md":
+        return "../quiz/"
+    if href.endswith(".md"):
+        return "../" + href[:-3] + "/"
+    return href
+
+
 def append_chapter_nav(md_text: str, prev: tuple[str, str] | None, next_: tuple[str, str] | None) -> str:
     """Append <div class="chapter-nav"> with Prev/Next links."""
     md_text = NAV_RE.sub("", md_text).rstrip() + "\n"
@@ -201,7 +221,7 @@ def append_chapter_nav(md_text: str, prev: tuple[str, str] | None, next_: tuple[
     if prev:
         title, href = prev
         parts.append(
-            f'  <a class="nav-prev" href="{href}">\n'
+            f'  <a class="nav-prev" href="{chapter_to_dir_href(href)}">\n'
             f'    <div class="nav-label">◀ 이전</div>\n'
             f'    <div class="nav-title">{title}</div>\n'
             f'  </a>\n'
@@ -209,7 +229,7 @@ def append_chapter_nav(md_text: str, prev: tuple[str, str] | None, next_: tuple[
     if next_:
         title, href = next_
         parts.append(
-            f'  <a class="nav-next" href="{href}">\n'
+            f'  <a class="nav-next" href="{chapter_to_dir_href(href)}">\n'
             f'    <div class="nav-label">다음 ▶</div>\n'
             f'    <div class="nav-title">{title}</div>\n'
             f'  </a>\n'

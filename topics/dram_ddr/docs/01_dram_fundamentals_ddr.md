@@ -387,11 +387,11 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
 > "LPDDR5는 명령 버스(CK)와 데이터 버스(WCK)의 클럭을 분리했다. 명령은 상대적으로 저속으로 충분하므로 CK는 낮은 주파수, WCK는 CK의 2배 또는 4배 주파수로 데이터만 고속 전송한다. 이를 통해 불필요한 고속 토글을 줄여 전력을 절감하면서도 데이터 대역폭을 확보한다. DVFSC와 결합하면 부하에 따라 WCK 주파수를 동적으로 변경하여 추가 절전이 가능하다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_memory_controller.md">
+  <a class="nav-next" href="../02_memory_controller/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Memory Controller 아키텍처</div>
   </a>

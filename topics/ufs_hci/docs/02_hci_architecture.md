@@ -411,11 +411,11 @@ SDB vs MCQ 비교:
 > "UIC Command는 HCI가 UniPro DME 레이어를 제어하는 인터페이스다. Gear 변경 과정: (1) DME_SET으로 PA_TxGear, PA_RxGear를 원하는 Gear 값으로 설정. (2) DME_SET으로 PA_PWRMode를 FAST로 설정하면 UniPro가 M-PHY Gear 전환을 시작. (3) IS[UPMS] (Power Mode Status) 인터럽트 대기. (4) HCS에서 새로운 Power Mode 확인. 각 DME_SET마다 IS[UCCS]로 완료를 확인해야 하며, Gear 전환 중에는 명령 발행을 자제해야 한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_ufs_protocol_stack.md">
+  <a class="nav-prev" href="../01_ufs_protocol_stack/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">UFS 프로토콜 스택</div>
   </a>
-  <a class="nav-next" href="03_upiu_command_flow.md">
+  <a class="nav-next" href="../03_upiu_command_flow/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">UPIU와 명령 처리 흐름</div>
   </a>

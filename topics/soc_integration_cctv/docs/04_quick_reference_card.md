@@ -154,11 +154,11 @@ mmu_ko Unit 4:                sysMMU = Common Task의 대표 항목
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_tb_top_and_ai.md">
+  <a class="nav-prev" href="../03_tb_top_and_ai/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">TB Top 환경 구축 + AI 자동화</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

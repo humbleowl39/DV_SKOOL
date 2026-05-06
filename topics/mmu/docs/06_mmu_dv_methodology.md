@@ -752,11 +752,11 @@ Agile 개발에서의 MMU 스펙 변경:
 > "세 가지 축으로 랜덤화했다: (1) VA 분포 — Hotspot(60%), 일반 범위(30%), 넓은 범위(10%)로 가중하여 실제 트래픽 패턴을 모사. (2) Page Table 구성 — 정상 PTE 85%, Invalid 5%, Permission 위반 7%, AF 미설정 3%로 Fault 주입. (3) 시나리오 조합 — 대량 Translation + 주기적 TLB Invalidation + 간헐적 Fault 주입을 병렬로 실행하여 실제 운영 환경의 복잡한 상호작용을 검증했다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="05_performance_analysis.md">
+  <a class="nav-prev" href="../05_performance_analysis/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">MMU 성능 분석 및 최적화</div>
   </a>
-  <a class="nav-next" href="07_quick_reference_card.md">
+  <a class="nav-next" href="../07_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">MMU — Quick Reference Card</div>
   </a>

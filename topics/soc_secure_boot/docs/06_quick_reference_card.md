@@ -156,11 +156,11 @@ Flash교체 → 서명 검증 (항상 활성)
 | PQC 전환 실무 | 하이브리드 서명 구현 방법 |
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="05_attack_surface_and_defense.md">
+  <a class="nav-prev" href="../05_attack_surface_and_defense/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">공격 표면과 방어</div>
   </a>
-  <a class="nav-next" href="07_bootrom_dv_methodology.md">
+  <a class="nav-next" href="../07_bootrom_dv_methodology/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">BootROM DV 검증 방법론</div>
   </a>

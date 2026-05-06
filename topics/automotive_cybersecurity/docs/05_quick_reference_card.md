@@ -208,11 +208,11 @@ L0: Physical — OBD 격리, 포트 비활성화, 물리 접근 제어
 | 자동차관리법 (한국) | 차량 소유자 | SW 무단 변경 금지 | 2년 징역 / 2천만 원 벌금 |
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_attack_surface_and_defense.md">
+  <a class="nav-prev" href="../04_attack_surface_and_defense/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Attack Surface & Defense (공격 표면과 방어 계층)</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

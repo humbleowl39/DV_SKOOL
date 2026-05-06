@@ -391,11 +391,11 @@ MangoBoost Data Path:
 > "세 가지: (1) 통계 카운터의 Read-on-Clear 특성 — 읽기 순서를 잘못하면 값이 사라지므로 Latch-on-Read 구현을 검증. (2) Config 레지스터 적용 시점 — Write 직후 적용인지, 다음 프레임부터인지. (3) Reset Value — 모든 레지스터가 리셋 후 스펙상의 기본값을 가지는지. RAL frontdoor/backdoor 양쪽으로 확인한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_ethernet_fundamentals.md">
+  <a class="nav-prev" href="../01_ethernet_fundamentals/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Ethernet 기본 + 프레임 구조</div>
   </a>
-  <a class="nav-next" href="03_dcmac_dv_methodology.md">
+  <a class="nav-next" href="../03_dcmac_dv_methodology/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">DCMAC DV 검증 전략</div>
   </a>

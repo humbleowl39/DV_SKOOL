@@ -565,11 +565,11 @@ endpackage
 - ➡️ [**Module 04 — config_db & Factory**](04_config_db_factory.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_agent_driver_monitor.md">
+  <a class="nav-prev" href="../02_agent_driver_monitor/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Agent / Driver / Monitor</div>
   </a>
-  <a class="nav-next" href="04_config_db_factory.md">
+  <a class="nav-next" href="../04_config_db_factory/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">config_db & Factory</div>
   </a>

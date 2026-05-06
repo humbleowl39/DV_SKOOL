@@ -373,11 +373,11 @@ DV 도메인 권장:
 > "MTEB(Massive Text Embedding Benchmark)가 표준이다. 56개 데이터셋에서 Retrieval, STS, Classification 등 8개 태스크 성능을 종합 평가한다. DV 도메인에서는 보안 요구사항(로컬 실행 필수)이 가장 먼저 필터링 기준이 되고, 그 다음 Retrieval 성능, 마지막으로 모델 크기/속도를 고려한다. 로컬 실행 시 BGE-large(326MB, Retrieval 54.3)가 성능-크기 균형이 좋다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_prompt_engineering.md">
+  <a class="nav-prev" href="../02_prompt_engineering/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Prompt Engineering & In-Context Learning</div>
   </a>
-  <a class="nav-next" href="04_rag.md">
+  <a class="nav-next" href="../04_rag/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">RAG (Retrieval-Augmented Generation)</div>
   </a>

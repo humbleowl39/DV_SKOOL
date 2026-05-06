@@ -289,11 +289,11 @@ endmodule
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_big_o_explained.md">
+  <a class="nav-prev" href="../01_big_o_explained/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Big-O 복잡도 & 패턴 사고법</div>
   </a>
-  <a class="nav-next" href="03_two_pointers_sliding_window_explained.md">
+  <a class="nav-next" href="../03_two_pointers_sliding_window_explained/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Two Pointers & Sliding Window</div>
   </a>

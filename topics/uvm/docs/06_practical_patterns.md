@@ -307,11 +307,11 @@ MangoBoost / Samsung에서 반복한 환경 구축 순서:
 - ➡️ [**Module 07 — Quick Reference Card**](07_quick_reference_card.md) (인터뷰/리뷰 시 빠르게 참조)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="05_tlm_scoreboard_coverage.md">
+  <a class="nav-prev" href="../05_tlm_scoreboard_coverage/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">TLM, Scoreboard, Coverage</div>
   </a>
-  <a class="nav-next" href="07_quick_reference_card.md">
+  <a class="nav-next" href="../07_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">UVM — Quick Reference Card</div>
   </a>

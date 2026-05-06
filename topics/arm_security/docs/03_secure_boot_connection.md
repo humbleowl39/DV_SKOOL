@@ -497,11 +497,11 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02a_secure_enclave_and_tee_hierarchy.md">
+  <a class="nav-prev" href="../02a_secure_enclave_and_tee_hierarchy/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Unit 2A: Secure Enclave & TEE 계층 구조</div>
   </a>
-  <a class="nav-next" href="04_quick_reference_card.md">
+  <a class="nav-next" href="../04_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">ARM Security Architecture — Quick Reference Card</div>
   </a>

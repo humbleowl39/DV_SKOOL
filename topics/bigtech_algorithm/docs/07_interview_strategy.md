@@ -153,11 +153,11 @@ Week 3 (Medium 도전):
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="06_dynamic_programming_explained.md">
+  <a class="nav-prev" href="../06_dynamic_programming_explained/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Dynamic Programming (DP)</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

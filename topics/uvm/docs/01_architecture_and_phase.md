@@ -492,11 +492,11 @@ UVM_INFO ... [TEST] scenario done               ← test의 run_phase 완료
 - ➡️ [**Module 02 — Agent / Driver / Monitor**](02_agent_driver_monitor.md) — DUT 인터페이스 컴포넌트 설계
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_agent_driver_monitor.md">
+  <a class="nav-next" href="../02_agent_driver_monitor/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Agent / Driver / Monitor</div>
   </a>

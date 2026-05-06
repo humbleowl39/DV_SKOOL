@@ -619,11 +619,11 @@ PLL Lock → Bus Fabric → Memory Controller (+ DRAM Init 완료 대기) → CP
 > "3단계로 진행했다. (1) 각 IP의 Base Address에 R/W 접근하여 OKAY 응답 확인, (2) 미할당 주소 접근 시 DECERR 응답 확인, (3) 주소 경계에서 정확히 잘리는지 boundary test. 특히 주소 중첩은 두 slave가 동시 응답하여 버스 프로토콜 위반으로 이어지므로, IP-XACT 메타데이터와 실제 RTL의 주소 디코더를 크로스 체크했다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_common_task_cctv.md">
+  <a class="nav-next" href="../02_common_task_cctv/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Common Task & CCTV (Common Task Coverage Verification)</div>
   </a>

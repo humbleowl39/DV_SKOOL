@@ -353,11 +353,11 @@ ZQ Calibration:
 > "CA Training(CS Training)이 가장 중요한 추가 항목이다. DDR5에서 CA 버스가 멀티플렉싱으로 변경되어 타이밍 마진이 축소되었기 때문이다. 또한 DFE 계수 Training, Read/Write Preamble Training이 추가되었다. LPDDR5에서는 WCK2CK Training(WCK-CK 위상 정렬)과 CBT(Command Bus Training)가 추가된다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_memory_controller.md">
+  <a class="nav-prev" href="../02_memory_controller/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Memory Controller 아키텍처</div>
   </a>
-  <a class="nav-next" href="04_dram_dv_methodology.md">
+  <a class="nav-next" href="../04_dram_dv_methodology/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">DRAM DV 검증 전략</div>
   </a>

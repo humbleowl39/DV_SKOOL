@@ -658,11 +658,11 @@ Resume:
 > "에러는 TB의 Device Agent와 UniPro Agent에서 주입하며, DUT RTL은 절대 수정하지 않는다. (1) Device 응답 에러 — Response UPIU의 Status를 CHECK_CONDITION/BUSY로 조작. (2) 불완전 전송 — 요청 크기보다 적은 데이터 반환 → Residual Count 정확성. (3) 링크 에러 — UniPro CRC 에러 주입 → 재전송 투명성, Link Down → IS[UE]. (4) 타임아웃 — Response 의도적 지연 → Task Management 복구 경로. 정상→에러→정상 패턴으로 에러 후 복구까지 검증한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_upiu_command_flow.md">
+  <a class="nav-prev" href="../03_upiu_command_flow/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">UPIU와 명령 처리 흐름</div>
   </a>
-  <a class="nav-next" href="05_quick_reference_card.md">
+  <a class="nav-next" href="../05_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">UFS HCI — Quick Reference Card</div>
   </a>

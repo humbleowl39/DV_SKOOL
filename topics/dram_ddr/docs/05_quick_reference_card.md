@@ -132,11 +132,11 @@ ufs_hci_ko:         UFS → BL2 이미지 로드 → BL2가 DRAM 초기화
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_dram_dv_methodology.md">
+  <a class="nav-prev" href="../04_dram_dv_methodology/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">DRAM DV 검증 전략</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

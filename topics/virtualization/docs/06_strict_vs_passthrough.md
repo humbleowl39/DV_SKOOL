@@ -333,11 +333,11 @@ Azure:
 > "성능: Strict System의 VM Exit 오버헤드가 100Gbps+ 네트워킹, NVMe에서 병목이 되었고, 클라우드 고객은 bare metal 대비 성능 격차를 허용하지 않는다. 보안: 전통적으로 pass-through = 보안 약화였으나, Nitro는 이를 HW로 해결했다. Nitro Card가 네트워크/스토리지/보안을 전용 칩에 오프로드하고, IOMMU + HW 격리로 pass-through에서도 강력한 보안을 유지한다. 핵심 전환: 보안을 SW 중재가 아닌 HW(IOMMU, Nitro Card)로 보장하면서 성능은 pass-through로 극대화하는 모델이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="05_hypervisor_types.md">
+  <a class="nav-prev" href="../05_hypervisor_types/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Hypervisor 유형</div>
   </a>
-  <a class="nav-next" href="07_containers_and_modern.md">
+  <a class="nav-next" href="../07_containers_and_modern/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">컨테이너와 현대 가상화</div>
   </a>

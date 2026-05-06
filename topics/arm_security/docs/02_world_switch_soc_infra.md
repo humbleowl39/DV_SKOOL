@@ -466,11 +466,11 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_exception_level_trustzone.md">
+  <a class="nav-prev" href="../01_exception_level_trustzone/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Exception Level & TrustZone</div>
   </a>
-  <a class="nav-next" href="02a_secure_enclave_and_tee_hierarchy.md">
+  <a class="nav-next" href="../02a_secure_enclave_and_tee_hierarchy/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Unit 2A: Secure Enclave & TEE 계층 구조</div>
   </a>

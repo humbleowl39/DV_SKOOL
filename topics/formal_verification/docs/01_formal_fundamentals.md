@@ -342,11 +342,11 @@ Formal의 근본 한계:
 > "핵심은 상태 공간 축소이다. (1) Blackboxing — 검증 대상이 아닌 모듈을 빈 박스로 교체. (2) Data/Counter Abstraction — 데이터 폭이나 카운터 범위를 축소. (3) Assume — 입력을 실제 환경 범위로 제한. (4) Cut Point — 큰 설계를 블록 단위로 분할하여 각각 증명. 이 기법들을 조합하여 Formal이 수렴(PROVEN)하도록 만드는 것이 Formal 엔지니어의 핵심 역량이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_sva.md">
+  <a class="nav-next" href="../02_sva/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">SVA (SystemVerilog Assertions)</div>
   </a>

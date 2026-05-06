@@ -66,11 +66,11 @@ Checksum Offload ⊂ TSO/LRO ⊂ TOE ⊂ RDMA (TCP 우회)
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_toe_dv_methodology.md">
+  <a class="nav-prev" href="../04_toe_dv_methodology/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">TOE DV 검증 전략</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

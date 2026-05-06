@@ -395,11 +395,11 @@ DV 검증 핵심:
 > "HW-Managed(ARM, x86, RISC-V)는 TLB Miss 시 HW Walk Engine이 자동으로 Page Table을 탐색하여 TLB를 채운다. SW-Managed(MIPS)는 Miss 시 Exception이 발생하고 OS Handler가 직접 TLB를 채운다. HW 방식이 수십~수백 cycle 더 빠르고, SW 개입이 없어 파이프라인 효율이 좋다. 현재 주류는 HW-Managed이며, DV 관점에서는 Walk Engine의 정확성 검증이 핵심이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_page_table_structure.md">
+  <a class="nav-prev" href="../02_page_table_structure/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Page Table 구조</div>
   </a>
-  <a class="nav-next" href="04_iommu_smmu.md">
+  <a class="nav-next" href="../04_iommu_smmu/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">IOMMU / SMMU — SoC에서의 MMU</div>
   </a>

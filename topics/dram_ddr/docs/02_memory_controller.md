@@ -384,11 +384,11 @@ MC의 역할:
 > "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → MRS 명령으로 Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → ZQ Calibration(임피던스 보정) → Training(WL, DQ, Eye, VREF) → Refresh 시작. 특히 MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_dram_fundamentals_ddr.md">
+  <a class="nav-prev" href="../01_dram_fundamentals_ddr/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">DRAM 기본 원리 + DDR4/5</div>
   </a>
-  <a class="nav-next" href="03_memory_interface_phy.md">
+  <a class="nav-next" href="../03_memory_interface_phy/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Memory Interface / PHY</div>
   </a>

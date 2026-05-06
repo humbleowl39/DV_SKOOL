@@ -357,11 +357,11 @@ MangoBoost MMU IP 맥락:
 > "평균만 보면 간헐적 병목을 놓친다. 예를 들어 평균 Latency가 3 cycle이라도 P99가 200 cycle이면, 상위 1% 트랜잭션이 극심한 지연을 겪고 있다는 뜻이다. 서버 워크로드에서는 Tail Latency가 SLA 위반의 원인이 되므로, P99/P99.9를 별도로 측정하여 메모리 대역폭 경쟁이나 TLB Miss 집중 구간을 찾아낸다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_iommu_smmu.md">
+  <a class="nav-prev" href="../04_iommu_smmu/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">IOMMU / SMMU — SoC에서의 MMU</div>
   </a>
-  <a class="nav-next" href="06_mmu_dv_methodology.md">
+  <a class="nav-next" href="../06_mmu_dv_methodology/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">MMU DV 검증 방법론</div>
   </a>

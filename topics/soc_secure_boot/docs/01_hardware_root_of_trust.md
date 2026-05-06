@@ -366,11 +366,11 @@ otp_model.rotpk_hash.set(expected_hash);
 > "비가역적 전환이므로 세 가지를 검증한다: (1) Development→Production 전환 후 Secure Boot가 강제 활성화되는지. (2) Production 상태에서 JTAG Open/USB DL 우회가 불가능한지. (3) ROTPK가 테스트 키에서 양산 키로 올바르게 전환되었는지. 특히 전환 중간 상태 — 예를 들어 Secure Boot은 ON인데 ROTPK가 미기록인 상태 — 가 안전하게 처리되는지가 DV의 핵심 Negative 시나리오다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_chain_of_trust_boot_stages.md">
+  <a class="nav-next" href="../02_chain_of_trust_boot_stages/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)</div>
   </a>

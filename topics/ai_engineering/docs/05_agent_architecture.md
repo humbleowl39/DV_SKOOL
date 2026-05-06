@@ -594,11 +594,11 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 > "Model Context Protocol은 Anthropic이 제안한 LLM-도구 연결 표준이다. USB-C처럼 하나의 표준으로 어떤 LLM/Agent에서든 도구를 사용할 수 있게 한다. DV에서의 가치는 VCS 컴파일러, FAISS 검색, 파형 분석기 등을 MCP Server로 한 번 구현하면, Claude Code, VS Code Copilot, 커스텀 Agent 어디서든 동일하게 사용 가능하다는 것이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_rag.md">
+  <a class="nav-prev" href="../04_rag/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">RAG (Retrieval-Augmented Generation)</div>
   </a>
-  <a class="nav-next" href="06_strategy_selection.md">
+  <a class="nav-next" href="../06_strategy_selection/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Fine-tuning vs RAG vs Prompt — 전략 선택</div>
   </a>

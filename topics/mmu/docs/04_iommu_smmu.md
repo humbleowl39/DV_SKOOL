@@ -418,11 +418,11 @@ Resume의 Technical Challenge #3에서 언급:
 > "가장 큰 차이는 동기성이다. CPU Page Fault는 동기적 Exception으로 현재 명령어가 즉시 멈추고 OS Handler가 처리한 뒤 재실행한다. IOMMU Page Fault는 비동기적으로, Event Queue에 기록되고 인터럽트로 OS에 통지된다. 디바이스 DMA는 이미 실패/대기 중이므로, OS가 페이지를 할당한 뒤 Stall 해제 또는 디바이스 재시도를 통해 복구한다. 디바이스 동기화가 필요하여 처리가 더 복잡하다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_tlb.md">
+  <a class="nav-prev" href="../03_tlb/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">TLB (Translation Lookaside Buffer)</div>
   </a>
-  <a class="nav-next" href="05_performance_analysis.md">
+  <a class="nav-next" href="../05_performance_analysis/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">MMU 성능 분석 및 최적화</div>
   </a>

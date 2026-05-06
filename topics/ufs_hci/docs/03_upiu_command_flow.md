@@ -342,11 +342,11 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 > "Device의 내부 Write 버퍼 관리를 위해서다. Host가 일방적으로 데이터를 밀어넣으면 Device 버퍼 오버플로가 발생할 수 있다. RTT는 Device가 '이 만큼의 데이터를 보내도 된다'고 허가하는 흐름 제어 메커니즘이다. RTT의 Data Transfer Count 필드가 허용 크기를 지정하며, 대용량 WRITE는 여러 번의 RTT→Data-Out 반복으로 진행된다. READ에는 RTT가 없는 이유는 Host가 PRDT로 DMA 버퍼를 미리 할당해놓기 때문이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_hci_architecture.md">
+  <a class="nav-prev" href="../02_hci_architecture/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">UFS HCI 아키텍처</div>
   </a>
-  <a class="nav-next" href="04_hci_dv_methodology.md">
+  <a class="nav-next" href="../04_hci_dv_methodology/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">UFS HCI DV 검증 전략</div>
   </a>

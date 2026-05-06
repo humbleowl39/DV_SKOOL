@@ -807,11 +807,11 @@ JSON Config 파일 1개만 교체하면 된다. Config에 IP 목록, Memory Map,
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_common_task_cctv.md">
+  <a class="nav-prev" href="../02_common_task_cctv/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Common Task & CCTV (Common Task Coverage Verification)</div>
   </a>
-  <a class="nav-next" href="04_quick_reference_card.md">
+  <a class="nav-next" href="../04_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">SoC Integration & CCTV — Quick Reference Card</div>
   </a>

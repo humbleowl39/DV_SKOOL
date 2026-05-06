@@ -439,11 +439,11 @@ Tesla의 현재 방어:
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_automotive_soc_security.md">
+  <a class="nav-prev" href="../02_automotive_soc_security/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Automotive SoC Security (차량 SoC 보안 아키텍처)</div>
   </a>
-  <a class="nav-next" href="04_attack_surface_and_defense.md">
+  <a class="nav-next" href="../04_attack_surface_and_defense/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Attack Surface & Defense (공격 표면과 방어 계층)</div>
   </a>

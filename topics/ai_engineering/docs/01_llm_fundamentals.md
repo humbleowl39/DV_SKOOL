@@ -562,11 +562,11 @@ Temperature 효과:
 > "반도체 IP 보안상 클라우드 API를 쓸 수 없을 때, INT4/INT8 양자화로 모델 크기를 1/4~1/8로 줄여 사내 GPU에서 실행한다. 예: Llama 3 70B를 INT4로 양자화하면 ~35GB로 A100 1장에서 실행 가능하며, 코드 생성 품질은 FP16 대비 95% 이상 유지된다. AWQ나 GPTQ 같은 고급 양자화 기법으로 정밀도 손실을 최소화한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_prompt_engineering.md">
+  <a class="nav-next" href="../02_prompt_engineering/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Prompt Engineering & In-Context Learning</div>
   </a>

@@ -355,11 +355,11 @@ DPDK: 모든 것을 user-space에서 처리 (polling 기반)
 > "PF(Physical Function)는 물리 디바이스의 완전한 PCIe Function으로 초기화, VF 생성/삭제를 담당하며 Hypervisor가 관리한다. VF(Virtual Function)는 PF에서 파생된 경량 PCIe Function으로, 자체 BAR, MSI-X, TX/RX 큐를 갖지만 관리 기능은 없고 데이터 경로만 제공한다. 확장성: 일반 pass-through는 NIC 1개 = VM 1개이지만, SR-IOV는 NIC 1개에서 VF 128개 생성 가능. 각 VF가 HW 독립 데이터 경로를 가지므로 bare metal 근접 성능을 유지하면서 128개 VM을 지원한다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_memory_virtualization.md">
+  <a class="nav-prev" href="../03_memory_virtualization/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">메모리 가상화</div>
   </a>
-  <a class="nav-next" href="05_hypervisor_types.md">
+  <a class="nav-next" href="../05_hypervisor_types/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Hypervisor 유형</div>
   </a>

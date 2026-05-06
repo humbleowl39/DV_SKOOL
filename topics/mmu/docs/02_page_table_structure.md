@@ -383,11 +383,11 @@ TLB Entry:
 > "COW는 fork() 시 물리 메모리 복사를 지연하는 최적화다. fork() 직후 부모/자식 모두 같은 물리 페이지를 RO로 공유한다. Write 시도 시 MMU가 Permission Fault를 발생시키고, OS의 COW Handler가 새 물리 페이지를 할당·복사한 뒤 PTE를 RW로 업데이트한다. MMU는 Permission Fault를 정확히 감지하고, Handler 후 TLB Invalidation → 재접근 시 새 PTE로 Walk하는 전체 흐름의 정확성이 핵심이다."
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_mmu_fundamentals.md">
+  <a class="nav-prev" href="../01_mmu_fundamentals/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">MMU 기본 개념 및 주소 변환</div>
   </a>
-  <a class="nav-next" href="03_tlb.md">
+  <a class="nav-next" href="../03_tlb/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">TLB (Translation Lookaside Buffer)</div>
   </a>

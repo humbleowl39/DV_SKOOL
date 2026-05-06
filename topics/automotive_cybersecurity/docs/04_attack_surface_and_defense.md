@@ -551,11 +551,11 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_tesla_fsd_case_study.md">
+  <a class="nav-prev" href="../03_tesla_fsd_case_study/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Tesla FSD Case Study (탈옥 사례 분석)</div>
   </a>
-  <a class="nav-next" href="05_quick_reference_card.md">
+  <a class="nav-next" href="../05_quick_reference_card/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Automotive Cybersecurity — Quick Reference Card</div>
   </a>

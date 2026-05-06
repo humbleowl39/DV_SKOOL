@@ -568,11 +568,11 @@ TCP Options 필드는 최대 40바이트(헤더 최대 60B - 고정 20B). Timest
 </details>
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_toe_architecture.md">
+  <a class="nav-prev" href="../02_toe_architecture/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">TOE 아키텍처</div>
   </a>
-  <a class="nav-next" href="04_toe_dv_methodology.md">
+  <a class="nav-next" href="../04_toe_dv_methodology/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">TOE DV 검증 전략</div>
   </a>

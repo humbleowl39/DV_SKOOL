@@ -130,11 +130,11 @@ soc_secure_boot_ko Unit 7: BootROM DV
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_secure_boot_connection.md">
+  <a class="nav-prev" href="../03_secure_boot_connection/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Secure Boot에서의 보안 레벨 적용</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>

@@ -280,11 +280,11 @@ endmodule
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="index.md">
+  <a class="nav-prev" href="../">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">코스 홈</div>
   </a>
-  <a class="nav-next" href="02_array_hashmap_explained.md">
+  <a class="nav-next" href="../02_array_hashmap_explained/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Array & Hash Map (연관 배열)</div>
   </a>

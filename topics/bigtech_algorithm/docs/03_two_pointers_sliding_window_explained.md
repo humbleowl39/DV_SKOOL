@@ -336,11 +336,11 @@ endmodule
 ```
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_array_hashmap_explained.md">
+  <a class="nav-prev" href="../02_array_hashmap_explained/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">Array & Hash Map (연관 배열)</div>
   </a>
-  <a class="nav-next" href="04_stack_binary_search_explained.md">
+  <a class="nav-next" href="../04_stack_binary_search_explained/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">Stack & Binary Search</div>
   </a>

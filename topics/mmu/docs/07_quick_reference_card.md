@@ -147,11 +147,11 @@ Pseudo-LRU HW 비용 (N-way):
 | 가상화 (ARMv8 EL2) | Stage 2 Translation 검증 |
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="06_mmu_dv_methodology.md">
+  <a class="nav-prev" href="../06_mmu_dv_methodology/">
     <div class="nav-label">◀ 이전</div>
     <div class="nav-title">MMU DV 검증 방법론</div>
   </a>
-  <a class="nav-next" href="quiz/index.md">
+  <a class="nav-next" href="../quiz/">
     <div class="nav-label">다음 ▶</div>
     <div class="nav-title">퀴즈로 이동</div>
   </a>
