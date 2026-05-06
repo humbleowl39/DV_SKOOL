@@ -1,8 +1,14 @@
-# ARM Security Architecture — Quick Reference Card
+# Module 04 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트.
+
+!!! info "사전 지식"
+    - [Module 01-03](01_exception_level_trustzone.md)
 
 ## 한줄 요약
 ```
@@ -128,6 +134,12 @@ soc_secure_boot_ko Unit 5: 공격과 방어
 soc_secure_boot_ko Unit 7: BootROM DV
   → arm_security_ko Unit 3: 보안 레벨 전환 검증 시나리오
 ```
+
+---
+
+## 코스 마무리
+
+[퀴즈](quiz/index.md) · [용어집](glossary.md) · 다음: [Secure Boot](../../soc_secure_boot/), [Virtualization](../../virtualization/) (EL2 hypervisor).
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_secure_boot_connection/">

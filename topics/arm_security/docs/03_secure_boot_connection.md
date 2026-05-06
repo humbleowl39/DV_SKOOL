@@ -1,8 +1,20 @@
-# Unit 3: Secure Boot에서의 보안 레벨 적용
+# Module 03 — Secure Boot Connection
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** Secure Boot 단계와 ARM EL의 매핑 (BL1=EL3, BL2=EL3, BL31=EL3 secure monitor, BL33=EL2/EL1 non-secure)
+    - **Apply** Secure World 자원이 어느 boot 단계에서 활성화되는지
+    - **Identify** Boot 시 TZASC, TZPC, GIC 보안 설정 단계
+    - **Distinguish** Verified Boot (서명) + Architecture Enforcement (EL/TrustZone)의 보완 관계
+
+!!! info "사전 지식"
+    - [Module 01-02A](01_exception_level_trustzone.md)
+    - [Secure Boot 코스](../../soc_secure_boot/)
 
 ## 핵심 개념
 **Secure Boot = Chain of Trust(서명 검증) + Security Architecture(EL/TrustZone)의 결합. 서명 검증이 "무엇을 실행해도 되는가"를 결정하고, 보안 레벨이 "어떤 권한으로 실행하는가"를 결정. 둘이 함께 동작해야 완전한 보안.**
@@ -495,6 +507,21 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
 - 응답 지연(##[1:10])은 버스 파이프라인 딜레이 고려
 - Cover property로 assertion이 vacuously true가 아닌지 확인
 </details>
+
+---
+
+## 핵심 정리
+
+- **두 메커니즘의 결합**: Verified Boot = "무엇을 실행하는가" (서명 검증), Architecture = "어떤 권한으로" (EL + TrustZone).
+- **Boot ↔ EL 매핑**: BootROM (EL3 Secure) → BL1/BL2 (EL3 Secure) → BL31 (EL3 Secure Monitor 영구 거주) → BL33 (EL2 hypervisor 또는 EL1 non-secure kernel).
+- **보안 인프라 활성화 시점**: BL1/BL2가 TZASC/TZPC/GIC 설정. BL31 도달 시점에는 secure infra 완료.
+- **EL3 = 영구 secure monitor**: BL31이 boot 완료 후에도 EL3에 영구 거주, world switch 처리.
+- **공격 표면 축소**: Verified Boot 없으면 EL3에 공격 코드 실행 가능 (모든 보안 무용). Architecture만 있으면 권한 정확하지만 image 위변조.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_secure_boot_connection_quiz.md)
+- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02a_secure_enclave_and_tee_hierarchy/">

@@ -1,8 +1,19 @@
-# Unit 2A: Secure Enclave & TEE 계층 구조
+# Module 02A — Secure Enclave & TEE Hierarchy
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** TrustZone (CPU 공유 TEE) vs Secure Enclave (전용 processor + RAM)
+    - **Identify** 주요 Secure Enclave (Apple SEP, Samsung Knox vault, Pixel Titan M)
+    - **Apply** Mutually distrusting relationship — 둘 중 하나 침해 시 다른 쪽 영향
+    - **Plan** TEE 계층 (Trusty, OP-TEE, Knox, SEP)의 책임 분리
+
+!!! info "사전 지식"
+    - [Module 01-02](01_exception_level_trustzone.md)
 
 ## 핵심 개념
 **TrustZone은 CPU 기반 TEE이므로 Trusted OS 취약점, 캐시 공유 부채널, CPU 자원 경합의 한계가 있다. Secure Enclave는 전용 프로세서+RAM으로 이 한계를 물리적으로 제거하며, TrustZone과 상호 불신(mutually distrusting) 관계로 공존한다.**
@@ -422,6 +433,21 @@ Internal과 External Secure Enclave는 SPI 버스로 연결되는데, SPI는 SoC
 
 이것은 차량 보안의 SecOC(CAN 메시지에 MAC + Freshness)와 동일한 원리를 물리 인터페이스 레벨에 적용한 것이다.
 </details>
+
+---
+
+## 핵심 정리
+
+- **TrustZone 한계**: CPU/cache/DRAM 공유 → side-channel (Spectre/Meltdown), Trusted OS 취약점, 자원 경합 latency.
+- **Secure Enclave**: 별도 processor + 전용 RAM + 전용 crypto engine → 물리적 격리. Side-channel 차단.
+- **주요 사례**: Apple SEP (T-series chip), Samsung Knox vault, Google Titan M (Pixel), AWS Nitro.
+- **Mutually distrusting**: TrustZone과 Enclave는 서로 신뢰 안 함. Enclave key는 TrustZone에 expose 안 함.
+- **TEE 계층**: OP-TEE / Trusty (TrustZone TEE OS) → Knox (Samsung TEE OS) → SEP (Apple) — 각 layer가 독립 보호.
+
+## 다음 단계
+
+- 📝 [**Module 02A 퀴즈**](quiz/02a_secure_enclave_and_tee_hierarchy_quiz.md)
+- ➡️ [**Module 03 — Secure Boot Connection**](03_secure_boot_connection.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_world_switch_soc_infra/">

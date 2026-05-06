@@ -1,8 +1,20 @@
-# Unit 2: 보안 상태 전환 & SoC 보안 인프라
+# Module 02 — World Switch & SoC Security Infra
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** SMC instruction → EL3 secure monitor → world switch 흐름
+    - **Apply** TZPC, TZASC, GIC의 secure/non-secure 분할 설정
+    - **Implement** Context save/restore 흐름 (world 전환 시 register 격리)
+    - **Identify** SoC peripheral의 보안 인프라 적용 위치
+
+!!! info "사전 지식"
+    - [Module 01](01_exception_level_trustzone.md)
+    - GIC (Generic Interrupt Controller) 기본
 
 ## 핵심 개념
 **월드 전환은 반드시 EL3(Secure Monitor)을 경유해야 하며, SMC 명령으로만 가능. SoC 레벨에서는 TZPC, TZASC, GIC 보안 설정으로 버스/메모리/인터럽트를 Secure/Non-Secure로 분할하여 HW 격리를 완성.**
@@ -464,6 +476,22 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
    → data_ptr이 NS 메모리 범위인지 확인 (Secure 메모리 참조 차단)
 4. **FF-A Memory Lending**: 메모리를 빌려주면(FFA_MEM_LEND) 빌려준 쪽의 접근 권한 제거 → TOCTOU 원천 차단
 </details>
+
+---
+
+## 핵심 정리
+
+- **World switch는 EL3 강제**: SMC instruction → EL3 trap → secure monitor (BL31)이 context save → world switch → 새 world로 ERET.
+- **Context isolation**: 각 world는 독립 register set. SMC 시 secure monitor가 모든 register save/restore.
+- **TZPC (TrustZone Protection Controller)**: peripheral마다 secure/non-secure 설정.
+- **TZASC (TrustZone Address Space Controller)**: DRAM 영역을 secure/non-secure 분할.
+- **GIC v3**: 인터럽트마다 group (Group 0 secure, Group 1 non-secure), 우선순위.
+- **sysMMU StreamID + Stage 2**: device 마스터가 secure 메모리 access 시도하면 차단.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_world_switch_soc_infra_quiz.md)
+- ➡️ [**Module 02A — Secure Enclave & TEE**](02a_secure_enclave_and_tee_hierarchy.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_exception_level_trustzone/">

@@ -1,8 +1,20 @@
-# Unit 1: Exception Level & TrustZone
+# Module 01 — Exception Level & TrustZone
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** ARMv8 4-level Exception Level (EL0/EL1/EL2/EL3)와 각 level 책임
+    - **Distinguish** TrustZone Secure/Non-Secure World의 수평적 분리와 EL의 수직적 계층
+    - **Apply** NS (Non-Secure) bit가 메모리/레지스터 access에 미치는 영향
+    - **Identify** Secure World만 access 가능한 자원과 그 보호 메커니즘
+
+!!! info "사전 지식"
+    - ARMv8 ISA 기본
+    - 권한 / 가상 메모리 / 인터럽트
 
 ## 핵심 개념
 **ARM의 보안은 두 축으로 구성: (1) Exception Level (EL0~EL3) — 권한의 수직적 계층. (2) TrustZone (Secure/Non-Secure) — 월드의 수평적 분리. 이 두 축의 조합이 ARM SoC의 전체 보안 모델을 형성.**
@@ -484,6 +496,21 @@ Hypervisor Stage 2:
 - VM Escape: 악성 Guest가 호스트 메모리까지 접근 가능
 - Hypervisor의 격리 보장이 SW 수준에 의존 → 취약점 하나로 전체 무력화
 </details>
+
+---
+
+## 핵심 정리
+
+- **두 축의 보안**: 수직 (Exception Level: EL0 user → EL1 kernel → EL2 hypervisor → EL3 secure monitor) + 수평 (Secure World vs Non-Secure World).
+- **EL3 (Secure Monitor)**: 가장 privileged, secure/non-secure world 전환 관리. ARM Trusted Firmware BL31이 여기서 동작.
+- **NS bit**: PSTATE의 1-bit field, 현재 instruction이 secure/non-secure world에서 발급되었는지 표시. 메모리 access마다 propagate.
+- **Secure-only resources**: TrustZone-aware 메모리 영역, secure 레지스터, secure debug. NS=1이면 access 차단 (BusError).
+- **2D matrix**: 4 EL × 2 World = 8 mode. 모든 mode가 의미 있지는 않음 (예: EL3는 항상 Secure).
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_exception_level_trustzone_quiz.md)
+- ➡️ [**Module 02 — World Switch**](02_world_switch_soc_infra.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">
