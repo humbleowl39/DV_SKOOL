@@ -1,8 +1,22 @@
-# Automotive Cybersecurity — Quick Reference Card
+# Module 05 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) CAN/SecOC/HSM/Gateway/IDS/V2X 의 핵심 한 줄 정의를 즉시 떠올릴 수 있다.
+2. (Apply) 면접/리뷰에서 차량 보안 토픽이 나왔을 때 30초 안에 구조화해 답할 수 있다.
+3. (Evaluate) 자기 시스템에 빠진 보안 계층이 무엇인지 cheat sheet 와 비교해 판별할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01 ~ 04 완료 — 이 모듈은 새 내용을 가르치지 않고 압축한다.
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+복습 + 인터뷰/리뷰 직전 즉시 꺼내볼 수 있는 1-page cheat sheet 가 필요하다. 이 모듈은 학습한 내용을 **머릿속 인덱스**로 굳히는 역할을 한다.
+
+---
 
 ## CAN Bus 한줄 요약
 ```
@@ -206,6 +220,21 @@ L0: Physical — OBD 격리, 포트 비활성화, 물리 접근 제어
 | UN R156 | 전 세계 신차 | SUMS (SW 업데이트 관리 시스템) | 형식 승인 불가 |
 | ISO 21434 | 개발 프로세스 | TARA + 보안 엔지니어링 | 인증 불가 |
 | 자동차관리법 (한국) | 차량 소유자 | SW 무단 변경 금지 | 2년 징역 / 2천만 원 벌금 |
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **CAN 자체는 무인증** — 외부 접근(OBD-II) 시 모든 메시지 위조 가능.
+- **SecOC + HSM + Gateway + IDS = 4-layer 표준 스택**.
+- **Tesla 사례 = 외부만 방어하고 내부는 신뢰한 결과**.
+- **표준 = R155/R156/21434** — CSMS/SUMS/TARA 가 핵심 키워드.
+
+## 다음 단계 (Next Steps)
+
+- 퀴즈로 마무리: [전체 Quiz Index](../quiz/) — 5개 모듈 각 5문항씩, 총 25문항.
+- 심화: 회사 내 ECU 한 종류를 골라 본 cheat sheet 의 모든 키워드를 매핑해 보는 표를 작성한다.
+- 추가 자료: ISO/SAE 21434, UN R155/R156, AUTOSAR SecOC, NHTSA Cybersecurity Best Practices.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_attack_surface_and_defense/">

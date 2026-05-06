@@ -1,8 +1,26 @@
-# Unit 4: Attack Surface & Defense (공격 표면과 방어 계층)
+# Module 04 — Attack Surface & Defense
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) 차량의 주요 공격 표면(물리 OBD-II, 무선 V2X/BT/WiFi/Cellular, 공급망 FW)을 나열할 수 있다.
+2. (Understand) Defense-in-Depth 가 왜 단일 방어보다 효과적인지 설명할 수 있다.
+3. (Apply) 주어진 ECU의 공격 surface를 STRIDE/Threat-tree로 분해할 수 있다.
+4. (Analyze) V2X 환경에서 Sybil/Replay/Message-injection 공격이 어떻게 결합되는지 분석할 수 있다.
+5. (Evaluate) UN R155 / ISO 21434 의 요구사항을 자신의 시스템 방어 계층 매트릭스로 평가할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01–03 (CAN, SoC 보안, Tesla 케이스)
+- 일반 사이버보안 개념: STRIDE, threat modeling, attack tree
+- PKI / 인증서 / CRL 의 기본 동작
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+방어를 잘하려면 **공격자가 어디부터 들어오는지** 체계적으로 이해해야 한다. 차량은 외부(셀룰러, V2X), 근접(Bluetooth, WiFi, NFC, OBD-II), 내부(CAN, Ethernet), 공급망(ECU FW, OTA 서버) 등 광범위한 surface를 가지고 있다. 이 모듈은 각 surface를 **자산 → 위협 → 방어 계층**의 매트릭스로 정리해 학습자가 자신의 시스템에도 같은 표를 직접 그릴 수 있게 한다.
+
+---
 
 ## 핵심 개념
 **차량 보안은 단일 방어가 아닌 다중 계층(Defense in Depth)으로 설계해야 한다 — 물리적 접근(OBD), 무선 접근(V2X/BT/WiFi), 공급망(ECU FW)의 세 축을 모두 방어해야 한다.**
@@ -549,6 +567,22 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 
 3. **Misbehavior Detection**: 수신 차량/인프라가 물리적 타당성(Plausibility)을 검증한다. 예: "같은 위치에 20대의 차량이 있는데 카메라/레이더에는 안 보인다" → Sybil 의심 → Misbehavior Authority에 보고 → 해당 인증서 폐기(CRL).
 </details>
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **3축 공격 표면** — 물리(OBD/USB), 무선(BT/WiFi/Cellular/V2X), 공급망(ECU FW/Tier-1).
+- **Defense-in-Depth** — 한 계층이 뚫려도 다음 계층(인증/필터/IDS/Cloud 검증)이 차단해야 한다.
+- **V2X 보안 = PKI + Misbehavior Detection** — Sybil/Replay 방어는 인증서 수량 제한과 물리 plausibility 검증의 조합.
+- **공급망 보안** — Code-signing, SBOM, OTA 검증이 빠지면 단 하나의 Tier-1 침해가 전 차량 fleet으로 확산된다.
+- **표준 = 체크리스트가 아닌 사고 도구** — UN R155, ISO/SAE 21434 는 매트릭스를 직접 그리게 만드는 도구.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Quick Reference Card →](../05_quick_reference_card/) — 모듈 1~4를 한 장으로 압축한 cheat sheet.
+- 퀴즈: [Module 04 Quiz](../quiz/04_attack_surface_and_defense_quiz/) — 공격 surface, V2X PKI, defense-in-depth 5문항.
+- 실습: 자신의 차량/ECU에서 한 가지 surface(예: BT)를 골라 attack tree를 작성하고, 각 leaf에 대응하는 방어 계층을 표로 매핑한다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_tesla_fsd_case_study/">

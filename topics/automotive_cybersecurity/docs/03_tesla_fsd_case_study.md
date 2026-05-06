@@ -1,8 +1,26 @@
-# Unit 3: Tesla FSD Case Study (탈옥 사례 분석)
+# Module 03 — Tesla FSD Case Study
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
-</div>
+## 학습 목표 (Learning Objectives)
+
+이 모듈을 마치면:
+
+1. (Remember) 2023 Pwn2Own에서 공개된 Tesla FSD 탈옥 체인의 단계를 나열할 수 있다.
+2. (Understand) "SoC에 SCS(보안 칩)가 있어도 CAN 인증이 없다면 무력화"되는 이유를 설명할 수 있다.
+3. (Analyze) 탈옥 체인의 각 단계를 ① 기술적 결함 ② 정책적 결함 ③ 아키텍처 결함으로 분류할 수 있다.
+4. (Evaluate) 같은 사건이 SecOC + Cloud 검증 기반 OEM에서 발생할 수 있는지 평가할 수 있다.
+5. (Apply) Threat-modeling 시 Tesla 사례에서 얻은 교훈을 자기 프로젝트의 ECU에 적용할 수 있다.
+
+## 선수 지식 (Prerequisites)
+
+- Module 01 (CAN), Module 02 (HSM/SecOC/Gateway) 의 기본 어휘
+- Bug bounty / responsible disclosure 절차에 대한 일반 상식
+- 차량 OTA 업데이트 흐름 (서버 → 차량 → 인증 → 적용) 의 큰 그림
+
+## 왜 이 모듈이 중요한가 (Why it matters)
+
+이론으로 배운 보안 메커니즘이 실제 어디에서 깨지는지 가장 빠르게 배우는 방법은 **공개된 케이스 스터디 분석**이다. Tesla FSD 사례는 "비싼 보안 IP를 넣었는데도 한 줄 잘못된 가정 때문에 무력화"된 대표 예시다. 이 모듈은 학습자가 단순히 "이런 일이 있었다"가 아니라 **다음에 같은 실수를 반복하지 않도록 사고 패턴**을 만들어 준다.
+
+---
 
 ## 핵심 개념
 **Tesla FSD 탈옥은 CAN Bus 무인증 + GPS 기반 지오펜싱 + 로컬 Feature Flag 의존이라는 세 가지 약점의 교집합에서 발생했다. SoC에 보안 하드웨어(SCS)가 있었지만 CAN 통신 인증에 적용하지 않은 아키텍처 판단이 근본 원인이다.**
@@ -437,6 +455,22 @@ Tesla의 현재 방어:
 
 이 판단이 틀렸음이 증명된 것이다 — **외부 경계(서버)만 방어하고 내부 경계(CAN)를 방어하지 않으면, 물리 접근 시 내부는 무방비**라는 교훈.
 </details>
+
+---
+
+## 핵심 정리 (Key Takeaways)
+
+- **외부 방어 ≠ 내부 방어** — Secure Boot로 부팅 체인을 지켜도 CAN 인증이 없으면 물리 접근에 그대로 노출된다.
+- **Feature Flag = 정책일 뿐, 보안 경계가 아니다** — 로컬 플래그를 신뢰하면 차량이 곧 정책 결정자가 된다.
+- **GPS 같은 외부 신호는 spoof 가능하다** — 지오펜스를 단독 보안 통제로 쓰면 안 된다.
+- **자체 SW 스택의 함정** — AUTOSAR/SecOC 에코시스템 밖이면 같은 기능을 자체 구현해야 하며, 누락 위험이 크다.
+- **케이스 스터디는 위협 모델의 출발점** — 공개된 익스플로잇 체인은 자체 ECU의 가정을 검증하는 가장 빠른 도구다.
+
+## 다음 단계 (Next Steps)
+
+- 다음 모듈: [Attack Surface & Defense →](../04_attack_surface_and_defense/) — 외부/내부/공급망 공격 표면을 체계화하고 각 계층의 방어 매핑을 정리한다.
+- 퀴즈: [Module 03 Quiz](../quiz/03_tesla_fsd_case_study_quiz/) — 탈옥 체인, 근본 원인, 구조적 교훈에 대한 5문항.
+- 실습: 자신의 회사/팀 ECU 한 종류를 골라 Tesla 사례의 5단계를 그대로 적용해 "여기서 같은 일이 가능한가?" 표로 정리해 본다.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_automotive_soc_security/">

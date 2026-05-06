@@ -1,8 +1,20 @@
-# Unit 1: CAN Bus Fundamentals (차량 내부 통신의 구조와 한계)
+# Module 01 — CAN Bus Fundamentals
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** CAN bus topology와 메시지 frame 구조 (ID, DLC, data, CRC)
+    - **Identify** CAN의 보안 한계 (no auth, broadcast, no encryption)
+    - **Distinguish** CAN 2.0, CAN-FD, CAN-XL의 차이
+    - **Apply** SecOC (Secure Onboard Communication)으로 인증 추가
+
+!!! info "사전 지식"
+    - 직렬 통신 기본
+    - 자동차 ECU / 네트워크 일반
 
 ## 핵심 개념
 **CAN Bus = 1980년대 설계된 브로드캐스트 직렬 버스 — 인증/암호화 없이 모든 노드가 모든 메시지를 읽고 쓸 수 있다.**
@@ -411,6 +423,22 @@ bit 7: 둘 다 `1` → 동일
 0x0A0이 recessive(1)을 보냈는데 bus 값이 dominant(0)이므로 패배를 감지하고 전송 포기.
 → **ID 0x080 승리** (bit 5에서 결정, MSB부터 5번째 비트)
 </details>
+
+---
+
+## 핵심 정리
+
+- **CAN bus**: 1980년대 broadcast 직렬 버스. **인증/암호화 없음** — 보안 한계의 근원.
+- **메시지 형식**: ID + DLC + Data (0-8 bytes) + CRC. 모든 ECU가 모든 메시지 수신.
+- **CAN-FD (Flexible Data)**: 가변 길이 (최대 64 bytes), 빠른 BR.
+- **CAN-XL**: 최대 2048 bytes, 10 Mbps.
+- **SecOC**: AUTOSAR의 인증 추가 — Freshness Value (counter) + MAC. CAN 위에 보안 layer.
+- **보안 강화 한계**: SecOC도 하드웨어 자원 제약 (8-byte MAC, freshness sync issue).
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_can_bus_fundamentals_quiz.md)
+- ➡️ [**Module 02 — Automotive SoC Security**](02_automotive_soc_security.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

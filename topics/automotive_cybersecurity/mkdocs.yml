@@ -56,15 +56,20 @@ plugins:
 nav:
   - "코스 홈": index.md
   - "학습 모듈":
-      - "Unit 1: CAN Bus Fundamentals (차량 내부 통신의 구조와 한계)": 01_can_bus_fundamentals.md
-      - "Unit 2: Automotive SoC Security (차량 SoC 보안 아키텍처)": 02_automotive_soc_security.md
-      - "Unit 3: Tesla FSD Case Study (탈옥 사례 분석)": 03_tesla_fsd_case_study.md
-      - "Unit 4: Attack Surface & Defense (공격 표면과 방어 계층)": 04_attack_surface_and_defense.md
-      - "Automotive Cybersecurity — Quick Reference Card": 05_quick_reference_card.md
+      - "Module 01 — CAN Bus Fundamentals": 01_can_bus_fundamentals.md
+      - "Module 02 — Automotive SoC Security": 02_automotive_soc_security.md
+      - "Module 03 — Tesla FSD Case Study": 03_tesla_fsd_case_study.md
+      - "Module 04 — Attack Surface & Defense": 04_attack_surface_and_defense.md
+      - "Module 05 — Quick Reference Card": 05_quick_reference_card.md
   - "코스 개요": _legacy_overview.md
   - "용어집": glossary.md
   - "퀴즈":
       - "퀴즈 인덱스": quiz/index.md
+      - "Module 01 Quiz": quiz/01_can_bus_fundamentals_quiz.md
+      - "Module 02 Quiz": quiz/02_automotive_soc_security_quiz.md
+      - "Module 03 Quiz": quiz/03_tesla_fsd_case_study_quiz.md
+      - "Module 04 Quiz": quiz/04_attack_surface_and_defense_quiz.md
+      - "Module 05 Quiz": quiz/05_quick_reference_card_quiz.md
 
 markdown_extensions:
   - abbr
