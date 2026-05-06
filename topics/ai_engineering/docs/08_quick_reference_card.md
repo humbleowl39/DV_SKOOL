@@ -1,5 +1,10 @@
 # AI Engineering for DV — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 7분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 정리
 
 | 주제 | 핵심 포인트 |
@@ -117,3 +122,14 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 | LoRA Fine-tuning 실습 | DV 도메인 모델 적응 |
 | Evaluation Framework | RAG 품질 평가 자동화 (RAGAS 등) |
 | Multi-Agent System | 복잡한 DV 워크플로 자동화 |
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="07_dv_application.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">DV/EDA 도메인 적용 사례</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

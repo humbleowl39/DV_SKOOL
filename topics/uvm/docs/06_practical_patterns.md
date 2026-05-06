@@ -1,4 +1,25 @@
-# Unit 6: UVM 실무 패턴 & 안티패턴
+# Module 06 — 실무 패턴 & 안티패턴
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 16분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Recognize** 자주 쓰이는 UVM 설계 패턴(Config Object, Sequencer Hierarchy, Layered Sequence)을 구분할 수 있다.
+    - **Identify** 흔한 안티패턴(God Env, Monitor가 sequence 시작, 하드코딩된 경로)을 코드에서 찾아낼 수 있다.
+    - **Plan** 새 검증 프로젝트의 from-scratch 환경 구축 체크리스트를 따라 디렉토리/파일 구조와 1주 차 작업을 계획할 수 있다.
+    - **Critique** 동료의 UVM 코드 리뷰에서 근거를 들어 안티패턴을 지적하고 리팩터링을 제안할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01-05](01_architecture_and_phase.md) 전체
+    - 한 번 이상 from-scratch 환경 구축 경험이 있으면 본문이 더 와닿음
+
+## 왜 이 모듈이 중요한가
+
+UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading failure**를 만듭니다. 6년+ 경력자도 새 프로젝트에서 자주 반복하는 실수가 있고, 코드 리뷰에서 근거 없이 "이건 좀..." 같은 피드백은 무력합니다. 이 모듈은 **재현 가능한 좋은 설계 결정**을 내리는 어휘를 제공합니다.
 
 ## 핵심 개념
 **실무에서 반복되는 설계 패턴을 익히면 환경 구축 속도와 품질이 동시에 향상. 안티패턴을 알면 디버그 시간을 대폭 줄일 수 있다. 이 Unit은 6년 실무에서 축적된 패턴/안티패턴을 정리.**
@@ -223,3 +244,76 @@ MangoBoost / Samsung에서 반복한 환경 구축 순서:
 
 **Q: 환경 포팅을 빠르게 하는 핵심은?**
 > "세 가지 분리: (1) DUT 독립적 Agent — 프로토콜만 구현, DUT 로직 배제. (2) Config Object — SoC별 차이를 설정 객체로 흡수. (3) OTP/메모리 맵 추상화 — 물리 주소가 아닌 의미 기반 접근. Samsung에서 Apple/Meta 프로젝트 포팅 시 수 주 → 3-5일로 단축한 것이 이 원칙 덕분이다."
+
+---
+
+## 연습문제
+
+!!! question "Exercise 1 (Evaluate, ★★)"
+    다음 코드 스니펫에서 안티패턴 3개를 찾고, 각각 어떻게 수정해야 하는지 답하세요.
+
+    ```systemverilog
+    class my_env extends uvm_env;
+      apb_driver  drv;     // (a) Agent 없이 driver 직접 보유
+      virtual apb_if vif;
+      function void connect_phase(uvm_phase phase);
+        drv.vif = vif;     // (b) config_db 안 쓰고 직접 대입
+      endfunction
+      task run_phase(uvm_phase phase);
+        my_seq seq = new();
+        seq.start(drv);    // (c) sequencer 없이 driver에 start
+      endtask
+    endclass
+    ```
+
+    ??? answer "모범 답안"
+        - **(a) Agent 누락**: env가 driver를 직접 보유 → 재사용 불가, Active/Passive 분리 안 됨. 수정: `apb_agent`를 만들고 driver/monitor/sequencer를 그 안에 두기.
+        - **(b) Direct VIF 전달**: connect_phase에서 핸들 직접 대입 — config_db를 우회. 수정: top에서 `uvm_config_db#(virtual apb_if)::set(null, "uvm_test_top.env.agent.*", "vif", vif);`.
+        - **(c) Sequencer 누락**: `seq.start(drv)`는 잘못. Sequence는 Sequencer에 start해야 함. 수정: `seq.start(env.agent.sqr);`.
+
+!!! question "Exercise 2 (Create, ★★★)"
+    새 SoC IP의 검증을 from scratch로 시작합니다. 첫 1주차에 끝낼 작업 5개를 의존 순서로 나열하세요.
+
+    ??? answer "예시 답안"
+        1. **인터페이스 sv 작성** (DUT 포트 매핑 + clocking block + modport)
+        2. **Sequence Item 정의** (트랜잭션 필드 + 기본 constraint)
+        3. **최소 Agent** (Driver 시그널 인가만 + Monitor sample만)
+        4. **Top + Test 1개** (build → connect → reset → 1 transaction → smoke)
+        5. **Smoke test 통과** (1 트랜잭션이 인가되고 Monitor가 캡처 + log 확인)
+        의존성: 1→2 (item이 interface 신호 폭에 맞춰야), 2→3 (driver가 item 형식 알아야), 3→4 (env에 agent 인스턴스화), 4→5 (시뮬 실행).
+
+!!! question "Exercise 3 (Analyze, ★★★)"
+    Legacy SystemVerilog testbench(uvm 미사용, task 기반 자극)를 UVM으로 전환할 때의 단계 4개를 설계하고, 각 단계에서 무엇을 검증해 위험을 줄일지 답하세요.
+
+    ??? answer "예시 답안"
+        1. **Wrapper UVM env**: 기존 task 기반 자극은 그대로 두고 그 위에 빈 UVM env. 검증: 기존 시뮬 결과와 동일한지 sanity.
+        2. **Monitor만 UVM화**: 신호 관찰을 UVM Monitor로 옮김. 자극은 여전히 legacy. 검증: Scoreboard에 actual이 잘 도착하는지 + legacy 결과와 일치.
+        3. **Driver 도입**: 기존 task 자극을 Sequence + Driver로 재구성. 검증: 같은 시드에서 같은 자극 인가 패턴 (signal-level diff).
+        4. **Sequence Library 정비**: 시나리오를 sequence 단위로 모듈화 + Virtual Sequence. 검증: 기존 테스트 리스트와 1:1 매핑 확인 + coverage가 떨어지지 않았는지.
+        **위험 감소 포인트**: 각 단계에서 *기능 동등성*을 sanity로 확인하는 게 핵심. 한 번에 다 갈아엎지 않기.
+
+## 핵심 정리
+
+- **Config Object 패턴**: 환경 설정을 한 객체에 모아 config_db로 전달 — 흩어진 set/get 폭발 방지.
+- **Sequencer Hierarchy**: virtual sequencer가 sub-sequencer 핸들을 보유 → multi-agent 시나리오의 표준.
+- **Layered Sequence**: 상위 sequence가 하위 sequence를 호출 → 시나리오 재사용성 + 의도 명확화.
+- **Anti: God Env** — env가 driver/monitor를 직접 보유하면 재사용 불가. Agent로 캡슐화.
+- **Anti: Monitor에서 sequence 시작** — 책임 분리 위반. Monitor는 관찰만, sequence는 test 또는 vseq에서 시작.
+- **Anti: 하드코딩된 config_db 경로** — 컴포넌트 이름 변경 시 silent failure. wildcard 또는 utility 함수.
+- **From-scratch 체크리스트**: 인터페이스 → sequence item → 최소 agent → top + test → smoke 통과. 이 순서를 어기면 디버그 어려움.
+
+## 다음 단계
+
+- 📝 [**Module 06 퀴즈**](quiz/06_practical_patterns_quiz.md)
+- ➡️ [**Module 07 — Quick Reference Card**](07_quick_reference_card.md) (인터뷰/리뷰 시 빠르게 참조)
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="05_tlm_scoreboard_coverage.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">TLM, Scoreboard, Coverage</div>
+  </a>
+  <a class="nav-next" href="07_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">UVM — Quick Reference Card</div>
+  </a>
+</div>

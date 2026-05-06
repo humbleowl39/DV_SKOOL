@@ -1,5 +1,10 @@
 # Unit 2: Prompt Engineering & In-Context Learning
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 12분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **Prompt Engineering = 모델 가중치 변경 없이, 입력(프롬프트)만으로 LLM의 출력을 원하는 방향으로 유도하는 기법. 가장 비용 효율적인 LLM 활용법이며, RAG/Agent의 기반.**
 
@@ -392,3 +397,14 @@ DV 적용:
 
 **Q: Prompt Chaining은 왜 단일 프롬프트보다 효과적인가?**
 > "세 가지 이유: (1) 에러 격리 — 한 단계 실패 시 해당 단계만 재실행, 전체 재생성 불필요. (2) 중간 검증 — 각 단계 출력을 확인하고 다음 단계 진행, 오류 전파 방지. (3) 복잡도 분산 — 하나의 어려운 문제를 여러 쉬운 문제로 분해하여 각각의 정확도를 높인다. DAC 논문의 TB 자동화 파이프라인(RTL 파싱→인터페이스 추출→코드 생성→컴파일 검증)이 이 패턴이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_llm_fundamentals.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">LLM 기본 구조</div>
+  </a>
+  <a class="nav-next" href="03_embedding_vectordb.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Embedding & Vector DB (FAISS)</div>
+  </a>
+</div>

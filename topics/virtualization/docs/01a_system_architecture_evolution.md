@@ -1,5 +1,10 @@
 # Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 23분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **현대 가상화 시스템은 하루아침에 만들어진 것이 아니다. 고정 기능 HW → 프로그래머블 프로세서 → HW 가속기 통합 → OS 도입 → MMU/IOMMU → 가상화로 이어지는 진화 과정의 결과물이다. 각 단계마다 이전 단계의 한계를 극복하기 위한 HW/SW가 추가되었다.**
 
@@ -599,3 +604,14 @@ Hypervisor 입장:
 
 **Q: AXI의 AxUSER 신호가 IOMMU 2-stage translation에서 하는 역할은?**
 > "AxUSER(ARUSER/AWUSER)는 AXI 트랜잭션에 'VM 정체성(identity)'을 부여하는 메커니즘이다. 디바이스가 메모리 접근 시 AxUSER에 SW 엔티티 정보를 실어 보내면, IOMMU가 이를 읽고 해당 VM의 Stage 1 PT로 VA→IPA, Stage 2 PT로 IPA→PA 변환을 수행한다. AxUSER 없이는 IOMMU가 어떤 VM의 접근인지 구분 불가. ARM SMMU에서는 이것이 StreamID에 해당하며, Stream Table Entry(STE)를 인덱싱하여 디바이스/VM별 변환 설정을 찾는다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_virtualization_fundamentals.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">가상화 기본 개념</div>
+  </a>
+  <a class="nav-next" href="02_cpu_virtualization.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">CPU 가상화</div>
+  </a>
+</div>

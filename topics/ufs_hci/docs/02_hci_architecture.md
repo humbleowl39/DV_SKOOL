@@ -1,5 +1,10 @@
 # Unit 2: UFS HCI 아키텍처
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 18분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **UFS HCI = SW Driver(UFSHCD)와 UFS 프로토콜 사이의 HW 인터페이스. SW가 레지스터/메모리를 통해 SCSI 명령을 제출하면, HCI가 UPIU로 변환하여 UniPro/M-PHY를 통해 UFS Device에 전달. JEDEC JESD223 표준.**
 
@@ -405,3 +410,14 @@ SDB vs MCQ 비교:
 
 **Q: UIC Command로 Gear를 변경하는 과정을 설명하라.**
 > "UIC Command는 HCI가 UniPro DME 레이어를 제어하는 인터페이스다. Gear 변경 과정: (1) DME_SET으로 PA_TxGear, PA_RxGear를 원하는 Gear 값으로 설정. (2) DME_SET으로 PA_PWRMode를 FAST로 설정하면 UniPro가 M-PHY Gear 전환을 시작. (3) IS[UPMS] (Power Mode Status) 인터럽트 대기. (4) HCS에서 새로운 Power Mode 확인. 각 DME_SET마다 IS[UCCS]로 완료를 확인해야 하며, Gear 전환 중에는 명령 발행을 자제해야 한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_ufs_protocol_stack.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">UFS 프로토콜 스택</div>
+  </a>
+  <a class="nav-next" href="03_upiu_command_flow.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">UPIU와 명령 처리 흐름</div>
+  </a>
+</div>

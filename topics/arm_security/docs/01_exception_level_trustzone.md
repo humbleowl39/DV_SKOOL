@@ -1,5 +1,10 @@
 # Unit 1: Exception Level & TrustZone
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 18분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **ARM의 보안은 두 축으로 구성: (1) Exception Level (EL0~EL3) — 권한의 수직적 계층. (2) TrustZone (Secure/Non-Secure) — 월드의 수평적 분리. 이 두 축의 조합이 ARM SoC의 전체 보안 모델을 형성.**
 
@@ -480,3 +485,14 @@ Hypervisor Stage 2:
 - VM Escape: 악성 Guest가 호스트 메모리까지 접근 가능
 - Hypervisor의 격리 보장이 SW 수준에 의존 → 취약점 하나로 전체 무력화
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_world_switch_soc_infra.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">보안 상태 전환 & SoC 보안 인프라</div>
+  </a>
+</div>

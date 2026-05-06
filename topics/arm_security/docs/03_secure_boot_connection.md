@@ -1,5 +1,10 @@
 # Unit 3: Secure Boot에서의 보안 레벨 적용
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 21분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **Secure Boot = Chain of Trust(서명 검증) + Security Architecture(EL/TrustZone)의 결합. 서명 검증이 "무엇을 실행해도 되는가"를 결정하고, 보안 레벨이 "어떤 권한으로 실행하는가"를 결정. 둘이 함께 동작해야 완전한 보안.**
 
@@ -491,3 +496,14 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
 - 응답 지연(##[1:10])은 버스 파이프라인 딜레이 고려
 - Cover property로 assertion이 vacuously true가 아닌지 확인
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02a_secure_enclave_and_tee_hierarchy.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Unit 2A: Secure Enclave & TEE 계층 구조</div>
+  </a>
+  <a class="nav-next" href="04_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">ARM Security Architecture — Quick Reference Card</div>
+  </a>
+</div>

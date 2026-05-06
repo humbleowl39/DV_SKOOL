@@ -1,5 +1,10 @@
 # TOE — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 3분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## TOE 한줄 요약
 ```
 TOE = TCP/IP 프로토콜 처리(Checksum/Segmentation/Retx/Flow Control)를 CPU에서 전용 HW로 Offload → CPU 부하 80-90% 감소, 라인 레이트 달성
@@ -60,3 +65,14 @@ TIME_WAIT: 2 × MSL (120초)
 Checksum Offload ⊂ TSO/LRO ⊂ TOE ⊂ RDMA (TCP 우회)
 (부분)            (중간)      (전체)  (다른 범주)
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_toe_dv_methodology.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">TOE DV 검증 전략</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

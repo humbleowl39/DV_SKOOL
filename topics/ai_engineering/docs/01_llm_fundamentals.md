@@ -1,5 +1,10 @@
 # Unit 1: LLM 기본 구조
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 18분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **LLM = Transformer 아키텍처 기반의 대규모 언어 모델. Self-Attention으로 입력 토큰 간 관계를 학습하고, 다음 토큰을 확률적으로 예측하는 방식으로 텍스트를 생성한다.**
 
@@ -556,3 +561,14 @@ Temperature 효과:
 
 **Q: 로컬 LLM 배포 시 Quantization을 어떻게 활용하는가?**
 > "반도체 IP 보안상 클라우드 API를 쓸 수 없을 때, INT4/INT8 양자화로 모델 크기를 1/4~1/8로 줄여 사내 GPU에서 실행한다. 예: Llama 3 70B를 INT4로 양자화하면 ~35GB로 A100 1장에서 실행 가능하며, 코드 생성 품질은 FP16 대비 95% 이상 유지된다. AWQ나 GPTQ 같은 고급 양자화 기법으로 정밀도 손실을 최소화한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_prompt_engineering.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Prompt Engineering & In-Context Learning</div>
+  </a>
+</div>

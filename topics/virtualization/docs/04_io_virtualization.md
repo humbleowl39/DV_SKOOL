@@ -1,5 +1,10 @@
 # Unit 4: I/O 가상화
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **I/O 가상화 = 물리 디바이스를 여러 VM이 공유하거나, 특정 VM에 전용 할당하는 기술. 에뮬레이션(SW) → 준가상화(VirtIO) → 패스스루(SR-IOV/VFIO)로 발전하며, 성능과 격리의 트레이드오프를 다룬다.**
 
@@ -349,3 +354,14 @@ DPDK: 모든 것을 user-space에서 처리 (polling 기반)
 
 **Q: SR-IOV의 PF/VF 차이와 일반 pass-through 대비 장점은?**
 > "PF(Physical Function)는 물리 디바이스의 완전한 PCIe Function으로 초기화, VF 생성/삭제를 담당하며 Hypervisor가 관리한다. VF(Virtual Function)는 PF에서 파생된 경량 PCIe Function으로, 자체 BAR, MSI-X, TX/RX 큐를 갖지만 관리 기능은 없고 데이터 경로만 제공한다. 확장성: 일반 pass-through는 NIC 1개 = VM 1개이지만, SR-IOV는 NIC 1개에서 VF 128개 생성 가능. 각 VF가 HW 독립 데이터 경로를 가지므로 bare metal 근접 성능을 유지하면서 128개 VM을 지원한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_memory_virtualization.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">메모리 가상화</div>
+  </a>
+  <a class="nav-next" href="05_hypervisor_types.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Hypervisor 유형</div>
+  </a>
+</div>

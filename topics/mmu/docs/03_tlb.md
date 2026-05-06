@@ -1,5 +1,10 @@
 # Unit 3: TLB (Translation Lookaside Buffer)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 15분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **TLB = 주소 변환 결과(VPN→PPN)를 캐싱하는 고속 하드웨어 캐시. Page Walk의 수백 배 지연을 1사이클로 줄여주는, MMU 성능의 핵심 컴포넌트.**
 
@@ -389,3 +394,14 @@ DV 검증 핵심:
 
 **Q: HW-Managed TLB vs SW-Managed TLB의 차이는?**
 > "HW-Managed(ARM, x86, RISC-V)는 TLB Miss 시 HW Walk Engine이 자동으로 Page Table을 탐색하여 TLB를 채운다. SW-Managed(MIPS)는 Miss 시 Exception이 발생하고 OS Handler가 직접 TLB를 채운다. HW 방식이 수십~수백 cycle 더 빠르고, SW 개입이 없어 파이프라인 효율이 좋다. 현재 주류는 HW-Managed이며, DV 관점에서는 Walk Engine의 정확성 검증이 핵심이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_page_table_structure.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Page Table 구조</div>
+  </a>
+  <a class="nav-next" href="04_iommu_smmu.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">IOMMU / SMMU — SoC에서의 MMU</div>
+  </a>
+</div>

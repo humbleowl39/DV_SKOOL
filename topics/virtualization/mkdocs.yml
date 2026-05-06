@@ -9,15 +9,18 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.tabs
+    - navigation.sections
     - navigation.top
-    - navigation.expand
     - navigation.indexes
+    - navigation.footer
     - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
+    - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -40,19 +43,35 @@ repo_url: https://github.com/humbleowl39/DV_SKOOL
 repo_name: humbleowl39/DV_SKOOL
 edit_uri: edit/main/topics/virtualization/docs/
 
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
 nav:
-  - "Virtualization — 개요 및 컨셉 맵": index.md
-  - "Unit 1: 가상화 기본 개념": 01_virtualization_fundamentals.md
-  - "Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지": 01a_system_architecture_evolution.md
-  - "Unit 2: CPU 가상화": 02_cpu_virtualization.md
-  - "Unit 3: 메모리 가상화": 03_memory_virtualization.md
-  - "Unit 4: I/O 가상화": 04_io_virtualization.md
-  - "Unit 5: Hypervisor 유형": 05_hypervisor_types.md
-  - "Unit 6: Strict System vs Hypervisor Pass-through": 06_strict_vs_passthrough.md
-  - "Unit 7: 컨테이너와 현대 가상화": 07_containers_and_modern.md
-  - "Unit 8: Quick Reference Card": 08_quick_reference_card.md
+  - "코스 홈": index.md
+  - "학습 모듈":
+      - "Unit 1: 가상화 기본 개념": 01_virtualization_fundamentals.md
+      - "Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지": 01a_system_architecture_evolution.md
+      - "Unit 2: CPU 가상화": 02_cpu_virtualization.md
+      - "Unit 3: 메모리 가상화": 03_memory_virtualization.md
+      - "Unit 4: I/O 가상화": 04_io_virtualization.md
+      - "Unit 5: Hypervisor 유형": 05_hypervisor_types.md
+      - "Unit 6: Strict System vs Hypervisor Pass-through": 06_strict_vs_passthrough.md
+      - "Unit 7: 컨테이너와 현대 가상화": 07_containers_and_modern.md
+      - "Unit 8: Quick Reference Card": 08_quick_reference_card.md
+  - "코스 개요": _legacy_overview.md
+  - "용어집": glossary.md
+  - "퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
+  - abbr
   - admonition
   - attr_list
   - def_list

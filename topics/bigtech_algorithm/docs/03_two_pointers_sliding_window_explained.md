@@ -1,5 +1,10 @@
 # Unit 3: Two Pointers & Sliding Window
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 9분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## Two Pointers — 언제 사용하는가?
 
 ```
@@ -330,3 +335,14 @@ module unit3_tp_sw;
 endmodule
 
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_array_hashmap_explained.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Array & Hash Map (연관 배열)</div>
+  </a>
+  <a class="nav-next" href="04_stack_binary_search_explained.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Stack & Binary Search</div>
+  </a>
+</div>

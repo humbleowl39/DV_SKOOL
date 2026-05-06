@@ -1,5 +1,10 @@
 # Unit 4: Attack Surface & Defense (공격 표면과 방어 계층)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 26분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **차량 보안은 단일 방어가 아닌 다중 계층(Defense in Depth)으로 설계해야 한다 — 물리적 접근(OBD), 무선 접근(V2X/BT/WiFi), 공급망(ECU FW)의 세 축을 모두 방어해야 한다.**
 
@@ -545,3 +550,14 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 
 3. **Misbehavior Detection**: 수신 차량/인프라가 물리적 타당성(Plausibility)을 검증한다. 예: "같은 위치에 20대의 차량이 있는데 카메라/레이더에는 안 보인다" → Sybil 의심 → Misbehavior Authority에 보고 → 해당 인증서 폐기(CRL).
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_tesla_fsd_case_study.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Tesla FSD Case Study (탈옥 사례 분석)</div>
+  </a>
+  <a class="nav-next" href="05_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Automotive Cybersecurity — Quick Reference Card</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # Unit 1: Big-O 복잡도 & 패턴 사고법
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 9분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 왜 패턴인가?
 
 ```
@@ -274,3 +279,14 @@ module unit1_big_o;
 endmodule
 
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_array_hashmap_explained.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Array & Hash Map (연관 배열)</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # Unit 1: MMU 기본 개념 및 주소 변환
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **MMU = Virtual Address를 Physical Address로 변환하고, 접근 권한을 검사하는 HW 블록. 프로세스 격리, 메모리 보호, 물리 메모리 추상화의 핵심.**
 
@@ -298,3 +303,14 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 
 **Q: TrustZone 환경에서 MMU의 역할은?**
 > "Secure World와 Normal World 각각이 독립적인 Translation Regime을 가진다. PTE의 NS 비트로 Secure/Non-secure 물리 메모리를 구분하며, Normal World에서 Secure 메모리 접근 시도 시 Bus Error로 차단된다. World 전환 시 TLB 관리가 중요한데, Secure TLB와 Normal TLB가 독립적으로 관리되어야 stale 엔트리로 인한 보안 누출을 방지할 수 있다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_page_table_structure.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Page Table 구조</div>
+  </a>
+</div>

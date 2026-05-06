@@ -1,5 +1,10 @@
 # Unit 3: Secure Boot 암호학 — 서명 검증과 키 관리
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **Secure Boot 검증 = Hash (무결성) + Digital Signature (인증성)**
 
@@ -240,3 +245,14 @@ Host SoC (BootROM)            Partner Chip
 
 **Q: ROTPK가 침해되면 어떻게 되는가?**
 > "최악의 시나리오 — 공격자가 어떤 악성 펌웨어든 정당한 것으로 서명할 수 있다. 대응: OTP 다중 슬롯 키 폐기(사전 할당), 키 계층으로 피해 범위 제한, Anti-Rollback 카운터 증가와 함께 FW 업데이트. 근본적 한계: OTP 슬롯은 유한하다. 예방이 가장 중요하다 — HSM 저장, 에어갭 서명, 접근 감사."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_chain_of_trust_boot_stages.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)</div>
+  </a>
+  <a class="nav-next" href="04_boot_device_and_boot_mode.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Boot Device & Boot Mode (부팅 장치와 부팅 모드)</div>
+  </a>
+</div>

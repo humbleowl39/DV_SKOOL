@@ -1,5 +1,10 @@
 # Formal Verification — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 6분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 한줄 요약
 ```
 Formal = 수학적 전수 검사. SVA로 Property 정의 → Formal Engine이 모든 상태에서 증명(PROVEN) 또는 반례(FAILED) 반환. 시뮬레이션과 상호 보완.
@@ -134,3 +139,14 @@ BOUNDED → ① Blackbox → ② Abstraction → ③ Helper Assert
     YES → Formal 강력 추천 ✓
     NO → 시뮬레이션으로 충분
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_jaspergold_and_strategy.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">JasperGold 활용 + DV 전략</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

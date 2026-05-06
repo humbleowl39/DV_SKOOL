@@ -1,5 +1,10 @@
 # Unit 3: Memory Interface / PHY
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 11분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **Memory Interface(MI) / PHY = MC의 명령을 DDR 전기 신호로 변환하고, 고속 데이터 전송을 위한 타이밍 캘리브레이션(Training)을 수행하는 물리 계층. PVT(공정/전압/온도) 변동에도 안정적인 데이터 수신을 보장하는 것이 핵심.**
 
@@ -347,3 +352,14 @@ ZQ Calibration:
 
 **Q: DDR4 대비 DDR5에서 추가된 Training 항목은?**
 > "CA Training(CS Training)이 가장 중요한 추가 항목이다. DDR5에서 CA 버스가 멀티플렉싱으로 변경되어 타이밍 마진이 축소되었기 때문이다. 또한 DFE 계수 Training, Read/Write Preamble Training이 추가되었다. LPDDR5에서는 WCK2CK Training(WCK-CK 위상 정렬)과 CBT(Command Bus Training)가 추가된다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_memory_controller.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Memory Controller 아키텍처</div>
+  </a>
+  <a class="nav-next" href="04_dram_dv_methodology.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">DRAM DV 검증 전략</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # Unit 1: TCP/IP 기본 + TOE 개념
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 10분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **TOE = TCP/IP 프로토콜 처리를 CPU에서 전용 HW로 이전(Offload)하여, CPU 부하를 줄이고 네트워크 처리량을 극대화하는 엔진. 100Gbps+ 서버 환경에서 CPU가 TCP 처리에 압도되는 문제를 해결.**
 
@@ -208,3 +213,14 @@ TSO는 Segmentation(대용량 데이터를 MSS 단위로 분할 + 헤더 생성)
 
 RDMA는 양쪽 모두 RDMA NIC + 전용 SW 스택이 필요하고, 기존 TCP 기반 애플리케이션(HTTP, NVMe-oF over TCP, 일반 소켓 앱 등)과 호환되지 않는다. 또한 RDMA는 보통 손실 없는(lossless) 네트워크를 전제한다. 반면 TOE는 기존 TCP 소켓 API와 호환되면서 성능을 높이므로, 레거시 애플리케이션 호환이 필요하거나 일반 인터넷/데이터센터 환경(손실 가능)에서 사용된다.
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_toe_architecture.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">TOE 아키텍처</div>
+  </a>
+</div>

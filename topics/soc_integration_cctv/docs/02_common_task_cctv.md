@@ -1,5 +1,10 @@
 # Unit 2: Common Task & CCTV (Common Task Coverage Verification)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 24분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **Common Task = SoC 내 모든(또는 대부분의) IP에 공통적으로 적용되는 검증 항목 (sysMMU, Security/Access Control, DVFS, Clock Gating 등). CCTV = 이 Common Task가 모든 IP에 대해 빠짐없이 수행되었는지 추적하는 Coverage 방법론. DVCon 2025 논문의 핵심 주제.**
 
@@ -672,3 +677,14 @@ Gap C: Technical Gap
 
 **Q: sysMMU 통합 검증에서 가장 중요한 시나리오는?**
 > "Bypass→Enable 전환이다. 부트로더에서는 sysMMU Bypass로 동작하다가 OS가 Enable로 전환하는데, 이 시점에 진행 중인 DMA 트랜잭션과 Page Table 설정의 Race Condition이 발생할 수 있다. 타이밍 의존적 간헐 버그로, Silicon에서 디버그하면 수 주가 걸린다. Pre-silicon에서 반드시 검증해야 한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_soc_top_integration.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">SoC Top Integration 검증</div>
+  </a>
+  <a class="nav-next" href="03_tb_top_and_ai.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">TB Top 환경 구축 + AI 자동화</div>
+  </a>
+</div>

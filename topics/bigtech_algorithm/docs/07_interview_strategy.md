@@ -1,5 +1,10 @@
 # Unit 7: 면접 전략
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 4분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 45분 타임라인
 
 | 시간 | 단계 | 할 일 |
@@ -147,3 +152,14 @@ Week 3 (Medium 도전):
   Day 6: Right Side View (#199) — BFS
   Day 7: Group Anagrams (#49) — Hash Map
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="06_dynamic_programming_explained.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Dynamic Programming (DP)</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

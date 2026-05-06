@@ -1,5 +1,10 @@
 # Unit 3: JasperGold 활용 + DV 전략
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 17분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **JasperGold = Cadence의 Formal Verification 도구. Property Checking, Equivalence Checking, Connectivity Checking 등을 지원. 실무에서는 Formal을 "시뮬레이션 보완 전략"으로 위치시키고, 제어 로직/프로토콜/보안에 집중 적용.**
 
@@ -397,3 +402,14 @@ assert property (@(posedge clk) disable iff (rst)
 
 **Q: Formal 디버깅에서 Counterexample을 어떻게 활용하는가?**
 > "Counterexample은 Formal의 가장 큰 장점이다. 엔진이 Property 위반을 유발하는 최소 입력 시퀀스를 자동 생성하므로, (1) 반례 파형에서 위반 시점을 확인하고, (2) 엔진이 생성한 입력의 의미를 파악하고, (3) RTL 코드에서 해당 경로의 로직을 추적하여 버그를 확정한다. 단, FAILED인데 실제 버그가 아닌 경우(False Negative)도 있다 — 이는 Assume 부족으로 불가능한 입력이 사용된 것이므로, 스펙을 확인한 후 assume을 추가한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_sva.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">SVA (SystemVerilog Assertions)</div>
+  </a>
+  <a class="nav-next" href="04_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Formal Verification — Quick Reference Card</div>
+  </a>
+</div>

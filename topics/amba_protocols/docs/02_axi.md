@@ -1,5 +1,10 @@
 # Unit 2: AXI (Advanced eXtensible Interface)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 19분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **AXI = AMBA에서 가장 고성능인 버스. 5개 독립 채널(AW/W/B/AR/R), Out-of-Order 완료, Burst, Outstanding 트랜잭션으로 최대 대역폭 달성. CPU↔MC, IP↔IP 고성능 연결의 사실상 표준.**
 
@@ -462,3 +467,14 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
 
 5. AXI4 INCR burst에서 AxLEN=0xFF이면 총 전송 바이트 수는? (AxSIZE=3'b011, 8 bytes)
    <details><summary>정답</summary>(0xFF + 1) × 8 = 256 × 8 = 2048 bytes = 2KB. AXI4에서 단일 burst로 전송 가능한 최대량.</details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_apb_ahb.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">APB & AHB</div>
+  </a>
+  <a class="nav-next" href="03_axi_stream.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">AXI-Stream</div>
+  </a>
+</div>

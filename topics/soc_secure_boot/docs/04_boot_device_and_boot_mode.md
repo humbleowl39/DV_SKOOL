@@ -1,5 +1,10 @@
 # Unit 4: Boot Device & Boot Mode (부팅 장치와 부팅 모드)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 16분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **Boot Mode는 OTP > Pinstrap > Default 우선순위로 결정된다. 각 부팅 장치는 프로토콜 복잡도와 초기화 시간이 다르다. OTP는 양산 후 변경 불가이므로, Fallback 경로는 사전에 설계되어야 한다.**
 
@@ -371,3 +376,14 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 
 **Q: Boot Image의 FIP 포맷이 왜 중요한가?**
 > "FIP(Firmware Image Package)는 BL2, BL31, BL32, BL33과 각각의 인증서를 하나의 패키지로 묶는 ARM TF-A 표준이다. UUID 기반 검색으로 이미지 오프셋 하드코딩 없이 유연하게 이미지를 찾을 수 있고, 벤더 확장도 가능하다. DV 관점에서는 FIP 파싱의 Negative 시나리오 — 손상된 ToC, 잘린 이미지, 잘못된 UUID — 가 중요한 검증 항목이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_crypto_in_boot.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Secure Boot 암호학 — 서명 검증과 키 관리</div>
+  </a>
+  <a class="nav-next" href="05_attack_surface_and_defense.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">공격 표면과 방어</div>
+  </a>
+</div>

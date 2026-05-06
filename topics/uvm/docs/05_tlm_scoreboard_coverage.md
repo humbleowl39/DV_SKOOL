@@ -1,4 +1,26 @@
-# Unit 5: TLM, Scoreboard, Coverage
+# Module 05 — TLM, Scoreboard, Coverage
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 18분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Connect** Monitor의 `analysis_port`를 Scoreboard와 Coverage 양쪽에 1:N broadcast로 연결할 수 있다.
+    - **Implement** in-order / out-of-order 트래픽에 맞는 Scoreboard 비교 로직을 작성할 수 있다.
+    - **Define** covergroup with coverpoints, bins, cross로 의미 있는 functional coverage를 정의할 수 있다.
+    - **Trigger** Monitor의 write 콜백에서 covergroup `sample()`을 호출해 sampling 시점을 명확히 할 수 있다.
+    - **Plan** Coverage closure 전략 (시드 다양성 + 타겟 시퀀스 + cross 분석)을 설계할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01-04](01_architecture_and_phase.md)
+    - SystemVerilog covergroup, coverpoint, cross 문법 (IEEE 1800 §19)
+
+## 왜 이 모듈이 중요한가
+
+TB의 **검증 가치**는 두 곳에서 생성됩니다: **비교(Scoreboard)** 로 결함을 발견하고, **커버리지(Coverage)** 로 검증 완전성을 측정합니다. 둘 다 TLM 위에서 동작하므로 Analysis Port 연결이 잘못되면 두 기능 모두 무력해집니다. 특히 OoO 응답을 가진 프로토콜(AXI ID, PCIe TLP tag)에서는 Scoreboard 매칭 로직 설계가 검증 신뢰성의 핵심입니다.
 
 ## 핵심 개념
 **TLM = 컴포넌트 간 트랜잭션 레벨 통신. Analysis Port로 Monitor→Scoreboard/Coverage에 broadcast. Scoreboard는 DUT 출력과 기대값을 비교하여 Pass/Fail 판정. Coverage는 검증 완전성을 정량적으로 측정.**
@@ -498,3 +520,98 @@ endgroup
 
 **Q: illegal_bins의 실무 활용은?**
 > "두 가지 용도가 있다. (1) 프로토콜 위반 검출 — reserved 명령 코드, 정의되지 않은 응답 값 등이 DUT에서 나오면 즉시 에러를 발생시킨다. SVA를 별도로 작성하지 않아도 coverage model 안에서 자동 검증이 된다. (2) illegal transition으로 FSM의 불법 전이를 검출한다. 예를 들어 IDLE에서 ERROR로 직접 전이하면 안 되는 스펙이면, `illegal_bins idle_to_error = (IDLE => ERROR)`로 잡는다."
+
+---
+
+## 연습문제
+
+!!! question "Exercise 1 (Apply, ★)"
+    Monitor 1개를 Scoreboard와 Coverage 양쪽에 broadcast 연결하는 코드를 작성하세요.
+
+    ??? answer "모범 답안"
+        ```systemverilog
+        // monitor
+        uvm_analysis_port#(my_item) ap;
+        function void build_phase(uvm_phase phase);
+          super.build_phase(phase);
+          ap = new("ap", this);
+        endfunction
+
+        // scoreboard
+        uvm_analysis_imp#(my_item, my_sb) actual_imp;
+        function void build_phase(uvm_phase phase);
+          super.build_phase(phase);
+          actual_imp = new("actual_imp", this);
+        endfunction
+        function void write(my_item it);
+          // 비교 로직
+        endfunction
+
+        // coverage subscriber
+        class my_cov extends uvm_subscriber#(my_item);
+          covergroup cg;
+            cp_addr: coverpoint item.addr { bins low={[0:'h3FF]}; bins high={['hC00:'hFFF]}; }
+          endgroup
+          function void write(my_item t);
+            this.item = t; cg.sample();
+          endfunction
+        endclass
+
+        // env connect_phase
+        agent.mon.ap.connect(sb.actual_imp);
+        agent.mon.ap.connect(cov.analysis_export);
+        ```
+
+!!! question "Exercise 2 (Analyze, ★★)"
+    in-order Scoreboard(큐 pop_front 비교)를 OoO 트래픽(AXI ID 기반)에 그대로 적용하면 어떤 증상이 나타나는지, 어떻게 수정해야 하는지 답하세요.
+
+    ??? answer "모범 답안"
+        - **증상**: Master는 ID=0,1,2 순으로 보냈지만 Slave가 ID=2,0,1 순으로 응답하면 첫 비교부터 mismatch → spurious UVM_ERROR.
+        - **수정**: 큐 1개가 아니라 **ID별 큐**(associative array `expected[id][$]`)를 두고, 응답이 오면 `expected[id].pop_front()`와 비교. AXI는 ID 단위 in-order, ID 간 OoO이므로 이 모델이 정합.
+        - 일반화: ID/tag/seq_no 같은 매칭 키가 있으면 **per-key 큐**, 없으면 모델로 비교(reference model이 모든 가능 출력 시뮬).
+
+!!! question "Exercise 3 (Create, ★★★)"
+    AXI write 트랜잭션에 대해 `addr_region` × `burst_len` cross coverage를 정의하세요. 4 region, burst_len bins {1, [2:4], [5:16]}.
+
+    ??? answer "예시 답안"
+        ```systemverilog
+        covergroup cg_axi_write;
+          cp_region: coverpoint item.addr {
+            bins r0 = {[32'h0000_0000:32'h3FFF_FFFF]};
+            bins r1 = {[32'h4000_0000:32'h7FFF_FFFF]};
+            bins r2 = {[32'h8000_0000:32'hBFFF_FFFF]};
+            bins r3 = {[32'hC000_0000:32'hFFFF_FFFF]};
+          }
+          cp_burst: coverpoint item.burst_len {
+            bins single = {1};
+            bins short  = {[2:4]};
+            bins long   = {[5:16]};
+          }
+          cross_region_burst: cross cp_region, cp_burst;  // 4 × 3 = 12 bins
+        endgroup
+        ```
+
+## 핵심 정리
+
+- **Analysis Port = 1:N broadcast**. Monitor 한 곳에서 send → 여러 구독자(SB, Coverage)가 각자 처리.
+- **Scoreboard 비교 모델**: in-order는 단일 큐, OoO는 per-key 큐(또는 ID별), 복잡 DUT는 reference model + 출력 비교.
+- **Covergroup sampling 시점**: Monitor의 write 콜백에서 `cg.sample()` 호출이 표준. trigger source 명시 안 하면 의도와 다른 시점에 샘플링.
+- **Cross coverage**는 단순 합집합이 아니라 곱집합(N × M bins) — 의미 있는 조합만 정의해야 폭발 방지.
+- **Coverage closure 전략**: (1) 시드 다양화로 baseline, (2) 타겟 시퀀스로 hole 채움, (3) cross 분석으로 미커버 조합 식별.
+- **Pitfall**: Scoreboard는 잡지만 covergroup이 trigger 안 되면 coverage가 0으로 남음 — 둘은 독립이지만 같은 ap에서 fan-out.
+
+## 다음 단계
+
+- 📝 [**Module 05 퀴즈**](quiz/05_tlm_scoreboard_coverage_quiz.md)
+- ➡️ [**Module 06 — 실무 패턴 & 안티패턴**](06_practical_patterns.md)
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_config_db_factory.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">config_db & Factory</div>
+  </a>
+  <a class="nav-next" href="06_practical_patterns.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">UVM 실무 패턴 & 안티패턴</div>
+  </a>
+</div>

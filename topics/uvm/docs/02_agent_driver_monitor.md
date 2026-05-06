@@ -1,4 +1,26 @@
-# Unit 2: Agent / Driver / Monitor
+# Module 02 — Agent / Driver / Monitor
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 16분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** Active/Passive 모드 분리를 갖춘 Agent를 build_phase에서 분기 구현할 수 있다.
+    - **Implement** `get_next_item` / `item_done` 짝을 사용하는 정상 Driver와 Pipelining Driver를 각각 작성할 수 있다.
+    - **Distinguish** Driver(인가)와 Monitor(관찰)의 책임 경계를 코드 리뷰에서 식별할 수 있다.
+    - **Connect** Virtual Interface를 top → config_db → Agent 경로로 전달해 Driver/Monitor에 연결할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01 — UVM 아키텍처 & Phase](01_architecture_and_phase.md) (Phase 흐름, 컴포넌트 생성)
+    - SystemVerilog `interface`와 `modport`
+    - `clocking block`의 의미 (signal sampling/driving timing)
+
+## 왜 이 모듈이 중요한가
+
+Agent는 **UVM 재사용의 최소 단위**입니다. 잘못 설계된 Agent는 모든 환경에 cascading failure를 만듭니다. 특히 Active/Passive 분리를 안 해 두면, 같은 인터페이스를 다른 위치에서(예: PCIe RC vs EP) 검증할 때 Agent를 새로 짜야 합니다. Driver와 Monitor의 책임 경계도 헷갈리기 쉬운 영역으로, **Monitor가 신호를 절대 driving하지 않는다**는 원칙은 격리/관찰의 본질입니다.
 
 ## 핵심 개념
 **Agent = 하나의 인터페이스에 대한 검증 인프라 묶음 (Driver + Monitor + Sequencer). Active Agent는 자극 생성+관찰, Passive Agent는 관찰만. DUT의 프로토콜 인터페이스마다 1개 Agent를 배치하는 것이 원칙.**
@@ -399,3 +421,75 @@ Security Driver: force/release로 DUT 내부 신호에 직접 접근
 
 **Q: set_id_info를 빠뜨리면 어떤 문제가 발생하는가?**
 > "여러 Sequence가 동시에 같은 Sequencer에서 실행될 때 문제가 된다. Driver가 put_response(rsp)를 호출하면 Sequencer가 rsp 내부의 sequence_id를 보고 해당 Sequence에 전달한다. set_id_info가 없으면 sequence_id가 기본값(0)이라 Sequencer가 올바른 Sequence를 매칭할 수 없다. 단일 Sequence만 실행한다면 우연히 동작할 수 있지만, 멀티 Sequence 환경에서 즉시 깨지는 잠재 버그이다."
+
+---
+
+## 연습문제
+
+!!! question "Exercise 1 (Apply, ★)"
+    `is_active` 플래그를 사용해 Active/Passive 모드를 build_phase에서 분기하는 Agent를 작성하세요. Passive 모드에서는 Driver와 Sequencer가 생성되지 않아야 합니다.
+
+    ??? answer "모범 답안"
+        ```systemverilog
+        class apb_agent extends uvm_agent;
+          `uvm_component_utils(apb_agent)
+          apb_driver    drv;
+          apb_monitor   mon;
+          apb_sequencer sqr;
+
+          function void build_phase(uvm_phase phase);
+            super.build_phase(phase);
+            mon = apb_monitor::type_id::create("mon", this);  // 항상 생성
+            if (get_is_active() == UVM_ACTIVE) begin
+              drv = apb_driver::type_id::create("drv", this);
+              sqr = apb_sequencer::type_id::create("sqr", this);
+            end
+          endfunction
+
+          function void connect_phase(uvm_phase phase);
+            super.connect_phase(phase);
+            if (get_is_active() == UVM_ACTIVE)
+              drv.seq_item_port.connect(sqr.seq_item_export);
+          endfunction
+        endclass
+        ```
+
+!!! question "Exercise 2 (Analyze, ★★)"
+    Driver의 `forever` 루프에서 `get_next_item()`만 호출하고 `item_done()`을 빠뜨리면 어떤 증상이 나타나는지, Sequencer 측 동작 관점에서 설명하세요.
+
+    ??? answer "모범 답안"
+        **증상**: 첫 트랜잭션은 정상 인가되지만 두 번째 트랜잭션이 영원히 대기 → 시뮬레이션 hang.
+
+        **이유**: Sequencer는 `get_next_item` / `item_done`을 lockstep으로 관리. `item_done` 호출 전까지 sequencer는 "현재 item이 아직 처리 중"이라고 판단해 다음 item을 driver에게 주지 않음.
+
+!!! question "Exercise 3 (Evaluate, ★★★)"
+    Pipelining Driver가 적절한 시나리오와 단순 Driver가 충분한 시나리오를 각각 한 가지씩 들고, throughput / 응답 매칭 복잡도 관점에서 설명하세요.
+
+    ??? answer "예시 답안"
+        - **Pipelining 적절**: AXI write 채널 — AW/W 독립, outstanding 4+ 정상. 단순 driver는 throughput 측정 불가, OoO 응답 커버 불가.
+        - **단순 driver 충분**: APB — outstanding 개념 없음(매 트랜잭션 SETUP→ACCESS→IDLE 순차). Pipelining 도입 시 오히려 protocol 위반.
+
+## 핵심 정리
+
+- **Agent = Driver + Monitor + Sequencer** 묶음. Active/Passive 모드 분기로 재사용성 확보.
+- **Driver는 인가, Monitor는 관찰**. Monitor가 DUT 신호 driving은 비침투적 관찰 원칙 위배.
+- **`get_next_item` / `item_done`은 lockstep 짝**. 누락 시 두 번째 트랜잭션부터 hang.
+- **Virtual Interface 전달은 config_db**: top → set, Driver/Monitor → get. 경로 일치 필수.
+- **Pipelining Driver**는 throughput 검증에 필요하지만 응답 매칭(ID/queue) 책임 추가.
+- Sequencer Arbitration은 다중 sequence 동시 실행 시 정책 결정 (FIFO / Strict-FIFO / Random / Weighted).
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_agent_driver_monitor_quiz.md)
+- ➡️ [**Module 03 — Sequence & Sequence Item**](03_sequence_and_item.md)
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_architecture_and_phase.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">UVM 아키텍처 & Phase</div>
+  </a>
+  <a class="nav-next" href="03_sequence_and_item.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Sequence & Sequence Item</div>
+  </a>
+</div>

@@ -1,118 +1,137 @@
-# UVM (Universal Verification Methodology) — 개요
+# UVM (Universal Verification Methodology)
 
-## 학습 플랜
-- **레벨**: Advanced (6년+ UVM 실무, from scratch 환경 구축 경험)
-- **목표**: UVM 아키텍처 전체를 화이트보드에 그리며 설계 의사결정의 근거를 설명할 수 있는 수준
+> **검증 엔지니어를 위한 UVM 마스터 코스** — 클래스 계층, Phase, Agent, Sequence, Factory, TLM, Coverage까지 6년+ 실무자 관점으로 통합 학습.
 
-## 핵심 용어집 (Glossary)
+<div class="course-header">
+  <div class="course-stats">
+    <div class="stat-item"><strong>7</strong>개 모듈 + Quick Ref</div>
+    <div class="stat-item"><strong>약 2시간</strong> 총 학습시간</div>
+    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+  </div>
+</div>
 
-### 아키텍처 & 컴포넌트
+## 이 코스에서 얻는 것
 
-| 약어 | 풀네임 | 설명 |
-|------|--------|------|
-| **UVM** | Universal Verification Methodology | SystemVerilog 기반 검증 프레임워크 |
-| **DUT** | Device Under Test | 검증 대상 설계 |
-| **Agent** | — | Driver + Monitor + Sequencer 묶음 (Active/Passive 모드) |
-| **Driver** | — | DUT 인터페이스에 트랜잭션을 물리 신호로 변환하여 인가 |
-| **Monitor** | — | DUT 신호를 관찰하여 트랜잭션으로 변환 (수동, 비침투적) |
-| **Sequencer** | — | Sequence와 Driver 사이의 중개자 (Arbitration 포함) |
-| **Scoreboard** | — | DUT 출력과 Reference Model의 기대값을 비교/판정 |
-| **uvm_env** | — | Agent, Scoreboard, Coverage를 담는 컨테이너 |
-| **uvm_test** | — | 최상위 테스트 클래스 (환경 구성 + 시나리오 선택) |
+코스를 마치면 다음을 할 수 있습니다:
 
-### Sequence & Stimulus
+- **Diagram (분석)** UVM 클래스 계층 전체와 Phase 실행 순서를 화이트보드로 그리며 설계 의사결정을 설명
+- **Design (생성)** Agent/Driver/Monitor 구조를 Active/Passive 모드를 구분해 설계
+- **Apply (적용)** Sequence + Virtual Sequence + Factory Override로 다양한 시나리오를 재사용 가능하게 구성
+- **Analyze (분석)** config_db 계층 전달, TLM 포트 연결, Scoreboard 비교 로직을 트레이스
+- **Evaluate (평가)** UVM 실무 패턴/안티패턴을 식별하고 코드 리뷰에서 근거 있는 피드백 제공
 
-| 약어 | 풀네임 | 설명 |
-|------|--------|------|
-| **Sequence** | — | 트랜잭션 생성 시나리오 (body() 태스크로 정의) |
-| **Sequence Item** | — | 하나의 트랜잭션 데이터 (uvm_sequence_item 상속) |
-| **Virtual Sequence** | — | 여러 Agent의 Sequence를 조합하는 시스템 레벨 시나리오 |
-| **Constrained Random** | — | 제약 조건(constraint) 만족 하에 필드를 무작위 생성 |
+## 사전 지식
 
-### 인프라 패턴
+이 코스는 **심화** 과정입니다. 다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
 
-| 약어 | 풀네임 | 설명 |
-|------|--------|------|
-| **Factory** | — | 객체 생성을 위임하는 패턴 (type override로 유연성 확보) |
-| **config_db** | — | 계층 간 설정(VIF, 파라미터)을 전달하는 전역 저장소 |
-| **TLM** | Transaction Level Modeling | 컴포넌트 간 트랜잭션 기반 통신 (Analysis Port 등) |
-| **Analysis Port** | — | Monitor → Scoreboard/Coverage 단방향 브로드캐스트 포트 |
-| **Virtual Interface** | — | RTL 신호 세계와 UVM class 세계를 연결하는 브릿지 |
-| **RAL** | Register Abstraction Layer | 레지스터 모델 추상화 및 자동화 |
+- **SystemVerilog 객체지향**: class, virtual function/task, polymorphism, parameterized class
+- **랜덤화**: `randomize()`, constraint, `rand`/`randc` 차이
+- **Interface & modport**: virtual interface 개념
+- **시뮬레이터 사용 경험**: VCS / Questa / Xcelium 중 하나로 +runtest, +UVM_TESTNAME 등의 경험
 
-### Phase & 실행 제어
+부족한 부분이 있다면 [SystemVerilog IEEE 1800](https://standards.ieee.org/ieee/1800/) 사양서나 *SystemVerilog for Verification* (Spear) 1-7장을 먼저 보세요.
 
-| 약어 | 풀네임 | 설명 |
-|------|--------|------|
-| **Phase** | — | 시뮬레이션 실행 단계 (Build→Connect→Run→Extract→Report) |
-| **Objection** | — | run_phase 종료 제어 메커니즘 (raise/drop) |
-| **Drain Time** | — | 마지막 트랜잭션 이후 DUT 처리 완료 대기 시간 |
+## 학습 모듈
 
-### Coverage
+순차 학습을 권장합니다 (특히 1→4까지). 5~7은 토픽 단위로도 가능합니다.
 
-| 약어 | 풀네임 | 설명 |
-|------|--------|------|
-| **Covergroup** | — | 기능 커버리지 정의 컨테이너 |
-| **Coverpoint** | — | 커버리지 수집 대상 신호/변수 |
-| **Cross** | — | 여러 Coverpoint의 교차 조합 커버리지 |
-| **Regression** | — | 다수 테스트를 다양한 시드로 반복 실행하여 커버리지 축적 |
+<div class="course-grid">
+  <a class="course-card" href="01_architecture_and_phase.md">
+    <div class="course-card-num">Module 01</div>
+    <div class="course-card-title">UVM 아키텍처 &amp; Phase</div>
+    <div class="course-card-desc">클래스 계층, Phase 실행 모델, Top-Down vs Bottom-Up</div>
+    <div class="course-card-meta">⏱ 약 17분 · Mermaid 다이어그램 포함</div>
+  </a>
+  <a class="course-card" href="02_agent_driver_monitor.md">
+    <div class="course-card-num">Module 02</div>
+    <div class="course-card-title">Agent / Driver / Monitor</div>
+    <div class="course-card-desc">DUT 인터페이스 컴포넌트, Active/Passive 분리, VIF 연결</div>
+    <div class="course-card-meta">⏱ 약 16분</div>
+  </a>
+  <a class="course-card" href="03_sequence_and_item.md">
+    <div class="course-card-num">Module 03</div>
+    <div class="course-card-title">Sequence &amp; Sequence Item</div>
+    <div class="course-card-desc">자극 생성 모델, body() 패턴, Virtual Sequence 조합</div>
+    <div class="course-card-meta">⏱ 약 17분</div>
+  </a>
+  <a class="course-card" href="04_config_db_factory.md">
+    <div class="course-card-num">Module 04</div>
+    <div class="course-card-title">config_db &amp; Factory</div>
+    <div class="course-card-desc">계층 설정 전달, Type/Instance Override 의사결정</div>
+    <div class="course-card-meta">⏱ 약 17분</div>
+  </a>
+  <a class="course-card" href="05_tlm_scoreboard_coverage.md">
+    <div class="course-card-num">Module 05</div>
+    <div class="course-card-title">TLM, Scoreboard, Coverage</div>
+    <div class="course-card-desc">Analysis Port 통신, 비교 모델, 커버리지 클로저</div>
+    <div class="course-card-meta">⏱ 약 18분</div>
+  </a>
+  <a class="course-card" href="06_practical_patterns.md">
+    <div class="course-card-num">Module 06</div>
+    <div class="course-card-title">실무 패턴 &amp; 안티패턴</div>
+    <div class="course-card-desc">현장에서 반복되는 좋은 설계 vs 피해야 할 함정</div>
+    <div class="course-card-meta">⏱ 약 16분</div>
+  </a>
+  <a class="course-card" href="07_quick_reference_card.md">
+    <div class="course-card-num">Module 07</div>
+    <div class="course-card-title">Quick Reference Card</div>
+    <div class="course-card-desc">실무 치트시트 — 매크로, 패턴, 디버그 팁</div>
+    <div class="course-card-meta">⏱ 약 8분 (참고용)</div>
+  </a>
+</div>
 
-### 기타 핵심
+## 학습 경로 다이어그램
 
-| 약어 | 풀네임 | 설명 |
-|------|--------|------|
-| **DPI-C** | Direct Programming Interface C | SystemVerilog↔C 양방향 인터페이스 |
-| **Reference Model** | — | DUT의 기대 동작을 추상적으로 모델링 (C/SV) |
-| **grab/lock** | — | Sequence가 Sequencer를 독점하는 메커니즘 |
+```mermaid
+flowchart LR
+    M1[Module 01<br/>아키텍처 &amp; Phase]
+    M2[Module 02<br/>Agent/Drv/Mon]
+    M3[Module 03<br/>Sequence]
+    M4[Module 04<br/>config_db &amp; Factory]
+    M5[Module 05<br/>TLM/Scoreboard/Cov]
+    M6[Module 06<br/>실무 패턴]
+    M7[Module 07<br/>Quick Ref]
 
----
+    M1 --> M2
+    M2 --> M3
+    M3 --> M4
+    M4 --> M5
+    M5 --> M6
+    M6 --> M7
 
-## 컨셉 맵
-
+    classDef coreModule fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef advModule fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
+    classDef refModule fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    class M1,M2,M3,M4 coreModule
+    class M5,M6 advModule
+    class M7 refModule
 ```
-                    +-------------------+
-                    |    uvm_test       |
-                    +---------+---------+
-                              |
-                    +---------+---------+
-                    |    uvm_env        |
-                    |                   |
-                    | +-----+ +-------+ |
-                    | |Agent| |Scorebrd| |
-                    | |     | |       | |
-                    | |Drv  | |Checker| |
-                    | |Mon  | |       | |
-                    | |Sqr  | +-------+ |
-                    | +-----+           |
-                    +---------+---------+
-                              |
-              +---------------+---------------+
-              |               |               |
-         +---------+   +----------+   +----------+
-         |Sequence |   | config_db|   | Factory  |
-         |Library  |   | (설정)   |   | (생성)   |
-         +---------+   +----------+   +----------+
-```
 
-## 학습 단위
+## 코스 운영 방식
 
-| # | 단위 | 핵심 질문 |
-|---|------|----------|
-| 1 | **UVM 아키텍처 & Phase** | UVM의 클래스 계층과 Phase 실행 순서는 어떻게 동작하는가? |
-| 2 | **Agent / Driver / Monitor** | DUT와 상호작용하는 핵심 컴포넌트는 어떻게 설계하는가? |
-| 3 | **Sequence & Sequence Item** | 자극(Stimulus)을 어떻게 생성하고 제어하는가? |
-| 4 | **config_db & Factory** | 환경 설정과 객체 생성을 어떻게 유연하게 관리하는가? |
-| 5 | **TLM, Scoreboard, Coverage** | 컴포넌트 간 통신, 결과 비교, Coverage 수집은 어떻게 하는가? |
-| 6 | **UVM 실무 패턴 & 안티패턴** | 실무에서 반복되는 설계 패턴과 피해야 할 것은? |
+각 모듈은 다음 순서로 구성됩니다:
 
-## 이력서 연결
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — 핵심 개념 + 예제 코드 + 다이어그램
+4. **워크스루 (Walkthrough)** — 단계별 실습 시나리오
+5. **연습문제** — 직접 풀어보는 문항 + 모범 답안
+6. **핵심 정리** — 5~7개의 압축된 takeaway
+7. **퀴즈** — 이해도 점검 (별도 페이지)
 
-| 이력서 항목 | 관련 Unit | 면접 시 활용 |
-|------------|----------|-------------|
-| E2E UVM from scratch (전 프로젝트) | 전체 | 아키텍처 설계 의사결정 |
-| Legacy SV → UVM 전환 | Unit 1, 6 | 전환 동기 + 설계 원칙 |
-| OTP Abstraction Layer (RAL 스타일) | Unit 4 | config_db / 추상화 설계 |
-| Active Driver (force/release) | Unit 2, 3 | Driver 설계 + Sequence 구조 |
-| Custom Thin VIP | Unit 2 | Agent 경량화 전략 |
-| Coverage-driven 방법론 | Unit 5 | Covergroup 설계 + Closure |
-| 다중 프로젝트 포팅 | Unit 4, 6 | 재사용 가능한 설계 패턴 |
+## 관련 자료
+
+- 📚 [**용어집 (Glossary)**](glossary.md) — UVM 핵심 용어 ISO 11179 형식 정의
+- 📝 [**퀴즈 (Quizzes)**](quiz/index.md) — 챕터별 5-8문항 (Bloom mix)
+- 📋 [**코스 개요 & 컨셉 맵**](_legacy_overview.md) — 학습 단위 개요와 이력서 매핑
+
+## 학습 팁
+
+!!! tip "효율적 학습"
+    - **순서 고수**: Module 01-04는 강한 의존이 있으므로 순차 학습
+    - **퀴즈 즉시**: 각 모듈 끝나면 바로 퀴즈 풀고 본문 재방문
+    - **코드 직접 작성**: 본문 코드는 읽기만 말고 실제 시뮬레이터에서 컴파일/실행
+    - **다이어그램 화이트보드**: 클래스 계층/Phase 흐름은 자기 손으로 그릴 수 있어야 함
+
+!!! warning "안티패턴 경계"
+    UVM 실무에서 가장 자주 발생하는 문제는 **Phase 오해**, **config_db 경로 불일치**, **Factory Override 누락**입니다. Module 06에서 별도 다룹니다.

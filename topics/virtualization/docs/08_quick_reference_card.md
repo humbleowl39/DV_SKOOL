@@ -1,5 +1,10 @@
 # Unit 8: Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 12분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 시스템 아키텍처 진화 (TechForum #54)
 
 ```
@@ -221,3 +226,14 @@ Bare Metal:  VA ──[1-Stage]──> PA              (최대 5회 메모리 �
    "AWS Nitro 모델: HW 보안 + Pass-through 성능, Firecracker MicroVM"
    "DPU 오프로드: 네트워크/스토리지 가상화를 전용 HW로 → 검증 대상 확대"
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="07_containers_and_modern.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">컨테이너와 현대 가상화</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

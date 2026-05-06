@@ -1,0 +1,241 @@
+# Unit 6: UVM 실무 패턴 & 안티패턴
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 7분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+## 핵심 개념
+**실무에서 반복되는 설계 패턴을 익히면 환경 구축 속도와 품질이 동시에 향상. 안티패턴을 알면 디버그 시간을 대폭 줄일 수 있다. 이 Unit은 6년 실무에서 축적된 패턴/안티패턴을 정리.**
+
+---
+
+## 설계 패턴
+
+### 패턴 1: Config Object 패턴
+
+```
+문제: config_db set/get가 수십 개 → 관리 불가, 오타 위험
+
+해결: 관련 설정을 Config Object로 묶기
+
+  class agent_config extends uvm_object;
+    virtual my_if vif;
+    bit is_active = 1;
+    int timeout = 1000;
+    bit enable_coverage = 1;
+  endclass
+
+→ set/get 1회로 모든 설정 전달
+→ 새 설정 추가 시 Config Object에만 필드 추가
+→ 포팅 시 Config Object만 교체 (Apple/Meta 사례)
+```
+
+### 패턴 2: Base Test + 상속 패턴
+
+```systemverilog
+class base_test extends uvm_test;
+  my_env env;
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    env = my_env::type_id::create("env", this);
+    // 공통 설정
+  endfunction
+
+  // 공통 헬퍼 메서드
+  task wait_for_reset();
+    @(posedge vif.rst_n);
+  endtask
+endclass
+
+class smoke_test extends base_test;
+  task run_phase(uvm_phase phase);
+    phase.raise_objection(this);
+    wait_for_reset();
+    // smoke 시나리오
+    phase.drop_objection(this);
+  endtask
+endclass
+
+class stress_test extends base_test;
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    // Factory Override로 Stress용 Sequence 교체
+    set_type_override_by_type(
+      normal_seq::get_type(), stress_seq::get_type());
+  endfunction
+endclass
+
+→ 공통 환경은 base_test에, 시나리오별 차이만 하위 Test에
+→ 새 테스트 추가 시 base_test 상속 + 시나리오만 작성
+```
+
+### 패턴 3: Layered Sequence 패턴
+
+```
+높은 추상 레벨 → 낮은 추상 레벨로 변환:
+
+  System Sequence: "파일 읽기" (Application 레벨)
+       ↓
+  Protocol Sequence: "READ(LBA=0x100, len=8)" (SCSI 레벨)
+       ↓
+  Transport Sequence: "Command UPIU + Data-In UPIU" (UFS 레벨)
+       ↓
+  Pin-level: Driver가 신호 구동
+
+각 레벨의 Sequence가 독립적으로 재사용 가능
+→ UFS HCI 검증에서 이 계층 활용
+```
+
+### 패턴 4: Parameterized Agent
+
+```systemverilog
+class generic_axi_agent #(int DATA_W = 32, int ADDR_W = 32)
+  extends uvm_agent;
+
+  typedef generic_axi_item #(DATA_W, ADDR_W) item_t;
+  typedef generic_axi_driver #(DATA_W, ADDR_W) driver_t;
+  ...
+endclass
+
+// 사용
+generic_axi_agent #(512, 40) wide_agent;   // 512-bit 데이터
+generic_axi_agent #(32, 32)  narrow_agent; // 32-bit 데이터
+
+→ 데이터/주소 폭만 다른 인터페이스에 같은 Agent 재사용
+→ DCMAC (512-bit), 레지스터 (32-bit) 모두 커버
+```
+
+---
+
+## 안티패턴 — 피해야 할 것
+
+### 안티패턴 1: config_db 경로 하드코딩
+
+```systemverilog
+// BAD: 경로 문자열이 코드 전체에 분산
+uvm_config_db #(int)::set(this, "env.axi_agent.driver", "timeout", 100);
+uvm_config_db #(int)::set(this, "env.axi_agent.monitor", "timeout", 100);
+// → 컴포넌트 이름 변경 시 모든 경로 수동 수정
+
+// GOOD: Config Object + 와일드카드
+uvm_config_db #(agent_cfg)::set(this, "env.axi_agent*", "cfg", cfg);
+```
+
+### 안티패턴 2: Driver에 DUT 로직 삽입
+
+```systemverilog
+// BAD: Driver가 기대값을 계산
+task drive_and_check(my_item item);
+  vif.data <= item.data;
+  @(posedge vif.clk);
+  if (vif.result != item.data * 2)  // ← DUT 로직!
+    `uvm_error(...)
+endtask
+
+// GOOD: Driver는 구동만, 비교는 Scoreboard
+// Driver: vif.data <= item.data;
+// Scoreboard: ref_model.predict(item) vs monitor.actual
+```
+
+### 안티패턴 3: Sequence에서 시간 대기
+
+```systemverilog
+// BAD: Sequence가 DUT 타이밍에 의존
+task body();
+  start_item(item); finish_item(item);
+  #100ns;  // ← 하드코딩 지연!
+  start_item(next_item); finish_item(next_item);
+endtask
+
+// GOOD: 이벤트/핸드셰이크 기반
+task body();
+  start_item(item); finish_item(item);
+  wait(env.monitor.transaction_complete);  // 이벤트 기반
+  start_item(next_item); finish_item(next_item);
+endtask
+```
+
+### 안티패턴 4: $display / $finish 사용
+
+```systemverilog
+// BAD: UVM 외부 출력
+$display("Error: data mismatch");
+$finish;
+
+// GOOD: UVM 리포팅 사용
+`uvm_error("SB", "Data mismatch")
+`uvm_fatal("DRV", "Critical failure — cannot continue")
+
+// 이유: UVM 리포팅은 컴포넌트 경로, 시간, 심각도를 자동 포함
+//       필터링/카운팅/파일 출력 등 제어 가능
+```
+
+### 안티패턴 5: 모든 곳에서 Objection
+
+```systemverilog
+// BAD: 여러 컴포넌트에서 raise/drop → 종료 시점 예측 불가
+// Driver: phase.raise_objection(this);
+// Monitor: phase.raise_objection(this);
+// Scoreboard: phase.raise_objection(this);
+
+// GOOD: Test에서만 raise/drop
+class my_test extends uvm_test;
+  task run_phase(uvm_phase phase);
+    phase.raise_objection(this);
+    vseq.start(null);
+    // drain time
+    #1000ns;
+    phase.drop_objection(this);
+  endtask
+endclass
+```
+
+---
+
+## From Scratch 환경 구축 체크리스트 (이력서 연결)
+
+```
+MangoBoost / Samsung에서 반복한 환경 구축 순서:
+
+1. [ ] Interface 정의 (.sv)
+2. [ ] Sequence Item 정의 (필드 + Constraint)
+3. [ ] Driver 구현 (Pin-level 구동)
+4. [ ] Monitor 구현 (Pin-level → Transaction)
+5. [ ] Sequencer (보통 기본 uvm_sequencer 사용)
+6. [ ] Agent (Active/Passive, Config Object)
+7. [ ] Scoreboard (Reference Model + 비교)
+8. [ ] Coverage (Covergroup + Coverpoint + Cross)
+9. [ ] Env (Agent + Scoreboard + Coverage 연결)
+10. [ ] Base Test + Config 설정
+11. [ ] 기본 Sequence (smoke, directed)
+12. [ ] Virtual Sequence (시스템 레벨)
+13. [ ] Package 파일 (.sv, .f)
+14. [ ] Sanity 실행 + 디버그
+15. [ ] Coverage 분석 + 추가 시나리오
+```
+
+---
+
+## Q&A
+
+**Q: UVM 환경을 from scratch로 구축한 경험을 설명하라.**
+> "MangoBoost에서 MMU IP와 DCMAC 서브시스템의 UVM 환경을 from scratch로 구축했다. 핵심 설계 원칙: (1) Config Object 패턴 — 포팅 시 Config만 교체. (2) Parameterized Agent — 데이터 폭만 다른 인터페이스에 재사용. (3) Base Test 상속 — 공통 환경 + 시나리오별 Test. (4) Virtual Sequence — 멀티 Agent 조합. 이 원칙들로 환경을 여러 프로젝트에 빠르게 포팅할 수 있었다."
+
+**Q: UVM에서 가장 흔한 실수는?**
+> "세 가지: (1) config_db 경로 오타 — 컴파일 타임에 안 잡히고 런타임에 get 실패. Config Object로 완화. (2) Driver에 DUT 로직 삽입 — 같은 버그를 양쪽에 구현하여 검출 불가. Scoreboard 분리 필수. (3) Objection 관리 — 여러 곳에서 raise/drop하면 종료 시점을 예측할 수 없음. Test에서만 관리."
+
+**Q: 환경 포팅을 빠르게 하는 핵심은?**
+> "세 가지 분리: (1) DUT 독립적 Agent — 프로토콜만 구현, DUT 로직 배제. (2) Config Object — SoC별 차이를 설정 객체로 흡수. (3) OTP/메모리 맵 추상화 — 물리 주소가 아닌 의미 기반 접근. Samsung에서 Apple/Meta 프로젝트 포팅 시 수 주 → 3-5일로 단축한 것이 이 원칙 덕분이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="05_tlm_scoreboard_coverage.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">TLM, Scoreboard, Coverage</div>
+  </a>
+  <a class="nav-next" href="07_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">UVM — Quick Reference Card</div>
+  </a>
+</div>

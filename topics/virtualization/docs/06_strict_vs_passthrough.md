@@ -1,5 +1,10 @@
 # Unit 6: Strict System vs Hypervisor Pass-through
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **Strict System은 모든 HW 접근을 Hypervisor가 중재하여 보안/격리를 보장하지만 성능 오버헤드가 크다. Pass-through는 특정 디바이스에 대해 VM이 HW에 직접 접근하여 bare metal 수준 성능을 달성한다. 현대 시스템은 두 방식을 혼합하여 보안과 성능을 모두 확보한다.**
 
@@ -327,3 +332,14 @@ Azure:
 
 **Q: AWS Nitro 같은 현대 클라우드가 Strict 대신 pass-through를 채택한 이유는?**
 > "성능: Strict System의 VM Exit 오버헤드가 100Gbps+ 네트워킹, NVMe에서 병목이 되었고, 클라우드 고객은 bare metal 대비 성능 격차를 허용하지 않는다. 보안: 전통적으로 pass-through = 보안 약화였으나, Nitro는 이를 HW로 해결했다. Nitro Card가 네트워크/스토리지/보안을 전용 칩에 오프로드하고, IOMMU + HW 격리로 pass-through에서도 강력한 보안을 유지한다. 핵심 전환: 보안을 SW 중재가 아닌 HW(IOMMU, Nitro Card)로 보장하면서 성능은 pass-through로 극대화하는 모델이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="05_hypervisor_types.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Hypervisor 유형</div>
+  </a>
+  <a class="nav-next" href="07_containers_and_modern.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">컨테이너와 현대 가상화</div>
+  </a>
+</div>

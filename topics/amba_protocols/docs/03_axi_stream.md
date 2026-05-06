@@ -1,5 +1,10 @@
 # Unit 3: AXI-Stream
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 15분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **AXI-Stream = 주소 없는 단방향 스트리밍 프로토콜. 연속적 데이터 흐름(패킷, 프레임, 샘플)을 고속으로 전달. AXI(메모리 매핑)와 달리 주소 개념이 없으며, 데이터의 시작/끝을 TLAST로 표시.**
 
@@ -366,3 +371,14 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
 
 5. TID와 TDEST가 모두 있을 때, 라우팅에 사용되는 것은?
    <details><summary>정답</summary>TDEST. TID는 스트림 식별(같은 출력 포트에서 스트림을 구분), TDEST는 물리적 라우팅 목적지 결정.</details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_axi.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">AXI (Advanced eXtensible Interface)</div>
+  </a>
+  <a class="nav-next" href="04_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">AMBA Protocols — Quick Reference Card</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # Ethernet & DCMAC — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 6분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 한줄 요약
 ```
 DCMAC = AMD 100/200/400GbE MAC IP. 프레임 생성(Preamble+FCS+IFG), FCS 검증, 흐름 제어(Pause/PFC), AXI-S ↔ Line Side 변환.
@@ -90,3 +95,14 @@ Host ↔ [PCIe/DMA] ↔ TOE ↔ [AXI-S] ↔ DCMAC ↔ [SerDes] ↔ Network
         mmu_ko/      toe_ko/    ethernet_dcmac_ko/
         ← 학습 자료가 전체 데이터 패스를 커버 →
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_dcmac_dv_methodology.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">DCMAC DV 검증 전략</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

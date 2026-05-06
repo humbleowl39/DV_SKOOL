@@ -1,5 +1,10 @@
 # Unit 2: Array & Hash Map (연관 배열)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 8분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 왜 Hash Map인가?
 
 ```
@@ -283,3 +288,14 @@ module unit2_array_hashmap;
 endmodule
 
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_big_o_explained.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Big-O 복잡도 & 패턴 사고법</div>
+  </a>
+  <a class="nav-next" href="03_two_pointers_sliding_window_explained.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Two Pointers & Sliding Window</div>
+  </a>
+</div>

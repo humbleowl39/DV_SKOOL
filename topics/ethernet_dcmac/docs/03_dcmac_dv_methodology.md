@@ -1,5 +1,10 @@
 # Unit 3: DCMAC DV 검증 전략
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 21분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **DCMAC 검증 = 프레임 무결성(FCS) + AXI-S 프로토콜 준수 + 흐름 제어(Pause/PFC) + 에러 처리 + E2E 데이터 패스. UVM 환경을 from scratch로 구축한 경험이 이력서 핵심.**
 
@@ -575,3 +580,14 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
 
 **Q: 레지스터 검증은 어떻게 접근했나?**
 > "UVM RAL을 구축하고 세 가지를 검증했다. (1) Reset Value — 모든 레지스터의 리셋 후 값이 스펙과 일치하는지 RAL mirror로 자동 확인. (2) Access Policy — RW/RO/W1C 등 각 필드의 접근 정책이 올바른지. (3) Functional — 통계 카운터가 실제 트래픽과 일치하는지, Config 변경이 올바른 시점에 적용되는지. 특히 통계 카운터의 Read-on-Clear 특성 때문에 읽기 순서/타이밍 검증이 까다로웠다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_dcmac_architecture.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">DCMAC 아키텍처</div>
+  </a>
+  <a class="nav-next" href="04_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Ethernet & DCMAC — Quick Reference Card</div>
+  </a>
+</div>

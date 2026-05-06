@@ -1,5 +1,10 @@
 # Unit 1: SoC Top Integration 검증
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 22분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **SoC Top 검증 = IP 단위에서 검증할 수 없는 "IP 간 상호작용"을 확인하는 단계. Connectivity, Clock/Reset, Interrupt, Memory Map, Power Domain 등 통합에서만 드러나는 문제를 검증. IP DV가 "각 부품이 정상"이라면, Top DV는 "부품을 조립한 완제품이 정상"인지 확인.**
 
@@ -613,3 +618,14 @@ PLL Lock → Bus Fabric → Memory Controller (+ DRAM Init 완료 대기) → CP
 
 **Q: Memory Map 검증에서 어떤 시나리오를 포함했나?**
 > "3단계로 진행했다. (1) 각 IP의 Base Address에 R/W 접근하여 OKAY 응답 확인, (2) 미할당 주소 접근 시 DECERR 응답 확인, (3) 주소 경계에서 정확히 잘리는지 boundary test. 특히 주소 중첩은 두 slave가 동시 응답하여 버스 프로토콜 위반으로 이어지므로, IP-XACT 메타데이터와 실제 RTL의 주소 디코더를 크로스 체크했다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_common_task_cctv.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Common Task & CCTV (Common Task Coverage Verification)</div>
+  </a>
+</div>

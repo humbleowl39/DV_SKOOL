@@ -1,5 +1,10 @@
 # Unit 4: TOE DV 검증 전략
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 23분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **TOE 검증 = 프로토콜 준수(TCP/IP RFC) + 기능 정확성(상태 머신, 데이터 무결성) + 성능(처리량, 지연) + 에러 복구(패킷 손실, 재전송). 네트워크 프로토콜의 비결정론적 특성(패킷 손실, 순서 변경, 지연)이 검증 난이도를 높이는 핵심 요인.**
 
@@ -449,3 +454,14 @@ Assertion이 한 번도 fail하지 않은 것은 두 가지 가능성이 있다:
 
 TCP는 상태 기반 프로토콜이므로, Network Agent의 응답은 DUT의 출력에 의존한다. 예를 들어 ACK의 ack_num은 DUT가 실제로 보낸 seq_num + len이어야 한다. Pre-programmed 방식은 DUT의 실제 동작을 예측해서 미리 만들어야 하는데, DUT가 재전송/OOO/Window 조정 등을 할 경우 예측이 불가능하다. Reactive 패턴은 DUT 출력을 Monitor가 관찰하고 Responder가 실시간으로 적절한 응답을 생성하므로, DUT의 어떤 동작에도 유연하게 대응할 수 있다.
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_toe_key_functions.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">TOE 핵심 기능 상세</div>
+  </a>
+  <a class="nav-next" href="05_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">TOE — Quick Reference Card</div>
+  </a>
+</div>

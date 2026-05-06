@@ -9,15 +9,18 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.tabs
+    - navigation.sections
     - navigation.top
-    - navigation.expand
     - navigation.indexes
+    - navigation.footer
     - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
+    - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -40,14 +43,30 @@ repo_url: https://github.com/humbleowl39/DV_SKOOL
 repo_name: humbleowl39/DV_SKOOL
 edit_uri: edit/main/topics/amba_protocols/docs/
 
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
 nav:
-  - "AMBA Protocols (APB / AHB / AXI / AXI-Stream) — 개요": index.md
-  - "Unit 1: APB & AHB": 01_apb_ahb.md
-  - "Unit 2: AXI (Advanced eXtensible Interface)": 02_axi.md
-  - "Unit 3: AXI-Stream": 03_axi_stream.md
-  - "AMBA Protocols — Quick Reference Card": 04_quick_reference_card.md
+  - "코스 홈": index.md
+  - "학습 모듈":
+      - "Unit 1: APB & AHB": 01_apb_ahb.md
+      - "Unit 2: AXI (Advanced eXtensible Interface)": 02_axi.md
+      - "Unit 3: AXI-Stream": 03_axi_stream.md
+      - "AMBA Protocols — Quick Reference Card": 04_quick_reference_card.md
+  - "코스 개요": _legacy_overview.md
+  - "용어집": glossary.md
+  - "퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
+  - abbr
   - admonition
   - attr_list
   - def_list

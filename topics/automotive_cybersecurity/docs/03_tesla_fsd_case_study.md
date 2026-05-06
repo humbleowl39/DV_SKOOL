@@ -1,5 +1,10 @@
 # Unit 3: Tesla FSD Case Study (탈옥 사례 분석)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 19분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **Tesla FSD 탈옥은 CAN Bus 무인증 + GPS 기반 지오펜싱 + 로컬 Feature Flag 의존이라는 세 가지 약점의 교집합에서 발생했다. SoC에 보안 하드웨어(SCS)가 있었지만 CAN 통신 인증에 적용하지 않은 아키텍처 판단이 근본 원인이다.**
 
@@ -433,3 +438,14 @@ Tesla의 현재 방어:
 
 이 판단이 틀렸음이 증명된 것이다 — **외부 경계(서버)만 방어하고 내부 경계(CAN)를 방어하지 않으면, 물리 접근 시 내부는 무방비**라는 교훈.
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_automotive_soc_security.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Automotive SoC Security (차량 SoC 보안 아키텍처)</div>
+  </a>
+  <a class="nav-next" href="04_attack_surface_and_defense.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Attack Surface & Defense (공격 표면과 방어 계층)</div>
+  </a>
+</div>

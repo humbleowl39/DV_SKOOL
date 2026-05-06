@@ -1,5 +1,10 @@
 # Unit 1: UFS 프로토콜 스택
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **UFS = SCSI 명령을 UniPro 링크 위에서 M-PHY 시리얼 인터페이스로 전달하는 3계층 프로토콜. eMMC 대비 고속(2.9GB/s+), Full-duplex, 명령 큐잉(최대 32개)을 지원하는 모바일/서버 스토리지 표준.**
 
@@ -321,3 +326,14 @@ BootROM의 UFS 부팅 시퀀스 (soc_secure_boot_ko Unit 4와 연결):
 
 **Q: M-PHY HS 모드에서 CDR이 왜 중요한가?**
 > "HS 모드는 별도 클럭 라인 없이 데이터에 클럭을 임베딩하여 전송한다. RX 측의 CDR 회로가 수신 데이터 에지에서 클럭을 복원해야 정확한 샘플링이 가능하다. CDR Lock이 실패하면 모든 데이터가 오류가 된다. Gear가 높을수록(G3→G4) 주파수가 높아져 CDR Lock이 까다로워지고, Eye Opening이 좁아져 정밀한 Calibration이 필수적이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_hci_architecture.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">UFS HCI 아키텍처</div>
+  </a>
+</div>

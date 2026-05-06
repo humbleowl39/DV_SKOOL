@@ -1,5 +1,10 @@
 # Unit 1: DRAM 기본 원리 + DDR4/5
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 14분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **DRAM = 커패시터에 전하를 저장하여 1비트를 기억하는 휘발성 메모리. 구조적으로 Bank → Row → Column 계층으로 접근하며, 주기적 Refresh가 필수. DDR은 클럭의 상승/하강 엣지 모두에서 데이터를 전송하여 대역폭을 2배로 활용.**
 
@@ -381,3 +386,14 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
 
 **Q: LPDDR5에서 WCK가 CK와 분리된 이유는?**
 > "LPDDR5는 명령 버스(CK)와 데이터 버스(WCK)의 클럭을 분리했다. 명령은 상대적으로 저속으로 충분하므로 CK는 낮은 주파수, WCK는 CK의 2배 또는 4배 주파수로 데이터만 고속 전송한다. 이를 통해 불필요한 고속 토글을 줄여 전력을 절감하면서도 데이터 대역폭을 확보한다. DVFSC와 결합하면 부하에 따라 WCK 주파수를 동적으로 변경하여 추가 절전이 가능하다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_memory_controller.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Memory Controller 아키텍처</div>
+  </a>
+</div>

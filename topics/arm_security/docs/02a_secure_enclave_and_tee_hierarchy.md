@@ -1,5 +1,10 @@
 # Unit 2A: Secure Enclave & TEE 계층 구조
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 23분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **TrustZone은 CPU 기반 TEE이므로 Trusted OS 취약점, 캐시 공유 부채널, CPU 자원 경합의 한계가 있다. Secure Enclave는 전용 프로세서+RAM으로 이 한계를 물리적으로 제거하며, TrustZone과 상호 불신(mutually distrusting) 관계로 공존한다.**
 
@@ -418,3 +423,14 @@ Internal과 External Secure Enclave는 SPI 버스로 연결되는데, SPI는 SoC
 
 이것은 차량 보안의 SecOC(CAN 메시지에 MAC + Freshness)와 동일한 원리를 물리 인터페이스 레벨에 적용한 것이다.
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_world_switch_soc_infra.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">보안 상태 전환 & SoC 보안 인프라</div>
+  </a>
+  <a class="nav-next" href="03_secure_boot_connection.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Secure Boot에서의 보안 레벨 적용</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # Unit 3: TB Top 환경 구축 + AI 자동화
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 29분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **TB Top = SoC 전체를 감싸는 검증 환경으로 여러 프로젝트에 재사용 가능하도록 설계. AI 자동화 = CCTV 매트릭스의 Gap을 자동 발견하고 테스트 생성까지 수행. 이 둘의 조합이 SoC 통합 검증의 효율을 극대화.**
 
@@ -801,3 +806,14 @@ JSON Config 파일 1개만 교체하면 된다. Config에 IP 목록, Memory Map,
 
 → 1에서 걸러지지 않은 Gap = 실제 누락이므로 반드시 검증 수행
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_common_task_cctv.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Common Task & CCTV (Common Task Coverage Verification)</div>
+  </a>
+  <a class="nav-next" href="04_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">SoC Integration & CCTV — Quick Reference Card</div>
+  </a>
+</div>

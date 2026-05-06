@@ -1,5 +1,10 @@
 # Unit 6: Fine-tuning vs RAG vs Prompt — 전략 선택
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **세 가지 접근법은 상호 배타적이 아니라 상호 보완적이다. 데이터 규모, 보안 요구, 업데이트 빈도, 작업 복잡도에 따라 조합하여 사용한다.**
 
@@ -389,3 +394,14 @@ Fine-tuning이 비효율적인 경우:
 
 **Q: 접근법을 어떻게 체계적으로 비교/평가하는가?**
 > "50-100개 태스크의 평가 데이터셋을 구성하고, 각 접근법(Prompt Only, RAG+Prompt, Fine-tuned, Fine-tuned+RAG)으로 실행한다. 코드 생성은 컴파일/시뮬레이션 통과율, 분석은 F1 Score, 자유형은 LLM-as-Judge로 자동 평가하고, 서브셋을 전문가가 블라인드 평가하여 교차 검증한다. 최종적으로 '성능 향상 / 추가 비용' 비율로 비용 효율을 판단한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="05_agent_architecture.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Agent 아키텍처</div>
+  </a>
+  <a class="nav-next" href="07_dv_application.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">DV/EDA 도메인 적용 사례</div>
+  </a>
+</div>

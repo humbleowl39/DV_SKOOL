@@ -1,5 +1,10 @@
 # Unit 2: Memory Controller 아키텍처
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 15분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **Memory Controller(MC) = SoC의 메모리 접근 요청을 DRAM 명령(ACT/RD/WR/PRE/REF)으로 변환하고, 타이밍 제약을 준수하면서 처리량을 최대화하는 스케줄러. 성능의 핵심은 Row Hit 극대화와 Bank-level Parallelism 활용.**
 
@@ -378,3 +383,14 @@ MC의 역할:
 
 **Q: DRAM 초기화 시퀀스의 핵심 단계는?**
 > "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → MRS 명령으로 Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → ZQ Calibration(임피던스 보정) → Training(WL, DQ, Eye, VREF) → Refresh 시작. 특히 MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_dram_fundamentals_ddr.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">DRAM 기본 원리 + DDR4/5</div>
+  </a>
+  <a class="nav-next" href="03_memory_interface_phy.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Memory Interface / PHY</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # AMBA Protocols — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 9분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 한줄 요약
 ```
 APB(레지스터) → AHB(중간, 파이프라인) → AXI(고성능, 5채널, OOO) → AXI-S(스트리밍, 주소 없음)
@@ -180,3 +185,14 @@ AXI-Stream:
 | AXI4에서 WID가 사라진 이유? | Write Interleaving 제거 → WID 불필요 (복잡도 대비 이득 미미) |
 | WSTRB 전부 0이면? | 유효 전송이나 실질 쓰기 없음 — Burst 중 beat skip용 |
 | TKEEP과 WSTRB 차이? | 동일 개념 (바이트 마스크) but TKEEP은 AXI-Stream, WSTRB은 AXI Write |
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_axi_stream.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">AXI-Stream</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

@@ -1,0 +1,247 @@
+/* DV SKOOL — 학습 사이트 스타일 */
+
+/* ===========================================================
+   학습 메타 블럭 (학습시간 + 난이도 뱃지)
+   =========================================================== */
+.learning-meta {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.8rem 0 1.6rem 0;
+  flex-wrap: wrap;
+}
+.meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+.meta-badge.meta-time {
+  background: rgba(79, 195, 247, 0.12);
+  color: #2196f3;
+  border-color: rgba(79, 195, 247, 0.28);
+}
+[data-md-color-scheme="slate"] .meta-badge.meta-time {
+  color: #82b1ff;
+  background: rgba(79, 195, 247, 0.18);
+}
+.meta-badge.meta-level-beginner {
+  background: rgba(76, 175, 80, 0.12);
+  color: #2e7d32;
+  border-color: rgba(76, 175, 80, 0.28);
+}
+.meta-badge.meta-level-intermediate {
+  background: rgba(255, 152, 0, 0.12);
+  color: #e65100;
+  border-color: rgba(255, 152, 0, 0.28);
+}
+.meta-badge.meta-level-advanced {
+  background: rgba(244, 67, 54, 0.12);
+  color: #c62828;
+  border-color: rgba(244, 67, 54, 0.28);
+}
+[data-md-color-scheme="slate"] .meta-badge.meta-level-beginner { color: #81c784; }
+[data-md-color-scheme="slate"] .meta-badge.meta-level-intermediate { color: #ffb74d; }
+[data-md-color-scheme="slate"] .meta-badge.meta-level-advanced { color: #e57373; }
+
+/* ===========================================================
+   코스 홈 — 모듈 카드 그리드
+   =========================================================== */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.course-card {
+  display: block;
+  padding: 1.1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  background: var(--md-default-bg-color);
+  text-decoration: none !important;
+  color: inherit;
+  transition: all 0.15s ease;
+}
+.course-card:hover {
+  border-color: var(--md-primary-fg-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+[data-md-color-scheme="slate"] .course-card:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+.course-card .course-card-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--md-primary-fg-color);
+  text-transform: uppercase;
+}
+.course-card .course-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.3rem 0 0.5rem 0;
+  line-height: 1.35;
+}
+.course-card .course-card-desc {
+  font-size: 0.85rem;
+  color: var(--md-default-fg-color--light);
+  line-height: 1.5;
+}
+.course-card .course-card-meta {
+  margin-top: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* ===========================================================
+   코스 헤더 (코스 홈 상단 영역)
+   =========================================================== */
+.course-header {
+  background: linear-gradient(135deg,
+    rgba(63, 81, 181, 0.06),
+    rgba(156, 39, 176, 0.04));
+  border-left: 4px solid var(--md-primary-fg-color);
+  padding: 1.2rem 1.4rem;
+  border-radius: 0 8px 8px 0;
+  margin: 1rem 0 1.5rem 0;
+}
+[data-md-color-scheme="slate"] .course-header {
+  background: linear-gradient(135deg,
+    rgba(63, 81, 181, 0.18),
+    rgba(156, 39, 176, 0.10));
+}
+.course-header h2 {
+  margin-top: 0 !important;
+  border-bottom: none;
+}
+.course-stats {
+  display: flex;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+}
+.course-stats .stat-item strong {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--md-primary-fg-color);
+}
+
+/* ===========================================================
+   Next/Prev 네비게이션
+   =========================================================== */
+.chapter-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 2.5rem 0 1rem 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+}
+.chapter-nav a {
+  display: block;
+  padding: 0.9rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  text-decoration: none !important;
+  color: inherit;
+  transition: all 0.15s ease;
+}
+.chapter-nav a:hover {
+  border-color: var(--md-primary-fg-color);
+  background: var(--md-primary-fg-color--light, rgba(63, 81, 181, 0.05));
+}
+.chapter-nav .nav-label {
+  font-size: 0.72rem;
+  color: var(--md-default-fg-color--light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+.chapter-nav .nav-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.chapter-nav .nav-prev { text-align: left; }
+.chapter-nav .nav-next { text-align: right; grid-column: 2; }
+.chapter-nav .nav-prev:only-child { grid-column: 1 / -1; }
+.chapter-nav .nav-next:only-child { grid-column: 1 / -1; text-align: right; }
+
+/* ===========================================================
+   Glossary 항목
+   =========================================================== */
+.glossary-term {
+  margin: 1.5rem 0;
+  padding: 1rem 1.2rem;
+  border-left: 3px solid var(--md-primary-fg-color);
+  background: var(--md-code-bg-color);
+  border-radius: 0 6px 6px 0;
+}
+.glossary-term h3 {
+  margin-top: 0 !important;
+  font-family: var(--md-code-font-family, monospace);
+}
+.glossary-term .glossary-field {
+  font-size: 0.82rem;
+  margin: 0.4rem 0;
+}
+.glossary-term .glossary-field strong {
+  color: var(--md-primary-fg-color);
+  margin-right: 0.4rem;
+}
+
+/* ===========================================================
+   Admonition 강화 (학습/연습/팁)
+   =========================================================== */
+:root {
+  --md-admonition-icon--objective: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,0 8,12A4,4 0 0,0 12,16A4,4 0 0,0 16,12A4,4 0 0,0 12,8Z"/></svg>');
+}
+
+.md-typeset .admonition.objective,
+.md-typeset details.objective {
+  border-color: #5e35b1;
+}
+.md-typeset .objective > .admonition-title,
+.md-typeset .objective > summary {
+  background-color: rgba(94, 53, 177, 0.1);
+}
+.md-typeset .objective > .admonition-title::before,
+.md-typeset .objective > summary::before {
+  background-color: #5e35b1;
+  -webkit-mask-image: var(--md-admonition-icon--objective);
+  mask-image: var(--md-admonition-icon--objective);
+}
+
+/* ===========================================================
+   기타 잡다 정돈
+   =========================================================== */
+.md-typeset h1 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.md-typeset h2 {
+  margin-top: 2.2rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+.md-typeset code {
+  font-size: 0.86em;
+  border-radius: 3px;
+}
+
+/* 부드러운 인라인 강조 */
+.md-typeset mark {
+  background: rgba(255, 235, 59, 0.4);
+  padding: 0.1em 0.25em;
+  border-radius: 3px;
+}
+[data-md-color-scheme="slate"] .md-typeset mark {
+  background: rgba(255, 235, 59, 0.25);
+  color: inherit;
+}

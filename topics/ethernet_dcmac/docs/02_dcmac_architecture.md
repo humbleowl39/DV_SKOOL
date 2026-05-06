@@ -1,5 +1,10 @@
 # Unit 2: DCMAC 아키텍처
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 15분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **DCMAC = AMD(Xilinx)의 100/200/400GbE 하드 IP MAC. FPGA/ASIC에 통합되어 라인 레이트 Ethernet 프레임 처리를 제공. 상위 계층(TOE, IP)과 AXI-Stream으로, 하위 계층(PCS/PHY)과 Segmented 인터페이스로 연결.**
 
@@ -385,3 +390,14 @@ MangoBoost Data Path:
 
 **Q: DCMAC 레지스터 검증에서 주의할 점은?**
 > "세 가지: (1) 통계 카운터의 Read-on-Clear 특성 — 읽기 순서를 잘못하면 값이 사라지므로 Latch-on-Read 구현을 검증. (2) Config 레지스터 적용 시점 — Write 직후 적용인지, 다음 프레임부터인지. (3) Reset Value — 모든 레지스터가 리셋 후 스펙상의 기본값을 가지는지. RAL frontdoor/backdoor 양쪽으로 확인한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_ethernet_fundamentals.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Ethernet 기본 + 프레임 구조</div>
+  </a>
+  <a class="nav-next" href="03_dcmac_dv_methodology.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">DCMAC DV 검증 전략</div>
+  </a>
+</div>

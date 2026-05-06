@@ -1,5 +1,10 @@
 # Unit 6: Dynamic Programming (DP)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 8분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## DP란?
 
 ```
@@ -279,3 +284,14 @@ module unit6_dp;
 endmodule
 
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="05_tree_bfs_dfs_explained.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Tree & BFS/DFS</div>
+  </a>
+  <a class="nav-next" href="07_interview_strategy.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">면접 전략</div>
+  </a>
+</div>

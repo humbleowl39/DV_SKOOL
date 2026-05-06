@@ -1,5 +1,10 @@
 # UFS HCI — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 5분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 한줄 요약
 ```
 UFS HCI = SW Driver(UFSHCD)가 레지스터/메모리로 SCSI 명령을 제출하면, UPIU로 변환하여 UniPro/M-PHY를 통해 UFS Device에 전달하는 HW 인터페이스.
@@ -123,3 +128,14 @@ soc_secure_boot_ko/ Unit 4: Boot Device 초기화 (UFS 부팅 시퀀스)
 ufs_hci_ko/: HCI 내부 동작 상세
 → 두 자료가 상호 보완
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_hci_dv_methodology.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">UFS HCI DV 검증 전략</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

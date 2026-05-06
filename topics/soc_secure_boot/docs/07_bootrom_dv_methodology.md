@@ -1,5 +1,10 @@
 # Unit 7: BootROM DV 검증 방법론
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 24분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **BootROM 검증 = 이론(Unit 1~5)을 실제 실리콘 품질로 전환하는 엔지니어링. Legacy SV 환경의 한계를 UVM 프레임워크로 극복하고, Coverage-Driven 방법론으로 Zero-Defect Silicon을 달성하는 과정.**
 
@@ -445,3 +450,14 @@ Post-silicon Bring-up 시나리오:
 
 **Q: Zero-Defect Silicon을 어떻게 달성했는가?**
 > "Coverage-Driven 방법론과 구조적 Negative Test 전략의 조합이다. Positive(정상 부팅) 100%는 기본이고, 5개 공격 카테고리(Crypto, Rollback, Fault, Input, Config)별 Negative 시나리오를 체계적으로 커버했다. 결과적으로 Post-silicon Bring-up에서 BootROM 관련 이슈 제로를 달성하여, 비-ROM 이슈의 빠른 Root Cause 분리를 가능하게 했다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="06_quick_reference_card.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">SoC Secure Boot Flow — Quick Reference Card</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

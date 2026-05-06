@@ -1,4 +1,25 @@
-# Unit 3: Sequence & Sequence Item
+# Module 03 — Sequence & Sequence Item
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 17분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Define** `rand` 필드와 constraint를 갖춘 Sequence Item 클래스를 설계할 수 있다.
+    - **Implement** `body()` 안에서 `uvm_do_with` / `start_item`+`finish_item` 두 패턴을 구분해 작성할 수 있다.
+    - **Compose** 여러 Agent의 Sequence를 조율하는 Virtual Sequence를 `p_sequencer`로 작성할 수 있다.
+    - **Decide** Sequence Library / Layered Sequence / In-line constraint 중 시나리오에 맞는 패턴을 고를 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01](01_architecture_and_phase.md), [Module 02](02_agent_driver_monitor.md)
+    - SystemVerilog `randomize()` + constraint, in-line constraint 문법
+
+## 왜 이 모듈이 중요한가
+
+검증 가치의 절반은 **자극의 다양성과 의도성**에서 나옵니다. Sequence가 부실하면 coverage가 안 메워지고, 너무 hard-coded면 재사용이 안 됩니다. Virtual Sequence는 SoC-level 시나리오의 핵심 — 여러 Agent를 시간/순서로 조율해야 의미 있는 시스템 검증이 됩니다.
 
 ## 핵심 개념
 **Sequence Item = 하나의 트랜잭션 데이터 (주소, 데이터, 제어). Sequence = Sequence Item들을 생성하는 시나리오 로직. Virtual Sequence = 여러 Agent의 Sequence를 조합하는 시스템 레벨 시나리오. 이 계층이 자극 생성의 핵심.**
@@ -473,3 +494,84 @@ endpackage
 
 **Q: grab과 lock의 차이는?**
 > "둘 다 Sequencer를 독점하지만 타이밍이 다르다. grab은 즉시 독점 — 현재 pending된 다른 Sequence 요청을 밀어내고 바로 제어권을 가져간다. Reset Sequence처럼 긴급 상황에 사용한다. lock은 현재 pending된 모든 요청이 처리된 후 독점한다. Atomic burst 전송처럼 중간에 다른 트래픽이 끼면 안 되는 경우에 사용한다. 실무에서는 grab은 드물고 lock을 더 자주 사용한다 — grab의 즉시 중단은 프로토콜 위반을 유발할 수 있기 때문이다."
+
+---
+
+## 연습문제
+
+!!! question "Exercise 1 (Apply, ★)"
+    주소가 `[32'h1000:32'h1FFF]` 범위에서 균등 분포된 read 트랜잭션 100건을 생성하는 Sequence를 작성하세요.
+
+    ??? answer "모범 답안"
+        ```systemverilog
+        class read_seq extends uvm_sequence#(my_item);
+          `uvm_object_utils(read_seq)
+          function new(string name="read_seq"); super.new(name); endfunction
+
+          task body();
+            repeat (100) begin
+              `uvm_do_with(req, {
+                req.kind == READ;
+                req.addr inside {[32'h1000:32'h1FFF]};
+              })
+            end
+          endtask
+        endclass
+        ```
+
+!!! question "Exercise 2 (Analyze, ★★)"
+    `uvm_do_with`를 사용한 코드와 `start_item / finish_item`을 사용한 코드의 동작 차이를 두 가지 이상 들고, 각각이 적절한 시나리오를 설명하세요.
+
+    ??? answer "모범 답안"
+        - **`uvm_do_with`**: 매크로가 `create + randomize + start_item + finish_item`을 묶어서 처리. 짧고 깔끔. 단점: randomization 결과를 send 전에 검사/수정 불가.
+        - **`start_item / finish_item`**: create + randomize 후 start_item과 finish_item 사이에 직접 필드 수정 가능. 예: `req.addr += offset_from_test;`. 단점: 코드가 길어짐.
+        - **적절 시나리오**: 단순 랜덤은 `uvm_do_with`, 시퀀스 계층 간 데이터 forwarding이나 conditional constraint relaxation은 start/finish.
+
+!!! question "Exercise 3 (Create, ★★★)"
+    APB(register access) Agent와 AXI(data) Agent를 동시에 사용하는 Virtual Sequence를 설계하세요. 시나리오: APB로 DUT 활성화 레지스터 set → AXI로 100건 traffic → APB로 status 읽기.
+
+    ??? answer "예시 답안"
+        ```systemverilog
+        class boot_vseq extends uvm_sequence;
+          `uvm_object_utils(boot_vseq)
+          `uvm_declare_p_sequencer(my_virtual_sequencer)
+          function new(string name="boot_vseq"); super.new(name); endfunction
+
+          task body();
+            apb_write_seq w_seq; axi_traffic_seq t_seq; apb_read_seq r_seq;
+            // 1) DUT enable
+            `uvm_do_on_with(w_seq, p_sequencer.apb_sqr,
+                            { addr == 32'h0010; data == 32'h1; })
+            // 2) Data traffic
+            `uvm_do_on(t_seq, p_sequencer.axi_sqr)
+            // 3) Status
+            `uvm_do_on_with(r_seq, p_sequencer.apb_sqr,
+                            { addr == 32'h0014; })
+          endtask
+        endclass
+        ```
+
+## 핵심 정리
+
+- **Sequence Item = 데이터+constraint, Sequence = 시나리오 로직.** 둘은 다른 클래스 계층 (`uvm_sequence_item` vs `uvm_sequence`).
+- **`uvm_do_with` 짧음 / `start_item+finish_item` 세밀.** 데이터 후처리 필요하면 후자.
+- **Virtual Sequence는 multi-agent 동기화의 표준.** `p_sequencer`로 sub-sequencer 핸들 접근.
+- **Sequence Library 패턴**으로 시나리오 재사용. Constraint를 sequence 내부에 두지 말고 sequence item이나 별도 bag에.
+- **Response 핸들링**: `has_response` 체크 후 `get_response`. set_id_info 빠뜨리면 multi-sequence 환경에서 응답 매칭 실패.
+- **Sequencer Arbitration**: 다중 sequence 동시 실행 시 정책으로 트래픽 믹스/우선순위 제어.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_sequence_and_item_quiz.md)
+- ➡️ [**Module 04 — config_db & Factory**](04_config_db_factory.md)
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="02_agent_driver_monitor.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Agent / Driver / Monitor</div>
+  </a>
+  <a class="nav-next" href="04_config_db_factory.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">config_db & Factory</div>
+  </a>
+</div>

@@ -1,4 +1,25 @@
-# Unit 4: config_db & Factory
+# Module 04 — config_db & Factory
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 17분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Apply** `config_db::set` / `get`을 사용해 virtual interface, configuration object를 계층으로 전달할 수 있다.
+    - **Use** Factory의 `type_id::create`와 type/instance override로 테스트별 동작 변형을 구현할 수 있다.
+    - **Debug** `uvm_config_db::dump`와 `factory.print()`로 경로 불일치 / 누락 override를 분석할 수 있다.
+    - **Decide** type override vs instance override 중 적절한 범위(scope)를 선택할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01](01_architecture_and_phase.md), [Module 02](02_agent_driver_monitor.md), [Module 03](03_sequence_and_item.md)
+    - hierarchical naming(`uvm_test_top.env.agent.*`) 이해
+
+## 왜 이 모듈이 중요한가
+
+UVM 환경의 **유연성과 재사용성은 모두 config_db + Factory에서 나옵니다**. 동시에 두 메커니즘은 가장 silent한 실패 원천: 경로 한 글자 차이로 set한 값이 get에 안 잡혀도 시뮬은 그냥 default로 동작합니다. **silent failure → cascading bug**의 전형적 패턴입니다.
 
 ## 핵심 개념
 **config_db = 계층 구조를 통해 설정을 전달하는 글로벌 데이터베이스. Factory = 클래스 이름(타입)으로 객체를 생성하되, 런타임에 다른 타입으로 대체 가능한 메커니즘. 이 둘이 UVM 환경의 유연성과 재사용성의 핵심.**
@@ -171,3 +192,74 @@ BootROM 검증에서의 config_db 활용:
 
 **Q: Factory Override가 왜 강력한가?**
 > "코드 수정 없이 컴포넌트를 교체할 수 있다. 예를 들어 base_test에서 사용하는 정상 Driver를 error_injection_test에서 에러 주입 Driver로 교체하면, Agent/Env 코드는 일절 변경하지 않고도 Negative 테스트 환경이 된다. 이것이 UVM의 '코드를 바꾸지 않고 동작을 바꾸는' 핵심 메커니즘이다."
+
+---
+
+## 연습문제
+
+!!! question "Exercise 1 (Apply, ★)"
+    `my_test`에서 `apb_cfg`(파라미터화된 config object)를 `config_db::set`으로 등록하고, `apb_agent`의 `build_phase`에서 `get`으로 받아 사용하는 코드를 작성하세요.
+
+    ??? answer "모범 답안"
+        ```systemverilog
+        // test
+        function void build_phase(uvm_phase phase);
+          super.build_phase(phase);
+          apb_cfg cfg = new();
+          cfg.timeout_ns = 1000;
+          uvm_config_db#(apb_cfg)::set(this, "env.agent", "cfg", cfg);
+          env = my_env::type_id::create("env", this);
+        endfunction
+
+        // agent
+        function void build_phase(uvm_phase phase);
+          super.build_phase(phase);
+          if (!uvm_config_db#(apb_cfg)::get(this, "", "cfg", m_cfg))
+            `uvm_fatal("CFG", "apb_cfg missing for this agent")
+          // 이후 m_cfg.timeout_ns 등 사용
+        endfunction
+        ```
+        **포인트**: 첫 인자 `this`는 set의 시작 컨텍스트, 두 번째 인자는 상대 경로. get의 `""`는 자기 자신의 경로.
+
+!!! question "Exercise 2 (Analyze, ★★)"
+    `config_db::set(this, "env.*.agent.*", "vif", vif)`의 wildcard와 `config_db::set(this, "env.agent", "vif", vif)`는 어떻게 다른가요? 어느 쪽이 silent failure를 만들기 쉬운지 설명하세요.
+
+    ??? answer "모범 답안"
+        - **Wildcard `env.*.agent.*`**: env 아래 어떤 중간 컴포넌트가 있든 그 아래 agent의 자식까지 모두 매칭. 유연하지만 의도와 다른 자식까지 hit할 수 있음.
+        - **명시 경로 `env.agent`**: 정확히 `env.agent`만 매칭. 컴포넌트 이름이 변경되면(예: `env.apb_agent`로 리팩터링) 매칭 실패 → silent default.
+        - **Silent failure 위험**: 명시 경로 쪽이 더 위험. wildcard는 너무 넓은 매칭이 문제, 명시 경로는 한 글자 오타가 문제. 권장: get 측에서 `if (!get(...)) `uvm_fatal(...)` 으로 강제 검출.
+
+!!! question "Exercise 3 (Decide, ★★★)"
+    다음 두 시나리오에 type override / instance override 중 무엇이 적절한지 정하고 이유를 설명하세요.
+    - (a) 모든 환경의 Driver를 error-injecting 변형으로 한 번에 교체
+    - (b) `env.cpu_agent.driver`만 시그널 글리치를 주입하는 변형으로 교체
+
+    ??? answer "모범 답안"
+        - **(a) type override**: `set_type_override_by_type(my_normal_drv::get_type(), my_err_drv::get_type())` — 모든 인스턴스에 적용. 환경 전체의 동작을 한 줄로 변경.
+        - **(b) instance override**: `set_inst_override_by_type("uvm_test_top.env.cpu_agent.driver", my_normal_drv::get_type(), my_glitch_drv::get_type())` — 특정 경로만 교체. 다른 driver들은 정상.
+        - **결정 규칙**: 변경의 scope가 *모든 곳*이면 type, *특정 경로/인스턴스*면 instance.
+
+## 핵심 정리
+
+- **`config_db`는 hierarchical path 기반**. 첫 인자(시작 컨텍스트) + 두 번째 인자(상대 경로)의 결합이 실제 경로.
+- **set/get은 build_phase에서**. get 누락 시 silent default 동작 → 항상 `if (!get(...)) `uvm_fatal` 패턴.
+- **`type_id::create`가 모든 컴포넌트 생성의 표준** (`new` 직접 호출 금지). Factory가 override를 반영.
+- **type override = 모든 인스턴스, instance override = 특정 경로**. 변경 scope에 따라 선택.
+- **디버그 도구**: `uvm_config_db::dump()` (전체 set 기록), `factory.print()` (등록된 type + override 매핑) — UVM_FATAL 이전에 호출.
+- 자주 발생하는 cascading bug 패턴: 한 곳의 경로 오타 → silent → 의도와 다른 default → 다운스트림 false error.
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_config_db_factory_quiz.md)
+- ➡️ [**Module 05 — TLM, Scoreboard, Coverage**](05_tlm_scoreboard_coverage.md)
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_sequence_and_item.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Sequence & Sequence Item</div>
+  </a>
+  <a class="nav-next" href="05_tlm_scoreboard_coverage.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">TLM, Scoreboard, Coverage</div>
+  </a>
+</div>

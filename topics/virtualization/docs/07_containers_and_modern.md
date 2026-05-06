@@ -1,5 +1,10 @@
 # Unit 7: 컨테이너와 현대 가상화
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 10분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **컨테이너는 OS 커널을 공유하면서 프로세스 수준 격리를 제공하는 경량 가상화. VM보다 빠르고 가볍지만 격리 수준이 낮다. 현대 클라우드는 VM + 컨테이너 + 마이크로VM을 혼합하여 사용한다.**
 
@@ -250,3 +255,14 @@ Timeline:
 
 **Q: Firecracker 마이크로VM이 '컨테이너의 속도 + VM의 격리'를 어떻게 달성하는가?**
 > "네 가지 전략이다. (1) 최소 커널(~5MB) — 필요 기능만 포함하여 ~125ms 부팅. (2) 최소 디바이스 — VirtIO 네트워크/블록만 에뮬레이션, 공격 표면 최소화. (3) KVM 기반 격리 — VT-x/ARM EL2로 VM 수준 메모리/CPU 격리, 커널 비공유로 container escape 없음. (4) 낮은 오버헤드 — VM당 ~5MB, 서버당 수천 개 동시 실행. AWS Lambda와 Fargate가 이 기술로 서버리스의 보안과 성능을 모두 확보했다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="06_strict_vs_passthrough.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Strict System vs Hypervisor Pass-through</div>
+  </a>
+  <a class="nav-next" href="08_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Quick Reference Card</div>
+  </a>
+</div>

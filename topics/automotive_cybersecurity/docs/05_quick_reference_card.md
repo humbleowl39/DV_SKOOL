@@ -1,5 +1,10 @@
 # Automotive Cybersecurity — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## CAN Bus 한줄 요약
 ```
 CAN(1983) = 브로드캐스트 버스, 무인증/무암호화 → OBD-II로 외부 접근 시 전체 위조 가능
@@ -202,3 +207,14 @@ L0: Physical — OBD 격리, 포트 비활성화, 물리 접근 제어
 | UN R156 | 전 세계 신차 | SUMS (SW 업데이트 관리 시스템) | 형식 승인 불가 |
 | ISO 21434 | 개발 프로세스 | TARA + 보안 엔지니어링 | 인증 불가 |
 | 자동차관리법 (한국) | 차량 소유자 | SW 무단 변경 금지 | 2년 징역 / 2천만 원 벌금 |
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_attack_surface_and_defense.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Attack Surface & Defense (공격 표면과 방어 계층)</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

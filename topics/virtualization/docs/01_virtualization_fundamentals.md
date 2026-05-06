@@ -1,5 +1,10 @@
 # Unit 1: 가상화 기본 개념
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 8분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **가상화 = 물리 하드웨어 자원을 추상화하여, 하나의 물리 머신 위에 여러 독립된 실행 환경(VM)을 만드는 기술. CPU, 메모리, I/O를 소프트웨어로 분할/공유/격리한다.**
 
@@ -194,3 +199,14 @@ Guest OS 계속 실행 (trap이 일어난 줄 모름)
 
 **Q: x86에서 VT-x 이전에 가상화가 어려웠던 이유는?**
 > "x86에는 POPF, SGDT 같은 'Sensitive하지만 Non-privileged'한 명령어가 있었다. HW 상태를 변경/읽지만 비특권 모드에서 trap 없이 실행되어 Hypervisor가 가로챌 수 없었다. VMware는 Binary Translation(명령어 동적 치환)으로 SW 우회했고, Intel이 VT-x로 VMX non-root 모드를 추가하여 모든 Sensitive 명령어가 자동 VM Exit되도록 HW 근본 해결했다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="01a_system_architecture_evolution.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지</div>
+  </a>
+</div>

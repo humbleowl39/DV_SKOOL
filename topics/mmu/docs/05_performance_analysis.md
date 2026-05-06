@@ -1,5 +1,10 @@
 # Unit 5: MMU 성능 분석 및 최적화
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 14분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **MMU 성능 = TLB Hit Rate × 처리량(Throughput) × 지연(Latency)의 함수. DUT의 실제 성능을 Ideal Model과 비교하여 병목을 찾아내고, 마이크로아키텍처 수준에서 원인을 분석하는 것이 핵심.**
 
@@ -351,3 +356,14 @@ MangoBoost MMU IP 맥락:
 
 **Q: Latency의 평균과 P99를 왜 구분하여 측정하나?**
 > "평균만 보면 간헐적 병목을 놓친다. 예를 들어 평균 Latency가 3 cycle이라도 P99가 200 cycle이면, 상위 1% 트랜잭션이 극심한 지연을 겪고 있다는 뜻이다. 서버 워크로드에서는 Tail Latency가 SLA 위반의 원인이 되므로, P99/P99.9를 별도로 측정하여 메모리 대역폭 경쟁이나 TLB Miss 집중 구간을 찾아낸다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_iommu_smmu.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">IOMMU / SMMU — SoC에서의 MMU</div>
+  </a>
+  <a class="nav-next" href="06_mmu_dv_methodology.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">MMU DV 검증 방법론</div>
+  </a>
+</div>

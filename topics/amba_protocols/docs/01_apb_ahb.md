@@ -1,5 +1,10 @@
 # Unit 1: APB & AHB
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 17분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## APB (Advanced Peripheral Bus)
 
 ### 핵심 개념
@@ -380,3 +385,14 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
 
 5. AHB-to-APB Bridge에서 AHB INCR4 burst는 APB 측에서 어떻게 처리되는가?
    <details><summary>정답</summary>4개의 독립적인 APB 단일 전송으로 분해된다. APB는 burst를 지원하지 않으므로.</details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_axi.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">AXI (Advanced eXtensible Interface)</div>
+  </a>
+</div>

@@ -1,5 +1,10 @@
 # Unit 4: UFS HCI DV 검증 전략
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 27분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **UFS HCI 검증 = 레지스터 정확성 + UTRD/UPIU 변환 정확성 + DMA 무결성 + 명령 큐잉 + 에러 복구. SW Driver 관점의 인터페이스(레지스터/메모리)와 Device 관점의 프로토콜(UPIU)을 양 끝에서 동시에 검증.**
 
@@ -652,3 +657,14 @@ Resume:
 
 **Q: Error Injection은 어떻게 수행하는가?**
 > "에러는 TB의 Device Agent와 UniPro Agent에서 주입하며, DUT RTL은 절대 수정하지 않는다. (1) Device 응답 에러 — Response UPIU의 Status를 CHECK_CONDITION/BUSY로 조작. (2) 불완전 전송 — 요청 크기보다 적은 데이터 반환 → Residual Count 정확성. (3) 링크 에러 — UniPro CRC 에러 주입 → 재전송 투명성, Link Down → IS[UE]. (4) 타임아웃 — Response 의도적 지연 → Task Management 복구 경로. 정상→에러→정상 패턴으로 에러 후 복구까지 검증한다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_upiu_command_flow.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">UPIU와 명령 처리 흐름</div>
+  </a>
+  <a class="nav-next" href="05_quick_reference_card.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">UFS HCI — Quick Reference Card</div>
+  </a>
+</div>

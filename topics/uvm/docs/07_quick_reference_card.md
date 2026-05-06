@@ -1,4 +1,20 @@
-# UVM — Quick Reference Card
+# Module 07 — Quick Reference Card
+
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 8분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
+!!! objective "사용 목적"
+    이 페이지는 **참조용 치트시트**입니다. 정독 자료가 아니라 인터뷰/코드 리뷰/디버그 중에 빠르게 펴보는 용도. 새로 배우는 사람은 [Module 01-06](01_architecture_and_phase.md)부터 보고 마지막에 이 페이지로 정리.
+
+    **할 수 있게 되는 것:**
+
+    - **Recall** UVM 핵심 매크로/Phase/패턴 이름을 즉시 떠올림
+    - **Reference** 면접/리뷰 중 한눈에 확인 (5-Whys 같은 골든 룰 포함)
+
+!!! info "사전 지식"
+    - [Module 01-06](01_architecture_and_phase.md) 학습 완료 후 이 카드를 보면 효과 극대화
 
 ## 한줄 요약
 ```
@@ -122,3 +138,25 @@ uvm_ko = 모든 DV 자료의 "검증 방법론" 기반
 
 → uvm_ko가 방법론, 나머지가 도메인별 적용
 ```
+
+---
+
+## 코스 마무리
+
+7개 모듈을 마치셨습니다. 다음을 권장합니다:
+
+1. **퀴즈 풀어보기** — 챕터별 5-8문항으로 이해 점검: [퀴즈 인덱스](quiz/index.md)
+2. **글로서리 스캔** — 모르는 용어 없는지: [용어집](glossary.md)
+3. **실전 적용** — 본인의 검증 환경에서 안티패턴 3개 찾아 리팩터링 시도
+4. **다른 토픽** — UVM은 도구. 실제 검증 대상에 적용하려면 [AMBA Protocols](../../amba_protocols/), [MMU](../../mmu/), [Formal Verification](../../formal_verification/) 등을 함께
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="06_practical_patterns.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">UVM 실무 패턴 & 안티패턴</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

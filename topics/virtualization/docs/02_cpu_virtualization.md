@@ -1,5 +1,10 @@
 # Unit 2: CPU 가상화
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 12분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **CPU 가상화 = Guest OS의 특권 명령어를 안전하게 처리하면서, 일반 명령어는 HW에서 직접 실행하여 성능을 유지하는 것. SW 방식(Binary Translation)에서 HW 지원(VT-x, ARM EL2)으로 발전했다.**
 
@@ -299,3 +304,14 @@ User App (EL0)
 
 **Q: Para-virtualization이 HW 가상화 등장 후 줄어든 이유는?**
 > "Para-virtualization은 x86의 Non-privileged Sensitive 명령어를 trap할 수 없어서 Guest OS를 수정하여 hypercall로 대체하는 방식이었다. VT-x/ARM EL2가 모든 Sensitive 명령어를 HW에서 자동 trap하므로 Guest OS 수정이 불필요해졌고, 미수정 OS(Windows 포함)도 그대로 실행 가능해졌다. 다만 VirtIO 같은 I/O para-virtualization은 에뮬레이션보다 VM Exit이 적어 여전히 성능 이점이 있어 현재도 널리 사용된다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01a_system_architecture_evolution.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지</div>
+  </a>
+  <a class="nav-next" href="03_memory_virtualization.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">메모리 가상화</div>
+  </a>
+</div>

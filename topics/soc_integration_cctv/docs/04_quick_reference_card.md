@@ -1,5 +1,10 @@
 # SoC Integration & CCTV — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 7분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 한줄 요약
 ```
 SoC Top 검증 = IP 간 연결/상호작용 확인. CCTV = 공통 Task(sysMMU/Security/DVFS)가 모든 IP에 빠짐없이 적용되었는지 자동 추적. DVCon 2025에서 293/216 Gap 발견.
@@ -148,3 +153,14 @@ mmu_ko Unit 4:                sysMMU = Common Task의 대표 항목
 
 → ai_engineering_ko가 "어떻게(AI)" / soc_integration_cctv_ko가 "무엇을(CCTV)"
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="03_tb_top_and_ai.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">TB Top 환경 구축 + AI 자동화</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

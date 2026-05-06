@@ -1,5 +1,10 @@
 # DRAM Memory Controller & DDR4/5 — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 6분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 한줄 요약
 ```
 MC = AXI 요청을 DRAM 명령(ACT/RD/WR/PRE/REF)으로 변환 + 타이밍 준수 + Row Hit 극대화
@@ -126,3 +131,14 @@ dram_ddr_ko:        BL2 → [MC 설정] → [Training] → DRAM 사용 가능
 ufs_hci_ko:         UFS → BL2 이미지 로드 → BL2가 DRAM 초기화
 → 세 자료가 부팅 시퀀스에서 연결됨
 ```
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_dram_dv_methodology.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">DRAM DV 검증 전략</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

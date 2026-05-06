@@ -1,5 +1,10 @@
 # Unit 1: CAN Bus Fundamentals (차량 내부 통신의 구조와 한계)
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 17분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **CAN Bus = 1980년대 설계된 브로드캐스트 직렬 버스 — 인증/암호화 없이 모든 노드가 모든 메시지를 읽고 쓸 수 있다.**
 
@@ -407,3 +412,14 @@ bit 7: 둘 다 `1` → 동일
 0x0A0이 recessive(1)을 보냈는데 bus 값이 dominant(0)이므로 패배를 감지하고 전송 포기.
 → **ID 0x080 승리** (bit 5에서 결정, MSB부터 5번째 비트)
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_automotive_soc_security.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Automotive SoC Security (차량 SoC 보안 아키텍처)</div>
+  </a>
+</div>

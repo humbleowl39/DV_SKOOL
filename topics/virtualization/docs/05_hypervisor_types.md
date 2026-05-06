@@ -1,5 +1,10 @@
 # Unit 5: Hypervisor 유형
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 9분</span>
+  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+</div>
+
 ## 핵심 개념
 **Hypervisor는 HW 자원을 VM에 분배/격리하는 소프트웨어. Type 1(Bare Metal)과 Type 2(Hosted)로 나뉘며, 실제 구현(KVM, Xen, VMware)은 이 분류의 경계를 넘나든다.**
 
@@ -222,3 +227,14 @@ ARM VHE 이후:
 
 **Q: Xen에서 Dom0가 필요한 이유는?**
 > "Xen Hypervisor는 Micro-kernel 철학으로 CPU 스케줄링, 메모리 관리, VM 격리만 담당하고 디바이스 드라이버나 관리 인터페이스가 없다. Dom0이 담당하는 것: (1) HW 드라이버 — 물리 디바이스 드라이버는 Dom0의 Linux 커널이 보유, (2) VM 관리 — xl 등 도구로 VM 생성/삭제, (3) I/O 중재 — DomU의 I/O를 para-virtualized backend로 처리, (4) 부팅 — Xen 부팅 후 Dom0이 먼저 시작하여 나머지 DomU 생성. Dom0 없이는 디바이스 사용도 VM 생성도 불가능하다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="04_io_virtualization.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">I/O 가상화</div>
+  </a>
+  <a class="nav-next" href="06_strict_vs_passthrough.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Strict System vs Hypervisor Pass-through</div>
+  </a>
+</div>

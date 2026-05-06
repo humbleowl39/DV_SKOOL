@@ -9,15 +9,18 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.tabs
+    - navigation.sections
     - navigation.top
-    - navigation.expand
     - navigation.indexes
+    - navigation.footer
     - toc.follow
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
     - content.code.annotate
     - content.tabs.link
+    - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -40,15 +43,31 @@ repo_url: https://github.com/humbleowl39/DV_SKOOL
 repo_name: humbleowl39/DV_SKOOL
 edit_uri: edit/main/topics/dram_ddr/docs/
 
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
 nav:
-  - "DRAM Memory Controller & DDR4/5 — 개요 및 컨셉 맵": index.md
-  - "Unit 1: DRAM 기본 원리 + DDR4/5": 01_dram_fundamentals_ddr.md
-  - "Unit 2: Memory Controller 아키텍처": 02_memory_controller.md
-  - "Unit 3: Memory Interface / PHY": 03_memory_interface_phy.md
-  - "Unit 4: DRAM DV 검증 전략": 04_dram_dv_methodology.md
-  - "DRAM Memory Controller & DDR4/5 — Quick Reference Card": 05_quick_reference_card.md
+  - "코스 홈": index.md
+  - "학습 모듈":
+      - "Unit 1: DRAM 기본 원리 + DDR4/5": 01_dram_fundamentals_ddr.md
+      - "Unit 2: Memory Controller 아키텍처": 02_memory_controller.md
+      - "Unit 3: Memory Interface / PHY": 03_memory_interface_phy.md
+      - "Unit 4: DRAM DV 검증 전략": 04_dram_dv_methodology.md
+      - "DRAM Memory Controller & DDR4/5 — Quick Reference Card": 05_quick_reference_card.md
+  - "코스 개요": _legacy_overview.md
+  - "용어집": glossary.md
+  - "퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
+  - abbr
   - admonition
   - attr_list
   - def_list

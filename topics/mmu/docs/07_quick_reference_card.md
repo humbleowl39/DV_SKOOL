@@ -1,5 +1,10 @@
 # MMU — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 8분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 주소 변환 한줄 요약
 ```
 VA → [TLB Hit? → PA] or [TLB Miss → Page Walk (L0→L1→L2→L3) → PA → TLB 캐싱]
@@ -141,3 +146,14 @@ Pseudo-LRU HW 비용 (N-way):
 | ARM SMMU v3 스펙 | SoC 레벨 IOMMU 검증 시 필수 |
 | Cache Coherency | MMU + 캐시 일관성 상호작용 |
 | 가상화 (ARMv8 EL2) | Stage 2 Translation 검증 |
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="06_mmu_dv_methodology.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">MMU DV 검증 방법론</div>
+  </a>
+  <a class="nav-next" href="quiz/index.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">퀴즈로 이동</div>
+  </a>
+</div>

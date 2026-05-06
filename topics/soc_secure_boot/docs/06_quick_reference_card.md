@@ -1,5 +1,10 @@
 # SoC Secure Boot Flow — Quick Reference Card
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 7분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 부팅 흐름 한줄 요약
 ```
 POR → BL1(ROM,EL3) → BL2(FSBL,DRAM초기화) → BL31(Monitor) + BL32(TEE) + BL33(U-Boot) → OS
@@ -150,3 +155,14 @@ Flash교체 → 서명 검증 (항상 활성)
 | ARM TrustZone 심화 | EL3/S-EL1/NS-EL1 전환 메커니즘 상세 |
 | UFS/eMMC 프로토콜 | 부팅 장치 VIP 설계에 직접 필요 |
 | PQC 전환 실무 | 하이브리드 서명 구현 방법 |
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="05_attack_surface_and_defense.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">공격 표면과 방어</div>
+  </a>
+  <a class="nav-next" href="07_bootrom_dv_methodology.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">BootROM DV 검증 방법론</div>
+  </a>
+</div>

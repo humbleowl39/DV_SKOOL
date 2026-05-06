@@ -1,5 +1,10 @@
 # Unit 2: 보안 상태 전환 & SoC 보안 인프라
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 18분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **월드 전환은 반드시 EL3(Secure Monitor)을 경유해야 하며, SMC 명령으로만 가능. SoC 레벨에서는 TZPC, TZASC, GIC 보안 설정으로 버스/메모리/인터럽트를 Secure/Non-Secure로 분할하여 HW 격리를 완성.**
 
@@ -460,3 +465,14 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
    → data_ptr이 NS 메모리 범위인지 확인 (Secure 메모리 참조 차단)
 4. **FF-A Memory Lending**: 메모리를 빌려주면(FFA_MEM_LEND) 빌려준 쪽의 접근 권한 제거 → TOCTOU 원천 차단
 </details>
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="01_exception_level_trustzone.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">Exception Level & TrustZone</div>
+  </a>
+  <a class="nav-next" href="02a_secure_enclave_and_tee_hierarchy.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">Unit 2A: Secure Enclave & TEE 계층 구조</div>
+  </a>
+</div>

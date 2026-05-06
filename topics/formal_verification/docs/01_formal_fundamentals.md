@@ -1,5 +1,10 @@
 # Unit 1: Formal Verification 기본 개념
 
+<div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 13분</span>
+  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+</div>
+
 ## 핵심 개념
 **Formal Verification = 수학적 증명으로 설계의 모든 가능한 입력/상태에서 속성(Property)이 성립함을 보장. 시뮬레이션이 "샘플링"이라면, Formal은 "전수 검사".**
 
@@ -336,3 +341,14 @@ Formal의 근본 한계:
 
 **Q: State Explosion은 어떻게 대응하는가?**
 > "핵심은 상태 공간 축소이다. (1) Blackboxing — 검증 대상이 아닌 모듈을 빈 박스로 교체. (2) Data/Counter Abstraction — 데이터 폭이나 카운터 범위를 축소. (3) Assume — 입력을 실제 환경 범위로 제한. (4) Cut Point — 큰 설계를 블록 단위로 분할하여 각각 증명. 이 기법들을 조합하여 Formal이 수렴(PROVEN)하도록 만드는 것이 Formal 엔지니어의 핵심 역량이다."
+
+<div class="chapter-nav">
+  <a class="nav-prev" href="index.md">
+    <div class="nav-label">◀ 이전</div>
+    <div class="nav-title">코스 홈</div>
+  </a>
+  <a class="nav-next" href="02_sva.md">
+    <div class="nav-label">다음 ▶</div>
+    <div class="nav-title">SVA (SystemVerilog Assertions)</div>
+  </a>
+</div>
