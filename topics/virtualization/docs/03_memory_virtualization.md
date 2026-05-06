@@ -1,8 +1,20 @@
-# Unit 3: 메모리 가상화
+# Module 03 — Memory Virtualization
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** VA → IPA → PA 2단계 변환 흐름
+    - **Distinguish** Shadow Page Table (SW) vs EPT/NPT/Stage-2 (HW)
+    - **Apply** Memory ballooning, KSM (Kernel Same-page Merging)
+    - **Identify** 메모리 가상화의 성능 영향
+
+!!! info "사전 지식"
+    - [MMU 코스](../../mmu/) (page table walk, TLB)
+    - [Module 01-02](01_virtualization_fundamentals.md)
 
 ## 핵심 개념
 **메모리 가상화 = VM마다 독립된 물리 메모리 공간이 있다는 환상을 제공하면서, 실제로는 하이퍼바이저가 물리 메모리를 분할/관리하는 것. 핵심 과제는 VA→IPA→PA 2단계 주소 변환의 성능 오버헤드 최소화.**
@@ -272,6 +284,21 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
 
 **Q: Stage 2가 최적화하기 어려운 이유는?**
 > "Stage 1(VA→IPA)은 Guest OS가 관리하므로 프로세스별 Working Set이 명확하고 접근 패턴이 예측 가능해 prefetch와 캐시가 효과적이다. 반면 Stage 2(IPA→PA)는 Hypervisor가 관리하며, 각 VM의 IPA가 물리 메모리에 불연속 매핑되고, VM 생성/삭제/마이그레이션에 따라 배치가 변한다. 결과적으로 Stage 2 PT의 spatial locality가 낮고, VM 수 증가 시 TLB pressure도 증가한다. 이것이 latency/bandwidth 민감 시스템의 핵심 병목이다."
+
+---
+
+## 핵심 정리
+
+- **2단계 변환**: VA (guest virtual) → IPA (guest "physical", OS 관점) → PA (실제 물리). Stage 1 (OS) + Stage 2 (hypervisor).
+- **Shadow PT (SW 방식, 구식)**: hypervisor가 VA→PA 직접 매핑하는 별도 page table 유지. Guest PT 변경마다 sync 필요 → 느림.
+- **EPT/NPT (Intel/AMD)**, **Stage-2 (ARM)**: HW가 IPA→PA 자동 변환. **현재 표준**.
+- **KSM**: 같은 내용의 메모리 페이지를 VM 간 공유 → memory deduplication.
+- **Ballooning**: hypervisor가 guest OS에 메모리 반환 요청 (driver 협력).
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_memory_virtualization_quiz.md)
+- ➡️ [**Module 04 — I/O Virtualization**](04_io_virtualization.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_cpu_virtualization/">

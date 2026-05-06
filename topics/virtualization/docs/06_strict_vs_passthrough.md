@@ -1,8 +1,19 @@
-# Unit 6: Strict System vs Hypervisor Pass-through
+# Module 06 — Strict vs Passthrough
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** Strict (hypervisor 중재) vs Passthrough (직접 전달) trade-off
+    - **Apply** IOMMU의 결정적 역할 (passthrough 격리)
+    - **Plan** Hybrid 접근 — 일부 device는 strict, 일부는 passthrough
+
+!!! info "사전 지식"
+    - [Module 04](04_io_virtualization.md)
+    - [IOMMU 코스](../../mmu/04_iommu_smmu/)
 
 ## 핵심 개념
 **Strict System은 모든 HW 접근을 Hypervisor가 중재하여 보안/격리를 보장하지만 성능 오버헤드가 크다. Pass-through는 특정 디바이스에 대해 VM이 HW에 직접 접근하여 bare metal 수준 성능을 달성한다. 현대 시스템은 두 방식을 혼합하여 보안과 성능을 모두 확보한다.**
@@ -331,6 +342,21 @@ Azure:
 
 **Q: AWS Nitro 같은 현대 클라우드가 Strict 대신 pass-through를 채택한 이유는?**
 > "성능: Strict System의 VM Exit 오버헤드가 100Gbps+ 네트워킹, NVMe에서 병목이 되었고, 클라우드 고객은 bare metal 대비 성능 격차를 허용하지 않는다. 보안: 전통적으로 pass-through = 보안 약화였으나, Nitro는 이를 HW로 해결했다. Nitro Card가 네트워크/스토리지/보안을 전용 칩에 오프로드하고, IOMMU + HW 격리로 pass-through에서도 강력한 보안을 유지한다. 핵심 전환: 보안을 SW 중재가 아닌 HW(IOMMU, Nitro Card)로 보장하면서 성능은 pass-through로 극대화하는 모델이다."
+
+---
+
+## 핵심 정리
+
+- **Strict**: 모든 IO를 hypervisor 중재 → 강한 격리 + 성능 ↓.
+- **Passthrough**: device 직접 VM 할당 → near-native 성능, 격리는 IOMMU 책임.
+- **IOMMU의 결정적 역할**: passthrough 시 device DMA를 가상 주소 격리. 없으면 device → host 메모리 침해.
+- **Hybrid**: 보통 데이터센터는 GPU/NIC만 passthrough (성능 critical), 그 외 strict.
+- **Trade-off**: 격리 강도 vs 성능 — 워크로드에 따라.
+
+## 다음 단계
+
+- 📝 [**Module 06 퀴즈**](quiz/06_strict_vs_passthrough_quiz.md)
+- ➡️ [**Module 07 — Containers & Modern**](07_containers_and_modern.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../05_hypervisor_types/">

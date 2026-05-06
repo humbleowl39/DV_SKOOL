@@ -1,23 +1,54 @@
-# Quiz: Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지
+# Quiz — Module 01A: System Architecture Evolution
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 01A 본문으로 돌아가기](../01a_system_architecture_evolution.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../01a_system_architecture_evolution.md)
+## Q1. (Remember)
+
+시스템 아키텍처 진화의 4가지 milestone은?
+
+??? answer "정답 / 해설"
+    1. **고정 기능 HW** (단일 task)
+    2. **프로그래머블 CPU** (다양한 SW 실행)
+    3. **MMU 도입** (메모리 격리)
+    4. **IOMMU + CPU 가상화** (다중 OS 동시 호스팅)
+
+## Q2. (Understand)
+
+MMU 없이 multi-process가 안 되는 이유는?
+
+??? answer "정답 / 해설"
+    Process 간 메모리 격리 불가능. 한 process가 다른 process의 메모리를 직접 read/write 가능 → 보안/안정성 모두 깨짐. MMU의 가상 주소 + page table이 process 간 격리의 토대.
+
+## Q3. (Apply)
+
+CPU 가상화 (VT-x) 도입 동기는?
+
+??? answer "정답 / 해설"
+    Software-only virtualization (binary translation)는 너무 느림. Multi-tenant cloud의 등장으로 server에서 multiple OS 동시 호스팅 필요 → near-native 성능 + 격리 → HW 지원 필수. Intel VT-x (2005), AMD-V (2006).
+
+## Q4. (Analyze)
+
+각 milestone에서 추가된 HW 메커니즘 vs 해결한 문제?
+
+??? answer "정답 / 해설"
+    | Milestone | HW | 해결한 문제 |
+    |-----------|-----|------------|
+    | CPU + ISA | program counter, register | 프로그램 실행 |
+    | Privilege levels | kernel/user mode | OS와 app 분리 |
+    | MMU | page table walker, TLB | process 메모리 격리 |
+    | IOMMU | SMMU | DMA 격리, device 보호 |
+    | VT-x/EL2 | root/non-root mode | multi-OS 동시 호스팅 |
+
+## Q5. (Evaluate)
+
+다음 중 가장 큰 architectural shift는?
+
+- [ ] A. user/kernel mode 분리
+- [ ] B. MMU 도입
+- [ ] C. CPU 가상화 (VT-x)
+- [ ] D. IOMMU 도입
+
+??? answer "정답 / 해설"
+    **B (MMU)**. MMU 없이는 modern OS (Linux/Windows) 자체가 불가능. process model의 토대. 다른 milestone은 MMU 위에 add-on. CPU 가상화 (C)도 결국 MMU의 확장 (Stage 2).

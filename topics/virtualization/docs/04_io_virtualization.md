@@ -1,8 +1,20 @@
-# Unit 4: I/O 가상화
+# Module 04 — I/O Virtualization
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** Emulation, Paravirtualization (virtio), Passthrough (SR-IOV, VFIO) 3가지 모델
+    - **Apply** SR-IOV의 PF/VF 분리, IOMMU의 역할
+    - **Identify** virtio의 vring + queue 메커니즘
+    - **Decide** 시나리오에 따른 적합한 I/O 가상화 방식
+
+!!! info "사전 지식"
+    - [Module 01-03](01_virtualization_fundamentals.md)
+    - [MMU 코스 IOMMU/SMMU](../../mmu/04_iommu_smmu/)
 
 ## 핵심 개념
 **I/O 가상화 = 물리 디바이스를 여러 VM이 공유하거나, 특정 VM에 전용 할당하는 기술. 에뮬레이션(SW) → 준가상화(VirtIO) → 패스스루(SR-IOV/VFIO)로 발전하며, 성능과 격리의 트레이드오프를 다룬다.**
@@ -353,6 +365,23 @@ DPDK: 모든 것을 user-space에서 처리 (polling 기반)
 
 **Q: SR-IOV의 PF/VF 차이와 일반 pass-through 대비 장점은?**
 > "PF(Physical Function)는 물리 디바이스의 완전한 PCIe Function으로 초기화, VF 생성/삭제를 담당하며 Hypervisor가 관리한다. VF(Virtual Function)는 PF에서 파생된 경량 PCIe Function으로, 자체 BAR, MSI-X, TX/RX 큐를 갖지만 관리 기능은 없고 데이터 경로만 제공한다. 확장성: 일반 pass-through는 NIC 1개 = VM 1개이지만, SR-IOV는 NIC 1개에서 VF 128개 생성 가능. 각 VF가 HW 독립 데이터 경로를 가지므로 bare metal 근접 성능을 유지하면서 128개 VM을 지원한다."
+
+---
+
+## 핵심 정리
+
+- **3 가지 모델**:
+  1. **Emulation** — Hypervisor가 device 시뮬. 호환성 ↑, 성능 ↓ (모든 IO trap)
+  2. **Paravirt (virtio)** — Guest driver + hypervisor 공유 ring. 성능 ↑, guest 인지 필요
+  3. **Passthrough (SR-IOV/VFIO)** — Device를 VM에 직접 할당. 성능 = native, 격리는 IOMMU 책임
+- **SR-IOV**: Single Root I/O Virtualization. PCIe device가 1 PF + N VF로 분할. 각 VF가 VM에 할당.
+- **VFIO**: kernel-bypass IOMMU 기반 직접 device access.
+- **IOMMU 필수**: passthrough 시 device DMA가 host 메모리 침해 못 하게 SMMU/IOMMU로 격리.
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_io_virtualization_quiz.md)
+- ➡️ [**Module 05 — Hypervisor Types**](05_hypervisor_types.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_memory_virtualization/">

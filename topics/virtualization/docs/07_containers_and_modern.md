@@ -1,8 +1,20 @@
-# Unit 7: 컨테이너와 현대 가상화
+# Module 07 — Containers & Modern Virtualization
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** Container (kernel 공유) vs VM (kernel 격리)
+    - **Apply** Linux namespace + cgroup이 container isolation의 토대
+    - **Identify** 현대 인프라 (Kubernetes, gVisor, kata-containers, microVM, Firecracker)
+    - **Decide** 시나리오별 선택 (multi-tenant security, density, startup time)
+
+!!! info "사전 지식"
+    - Linux namespace, cgroup 기본
+    - [Module 01-06](01_virtualization_fundamentals.md)
 
 ## 핵심 개념
 **컨테이너는 OS 커널을 공유하면서 프로세스 수준 격리를 제공하는 경량 가상화. VM보다 빠르고 가볍지만 격리 수준이 낮다. 현대 클라우드는 VM + 컨테이너 + 마이크로VM을 혼합하여 사용한다.**
@@ -254,6 +266,23 @@ Timeline:
 
 **Q: Firecracker 마이크로VM이 '컨테이너의 속도 + VM의 격리'를 어떻게 달성하는가?**
 > "네 가지 전략이다. (1) 최소 커널(~5MB) — 필요 기능만 포함하여 ~125ms 부팅. (2) 최소 디바이스 — VirtIO 네트워크/블록만 에뮬레이션, 공격 표면 최소화. (3) KVM 기반 격리 — VT-x/ARM EL2로 VM 수준 메모리/CPU 격리, 커널 비공유로 container escape 없음. (4) 낮은 오버헤드 — VM당 ~5MB, 서버당 수천 개 동시 실행. AWS Lambda와 Fargate가 이 기술로 서버리스의 보안과 성능을 모두 확보했다."
+
+---
+
+## 핵심 정리
+
+- **Container = OS 공유 + namespace 격리**: VM은 kernel 별도, container는 host kernel 공유.
+- **Linux namespace**: PID, NET, MNT, UTS, USER, IPC, CGROUP — 자원별 가상화.
+- **cgroup**: CPU/메모리/IO 제한 (resource limit).
+- **microVM (Firecracker, AWS Lambda)**: Container 빠른 startup + VM 격리. KVM 기반 minimal device set.
+- **gVisor**: user-space kernel + sandboxing. Container 호환 + VM-like 격리.
+- **kata-containers**: container API + VM 격리 (lightweight VM under container).
+- **선택**: high density 단일 tenant → container. Multi-tenant security → VM 또는 microVM.
+
+## 다음 단계
+
+- 📝 [**Module 07 퀴즈**](quiz/07_containers_and_modern_quiz.md)
+- ➡️ [**Module 08 — Quick Reference Card**](08_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../06_strict_vs_passthrough/">

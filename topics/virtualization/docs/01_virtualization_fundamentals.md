@@ -1,8 +1,19 @@
-# Unit 1: 가상화 기본 개념
+# Module 01 — Virtualization Fundamentals
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Define** 가상화의 정의와 동기 (격리, 효율, multi-tenant) 설명
+    - **Distinguish** Full / Para / HW-assisted virtualization
+    - **Identify** Virtualization 적합/부적합 시나리오
+
+!!! info "사전 지식"
+    - OS 기본 (process, kernel/user mode)
+    - CPU 권한 모드
 
 ## 핵심 개념
 **가상화 = 물리 하드웨어 자원을 추상화하여, 하나의 물리 머신 위에 여러 독립된 실행 환경(VM)을 만드는 기술. CPU, 메모리, I/O를 소프트웨어로 분할/공유/격리한다.**
@@ -198,6 +209,20 @@ Guest OS 계속 실행 (trap이 일어난 줄 모름)
 
 **Q: x86에서 VT-x 이전에 가상화가 어려웠던 이유는?**
 > "x86에는 POPF, SGDT 같은 'Sensitive하지만 Non-privileged'한 명령어가 있었다. HW 상태를 변경/읽지만 비특권 모드에서 trap 없이 실행되어 Hypervisor가 가로챌 수 없었다. VMware는 Binary Translation(명령어 동적 치환)으로 SW 우회했고, Intel이 VT-x로 VMX non-root 모드를 추가하여 모든 Sensitive 명령어가 자동 VM Exit되도록 HW 근본 해결했다."
+
+---
+
+## 핵심 정리
+
+- **가상화 = HW 자원 추상화**: 1 physical → N virtual. 격리, 효율, multi-tenant.
+- **Full**: HW emulation (느림). 예: QEMU 단독.
+- **Para-virtualization**: guest OS 수정 (xenoLinux). HW emulation 회피.
+- **HW-assisted**: VT-x/AMD-V, ARM EL2 — CPU가 가상화 지원. **현재 표준**.
+
+## 다음 단계
+
+- 📝 [**Module 01 퀴즈**](quiz/01_virtualization_fundamentals_quiz.md)
+- ➡️ [**Module 01A — System Architecture Evolution**](01a_system_architecture_evolution.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

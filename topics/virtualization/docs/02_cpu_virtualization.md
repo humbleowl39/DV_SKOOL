@@ -1,8 +1,20 @@
-# Unit 2: CPU 가상화
+# Module 02 — CPU Virtualization
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** Trap-and-emulate 메커니즘 (privileged instruction → trap to hypervisor → emulate)
+    - **Distinguish** Binary Translation, Para-virtualization, HW-assisted (VT-x/AMD-V/EL2)
+    - **Apply** VMCS / VMCB / vCPU의 역할
+    - **Identify** Sensitive instruction과 그 처리 방법
+
+!!! info "사전 지식"
+    - CPU 권한 모드 (kernel/user, ring, EL)
+    - [Module 01](01_virtualization_fundamentals.md)
 
 ## 핵심 개념
 **CPU 가상화 = Guest OS의 특권 명령어를 안전하게 처리하면서, 일반 명령어는 HW에서 직접 실행하여 성능을 유지하는 것. SW 방식(Binary Translation)에서 HW 지원(VT-x, ARM EL2)으로 발전했다.**
@@ -303,6 +315,21 @@ User App (EL0)
 
 **Q: Para-virtualization이 HW 가상화 등장 후 줄어든 이유는?**
 > "Para-virtualization은 x86의 Non-privileged Sensitive 명령어를 trap할 수 없어서 Guest OS를 수정하여 hypercall로 대체하는 방식이었다. VT-x/ARM EL2가 모든 Sensitive 명령어를 HW에서 자동 trap하므로 Guest OS 수정이 불필요해졌고, 미수정 OS(Windows 포함)도 그대로 실행 가능해졌다. 다만 VirtIO 같은 I/O para-virtualization은 에뮬레이션보다 VM Exit이 적어 여전히 성능 이점이 있어 현재도 널리 사용된다."
+
+---
+
+## 핵심 정리
+
+- **Trap-and-emulate**: privileged instruction 실행 시 trap → hypervisor가 emulate → resume.
+- **HW-assisted**: VT-x (Intel), AMD-V, ARM EL2. CPU가 가상화 root mode + non-root mode 분리.
+- **VMCS/VMCB**: vCPU state (GP register, control register 등) 저장 자료구조.
+- **Para-virtualization**: guest OS가 hypervisor 인지 + hypercall로 통신. xenoLinux.
+- **HW-assisted가 표준**: 거의 모든 modern hypervisor (KVM/Xen/Hyper-V/VMware)가 VT-x/EL2 활용.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_cpu_virtualization_quiz.md)
+- ➡️ [**Module 03 — Memory Virtualization**](03_memory_virtualization.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01a_system_architecture_evolution/">

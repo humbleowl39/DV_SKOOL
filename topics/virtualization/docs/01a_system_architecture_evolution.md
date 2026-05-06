@@ -1,8 +1,19 @@
-# Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지
+# Module 01A — System Architecture Evolution
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Trace** HW only → microcontroller → MMU 도입 → 가상화의 진화 흐름
+    - **Identify** 각 단계에서 추가된 HW 메커니즘과 그 동기
+    - **Understand** 왜 가상화가 multi-tenant 시대의 토대가 되었는지
+
+!!! info "사전 지식"
+    - [Module 01](01_virtualization_fundamentals.md)
+    - 컴퓨터 architecture 일반
 
 ## 핵심 개념
 **현대 가상화 시스템은 하루아침에 만들어진 것이 아니다. 고정 기능 HW → 프로그래머블 프로세서 → HW 가속기 통합 → OS 도입 → MMU/IOMMU → 가상화로 이어지는 진화 과정의 결과물이다. 각 단계마다 이전 단계의 한계를 극복하기 위한 HW/SW가 추가되었다.**
@@ -603,6 +614,19 @@ Hypervisor 입장:
 
 **Q: AXI의 AxUSER 신호가 IOMMU 2-stage translation에서 하는 역할은?**
 > "AxUSER(ARUSER/AWUSER)는 AXI 트랜잭션에 'VM 정체성(identity)'을 부여하는 메커니즘이다. 디바이스가 메모리 접근 시 AxUSER에 SW 엔티티 정보를 실어 보내면, IOMMU가 이를 읽고 해당 VM의 Stage 1 PT로 VA→IPA, Stage 2 PT로 IPA→PA 변환을 수행한다. AxUSER 없이는 IOMMU가 어떤 VM의 접근인지 구분 불가. ARM SMMU에서는 이것이 StreamID에 해당하며, Stream Table Entry(STE)를 인덱싱하여 디바이스/VM별 변환 설정을 찾는다."
+
+---
+
+## 핵심 정리
+
+- **진화 단계**: 고정 기능 HW → 프로그래머블 CPU → MMU (메모리 격리) → IOMMU (device 격리) → CPU 가상화 (VT-x/EL2) → 컨테이너.
+- **각 단계의 동기**: 더 큰 sharing/efficiency, 동시에 더 강한 isolation.
+- **가상화는 모든 이전 단계 위에 구축**: MMU 없으면 메모리 격리 불가, IOMMU 없으면 DMA 보호 불가.
+
+## 다음 단계
+
+- 📝 [**Module 01A 퀴즈**](quiz/01a_system_architecture_evolution_quiz.md)
+- ➡️ [**Module 02 — CPU Virtualization**](02_cpu_virtualization.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_virtualization_fundamentals/">
