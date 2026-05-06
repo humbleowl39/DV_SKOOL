@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DV SKOOL - 디자인 검증 학습 자료</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a1f2e;
+      --surface-hover: #232a3d;
+      --primary: #4fc3f7;
+      --text: #e6edf3;
+      --text-dim: #94a3b8;
+      --border: #2d3748;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 60px 24px; }
+    header { text-align: center; margin-bottom: 48px; }
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4fc3f7 0%, #7c4dff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .subtitle { color: var(--text-dim); font-size: 1.1rem; }
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin: 40px 0 16px;
+      color: var(--primary);
+      border-left: 4px solid var(--primary);
+      padding-left: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .card:hover {
+      background: var(--surface-hover);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(79, 195, 247, 0.15);
+    }
+    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+    .card-desc { font-size: 0.9rem; color: var(--text-dim); }
+    .card-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: rgba(79, 195, 247, 0.15);
+      color: var(--primary);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    footer {
+      text-align: center;
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>DV SKOOL</h1>
+      <p class="subtitle">디자인 검증(Design Verification) 학습 자료 모음</p>
+    </header>
+
+    <h2 class="section-title">DV 코어</h2>
+    <div class="grid">
+      <a class="card" href="./uvm/">
+        <div class="card-title">UVM</div>
+        <div class="card-desc">Universal Verification Methodology — 아키텍처, phase, agent, sequence, factory, TLM</div>
+        <span class="card-tag">methodology</span>
+      </a>
+      <a class="card" href="./amba_protocols/">
+        <div class="card-title">AMBA Protocols</div>
+        <div class="card-desc">APB, AHB, AXI, AXI-Stream — ARM의 표준 버스 프로토콜</div>
+        <span class="card-tag">protocol</span>
+      </a>
+      <a class="card" href="./formal_verification/">
+        <div class="card-title">Formal Verification</div>
+        <div class="card-desc">SVA, JasperGold — 정형 검증 기법과 실전 전략</div>
+        <span class="card-tag">methodology</span>
+      </a>
+    </div>
+
+    <h2 class="section-title">메모리 & 스토리지</h2>
+    <div class="grid">
+      <a class="card" href="./mmu/">
+        <div class="card-title">MMU</div>
+        <div class="card-desc">페이지 테이블, TLB, IOMMU/SMMU, 성능 분석</div>
+        <span class="card-tag">subsystem</span>
+      </a>
+      <a class="card" href="./dram_ddr/">
+        <div class="card-title">DRAM / DDR</div>
+        <div class="card-desc">DRAM 기본, 메모리 컨트롤러, PHY, DV 방법론</div>
+        <span class="card-tag">memory</span>
+      </a>
+      <a class="card" href="./ufs_hci/">
+        <div class="card-title">UFS HCI</div>
+        <div class="card-desc">UFS 프로토콜 스택, HCI 아키텍처, UPIU command flow</div>
+        <span class="card-tag">storage</span>
+      </a>
+    </div>
+
+    <h2 class="section-title">네트워크 & 인터커넥트</h2>
+    <div class="grid">
+      <a class="card" href="./ethernet_dcmac/">
+        <div class="card-title">Ethernet DCMAC</div>
+        <div class="card-desc">이더넷 기본, DCMAC 아키텍처와 DV</div>
+        <span class="card-tag">network</span>
+      </a>
+      <a class="card" href="./toe/">
+        <div class="card-title">TOE</div>
+        <div class="card-desc">TCP/IP Offload Engine — 아키텍처와 핵심 기능</div>
+        <span class="card-tag">network</span>
+      </a>
+    </div>
+
+    <h2 class="section-title">SoC & 보안</h2>
+    <div class="grid">
+      <a class="card" href="./soc_integration_cctv/">
+        <div class="card-title">SoC Integration (CCTV)</div>
+        <div class="card-desc">SoC top integration, 공통 task, TB top, AI 활용</div>
+        <span class="card-tag">soc</span>
+      </a>
+      <a class="card" href="./soc_secure_boot/">
+        <div class="card-title">SoC Secure Boot</div>
+        <div class="card-desc">Hardware RoT, chain of trust, crypto, attack surface</div>
+        <span class="card-tag">security</span>
+      </a>
+      <a class="card" href="./arm_security/">
+        <div class="card-title">ARM Security</div>
+        <div class="card-desc">Exception level, TrustZone, secure enclave, TEE</div>
+        <span class="card-tag">security</span>
+      </a>
+      <a class="card" href="./virtualization/">
+        <div class="card-title">Virtualization</div>
+        <div class="card-desc">CPU/메모리/IO 가상화, 하이퍼바이저, 컨테이너</div>
+        <span class="card-tag">subsystem</span>
+      </a>
+      <a class="card" href="./automotive_cybersecurity/">
+        <div class="card-title">Automotive Cybersecurity</div>
+        <div class="card-desc">CAN bus, 자동차 SoC 보안, Tesla FSD case study</div>
+        <span class="card-tag">security</span>
+      </a>
+    </div>
+
+    <h2 class="section-title">응용 & 알고리즘</h2>
+    <div class="grid">
+      <a class="card" href="./ai_engineering/">
+        <div class="card-title">AI Engineering</div>
+        <div class="card-desc">LLM, 프롬프트 엔지니어링, RAG, agent 아키텍처, DV 활용</div>
+        <span class="card-tag">applied</span>
+      </a>
+      <a class="card" href="./bigtech_algorithm/">
+        <div class="card-title">BigTech Algorithm</div>
+        <div class="card-desc">코딩 인터뷰 핵심 — Big-O, 자료구조, 알고리즘 + SystemVerilog 예제</div>
+        <span class="card-tag">interview</span>
+      </a>
+    </div>
+
+    <footer>
+      <p>Source: <a href="https://github.com/humbleowl39/DV_SKOOL">github.com/humbleowl39/DV_SKOOL</a></p>
+      <p>Built with MkDocs Material</p>
+    </footer>
+  </div>
+</body>
+</html>

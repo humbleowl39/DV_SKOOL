@@ -1,0 +1,95 @@
+site_name: AI Engineering
+site_description: LLM 기본, 프롬프트 엔지니어링, RAG, agent 아키텍처, DV 적용
+site_url: https://humbleowl39.github.io/DV_SKOOL/ai_engineering/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.expand
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/ai_engineering/docs/
+
+nav:
+  - "AI Engineering for DV — 개요 및 컨셉 맵": index.md
+  - "Unit 1: LLM 기본 구조": 01_llm_fundamentals.md
+  - "Unit 2: Prompt Engineering & In-Context Learning": 02_prompt_engineering.md
+  - "Unit 3: Embedding & Vector DB (FAISS)": 03_embedding_vectordb.md
+  - "Unit 4: RAG (Retrieval-Augmented Generation)": 04_rag.md
+  - "Unit 5: Agent 아키텍처": 05_agent_architecture.md
+  - "Unit 6: Fine-tuning vs RAG vs Prompt — 전략 선택": 06_strategy_selection.md
+  - "Unit 7: DV/EDA 도메인 적용 사례": 07_dv_application.md
+  - "AI Engineering for DV — Quick Reference Card": 08_quick_reference_card.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — 학습용 자료

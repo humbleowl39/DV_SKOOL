@@ -1,0 +1,95 @@
+site_name: BigTech Algorithm
+site_description: 코딩 인터뷰 — Big-O, 자료구조, 알고리즘 + SystemVerilog 예제
+site_url: https://humbleowl39.github.io/DV_SKOOL/bigtech_algorithm/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.expand
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/bigtech_algorithm/docs/
+
+nav:
+  - "빅테크 알고리즘 면접 — 학습 요약": index.md
+  - "빅테크 알고리즘 면접 — 학습 요약": 00_summary.md
+  - "Unit 1: Big-O 복잡도 & 패턴 사고법": 01_big_o_explained.md
+  - "Unit 2: Array & Hash Map (연관 배열)": 02_array_hashmap_explained.md
+  - "Unit 3: Two Pointers & Sliding Window": 03_two_pointers_sliding_window_explained.md
+  - "Unit 4: Stack & Binary Search": 04_stack_binary_search_explained.md
+  - "Unit 5: Tree & BFS/DFS": 05_tree_bfs_dfs_explained.md
+  - "Unit 6: Dynamic Programming (DP)": 06_dynamic_programming_explained.md
+  - "Unit 7: 면접 전략": 07_interview_strategy.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — 학습용 자료

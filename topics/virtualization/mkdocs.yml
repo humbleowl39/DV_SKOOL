@@ -1,0 +1,96 @@
+site_name: Virtualization
+site_description: CPU/메모리/IO 가상화, 하이퍼바이저, 컨테이너, modern virt
+site_url: https://humbleowl39.github.io/DV_SKOOL/virtualization/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.expand
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/virtualization/docs/
+
+nav:
+  - "Virtualization — 개요 및 컨셉 맵": index.md
+  - "Unit 1: 가상화 기본 개념": 01_virtualization_fundamentals.md
+  - "Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지": 01a_system_architecture_evolution.md
+  - "Unit 2: CPU 가상화": 02_cpu_virtualization.md
+  - "Unit 3: 메모리 가상화": 03_memory_virtualization.md
+  - "Unit 4: I/O 가상화": 04_io_virtualization.md
+  - "Unit 5: Hypervisor 유형": 05_hypervisor_types.md
+  - "Unit 6: Strict System vs Hypervisor Pass-through": 06_strict_vs_passthrough.md
+  - "Unit 7: 컨테이너와 현대 가상화": 07_containers_and_modern.md
+  - "Unit 8: Quick Reference Card": 08_quick_reference_card.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — 학습용 자료
