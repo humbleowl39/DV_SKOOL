@@ -1,7 +1,6 @@
 # Module 03 — Sequence & Sequence Item
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 17분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

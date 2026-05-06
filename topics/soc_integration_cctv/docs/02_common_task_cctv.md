@@ -1,7 +1,6 @@
 # Unit 2: Common Task & CCTV (Common Task Coverage Verification)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 24분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

@@ -1,7 +1,7 @@
 /* DV SKOOL — 학습 사이트 스타일 */
 
 /* ===========================================================
-   학습 메타 블럭 (학습시간 + 난이도 뱃지)
+   학습 메타 블럭 (난이도 뱃지)
    =========================================================== */
 .learning-meta {
   display: flex;
@@ -19,15 +19,6 @@
   border-radius: 999px;
   letter-spacing: 0.02em;
   border: 1px solid var(--md-default-fg-color--lightest);
-}
-.meta-badge.meta-time {
-  background: rgba(79, 195, 247, 0.12);
-  color: #2196f3;
-  border-color: rgba(79, 195, 247, 0.28);
-}
-[data-md-color-scheme="slate"] .meta-badge.meta-time {
-  color: #82b1ff;
-  background: rgba(79, 195, 247, 0.18);
 }
 .meta-badge.meta-level-beginner {
   background: rgba(76, 175, 80, 0.12);
@@ -92,11 +83,6 @@
   font-size: 0.85rem;
   color: var(--md-default-fg-color--light);
   line-height: 1.5;
-}
-.course-card .course-card-meta {
-  margin-top: 0.7rem;
-  font-size: 0.75rem;
-  color: var(--md-default-fg-color--light);
 }
 
 /* ===========================================================
@@ -247,72 +233,251 @@
 }
 
 /* ===========================================================
-   Mermaid — 다크모드 대비 강화
+   다이어그램 컴포넌트 — Path Chain (학습 경로 / 순차 흐름)
    =========================================================== */
-.md-typeset .mermaid {
-  text-align: center;
+.path-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
   margin: 1.5rem 0;
-}
-
-/* 라이트모드: 약한 배경 박스로 다이어그램 영역 분리 */
-.md-typeset .mermaid svg {
+  padding: 1rem;
   background: rgba(0, 0, 0, 0.02);
-  border-radius: 6px;
-  padding: 0.5rem;
-  max-width: 100%;
+  border-radius: 8px;
 }
-
-/* 다크모드: 노드/라벨 가독성 강화 */
-[data-md-color-scheme="slate"] .md-typeset .mermaid svg {
+[data-md-color-scheme="slate"] .path-chain {
   background: rgba(255, 255, 255, 0.04);
 }
-[data-md-color-scheme="slate"] .md-typeset .mermaid .label,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .nodeLabel,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .edgeLabel {
-  color: #1a1a1a !important;
-  fill: #1a1a1a !important;
+.path-pill {
+  flex: 1 1 150px;
+  min-width: 150px;
+  padding: 0.7rem 0.8rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 2px solid;
+  background: var(--md-default-bg-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-[data-md-color-scheme="slate"] .md-typeset .mermaid .edgeLabel {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  padding: 1px 4px;
+.path-pill.tier-core { border-color: #1976d2; }
+.path-pill.tier-adv  { border-color: #6a1b9a; }
+.path-pill.tier-ref  { border-color: #e65100; }
+.path-pill .pill-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+}
+.path-pill .pill-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  line-height: 1.3;
+  color: var(--md-default-fg-color);
+}
+.path-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--md-default-fg-color--light);
+  flex: 0 0 auto;
+  opacity: 0.5;
+  user-select: none;
+}
+@media (max-width: 600px) {
+  .path-arrow { transform: rotate(90deg); width: 100%; padding: 0.2rem; }
+}
+
+/* ===========================================================
+   다이어그램 컴포넌트 — Tree Diagram (계층 구조)
+   =========================================================== */
+.tree-diagram {
+  font-family: var(--md-code-font-family, monospace);
+  font-size: 0.86rem;
+  margin: 1.2rem 0;
+  padding: 1rem 1.2rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  border-left: 3px solid var(--md-primary-fg-color);
+}
+[data-md-color-scheme="slate"] .tree-diagram {
+  background: rgba(255, 255, 255, 0.04);
+}
+.tree-diagram ul {
+  list-style: none;
+  margin: 0.2rem 0 0 0;
+  padding: 0 0 0 1.4rem;
+  border-left: 1px dashed var(--md-default-fg-color--lightest);
+}
+.tree-diagram > .tree-node:first-child {
+  margin-bottom: 0.3rem;
+}
+.tree-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.6rem;
+  margin: 0.2rem 0;
+  background: var(--md-default-bg-color);
+  border-radius: 4px;
+  border-left: 3px solid #607d8b;
+  line-height: 1.4;
+}
+.tree-node.tree-root { border-left-color: #455a64; font-weight: 700; font-size: 0.9rem; }
+.tree-node.tree-branch-data { border-left-color: #1976d2; font-weight: 600; }
+.tree-node.tree-branch-comp { border-left-color: #6a1b9a; font-weight: 600; }
+.tree-node.tree-leaf-data   { border-left-color: #2196f3; }
+.tree-node.tree-leaf-comp   { border-left-color: #ab47bc; }
+.tree-tag {
+  font-size: 0.72rem;
+  color: var(--md-default-fg-color--light);
+  background: var(--md-code-bg-color);
+  padding: 0.1em 0.5em;
   border-radius: 3px;
-}
-[data-md-color-scheme="slate"] .md-typeset .mermaid .edgePath .path,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .flowchart-link {
-  stroke: #aab2c0 !important;
-}
-[data-md-color-scheme="slate"] .md-typeset .mermaid marker path {
-  fill: #aab2c0 !important;
-  stroke: #aab2c0 !important;
+  font-weight: 400;
 }
 
-/* classDiagram (UVM 클래스 계층) — 다크모드용 명시 색상 */
-[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup rect,
-[data-md-color-scheme="slate"] .md-typeset .mermaid g.classGroup rect {
-  fill: #e3f2fd !important;
-  stroke: #1976d2 !important;
+/* ===========================================================
+   다이어그램 컴포넌트 — Phase Grid (Build/Run/Cleanup 3단)
+   =========================================================== */
+.phase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
 }
-[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup .title,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup text {
-  fill: #0d2a4a !important;
-  color: #0d2a4a !important;
+.phase-col {
+  border-radius: 8px;
+  padding: 1rem;
+  border-top: 4px solid;
+  background: var(--md-default-bg-color);
 }
-[data-md-color-scheme="slate"] .md-typeset .mermaid .classGroup line {
-  stroke: #1976d2 !important;
+.phase-col.phase-build   { border-top-color: #1976d2; background: rgba(25, 118, 210, 0.04); }
+.phase-col.phase-run     { border-top-color: #e65100; background: rgba(230, 81, 0, 0.04); }
+.phase-col.phase-cleanup { border-top-color: #6a1b9a; background: rgba(106, 27, 154, 0.04); }
+[data-md-color-scheme="slate"] .phase-col.phase-build   { background: rgba(25, 118, 210, 0.1); }
+[data-md-color-scheme="slate"] .phase-col.phase-run     { background: rgba(255, 152, 0, 0.1); }
+[data-md-color-scheme="slate"] .phase-col.phase-cleanup { background: rgba(186, 104, 200, 0.1); }
+.phase-col-header {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.7rem;
 }
-[data-md-color-scheme="slate"] .md-typeset .mermaid .relation {
-  stroke: #aab2c0 !important;
+.phase-col-direction {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.7;
+  margin-top: 0.15rem;
 }
-[data-md-color-scheme="slate"] .md-typeset .mermaid #arrowhead path {
-  fill: #aab2c0 !important;
-  stroke: #aab2c0 !important;
+.phase-step {
+  background: var(--md-default-bg-color);
+  padding: 0.4rem 0.7rem;
+  margin: 0.3rem 0;
+  border-radius: 4px;
+  font-family: var(--md-code-font-family, monospace);
+  font-size: 0.82rem;
+  border-left: 2px solid var(--md-default-fg-color--lightest);
+}
+.phase-step.phase-step-sub {
+  margin-left: 0.8rem;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+.phase-step-note {
+  font-size: 0.72rem;
+  color: var(--md-default-fg-color--light);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--md-default-fg-color--lightest);
 }
 
-/* classDef 미적용 노드의 폴백(라이트 fill + 다크 텍스트) */
-[data-md-color-scheme="slate"] .md-typeset .mermaid .node rect,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .node polygon,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .node ellipse,
-[data-md-color-scheme="slate"] .md-typeset .mermaid .node circle {
-  fill: #f5f7fa;
-  stroke: #607d8b;
+/* ===========================================================
+   다이어그램 컴포넌트 — Layered Box (중첩 컨테이너)
+   =========================================================== */
+.layered-box {
+  border: 2px solid;
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin: 0.6rem 0;
+  background: var(--md-default-bg-color);
+}
+.layered-box.layered-test  { border-color: #2e7d32; background: rgba(46, 125, 50, 0.04); }
+.layered-box.layered-env   { border-color: #1976d2; background: rgba(25, 118, 210, 0.04); }
+.layered-box.layered-agent { border-color: #e65100; background: rgba(230, 81, 0, 0.04); }
+.layered-box.layered-sb    { border-color: #6a1b9a; background: rgba(106, 27, 154, 0.06); }
+.layered-box.layered-cov   { border-color: #00838f; background: rgba(0, 131, 143, 0.06); }
+[data-md-color-scheme="slate"] .layered-box.layered-test  { background: rgba(46, 125, 50, 0.12); }
+[data-md-color-scheme="slate"] .layered-box.layered-env   { background: rgba(25, 118, 210, 0.12); }
+[data-md-color-scheme="slate"] .layered-box.layered-agent { background: rgba(230, 81, 0, 0.12); }
+[data-md-color-scheme="slate"] .layered-box.layered-sb    { background: rgba(186, 104, 200, 0.12); }
+[data-md-color-scheme="slate"] .layered-box.layered-cov   { background: rgba(38, 198, 218, 0.12); }
+.layered-label {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.layered-label small {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.75;
+}
+.layered-desc {
+  font-size: 0.82rem;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 0.55rem;
+}
+.layered-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.layered-mini {
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 0.82rem;
+  background: var(--md-default-bg-color);
+}
+.layered-mini.mini-drv { border-color: #1976d2; }
+.layered-mini.mini-mon { border-color: #00838f; }
+.layered-mini.mini-sqr { border-color: #5e35b1; }
+.layered-mini strong {
+  display: block;
+  font-size: 0.78rem;
+  margin-bottom: 0.15rem;
+}
+
+/* ===========================================================
+   Sequencer/Phase 병렬 표시
+   =========================================================== */
+.parallel-box {
+  border: 2px dashed var(--md-default-fg-color--lighter);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  background: var(--md-code-bg-color);
+}
+.parallel-box-header {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+  color: var(--md-default-fg-color);
+}
+.parallel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+}
+.parallel-grid > .phase-step {
+  margin: 0;
 }

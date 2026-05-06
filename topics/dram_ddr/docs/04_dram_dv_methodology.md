@@ -1,7 +1,6 @@
 # Unit 4: DRAM DV 검증 전략
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 16분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

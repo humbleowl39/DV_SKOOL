@@ -1,7 +1,6 @@
 # SoC Secure Boot Flow — Quick Reference Card
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 7분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

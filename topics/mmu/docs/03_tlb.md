@@ -1,7 +1,6 @@
 # Unit 3: TLB (Translation Lookaside Buffer)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 15분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

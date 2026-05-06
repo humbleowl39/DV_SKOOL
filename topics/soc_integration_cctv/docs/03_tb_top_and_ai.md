@@ -1,7 +1,6 @@
 # Unit 3: TB Top 환경 구축 + AI 자동화
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 29분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

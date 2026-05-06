@@ -1,7 +1,6 @@
 # Unit 1: TCP/IP 기본 + TOE 개념
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 10분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

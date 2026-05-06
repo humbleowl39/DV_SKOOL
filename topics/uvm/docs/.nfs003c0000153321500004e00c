@@ -1,6 +1,7 @@
 # Module 01 — UVM 아키텍처 & Phase
 
 <div class="learning-meta">
+  <span class="meta-badge meta-time">⏱ 17분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 
@@ -38,36 +39,59 @@ UVM의 **모든 동작은 Phase 위에 얹혀 있습니다**. Driver/Monitor가 
 
 ## UVM 클래스 계층
 
-<div class="tree-diagram" markdown="0">
-  <div class="tree-node tree-root">uvm_void</div>
-  <ul>
-    <li>
-      <div class="tree-node tree-branch-data">uvm_object <span class="tree-tag">데이터, Phase 없음</span></div>
-      <ul>
-        <li>
-          <div class="tree-node tree-leaf-data">uvm_transaction</div>
-          <ul>
-            <li><div class="tree-node tree-leaf-data">uvm_sequence_item <span class="tree-tag">트랜잭션 데이터</span></div></li>
-          </ul>
-        </li>
-        <li><div class="tree-node tree-leaf-data">uvm_sequence <span class="tree-tag">자극 시나리오</span></div></li>
-        <li><div class="tree-node tree-leaf-data">uvm_reg_block <span class="tree-tag">RAL 레지스터 모델</span></div></li>
-      </ul>
-    </li>
-    <li>
-      <div class="tree-node tree-branch-comp">uvm_component <span class="tree-tag">인프라, Phase 있음, 트리 구조</span></div>
-      <ul>
-        <li><div class="tree-node tree-leaf-comp">uvm_monitor <span class="tree-tag">DUT 신호 관찰</span></div></li>
-        <li><div class="tree-node tree-leaf-comp">uvm_driver <span class="tree-tag">DUT에 자극 인가</span></div></li>
-        <li><div class="tree-node tree-leaf-comp">uvm_sequencer <span class="tree-tag">Sequence ↔ Driver 중개</span></div></li>
-        <li><div class="tree-node tree-leaf-comp">uvm_agent <span class="tree-tag">Drv+Mon+Sqr 묶음</span></div></li>
-        <li><div class="tree-node tree-leaf-comp">uvm_scoreboard <span class="tree-tag">결과 비교/검증</span></div></li>
-        <li><div class="tree-node tree-leaf-comp">uvm_env <span class="tree-tag">Agent + SB 묶음</span></div></li>
-        <li><div class="tree-node tree-leaf-comp">uvm_test <span class="tree-tag">최상위, 시나리오 선택</span></div></li>
-      </ul>
-    </li>
-  </ul>
-</div>
+```mermaid
+classDiagram
+    class uvm_void
+    class uvm_object {
+        +Phase 없음
+        +생명주기 짧음
+        +데이터/트랜잭션
+    }
+    class uvm_component {
+        +Phase 있음
+        +시뮬레이션 내내 존재
+        +parent/child 트리
+    }
+    class uvm_transaction
+    class uvm_sequence_item
+    class uvm_sequence
+    class uvm_reg_block
+    class uvm_monitor {
+        DUT 신호 관찰
+    }
+    class uvm_driver {
+        DUT 자극 인가
+    }
+    class uvm_sequencer {
+        Sequence ↔ Driver 중개
+    }
+    class uvm_agent {
+        Driver+Monitor+Sequencer 묶음
+    }
+    class uvm_scoreboard {
+        결과 비교/검증
+    }
+    class uvm_env {
+        Agent + Scoreboard 묶음
+    }
+    class uvm_test {
+        최상위, 시나리오 선택
+    }
+
+    uvm_void <|-- uvm_object
+    uvm_object <|-- uvm_transaction
+    uvm_transaction <|-- uvm_sequence_item
+    uvm_object <|-- uvm_sequence
+    uvm_object <|-- uvm_reg_block
+    uvm_object <|-- uvm_component
+    uvm_component <|-- uvm_monitor
+    uvm_component <|-- uvm_driver
+    uvm_component <|-- uvm_sequencer
+    uvm_component <|-- uvm_agent
+    uvm_component <|-- uvm_scoreboard
+    uvm_component <|-- uvm_env
+    uvm_component <|-- uvm_test
+```
 
 !!! note "두 분기의 본질적 차이"
     - **`uvm_object`**: 데이터(트랜잭션, 시퀀스, 설정값). Phase 없음. 자유롭게 생성/소멸.
@@ -105,33 +129,28 @@ endclass
 
 ### Phase 실행 모델
 
-<div class="phase-grid">
-  <div class="phase-col phase-build">
-    <div class="phase-col-header">Build Phases<span class="phase-col-direction">↓ Top → Down · 순차</span></div>
-    <div class="phase-step">build_phase</div>
-    <div class="phase-step">connect_phase</div>
-    <div class="phase-step">end_of_elaboration_phase</div>
-    <div class="phase-step">start_of_simulation_phase</div>
-    <div class="phase-step-note">컴포넌트 생성 → TLM 연결 → 시뮬 시작 직전 준비</div>
-  </div>
-  <div class="phase-col phase-run">
-    <div class="phase-col-header">Run Phase<span class="phase-col-direction">⇄ 병렬 실행 (시간 소비)</span></div>
-    <div class="phase-step">run_phase</div>
-    <div class="phase-step phase-step-sub">┣ reset_phase</div>
-    <div class="phase-step phase-step-sub">┣ configure_phase</div>
-    <div class="phase-step phase-step-sub">┣ main_phase</div>
-    <div class="phase-step phase-step-sub">┗ shutdown_phase</div>
-    <div class="phase-step-note">run_phase와 sub-phase는 병렬. 둘 중 하나만 사용 권장.</div>
-  </div>
-  <div class="phase-col phase-cleanup">
-    <div class="phase-col-header">Cleanup Phases<span class="phase-col-direction">↑ Bottom → Up · 순차</span></div>
-    <div class="phase-step">extract_phase</div>
-    <div class="phase-step">check_phase</div>
-    <div class="phase-step">report_phase</div>
-    <div class="phase-step">final_phase</div>
-    <div class="phase-step-note">결과 수집 → 최종 검증 → 보고 → 정리</div>
-  </div>
-</div>
+```mermaid
+flowchart TD
+    BP[build_phase<br/>Top → Down] --> CP[connect_phase<br/>Bottom → Up]
+    CP --> EOE[end_of_elaboration_phase]
+    EOE --> SOS[start_of_simulation_phase]
+    SOS --> RP[run_phase<br/>병렬 실행]
+    RP -.병렬.-> RST[reset_phase]
+    RP -.병렬.-> CFG[configure_phase]
+    RP -.병렬.-> MN[main_phase]
+    RP -.병렬.-> SHD[shutdown_phase]
+    RP --> EXT[extract_phase]
+    EXT --> CHK[check_phase]
+    CHK --> RPT[report_phase]
+    RPT --> FIN[final_phase]
+
+    classDef build fill:#e3f2fd,stroke:#1976d2,color:#000
+    classDef run fill:#fff3e0,stroke:#e65100,color:#000
+    classDef cleanup fill:#f3e5f5,stroke:#6a1b9a,color:#000
+    class BP,CP,EOE,SOS build
+    class RP,RST,CFG,MN,SHD run
+    class EXT,CHK,RPT,FIN cleanup
+```
 
 ### Phase 핵심 규칙
 
@@ -221,16 +240,16 @@ endclass
 
 ### Sub-Phase (run_phase 세분화)
 
-<div class="parallel-box">
-  <div class="parallel-box-header">⇄ 병렬 실행 (run_phase 전체와 sub-phase 동시 진행)</div>
-  <div class="parallel-grid">
-    <div class="phase-step">run_phase</div>
-    <div class="phase-step">reset_phase</div>
-    <div class="phase-step">configure_phase</div>
-    <div class="phase-step">main_phase</div>
-    <div class="phase-step">shutdown_phase</div>
-  </div>
-</div>
+```mermaid
+flowchart LR
+    R[run_phase 전체] -.병렬.-> RST[reset_phase]
+    R -.병렬.-> CFG[configure_phase]
+    R -.병렬.-> MN[main_phase]
+    R -.병렬.-> SHD[shutdown_phase]
+
+    classDef rp fill:#fff3e0,stroke:#e65100,color:#000
+    class R,RST,CFG,MN,SHD rp
+```
 
 핵심: **`run_phase`와 sub-phase는 병렬 실행**. 따라서 둘 중 하나만 쓰는 것이 혼란을 방지.
 
@@ -279,40 +298,45 @@ endclass
 
 ## UVM 환경 계층 구조
 
-<div class="layered-box layered-test">
-  <div class="layered-label">uvm_test <small>(my_test)</small></div>
-  <div class="layered-desc">시나리오 선택 · Sequence 실행 · Factory Override</div>
-  <div class="layered-box layered-env">
-    <div class="layered-label">uvm_env <small>(my_env)</small></div>
-    <div class="layered-desc">Agent / Scoreboard / Coverage 인스턴스화 + 연결</div>
-    <div class="layered-grid">
-      <div class="layered-box layered-agent">
-        <div class="layered-label">Agent_A</div>
-        <div class="layered-grid">
-          <div class="layered-mini mini-drv"><strong>Driver</strong>자극 인가</div>
-          <div class="layered-mini mini-mon"><strong>Monitor</strong>신호 관찰</div>
-          <div class="layered-mini mini-sqr"><strong>Sequencer</strong>중개</div>
-        </div>
-      </div>
-      <div class="layered-box layered-agent">
-        <div class="layered-label">Agent_B</div>
-        <div class="layered-grid">
-          <div class="layered-mini mini-drv"><strong>Driver</strong>자극 인가</div>
-          <div class="layered-mini mini-mon"><strong>Monitor</strong>신호 관찰</div>
-          <div class="layered-mini mini-sqr"><strong>Sequencer</strong>중개</div>
-        </div>
-      </div>
-      <div class="layered-box layered-sb">
-        <div class="layered-label">Scoreboard</div>
-        <div class="layered-desc">DUT 출력 vs 기대값 비교 · Pass/Fail 판정</div>
-      </div>
-      <div class="layered-box layered-cov">
-        <div class="layered-label">Coverage</div>
-        <div class="layered-desc">Covergroup · Coverpoint · Cross 수집</div>
-      </div>
-    </div>
-  </div>
-</div>
+```mermaid
+flowchart TB
+    Test[uvm_test<br/>my_test<br/>시나리오 선택, Sequence 실행, Factory Override]
+    Env[uvm_env<br/>my_env<br/>Agent/Scoreboard/Coverage 인스턴스화]
+
+    AgA[Agent_A]
+    AgB[Agent_B]
+    SB[Scoreboard<br/>비교/판정]
+    Cov[Coverage<br/>CG/CP]
+
+    DrvA[Driver]
+    MonA[Monitor]
+    SqrA[Sequencer]
+    DrvB[Driver]
+    MonB[Monitor]
+    SqrB[Sequencer]
+
+    Test --> Env
+    Env --> AgA
+    Env --> AgB
+    Env --> SB
+    Env --> Cov
+    AgA --> DrvA
+    AgA --> MonA
+    AgA --> SqrA
+    AgB --> DrvB
+    AgB --> MonB
+    AgB --> SqrB
+
+    classDef testN fill:#e8f5e9,stroke:#2e7d32,color:#000
+    classDef envN fill:#e3f2fd,stroke:#1976d2,color:#000
+    classDef agentN fill:#fff3e0,stroke:#e65100,color:#000
+    classDef compN fill:#f3e5f5,stroke:#6a1b9a,color:#000
+    class Test testN
+    class Env envN
+    class AgA,AgB agentN
+    class SB,Cov compN
+    class DrvA,MonA,SqrA,DrvB,MonB,SqrB compN
+```
 
 **계층 원칙**: 각 레벨은 **자신의 직접 자식만** 생성. test가 driver를 직접 만들지 않고, env가 만들지도 않으며, agent가 driver를 만든다.
 

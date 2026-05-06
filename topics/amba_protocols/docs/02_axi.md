@@ -1,7 +1,6 @@
 # Unit 2: AXI (Advanced eXtensible Interface)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 19분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

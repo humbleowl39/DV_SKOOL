@@ -1,7 +1,6 @@
 # Unit 3: Two Pointers & Sliding Window
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 9분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

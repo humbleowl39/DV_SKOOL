@@ -1,7 +1,6 @@
 # Unit 7: BootROM DV 검증 방법론
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 24분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

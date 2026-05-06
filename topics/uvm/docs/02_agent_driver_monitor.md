@@ -1,7 +1,6 @@
 # Module 02 — Agent / Driver / Monitor
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 16분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

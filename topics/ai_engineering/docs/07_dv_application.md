@@ -1,7 +1,6 @@
 # Unit 7: DV/EDA 도메인 적용 사례
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 11분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

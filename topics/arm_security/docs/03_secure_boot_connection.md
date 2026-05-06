@@ -1,7 +1,6 @@
 # Unit 3: Secure Boot에서의 보안 레벨 적용
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 21분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

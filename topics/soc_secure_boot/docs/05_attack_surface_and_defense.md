@@ -1,7 +1,6 @@
 # Unit 5: 공격 표면과 방어
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 14분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

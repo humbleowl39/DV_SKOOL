@@ -1,7 +1,6 @@
 # Unit 7: 면접 전략
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 4분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

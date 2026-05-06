@@ -1,7 +1,6 @@
 # Unit 6: Dynamic Programming (DP)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 8분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

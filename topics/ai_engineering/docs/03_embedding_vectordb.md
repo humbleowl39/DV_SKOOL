@@ -1,7 +1,6 @@
 # Unit 3: Embedding & Vector DB (FAISS)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

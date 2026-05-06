@@ -1,7 +1,6 @@
 # Unit 2: Array & Hash Map (연관 배열)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 8분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

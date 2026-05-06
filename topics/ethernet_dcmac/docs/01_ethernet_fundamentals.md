@@ -1,7 +1,6 @@
 # Unit 1: Ethernet 기본 + 프레임 구조
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

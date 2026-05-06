@@ -1,7 +1,6 @@
 # Unit 1: SoC Top Integration 검증
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 22분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

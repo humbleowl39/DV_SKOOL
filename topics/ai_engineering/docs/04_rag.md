@@ -1,7 +1,6 @@
 # Unit 4: RAG (Retrieval-Augmented Generation)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 11분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

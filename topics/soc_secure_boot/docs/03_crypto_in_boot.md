@@ -1,7 +1,6 @@
 # Unit 3: Secure Boot 암호학 — 서명 검증과 키 관리
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

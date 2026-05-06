@@ -5,7 +5,6 @@ CAN bus, automotive SoC 보안, Tesla FSD case study, attack surface & defense
 <div class="course-header">
   <div class="course-stats">
     <div class="stat-item"><strong>5</strong>개 모듈</div>
-    <div class="stat-item"><strong>1시간 39분</strong> 총 학습시간</div>
     <div class="stat-item"><strong>중급</strong> 난이도</div>
   </div>
 </div>
@@ -20,27 +19,22 @@ CAN bus, automotive SoC 보안, Tesla FSD case study, attack surface & defense
   <a class="course-card" href="01_can_bus_fundamentals/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">CAN Bus Fundamentals (차량 내부 통신의 구조와 한계)</div>
-    <div class="course-card-meta">⏱ 17분 학습</div>
   </a>
   <a class="course-card" href="02_automotive_soc_security/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Automotive SoC Security (차량 SoC 보안 아키텍처)</div>
-    <div class="course-card-meta">⏱ 24분 학습</div>
   </a>
   <a class="course-card" href="03_tesla_fsd_case_study/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">Tesla FSD Case Study (탈옥 사례 분석)</div>
-    <div class="course-card-meta">⏱ 19분 학습</div>
   </a>
   <a class="course-card" href="04_attack_surface_and_defense/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">Attack Surface & Defense (공격 표면과 방어 계층)</div>
-    <div class="course-card-meta">⏱ 26분 학습</div>
   </a>
   <a class="course-card" href="05_quick_reference_card/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">Automotive Cybersecurity — Quick Reference Card</div>
-    <div class="course-card-meta">⏱ 13분 학습</div>
   </a>
 </div>
 

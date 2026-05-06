@@ -1,7 +1,6 @@
 # Automotive Cybersecurity — Quick Reference Card
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

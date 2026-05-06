@@ -1,7 +1,6 @@
 # Unit 1: MMU 기본 개념 및 주소 변환
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

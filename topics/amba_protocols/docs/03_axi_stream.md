@@ -1,7 +1,6 @@
 # Unit 3: AXI-Stream
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 15분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

@@ -1,7 +1,6 @@
 # Unit 4: IOMMU / SMMU — SoC에서의 MMU
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 17분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

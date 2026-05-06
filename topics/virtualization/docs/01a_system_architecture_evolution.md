@@ -1,7 +1,6 @@
 # Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 23분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

@@ -1,7 +1,6 @@
 # Unit 5: MMU 성능 분석 및 최적화
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 14분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

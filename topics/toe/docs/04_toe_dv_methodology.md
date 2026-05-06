@@ -1,7 +1,6 @@
 # Unit 4: TOE DV 검증 전략
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 23분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

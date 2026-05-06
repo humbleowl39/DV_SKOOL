@@ -1,7 +1,6 @@
 # Unit 2: CPU 가상화
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 12분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

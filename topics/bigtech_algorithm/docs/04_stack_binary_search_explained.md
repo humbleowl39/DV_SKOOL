@@ -1,7 +1,6 @@
 # Unit 4: Stack & Binary Search
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 9분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

@@ -1,7 +1,6 @@
 # Unit 3: Tesla FSD Case Study (탈옥 사례 분석)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 19분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

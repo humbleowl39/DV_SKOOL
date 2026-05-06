@@ -5,6 +5,7 @@
 <div class="course-header">
   <div class="course-stats">
     <div class="stat-item"><strong>7</strong>개 모듈 + Quick Ref</div>
+    <div class="stat-item"><strong>약 2시간</strong> 총 학습시간</div>
     <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
   </div>
 </div>
@@ -39,81 +40,72 @@
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">UVM 아키텍처 &amp; Phase</div>
     <div class="course-card-desc">클래스 계층, Phase 실행 모델, Top-Down vs Bottom-Up</div>
+    <div class="course-card-meta">⏱ 약 17분 · Mermaid 다이어그램 포함</div>
   </a>
   <a class="course-card" href="02_agent_driver_monitor/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Agent / Driver / Monitor</div>
     <div class="course-card-desc">DUT 인터페이스 컴포넌트, Active/Passive 분리, VIF 연결</div>
+    <div class="course-card-meta">⏱ 약 16분</div>
   </a>
   <a class="course-card" href="03_sequence_and_item/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">Sequence &amp; Sequence Item</div>
     <div class="course-card-desc">자극 생성 모델, body() 패턴, Virtual Sequence 조합</div>
+    <div class="course-card-meta">⏱ 약 17분</div>
   </a>
   <a class="course-card" href="04_config_db_factory/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">config_db &amp; Factory</div>
     <div class="course-card-desc">계층 설정 전달, Type/Instance Override 의사결정</div>
+    <div class="course-card-meta">⏱ 약 17분</div>
   </a>
   <a class="course-card" href="05_tlm_scoreboard_coverage/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">TLM, Scoreboard, Coverage</div>
     <div class="course-card-desc">Analysis Port 통신, 비교 모델, 커버리지 클로저</div>
+    <div class="course-card-meta">⏱ 약 18분</div>
   </a>
   <a class="course-card" href="06_practical_patterns/">
     <div class="course-card-num">Module 06</div>
     <div class="course-card-title">실무 패턴 &amp; 안티패턴</div>
     <div class="course-card-desc">현장에서 반복되는 좋은 설계 vs 피해야 할 함정</div>
+    <div class="course-card-meta">⏱ 약 16분</div>
   </a>
   <a class="course-card" href="07_quick_reference_card/">
     <div class="course-card-num">Module 07</div>
     <div class="course-card-title">Quick Reference Card</div>
     <div class="course-card-desc">실무 치트시트 — 매크로, 패턴, 디버그 팁</div>
+    <div class="course-card-meta">⏱ 약 8분 (참고용)</div>
   </a>
 </div>
 
-## 학습 경로
+## 학습 경로 다이어그램
 
-코어(Module 01-04) → 심화(05-06) → 참조(07) 순서로 의존성이 있습니다.
+```mermaid
+flowchart LR
+    M1[Module 01<br/>아키텍처 &amp; Phase]
+    M2[Module 02<br/>Agent/Drv/Mon]
+    M3[Module 03<br/>Sequence]
+    M4[Module 04<br/>config_db &amp; Factory]
+    M5[Module 05<br/>TLM/Scoreboard/Cov]
+    M6[Module 06<br/>실무 패턴]
+    M7[Module 07<br/>Quick Ref]
 
-<div class="path-chain">
-  <div class="path-pill tier-core">
-    <div class="pill-num">M01</div>
-    <div class="pill-title">아키텍처 &amp; Phase</div>
-  </div>
-  <div class="path-arrow">▶</div>
-  <div class="path-pill tier-core">
-    <div class="pill-num">M02</div>
-    <div class="pill-title">Agent/Drv/Mon</div>
-  </div>
-  <div class="path-arrow">▶</div>
-  <div class="path-pill tier-core">
-    <div class="pill-num">M03</div>
-    <div class="pill-title">Sequence</div>
-  </div>
-  <div class="path-arrow">▶</div>
-  <div class="path-pill tier-core">
-    <div class="pill-num">M04</div>
-    <div class="pill-title">config_db &amp; Factory</div>
-  </div>
-  <div class="path-arrow">▶</div>
-  <div class="path-pill tier-adv">
-    <div class="pill-num">M05</div>
-    <div class="pill-title">TLM/SB/Coverage</div>
-  </div>
-  <div class="path-arrow">▶</div>
-  <div class="path-pill tier-adv">
-    <div class="pill-num">M06</div>
-    <div class="pill-title">실무 패턴</div>
-  </div>
-  <div class="path-arrow">▶</div>
-  <div class="path-pill tier-ref">
-    <div class="pill-num">M07</div>
-    <div class="pill-title">Quick Ref</div>
-  </div>
-</div>
+    M1 --> M2
+    M2 --> M3
+    M3 --> M4
+    M4 --> M5
+    M5 --> M6
+    M6 --> M7
 
-**Tier 색상**: <span style="color:#1976d2">■</span> 코어 (M01-M04, 강한 의존) ・ <span style="color:#6a1b9a">■</span> 심화 (M05-M06) ・ <span style="color:#e65100">■</span> 참조 (M07, 치트시트)
+    classDef coreModule fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#000
+    classDef advModule fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
+    classDef refModule fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    class M1,M2,M3,M4 coreModule
+    class M5,M6 advModule
+    class M7 refModule
+```
 
 ## 코스 운영 방식
 

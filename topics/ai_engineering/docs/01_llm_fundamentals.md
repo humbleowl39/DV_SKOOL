@@ -1,7 +1,6 @@
 # Unit 1: LLM 기본 구조
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 18분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

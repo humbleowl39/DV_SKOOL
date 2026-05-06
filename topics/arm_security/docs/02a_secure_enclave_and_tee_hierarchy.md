@@ -1,7 +1,6 @@
 # Unit 2A: Secure Enclave & TEE 계층 구조
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 23분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

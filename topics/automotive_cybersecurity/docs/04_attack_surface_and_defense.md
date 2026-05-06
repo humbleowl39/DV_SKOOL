@@ -1,7 +1,6 @@
 # Unit 4: Attack Surface & Defense (공격 표면과 방어 계층)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 26분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

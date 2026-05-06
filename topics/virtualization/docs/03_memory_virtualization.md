@@ -1,7 +1,6 @@
 # Unit 3: 메모리 가상화
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 10분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

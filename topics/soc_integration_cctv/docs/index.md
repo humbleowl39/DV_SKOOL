@@ -5,7 +5,6 @@ SoC top integration — 공통 task, TB top, AI 활용 (CCTV 케이스)
 <div class="course-header">
   <div class="course-stats">
     <div class="stat-item"><strong>4</strong>개 모듈</div>
-    <div class="stat-item"><strong>1시간 22분</strong> 총 학습시간</div>
     <div class="stat-item"><strong>심화</strong> 난이도</div>
   </div>
 </div>
@@ -20,22 +19,18 @@ UVM, AMBA, SoC top 디자인 흐름
   <a class="course-card" href="01_soc_top_integration/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">SoC Top Integration 검증</div>
-    <div class="course-card-meta">⏱ 22분 학습</div>
   </a>
   <a class="course-card" href="02_common_task_cctv/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Common Task & CCTV (Common Task Coverage Verification)</div>
-    <div class="course-card-meta">⏱ 24분 학습</div>
   </a>
   <a class="course-card" href="03_tb_top_and_ai/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">TB Top 환경 구축 + AI 자동화</div>
-    <div class="course-card-meta">⏱ 29분 학습</div>
   </a>
   <a class="course-card" href="04_quick_reference_card/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">SoC Integration & CCTV — Quick Reference Card</div>
-    <div class="course-card-meta">⏱ 7분 학습</div>
   </a>
 </div>
 

@@ -5,7 +5,6 @@ TCP/IP Offload Engine — 아키텍처, 핵심 기능, DV 방법론
 <div class="course-header">
   <div class="course-stats">
     <div class="stat-item"><strong>5</strong>개 모듈</div>
-    <div class="stat-item"><strong>1시간 16분</strong> 총 학습시간</div>
     <div class="stat-item"><strong>심화</strong> 난이도</div>
   </div>
 </div>
@@ -20,27 +19,22 @@ TCP/IP 스택 기본, NIC 동작 원리, AMBA 인터커넥트
   <a class="course-card" href="01_tcp_ip_and_toe_concept/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">TCP/IP 기본 + TOE 개념</div>
-    <div class="course-card-meta">⏱ 10분 학습</div>
   </a>
   <a class="course-card" href="02_toe_architecture/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">TOE 아키텍처</div>
-    <div class="course-card-meta">⏱ 17분 학습</div>
   </a>
   <a class="course-card" href="03_toe_key_functions/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">TOE 핵심 기능 상세</div>
-    <div class="course-card-meta">⏱ 23분 학습</div>
   </a>
   <a class="course-card" href="04_toe_dv_methodology/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">TOE DV 검증 전략</div>
-    <div class="course-card-meta">⏱ 23분 학습</div>
   </a>
   <a class="course-card" href="05_quick_reference_card/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">TOE — Quick Reference Card</div>
-    <div class="course-card-meta">⏱ 3분 학습</div>
   </a>
 </div>
 

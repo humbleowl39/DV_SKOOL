@@ -1,7 +1,6 @@
 # Module 06 — 실무 패턴 & 안티패턴
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 16분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

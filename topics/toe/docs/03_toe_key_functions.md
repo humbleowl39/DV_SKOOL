@@ -1,7 +1,6 @@
 # Unit 3: TOE 핵심 기능 상세
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 23분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

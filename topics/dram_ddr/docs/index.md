@@ -5,7 +5,6 @@ DRAM 기본, 메모리 컨트롤러, PHY, DDR DV 방법론
 <div class="course-header">
   <div class="course-stats">
     <div class="stat-item"><strong>5</strong>개 모듈</div>
-    <div class="stat-item"><strong>1시간 2분</strong> 총 학습시간</div>
     <div class="stat-item"><strong>중급</strong> 난이도</div>
   </div>
 </div>
@@ -20,27 +19,22 @@ DRAM 기본, 메모리 컨트롤러, PHY, DDR DV 방법론
   <a class="course-card" href="01_dram_fundamentals_ddr/">
     <div class="course-card-num">Module 01</div>
     <div class="course-card-title">DRAM 기본 원리 + DDR4/5</div>
-    <div class="course-card-meta">⏱ 14분 학습</div>
   </a>
   <a class="course-card" href="02_memory_controller/">
     <div class="course-card-num">Module 02</div>
     <div class="course-card-title">Memory Controller 아키텍처</div>
-    <div class="course-card-meta">⏱ 15분 학습</div>
   </a>
   <a class="course-card" href="03_memory_interface_phy/">
     <div class="course-card-num">Module 03</div>
     <div class="course-card-title">Memory Interface / PHY</div>
-    <div class="course-card-meta">⏱ 11분 학습</div>
   </a>
   <a class="course-card" href="04_dram_dv_methodology/">
     <div class="course-card-num">Module 04</div>
     <div class="course-card-title">DRAM DV 검증 전략</div>
-    <div class="course-card-meta">⏱ 16분 학습</div>
   </a>
   <a class="course-card" href="05_quick_reference_card/">
     <div class="course-card-num">Module 05</div>
     <div class="course-card-title">DRAM Memory Controller & DDR4/5 — Quick Reference Card</div>
-    <div class="course-card-meta">⏱ 6분 학습</div>
   </a>
 </div>
 

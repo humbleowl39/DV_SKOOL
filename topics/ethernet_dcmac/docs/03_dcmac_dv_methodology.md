@@ -1,7 +1,6 @@
 # Unit 3: DCMAC DV 검증 전략
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 21분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

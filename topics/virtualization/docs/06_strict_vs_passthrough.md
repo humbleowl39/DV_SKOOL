@@ -1,7 +1,6 @@
 # Unit 6: Strict System vs Hypervisor Pass-through
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

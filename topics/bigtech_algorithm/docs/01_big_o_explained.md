@@ -1,7 +1,6 @@
 # Unit 1: Big-O 복잡도 & 패턴 사고법
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 9분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

@@ -1,7 +1,6 @@
 # Unit 1: Hardware Root of Trust (하드웨어 신뢰 기반)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 19분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

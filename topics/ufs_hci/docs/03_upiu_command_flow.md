@@ -1,7 +1,6 @@
 # Unit 3: UPIU와 명령 처리 흐름
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 14분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

@@ -1,7 +1,6 @@
 # DRAM Memory Controller & DDR4/5 — Quick Reference Card
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 6분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

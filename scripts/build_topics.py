@@ -158,7 +158,7 @@ META_RE = re.compile(r'<div class="learning-meta">.*?</div>\n*', re.DOTALL)
 NAV_RE = re.compile(r'<div class="chapter-nav">.*?</div>\n*', re.DOTALL)
 
 
-def inject_chapter_meta(md_text: str, time_min: int, level: str) -> str:
+def inject_chapter_meta(md_text: str, level: str) -> str:
     """Insert <div class="learning-meta"> right after H1."""
     # Remove old meta block if present
     md_text = META_RE.sub("", md_text)
@@ -166,7 +166,6 @@ def inject_chapter_meta(md_text: str, time_min: int, level: str) -> str:
     level_label = {"beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced"}[level]
     meta_html = (
         f'<div class="learning-meta">\n'
-        f'  <span class="meta-badge meta-time">⏱ {time_min}분</span>\n'
         f'  <span class="meta-badge meta-level-{level}">📊 {level_label}</span>\n'
         f'</div>\n\n'
     )
@@ -231,14 +230,6 @@ def make_course_home(
     chapters: list[dict],
     has_legacy_overview: bool,
 ) -> str:
-    total_min = sum(c["time"] for c in chapters)
-    total_h = total_min // 60
-    total_m = total_min % 60
-    if total_h > 0:
-        time_str = f"{total_h}시간 {total_m}분"
-    else:
-        time_str = f"{total_min}분"
-
     level_label = {"beginner": "초급", "intermediate": "중급", "advanced": "심화"}[level]
 
     cards_html = '<div class="course-grid">\n'
@@ -249,7 +240,6 @@ def make_course_home(
             f'  <a class="course-card" href="{href_dir}">\n'
             f'    <div class="course-card-num">Module {i:02d}</div>\n'
             f'    <div class="course-card-title">{c["title"]}</div>\n'
-            f'    <div class="course-card-meta">⏱ {c["time"]}분 학습</div>\n'
             f'  </a>\n'
         )
     cards_html += '</div>\n'
@@ -269,7 +259,6 @@ def make_course_home(
 <div class="course-header">
   <div class="course-stats">
     <div class="stat-item"><strong>{len(chapters)}</strong>개 모듈</div>
-    <div class="stat-item"><strong>{time_str}</strong> 총 학습시간</div>
     <div class="stat-item"><strong>{level_label}</strong> 난이도</div>
   </div>
 </div>
@@ -595,7 +584,7 @@ def build_topic(
     # Inject meta and nav
     for i, ch in enumerate(chapter_meta):
         text = ch["path"].read_text(encoding="utf-8")
-        text = inject_chapter_meta(text, ch["time"], level)
+        text = inject_chapter_meta(text, level)
         prev_ = None
         next_ = None
         if i > 0:
@@ -615,7 +604,7 @@ def build_topic(
 
     # --- generate course home (index.md) ---
     course_chapters = [
-        {"title": ch["card_title"], "time": ch["time"], "href": ch["href"]}
+        {"title": ch["card_title"], "href": ch["href"]}
         for ch in chapter_meta
     ]
     index_md = make_course_home(
@@ -660,8 +649,14 @@ def build_topic(
 
 
 def main() -> None:
+    # UVM has hand-crafted content (full deep enhancement) — never regenerate.
+    SKIP = {"uvm"}
+
     DST.mkdir(parents=True, exist_ok=True)
     for src_name, slug, site_name, site_desc, level, prereqs in TOPICS:
+        if slug in SKIP:
+            print(f"\n--- Skipping {slug} (hand-crafted, preserved) ---")
+            continue
         print(f"\n--- Building {slug} ({src_name}) ---")
         build_topic(src_name, slug, site_name, site_desc, level, prereqs)
     print("\nAll topics built (Phase A structural).")

@@ -1,7 +1,6 @@
 # Unit 1: 가상화 기본 개념
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 8분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

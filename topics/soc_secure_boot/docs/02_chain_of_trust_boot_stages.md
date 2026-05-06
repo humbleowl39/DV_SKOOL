@@ -1,7 +1,6 @@
 # Unit 2: Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 16분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

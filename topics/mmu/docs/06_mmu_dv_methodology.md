@@ -1,7 +1,6 @@
 # Unit 6: MMU DV 검증 방법론
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 30분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

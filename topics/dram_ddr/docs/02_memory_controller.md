@@ -1,7 +1,6 @@
 # Unit 2: Memory Controller 아키텍처
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 15분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

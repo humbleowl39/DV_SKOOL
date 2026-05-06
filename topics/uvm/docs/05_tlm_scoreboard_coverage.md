@@ -1,7 +1,6 @@
 # Module 05 — TLM, Scoreboard, Coverage
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 18분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

@@ -1,7 +1,6 @@
 # Unit 2: 보안 상태 전환 & SoC 보안 인프라
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 18분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

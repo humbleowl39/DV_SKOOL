@@ -1,0 +1,117 @@
+site_name: UVM
+site_description: Universal Verification Methodology — 아키텍처, phase, agent, sequence, factory, TLM, coverage
+site_url: https://humbleowl39.github.io/DV_SKOOL/uvm/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/uvm/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+nav:
+  - "코스 홈": index.md
+  - "학습 모듈":
+      - "Unit 1: UVM 아키텍처 & Phase": 01_architecture_and_phase.md
+      - "Unit 2: Agent / Driver / Monitor": 02_agent_driver_monitor.md
+      - "Unit 3: Sequence & Sequence Item": 03_sequence_and_item.md
+      - "Unit 4: config_db & Factory": 04_config_db_factory.md
+      - "Unit 5: TLM, Scoreboard, Coverage": 05_tlm_scoreboard_coverage.md
+      - "Unit 6: UVM 실무 패턴 & 안티패턴": 06_practical_patterns.md
+      - "UVM — Quick Reference Card": 07_quick_reference_card.md
+  - "코스 개요": _legacy_overview.md
+  - "용어집": glossary.md
+  - "퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — 학습용 자료

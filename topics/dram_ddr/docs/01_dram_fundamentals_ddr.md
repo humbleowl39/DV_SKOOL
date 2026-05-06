@@ -1,7 +1,6 @@
 # Unit 1: DRAM 기본 원리 + DDR4/5
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 14분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

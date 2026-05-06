@@ -1,7 +1,6 @@
 # Unit 2: Automotive SoC Security (차량 SoC 보안 아키텍처)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 24분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

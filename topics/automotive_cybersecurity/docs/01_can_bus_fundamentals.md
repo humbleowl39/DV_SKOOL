@@ -1,7 +1,6 @@
 # Unit 1: CAN Bus Fundamentals (차량 내부 통신의 구조와 한계)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 17분</span>
   <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
 </div>
 

@@ -1,7 +1,6 @@
 # Unit 1: UFS 프로토콜 스택
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 13분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 

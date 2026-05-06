@@ -1,7 +1,6 @@
 # Unit 4: Boot Device & Boot Mode (부팅 장치와 부팅 모드)
 
 <div class="learning-meta">
-  <span class="meta-badge meta-time">⏱ 16분</span>
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 
