@@ -1,8 +1,25 @@
-# Unit 5: MMU 성능 분석 및 최적화
+# Module 05 — Performance Analysis
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Calculate** TLB hit rate, miss penalty, page walk cost를 측정값으로부터 계산할 수 있다.
+    - **Apply** Dual-Reference Model (Ideal vs DUT)로 성능 갭을 분석할 수 있다.
+    - **Distinguish** 평균 vs P99/P99.9 latency를 측정하고 tail latency가 의미하는 것을 해석할 수 있다.
+    - **Identify** Performance bottleneck의 원천(TLB miss, walk depth, memory bandwidth)을 분리할 수 있다.
+    - **Design** UVM Performance Monitor를 통한 실시간 성능 데이터 수집 구조를 설계할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01-04](01_mmu_fundamentals.md)
+    - 통계 기본 (평균, percentile, histogram)
+
+## 왜 이 모듈이 중요한가
+
+**MMU 성능 검증은 functional verification보다 미묘**합니다. PASS/FAIL이 아니라 "Ideal 대비 얼마나 효율적인가"를 정량 분석. **Dual-Reference Model**은 이력서에서 가장 강조된 패턴 — Ideal Model을 기준으로 DUT 성능 갭을 자동 측정해 시뮬에서 회귀를 잡습니다. P99 tail latency는 실제 워크로드의 SLA 위반 원인으로, 평균만 보면 놓치는 문제입니다.
 
 ## 핵심 개념
 **MMU 성능 = TLB Hit Rate × 처리량(Throughput) × 지연(Latency)의 함수. DUT의 실제 성능을 Ideal Model과 비교하여 병목을 찾아내고, 마이크로아키텍처 수준에서 원인을 분석하는 것이 핵심.**
@@ -355,6 +372,22 @@ MangoBoost MMU IP 맥락:
 
 **Q: Latency의 평균과 P99를 왜 구분하여 측정하나?**
 > "평균만 보면 간헐적 병목을 놓친다. 예를 들어 평균 Latency가 3 cycle이라도 P99가 200 cycle이면, 상위 1% 트랜잭션이 극심한 지연을 겪고 있다는 뜻이다. 서버 워크로드에서는 Tail Latency가 SLA 위반의 원인이 되므로, P99/P99.9를 별도로 측정하여 메모리 대역폭 경쟁이나 TLB Miss 집중 구간을 찾아낸다."
+
+---
+
+## 핵심 정리
+
+- **MMU 성능 = TLB Hit Rate × Throughput × Latency** 함수. 단일 지표가 아닌 다차원.
+- **Dual-Reference Model**: Ideal(완벽한 walk + TLB) vs DUT 비교. Performance Ratio 임계값(2x) 초과 시 회귀.
+- **TLB miss penalty**: walk N levels × memory access cost. PWC가 hit하면 1-2 access로 줄어듦.
+- **Tail latency (P99/P99.9)**: 평균은 간헐 병목 가림. SLA 위반은 tail에서 발생.
+- **Bottleneck 분리**: TLB miss / walk depth / memory bandwidth — 각각 측정해 원인 식별.
+- **UVM Performance Monitor**: trans 별 latency / hit 소스 / walk count 실시간 수집 + histogram.
+
+## 다음 단계
+
+- 📝 [**Module 05 퀴즈**](quiz/05_performance_analysis_quiz.md)
+- ➡️ [**Module 06 — MMU DV Methodology**](06_mmu_dv_methodology.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_iommu_smmu/">

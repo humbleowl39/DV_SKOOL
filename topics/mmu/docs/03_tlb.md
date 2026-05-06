@@ -1,8 +1,25 @@
-# Unit 3: TLB (Translation Lookaside Buffer)
+# Module 03 — TLB
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Diagram** TLB의 구조(set-associative, fully associative, micro-TLB / L1 / L2)와 동작을 그릴 수 있다.
+    - **Trace** TLB hit / TLB miss / page walk 흐름과 각 경우의 latency 영향을 추적할 수 있다.
+    - **Apply** ASID/VMID tagging이 어떻게 process/VM 간 TLB sharing을 가능하게 하는지 시나리오에 적용할 수 있다.
+    - **Decide** 언제 TLB invalidate (TLBI), shootdown이 필요한지 식별할 수 있다.
+    - **Distinguish** HW-managed TLB (ARM/x86)와 SW-managed TLB (MIPS) 차이를 설명할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01-02](01_mmu_fundamentals.md) (VA→PA, multi-level walk)
+    - 캐시 기본 (associativity, replacement policy)
+
+## 왜 이 모듈이 중요한가
+
+**TLB는 MMU 성능의 90%를 결정**합니다. Page walk이 100+ cycle이면 TLB hit는 1 cycle. **Stale TLB entry는 silent correctness bug**의 흔한 원인 — page table 업데이트 후 invalidate 누락 시 잘못된 PA에 access. 검증에서는 TLB invalidation 시나리오를 빠짐없이 다루는 것이 핵심.
 
 ## 핵심 개념
 **TLB = 주소 변환 결과(VPN→PPN)를 캐싱하는 고속 하드웨어 캐시. Page Walk의 수백 배 지연을 1사이클로 줄여주는, MMU 성능의 핵심 컴포넌트.**
@@ -393,6 +410,22 @@ DV 검증 핵심:
 
 **Q: HW-Managed TLB vs SW-Managed TLB의 차이는?**
 > "HW-Managed(ARM, x86, RISC-V)는 TLB Miss 시 HW Walk Engine이 자동으로 Page Table을 탐색하여 TLB를 채운다. SW-Managed(MIPS)는 Miss 시 Exception이 발생하고 OS Handler가 직접 TLB를 채운다. HW 방식이 수십~수백 cycle 더 빠르고, SW 개입이 없어 파이프라인 효율이 좋다. 현재 주류는 HW-Managed이며, DV 관점에서는 Walk Engine의 정확성 검증이 핵심이다."
+
+---
+
+## 핵심 정리
+
+- **TLB는 latency 게임**: hit 1 cycle vs miss + walk 100+ cycle. Hit rate가 IPC를 좌우.
+- **계층화**: micro-TLB (L1 cache 옆 4-16 entries) → L1 TLB (수십 entries) → L2 TLB (수천 entries).
+- **ASID/VMID**: process/VM 간 TLB 공유 가능. Context switch 시 flush 회피로 cold miss 폭증 방지.
+- **TLBI 명령**: ASID-by, VA-by, full flush. context switch / page table 변경 시 필수.
+- **TLB shootdown**: Multi-core SMP에서 다른 코어의 TLB도 무효화하는 IPI(inter-processor interrupt) 메커니즘. 비싸므로 batch 처리.
+- **HW-managed가 표준**: 검증에서는 walk engine + TLB의 정확성 (특히 invalidation 후 stale 없는지) 핵심.
+
+## 다음 단계
+
+- 📝 [**Module 03 퀴즈**](quiz/03_tlb_quiz.md)
+- ➡️ [**Module 04 — IOMMU / SMMU**](04_iommu_smmu.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_page_table_structure/">

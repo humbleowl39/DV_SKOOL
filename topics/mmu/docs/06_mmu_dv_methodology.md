@@ -1,8 +1,26 @@
-# Unit 6: MMU DV 검증 방법론
+# Module 06 — MMU DV Methodology
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Design** MMU 검증 환경 아키텍처(Reference Model / Custom VIP / SVA bind / Constrained Random)를 설계할 수 있다.
+    - **Apply** Custom Thin VIP를 사용해 상용 VIP의 메모리/성능 한계를 극복하는 시나리오를 작성할 수 있다.
+    - **Implement** Dual-Reference Model로 기능 + 성능을 동시 검증하는 scoreboard 구조를 구현할 수 있다.
+    - **Plan** 시나리오 매트릭스(VA distribution × PTE 구성 × Fault injection)로 coverage 닫는 전략을 수립할 수 있다.
+    - **Critique** SVA bind 패턴으로 RTL 무수정 검증 + Vacuous Pass 방지 cover 짝까지 검토할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01-05](01_mmu_fundamentals.md) MMU 전반
+    - [UVM 코스](../../uvm/) — Agent / Sequence / Scoreboard / Coverage
+    - [Formal](../../formal_verification/) — SVA 활용
+
+## 왜 이 모듈이 중요한가
+
+**MMU 검증은 일반 IP보다 복잡**합니다 — 기능 정확성(주소 변환) + 성능(TLB/throughput) + 프로토콜(AXI/AXI-S) 3축을 동시에 검증해야 하고, 상용 VIP의 메모리 한계로 large dataset 시뮬에서 OOM이 발생합니다. **Custom Thin VIP + Dual-Reference Model**이 이 코스의 시그니처 패턴이며, 이력서/면접의 핵심 차별화 요소입니다.
 
 ## 핵심 개념
 **MMU 검증 = 기능 정확성(주소 변환) + 성능 검증(TLB/Throughput) + 프로토콜 준수(AXI-S). 상용 VIP의 한계를 Custom VIP으로 극복하고, Dual-Reference Model로 기능과 성능을 동시에 검증하며, AI로 스펙 변경에 즉시 대응하는 것이 핵심.**
@@ -750,6 +768,22 @@ Agile 개발에서의 MMU 스펙 변경:
 
 **Q: Constrained Random으로 어떤 시나리오를 만들었나?**
 > "세 가지 축으로 랜덤화했다: (1) VA 분포 — Hotspot(60%), 일반 범위(30%), 넓은 범위(10%)로 가중하여 실제 트래픽 패턴을 모사. (2) Page Table 구성 — 정상 PTE 85%, Invalid 5%, Permission 위반 7%, AF 미설정 3%로 Fault 주입. (3) 시나리오 조합 — 대량 Translation + 주기적 TLB Invalidation + 간헐적 Fault 주입을 병렬로 실행하여 실제 운영 환경의 복잡한 상호작용을 검증했다."
+
+---
+
+## 핵심 정리
+
+- **MMU 검증 3축**: 기능(주소 변환) + 성능(TLB/throughput) + 프로토콜(AXI/AXI-S). 단일 axis 검증으론 부족.
+- **Custom Thin VIP의 동기**: 상용 VIP의 메모리 부담(GB 단위 page table) → SoC 시뮬 OOM. Sparse 표현으로 100x 메모리 절감.
+- **Dual-Reference Model**: 기능 reference (정확한 PA 예측) + 성능 reference (Ideal latency). 둘 다 비교해 회귀 즉시 catch.
+- **SVA bind 카테고리**: TLB 동작 (hit/invalidation) + Walk (miss → walk → fill) + 프로토콜 (handshake / fault response). 모두 cover 짝.
+- **Constrained Random 3축**: VA 분포 (hotspot/일반/넓음) × PTE 구성 (정상/invalid/permission) × 시나리오 조합 (대량 + invalidation + fault injection).
+- **AI 활용**: spec 변경 시 LLM으로 sequence/coverage 자동 생성 → 회귀 시간 단축.
+
+## 다음 단계
+
+- 📝 [**Module 06 퀴즈**](quiz/06_mmu_dv_methodology_quiz.md)
+- ➡️ [**Module 07 — Quick Reference Card**](07_quick_reference_card.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../05_performance_analysis/">

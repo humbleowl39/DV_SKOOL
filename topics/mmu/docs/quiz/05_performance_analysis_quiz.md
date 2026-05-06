@@ -1,23 +1,66 @@
-# Quiz: MMU 성능 분석 및 최적화
+# Quiz — Module 05: Performance Analysis
 
-!!! info "준비 중"
-    이 챕터의 퀴즈는 콘텐츠 보강 단계에서 추가됩니다. 우선은 본문의 핵심 개념을 직접 정리해보는 방식으로 학습 효과를 점검하세요.
-
----
-
-## 자가 점검 질문 (Self-Check)
-
-본문을 학습한 후 다음 질문에 직접 답해보세요:
-
-1. 이 챕터의 한 줄 핵심 메시지를 적어보세요.
-2. 본문에서 가장 중요하다고 느낀 다이어그램/표 하나를 선택하고, 그것이 왜 중요한지 한 문단으로 설명해보세요.
-3. 본문에서 다룬 패턴/메커니즘 중 하나를 골라, 실무에서 적용할 수 있는 시나리오를 하나 떠올려 보세요.
-
-??? tip "학습 효과를 높이려면"
-    - 답을 적은 후 본문과 비교해 보강할 부분 찾기
-    - 암기보다 **이유**를 설명할 수 있는지 확인
-    - 동료에게 5분 안에 설명할 수 있는지 시뮬레이션
+[← Module 05 본문으로 돌아가기](../05_performance_analysis.md)
 
 ---
 
-[← 챕터 본문으로 돌아가기](../05_performance_analysis.md)
+## Q1. (Remember)
+
+MMU 성능을 평가하는 3가지 핵심 지표는?
+
+??? answer "정답 / 해설"
+    1. **TLB Hit Rate** — TLB hit / total access
+    2. **Throughput** — 단위 시간당 변환 수
+    3. **Latency** — 단일 access의 지연 (평균 + tail)
+
+    이 셋의 곱이 system effective performance.
+
+## Q2. (Understand)
+
+Dual-Reference Model이 single-reference보다 강력한 이유는?
+
+??? answer "정답 / 해설"
+    Single-reference (functional only)는 PA 정확성만 검증. Dual-reference는:
+    1. **Functional reference**: 정확한 PA 예측 → 기능 정확성
+    2. **Performance reference**: Ideal latency 예측 → 성능 갭 측정
+
+    Performance ratio (DUT / Ideal) > 임계값 시 회귀 즉시 감지. Functional만 보면 PASS인데 성능 25% 저하된 회귀를 놓침.
+
+## Q3. (Apply)
+
+평균 latency = 5 cycle, P99 latency = 80 cycle인 시스템. 다음 중 더 시급한 문제는?
+
+??? answer "정답 / 해설"
+    **P99 = 80 cycle이 더 시급**. 평균은 양호해 보이지만 상위 1% access가 극심한 지연 → SLA 위반 원인. 가능한 원인:
+    - TLB thrashing (작은 working set + invalidation 패턴)
+    - Memory bandwidth contention
+    - Page walk이 deep cache miss 동반
+
+    조치: P99 access만 trace해 hotspot 식별 → ASID 격리, TLB size 증가, Huge page 검토.
+
+## Q4. (Analyze)
+
+UVM Performance Monitor가 수집해야 하는 핵심 데이터는?
+
+??? answer "정답 / 해설"
+    1. **Per-transaction latency** — histogram + percentile
+    2. **Hit source** — micro-TLB / L1 / L2 / Walk (어디서 히트했는지)
+    3. **Walk depth** — 4-level / PWC hit / cache miss
+    4. **Performance Ratio** — DUT vs Ideal Model
+    5. **Throughput** — outstanding transaction 수
+
+    실시간 수집 + 임계값 자동 회귀 검출.
+
+## Q5. (Evaluate)
+
+다음 중 MMU 성능 회귀의 silent killer는?
+
+- [ ] A. TLB miss rate 급증
+- [ ] B. P99 latency 50% 증가 (평균은 동일)
+- [ ] C. Page fault 다수 발생
+- [ ] D. Throughput 감소
+
+??? answer "정답 / 해설"
+    **B**. 평균만 모니터링하면 잡을 수 없음. P99 회귀는 SLA 위반의 직접 원인이지만 functional pass 하에 숨음. Dual-Reference Model + tail latency 모니터링이 필수인 이유.
+
+    A/C/D는 보통 functional 또는 throughput 지표에서 catch됨.

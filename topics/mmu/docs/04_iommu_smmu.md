@@ -1,8 +1,26 @@
-# Unit 4: IOMMU / SMMU — SoC에서의 MMU
+# Module 04 — IOMMU / SMMU
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Distinguish** CPU MMU와 IOMMU/SMMU의 위치/책임 차이를 SoC 다이어그램으로 식별할 수 있다.
+    - **Trace** Stage 1 (VA→IPA, OS) + Stage 2 (IPA→PA, hypervisor) translation 흐름을 추적할 수 있다.
+    - **Apply** StreamID / SubstreamID로 device 격리와 multi-context를 구현하는 시나리오를 설계할 수 있다.
+    - **Analyze** SVM (Shared Virtual Memory)의 동작 원리와 ATS/PRI의 역할을 분석할 수 있다.
+    - **Distinguish** IOMMU page fault의 비동기 처리와 CPU의 동기 fault 차이를 설명할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01-03](01_mmu_fundamentals.md)
+    - DMA / device 마스터 개념
+    - Hypervisor / virtualization 기본 (Stage 2 이해 위해)
+
+## 왜 이 모듈이 중요한가
+
+**SMMU는 SoC 보안의 핵심**입니다. IOMMU 없는 SoC는 DMA 마스터(GPU/USB/NIC)가 시스템 메모리 무제한 access — 단일 device compromise → 전체 SoC compromise. 가상화 환경에서는 Stage 2가 hypervisor 격리의 토대. **SVM은 GPU/AI accelerator의 SoC 통합 트렌드**로, 검증에서는 ATS/PRI 시나리오가 점점 중요해집니다.
 
 ## 핵심 개념
 **IOMMU/SMMU = 디바이스(GPU, DMA, NIC, 가속기)의 메모리 접근을 가상 주소로 관리하여, 디바이스 격리와 DMA 보호를 제공하는 SoC 레벨 MMU.**
@@ -416,6 +434,22 @@ Resume의 Technical Challenge #3에서 언급:
 
 **Q: IOMMU Page Fault는 CPU Page Fault와 어떻게 다른가?**
 > "가장 큰 차이는 동기성이다. CPU Page Fault는 동기적 Exception으로 현재 명령어가 즉시 멈추고 OS Handler가 처리한 뒤 재실행한다. IOMMU Page Fault는 비동기적으로, Event Queue에 기록되고 인터럽트로 OS에 통지된다. 디바이스 DMA는 이미 실패/대기 중이므로, OS가 페이지를 할당한 뒤 Stall 해제 또는 디바이스 재시도를 통해 복구한다. 디바이스 동기화가 필요하여 처리가 더 복잡하다."
+
+---
+
+## 핵심 정리
+
+- **SMMU = SoC-level MMU**: DMA 마스터(GPU/NIC/DMA/가속기)의 시스템 메모리 access를 가상화·격리.
+- **Two-stage translation**: Stage 1 (OS, VA→IPA) + Stage 2 (hypervisor, IPA→PA). 가상화 환경의 표준.
+- **StreamID로 device 식별**: SoC 내 모든 device 마스터가 고유 StreamID. SMMU가 StreamID별 translation context 적용.
+- **SVM (Shared Virtual Memory)**: device가 CPU의 VA를 그대로 사용 — pin/map 불필요. ATS(주소 변환 caching), PRI(page fault 협력)로 구현.
+- **Page fault는 비동기**: CPU와 달리 event queue + interrupt. device는 이미 실패/대기 → OS가 복구 후 재시도.
+- **보안 토대**: IOMMU 없으면 device compromise → 전체 시스템 메모리 침해 가능.
+
+## 다음 단계
+
+- 📝 [**Module 04 퀴즈**](quiz/04_iommu_smmu_quiz.md)
+- ➡️ [**Module 05 — Performance Analysis**](05_performance_analysis.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_tlb/">

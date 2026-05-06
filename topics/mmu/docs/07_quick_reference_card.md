@@ -1,8 +1,21 @@
-# MMU — Quick Reference Card
+# Module 07 — Quick Reference Card
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "사용 목적"
+    참조용 치트시트 — 면접 / 코드 리뷰 / 디버그 중 빠른 확인용.
+
+    **떠올릴 수 있어야 하는 것:**
+
+    - **Recall** VA → PA 변환 절차 (TLB → walk → fill)
+    - **Recall** 4-level translation의 비트 분할
+    - **Recall** TLB invalidation 시점, ASID/VMID 의미
+    - **Reference** SMMU Stage 1/2, SVM (ATS/PRI) 핵심 개념
+
+!!! info "사전 지식"
+    - [Module 01-06](01_mmu_fundamentals.md) 학습 후 활용
 
 ## 주소 변환 한줄 요약
 ```
@@ -145,6 +158,17 @@ Pseudo-LRU HW 비용 (N-way):
 | ARM SMMU v3 스펙 | SoC 레벨 IOMMU 검증 시 필수 |
 | Cache Coherency | MMU + 캐시 일관성 상호작용 |
 | 가상화 (ARMv8 EL2) | Stage 2 Translation 검증 |
+
+---
+
+## 코스 마무리
+
+6개 모듈 + Quick Ref 완료. 다음을 권장:
+
+1. **퀴즈 풀어보기** — [퀴즈 인덱스](quiz/index.md)
+2. **글로서리 점검** — [용어집](glossary.md)
+3. **실전 적용** — 본인 프로젝트의 MMU 검증 환경에서 Dual-Reference Model 도입
+4. **다른 토픽** — 가상화 [Virtualization](../../virtualization/) (Stage 2 deep), 또는 메모리 [DRAM/DDR](../../dram_ddr/)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../06_mmu_dv_methodology/">

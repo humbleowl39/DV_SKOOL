@@ -1,8 +1,25 @@
-# Unit 2: Page Table 구조
+# Module 02 — Page Table Structure
 
 <div class="learning-meta">
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **Explain** Single-level page table의 메모리 비용 문제와 Multi-level이 이를 해결하는 원리를 설명할 수 있다.
+    - **Walk** 64-bit VA를 ARMv8 4-level translation으로 단계별 추적해 PA를 도출할 수 있다.
+    - **Distinguish** 4KB / 16KB / 64KB granule과 각 granule별 page level 깊이/주소 비트 분할을 식별할 수 있다.
+    - **Apply** Block descriptor(Huge page)와 Table descriptor의 차이를 시나리오에 매핑할 수 있다.
+    - **Describe** Page Walk Cache (PWC)가 어떻게 walk 비용을 줄이는지 설명할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01](01_mmu_fundamentals.md) (VA→PA 변환 개념)
+    - 이진/16진 비트 마스킹, 인덱스 추출
+
+## 왜 이 모듈이 중요한가
+
+**Page Table walk은 MMU 성능의 핵심 비용**입니다. 4-level walk은 4번의 메모리 access가 발생하므로 cache miss 시 latency가 크게 늘어납니다. **PWC, Huge page, ASID 활용**이 walk 비용을 줄이는 표준 기법이며, 검증에서는 multi-level walk을 정확히 trace하는 능력이 필수입니다.
 
 ## 핵심 개념
 **Page Table = VPN → PPN 매핑을 저장하는 메모리 내 자료구조. 단일 레벨은 메모리 낭비가 심하므로 Multi-level로 계층화하여 필요한 영역만 할당한다.**
@@ -381,6 +398,22 @@ TLB Entry:
 
 **Q: Copy-on-Write에서 MMU의 역할은?**
 > "COW는 fork() 시 물리 메모리 복사를 지연하는 최적화다. fork() 직후 부모/자식 모두 같은 물리 페이지를 RO로 공유한다. Write 시도 시 MMU가 Permission Fault를 발생시키고, OS의 COW Handler가 새 물리 페이지를 할당·복사한 뒤 PTE를 RW로 업데이트한다. MMU는 Permission Fault를 정확히 감지하고, Handler 후 TLB Invalidation → 재접근 시 새 PTE로 Walk하는 전체 흐름의 정확성이 핵심이다."
+
+---
+
+## 핵심 정리
+
+- **Multi-level이 메모리 효율의 핵심**: Single-level은 모든 VA를 위해 page table 통째로 할당 (TB 단위). Multi-level은 사용 중인 영역의 sub-tree만 할당.
+- **ARMv8 4-level (4KB granule)**: VA[63:48] sign-extension, [47:39] L0, [38:30] L1, [29:21] L2, [20:12] L3, [11:0] page offset.
+- **Granule trade-off**: 4KB = 깊은 walk + fine grain, 64KB = 얕은 walk + coarse grain. 보통 4KB 표준, large dataset은 16KB/64KB.
+- **Block descriptor (Huge page)**: 중간 레벨에서 변환 종료 → 2MB / 1GB 매핑. TLB 효율성 ↑.
+- **PWC (Page Walk Cache)**: 중간 레벨 PTE 캐싱 → 순차 access의 walk 비용 40-60% 감소.
+- **COW**: Write fault → OS가 복사 + PTE 업데이트 + TLB invalidation. MMU는 fault 감지와 후속 walk 정확성 책임.
+
+## 다음 단계
+
+- 📝 [**Module 02 퀴즈**](quiz/02_page_table_structure_quiz.md)
+- ➡️ [**Module 03 — TLB**](03_tlb.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_mmu_fundamentals/">
