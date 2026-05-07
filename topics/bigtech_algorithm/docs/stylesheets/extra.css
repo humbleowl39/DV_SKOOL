@@ -88,6 +88,8 @@
   text-decoration: none !important;
   color: inherit;
   transition: var(--dvs-transition);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .course-card:hover {
   border-color: var(--md-primary-fg-color);
@@ -166,6 +168,8 @@
   text-decoration: none !important;
   color: inherit;
   transition: all 0.15s ease;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .chapter-nav a:hover {
   border-color: var(--md-primary-fg-color);
@@ -196,6 +200,7 @@
   border-left: 3px solid var(--md-primary-fg-color);
   background: var(--md-code-bg-color);
   border-radius: 0 6px 6px 0;
+  overflow-wrap: anywhere;
 }
 .glossary-term h3 {
   margin-top: 0 !important;
@@ -278,7 +283,7 @@
 }
 .path-pill {
   flex: 1 1 150px;
-  min-width: 150px;
+  min-width: 0;            /* allow shrink below 150px on narrow viewports */
   padding: 0.7rem 0.8rem;
   border-radius: 8px;
   text-align: center;
@@ -287,6 +292,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow-wrap: anywhere;
 }
 .path-pill.tier-core { border-color: #1976d2; }
 .path-pill.tier-adv  { border-color: #6a1b9a; }
@@ -329,6 +335,7 @@
   margin: 1.2rem 0;
   padding: 1rem 1.2rem;
   background: rgba(0, 0, 0, 0.02);
+  overflow-wrap: anywhere;
   border-radius: 8px;
   border-left: 3px solid var(--md-primary-fg-color);
 }
@@ -654,6 +661,7 @@
   box-shadow: var(--dvs-shadow-card);
   transition: var(--dvs-transition);
   display: inline-block;
+  overflow-wrap: anywhere;
 }
 .concept-dag-node:hover {
   transform: translateY(-2px);
