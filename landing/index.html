@@ -3,88 +3,448 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DV SKOOL - 디자인 검증 학습 자료</title>
+  <title>DV SKOOL — 디자인 검증 학습 자료</title>
+  <meta name="description" content="DV SKOOL — 디자인 검증(Design Verification) 학습 허브. UVM, AMBA, PCIe, MMU, Secure Boot 등 17개 토픽." />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <style>
+    /* ===========================================================
+       Design tokens (extra.css의 calm tone과 동일 팔레트)
+       =========================================================== */
     :root {
-      --bg: #0f1419;
-      --surface: #1a1f2e;
-      --surface-hover: #232a3d;
-      --primary: #4fc3f7;
-      --text: #e6edf3;
-      --text-dim: #94a3b8;
-      --border: #2d3748;
+      --bg:           #f7f8fb;
+      --surface:      #ffffff;
+      --surface-2:    #f1f3f8;
+      --border:       #e3e6ee;
+      --border-soft:  #eceff5;
+      --text:         #1f2937;
+      --text-dim:     #5a6378;
+      --text-muted:   #8b94a8;
+
+      --brand-c1:     #4d7cba;
+      --brand-c2:     #7a5ec0;
+      --brand-grad:   linear-gradient(135deg, #4d7cba 0%, #7a5ec0 100%);
+      --brand-soft:   linear-gradient(135deg, rgba(77,124,186,0.06) 0%, rgba(122,94,192,0.06) 100%);
+
+      /* 카테고리 색상 (좌측 보더 띠) */
+      --cat-core:     #5e72e4;  /* DV 코어 — indigo */
+      --cat-memory:   #f59e0b;  /* 메모리 & 스토리지 — amber */
+      --cat-intercon: #8b5cf6;  /* 인터커넥트 — violet */
+      --cat-network:  #10b981;  /* 네트워크 (hidden) — emerald */
+      --cat-soc:      #ef4444;  /* SoC & 보안 — rose */
+      --cat-applied:  #14b8a6;  /* 응용 — teal */
+
+      --shadow-card:       0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+      --shadow-card-hover: 0 6px 18px rgba(15,23,42,0.10), 0 2px 6px rgba(15,23,42,0.05);
+
+      --radius-card: 14px;
+      --radius-pill: 999px;
+
+      --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+
+      --transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:           #0f1419;
+        --surface:      #1a1f2e;
+        --surface-2:    #242a3a;
+        --border:       #2d3548;
+        --border-soft:  #232a3d;
+        --text:         #e6edf3;
+        --text-dim:     #a8b2c5;
+        --text-muted:   #7a8499;
+        --brand-soft:   linear-gradient(135deg, rgba(125,170,235,0.08) 0%, rgba(170,140,225,0.08) 100%);
+        --shadow-card:       0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+        --shadow-card-hover: 0 6px 18px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.30);
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      font-family: var(--font-sans);
       background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
-      line-height: 1.6;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 60px 24px; }
-    header { text-align: center; margin-bottom: 48px; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ===========================================================
+       Layout
+       =========================================================== */
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    /* ===========================================================
+       Header
+       =========================================================== */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.2rem 0.4rem;
+      border-radius: 8px;
+    }
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--brand-grad);
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: 0.02em;
+      box-shadow: var(--shadow-card);
+    }
     h1 {
-      font-size: 2.8rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #4fc3f7 0%, #7c4dff 100%);
+      font-size: clamp(2.0rem, 4vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: var(--brand-grad);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      margin: 0;
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 1.05rem;
+      margin-top: 8px;
+    }
+
+    /* ===========================================================
+       Stats strip
+       =========================================================== */
+    .stats {
+      display: flex;
+      gap: 1.4rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 18px;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    .stats .stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .stats .stat strong {
+      color: var(--text);
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .stats .dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      opacity: 0.4;
+    }
+
+    /* ===========================================================
+       Search / filter bar
+       =========================================================== */
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 28px 0 12px;
+    }
+    .search-wrap {
+      flex: 1 1 280px;
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 0.7rem 0.9rem 0.7rem 2.4rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: var(--transition);
+    }
+    .search-wrap input:focus {
+      outline: none;
+      border-color: var(--brand-c1);
+      box-shadow: 0 0 0 3px rgba(77,124,186,0.15);
+    }
+    .search-wrap::before {
+      content: "🔍";
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.55;
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pill {
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+    .pill:hover { border-color: var(--brand-c1); color: var(--text); }
+    .pill.active {
+      background: var(--brand-grad);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    /* ===========================================================
+       Section titles
+       =========================================================== */
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 44px 0 4px;
+      color: var(--text);
+      letter-spacing: -0.005em;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .section-title .accent {
+      width: 4px;
+      height: 22px;
+      border-radius: 4px;
+      background: var(--brand-grad);
+      display: inline-block;
+    }
+    .section-sub {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      margin: 0 0 18px 16px;
+    }
+
+    /* ===========================================================
+       Learning Paths (track strip)
+       =========================================================== */
+    .paths {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
       margin-bottom: 12px;
     }
-    .subtitle { color: var(--text-dim); font-size: 1.1rem; }
-    .section-title {
-      font-size: 1.4rem;
-      font-weight: 600;
-      margin: 40px 0 16px;
-      color: var(--primary);
-      border-left: 4px solid var(--primary);
-      padding-left: 12px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      display: block;
+    .path {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      text-decoration: none;
+      border-top: 3px solid var(--cat-core);
+      border-radius: var(--radius-card);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-card);
+    }
+    .path.path-memory   { border-top-color: var(--cat-memory); }
+    .path.path-intercon { border-top-color: var(--cat-intercon); }
+    .path.path-soc      { border-top-color: var(--cat-soc); }
+    .path.path-applied  { border-top-color: var(--cat-applied); }
+
+    .path-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-bottom: 10px;
+    }
+    .path-name {
+      font-weight: 700;
+      font-size: 1rem;
       color: var(--text);
-      transition: all 0.2s;
     }
-    .card:hover {
-      background: var(--surface-hover);
-      border-color: var(--primary);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(79, 195, 247, 0.15);
-    }
-    .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
-    .card-desc { font-size: 0.9rem; color: var(--text-dim); }
-    .card-tag {
-      display: inline-block;
+    .path-tag {
       font-size: 0.7rem;
-      background: rgba(79, 195, 247, 0.15);
-      color: var(--primary);
-      padding: 2px 8px;
-      border-radius: 4px;
-      margin-top: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
     }
+    .path-steps {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .step {
+      flex: 0 1 auto;
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid var(--border-soft);
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .step:hover {
+      background: var(--brand-soft);
+      border-color: var(--brand-c1);
+      transform: translateY(-1px);
+    }
+    .step-arrow {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      opacity: 0.7;
+      user-select: none;
+    }
+
+    /* ===========================================================
+       Card grid
+       =========================================================== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--cat-core);  /* 카테고리별로 override */
+      border-radius: var(--radius-card);
+      padding: 18px 18px 16px;
+      box-shadow: var(--shadow-card);
+      transition: var(--transition);
+      overflow: hidden;
+    }
+    .card.cat-memory   { border-left-color: var(--cat-memory); }
+    .card.cat-intercon { border-left-color: var(--cat-intercon); }
+    .card.cat-network  { border-left-color: var(--cat-network); }
+    .card.cat-soc      { border-left-color: var(--cat-soc); }
+    .card.cat-applied  { border-left-color: var(--cat-applied); }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-card-hover);
+      border-color: var(--brand-c1);
+    }
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .card-icon {
+      flex: 0 0 auto;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--brand-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.005em;
+      line-height: 1.35;
+    }
+    .card-desc {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      line-height: 1.55;
+      flex: 1 1 auto;
+    }
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.18rem 0.55rem;
+      border-radius: var(--radius-pill);
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+    }
+    .badge.lvl-int {
+      background: rgba(245,158,11,0.12);
+      color: #b45309;
+      border-color: rgba(245,158,11,0.28);
+    }
+    .badge.lvl-adv {
+      background: rgba(239,68,68,0.10);
+      color: #b91c1c;
+      border-color: rgba(239,68,68,0.28);
+    }
+    .badge.chapters {
+      background: var(--surface-2);
+      color: var(--text-dim);
+      border-color: var(--border-soft);
+    }
+    @media (prefers-color-scheme: dark) {
+      .badge.lvl-int { color: #fbbf24; }
+      .badge.lvl-adv { color: #f87171; }
+    }
+
+    /* ===========================================================
+       Footer
+       =========================================================== */
     footer {
       text-align: center;
       margin-top: 64px;
-      padding-top: 24px;
+      padding-top: 28px;
       border-top: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-size: 0.82rem;
     }
-    footer a { color: var(--primary); text-decoration: none; }
+    footer a { color: var(--brand-c1); }
+    footer a:hover { text-decoration: underline; }
 
-    /* === Easter egg: hidden-section reveal === */
+    /* ===========================================================
+       Empty state
+       =========================================================== */
+    .empty-state {
+      grid-column: 1 / -1;
+      padding: 32px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+    }
+
+    /* ===========================================================
+       Easter egg (network section reveal — preserved)
+       =========================================================== */
     .hidden-easter { display: none; }
     body.secrets-revealed .hidden-easter {
       display: block;
@@ -101,15 +461,14 @@
       opacity: 0.7;
       margin-left: 0.4rem;
     }
-    header h1 { cursor: pointer; user-select: none; }
     .easter-toast {
       position: fixed;
       bottom: 24px;
       right: 24px;
-      background: linear-gradient(135deg, #4d7cba 0%, #7a5ec0 100%);
+      background: var(--brand-grad);
       color: #fff;
       padding: 0.75rem 1.25rem;
-      border-radius: 999px;
+      border-radius: var(--radius-pill);
       font-size: 0.9rem;
       font-weight: 600;
       box-shadow: 0 6px 20px rgba(0,0,0,0.35);
@@ -124,150 +483,433 @@
       opacity: 1;
       transform: translateY(0);
     }
+
+    /* ===========================================================
+       Mobile
+       =========================================================== */
+    @media (max-width: 640px) {
+      .container { padding: 36px 16px 56px; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .filter-pills { justify-content: flex-start; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 4px; }
+      .pill { flex: 0 0 auto; }
+      .stats { gap: 0.9rem; font-size: 0.8rem; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
+
     <header>
-      <h1>DV SKOOL</h1>
-      <p class="subtitle">디자인 검증(Design Verification) 학습 자료 모음</p>
+      <div class="brand" id="brand-logo" title="DV SKOOL 홈">
+        <span class="brand-mark">DV</span>
+        <h1>DV SKOOL</h1>
+      </div>
+      <p class="subtitle">디자인 검증(Design Verification) 학습 허브</p>
+
+      <div class="stats">
+        <span class="stat"><strong id="topic-count">17</strong> 토픽</span>
+        <span class="dot"></span>
+        <span class="stat"><strong id="chapter-count">99</strong> 챕터</span>
+        <span class="dot"></span>
+        <span class="stat">MkDocs Material 기반</span>
+      </div>
     </header>
 
-    <h2 class="section-title">DV 코어</h2>
-    <div class="grid">
-      <a class="card" href="./uvm/">
-        <div class="card-title">UVM</div>
-        <div class="card-desc">Universal Verification Methodology — 아키텍처, phase, agent, sequence, factory, TLM</div>
-        <span class="card-tag">methodology</span>
-      </a>
-      <a class="card" href="./amba_protocols/">
-        <div class="card-title">AMBA Protocols</div>
-        <div class="card-desc">APB, AHB, AXI, AXI-Stream — ARM의 표준 버스 프로토콜</div>
-        <span class="card-tag">protocol</span>
-      </a>
-      <a class="card" href="./formal_verification/">
-        <div class="card-title">Formal Verification</div>
-        <div class="card-desc">SVA, JasperGold — 정형 검증 기법과 실전 전략</div>
-        <span class="card-tag">methodology</span>
-      </a>
+    <!-- ===========================================================
+         Learning Paths
+         =========================================================== -->
+    <h2 class="section-title"><span class="accent"></span>추천 학습 경로</h2>
+    <p class="section-sub">목표에 맞춰 토픽을 순서대로 따라가세요. 각 경로는 ~2주 분량의 학습입니다.</p>
+    <div class="paths">
+      <div class="path">
+        <div class="path-head">
+          <span class="path-name">DV 입문</span>
+          <span class="path-tag">CORE</span>
+        </div>
+        <div class="path-steps">
+          <a class="step" href="./uvm/">UVM</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./amba_protocols/">AMBA</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./formal_verification/">Formal</a>
+        </div>
+      </div>
+
+      <div class="path path-memory">
+        <div class="path-head">
+          <span class="path-name">메모리 & 스토리지</span>
+          <span class="path-tag">MEMORY</span>
+        </div>
+        <div class="path-steps">
+          <a class="step" href="./dram_ddr/">DRAM/DDR</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./mmu/">MMU</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./ufs_hci/">UFS HCI</a>
+        </div>
+      </div>
+
+      <div class="path path-intercon">
+        <div class="path-head">
+          <span class="path-name">고속 인터커넥트</span>
+          <span class="path-tag">INTERCONNECT</span>
+        </div>
+        <div class="path-steps">
+          <a class="step" href="./amba_protocols/">AMBA</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./pcie/">PCIe</a>
+          <span class="step-arrow">→</span>
+          <span class="step" style="opacity:0.55; cursor:default;" title="향후 추가">CXL (예정)</span>
+        </div>
+      </div>
+
+      <div class="path path-soc">
+        <div class="path-head">
+          <span class="path-name">SoC 통합 & 보안</span>
+          <span class="path-tag">SOC</span>
+        </div>
+        <div class="path-steps">
+          <a class="step" href="./soc_integration_cctv/">SoC Integration</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./soc_secure_boot/">Secure Boot</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./arm_security/">ARM Security</a>
+          <span class="step-arrow">→</span>
+          <a class="step" href="./virtualization/">Virtualization</a>
+        </div>
+      </div>
     </div>
 
-    <h2 class="section-title">메모리 & 스토리지</h2>
-    <div class="grid">
-      <a class="card" href="./mmu/">
-        <div class="card-title">MMU</div>
-        <div class="card-desc">페이지 테이블, TLB, IOMMU/SMMU, 성능 분석</div>
-        <span class="card-tag">subsystem</span>
-      </a>
-      <a class="card" href="./dram_ddr/">
-        <div class="card-title">DRAM / DDR</div>
-        <div class="card-desc">DRAM 기본, 메모리 컨트롤러, PHY, DV 방법론</div>
-        <span class="card-tag">memory</span>
-      </a>
-      <a class="card" href="./ufs_hci/">
-        <div class="card-title">UFS HCI</div>
-        <div class="card-desc">UFS 프로토콜 스택, HCI 아키텍처, UPIU command flow</div>
-        <span class="card-tag">storage</span>
-      </a>
+    <!-- ===========================================================
+         Filters + Search
+         =========================================================== -->
+    <div class="controls">
+      <div class="search-wrap">
+        <input id="search" type="search" placeholder="토픽 검색 (예: AXI, TLP, TLB, secure boot…)" autocomplete="off" />
+      </div>
+      <div class="filter-pills" id="filter-pills">
+        <button class="pill active" data-filter="all">전체</button>
+        <button class="pill" data-filter="core">DV 코어</button>
+        <button class="pill" data-filter="memory">메모리</button>
+        <button class="pill" data-filter="intercon">인터커넥트</button>
+        <button class="pill" data-filter="soc">SoC & 보안</button>
+        <button class="pill" data-filter="applied">응용</button>
+      </div>
     </div>
 
-    <h2 class="section-title">인터커넥트</h2>
-    <div class="grid">
-      <a class="card" href="./pcie/">
-        <div class="card-title">PCI Express</div>
-        <div class="card-desc">3-layer, TLP/DLLP, LTSSM, Config/AER, SR-IOV/CXL</div>
-        <span class="card-tag">interconnect</span>
-      </a>
-    </div>
+    <!-- ===========================================================
+         Topic cards
+         =========================================================== -->
+    <div id="all-cards">
 
-    <section class="hidden-easter">
-      <h2 class="section-title">네트워크 <span class="easter-badge">🔓</span></h2>
-      <div class="grid">
-        <a class="card" href="./ethernet_dcmac/">
-          <div class="card-title">Ethernet DCMAC</div>
-          <div class="card-desc">이더넷 기본, DCMAC 아키텍처와 DV</div>
-          <span class="card-tag">network</span>
+      <h2 class="section-title" data-section="core"><span class="accent" style="background:var(--cat-core)"></span>DV 코어</h2>
+      <p class="section-sub" data-section-sub="core">검증 방법론과 표준 프로토콜의 토대.</p>
+      <div class="grid" data-section="core">
+        <a class="card cat-core" href="./uvm/" data-cat="core" data-keywords="uvm phase agent sequence factory tlm coverage scoreboard verification methodology">
+          <div class="card-head">
+            <span class="card-icon">🧪</span>
+            <div class="card-title">UVM</div>
+          </div>
+          <div class="card-desc">Universal Verification Methodology — 아키텍처, phase, agent, sequence, factory, TLM</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">7 챕터</span>
+          </div>
         </a>
-        <a class="card" href="./toe/">
-          <div class="card-title">TOE</div>
-          <div class="card-desc">TCP/IP Offload Engine — 아키텍처와 핵심 기능</div>
-          <span class="card-tag">network</span>
+        <a class="card cat-core" href="./amba_protocols/" data-cat="core" data-keywords="amba apb ahb axi axi-stream arm bus protocol handshake outstanding burst">
+          <div class="card-head">
+            <span class="card-icon">🔄</span>
+            <div class="card-title">AMBA Protocols</div>
+          </div>
+          <div class="card-desc">APB, AHB, AXI, AXI-Stream — ARM의 표준 버스 프로토콜</div>
+          <div class="card-meta">
+            <span class="badge lvl-int">★★ 중급</span>
+            <span class="badge chapters">4 챕터</span>
+          </div>
         </a>
-        <a class="card" href="./rdma/">
-          <div class="card-title">RDMA (InfiniBand &amp; RoCEv2)</div>
-          <div class="card-desc">IB 프로토콜 스택, RoCEv2, QP/Memory Model, DV 전략</div>
-          <span class="card-tag">network</span>
+        <a class="card cat-core" href="./formal_verification/" data-cat="core" data-keywords="formal sva jaspergold property assertion proof bounded">
+          <div class="card-head">
+            <span class="card-icon">✅</span>
+            <div class="card-title">Formal Verification</div>
+          </div>
+          <div class="card-desc">SVA, JasperGold — 정형 검증 기법과 실전 전략</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">4 챕터</span>
+          </div>
         </a>
       </div>
-    </section>
 
-    <h2 class="section-title">SoC & 보안</h2>
-    <div class="grid">
-      <a class="card" href="./soc_integration_cctv/">
-        <div class="card-title">SoC Integration (CCTV)</div>
-        <div class="card-desc">SoC top integration, 공통 task, TB top, AI 활용</div>
-        <span class="card-tag">soc</span>
-      </a>
-      <a class="card" href="./soc_secure_boot/">
-        <div class="card-title">SoC Secure Boot</div>
-        <div class="card-desc">Hardware RoT, chain of trust, crypto, attack surface</div>
-        <span class="card-tag">security</span>
-      </a>
-      <a class="card" href="./arm_security/">
-        <div class="card-title">ARM Security</div>
-        <div class="card-desc">Exception level, TrustZone, secure enclave, TEE</div>
-        <span class="card-tag">security</span>
-      </a>
-      <a class="card" href="./virtualization/">
-        <div class="card-title">Virtualization</div>
-        <div class="card-desc">CPU/메모리/IO 가상화, 하이퍼바이저, 컨테이너</div>
-        <span class="card-tag">subsystem</span>
-      </a>
-      <a class="card" href="./automotive_cybersecurity/">
-        <div class="card-title">Automotive Cybersecurity</div>
-        <div class="card-desc">CAN bus, 자동차 SoC 보안, Tesla FSD case study</div>
-        <span class="card-tag">security</span>
-      </a>
-    </div>
+      <h2 class="section-title" data-section="memory"><span class="accent" style="background:var(--cat-memory)"></span>메모리 & 스토리지</h2>
+      <p class="section-sub" data-section-sub="memory">DRAM부터 NAND 기반 storage까지, 메모리 서브시스템 전반.</p>
+      <div class="grid" data-section="memory">
+        <a class="card cat-memory" href="./mmu/" data-cat="memory" data-keywords="mmu page table tlb iommu smmu virtual physical address translation">
+          <div class="card-head">
+            <span class="card-icon">🧭</span>
+            <div class="card-title">MMU</div>
+          </div>
+          <div class="card-desc">페이지 테이블, TLB, IOMMU/SMMU, 성능 분석</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">7 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-memory" href="./dram_ddr/" data-cat="memory" data-keywords="dram ddr ddr4 ddr5 memory controller phy refresh bank timing tras trcd">
+          <div class="card-head">
+            <span class="card-icon">💾</span>
+            <div class="card-title">DRAM / DDR</div>
+          </div>
+          <div class="card-desc">DRAM 기본, 메모리 컨트롤러, PHY, DV 방법론</div>
+          <div class="card-meta">
+            <span class="badge lvl-int">★★ 중급</span>
+            <span class="badge chapters">5 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-memory" href="./ufs_hci/" data-cat="memory" data-keywords="ufs hci upiu unipro mphy storage scsi nand flash command queue">
+          <div class="card-head">
+            <span class="card-icon">💿</span>
+            <div class="card-title">UFS HCI</div>
+          </div>
+          <div class="card-desc">UFS 프로토콜 스택, HCI 아키텍처, UPIU command flow</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">5 챕터</span>
+          </div>
+        </a>
+      </div>
 
-    <h2 class="section-title">응용 & 알고리즘</h2>
-    <div class="grid">
-      <a class="card" href="./ai_engineering/">
-        <div class="card-title">AI Engineering</div>
-        <div class="card-desc">LLM, 프롬프트 엔지니어링, RAG, agent 아키텍처, DV 활용</div>
-        <span class="card-tag">applied</span>
-      </a>
-      <a class="card" href="./bigtech_algorithm/">
-        <div class="card-title">BigTech Algorithm</div>
-        <div class="card-desc">코딩 인터뷰 핵심 — Big-O, 자료구조, 알고리즘 + SystemVerilog 예제</div>
-        <span class="card-tag">interview</span>
-      </a>
+      <h2 class="section-title" data-section="intercon"><span class="accent" style="background:var(--cat-intercon)"></span>인터커넥트</h2>
+      <p class="section-sub" data-section-sub="intercon">칩 안팎을 연결하는 고속 직렬 인터커넥트.</p>
+      <div class="grid" data-section="intercon">
+        <a class="card cat-intercon" href="./pcie/" data-cat="intercon" data-keywords="pcie pci express tlp dllp ltssm config space sr-iov cxl ats msi">
+          <div class="card-head">
+            <span class="card-icon">🔌</span>
+            <div class="card-title">PCI Express</div>
+          </div>
+          <div class="card-desc">3-layer, TLP/DLLP, LTSSM, Config/AER, SR-IOV/CXL</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">9 챕터</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Hidden: 7-click on logo to reveal -->
+      <section class="hidden-easter" data-section-easter="network">
+        <h2 class="section-title" data-section="network"><span class="accent" style="background:var(--cat-network)"></span>네트워크 <span class="easter-badge">🔓</span></h2>
+        <p class="section-sub" data-section-sub="network">고대역 네트워크와 RDMA — 7-click 이스터에그로 잠금 해제됨.</p>
+        <div class="grid" data-section="network">
+          <a class="card cat-network" href="./ethernet_dcmac/" data-cat="network" data-keywords="ethernet dcmac mac phy 100g 400g 800g link layer">
+            <div class="card-head">
+              <span class="card-icon">🌐</span>
+              <div class="card-title">Ethernet DCMAC</div>
+            </div>
+            <div class="card-desc">이더넷 기본, DCMAC 아키텍처와 DV</div>
+            <div class="card-meta">
+              <span class="badge lvl-adv">★★★ 심화</span>
+              <span class="badge chapters">4 챕터</span>
+            </div>
+          </a>
+          <a class="card cat-network" href="./toe/" data-cat="network" data-keywords="toe tcp ip offload nic socket window congestion">
+            <div class="card-head">
+              <span class="card-icon">📡</span>
+              <div class="card-title">TOE</div>
+            </div>
+            <div class="card-desc">TCP/IP Offload Engine — 아키텍처와 핵심 기능</div>
+            <div class="card-meta">
+              <span class="badge lvl-adv">★★★ 심화</span>
+              <span class="badge chapters">5 챕터</span>
+            </div>
+          </a>
+          <a class="card cat-network" href="./rdma/" data-cat="network" data-keywords="rdma infiniband rocev2 ibta queue pair memory region verb">
+            <div class="card-head">
+              <span class="card-icon">⚡</span>
+              <div class="card-title">RDMA (IB &amp; RoCEv2)</div>
+            </div>
+            <div class="card-desc">IB 프로토콜 스택, RoCEv2, QP/Memory Model, DV 전략</div>
+            <div class="card-meta">
+              <span class="badge lvl-adv">★★★ 심화</span>
+              <span class="badge chapters">9 챕터</span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <h2 class="section-title" data-section="soc"><span class="accent" style="background:var(--cat-soc)"></span>SoC & 보안</h2>
+      <p class="section-sub" data-section-sub="soc">SoC top-level 통합, 보안 부팅, 가상화/격리.</p>
+      <div class="grid" data-section="soc">
+        <a class="card cat-soc" href="./soc_integration_cctv/" data-cat="soc" data-keywords="soc integration cctv top tb common task ai">
+          <div class="card-head">
+            <span class="card-icon">🏗️</span>
+            <div class="card-title">SoC Integration (CCTV)</div>
+          </div>
+          <div class="card-desc">SoC top integration, 공통 task, TB top, AI 활용</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">4 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-soc" href="./soc_secure_boot/" data-cat="soc" data-keywords="secure boot rot root of trust chain crypto bootrom signature key">
+          <div class="card-head">
+            <span class="card-icon">🔐</span>
+            <div class="card-title">SoC Secure Boot</div>
+          </div>
+          <div class="card-desc">Hardware RoT, chain of trust, crypto, attack surface</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">7 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-soc" href="./arm_security/" data-cat="soc" data-keywords="arm trustzone exception level secure el3 tee enclave">
+          <div class="card-head">
+            <span class="card-icon">🛡️</span>
+            <div class="card-title">ARM Security</div>
+          </div>
+          <div class="card-desc">Exception level, TrustZone, secure enclave, TEE</div>
+          <div class="card-meta">
+            <span class="badge lvl-adv">★★★ 심화</span>
+            <span class="badge chapters">4 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-soc" href="./virtualization/" data-cat="soc" data-keywords="virtualization hypervisor cpu memory io kvm container vmm">
+          <div class="card-head">
+            <span class="card-icon">🪟</span>
+            <div class="card-title">Virtualization</div>
+          </div>
+          <div class="card-desc">CPU/메모리/IO 가상화, 하이퍼바이저, 컨테이너</div>
+          <div class="card-meta">
+            <span class="badge lvl-int">★★ 중급</span>
+            <span class="badge chapters">8 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-soc" href="./automotive_cybersecurity/" data-cat="soc" data-keywords="automotive can bus tesla fsd vehicle attack defense">
+          <div class="card-head">
+            <span class="card-icon">🚗</span>
+            <div class="card-title">Automotive Cybersecurity</div>
+          </div>
+          <div class="card-desc">CAN bus, 자동차 SoC 보안, Tesla FSD case study</div>
+          <div class="card-meta">
+            <span class="badge lvl-int">★★ 중급</span>
+            <span class="badge chapters">5 챕터</span>
+          </div>
+        </a>
+      </div>
+
+      <h2 class="section-title" data-section="applied"><span class="accent" style="background:var(--cat-applied)"></span>응용 & 알고리즘</h2>
+      <p class="section-sub" data-section-sub="applied">DV 실무에 응용 가능한 AI/알고리즘 토픽.</p>
+      <div class="grid" data-section="applied">
+        <a class="card cat-applied" href="./ai_engineering/" data-cat="applied" data-keywords="ai llm prompt engineering rag agent context dv automation">
+          <div class="card-head">
+            <span class="card-icon">🤖</span>
+            <div class="card-title">AI Engineering</div>
+          </div>
+          <div class="card-desc">LLM, 프롬프트 엔지니어링, RAG, agent 아키텍처, DV 활용</div>
+          <div class="card-meta">
+            <span class="badge lvl-int">★★ 중급</span>
+            <span class="badge chapters">8 챕터</span>
+          </div>
+        </a>
+        <a class="card cat-applied" href="./bigtech_algorithm/" data-cat="applied" data-keywords="algorithm interview big-o data structure systemverilog coding leetcode">
+          <div class="card-head">
+            <span class="card-icon">📐</span>
+            <div class="card-title">BigTech Algorithm</div>
+          </div>
+          <div class="card-desc">코딩 인터뷰 핵심 — Big-O, 자료구조, 알고리즘 + SystemVerilog 예제</div>
+          <div class="card-meta">
+            <span class="badge lvl-int">★★ 중급</span>
+            <span class="badge chapters">7 챕터</span>
+          </div>
+        </a>
+      </div>
+
+    </div><!-- #all-cards -->
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      검색 결과가 없습니다. 다른 키워드를 시도해보세요.
     </div>
 
     <footer>
       <p>Source: <a href="https://github.com/humbleowl39/DV_SKOOL">github.com/humbleowl39/DV_SKOOL</a></p>
-      <p>Built with MkDocs Material</p>
+      <p>Built with MkDocs Material · DV SKOOL — 학습용 자료</p>
     </footer>
   </div>
 
   <script>
-  // === Easter egg: 로고 7-click within 3s reveals 'Network & Interconnect' section ===
+  // ===========================================================
+  // Filter + search
+  // ===========================================================
+  (function () {
+    var search = document.getElementById('search');
+    var pills  = document.querySelectorAll('#filter-pills .pill');
+    var cards  = document.querySelectorAll('#all-cards .card');
+    var sections = document.querySelectorAll('#all-cards .section-title[data-section], #all-cards .section-sub[data-section-sub], #all-cards .grid[data-section]');
+    var emptyEl = document.getElementById('empty-state');
+    var currentFilter = 'all';
+
+    function apply() {
+      var q = (search.value || '').trim().toLowerCase();
+      var anyVisible = false;
+
+      // Per-card visibility
+      var visibleByCat = {};
+      cards.forEach(function (c) {
+        var cat = c.getAttribute('data-cat');
+        var kw  = (c.getAttribute('data-keywords') || '') + ' ' + c.textContent.toLowerCase();
+        var passCat = (currentFilter === 'all') || (currentFilter === cat) ||
+                      (currentFilter === 'intercon' && cat === 'network'); /* 인터커넥트 필터에 네트워크도 포함 */
+        var passQ = !q || kw.indexOf(q) !== -1;
+        var visible = passCat && passQ;
+        c.style.display = visible ? '' : 'none';
+        if (visible) {
+          anyVisible = true;
+          visibleByCat[cat] = (visibleByCat[cat] || 0) + 1;
+        }
+      });
+
+      // Per-section visibility (hide section title if no cards visible in that section)
+      sections.forEach(function (el) {
+        var sec = el.getAttribute('data-section') || el.getAttribute('data-section-sub');
+        var hasAny = !!visibleByCat[sec];
+        // Easter network section: don't force-show if not revealed
+        if (sec === 'network' && !document.body.classList.contains('secrets-revealed')) {
+          el.style.display = '';  // CSS handles via .hidden-easter
+          return;
+        }
+        el.style.display = hasAny ? '' : 'none';
+      });
+
+      emptyEl.style.display = anyVisible ? 'none' : 'block';
+    }
+
+    search && search.addEventListener('input', apply);
+    pills.forEach(function (p) {
+      p.addEventListener('click', function () {
+        pills.forEach(function (x) { x.classList.remove('active'); });
+        p.classList.add('active');
+        currentFilter = p.getAttribute('data-filter');
+        apply();
+      });
+    });
+  })();
+
+  // ===========================================================
+  // Easter egg: 7-click on brand within 3s reveals network section
+  // (preserved from previous landing)
+  // ===========================================================
   (function () {
     var STORAGE_KEY = 'dvskool_secrets_revealed';
     var THRESHOLD   = 7;
     var WINDOW_MS   = 3000;
 
-    // Restore previously unlocked state silently
     if (localStorage.getItem(STORAGE_KEY) === '1') {
       document.body.classList.add('secrets-revealed');
     }
 
-    var title = document.querySelector('header h1');
-    if (!title) return;
+    var brand = document.getElementById('brand-logo');
+    if (!brand) return;
 
     var clicks = [];
-    title.addEventListener('click', function () {
-      // toggle: if already unlocked, allow lock back via 7-click
+    brand.addEventListener('click', function () {
       var now = Date.now();
       clicks.push(now);
       clicks = clicks.filter(function (t) { return now - t < WINDOW_MS; });

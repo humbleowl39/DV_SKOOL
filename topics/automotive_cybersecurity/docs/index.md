@@ -120,3 +120,27 @@
 - 📚 [**용어집**](glossary.md)
 - 📝 [**퀴즈**](quiz/index.md)
 - 📋 [**코스 개요**](_legacy_overview.md)
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/arm_security/">
+    <div class="course-card-num">🛡️ 관련</div>
+    <div class="course-card-title">ARM Security</div>
+    <div class="course-card-desc">Exception level, TrustZone, TEE</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/soc_secure_boot/">
+    <div class="course-card-num">🔐 관련</div>
+    <div class="course-card-title">SoC Secure Boot</div>
+    <div class="course-card-desc">RoT, chain of trust, BootROM DV</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

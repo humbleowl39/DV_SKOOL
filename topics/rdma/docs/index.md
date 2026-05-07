@@ -137,3 +137,32 @@
 - **`RDMA-TB/`** — 사내 RDMA 2.0 verification environment
 - **`PROTOCOL_RULES.md`** — IB Spec 1.7 must-rule 카탈로그 (1079개 규칙)
 - **`ROCEV2_RULE_APPLICABILITY.md`** — IB 규칙의 RoCEv2 적용 여부 분류
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/pcie/">
+    <div class="course-card-num">🔌 관련</div>
+    <div class="course-card-title">PCI Express</div>
+    <div class="course-card-desc">TLP/DLLP, LTSSM, SR-IOV/CXL</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/ethernet_dcmac/">
+    <div class="course-card-num">🌐 관련</div>
+    <div class="course-card-title">Ethernet DCMAC</div>
+    <div class="course-card-desc">이더넷 MAC + DCMAC DV</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/toe/">
+    <div class="course-card-num">📡 관련</div>
+    <div class="course-card-title">TOE</div>
+    <div class="course-card-desc">TCP/IP Offload Engine</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

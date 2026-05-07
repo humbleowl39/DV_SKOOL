@@ -128,3 +128,32 @@
     - **5계층을 외워야**: UTP / UPIU / UniPro / M-PHY / Storage. 각 계층의 책임 + 인접 계층과의 인터페이스
     - **UPIU 형식 = SCSI mapping + UFS 확장**: SCSI 기본 + Query/NOP/Reject 같은 UFS-specific
     - **Doorbell ring → UTRD parse → command exec → Interrupt** 흐름이 모든 명령의 표준
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
+    <div class="course-card-num">🔄 관련</div>
+    <div class="course-card-title">AMBA Protocols</div>
+    <div class="course-card-desc">APB/AHB/AXI — 표준 버스 프로토콜</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/dram_ddr/">
+    <div class="course-card-num">💾 관련</div>
+    <div class="course-card-title">DRAM / DDR</div>
+    <div class="course-card-desc">DRAM 컨트롤러, PHY, DDR DV</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/soc_integration_cctv/">
+    <div class="course-card-num">🏗️ 관련</div>
+    <div class="course-card-title">SoC Integration</div>
+    <div class="course-card-desc">Top-level integration, TB top</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

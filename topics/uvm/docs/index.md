@@ -188,3 +188,37 @@
 
 !!! warning "안티패턴 경계"
     UVM 실무에서 가장 자주 발생하는 문제는 **Phase 오해**, **config_db 경로 불일치**, **Factory Override 누락**입니다. Module 06에서 별도 다룹니다.
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
+    <div class="course-card-num">🔄 관련</div>
+    <div class="course-card-title">AMBA Protocols</div>
+    <div class="course-card-desc">APB/AHB/AXI — 표준 버스 프로토콜</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/formal_verification/">
+    <div class="course-card-num">✅ 관련</div>
+    <div class="course-card-title">Formal Verification</div>
+    <div class="course-card-desc">SVA, JasperGold — 정형 검증</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/soc_integration_cctv/">
+    <div class="course-card-num">🏗️ 관련</div>
+    <div class="course-card-title">SoC Integration</div>
+    <div class="course-card-desc">Top-level integration, TB top</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/bigtech_algorithm/">
+    <div class="course-card-num">📐 관련</div>
+    <div class="course-card-title">BigTech Algorithm</div>
+    <div class="course-card-desc">Big-O, 자료구조, 알고리즘</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

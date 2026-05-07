@@ -103,3 +103,27 @@
 
 → [**코스 개요 & 컨셉 맵**](_legacy_overview.md)
 
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/ai_engineering/">
+    <div class="course-card-num">🤖 관련</div>
+    <div class="course-card-title">AI Engineering</div>
+    <div class="course-card-desc">LLM, RAG, agent — DV 활용</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/uvm/">
+    <div class="course-card-num">🧪 관련</div>
+    <div class="course-card-title">UVM</div>
+    <div class="course-card-desc">검증 방법론, phase, agent, sequence</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

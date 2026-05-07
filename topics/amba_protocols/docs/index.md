@@ -127,3 +127,37 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
     - **VALID 데드락**: Source가 READY 기다리며 VALID 안 올림 (절대 금지)
     - **WSTRB 누락**: AXI write에서 strobe 무시 → DUT가 잘못된 바이트 덮어씀
     - **AxLEN 오프셋**: AXI4 burst length는 N-1 인코딩 (16-beat = AxLEN=15)
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/uvm/">
+    <div class="course-card-num">🧪 관련</div>
+    <div class="course-card-title">UVM</div>
+    <div class="course-card-desc">검증 방법론, phase, agent, sequence</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/pcie/">
+    <div class="course-card-num">🔌 관련</div>
+    <div class="course-card-title">PCI Express</div>
+    <div class="course-card-desc">TLP/DLLP, LTSSM, SR-IOV/CXL</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/mmu/">
+    <div class="course-card-num">🧭 관련</div>
+    <div class="course-card-title">MMU</div>
+    <div class="course-card-desc">페이지 테이블, TLB, IOMMU/SMMU</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/formal_verification/">
+    <div class="course-card-num">✅ 관련</div>
+    <div class="course-card-title">Formal Verification</div>
+    <div class="course-card-desc">SVA, JasperGold — 정형 검증</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

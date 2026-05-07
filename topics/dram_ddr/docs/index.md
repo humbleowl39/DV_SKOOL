@@ -134,3 +134,32 @@
     - **Refresh 누락**: tREFI 기간 내 모든 row를 한 번씩 refresh — 스케줄러 검증의 핵심
     - **Bank conflict**: 같은 bank에 연속 access 시 ACT-PRE 사이클 강제 → throughput 저하
     - **Training 실패**: PHY 초기화 안 끝났는데 traffic 시작 → silent corruption
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/mmu/">
+    <div class="course-card-num">🧭 관련</div>
+    <div class="course-card-title">MMU</div>
+    <div class="course-card-desc">페이지 테이블, TLB, IOMMU/SMMU</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/ufs_hci/">
+    <div class="course-card-num">💿 관련</div>
+    <div class="course-card-title">UFS HCI</div>
+    <div class="course-card-desc">UFS 프로토콜, HCI, UPIU</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
+    <div class="course-card-num">🔄 관련</div>
+    <div class="course-card-title">AMBA Protocols</div>
+    <div class="course-card-desc">APB/AHB/AXI — 표준 버스 프로토콜</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

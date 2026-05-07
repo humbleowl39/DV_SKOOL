@@ -165,3 +165,37 @@
     - **TLB stale entry**: page table 업데이트 후 TLB invalidate 누락 → 잘못된 PA 사용
     - **IOMMU bypass**: pre-IOMMU SoC는 DMA가 시스템 메모리 무제한 access → 보안 hole
     - **ASID/VMID 충돌**: 다른 process/VM이 같은 VA를 다른 PA로 매핑할 때 ASID 비교 누락
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
+    <div class="course-card-num">🔄 관련</div>
+    <div class="course-card-title">AMBA Protocols</div>
+    <div class="course-card-desc">APB/AHB/AXI — 표준 버스 프로토콜</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/virtualization/">
+    <div class="course-card-num">🪟 관련</div>
+    <div class="course-card-title">Virtualization</div>
+    <div class="course-card-desc">CPU/Mem/IO 가상화, 하이퍼바이저</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/arm_security/">
+    <div class="course-card-num">🛡️ 관련</div>
+    <div class="course-card-title">ARM Security</div>
+    <div class="course-card-desc">Exception level, TrustZone, TEE</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/dram_ddr/">
+    <div class="course-card-num">💾 관련</div>
+    <div class="course-card-title">DRAM / DDR</div>
+    <div class="course-card-desc">DRAM 컨트롤러, PHY, DDR DV</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

@@ -121,3 +121,32 @@
 - 📚 [**용어집**](glossary.md)
 - 📝 [**퀴즈**](quiz/index.md)
 - 📋 [**코스 개요**](_legacy_overview.md)
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/ethernet_dcmac/">
+    <div class="course-card-num">🌐 관련</div>
+    <div class="course-card-title">Ethernet DCMAC</div>
+    <div class="course-card-desc">이더넷 MAC + DCMAC DV</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/rdma/">
+    <div class="course-card-num">⚡ 관련</div>
+    <div class="course-card-title">RDMA</div>
+    <div class="course-card-desc">InfiniBand & RoCEv2, QP/MR</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
+    <div class="course-card-num">🔄 관련</div>
+    <div class="course-card-title">AMBA Protocols</div>
+    <div class="course-card-desc">APB/AHB/AXI — 표준 버스 프로토콜</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->

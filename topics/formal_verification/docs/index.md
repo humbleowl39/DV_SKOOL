@@ -120,3 +120,32 @@
     - **Over-constraint**: assume이 너무 강해 실제 DUT 입력 공간을 좁힘 → false PROVEN
     - **Vacuous pass**: implication의 LHS가 false → 항상 true → 의미 없는 PROVEN
     - **Blackbox 후 sign-off**: 블랙박스된 영역의 동작을 검증한 게 아님을 명시
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 관련 토픽
+
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/uvm/">
+    <div class="course-card-num">🧪 관련</div>
+    <div class="course-card-title">UVM</div>
+    <div class="course-card-desc">검증 방법론, phase, agent, sequence</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
+    <div class="course-card-num">🔄 관련</div>
+    <div class="course-card-title">AMBA Protocols</div>
+    <div class="course-card-desc">APB/AHB/AXI — 표준 버스 프로토콜</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/soc_secure_boot/">
+    <div class="course-card-num">🔐 관련</div>
+    <div class="course-card-title">SoC Secure Boot</div>
+    <div class="course-card-desc">RoT, chain of trust, BootROM DV</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->
