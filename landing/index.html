@@ -83,6 +83,47 @@
       font-size: 0.85rem;
     }
     footer a { color: var(--primary); text-decoration: none; }
+
+    /* === Easter egg: hidden-section reveal === */
+    .hidden-easter { display: none; }
+    body.secrets-revealed .hidden-easter {
+      display: block;
+      animation: dvs-easter-fadein 0.6s ease-out;
+    }
+    @keyframes dvs-easter-fadein {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .easter-badge {
+      display: inline-block;
+      font-size: 0.7em;
+      vertical-align: middle;
+      opacity: 0.7;
+      margin-left: 0.4rem;
+    }
+    header h1 { cursor: pointer; user-select: none; }
+    .easter-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #4d7cba 0%, #7a5ec0 100%);
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      z-index: 9999;
+      pointer-events: none;
+      letter-spacing: 0.01em;
+    }
+    .easter-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -130,19 +171,21 @@
       </a>
     </div>
 
-    <h2 class="section-title">네트워크 & 인터커넥트</h2>
-    <div class="grid">
-      <a class="card" href="./ethernet_dcmac/">
-        <div class="card-title">Ethernet DCMAC</div>
-        <div class="card-desc">이더넷 기본, DCMAC 아키텍처와 DV</div>
-        <span class="card-tag">network</span>
-      </a>
-      <a class="card" href="./toe/">
-        <div class="card-title">TOE</div>
-        <div class="card-desc">TCP/IP Offload Engine — 아키텍처와 핵심 기능</div>
-        <span class="card-tag">network</span>
-      </a>
-    </div>
+    <section class="hidden-easter">
+      <h2 class="section-title">네트워크 & 인터커넥트 <span class="easter-badge">🔓</span></h2>
+      <div class="grid">
+        <a class="card" href="./ethernet_dcmac/">
+          <div class="card-title">Ethernet DCMAC</div>
+          <div class="card-desc">이더넷 기본, DCMAC 아키텍처와 DV</div>
+          <span class="card-tag">network</span>
+        </a>
+        <a class="card" href="./toe/">
+          <div class="card-title">TOE</div>
+          <div class="card-desc">TCP/IP Offload Engine — 아키텍처와 핵심 기능</div>
+          <span class="card-tag">network</span>
+        </a>
+      </div>
+    </section>
 
     <h2 class="section-title">SoC & 보안</h2>
     <div class="grid">
@@ -192,5 +235,54 @@
       <p>Built with MkDocs Material</p>
     </footer>
   </div>
+
+  <script>
+  // === Easter egg: 로고 7-click within 3s reveals 'Network & Interconnect' section ===
+  (function () {
+    var STORAGE_KEY = 'dvskool_secrets_revealed';
+    var THRESHOLD   = 7;
+    var WINDOW_MS   = 3000;
+
+    // Restore previously unlocked state silently
+    if (localStorage.getItem(STORAGE_KEY) === '1') {
+      document.body.classList.add('secrets-revealed');
+    }
+
+    var title = document.querySelector('header h1');
+    if (!title) return;
+
+    var clicks = [];
+    title.addEventListener('click', function () {
+      // toggle: if already unlocked, allow lock back via 7-click
+      var now = Date.now();
+      clicks.push(now);
+      clicks = clicks.filter(function (t) { return now - t < WINDOW_MS; });
+      if (clicks.length >= THRESHOLD) {
+        clicks = [];
+        if (document.body.classList.contains('secrets-revealed')) {
+          document.body.classList.remove('secrets-revealed');
+          localStorage.removeItem(STORAGE_KEY);
+          showToast('🔒 Network section locked');
+        } else {
+          document.body.classList.add('secrets-revealed');
+          localStorage.setItem(STORAGE_KEY, '1');
+          showToast('🔓 Network & Interconnect unlocked');
+        }
+      }
+    });
+
+    function showToast(msg) {
+      var t = document.createElement('div');
+      t.className = 'easter-toast';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      requestAnimationFrame(function () { t.classList.add('show'); });
+      setTimeout(function () {
+        t.classList.remove('show');
+        setTimeout(function () { t.remove(); }, 450);
+      }, 3500);
+    }
+  })();
+  </script>
 </body>
 </html>
