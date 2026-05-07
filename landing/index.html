@@ -145,11 +145,6 @@
         <div class="card-desc">APB, AHB, AXI, AXI-Stream — ARM의 표준 버스 프로토콜</div>
         <span class="card-tag">protocol</span>
       </a>
-      <a class="card" href="./pcie/">
-        <div class="card-title">PCI Express</div>
-        <div class="card-desc">3-layer, TLP/DLLP, LTSSM, Config/AER, SR-IOV/CXL</div>
-        <span class="card-tag">protocol</span>
-      </a>
       <a class="card" href="./formal_verification/">
         <div class="card-title">Formal Verification</div>
         <div class="card-desc">SVA, JasperGold — 정형 검증 기법과 실전 전략</div>
@@ -176,8 +171,17 @@
       </a>
     </div>
 
+    <h2 class="section-title">인터커넥트</h2>
+    <div class="grid">
+      <a class="card" href="./pcie/">
+        <div class="card-title">PCI Express</div>
+        <div class="card-desc">3-layer, TLP/DLLP, LTSSM, Config/AER, SR-IOV/CXL</div>
+        <span class="card-tag">interconnect</span>
+      </a>
+    </div>
+
     <section class="hidden-easter">
-      <h2 class="section-title">네트워크 & 인터커넥트 <span class="easter-badge">🔓</span></h2>
+      <h2 class="section-title">네트워크 <span class="easter-badge">🔓</span></h2>
       <div class="grid">
         <a class="card" href="./ethernet_dcmac/">
           <div class="card-title">Ethernet DCMAC</div>
@@ -276,7 +280,7 @@
         } else {
           document.body.classList.add('secrets-revealed');
           localStorage.setItem(STORAGE_KEY, '1');
-          showToast('🔓 Network & Interconnect unlocked');
+          showToast('🔓 Network section unlocked');
         }
       }
     });
