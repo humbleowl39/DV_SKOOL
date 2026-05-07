@@ -1,13 +1,19 @@
 # UFS HCI
 
-> **UFS Host Controller Interface 마스터 코스** — 프로토콜 스택, HCI 아키텍처, UPIU 흐름, DV 방법론.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>4</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="memory">
+  <div class="topic-hero-mark">💿</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">UFS HCI</div>
+    <p class="topic-hero-sub">프로토콜 스택, HCI 아키텍처, UPIU 흐름, DV 방법론.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">4</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.7h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -59,33 +65,60 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_ufs_protocol_stack/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">UFS Protocol Stack</div>
-    <div class="course-card-desc">5계층 (UTP/UPIU/UniPro/M-PHY/Storage), JEDEC vs MIPI 매핑</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="memory" href="01_ufs_protocol_stack/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">UFS Protocol Stack</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_hci_architecture/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">HCI Architecture</div>
-    <div class="course-card-desc">Register, UTRD/UTMRD, doorbell, interrupt aggregation</div>
+  <a class="module-card" data-cat="memory" href="02_hci_architecture/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">HCI Architecture</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 24분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_upiu_command_flow/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">UPIU &amp; Command Flow</div>
-    <div class="course-card-desc">UPIU 형식, SCSI command 매핑, READ/WRITE/QUERY 흐름</div>
+  <a class="module-card" data-cat="memory" href="03_upiu_command_flow/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">UPIU & Command Flow</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 20분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_hci_dv_methodology/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">HCI DV Methodology</div>
-    <div class="course-card-desc">UFS device model, command coverage, error injection</div>
+  <a class="module-card" data-cat="memory" href="04_hci_dv_methodology/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">HCI DV Methodology</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 32분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_quick_reference_card/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">UPIU 형식, register map, DV 체크리스트</div>
+  <a class="module-card" data-cat="memory" href="05_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 9분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

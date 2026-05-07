@@ -1,13 +1,19 @@
 # DRAM / DDR
 
-> **DRAM & DDR Memory Controller 마스터 코스** — 셀 동작에서 PHY까지, DDR4/5 spec과 Memory Controller 검증 전략을 통합 학습.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>4</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>중급 (Intermediate)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="memory">
+  <div class="topic-hero-mark">💾</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">DRAM / DDR</div>
+    <p class="topic-hero-sub">셀 동작에서 PHY까지, DDR4/5 spec과 Memory Controller 검증 전략을 통합 학습.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">4</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.5h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -60,33 +66,60 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_dram_fundamentals_ddr/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">DRAM Fundamentals + DDR4/5</div>
-    <div class="course-card-desc">Cell, Bank, ROW/COL, ACT/PRE/RD/WR, DDR4↔DDR5 차이</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="memory" href="01_dram_fundamentals_ddr/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">DRAM Fundamentals + DDR4/5</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 20분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_memory_controller/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Memory Controller</div>
-    <div class="course-card-desc">스케줄러, reordering, bank interleaving, refresh, ECC</div>
+  <a class="module-card" data-cat="memory" href="02_memory_controller/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Memory Controller</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_memory_interface_phy/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Memory Interface / PHY</div>
-    <div class="course-card-desc">PHY 아키텍처, DLL/PLL, training, write/read leveling</div>
+  <a class="module-card" data-cat="memory" href="03_memory_interface_phy/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Memory Interface / PHY</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_dram_dv_methodology/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">DRAM DV Methodology</div>
-    <div class="course-card-desc">검증 환경, traffic generator, refcheck, performance ref</div>
+  <a class="module-card" data-cat="memory" href="04_dram_dv_methodology/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">DRAM DV Methodology</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 22분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_quick_reference_card/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">DDR4/5 timing parameter, MC 명령, DV 체크리스트</div>
+  <a class="module-card" data-cat="memory" href="05_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 10분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

@@ -1,13 +1,19 @@
 # Virtualization
 
-> **가상화 마스터 코스** — CPU / 메모리 / I/O 가상화부터 컨테이너까지, 현대 인프라의 토대.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>8</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>중급 (Intermediate)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="soc">
+  <div class="topic-hero-mark">🪟</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">Virtualization</div>
+    <p class="topic-hero-sub">CPU / 메모리 / I/O 가상화부터 컨테이너까지, 현대 인프라의 토대.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">7</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.1h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -82,53 +88,90 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_virtualization_fundamentals/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">Fundamentals</div>
-    <div class="course-card-desc">가상화 정의, 동기, full vs para vs HW-assisted</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="soc" href="01_virtualization_fundamentals/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Virtualization Fundamentals</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 12분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="01a_system_architecture_evolution/">
-    <div class="course-card-num">Module 01A</div>
-    <div class="course-card-title">System Architecture Evolution</div>
-    <div class="course-card-desc">HW only → kernel/user → 가상화까지 진화 흐름</div>
+  <a class="module-card" data-cat="soc" href="02_cpu_virtualization/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">CPU Virtualization</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_cpu_virtualization/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">CPU Virtualization</div>
-    <div class="course-card-desc">Trap-and-emulate, VT-x/AMD-V, ARM EL2</div>
+  <a class="module-card" data-cat="soc" href="03_memory_virtualization/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Memory Virtualization</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 15분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_memory_virtualization/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Memory Virtualization</div>
-    <div class="course-card-desc">Shadow PT, EPT/NPT, ARM Stage 2</div>
+  <a class="module-card" data-cat="soc" href="04_io_virtualization/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">I/O Virtualization</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_io_virtualization/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">I/O Virtualization</div>
-    <div class="course-card-desc">Emulation, paravirt (virtio), passthrough (SR-IOV, VFIO)</div>
+  <a class="module-card" data-cat="soc" href="05_hypervisor_types/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Hypervisor Types</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 14분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_hypervisor_types/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Hypervisor Types</div>
-    <div class="course-card-desc">Type 1 vs Type 2, KVM/Xen/Hyper-V/VMware</div>
+  <a class="module-card" data-cat="soc" href="06_strict_vs_passthrough/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">Strict vs Passthrough</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_strict_vs_passthrough/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">Strict vs Passthrough</div>
-    <div class="course-card-desc">고정 격리 vs 직접 전달, IOMMU의 역할</div>
+  <a class="module-card" data-cat="soc" href="07_containers_and_modern/">
+    <div class="module-num">07</div>
+    <div class="module-body">
+      <div class="module-title">Containers & Modern Virtualization</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 15분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_containers_and_modern/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">Containers &amp; Modern</div>
-    <div class="course-card-desc">Docker, K8s, microVM, gVisor — 현대 인프라</div>
-  </a>
-  <a class="course-card" href="08_quick_reference_card/">
-    <div class="course-card-num">Module 08</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">기술 비교, 흔한 함정, 체크리스트</div>
+  <a class="module-card" data-cat="soc" href="08_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 16분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

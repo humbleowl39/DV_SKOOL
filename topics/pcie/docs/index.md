@@ -1,13 +1,19 @@
 # PCI Express (PCIe)
 
-> **PCIe 마스터 코스** — 3-layer architecture, TLP/DLLP, LTSSM, Configuration, Power/Error, 그리고 SR-IOV/CXL 의 미래.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>8</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="intercon">
+  <div class="topic-hero-mark">🔌</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">PCI Express (PCIe)</div>
+    <p class="topic-hero-sub">3-layer architecture, TLP/DLLP, LTSSM, Configuration, Power/Error, 그리고 SR-IOV/CXL 의 미래.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">8</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.7h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -83,53 +89,100 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_pcie_motivation/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">PCIe 동기와 진화</div>
-    <div class="course-card-desc">PCI parallel → PCIe serial, Gen1~Gen7, RC/Switch/EP 토폴로지</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="intercon" href="01_pcie_motivation/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">PCIe 동기와 진화</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_layer_architecture/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">3-Layer Architecture</div>
-    <div class="course-card-desc">Transaction / Data Link / Physical 책임</div>
+  <a class="module-card" data-cat="intercon" href="02_layer_architecture/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">3-Layer Architecture</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_tlp/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">TLP</div>
-    <div class="course-card-desc">Header 3DW/4DW, Fmt/Type, address vs ID routing</div>
+  <a class="module-card" data-cat="intercon" href="03_tlp/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">TLP (Transaction Layer Packet)</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 22분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_dllp_flow_control/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">DLLP, FC, ACK/NAK</div>
-    <div class="course-card-desc">Credit-based FC (P/NP/Cpl), replay buffer, sequence #</div>
+  <a class="module-card" data-cat="intercon" href="04_dllp_flow_control/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">DLLP, Flow Control, ACK/NAK</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 14분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_phy_ltssm/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">PHY &amp; LTSSM</div>
-    <div class="course-card-desc">8b/10b → 128b/130b, equalization, 11-state LTSSM</div>
+  <a class="module-card" data-cat="intercon" href="05_phy_ltssm/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Physical Layer & LTSSM</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_config_enumeration/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">Config &amp; Enumeration</div>
-    <div class="course-card-desc">Type 0/1, BAR sizing, BDF, capability list</div>
+  <a class="module-card" data-cat="intercon" href="06_config_enumeration/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">Configuration Space & Enumeration</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 20분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_power_aer_hotplug/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">Power, AER, Hot Plug</div>
-    <div class="course-card-desc">D/L state, ASPM, AER, Hot Plug 이벤트</div>
+  <a class="module-card" data-cat="intercon" href="07_power_aer_hotplug/">
+    <div class="module-num">07</div>
+    <div class="module-body">
+      <div class="module-title">Power Management, AER, Hot Plug</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="08_advanced/">
-    <div class="course-card-num">Module 08</div>
-    <div class="course-card-title">SR-IOV, ATS, P2P, CXL</div>
-    <div class="course-card-desc">VF, IOMMU, P2P, CXL.io/cache/mem</div>
+  <a class="module-card" data-cat="intercon" href="08_advanced/">
+    <div class="module-num">08</div>
+    <div class="module-body">
+      <div class="module-title">SR-IOV, ATS, P2P, CXL</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="09_quick_reference_card/">
-    <div class="course-card-num">Quick Ref</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">TLP/DLLP/LTSSM/Config/Power 한 장 요약</div>
+  <a class="module-card" data-cat="intercon" href="09_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 13분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 참조 자료
 

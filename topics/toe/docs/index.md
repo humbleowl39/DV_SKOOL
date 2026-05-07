@@ -1,13 +1,19 @@
 # TOE (TCP/IP Offload Engine)
 
-> **TCP/IP Offload Engine 마스터 코스** — 호스트 CPU의 TCP/IP 처리 부담을 NIC HW로 옮기는 표준 architecture와 DV.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>4</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="network">
+  <div class="topic-hero-mark">📡</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">TOE (TCP/IP Offload Engine)</div>
+    <p class="topic-hero-sub">호스트 CPU의 TCP/IP 처리 부담을 NIC HW로 옮기는 표준 architecture와 DV.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">4</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.6h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -59,33 +65,60 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_tcp_ip_and_toe_concept/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">TCP/IP &amp; TOE Concept</div>
-    <div class="course-card-desc">TCP/IP 기본, TOE 등장 동기, partial vs full offload</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="network" href="01_tcp_ip_and_toe_concept/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">TCP/IP & TOE Concept</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 15분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_toe_architecture/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">TOE Architecture</div>
-    <div class="course-card-desc">Connection table, TX/RX pipeline, host interface</div>
+  <a class="module-card" data-cat="network" href="02_toe_architecture/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">TOE Architecture</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 22분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_toe_key_functions/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">TOE Key Functions</div>
-    <div class="course-card-desc">Checksum, ARP, RSS, segmentation, retransmission</div>
+  <a class="module-card" data-cat="network" href="03_toe_key_functions/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">TOE Key Functions</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 28분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_toe_dv_methodology/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">TOE DV Methodology</div>
-    <div class="course-card-desc">Connection state coverage, packet generator, error scenarios</div>
+  <a class="module-card" data-cat="network" href="04_toe_dv_methodology/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">TOE DV Methodology</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 28분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_quick_reference_card/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">TCP state machine, header, DV 체크리스트</div>
+  <a class="module-card" data-cat="network" href="05_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 6분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

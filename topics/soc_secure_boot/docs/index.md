@@ -1,13 +1,19 @@
 # SoC Secure Boot
 
-> **SoC Secure Boot 마스터 코스** — Hardware Root of Trust부터 BootROM DV까지, 안전한 부팅의 모든 것.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>6</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="soc">
+  <div class="topic-hero-mark">🔐</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">SoC Secure Boot</div>
+    <p class="topic-hero-sub">Hardware Root of Trust부터 BootROM DV까지, 안전한 부팅의 모든 것.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">6</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.4h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -70,43 +76,80 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_hardware_root_of_trust/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">Hardware Root of Trust</div>
-    <div class="course-card-desc">eFuse/OTP, secure key storage, immutable boot code</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="soc" href="01_hardware_root_of_trust/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Hardware Root of Trust</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_chain_of_trust_boot_stages/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Chain of Trust & Boot Stages</div>
-    <div class="course-card-desc">BootROM → BL1 → BL2 → BL31 → kernel, 단계별 검증</div>
+  <a class="module-card" data-cat="soc" href="02_chain_of_trust_boot_stages/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Chain of Trust & Boot Stages</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_crypto_in_boot/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Crypto in Boot</div>
-    <div class="course-card-desc">RSA/ECDSA 서명, SHA hash, AES 암호화</div>
+  <a class="module-card" data-cat="soc" href="03_crypto_in_boot/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Crypto in Boot</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_boot_device_and_boot_mode/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Boot Device &amp; Boot Mode</div>
-    <div class="course-card-desc">eMMC/UFS/QSPI, boot mode strap, fail-over</div>
+  <a class="module-card" data-cat="soc" href="04_boot_device_and_boot_mode/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">Boot Device & Boot Mode</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_attack_surface_and_defense/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Attack Surface &amp; Defense</div>
-    <div class="course-card-desc">Fault injection, side-channel, supply chain 방어</div>
+  <a class="module-card" data-cat="soc" href="05_attack_surface_and_defense/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Attack Surface & Defense</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 19분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_bootrom_dv_methodology/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">BootROM DV Methodology</div>
-    <div class="course-card-desc">시나리오 매트릭스, golden image, fault injection</div>
+  <a class="module-card" data-cat="soc" href="06_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 11분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_quick_reference_card/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">Boot flow, crypto algo, attack 패턴 치트시트</div>
+  <a class="module-card" data-cat="soc" href="07_bootrom_dv_methodology/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">BootROM DV Methodology</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 29분</span>
+        
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

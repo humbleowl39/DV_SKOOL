@@ -1,13 +1,19 @@
 # UVM (Universal Verification Methodology)
 
-> **검증 엔지니어를 위한 UVM 마스터 코스** — 클래스 계층, Phase, Agent, Sequence, Factory, TLM, Coverage까지 6년+ 실무자 관점으로 통합 학습.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>7</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="core">
+  <div class="topic-hero-mark">🧪</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">UVM (Universal Verification Methodology)</div>
+    <p class="topic-hero-sub">클래스 계층, Phase, Agent, Sequence, Factory, TLM, Coverage까지 6년+ 실무자 관점으로 통합 학습.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">6</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.5h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -79,43 +85,80 @@
 
 순차 학습을 권장합니다 (특히 1→4까지). 5~7은 토픽 단위로도 가능합니다.
 
-<div class="course-grid">
-  <a class="course-card" href="01_architecture_and_phase/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">UVM 아키텍처 &amp; Phase</div>
-    <div class="course-card-desc">클래스 계층, Phase 실행 모델, Top-Down vs Bottom-Up</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="core" href="01_architecture_and_phase/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">UVM 아키텍처 & Phase</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 31분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_agent_driver_monitor/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Agent / Driver / Monitor</div>
-    <div class="course-card-desc">DUT 인터페이스 컴포넌트, Active/Passive 분리, VIF 연결</div>
+  <a class="module-card" data-cat="core" href="02_agent_driver_monitor/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Agent / Driver / Monitor</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_sequence_and_item/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Sequence &amp; Sequence Item</div>
-    <div class="course-card-desc">자극 생성 모델, body() 패턴, Virtual Sequence 조합</div>
+  <a class="module-card" data-cat="core" href="03_sequence_and_item/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Sequence & Sequence Item</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 26분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_config_db_factory/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">config_db &amp; Factory</div>
-    <div class="course-card-desc">계층 설정 전달, Type/Instance Override 의사결정</div>
+  <a class="module-card" data-cat="core" href="04_config_db_factory/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">config_db & Factory</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 16분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_tlm_scoreboard_coverage/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">TLM, Scoreboard, Coverage</div>
-    <div class="course-card-desc">Analysis Port 통신, 비교 모델, 커버리지 클로저</div>
+  <a class="module-card" data-cat="core" href="05_tlm_scoreboard_coverage/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">TLM, Scoreboard, Coverage</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 28분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_practical_patterns/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">실무 패턴 &amp; 안티패턴</div>
-    <div class="course-card-desc">현장에서 반복되는 좋은 설계 vs 피해야 할 함정</div>
+  <a class="module-card" data-cat="core" href="06_practical_patterns/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">실무 패턴 & 안티패턴</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_quick_reference_card/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">실무 치트시트 — 매크로, 패턴, 디버그 팁</div>
+  <a class="module-card" data-cat="core" href="07_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 10분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

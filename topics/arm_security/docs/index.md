@@ -1,13 +1,19 @@
 # ARM Security
 
-> **ARM Security Architecture 마스터 코스** — Exception Level, TrustZone, Secure Enclave, TEE 계층, Secure Boot 연계.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>4</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="soc">
+  <div class="topic-hero-mark">🛡️</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">ARM Security</div>
+    <p class="topic-hero-sub">Exception Level, TrustZone, Secure Enclave, TEE 계층, Secure Boot 연계.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.4h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -59,33 +65,50 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_exception_level_trustzone/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">Exception Level &amp; TrustZone</div>
-    <div class="course-card-desc">EL0-EL3, secure/non-secure, NS bit</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="soc" href="01_exception_level_trustzone/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Exception Level & TrustZone</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_world_switch_soc_infra/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">World Switch &amp; SoC Infra</div>
-    <div class="course-card-desc">SMC instruction, secure monitor, sysMMU/peripheral 보안</div>
+  <a class="module-card" data-cat="soc" href="02_world_switch_soc_infra/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">World Switch & SoC Security Infra</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02a_secure_enclave_and_tee_hierarchy/">
-    <div class="course-card-num">Module 02A</div>
-    <div class="course-card-title">Secure Enclave &amp; TEE Hierarchy</div>
-    <div class="course-card-desc">SEP, Knox, OP-TEE, Trusty 계층 구조</div>
+  <a class="module-card" data-cat="soc" href="03_secure_boot_connection/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Secure Boot Connection</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 26분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_secure_boot_connection/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Secure Boot Connection</div>
-    <div class="course-card-desc">Secure Boot와 ARM Security 통합 (BL31 = EL3)</div>
-  </a>
-  <a class="course-card" href="04_quick_reference_card/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">EL/TrustZone 다이어그램, SMC, 흔한 위협</div>
+  <a class="module-card" data-cat="soc" href="04_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 10분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

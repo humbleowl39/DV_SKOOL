@@ -1,13 +1,19 @@
 # AMBA Protocols
 
-> **ARM AMBA 프로토콜 마스터 코스** — APB, AHB, AXI, AXI-Stream을 검증 엔지니어 관점에서 통합 학습. 핸드셰이크, 채널 구조, outstanding/OoO, 패킷 스트림까지.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>3</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>중급 (Intermediate)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="core">
+  <div class="topic-hero-mark">🔄</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">AMBA Protocols</div>
+    <p class="topic-hero-sub">APB, AHB, AXI, AXI-Stream을 검증 엔지니어 관점에서 통합 학습. 핸드셰이크, 채널 구조, outstanding/OoO, 패킷 스트림까지.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.4h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -61,28 +67,50 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 
 순차 학습 권장 (APB→AHB→AXI는 점진적 복잡도 증가):
 
-<div class="course-grid">
-  <a class="course-card" href="01_apb_ahb/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">APB &amp; AHB</div>
-    <div class="course-card-desc">레지스터 접근의 표준(APB) + 중간 성능(AHB), Bridge</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="core" href="01_apb_ahb/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Unit 1: APB & AHB</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_axi/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">AXI</div>
-    <div class="course-card-desc">5채널 / Burst / Outstanding / OoO — SoC 인터커넥트의 사실상 표준</div>
+  <a class="module-card" data-cat="core" href="02_axi/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">AXI (Advanced eXtensible Interface)</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 26분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_axi_stream/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">AXI-Stream</div>
-    <div class="course-card-desc">주소 없는 패킷/프레임 전송 — DSP/AI/네트워크 데이터 패스</div>
+  <a class="module-card" data-cat="core" href="03_axi_stream/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">AXI-Stream</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_quick_reference_card/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">프로토콜 비교, 핸드셰이크, 흔한 버그 치트시트</div>
+  <a class="module-card" data-cat="core" href="04_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 13분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

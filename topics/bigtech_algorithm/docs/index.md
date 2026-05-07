@@ -1,13 +1,19 @@
 # BigTech Algorithm
 
-코딩 인터뷰 — Big-O, 자료구조, 알고리즘 + SystemVerilog 예제
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>7</strong>개 모듈</div>
-    <div class="stat-item"><strong>중급</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="applied">
+  <div class="topic-hero-mark">📐</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">BigTech Algorithm</div>
+    <p class="topic-hero-sub">코딩 인터뷰 핵심 — Big-O, 자료구조, 알고리즘</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">7</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.6h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 사전 지식
 
@@ -60,36 +66,80 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_big_o_explained/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">Big-O 복잡도 & 패턴 사고법</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="applied" href="01_big_o_explained/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Big-O Complexity & Pattern Thinking</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 14분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_array_hashmap_explained/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Array & Hash Map (연관 배열)</div>
+  <a class="module-card" data-cat="applied" href="02_array_hashmap_explained/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Array & Hash Map</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 13분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_two_pointers_sliding_window_explained/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Two Pointers & Sliding Window</div>
+  <a class="module-card" data-cat="applied" href="03_two_pointers_sliding_window_explained/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Two Pointers & Sliding Window</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 14분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_stack_binary_search_explained/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Stack & Binary Search</div>
+  <a class="module-card" data-cat="applied" href="04_stack_binary_search_explained/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">Stack & Binary Search</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 14분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_tree_bfs_dfs_explained/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Tree & BFS/DFS</div>
+  <a class="module-card" data-cat="applied" href="05_tree_bfs_dfs_explained/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Tree & BFS/DFS</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_dynamic_programming_explained/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">Dynamic Programming (DP)</div>
+  <a class="module-card" data-cat="applied" href="06_dynamic_programming_explained/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">Dynamic Programming</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 13분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_interview_strategy/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">면접 전략</div>
+  <a class="module-card" data-cat="applied" href="07_interview_strategy/">
+    <div class="module-num">07</div>
+    <div class="module-body">
+      <div class="module-title">Interview Strategy</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 9분</span>
+        
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 
 ## 관련 자료

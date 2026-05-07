@@ -1,13 +1,19 @@
 # Ethernet DCMAC
 
-> **Ethernet & DCMAC 마스터 코스** — 프레임 구조부터 100/400G DCMAC 검증까지.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>3</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="network">
+  <div class="topic-hero-mark">🌐</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">Ethernet DCMAC</div>
+    <p class="topic-hero-sub">프레임 구조부터 100/400G DCMAC 검증까지.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.2h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -52,28 +58,50 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_ethernet_fundamentals/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">Ethernet Fundamentals</div>
-    <div class="course-card-desc">프레임 구조, MAC address, VLAN, 100/400GbE 표준</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="network" href="01_ethernet_fundamentals/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Ethernet Fundamentals</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_dcmac_architecture/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">DCMAC Architecture</div>
-    <div class="course-card-desc">DCMAC 블럭 구조, PCS/FEC/MAC 인터페이스, multi-channel</div>
+  <a class="module-card" data-cat="network" href="02_dcmac_architecture/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">DCMAC Architecture</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_dcmac_dv_methodology/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">DCMAC DV Methodology</div>
-    <div class="course-card-desc">Packet generator, scoreboard, FEC injection, performance</div>
+  <a class="module-card" data-cat="network" href="03_dcmac_dv_methodology/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">DCMAC DV Methodology</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 26분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_quick_reference_card/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">프레임 형식, FEC RS(528,514), DV 체크리스트</div>
+  <a class="module-card" data-cat="network" href="04_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 9분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

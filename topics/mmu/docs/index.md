@@ -1,13 +1,19 @@
 # MMU
 
-> **Memory Management Unit 마스터 코스** — 가상↔물리 주소 변환의 모든 것. 페이지 테이블, TLB, IOMMU/SMMU, 성능 분석, DV 방법론까지.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>6</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="memory">
+  <div class="topic-hero-mark">🧭</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">MMU</div>
+    <p class="topic-hero-sub">가상↔물리 주소 변환의 모든 것. 페이지 테이블, TLB, IOMMU/SMMU, 성능 분석, DV 방법론까지.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">6</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.5h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -71,43 +77,80 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_mmu_fundamentals/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">MMU Fundamentals</div>
-    <div class="course-card-desc">왜 VA가 필요한가, 주소 변환 기본 원리, MMU의 위치</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="memory" href="01_mmu_fundamentals/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Unit 1: MMU 기본 개념 및 주소 변환</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 16분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_page_table_structure/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Page Table Structure</div>
-    <div class="course-card-desc">Multi-level page table, ARMv8 4-level translation, granule</div>
+  <a class="module-card" data-cat="memory" href="02_page_table_structure/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Page Table Structure</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_tlb/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">TLB</div>
-    <div class="course-card-desc">TLB 구조 / replace policy / shootdown / ASID/VMID 태깅</div>
+  <a class="module-card" data-cat="memory" href="03_tlb/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">TLB</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 20분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_iommu_smmu/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">IOMMU / SMMU</div>
-    <div class="course-card-desc">왜 IOMMU 필요? ARM SMMU 아키텍처, Stage 1/2, StreamID</div>
+  <a class="module-card" data-cat="memory" href="04_iommu_smmu/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">IOMMU / SMMU</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_performance_analysis/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Performance Analysis</div>
-    <div class="course-card-desc">TLB miss penalty / page walk caching / Dual-Reference Model</div>
+  <a class="module-card" data-cat="memory" href="05_performance_analysis/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Performance Analysis</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 19분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_mmu_dv_methodology/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">MMU DV Methodology</div>
-    <div class="course-card-desc">검증 아키텍처, Custom Thin VIP, RAL, 시나리오 매트릭스</div>
+  <a class="module-card" data-cat="memory" href="06_mmu_dv_methodology/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">MMU DV Methodology</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 36분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_quick_reference_card/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">주소 변환 / TLB / SMMU 치트시트</div>
+  <a class="module-card" data-cat="memory" href="07_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 12분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

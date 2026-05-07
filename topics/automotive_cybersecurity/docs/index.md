@@ -1,13 +1,19 @@
 # Automotive Cybersecurity
 
-> **Automotive Cybersecurity 마스터 코스** — CAN bus부터 자율주행 보안까지, 차량 보안의 모든 것.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>4</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>중급 (Intermediate)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="soc">
+  <div class="topic-hero-mark">🚗</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">Automotive Cybersecurity</div>
+    <p class="topic-hero-sub">CAN bus부터 자율주행 보안까지, 차량 보안의 모든 것.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">4</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.1h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -58,33 +64,60 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_can_bus_fundamentals/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">CAN Bus Fundamentals</div>
-    <div class="course-card-desc">CAN 프로토콜, ECU 통신, 보안 한계</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="soc" href="01_can_bus_fundamentals/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">CAN Bus Fundamentals</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 22분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_automotive_soc_security/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Automotive SoC Security</div>
-    <div class="course-card-desc">HSM, Secure Boot, OTA, ISO 21434</div>
+  <a class="module-card" data-cat="soc" href="02_automotive_soc_security/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Automotive SoC Security</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 30분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_tesla_fsd_case_study/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">Tesla FSD Case Study</div>
-    <div class="course-card-desc">FSD jailbreak 사례 분석 (voltage glitch, MMU disable)</div>
+  <a class="module-card" data-cat="soc" href="03_tesla_fsd_case_study/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">Tesla FSD Case Study</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 24분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_attack_surface_and_defense/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Attack Surface &amp; Defense</div>
-    <div class="course-card-desc">차량 attack surface map, layered defense</div>
+  <a class="module-card" data-cat="soc" href="04_attack_surface_and_defense/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">Attack Surface & Defense</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 32분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_quick_reference_card/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">CAN/HSM/SecOC 치트시트</div>
+  <a class="module-card" data-cat="soc" href="05_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

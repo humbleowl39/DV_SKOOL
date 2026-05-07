@@ -1,13 +1,19 @@
 # SoC Integration (CCTV)
 
-> **SoC Top Integration & CCTV 마스터 코스** — Top-level 검증 환경 구축, Common Task 패턴, AI 자동화 활용.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>3</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="soc">
+  <div class="topic-hero-mark">🏗️</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">SoC Integration (CCTV)</div>
+    <p class="topic-hero-sub">Top-level 검증 환경 구축, Common Task 패턴, AI 자동화 활용.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.7h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -52,28 +58,50 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_soc_top_integration/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">SoC Top Integration</div>
-    <div class="course-card-desc">Top-level 검증 환경, multi-IP env, multi-clock</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="soc" href="01_soc_top_integration/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">SoC Top Integration</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 27분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_common_task_cctv/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">Common Task &amp; CCTV</div>
-    <div class="course-card-desc">재사용 sequence library, coverage 통합 전략</div>
+  <a class="module-card" data-cat="soc" href="02_common_task_cctv/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Common Task & CCTV</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 28분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_tb_top_and_ai/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">TB Top &amp; AI Automation</div>
-    <div class="course-card-desc">TB 구축 자동화, LLM 시퀀스/coverage/디버그 보조</div>
+  <a class="module-card" data-cat="soc" href="03_tb_top_and_ai/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">TB Top & AI Automation</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 35분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_quick_reference_card/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">SoC 검증 패턴, AI workflow, 흔한 함정</div>
+  <a class="module-card" data-cat="soc" href="04_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 10분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

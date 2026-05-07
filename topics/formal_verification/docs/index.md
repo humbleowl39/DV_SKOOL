@@ -1,13 +1,19 @@
 # Formal Verification
 
-> **정형 검증 마스터 코스** — SVA, JasperGold, Convergence 전략. 시뮬레이션이 못 잡는 corner case를 수학적으로 증명하는 방법론.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>3</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="core">
+  <div class="topic-hero-mark">✅</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">Formal Verification</div>
+    <p class="topic-hero-sub">SVA, JasperGold, Convergence 전략. 시뮬레이션이 못 잡는 corner case를 수학적으로 증명하는 방법론.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.2h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -56,28 +62,50 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_formal_fundamentals/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">Formal Fundamentals</div>
-    <div class="course-card-desc">Sim vs Formal, 3가지 결과(PROVEN/BOUNDED/CEX), Induction, State Explosion</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="core" href="01_formal_fundamentals/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">Unit 1: Formal Verification 기본 개념</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 19분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_sva/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">SVA</div>
-    <div class="course-card-desc">SVA 구조, 시퀀스/프로퍼티, 핵심 연산자, 실무 패턴, Bind, Vacuous Pass</div>
+  <a class="module-card" data-cat="core" href="02_sva/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">SVA (SystemVerilog Assertions)</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 21분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_jaspergold_and_strategy/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">JasperGold &amp; Strategy</div>
-    <div class="course-card-desc">JasperGold 워크플로, Convergence 전략, Blackbox/Cut Point, Sign-off 기준</div>
+  <a class="module-card" data-cat="core" href="03_jaspergold_and_strategy/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">JasperGold & DV Strategy</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_quick_reference_card/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">SVA 연산자, 패턴, Convergence 순서, 면접 골든 룰</div>
+  <a class="module-card" data-cat="core" href="04_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 10분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 학습 경로
 

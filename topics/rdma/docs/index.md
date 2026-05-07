@@ -1,13 +1,19 @@
 # RDMA (InfiniBand & RoCEv2)
 
-> **Remote Direct Memory Access 마스터 코스** — InfiniBand 스펙(IB Vol1 r1.7), RoCEv2 Annex17, 그리고 실제 RDMA 검증 환경(`RDMA-TB`)을 한 번에.
-
-<div class="course-header">
-  <div class="course-stats">
-    <div class="stat-item"><strong>8</strong>개 모듈 + Quick Ref</div>
-    <div class="stat-item"><strong>심화 (Advanced)</strong> 난이도</div>
+<!-- DV-SKOOL-HERO:start -->
+<div class="topic-hero" data-cat="network">
+  <div class="topic-hero-mark">⚡</div>
+  <div class="topic-hero-body">
+    <div class="topic-hero-title">RDMA (InfiniBand & RoCEv2)</div>
+    <p class="topic-hero-sub">InfiniBand 스펙(IB Vol1 r1.7), RoCEv2 Annex17, 그리고 실제 RDMA 검증 환경(`RDMA-TB`)을 한 번에.</p>
+    <div class="topic-hero-stats">
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">8</span><span class="topic-stat-lbl">모듈</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.8h</span><span class="topic-stat-lbl">예상</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
+    </div>
   </div>
 </div>
+<!-- DV-SKOOL-HERO:end -->
 
 ## 이 코스에서 얻는 것
 
@@ -82,53 +88,100 @@
 
 ## 학습 모듈
 
-<div class="course-grid">
-  <a class="course-card" href="01_rdma_motivation/">
-    <div class="course-card-num">Module 01</div>
-    <div class="course-card-title">RDMA 동기와 핵심 모델</div>
-    <div class="course-card-desc">Kernel bypass, zero-copy, Verbs, IB ↔ iWARP ↔ RoCE 계보</div>
+<!-- DV-SKOOL-MODULES:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="network" href="01_rdma_motivation/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">RDMA 동기와 핵심 모델</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 15분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="02_ib_protocol_stack/">
-    <div class="course-card-num">Module 02</div>
-    <div class="course-card-title">InfiniBand 프로토콜 스택</div>
-    <div class="course-card-desc">5계층, LRH/GRH/BTH/Payload/ICRC/VCRC, VL/SL</div>
+  <a class="module-card" data-cat="network" href="02_ib_protocol_stack/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">InfiniBand 프로토콜 스택</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 20분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="03_rocev2/">
-    <div class="course-card-num">Module 03</div>
-    <div class="course-card-title">RoCEv2 — Ethernet 위의 RDMA</div>
-    <div class="course-card-desc">Eth/IP/UDP(4791)/BTH 매핑, IB ↔ RoCEv2 차이</div>
+  <a class="module-card" data-cat="network" href="03_rocev2/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">RoCEv2: Ethernet 위의 RDMA</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 19분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="04_service_types_qp/">
-    <div class="course-card-num">Module 04</div>
-    <div class="course-card-title">Service Types & QP FSM</div>
-    <div class="course-card-desc">RC/UC/UD/XRC, QP 상태 전이</div>
+  <a class="module-card" data-cat="network" href="04_service_types_qp/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">Service Types & QP FSM</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 18분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="05_memory_model/">
-    <div class="course-card-num">Module 05</div>
-    <div class="course-card-title">Memory Model</div>
-    <div class="course-card-desc">PD, MR, L_Key/R_Key, IOVA, MMU/PTW/TLB</div>
+  <a class="module-card" data-cat="network" href="05_memory_model/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Memory Model: PD, MR, L_Key/R_Key, IOVA</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 17분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="06_data_path/">
-    <div class="course-card-num">Module 06</div>
-    <div class="course-card-title">Data Path Operations</div>
-    <div class="course-card-desc">SEND/WRITE/READ/ATOMIC, Opcode, PSN, ACK/NAK</div>
+  <a class="module-card" data-cat="network" href="06_data_path/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">Data Path Operations</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 19분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="07_congestion_error/">
-    <div class="course-card-num">Module 07</div>
-    <div class="course-card-title">Congestion & Error Handling</div>
-    <div class="course-card-desc">PFC/ECN/DCQCN, Timeout/RNR/R-Key, QP recovery</div>
+  <a class="module-card" data-cat="network" href="07_congestion_error/">
+    <div class="module-num">07</div>
+    <div class="module-body">
+      <div class="module-title">Congestion Control & Error Handling</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 20분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="08_rdma_tb_dv/">
-    <div class="course-card-num">Module 08</div>
-    <div class="course-card-title">RDMA-TB 검증 환경 & DV 전략</div>
-    <div class="course-card-desc">vrdmatb env, agent, vplan, scoreboard, coverage</div>
+  <a class="module-card" data-cat="network" href="08_rdma_tb_dv/">
+    <div class="module-num">08</div>
+    <div class="module-body">
+      <div class="module-title">RDMA-TB 검증 환경 & DV 전략</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 23분</span>
+        
+      </div>
+    </div>
   </a>
-  <a class="course-card" href="09_quick_reference_card/">
-    <div class="course-card-num">Quick Ref</div>
-    <div class="course-card-title">Quick Reference Card</div>
-    <div class="course-card-desc">Opcode/header/state/error 한 장 요약</div>
+  <a class="module-card" data-cat="network" href="09_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
+      <div class="module-meta">
+        <span class="module-time">⏱ 15분</span>
+        <span class="module-tag">Quick Ref</span>
+      </div>
+    </div>
   </a>
 </div>
+<!-- DV-SKOOL-MODULES:end -->
 
 ## 참조 자료
 
