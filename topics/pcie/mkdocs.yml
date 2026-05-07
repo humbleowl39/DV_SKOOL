@@ -1,0 +1,94 @@
+site_name: PCI Express
+site_description: PCIe — 3-layer architecture, TLP/DLLP, LTSSM, Config Space, Power/AER, SR-IOV/CXL
+site_url: https://humbleowl39.github.io/DV_SKOOL/pcie/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/pcie/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+nav:
+  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "코스 홈": index.md
+  - "학습 모듈":
+      - "Module 01: PCIe 동기와 진화": 01_pcie_motivation.md
+      - "Module 02: 3-Layer Architecture": 02_layer_architecture.md
+      - "Module 03: TLP (Transaction Layer Packet)": 03_tlp.md
+      - "Module 04: DLLP, Flow Control, ACK/NAK": 04_dllp_flow_control.md
+      - "Module 05: Physical Layer & LTSSM": 05_phy_ltssm.md
+      - "Module 06: Configuration Space & Enumeration": 06_config_enumeration.md
+      - "Module 07: Power, AER, Hot Plug": 07_power_aer_hotplug.md
+      - "Module 08: SR-IOV, ATS, P2P, CXL": 08_advanced.md
+      - "Quick Reference Card": 09_quick_reference_card.md
+  - "코스 개요": _legacy_overview.md
+  - "용어집": glossary.md
+  - "퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
