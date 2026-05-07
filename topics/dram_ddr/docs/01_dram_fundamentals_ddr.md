@@ -30,6 +30,12 @@
 ## 핵심 개념
 **DRAM = 커패시터에 전하를 저장하여 1비트를 기억하는 휘발성 메모리. 구조적으로 Bank → Row → Column 계층으로 접근하며, 주기적 Refresh가 필수. DDR은 클럭의 상승/하강 엣지 모두에서 데이터를 전송하여 대역폭을 2배로 활용.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: DDR = Double Data Rate 만 의미
+
+    **실제**: DDR 의 D 는 Double-rate 이지만, 세대별로 prefetch (DDR3 8n, DDR4 8n, DDR5 16n), bank group, on-die ECC 등 큰 변화. 이름은 같아도 다른 동물.
+
+    **왜 헷갈리는가**: 약자 의미만 보고 "세대 = 속도만 ↑" 로 단순화. 실제로는 아키텍처 진화.
 ---
 
 ## DRAM 셀 동작
@@ -410,14 +416,6 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
 > "LPDDR5는 명령 버스(CK)와 데이터 버스(WCK)의 클럭을 분리했다. 명령은 상대적으로 저속으로 충분하므로 CK는 낮은 주파수, WCK는 CK의 2배 또는 4배 주파수로 데이터만 고속 전송한다. 이를 통해 불필요한 고속 토글을 줄여 전력을 절감하면서도 데이터 대역폭을 확보한다. DVFSC와 결합하면 부하에 따라 WCK 주파수를 동적으로 변경하여 추가 절전이 가능하다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: DDR = Double Data Rate 만 의미
-
-    **실제**: DDR 의 D 는 Double-rate 이지만, 세대별로 prefetch (DDR3 8n, DDR4 8n, DDR5 16n), bank group, on-die ECC 등 큰 변화. 이름은 같아도 다른 동물.
-
-    **왜 헷갈리는가**: 약자 의미만 보고 "세대 = 속도만 ↑" 로 단순화. 실제로는 아키텍처 진화.
-
 !!! warning "실무 주의점 — tREFI 초과 시 Row Hammer 취약점 노출"
     **현상**: Refresh 간격(tREFI = 7.8μs @ 85°C 이하) 내에 같은 Row를 반복 ACT/PRE하면 인접 Row의 전하가 누설되어 비트 플립 발생. 보안 공격 및 데이터 손상으로 이어짐.
     

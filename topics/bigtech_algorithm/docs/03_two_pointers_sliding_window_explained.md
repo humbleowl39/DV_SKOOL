@@ -1,6 +1,6 @@
 # Module 03 — Two Pointers & Sliding Window
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) Window 의 expand / shrink 조건을 invariant 로 명세할 수 있다.
 5. (Evaluate) Two Pointers vs Hash Map vs Sorting 의 trade-off 를 비교 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01–02 (Big-O, Hash Map)
 - 배열 인덱스 조작에 대한 자신감
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 Two Pointers / Sliding Window 는 **메모리를 쓰지 않고 O(N) 으로** 푸는 강력한 도구다. Hash Map 으로 풀리는 많은 문제가 정렬 + Two Pointers 로 더 간결해지고, 부분 배열/문자열 문제는 거의 모두 sliding window 로 일반화된다.
 
@@ -205,7 +205,6 @@ Dry Run (seen = 문자의 마지막 인덱스):
 
 **Sliding Window 키워드:** "연속", "부분 배열", "부분 문자열", "최대/최소 길이"
 
-
 ---
 
 ## 부록: SystemVerilog 예제 코드
@@ -353,14 +352,6 @@ endmodule
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Two Pointers / Sliding Window 는 같은 패턴
-
-    **실제**: Two Pointers = 양방향 좁힘 (보통 정렬된 입력), Sliding Window = invariant 유지 expand/shrink. 입력 조건과 invariant 가 다른 패턴.
-
-    **왜 헷갈리는가**: 둘 다 "포인터 두 개" 사용 → 시각적 유사성 때문에 같은 것으로 묶임.
-
 !!! warning "실무 주의점 — while 조건의 off-by-one (`lo<hi` vs `lo<=hi`)"
     **현상**: 정렬된 배열의 two-sum 에서 `[a, a]` 같은 동일 원소 두 번 사용 케이스를 놓치거나, 반대로 같은 인덱스를 두 번 더해 false positive 가 난다.
 
@@ -375,7 +366,14 @@ endmodule
 
 ---
 
-## 핵심 정리 (Key Takeaways)
+!!! danger "❓ 흔한 오해"
+    **오해**: Two Pointers / Sliding Window 는 같은 패턴
+
+    **실제**: Two Pointers = 양방향 좁힘 (보통 정렬된 입력), Sliding Window = invariant 유지 expand/shrink. 입력 조건과 invariant 가 다른 패턴.
+
+    **왜 헷갈리는가**: 둘 다 "포인터 두 개" 사용 → 시각적 유사성 때문에 같은 것으로 묶임.
+
+## 핵심 정리
 
 - **Two Pointers** — 보통 정렬된 배열 / 양 끝에서 좁혀가는 구조.
 - **Sliding Window** — 부분 배열/문자열의 invariant 유지 (window expand → 조건 위반 → shrink).
@@ -383,7 +381,7 @@ endmodule
 - **메모리 ↓** — hash map 풀이 대비 공간을 거의 쓰지 않는다.
 - **정렬 비용 고려** — 입력이 정렬 가능하면 O(N log N) + O(N) 이 hash map 의 O(N) 보다 종종 깔끔.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Stack & Binary Search →](../04_stack_binary_search_explained/) — 정렬된 배열의 또 다른 도구.
 - 퀴즈: [Module 03 Quiz](../quiz/03_two_pointers_sliding_window_explained_quiz/) — 5문항.

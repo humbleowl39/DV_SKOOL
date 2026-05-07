@@ -32,6 +32,12 @@
 ## 핵심 개념
 **IOMMU/SMMU = 디바이스(GPU, DMA, NIC, 가속기)의 메모리 접근을 가상 주소로 관리하여, 디바이스 격리와 DMA 보호를 제공하는 SoC 레벨 MMU.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: IOMMU = MMU 의 단순 복제다
+
+    **실제**: IOMMU 는 추가로 stream ID, context 분리, ATS (Address Translation Service) 등 device 측 특화 기능 보유. 단순 복제가 아니라 device 영역 특화.
+
+    **왜 헷갈리는가**: "이름이 같은 패밀리 = 동일 동작" 이라는 가정. 실제 SMMU spec 은 ARMv8 MMU 와 별도 문서.
 ---
 
 ## 왜 IOMMU가 필요한가?
@@ -443,14 +449,6 @@ Resume의 Technical Challenge #3에서 언급:
 > "가장 큰 차이는 동기성이다. CPU Page Fault는 동기적 Exception으로 현재 명령어가 즉시 멈추고 OS Handler가 처리한 뒤 재실행한다. IOMMU Page Fault는 비동기적으로, Event Queue에 기록되고 인터럽트로 OS에 통지된다. 디바이스 DMA는 이미 실패/대기 중이므로, OS가 페이지를 할당한 뒤 Stall 해제 또는 디바이스 재시도를 통해 복구한다. 디바이스 동기화가 필요하여 처리가 더 복잡하다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: IOMMU = MMU 의 단순 복제다
-
-    **실제**: IOMMU 는 추가로 stream ID, context 분리, ATS (Address Translation Service) 등 device 측 특화 기능 보유. 단순 복제가 아니라 device 영역 특화.
-
-    **왜 헷갈리는가**: "이름이 같은 패밀리 = 동일 동작" 이라는 가정. 실제 SMMU spec 은 ARMv8 MMU 와 별도 문서.
-
 !!! warning "실무 주의점 — Stage 2 미설정 시 Guest 메모리 격리 무효화"
     **현상**: 가상화 환경에서 Guest OS가 Stage 2 변환 없이 IPA를 그대로 PA로 사용하게 되어, 다른 Guest 또는 Hypervisor 메모리 영역에 DMA 접근 가능.
     

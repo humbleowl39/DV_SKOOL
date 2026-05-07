@@ -1,6 +1,37 @@
 /* DV SKOOL — 학습 사이트 스타일 */
 
 /* ===========================================================
+   디자인 토큰 (Design Tokens) — 모든 컴포넌트가 공유
+   =========================================================== */
+:root {
+  --dvs-pad-card:    1.25rem;
+  --dvs-pad-tight:   0.9rem 1rem;
+  --dvs-pad-pill:    0.4rem 0.9rem;
+  --dvs-radius-card: 12px;
+  --dvs-radius-mid:  10px;
+  --dvs-radius-pill: 999px;
+  --dvs-gap-row:     1rem;
+  --dvs-gap-tight:   0.5rem;
+
+  --dvs-shadow-card:       0 2px 6px rgba(0,0,0,0.08);
+  --dvs-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.15);
+
+  --dvs-brand-c1: #4fc3f7;
+  --dvs-brand-c2: #7c4dff;
+  --dvs-brand-grad:      linear-gradient(135deg, var(--dvs-brand-c1) 0%, var(--dvs-brand-c2) 100%);
+  --dvs-brand-grad-soft: linear-gradient(135deg, rgba(79,195,247,0.06) 0%, rgba(124,77,255,0.06) 100%);
+  --dvs-brand-border:    rgba(79,195,247,0.25);
+
+  --dvs-transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+[data-md-color-scheme="slate"] {
+  --dvs-shadow-card:       0 2px 6px rgba(0,0,0,0.4);
+  --dvs-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.55);
+  --dvs-brand-grad-soft:   linear-gradient(135deg, rgba(79,195,247,0.10) 0%, rgba(124,77,255,0.10) 100%);
+  --dvs-brand-border:      rgba(79,195,247,0.35);
+}
+
+/* ===========================================================
    학습 메타 블럭 (난이도 뱃지)
    =========================================================== */
 .learning-meta {
@@ -44,27 +75,24 @@
    =========================================================== */
 .course-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--dvs-gap-row);
   margin: 1.5rem 0;
 }
 .course-card {
   display: block;
-  padding: 1.1rem 1.2rem;
-  border-radius: 10px;
+  padding: var(--dvs-pad-card);
+  border-radius: var(--dvs-radius-mid);
   border: 1px solid var(--md-default-fg-color--lightest);
   background: var(--md-default-bg-color);
   text-decoration: none !important;
   color: inherit;
-  transition: all 0.15s ease;
+  transition: var(--dvs-transition);
 }
 .course-card:hover {
   border-color: var(--md-primary-fg-color);
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-}
-[data-md-color-scheme="slate"] .course-card:hover {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--dvs-shadow-card-hover);
 }
 .course-card .course-card-num {
   font-size: 0.72rem;
@@ -576,15 +604,11 @@
    토픽 홈에서 모듈 간 의존성을 한 눈에.
    =========================================================== */
 .concept-dag {
-  background: linear-gradient(135deg, rgba(79,195,247,0.06) 0%, rgba(124,77,255,0.06) 100%);
-  border: 1px solid rgba(79,195,247,0.25);
-  border-radius: 12px;
-  padding: 1.5rem 1.2rem;
+  background: var(--dvs-brand-grad-soft);
+  border: 1px solid var(--dvs-brand-border);
+  border-radius: var(--dvs-radius-card);
+  padding: var(--dvs-pad-card);
   margin: 1.5rem 0;
-}
-[data-md-color-scheme="slate"] .concept-dag {
-  background: linear-gradient(135deg, rgba(79,195,247,0.10) 0%, rgba(124,77,255,0.10) 100%);
-  border-color: rgba(79,195,247,0.35);
 }
 .concept-dag-title {
   font-weight: 700;
@@ -606,23 +630,35 @@
   margin-bottom: 0;
 }
 .concept-dag-node {
-  background: linear-gradient(135deg, #4fc3f7 0%, #7c4dff 100%);
+  background: var(--dvs-brand-grad);
   color: #ffffff !important;
   padding: 0.55rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--dvs-radius-mid);
   text-decoration: none !important;
   font-weight: 600;
   font-size: 0.85rem;
-  min-width: 120px;
+  min-width: 130px;
   max-width: 220px;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(79,195,247,0.3);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--dvs-shadow-card);
+  transition: var(--dvs-transition);
   display: inline-block;
 }
 .concept-dag-node:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(124,77,255,0.4);
+  box-shadow: var(--dvs-shadow-card-hover);
+}
+/* Long DAG (7+ nodes) — stack vertically even on desktop */
+.concept-dag.dag-long .concept-dag-row {
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.concept-dag.dag-long .concept-dag-arrow {
+  transform: rotate(90deg);
+}
+.concept-dag.dag-long .concept-dag-node {
+  width: min(380px, 100%);
+  max-width: 380px;
 }
 .concept-dag-node-num {
   display: block;

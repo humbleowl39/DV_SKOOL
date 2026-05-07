@@ -1,6 +1,6 @@
 # Module 04 — RAG (Retrieval-Augmented Generation)
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) RAG 응답이 실패하는 단계(retrieval / context window / generation) 를 진단할 수 있다.
 5. (Evaluate) RAGAS / 자체 metrics 로 RAG 시스템 품질을 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 02 (prompt) · Module 03 (embedding/vector DB)
 - 검색 시스템 평가 지표 (precision@k, recall@k)
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은 방법이 RAG 다. Fine-tune 은 비싸고 느리며 라이프사이클이 길지만, RAG 는 인덱스만 갱신하면 곧장 반영된다. 사내 IP / 코드 / 문서를 LLM 으로 활용하려는 거의 모든 프로젝트의 표준 패턴이다.
 
@@ -31,6 +31,12 @@ LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은
 ## 핵심 개념
 **RAG = LLM에 외부 지식을 검색하여 주입하는 아키텍처. LLM의 학습 데이터에 없는 최신/도메인 정보를 활용하면서, Fine-tuning의 비용과 Hallucination을 줄이는 실용적 접근법.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: RAG 가 fine-tune 을 완전히 대체
+
+    **실제**: RAG 는 지식 갱신에 강함, fine-tune 은 형식/스타일 내재화에 강함. 둘은 보완. 실무는 "prompt → RAG → 필요 시 FT" 순서.
+
+    **왜 헷갈리는가**: 최근 RAG hype 가 fine-tune 의 단점만 부각. 실제로는 trade-off.
 ---
 
 ## 왜 RAG가 필요한가?
@@ -265,14 +271,6 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 > "세 가지 전략: (1) Hybrid 검색 — Dense(의미) + Sparse(키워드) 결합으로 각각의 약점 보완. (2) 도메인 특화 Chunking — IP 스펙의 섹션/테이블/시퀀스 단위 분할로 의미 보존. (3) Re-ranking — 초기 Top-20을 Cross-encoder로 정밀 재정렬하여 최종 Top-5의 정확도 향상."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: RAG 가 fine-tune 을 완전히 대체
-
-    **실제**: RAG 는 지식 갱신에 강함, fine-tune 은 형식/스타일 내재화에 강함. 둘은 보완. 실무는 "prompt → RAG → 필요 시 FT" 순서.
-
-    **왜 헷갈리는가**: 최근 RAG hype 가 fine-tune 의 단점만 부각. 실제로는 trade-off.
-
 !!! warning "실무 주의점 — RAG 검색 실패가 Hallucination으로 보이는 문제"
     **현상**: Retrieval 단계에서 관련 문서가 반환되지 않으면 LLM은 학습 지식으로 답변을 생성한다. 사용자 입장에서는 RAG가 작동한 것처럼 보이지만 실제로는 검색이 실패한 응답이므로, 도메인 특화 정보가 틀릴 가능성이 높다.
 
@@ -280,7 +278,7 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 
     **점검 포인트**: 응답 파이프라인에서 `len(retrieved_docs) == 0`일 때 별도 분기로 "관련 문서 없음" 메시지를 반환하는지 확인. 평가 시 retrieval recall과 생성 답변 정확도를 별도 지표로 측정해 검색 실패가 오답의 원인인지 분리 분석.
 
-## 핵심 정리 (Key Takeaways)
+## 핵심 정리
 
 - **RAG = LLM + 외부 검색** — 가중치 변경 없이 도메인 지식 활용.
 - **Chunking** — 문서를 의미 단위로 자르는 것이 retrieval 품질의 출발점.
@@ -288,7 +286,7 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 - **Re-ranking** — top-20 을 cross-encoder 로 정밀 재정렬 → top-5 의 정확도 ↑.
 - **품질 평가** — Faithfulness, Answer Relevance, Context Recall (RAGAS).
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Agent Architecture →](../05_agent_architecture/) — RAG 가 도구 호출과 결합되어 자율 agent 가 된다.
 - 퀴즈: [Module 04 Quiz](../quiz/04_rag_quiz/) — RAG 4단계, 실패 진단 5문항.

@@ -41,6 +41,12 @@ UVM의 **모든 동작은 Phase 위에 얹혀 있습니다**. Driver/Monitor가 
 
 > **UVM = SystemVerilog 기반의 검증 방법론 프레임워크.** 클래스 계층으로 재사용 가능한 검증 환경을 구축하고, Phase 메커니즘으로 빌드/연결/실행의 순서를 보장하며, Factory/config_db로 유연한 객체 생성/설정을 제공.
 
+!!! danger "❓ 흔한 오해"
+    **오해**: build_phase 가 모든 컴포넌트에서 동시에 실행된다
+
+    **실제**: build_phase 는 top-down 으로 진행 — 부모가 먼저 build, 자식이 그 다음. connect_phase 는 반대로 bottom-up.
+
+    **왜 헷갈리는가**: phase 가 "동시에 시작" 한다는 직관이 강해서 — 실제로는 hierarchy 순서가 정해져 있고 잘못 가정하면 self.child = null 상태에서 connect 시도.
 ---
 
 ## UVM 클래스 계층
@@ -457,14 +463,6 @@ UVM_INFO ... [TEST] scenario done               ← test의 run_phase 완료
         - **하나면 충분한 경우**: 단일 Agent + DUT의 deterministic latency(예: pipeline depth=10, 항상 10 cycle 후 출력). drain_time을 PIPELINE_DEPTH * CLK_PERIOD * 2로 잡으면 충분.
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: build_phase 가 모든 컴포넌트에서 동시에 실행된다
-
-    **실제**: build_phase 는 top-down 으로 진행 — 부모가 먼저 build, 자식이 그 다음. connect_phase 는 반대로 bottom-up.
-
-    **왜 헷갈리는가**: phase 가 "동시에 시작" 한다는 직관이 강해서 — 실제로는 hierarchy 순서가 정해져 있고 잘못 가정하면 self.child = null 상태에서 connect 시도.
-
 ## 핵심 정리
 
 - **`uvm_object` vs `uvm_component`**: 데이터(Phase 없음, 자유 생명주기) vs 인프라(Phase 있음, 트리 구조). 등록 매크로/생성자 시그니처가 이 차이를 반영.

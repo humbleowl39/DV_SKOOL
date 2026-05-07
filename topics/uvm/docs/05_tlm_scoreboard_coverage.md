@@ -31,6 +31,12 @@ TB의 **검증 가치**는 두 곳에서 생성됩니다: **비교(Scoreboard)**
 ## 핵심 개념
 **TLM = 컴포넌트 간 트랜잭션 레벨 통신. Analysis Port로 Monitor→Scoreboard/Coverage에 broadcast. Scoreboard는 DUT 출력과 기대값을 비교하여 Pass/Fail 판정. Coverage는 검증 완전성을 정량적으로 측정.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: scoreboard 가 hang 했다는 건 transaction 이 안 들어왔다는 뜻이다
+
+    **실제**: scoreboard 가 hang 하는 이유의 다수는 expected/actual 큐 size 가 영원히 0 이 안 되어 check_phase 가 무한 대기. 수신은 됐는데 비교가 안 끝난 것.
+
+    **왜 헷갈리는가**: "hang = no-input" 이라는 단순화된 mental model 때문에 — 실제로는 input 은 있지만 expected 계산이 잘못돼 큐가 비지 않는 경우 다수.
 ---
 
 ## TLM (Transaction Level Modeling)
@@ -596,14 +602,6 @@ endgroup
           cross_region_burst: cross cp_region, cp_burst;  // 4 × 3 = 12 bins
         endgroup
         ```
-
-!!! danger "❓ 흔한 오해"
-    **오해**: scoreboard 가 hang 했다는 건 transaction 이 안 들어왔다는 뜻이다
-
-    **실제**: scoreboard 가 hang 하는 이유의 다수는 expected/actual 큐 size 가 영원히 0 이 안 되어 check_phase 가 무한 대기. 수신은 됐는데 비교가 안 끝난 것.
-
-    **왜 헷갈리는가**: "hang = no-input" 이라는 단순화된 mental model 때문에 — 실제로는 input 은 있지만 expected 계산이 잘못돼 큐가 비지 않는 경우 다수.
-
 !!! warning "실무 주의점 — `check_phase`에서 잔여 expected 미확인으로 miss 버그 방치"
     **현상**: 시뮬이 PASS로 종료되지만 DUT가 일부 응답을 아예 보내지 않은 경우(drop/miss)가 있어도 탐지되지 않는다. Scoreboard가 actual을 받을 때만 비교하므로, actual 자체가 오지 않으면 expected 큐에 항목이 쌓인 채로 검사 없이 종료된다.
 

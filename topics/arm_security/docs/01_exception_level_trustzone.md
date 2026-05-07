@@ -26,6 +26,12 @@
 ## 핵심 개념
 **ARM의 보안은 두 축으로 구성: (1) Exception Level (EL0~EL3) — 권한의 수직적 계층. (2) TrustZone (Secure/Non-Secure) — 월드의 수평적 분리. 이 두 축의 조합이 ARM SoC의 전체 보안 모델을 형성.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: TrustZone 켜면 자동으로 안전
+
+    **실제**: TrustZone 은 "분리된 실행 환경" 인프라일 뿐, 그 위 SW (TEE) 와 정책이 정확해야 안전. 단순 enable 만으로는 misconfiguration 가능.
+
+    **왜 헷갈리는가**: "기능 켜짐 = 안전" 의 직관. 실제 보안은 SW 정책 정확성.
 ---
 
 ## Exception Level (EL0 ~ EL3)
@@ -505,14 +511,6 @@ Hypervisor Stage 2:
 </details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: TrustZone 켜면 자동으로 안전
-
-    **실제**: TrustZone 은 "분리된 실행 환경" 인프라일 뿐, 그 위 SW (TEE) 와 정책이 정확해야 안전. 단순 enable 만으로는 misconfiguration 가능.
-
-    **왜 헷갈리는가**: "기능 켜짐 = 안전" 의 직관. 실제 보안은 SW 정책 정확성.
-
 !!! warning "실무 주의점 — SCR_EL3.NS 비트 전파 누락"
     **현상**: NS world 에서 secure-only 메모리/레지스터를 read 했는데 BusError 없이 정상 데이터가 반환된다.
 

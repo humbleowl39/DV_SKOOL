@@ -1,6 +1,6 @@
 # Module 04 — Stack & Binary Search
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) Binary Search 변형(범위, parametric search) 을 invariant 로 정형화할 수 있다.
 5. (Evaluate) Stack vs Recursion / Binary Search vs Hash 의 trade-off 를 비교할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01–03
 - 재귀와 반복의 동등성 직관
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 Stack 은 **이전 상태를 미루어 두었다 다시 쓰는** 가장 단순하지만 강력한 도구이고, Binary Search 는 **단조성(monotonicity)** 만 있다면 어디든 통하는 보편적 패턴이다. 이 둘을 패턴으로 익히면 면접에서 "이게 stack/이진 탐색 문제인지" 를 인지하는 시간이 크게 줄어든다.
 
@@ -214,7 +214,6 @@ Binary Search 코딩 시:
   이 세 가지를 "Binary Search 3원칙"으로 외우면 실수 방지
 ```
 
-
 ---
 
 ## 부록: SystemVerilog 예제 코드
@@ -363,14 +362,6 @@ endmodule
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Binary Search = sorted array 에서만 가능
-
-    **실제**: Sorted 외에 단조 boolean 함수 (예: "이 capacity 로 가능?" 함수가 X 이상에서 true) 에도 적용 가능. parametric search.
-
-    **왜 헷갈리는가**: 교과서 첫 예시가 "sorted array" 라 "sorted = 필수" 로 일반화.
-
 !!! warning "실무 주의점 — `mid = (lo+hi)/2` 의 integer overflow"
     **현상**: 큰 배열(특히 C/C++/Java 의 `int`) 에서 binary search 가 음수 인덱스를 만들거나 segfault 로 죽는다. 작은 입력 테스트는 다 통과해서 production 에서 처음 발견된다.
 
@@ -385,7 +376,14 @@ endmodule
 
 ---
 
-## 핵심 정리 (Key Takeaways)
+!!! danger "❓ 흔한 오해"
+    **오해**: Binary Search = sorted array 에서만 가능
+
+    **실제**: Sorted 외에 단조 boolean 함수 (예: "이 capacity 로 가능?" 함수가 X 이상에서 true) 에도 적용 가능. parametric search.
+
+    **왜 헷갈리는가**: 교과서 첫 예시가 "sorted array" 라 "sorted = 필수" 로 일반화.
+
+## 핵심 정리
 
 - **Stack** — LIFO. Bracket matching, monotonic stack 류 문제의 단골 도구.
 - **Monotonic Stack** — "다음 큰/작은 원소" 류 문제를 O(N) 으로 푼다.
@@ -393,7 +391,7 @@ endmodule
 - **lower_bound / upper_bound** 차이 명확히 — off-by-one 의 주요 원인.
 - **재귀 vs Stack** — 깊이 큰 트리에서 재귀는 stack overflow 위험, 명시적 stack 으로 변환.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Tree & BFS/DFS →](../05_tree_bfs_dfs_explained/).
 - 퀴즈: [Module 04 Quiz](../quiz/04_stack_binary_search_explained_quiz/) — 5문항.

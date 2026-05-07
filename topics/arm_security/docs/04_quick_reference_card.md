@@ -16,14 +16,6 @@ ARM 보안 = Exception Level(EL0~3, 권한 수직 계층) × TrustZone(S/NS, 월
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: EL3 가 항상 활성화되어 있다
-
-    **실제**: EL3 가 OEM 에 따라 disable 될 수 있음 (예: Cortex-A 에서 EL3 미사용 SoC). 그 경우 secure ↔ non-secure 전환은 EL2 / hypervisor 가 담당.
-
-    **왜 헷갈리는가**: ARM 표준 spec 의 "EL3 가 monitor" 표현 때문에 항상 있다고 가정.
-
 !!! warning "실무 주의점 — Stage 2 translation 미설정으로 hypervisor 격리 실패"
     **현상**: VM-A 가 VM-B 또는 hypervisor 메모리를 그대로 read/write 할 수 있다.
 
@@ -37,6 +29,13 @@ ARM 보안 = Exception Level(EL0~3, 권한 수직 계층) × TrustZone(S/NS, 월
     EL0/1/2/3 × Secure/NS × Stage1/Stage2 = 다축 권한 모델. 각 조합에서 어떤 자원이 visible / accessible 한지 즉시 그리는 것이 마스터.
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: EL3 가 항상 활성화되어 있다
+
+    **실제**: EL3 가 OEM 에 따라 disable 될 수 있음 (예: Cortex-A 에서 EL3 미사용 SoC). 그 경우 secure ↔ non-secure 전환은 EL2 / hypervisor 가 담당.
+
+    **왜 헷갈리는가**: ARM 표준 spec 의 "EL3 가 monitor" 표현 때문에 항상 있다고 가정.
 
 ## 핵심 정리
 

@@ -1,6 +1,6 @@
 # Module 03 — Embedding & Vector DB
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,13 +10,13 @@
 4. (Analyze) IVF · HNSW · PQ 의 메모리/지연/정확도 trade-off 를 데이터 규모별로 분석할 수 있다.
 5. (Evaluate) 검색 품질을 MRR / nDCG 로 평가하고, 임베딩 모델 후보를 선정할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01–02 (LLM 기본, prompt)
 - 기본 선형대수 (벡터 내적, 노름)
 - 검색 시스템에 대한 직관 (precision / recall)
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰 수 없다. **임베딩 + 벡터 DB 가 외부 메모리** 역할을 한다. 이 두 컴포넌트의 품질이 RAG / Agent 시스템의 상한선이다.
 
@@ -32,6 +32,12 @@ LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰
 ## 핵심 개념
 **Embedding = 텍스트를 의미를 보존하는 고차원 벡터로 변환. Vector DB = 이 벡터들을 저장하고, 의미적 유사도로 빠르게 검색하는 데이터베이스. RAG의 핵심 인프라.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Vector DB 가 모든 검색을 대체한다
+
+    **실제**: 의미 검색은 keyword exact match (코드 식별자, 약어) 에 약함. Hybrid (dense + sparse/BM25) 가 production 표준.
+
+    **왜 헷갈리는가**: 최근 hype 로 "vector = 만능" 이라는 인상. 실제로는 보완 관계.
 ---
 
 ## Embedding이란?
@@ -398,14 +404,6 @@ DV 도메인 권장:
 > "MTEB(Massive Text Embedding Benchmark)가 표준이다. 56개 데이터셋에서 Retrieval, STS, Classification 등 8개 태스크 성능을 종합 평가한다. DV 도메인에서는 보안 요구사항(로컬 실행 필수)이 가장 먼저 필터링 기준이 되고, 그 다음 Retrieval 성능, 마지막으로 모델 크기/속도를 고려한다. 로컬 실행 시 BGE-large(326MB, Retrieval 54.3)가 성능-크기 균형이 좋다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Vector DB 가 모든 검색을 대체한다
-
-    **실제**: 의미 검색은 keyword exact match (코드 식별자, 약어) 에 약함. Hybrid (dense + sparse/BM25) 가 production 표준.
-
-    **왜 헷갈리는가**: 최근 hype 로 "vector = 만능" 이라는 인상. 실제로는 보완 관계.
-
 !!! warning "실무 주의점 — Embedding 모델 교체 시 기존 인덱스 전체 재구축 필요"
     **현상**: RAG 운영 중 더 성능 좋은 Embedding 모델로 교체하면, 기존 벡터 인덱스와 새 모델의 벡터 공간이 달라 검색 결과가 완전히 깨진다. 오류 없이 응답이 나오지만 관련 없는 문서가 검색되어 hallucination이 증가한다.
 
@@ -413,7 +411,7 @@ DV 도메인 권장:
 
     **점검 포인트**: 모델 교체 후 기존 인덱스의 `model_name` 메타데이터와 현재 사용 모델이 일치하는지 확인. Retrieval 정확도 지표(Top-5 Recall)를 교체 전후 비교하고, 불일치 시 전체 문서에 대해 재임베딩 및 인덱스 재구축 필수.
 
-## 핵심 정리 (Key Takeaways)
+## 핵심 정리
 
 - **Embedding = 의미를 좌표로** — 의미가 비슷한 텍스트가 가까운 벡터.
 - **ANN 알고리즘** — IVF (cluster), HNSW (graph), PQ (compression). 선택은 데이터 규모와 메모리 예산.
@@ -421,7 +419,7 @@ DV 도메인 권장:
 - **임베딩 모델 선정** — MTEB 벤치마크 + 도메인 특화 fine-tune 검토.
 - **품질 평가** — top-k recall, MRR, nDCG. retrieval 이 망가지면 LLM 이 아무리 좋아도 답이 망가진다.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [RAG →](../04_rag/) — embedding/vector DB 를 LLM 호출과 결합.
 - 퀴즈: [Module 03 Quiz](../quiz/03_embedding_vectordb_quiz/) — ANN, FAISS, 모델 선택 5문항.

@@ -26,6 +26,12 @@
 ## 핵심 개념
 **Boot Mode는 OTP > Pinstrap > Default 우선순위로 결정된다. 각 부팅 장치는 프로토콜 복잡도와 초기화 시간이 다르다. OTP는 양산 후 변경 불가이므로, Fallback 경로는 사전에 설계되어야 한다.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Production mode 만 검증하면 충분
+
+    **실제**: Test/Debug mode 가 production 에서도 활성화되어 있으면 (mode pin 미고정) 공격자가 그 path 로 우회 가능. Secondary path 검증이 critical.
+
+    **왜 헷갈리는가**: "제품 = production path" 만 보는 mindset. 공격자는 secondary 노린다.
 ---
 
 ## Boot Mode 결정
@@ -396,14 +402,6 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 > "FIP(Firmware Image Package)는 BL2, BL31, BL32, BL33과 각각의 인증서를 하나의 패키지로 묶는 ARM TF-A 표준이다. UUID 기반 검색으로 이미지 오프셋 하드코딩 없이 유연하게 이미지를 찾을 수 있고, 벤더 확장도 가능하다. DV 관점에서는 FIP 파싱의 Negative 시나리오 — 손상된 ToC, 잘린 이미지, 잘못된 UUID — 가 중요한 검증 항목이다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Production mode 만 검증하면 충분
-
-    **실제**: Test/Debug mode 가 production 에서도 활성화되어 있으면 (mode pin 미고정) 공격자가 그 path 로 우회 가능. Secondary path 검증이 critical.
-
-    **왜 헷갈리는가**: "제품 = production path" 만 보는 mindset. 공격자는 secondary 노린다.
-
 !!! warning "실무 주의점 — Secondary boot 경로의 검증 누락 (test mode pin 우회)"
     **현상**: Production silicon 에서 정상 boot 는 깨끗한데, test/debug 용 strap pin 을 특정 조합으로 묶으면 인증 검사를 건너뛰는 secondary boot 경로가 살아있어 임의 image 가 부팅된다.
 

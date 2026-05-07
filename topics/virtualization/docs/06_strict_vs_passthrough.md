@@ -27,6 +27,12 @@
 
 > 이 Unit은 DV TechForum #55 발표 내용을 기반으로 정리한 것이다.
 
+!!! danger "❓ 흔한 오해"
+    **오해**: IOMMU 가 자동으로 보안 제공
+
+    **실제**: IOMMU 가 켜져도 page table 정확성 + DMA fault 처리 SW 가 정확해야 안전. 단순 "IOMMU on" 은 불충분.
+
+    **왜 헷갈리는가**: "IOMMU = secure DMA" 마케팅 메시지의 단순화. 실제는 SW 정책 + HW 협업.
 ---
 
 ## Strict System 상세
@@ -351,14 +357,6 @@ Azure:
 > "성능: Strict System의 VM Exit 오버헤드가 100Gbps+ 네트워킹, NVMe에서 병목이 되었고, 클라우드 고객은 bare metal 대비 성능 격차를 허용하지 않는다. 보안: 전통적으로 pass-through = 보안 약화였으나, Nitro는 이를 HW로 해결했다. Nitro Card가 네트워크/스토리지/보안을 전용 칩에 오프로드하고, IOMMU + HW 격리로 pass-through에서도 강력한 보안을 유지한다. 핵심 전환: 보안을 SW 중재가 아닌 HW(IOMMU, Nitro Card)로 보장하면서 성능은 pass-through로 극대화하는 모델이다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: IOMMU 가 자동으로 보안 제공
-
-    **실제**: IOMMU 가 켜져도 page table 정확성 + DMA fault 처리 SW 가 정확해야 안전. 단순 "IOMMU on" 은 불충분.
-
-    **왜 헷갈리는가**: "IOMMU = secure DMA" 마케팅 메시지의 단순화. 실제는 SW 정책 + HW 협업.
-
 !!! warning "실무 주의점 — IOMMU disable 실수로 DMA 가 host RAM 직접 access"
     **현상**: Passthrough 된 device 가 VM 의 게스트 메모리 영역을 넘어 host kernel/다른 VM 메모리까지 read/write 가능 → 보안 격리 붕괴.
 

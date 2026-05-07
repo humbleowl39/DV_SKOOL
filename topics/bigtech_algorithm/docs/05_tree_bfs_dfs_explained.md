@@ -1,6 +1,6 @@
 # Module 05 — Tree & BFS/DFS
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) 재귀 DFS 의 시간/공간 복잡도와 명시적 stack 변환을 분석할 수 있다.
 5. (Evaluate) "BFS 가 좋은가, DFS 가 좋은가" 를 메모리/조기 종료 관점에서 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01–04
 - 재귀의 호출 stack 동작 이해
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 Tree / Graph 탐색은 **가장 큰 문제 군** 이다. 상속 / 트리 / 의존성 / 그래프 모두 같은 패턴 (BFS / DFS) 으로 풀린다. 이 모듈은 "이 문제가 BFS 인지 DFS 인지" 를 빠르게 분류하는 직관을 만든다.
 
@@ -222,7 +222,6 @@ DFS 3가지 순회 — 면접에서 물어보면:
   - 편향 트리 (연결 리스트처럼 한쪽만)
   - 음수 값 포함 (Path Sum에서 주의 — 경로 중간에 합이 target이어도 리프가 아니면 X)
 ```
-
 
 ---
 
@@ -476,14 +475,6 @@ endmodule
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: BFS 와 DFS 는 같은 결과를 다른 순서로
-
-    **실제**: BFS 가 "가장 가까운 X" 류에 자연스럽고, DFS 는 "경로 reconstruction" 류에 자연. 결과가 다른 케이스 다수 (예: 최단 경로).
-
-    **왜 헷갈리는가**: "순회" 라는 같은 카테고리 → 같은 결과로 단순화. 실제는 다른 의도.
-
 !!! warning "실무 주의점 — 재귀 깊이로 인한 stack overflow 임계"
     **현상**: skewed tree / 긴 linked-list 형태 그래프에서 DFS 재귀가 도중에 죽는다. Python 은 대략 N≈1000, C++ 은 환경에 따라 수만 깊이에서 한계.
 
@@ -498,7 +489,14 @@ endmodule
 
 ---
 
-## 핵심 정리 (Key Takeaways)
+!!! danger "❓ 흔한 오해"
+    **오해**: BFS 와 DFS 는 같은 결과를 다른 순서로
+
+    **실제**: BFS 가 "가장 가까운 X" 류에 자연스럽고, DFS 는 "경로 reconstruction" 류에 자연. 결과가 다른 케이스 다수 (예: 최단 경로).
+
+    **왜 헷갈리는가**: "순회" 라는 같은 카테고리 → 같은 결과로 단순화. 실제는 다른 의도.
+
+## 핵심 정리
 
 - **BFS** — Queue, level by level. 최단 경로 / 가장 가까운 X 류 문제.
 - **DFS** — Stack 또는 재귀, 깊이 우선. 경로 합 / 조합 / Path Reconstruction.
@@ -506,7 +504,7 @@ endmodule
 - **메모리** — BFS 는 가장 넓은 level 만큼, DFS 는 깊이만큼.
 - **방문 표시 (visited)** — 그래프에서 무한 루프 방지의 핵심.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Dynamic Programming →](../06_dynamic_programming_explained/).
 - 퀴즈: [Module 05 Quiz](../quiz/05_tree_bfs_dfs_explained_quiz/) — 5문항.

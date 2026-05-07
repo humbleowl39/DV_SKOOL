@@ -24,14 +24,6 @@ MI/PHY = DDR 전기 신호 변환 + Training(타이밍 캘리브레이션)
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Timing parameter 만 외우면 마스터다
-
-    **실제**: Parameter 값보다 "왜 그 값인지" + "어떤 workload 에서 그 값이 critical 한지" 의 직관이 마스터의 핵심.
-
-    **왜 헷갈리는가**: Cheat sheet 의 숫자가 정량적이라 "외우기 = 마스터" 같은 학습 패턴 유도. 실제로는 정성적 직관.
-
 !!! warning "실무 주의점 — tFAW + Bank conflict 동시 발생 시 throughput cliff"
     **현상**: 평균 BW는 정상이나 특정 트래픽 패턴에서 effective BW가 50% 이하로 급락하고 latency tail 이 길어짐.
 
@@ -45,6 +37,13 @@ MI/PHY = DDR 전기 신호 변환 + Training(타이밍 캘리브레이션)
     tRCD, tRP, tRAS, tFAW, tRFC 의 위반 시 어떤 증상이 나오는지 즉시 떠오르는 것이 마스터.
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Timing parameter 만 외우면 마스터다
+
+    **실제**: Parameter 값보다 "왜 그 값인지" + "어떤 workload 에서 그 값이 critical 한지" 의 직관이 마스터의 핵심.
+
+    **왜 헷갈리는가**: Cheat sheet 의 숫자가 정량적이라 "외우기 = 마스터" 같은 학습 패턴 유도. 실제로는 정성적 직관.
 
 ## 핵심 정리
 

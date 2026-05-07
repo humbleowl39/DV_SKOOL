@@ -27,6 +27,12 @@
 
 "TZASC/SMMU/GIC가 TrustZone의 '경비원'이라면, Secure Enclave는 아예 '별도 건물' — 건물 사이에도 출입증을 검사한다."
 
+!!! danger "❓ 흔한 오해"
+    **오해**: TEE = SGX / SEV 와 동일
+
+    **실제**: TEE 는 ARM TrustZone-based, SGX 는 Intel enclave (다른 모델 — runtime 격리 + memory 암호화), SEV 는 AMD VM 단위 암호화. 카테고리 다름.
+
+    **왜 헷갈리는가**: "보안 enclave" 라는 generic 용어가 다른 model 들 모두를 포괄해서.
 ---
 
 ## Unit 2와의 관계
@@ -442,14 +448,6 @@ Internal과 External Secure Enclave는 SPI 버스로 연결되는데, SPI는 SoC
 </details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: TEE = SGX / SEV 와 동일
-
-    **실제**: TEE 는 ARM TrustZone-based, SGX 는 Intel enclave (다른 모델 — runtime 격리 + memory 암호화), SEV 는 AMD VM 단위 암호화. 카테고리 다름.
-
-    **왜 헷갈리는가**: "보안 enclave" 라는 generic 용어가 다른 model 들 모두를 포괄해서.
-
 ## 핵심 정리
 
 - **TrustZone 한계**: CPU/cache/DRAM 공유 → side-channel (Spectre/Meltdown), Trusted OS 취약점, 자원 경합 latency.

@@ -32,6 +32,12 @@
 ## 핵심 개념
 **SVA = 설계의 기대 동작을 시간적 관계로 표현하는 선언적 언어. 시뮬레이션과 Formal 모두에서 동작하며, assert(버그 검출), assume(입력 제약), cover(도달성 확인)의 세 역할.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Cover 는 옵션이고 assert 만 있으면 충분하다
+
+    **실제**: Cover 없이 assert PROVEN 이면 "antecedent 가 한 번도 안 발생해서 vacuously true" 일 수 있다. assert 와 cover 는 짝.
+
+    **왜 헷갈리는가**: Cover 는 "발생한 경우만 본다" 는 인상 + assert 가 메인 메뉴라는 학습 순서 때문에 cover 가 부수적으로 보임.
 ---
 
 ## SVA 기본 구조
@@ -515,14 +521,6 @@ SVA에서 존재하지 않는 신호를 참조하면:
 > "시퀀스의 특정 시점에서 값을 캡처하여 나중 시점과 비교해야 할 때 사용한다. 예를 들어 'write한 데이터가 read에서 정확히 나오는가'를 검증하려면, write 시점의 data를 로컬 변수에 저장하고 read 시점에 비교한다. 로컬 변수는 sequence 안에서만 선언 가능하고, 여러 시퀀스 인스턴스가 동시에 활성화되면 각각 독립적인 변수를 가진다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Cover 는 옵션이고 assert 만 있으면 충분하다
-
-    **실제**: Cover 없이 assert PROVEN 이면 "antecedent 가 한 번도 안 발생해서 vacuously true" 일 수 있다. assert 와 cover 는 짝.
-
-    **왜 헷갈리는가**: Cover 는 "발생한 경우만 본다" 는 인상 + assert 가 메인 메뉴라는 학습 순서 때문에 cover 가 부수적으로 보임.
-
 !!! warning "실무 주의점 — Vacuous Pass (cover 누락)"
     **현상**: assert property 가 "PROVEN" 으로 통과해 안심하고 있었는데, 실제로는 antecedent 자체가 한 번도 도달하지 못해 명제가 공허하게 참(vacuously true) 이었다. 버그를 잡지 못하고 sign-off 한다.
 

@@ -15,7 +15,7 @@ Python, 머신러닝/딥러닝 개요, API 호출 경험
 
 ## 🗺️ 학습 경로
 
-<div class="concept-dag">
+<div class="concept-dag dag-long">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
     <a class="concept-dag-node" href="01_llm_fundamentals/">

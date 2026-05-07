@@ -1,6 +1,6 @@
 # Module 06 — Strategy Selection (Prompt vs RAG vs Fine-tune)
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) 같은 task 에 대해 4가지 조합 (Prompt / RAG / FT / FT+RAG) 의 비용·정확도 trade-off 표를 작성할 수 있다.
 5. (Evaluate) 평가 셋과 metric 을 정해 ROI 를 계산할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 02 (prompt) · 03 (embedding) · 04 (RAG) · 05 (Agent)
 - 일반적 ML 평가 (precision, recall, F1)
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 엔지니어가 가장 자주 받는 질문이 "RAG 가 좋아요, fine-tune 이 좋아요?" 이다. 정답은 "둘 다 / 둘 다 아님 / 같이 써야 함" 중 하나이며, **선택 기준** 이 핵심이다. 잘못 고르면 비용을 5배 쓰고도 결과가 나빠진다.
 
@@ -31,6 +31,12 @@
 ## 핵심 개념
 **세 가지 접근법은 상호 배타적이 아니라 상호 보완적이다. 데이터 규모, 보안 요구, 업데이트 빈도, 작업 복잡도에 따라 조합하여 사용한다.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Fine-tune 이 가장 강력한 솔루션
+
+    **실제**: Fine-tune 은 (1) 비용 ↑ (2) 갱신 어려움 (3) 도메인 지식보다 형식/스타일 내재화에 강함. RAG 가 더 적합한 경우가 다수.
+
+    **왜 헷갈리는가**: "가중치 학습 = 진짜 학습" 이라는 mental model. 실제는 task-dependent.
 ---
 
 ## 3가지 접근법 비교
@@ -419,14 +425,6 @@ Fine-tuning이 비효율적인 경우:
 > "50-100개 태스크의 평가 데이터셋을 구성하고, 각 접근법(Prompt Only, RAG+Prompt, Fine-tuned, Fine-tuned+RAG)으로 실행한다. 코드 생성은 컴파일/시뮬레이션 통과율, 분석은 F1 Score, 자유형은 LLM-as-Judge로 자동 평가하고, 서브셋을 전문가가 블라인드 평가하여 교차 검증한다. 최종적으로 '성능 향상 / 추가 비용' 비율로 비용 효율을 판단한다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Fine-tune 이 가장 강력한 솔루션
-
-    **실제**: Fine-tune 은 (1) 비용 ↑ (2) 갱신 어려움 (3) 도메인 지식보다 형식/스타일 내재화에 강함. RAG 가 더 적합한 경우가 다수.
-
-    **왜 헷갈리는가**: "가중치 학습 = 진짜 학습" 이라는 mental model. 실제는 task-dependent.
-
 !!! warning "실무 주의점 — Fine-tune 후 기반 능력 손상(Catastrophic Forgetting)"
     **현상**: 도메인 특화 데이터로 Fine-tuning하면 해당 태스크 성능은 높아지지만, 일반 추론·코드 생성 등 기반 능력이 크게 저하되는 경우가 있다.
 
@@ -434,7 +432,7 @@ Fine-tuning이 비효율적인 경우:
 
     **점검 포인트**: Fine-tuning 전후로 도메인 태스크 성능(목표)과 일반 벤치마크(MMLU, HumanEval 등) 성능을 함께 측정. 성능 저하가 허용 범위를 초과하면 학습률을 낮추거나 기반 데이터를 10~20% 혼합(Replay)하는 방식으로 재학습.
 
-## 핵심 정리 (Key Takeaways)
+## 핵심 정리
 
 - **Prompt = 행동 변경**, **RAG = 지식 추가**, **Fine-tune = 형식·스타일 내재화**.
 - **데이터 양 ↑ + 정형 task** → fine-tune 유리. **변동성 ↑** → RAG 유리.
@@ -442,7 +440,7 @@ Fine-tuning이 비효율적인 경우:
 - **항상 Prompt 부터** — 프롬프트로 한계 확인 후 RAG → fine-tune 순서로 escalation.
 - **평가 없는 선택은 위험** — 50~100 태스크 평가셋 + LLM-as-judge / 전문가 블라인드 병행.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [DV Application →](../07_dv_application/) — 위 전략을 DV/EDA 워크플로에 적용.
 - 퀴즈: [Module 06 Quiz](../quiz/06_strategy_selection_quiz/) — 5문항.

@@ -32,6 +32,12 @@
 ## 핵심 개념
 **Memory Controller(MC) = SoC의 메모리 접근 요청을 DRAM 명령(ACT/RD/WR/PRE/REF)으로 변환하고, 타이밍 제약을 준수하면서 처리량을 최대화하는 스케줄러. 성능의 핵심은 Row Hit 극대화와 Bank-level Parallelism 활용.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Open-page 정책이 항상 좋다
+
+    **실제**: Open-page 는 row hit 시 빠르지만 row conflict (다른 row access) 시 페널티 큼. workload 가 random 이면 close-page 가 더 좋을 수 있음.
+
+    **왜 헷갈리는가**: "row 열어 두면 다음에 빠름" 만 보고 row conflict 페널티는 직관에 잘 안 들어와서.
 ---
 
 ## MC 블록 다이어그램
@@ -409,14 +415,6 @@ MC의 역할:
 > "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → MRS 명령으로 Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → ZQ Calibration(임피던스 보정) → Training(WL, DQ, Eye, VREF) → Refresh 시작. 특히 MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Open-page 정책이 항상 좋다
-
-    **실제**: Open-page 는 row hit 시 빠르지만 row conflict (다른 row access) 시 페널티 큼. workload 가 random 이면 close-page 가 더 좋을 수 있음.
-
-    **왜 헷갈리는가**: "row 열어 두면 다음에 빠름" 만 보고 row conflict 페널티는 직관에 잘 안 들어와서.
-
 !!! warning "실무 주의점 — tFAW 위반으로 Rank 내 동시 ACT 과전류 위험"
     **현상**: 짧은 시간 내에 서로 다른 Bank에 4개 초과의 ACT 명령이 발행되어 DRAM의 순간 전류가 스펙을 초과, 전압 강하(Vdd Droop)로 인한 데이터 오류 발생.
     

@@ -31,6 +31,12 @@
 ## 핵심 개념
 **TLB = 주소 변환 결과(VPN→PPN)를 캐싱하는 고속 하드웨어 캐시. Page Walk의 수백 배 지연을 1사이클로 줄여주는, MMU 성능의 핵심 컴포넌트.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: TLB invalidate = 모든 entry 삭제
+
+    **실제**: TLBI ALL 은 전체 무효화이지만, TLBI by VA / by ASID 는 일부만 무효화. 전체 무효화는 비싸므로 fine-grained 가 표준.
+
+    **왜 헷갈리는가**: "clear = 전부 지움" 이라는 직관 + ASID/VA 단위 invalidate 가 디테일이라 처음엔 "전체 = 안전" 으로 단순화.
 ---
 
 ## TLB가 필요한 이유
@@ -419,14 +425,6 @@ DV 검증 핵심:
 > "HW-Managed(ARM, x86, RISC-V)는 TLB Miss 시 HW Walk Engine이 자동으로 Page Table을 탐색하여 TLB를 채운다. SW-Managed(MIPS)는 Miss 시 Exception이 발생하고 OS Handler가 직접 TLB를 채운다. HW 방식이 수십~수백 cycle 더 빠르고, SW 개입이 없어 파이프라인 효율이 좋다. 현재 주류는 HW-Managed이며, DV 관점에서는 Walk Engine의 정확성 검증이 핵심이다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: TLB invalidate = 모든 entry 삭제
-
-    **실제**: TLBI ALL 은 전체 무효화이지만, TLBI by VA / by ASID 는 일부만 무효화. 전체 무효화는 비싸므로 fine-grained 가 표준.
-
-    **왜 헷갈리는가**: "clear = 전부 지움" 이라는 직관 + ASID/VA 단위 invalidate 가 디테일이라 처음엔 "전체 = 안전" 으로 단순화.
-
 !!! warning "실무 주의점 — TLB Shootdown 순서 오류로 stale 변환 사용"
     **현상**: Multi-core 환경에서 한 코어가 PTE를 변경했음에도 다른 코어가 이전 변환 결과를 계속 사용하여 잘못된 PA로 접근, 데이터 오염 또는 보안 취약점 발생.
     

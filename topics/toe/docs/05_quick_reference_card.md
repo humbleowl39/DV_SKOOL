@@ -16,14 +16,6 @@ TOE = TCP/IP 프로토콜 처리(Checksum/Segmentation/Retx/Flow Control)를 CPU
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: TOE 가 적용되면 항상 throughput ↑
-
-    **실제**: TOE 가 효과 있는 워크로드 (small packet, many connection, CPU bound). large MTU + bulk transfer 에서는 jumbo + GSO 가 더 효과적.
-
-    **왜 헷갈리는가**: "HW = 항상 빠름" 이라는 직관. 실제로는 workload-dependent.
-
 !!! warning "실무 주의점 — LRO(Large Receive Offload)와 IP Fragment 혼용"
     **현상**: LRO를 활성화한 환경에서 IP Fragment 패킷이 유입되면 재조합 오류가 발생하거나, 이후 정상 TCP 세그먼트도 LRO로 묶이지 않는다.
     
@@ -37,6 +29,13 @@ TOE = TCP/IP 프로토콜 처리(Checksum/Segmentation/Retx/Flow Control)를 CPU
     정상 / RTO / fast retransmit / SACK / congestion event / RST 의 동작을 즉시 그릴 수 있는 것이 마스터.
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: TOE 가 적용되면 항상 throughput ↑
+
+    **실제**: TOE 가 효과 있는 워크로드 (small packet, many connection, CPU bound). large MTU + bulk transfer 에서는 jumbo + GSO 가 더 효과적.
+
+    **왜 헷갈리는가**: "HW = 항상 빠름" 이라는 직관. 실제로는 workload-dependent.
 
 ## 핵심 정리
 

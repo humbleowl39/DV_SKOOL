@@ -1,6 +1,6 @@
 # Module 08 — Quick Reference Card
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -8,11 +8,11 @@
 2. (Apply) 면접/리뷰에서 30초 이내 답변할 수 있는 답변 템플릿을 갖춘다.
 3. (Evaluate) 자기 시스템의 부족한 영역(LLM 선택, RAG 품질, Agent 통제) 을 cheat sheet 와 비교 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01 ~ 07.
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 복습 + 인터뷰/리뷰 직전의 1-page cheat sheet. 학습한 내용을 빠르게 인덱스화한다.
 
@@ -24,6 +24,13 @@
     Task 특성 → 전략 매핑을 즉시 그리는 것이 마스터. 모든 case 를 RAG 로 풀려고 하면 hammer-nail.
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: AI 는 더 큰 모델이면 다 해결
+
+    **실제**: Frontier 모델조차 hallucination, context 한계, retrieval 부재로 실패. 모델 ↑ 보다 "task 분해 + RAG 품질 + Agent loop guard" 가 더 효과적.
+
+    **왜 헷갈리는가**: AI 발전이 "model 크기" 로 매년 보고되어 "크기 = 능력" 단순화.
 
 ## 핵심 정리
 
@@ -144,14 +151,6 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 | Multi-Agent System | 복잡한 DV 워크플로 자동화 |
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: AI 는 더 큰 모델이면 다 해결
-
-    **실제**: Frontier 모델조차 hallucination, context 한계, retrieval 부재로 실패. 모델 ↑ 보다 "task 분해 + RAG 품질 + Agent loop guard" 가 더 효과적.
-
-    **왜 헷갈리는가**: AI 발전이 "model 크기" 로 매년 보고되어 "크기 = 능력" 단순화.
-
 !!! warning "실무 주의점 — 계측 없는 Agent 배포는 운영 부채"
     **현상**: Agent 파이프라인을 계측 없이 운영하면, 어느 단계(Retrieval, LLM, Tool 호출)에서 실패가 발생했는지 사후에 추적할 수 없어 장애 대응 시간이 수 배 길어진다.
 
@@ -159,14 +158,14 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 
     **점검 포인트**: LangSmith, Langfuse 등의 tracing 도구나 자체 미들웨어로 `retrieval_time`, `llm_time`, `tool_call_count`, `total_cost`를 스텝 단위로 로깅. 도입 첫날부터 대시보드를 구성해 비용 이상 증가 알림을 설정.
 
-## 핵심 정리 (Key Takeaways)
+## 핵심 정리
 
 - **LLM 호출만이 끝이 아니다** — Prompt → RAG → Agent → Eval 의 4축으로 구성.
 - **품질의 상한 = 검색 품질** — RAG 의 retrieval 단계가 제일 먼저 깨진다.
 - **Agent loop 는 비용 폭주에 취약** — max-step / budget guard 필수.
 - **계측 없는 도입은 운영 부채** — 도입 첫날부터 metric 수집 파이프라인을 만들어라.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 퀴즈로 마무리: [전체 Quiz Index](../quiz/) — 8개 모듈 각 5문항씩, 총 40문항.
 - 추가 학습: LangChain/LangGraph, LoRA fine-tune, RAGAS, Multi-agent system.

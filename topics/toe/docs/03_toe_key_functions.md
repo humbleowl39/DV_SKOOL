@@ -26,6 +26,12 @@
 ## 핵심 개념
 **TOE가 HW로 처리하는 5대 기능: Checksum, Segmentation/Reassembly, Retransmission, Flow Control, Congestion Control. 각각이 패킷마다 수행되므로 HW Offload의 효과가 극대화되는 영역.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: RTO 는 고정 값이다
+
+    **실제**: RTO 는 RTT(Round-Trip Time) 측정 기반 동적 계산 (RFC 6298). 네트워크 상태 변화에 따라 자동 조정.
+
+    **왜 헷갈리는가**: "timeout = 고정 상수" 의 직관. 실제로는 EWMA 기반 동적 추정.
 ---
 
 ## 1. Checksum — 무결성 검증
@@ -587,14 +593,6 @@ TCP Options 필드는 최대 40바이트(헤더 최대 60B - 고정 20B). Timest
 </details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: RTO 는 고정 값이다
-
-    **실제**: RTO 는 RTT(Round-Trip Time) 측정 기반 동적 계산 (RFC 6298). 네트워크 상태 변화에 따라 자동 조정.
-
-    **왜 헷갈리는가**: "timeout = 고정 상수" 의 직관. 실제로는 EWMA 기반 동적 추정.
-
 !!! warning "실무 주의점 — RTO 타이머와 Fast Retransmit 동시 트리거"
     **현상**: 패킷 손실 시나리오에서 동일 세그먼트가 두 번 재전송되며 수신 측에서 중복 ACK 폭주가 발생한다.
     

@@ -25,7 +25,7 @@
 
 ## 🗺️ 학습 경로
 
-<div class="concept-dag">
+<div class="concept-dag dag-long">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
     <a class="concept-dag-node" href="01_virtualization_fundamentals/">

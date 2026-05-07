@@ -30,6 +30,12 @@
 ## 핵심 개념
 **AXI-Stream = 주소 없는 단방향 스트리밍 프로토콜. 연속적 데이터 흐름(패킷, 프레임, 샘플)을 고속으로 전달. AXI(메모리 매핑)와 달리 주소 개념이 없으며, 데이터의 시작/끝을 TLAST로 표시.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: AXI-Stream 도 burst 라는 개념이 있다
+
+    **실제**: Stream 은 burst 가 없다 — 매 beat 가 독립. TLAST 가 "패킷의 마지막 beat" 를 표시하는 것이 burst 와 가장 가까운 개념.
+
+    **왜 헷갈리는가**: AXI 패밀리라는 이름 때문에 AXI4 의 burst 개념이 그대로 적용된다고 가정하기 쉬움.
 ---
 
 ## AXI vs AXI-Stream 핵심 차이
@@ -395,14 +401,6 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
    <details><summary>정답</summary>TDEST. TID는 스트림 식별(같은 출력 포트에서 스트림을 구분), TDEST는 물리적 라우팅 목적지 결정.</details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: AXI-Stream 도 burst 라는 개념이 있다
-
-    **실제**: Stream 은 burst 가 없다 — 매 beat 가 독립. TLAST 가 "패킷의 마지막 beat" 를 표시하는 것이 burst 와 가장 가까운 개념.
-
-    **왜 헷갈리는가**: AXI 패밀리라는 이름 때문에 AXI4 의 burst 개념이 그대로 적용된다고 가정하기 쉬움.
-
 !!! warning "실무 주의점 — TVALID hold 중 TKEEP/TUSER 변경"
     **현상**: 같은 beat 의 처음과 끝에서 TKEEP/TLAST/TUSER 값이 달라져 packet 이 잘리거나 sideband flag 가 잘못된 beat 에 부착된다. 시뮬레이션은 우연히 통과하지만 게이트 sim 또는 실제 칩에서 random fail.
 

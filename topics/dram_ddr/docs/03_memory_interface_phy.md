@@ -31,6 +31,12 @@
 ## 핵심 개념
 **Memory Interface(MI) / PHY = MC의 명령을 DDR 전기 신호로 변환하고, 고속 데이터 전송을 위한 타이밍 캘리브레이션(Training)을 수행하는 물리 계층. PVT(공정/전압/온도) 변동에도 안정적인 데이터 수신을 보장하는 것이 핵심.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: PHY 는 한 번 training 하면 그대로다
+
+    **실제**: Training 은 boot 시 + 주기적 재training (온도 / 전압 변화 대응) 필요. 운영 중 ZQ Calibration 도 수십 초마다 자동.
+
+    **왜 헷갈리는가**: "한 번 잘 맞추면 계속 맞을 것" 이라는 직관. 실제로는 환경 drift 보정이 상시적.
 ---
 
 ## DDR 신호 구성
@@ -377,14 +383,6 @@ ZQ Calibration:
 > "CA Training(CS Training)이 가장 중요한 추가 항목이다. DDR5에서 CA 버스가 멀티플렉싱으로 변경되어 타이밍 마진이 축소되었기 때문이다. 또한 DFE 계수 Training, Read/Write Preamble Training이 추가되었다. LPDDR5에서는 WCK2CK Training(WCK-CK 위상 정렬)과 CBT(Command Bus Training)가 추가된다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: PHY 는 한 번 training 하면 그대로다
-
-    **실제**: Training 은 boot 시 + 주기적 재training (온도 / 전압 변화 대응) 필요. 운영 중 ZQ Calibration 도 수십 초마다 자동.
-
-    **왜 헷갈리는가**: "한 번 잘 맞추면 계속 맞을 것" 이라는 직관. 실제로는 환경 drift 보정이 상시적.
-
 !!! warning "실무 주의점 — ZQ Calibration 타이밍 위반으로 ODT 임피던스 오동작"
     **현상**: 온도 변화 이후 Write 데이터가 Eye 중심에서 벗어나 비트 오류율이 증가하거나, 주기적 ZQ Calibration 도중 RD/WR 명령이 겹쳐 데이터 오염 발생.
     

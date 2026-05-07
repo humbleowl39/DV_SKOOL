@@ -26,6 +26,12 @@
 ## 핵심 개념
 **메모리 가상화 = VM마다 독립된 물리 메모리 공간이 있다는 환상을 제공하면서, 실제로는 하이퍼바이저가 물리 메모리를 분할/관리하는 것. 핵심 과제는 VA→IPA→PA 2단계 주소 변환의 성능 오버헤드 최소화.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Stage 2 가 켜지면 guest 가 자동으로 격리된다
+
+    **실제**: Stage 2 가 켜져도 hypervisor 가 page table 잘못 채우면 cross-VM access 가능. 격리 = HW + SW 정책 정확성.
+
+    **왜 헷갈리는가**: "기능 켜짐 = 안전" 의 직관. 정책 SW 가 critical.
 ---
 
 ## 왜 메모리 가상화가 필요한가?
@@ -293,14 +299,6 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
 > "Stage 1(VA→IPA)은 Guest OS가 관리하므로 프로세스별 Working Set이 명확하고 접근 패턴이 예측 가능해 prefetch와 캐시가 효과적이다. 반면 Stage 2(IPA→PA)는 Hypervisor가 관리하며, 각 VM의 IPA가 물리 메모리에 불연속 매핑되고, VM 생성/삭제/마이그레이션에 따라 배치가 변한다. 결과적으로 Stage 2 PT의 spatial locality가 낮고, VM 수 증가 시 TLB pressure도 증가한다. 이것이 latency/bandwidth 민감 시스템의 핵심 병목이다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Stage 2 가 켜지면 guest 가 자동으로 격리된다
-
-    **실제**: Stage 2 가 켜져도 hypervisor 가 page table 잘못 채우면 cross-VM access 가능. 격리 = HW + SW 정책 정확성.
-
-    **왜 헷갈리는가**: "기능 켜짐 = 안전" 의 직관. 정책 SW 가 critical.
-
 !!! warning "실무 주의점 — 2-stage translation 후 TLB invalidate 누락"
     **현상**: Guest 가 page 를 unmap/remap 했음에도 stale 한 IPA→PA 매핑으로 옛 데이터를 읽거나 잘못된 페이지에 write.
 

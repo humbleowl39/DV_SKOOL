@@ -1,6 +1,6 @@
 # Module 05 — Agent Architecture
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) Agent 가 무한 루프 / 비용 폭주 / 도구 오용에 빠지는 원인을 분석할 수 있다.
 5. (Evaluate) MCP 같은 표준이 실무 도입에 가져오는 장단점을 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 02 (prompt) · Module 04 (RAG)
 - 기본 함수 호출 / API 디자인 감각
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 LLM 단일 호출로 풀 수 없는 작업(다단계 추론, 환경 상호작용, 자기 점검) 을 풀려면 **agent 패턴** 이 필요하다. DV / 코딩 / 분석 자동화 등 거의 모든 실무 응용은 결국 agent 형태로 수렴한다.
 
@@ -31,6 +31,12 @@ LLM 단일 호출로 풀 수 없는 작업(다단계 추론, 환경 상호작용
 ## 핵심 개념
 **Agent = LLM이 외부 도구(Tool)를 사용하고, 계획(Plan)을 세우고, 기억(Memory)을 유지하면서 복잡한 작업을 자율적으로 수행하는 시스템. 단순 Q&A를 넘어 실제 행동을 취하는 AI.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Agent 는 자동으로 잘 멈춘다
+
+    **실제**: Agent loop 는 max_step / max_token / cost guard 없으면 무한 루프 + 비용 폭주. 종료 조건 명시 필수.
+
+    **왜 헷갈리는가**: demo 에서 짧은 task 만 보면 자율 종료가 자연스러워 보이지만 production 은 guard 필수.
 ---
 
 ## Agent vs 일반 LLM
@@ -618,14 +624,6 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 > "Model Context Protocol은 Anthropic이 제안한 LLM-도구 연결 표준이다. USB-C처럼 하나의 표준으로 어떤 LLM/Agent에서든 도구를 사용할 수 있게 한다. DV에서의 가치는 VCS 컴파일러, FAISS 검색, 파형 분석기 등을 MCP Server로 한 번 구현하면, Claude Code, VS Code Copilot, 커스텀 Agent 어디서든 동일하게 사용 가능하다는 것이다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Agent 는 자동으로 잘 멈춘다
-
-    **실제**: Agent loop 는 max_step / max_token / cost guard 없으면 무한 루프 + 비용 폭주. 종료 조건 명시 필수.
-
-    **왜 헷갈리는가**: demo 에서 짧은 task 만 보면 자율 종료가 자연스러워 보이지만 production 은 guard 필수.
-
 !!! warning "실무 주의점 — Agent Infinite Loop로 인한 비용 폭주"
     **현상**: ReAct Agent가 도구 호출 실패나 모호한 결과를 만나면 동일한 Action을 반복 시도하는 루프에 빠져, 수백 번의 LLM 호출이 발생하고 API 비용이 폭주한다.
 
@@ -633,7 +631,7 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 
     **점검 포인트**: Agent 프레임워크 설정에서 `max_iterations` 또는 `max_steps` 값이 설정되어 있는지 확인. 운영 환경의 LLM API 호출 로그에서 동일 tool + 동일 input의 반복 호출 패턴을 모니터링하고, 비용 알림 임계값을 설정.
 
-## 핵심 정리 (Key Takeaways)
+## 핵심 정리
 
 - **Agent = LLM + Tool + Memory + Planner** — 한 단계 호출이 아닌 loop.
 - **ReAct** — 추론(Reason) 과 행동(Act) 을 번갈아 가며 외부와 상호작용.
@@ -641,7 +639,7 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 - **Reflexion** — 결과를 모델이 스스로 평가/수정.
 - **MCP** — 도구 인터페이스 표준화. 에이전트 간 도구 재사용 가능.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Strategy Selection →](../06_strategy_selection/) — prompt vs RAG vs fine-tune 결정 기준.
 - 퀴즈: [Module 05 Quiz](../quiz/05_agent_architecture_quiz/) — Agent 패턴, MCP 5문항.

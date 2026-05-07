@@ -1,6 +1,6 @@
 # Module 04 — Attack Surface & Defense
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,13 +10,13 @@
 4. (Analyze) V2X 환경에서 Sybil/Replay/Message-injection 공격이 어떻게 결합되는지 분석할 수 있다.
 5. (Evaluate) UN R155 / ISO 21434 의 요구사항을 자신의 시스템 방어 계층 매트릭스로 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01–03 (CAN, SoC 보안, Tesla 케이스)
 - 일반 사이버보안 개념: STRIDE, threat modeling, attack tree
 - PKI / 인증서 / CRL 의 기본 동작
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 방어를 잘하려면 **공격자가 어디부터 들어오는지** 체계적으로 이해해야 한다. 차량은 외부(셀룰러, V2X), 근접(Bluetooth, WiFi, NFC, OBD-II), 내부(CAN, Ethernet), 공급망(ECU FW, OTA 서버) 등 광범위한 surface를 가지고 있다. 이 모듈은 각 surface를 **자산 → 위협 → 방어 계층**의 매트릭스로 정리해 학습자가 자신의 시스템에도 같은 표를 직접 그릴 수 있게 한다.
 
@@ -34,6 +34,12 @@
 
 "Secure Boot가 BL1→BL2→BL3의 모든 단계를 검증하듯, 차량 보안도 물리 계층→통신 계층→어플리케이션 계층의 모든 단계를 검증해야 한다."
 
+!!! danger "❓ 흔한 오해"
+    **오해**: 외부 무선만 막으면 안전
+
+    **실제**: 차량은 무선 외 OBD-II (물리), supply chain (Tier-1 FW), JTAG, USB 등 다축 surface. 무선만 보면 ⅓ 만 본 것.
+
+    **왜 헷갈리는가**: 마케팅이 "커넥티드카" 위협 강조해서 무선이 가장 가시적이지만 실제 surface 는 다축.
 ---
 
 ## 차량 공격 표면 전체 맵
@@ -576,14 +582,6 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 </details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: 외부 무선만 막으면 안전
-
-    **실제**: 차량은 무선 외 OBD-II (물리), supply chain (Tier-1 FW), JTAG, USB 등 다축 surface. 무선만 보면 ⅓ 만 본 것.
-
-    **왜 헷갈리는가**: 마케팅이 "커넥티드카" 위협 강조해서 무선이 가장 가시적이지만 실제 surface 는 다축.
-
 !!! warning "실무 주의점 — V2X Sybil 공격 임계값 설정 오류"
     **현상**: V2X Misbehavior Detection의 물리 타당성(Plausibility) 임계값이 느슨하면 Sybil 차량이 소수의 위장 메시지만으로 전방 정체 또는 긴급 제동 신호를 위조할 수 있다. 반대로 너무 엄격하면 정상 밀집 구간(교차로, 주차장)에서 오탐이 발생한다.
 
@@ -591,7 +589,7 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 
     **점검 포인트**: BSM(Basic Safety Message) 수신 로그에서 동일 위치 좌표를 공유하는 Certificate가 임계 개수(예: 3개) 이상 있는지 확인. Misbehavior Authority 보고 API 호출 여부와 CRL 갱신 주기가 실시간에 준하는지 검토.
 
-## 핵심 정리 (Key Takeaways)
+## 핵심 정리
 
 - **3축 공격 표면** — 물리(OBD/USB), 무선(BT/WiFi/Cellular/V2X), 공급망(ECU FW/Tier-1).
 - **Defense-in-Depth** — 한 계층이 뚫려도 다음 계층(인증/필터/IDS/Cloud 검증)이 차단해야 한다.
@@ -599,7 +597,7 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 - **공급망 보안** — Code-signing, SBOM, OTA 검증이 빠지면 단 하나의 Tier-1 침해가 전 차량 fleet으로 확산된다.
 - **표준 = 체크리스트가 아닌 사고 도구** — UN R155, ISO/SAE 21434 는 매트릭스를 직접 그리게 만드는 도구.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Quick Reference Card →](../05_quick_reference_card/) — 모듈 1~4를 한 장으로 압축한 cheat sheet.
 - 퀴즈: [Module 04 Quiz](../quiz/04_attack_surface_and_defense_quiz/) — 공격 surface, V2X PKI, defense-in-depth 5문항.

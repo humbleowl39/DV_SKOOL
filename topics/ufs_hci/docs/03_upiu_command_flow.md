@@ -30,6 +30,12 @@
 ## 핵심 개념
 **UPIU = UFS의 명령/데이터/응답을 담는 표준 패킷 형식. HCI가 SCSI CDB를 Command UPIU로 감싸서 전송하고, Device가 Response/Data UPIU로 응답. Task Tag(0~31)로 동시 32개 명령을 식별.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Task Tag 는 unique 면 충분하다
+
+    **실제**: Task Tag 는 "command 발행 ~ completion" 사이에는 unique 해야 하지만, completion 후 reuse 가능. reuse timing 을 잘못 잡으면 다른 LU 로 라우팅.
+
+    **왜 헷갈리는가**: "unique key" 라는 단순 직관 + lifecycle 의 미묘한 reuse 시점이 spec 깊은 곳에 있어서.
 ---
 
 ## SCSI 명령과 UPIU 매핑
@@ -365,14 +371,6 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 > "Device의 내부 Write 버퍼 관리를 위해서다. Host가 일방적으로 데이터를 밀어넣으면 Device 버퍼 오버플로가 발생할 수 있다. RTT는 Device가 '이 만큼의 데이터를 보내도 된다'고 허가하는 흐름 제어 메커니즘이다. RTT의 Data Transfer Count 필드가 허용 크기를 지정하며, 대용량 WRITE는 여러 번의 RTT→Data-Out 반복으로 진행된다. READ에는 RTT가 없는 이유는 Host가 PRDT로 DMA 버퍼를 미리 할당해놓기 때문이다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Task Tag 는 unique 면 충분하다
-
-    **실제**: Task Tag 는 "command 발행 ~ completion" 사이에는 unique 해야 하지만, completion 후 reuse 가능. reuse timing 을 잘못 잡으면 다른 LU 로 라우팅.
-
-    **왜 헷갈리는가**: "unique key" 라는 단순 직관 + lifecycle 의 미묘한 reuse 시점이 spec 깊은 곳에 있어서.
-
 !!! warning "실무 주의점 — Task Tag 재사용 시점 오해"
     **현상**: 다른 LU 로 보낸 명령이 엉뚱한 LU 의 응답과 매칭되어 scoreboard mismatch 가 발생한다.
 

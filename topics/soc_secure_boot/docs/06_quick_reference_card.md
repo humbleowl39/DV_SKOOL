@@ -16,14 +16,6 @@ POR → BL1(ROM,EL3) → BL2(FSBL,DRAM초기화) → BL31(Monitor) + BL32(TEE) +
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Anti-rollback 만 있으면 downgrade attack 차단
-
-    **실제**: Anti-rollback counter 가 OTP 가 아닌 OTP-emulated (rewriteable EEPROM 등) 에 있으면 우회 가능. counter 의 "진짜 immutable" 여부가 critical.
-
-    **왜 헷갈리는가**: "기능 이름 = 동작 보장" 의 직관. 실제 구현 storage 가 더 중요.
-
 !!! warning "실무 주의점 — Anti-rollback counter 가 OTP 가 아닌 OTP-emulated 영역에 위치"
     **현상**: 구버전 펌웨어로 다운그레이드 공격을 막는다고 명시했는데, 실제 attacker 가 emulation 영역 (예: flash backed 영역) 을 reset 하자 rollback counter 가 되돌아가 옛 버전 재부팅이 성공한다.
 
@@ -37,6 +29,13 @@ POR → BL1(ROM,EL3) → BL2(FSBL,DRAM초기화) → BL31(Monitor) + BL32(TEE) +
     ROM → BL1 → ... → kernel 의 각 단계가 어떤 검증을 어떻게 하는지, 한 단계가 깨지면 어떤 영향이 있는지 즉시 그리는 것이 마스터.
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Anti-rollback 만 있으면 downgrade attack 차단
+
+    **실제**: Anti-rollback counter 가 OTP 가 아닌 OTP-emulated (rewriteable EEPROM 등) 에 있으면 우회 가능. counter 의 "진짜 immutable" 여부가 critical.
+
+    **왜 헷갈리는가**: "기능 이름 = 동작 보장" 의 직관. 실제 구현 storage 가 더 중요.
 
 ## 핵심 정리
 

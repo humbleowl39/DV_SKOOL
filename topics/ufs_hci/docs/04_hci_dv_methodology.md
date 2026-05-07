@@ -30,6 +30,12 @@
 ## 핵심 개념
 **UFS HCI 검증 = 레지스터 정확성 + UTRD/UPIU 변환 정확성 + DMA 무결성 + 명령 큐잉 + 에러 복구. SW Driver 관점의 인터페이스(레지스터/메모리)와 Device 관점의 프로토콜(UPIU)을 양 끝에서 동시에 검증.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: HCI DV = doorbell + UPIU 검사면 끝
+
+    **실제**: 추가로 abort vs reset 선택, error recovery, gear switch 중 transfer, UTRLDBR race, queue 깊이 한계, MCQ 정책 등 광범위.
+
+    **왜 헷갈리는가**: Happy path 가 가장 가시적이라 검증의 중심으로 보이지만 error / recovery path 가 실제 silent bug 의 source.
 ---
 
 ## 검증 환경 아키텍처
@@ -207,7 +213,6 @@ HCI 초기화 시퀀스는 엄격한 순서를 요구 — 검증 필수
   | Host     |                  | Device      |
   | Driver   |                  | Driver      |
   +----------+                  +-------------+
-
 
 Sequence 계층:
 
@@ -681,14 +686,6 @@ Resume:
 > "에러는 TB의 Device Agent와 UniPro Agent에서 주입하며, DUT RTL은 절대 수정하지 않는다. (1) Device 응답 에러 — Response UPIU의 Status를 CHECK_CONDITION/BUSY로 조작. (2) 불완전 전송 — 요청 크기보다 적은 데이터 반환 → Residual Count 정확성. (3) 링크 에러 — UniPro CRC 에러 주입 → 재전송 투명성, Link Down → IS[UE]. (4) 타임아웃 — Response 의도적 지연 → Task Management 복구 경로. 정상→에러→정상 패턴으로 에러 후 복구까지 검증한다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: HCI DV = doorbell + UPIU 검사면 끝
-
-    **실제**: 추가로 abort vs reset 선택, error recovery, gear switch 중 transfer, UTRLDBR race, queue 깊이 한계, MCQ 정책 등 광범위.
-
-    **왜 헷갈리는가**: Happy path 가 가장 가시적이라 검증의 중심으로 보이지만 error / recovery path 가 실제 silent bug 의 source.
-
 !!! warning "실무 주의점 — Doorbell-Completion ISR race 검증 누락"
     **현상**: 회귀에서 가끔 명령이 timeout 으로 빠지지만 재현이 어려워 silent fail 로 묻힌다.
 

@@ -27,6 +27,12 @@
 
     황실 옥새(BootROM)는 제조 시점에 주조되어 누구도 모양을 바꿀 수 없다. 인장 규정집(OTP)은 발행 후 변경 불가한 도장으로, 어떤 문서(이미지)에 어떤 옥새가 유효한지를 영구 기록한다. 이 둘이 결합할 때 비로소 위조 불가능한 신뢰의 출발점이 된다.
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Secure Boot 가 켜지면 안전하다
+
+    **실제**: Secure Boot 는 boot chain 무결성만 보장. runtime 보호 (ASLR, kernel hardening, IO 보안) 는 별도. boot 만으로 끝나지 않음.
+
+    **왜 헷갈리는가**: "secure boot = full security" 의 marketing 단순화. 실제는 startup 만 보장.
 ---
 
 ## 왜 하드웨어 기반인가?
@@ -384,14 +390,6 @@ otp_model.rotpk_hash.set(expected_hash);
 > "비가역적 전환이므로 세 가지를 검증한다: (1) Development→Production 전환 후 Secure Boot가 강제 활성화되는지. (2) Production 상태에서 JTAG Open/USB DL 우회가 불가능한지. (3) ROTPK가 테스트 키에서 양산 키로 올바르게 전환되었는지. 특히 전환 중간 상태 — 예를 들어 Secure Boot은 ON인데 ROTPK가 미기록인 상태 — 가 안전하게 처리되는지가 DV의 핵심 Negative 시나리오다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Secure Boot 가 켜지면 안전하다
-
-    **실제**: Secure Boot 는 boot chain 무결성만 보장. runtime 보호 (ASLR, kernel hardening, IO 보안) 는 별도. boot 만으로 끝나지 않음.
-
-    **왜 헷갈리는가**: "secure boot = full security" 의 marketing 단순화. 실제는 startup 만 보장.
-
 !!! warning "실무 주의점 — ROTPK 미기록 상태에서 Secure Boot 활성화"
     **현상**: OTP에서 Secure Boot Enable 비트는 blown됐지만 ROTPK hash가 기록되지 않은 상태로 칩이 출고된다. 부팅 시 BootROM이 ROTPK를 읽어 all-zero와 비교하여 임의 서명이 통과되거나 즉시 halt된다.
 

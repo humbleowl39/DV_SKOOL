@@ -1,6 +1,6 @@
 # Module 06 — Dynamic Programming
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) DP 의 state 정의가 잘못된 경우의 증상(중복 / 무한 / 답 누락) 을 진단할 수 있다.
 5. (Evaluate) 같은 문제에 DP / Greedy / DFS+memo 의 trade-off 를 평가할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01–05
 - 재귀 + memoization 한 번이라도 작성한 경험
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 DP 는 면접관이 reasoning depth 를 가장 좋아하는 패턴이다. 상태 정의 → 점화식 → 베이스 케이스 → 구현 → 최적화 의 다섯 단계 표준 풀이를 만들 수 있으면 거의 모든 DP 문제를 풀 수 있다. 또한 운영 코드(parsing, scoring, scheduling) 에서도 자주 등장한다.
 
@@ -166,7 +166,6 @@ DP 문제를 받으면:
    "dp[i]가 dp[i-1], dp[i-2]에만 의존하므로 변수 2개로 줄일 수 있습니다"
 ```
 
-
 ---
 
 ## 부록: SystemVerilog 예제 코드
@@ -302,14 +301,6 @@ endmodule
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: DP 는 항상 가장 빠른 풀이
-
-    **실제**: Greedy 가 작동하면 더 빠름 (단, optimality 증명 필요). DP 는 Greedy 가 안 될 때 안전한 default.
-
-    **왜 헷갈리는가**: "DP = 어려운 문제용 = 가장 강력" 이라는 학습 순서. 실제는 trade-off.
-
 !!! warning "실무 주의점 — State 차원 누락 (knapsack 의 weight axis 빠짐)"
     **현상**: 0/1 knapsack 을 `dp[i]` 1 차원으로 정의해 풀었는데, 같은 `i` 에 대해 서로 다른 잔여 capacity 에서 들어와 답이 cell 마다 달라진다. 작은 예제는 통과, 큰 예제에서 오답.
 
@@ -324,7 +315,14 @@ endmodule
 
 ---
 
-## 핵심 정리 (Key Takeaways)
+!!! danger "❓ 흔한 오해"
+    **오해**: DP 는 항상 가장 빠른 풀이
+
+    **실제**: Greedy 가 작동하면 더 빠름 (단, optimality 증명 필요). DP 는 Greedy 가 안 될 때 안전한 default.
+
+    **왜 헷갈리는가**: "DP = 어려운 문제용 = 가장 강력" 이라는 학습 순서. 실제는 trade-off.
+
+## 핵심 정리
 
 - **DP 두 조건** — Optimal Substructure + Overlapping Subproblems.
 - **5단계 표준 풀이** — state 정의 → 점화식 → base case → 구현(memo / tabulation) → 공간 최적화.
@@ -332,7 +330,7 @@ endmodule
 - **Memoization vs Tabulation** — 재귀가 자연스러우면 memo, iteration 이 자연스러우면 tabulation.
 - **공간 최적화** — 보통 1D DP 는 O(N) → O(1), 2D DP 는 O(N×M) → O(min(N,M)) 으로 줄일 수 있다.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Interview Strategy →](../07_interview_strategy/) — 모듈 1~6 을 면접 시간 안에 적용하는 법.
 - 퀴즈: [Module 06 Quiz](../quiz/06_dynamic_programming_explained_quiz/) — 5문항.

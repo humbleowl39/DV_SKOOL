@@ -26,6 +26,12 @@
 ## 핵심 개념
 **Secure Boot = Chain of Trust(서명 검증) + Security Architecture(EL/TrustZone)의 결합. 서명 검증이 "무엇을 실행해도 되는가"를 결정하고, 보안 레벨이 "어떤 권한으로 실행하는가"를 결정. 둘이 함께 동작해야 완전한 보안.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Secure Boot 와 TrustZone 은 별개
+
+    **실제**: Secure Boot 의 ROTPK 가 TrustZone 의 root key derivation 의 source. Boot 단계의 실패는 runtime TrustZone 무력화.
+
+    **왜 헷갈리는가**: "이름 다른 기능 = 독립" 이라는 직관. 실제는 같은 trust chain 의 다른 단계.
 ---
 
 ## Boot Stage별 보안 레벨 상세
@@ -516,14 +522,6 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
 </details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Secure Boot 와 TrustZone 은 별개
-
-    **실제**: Secure Boot 의 ROTPK 가 TrustZone 의 root key derivation 의 source. Boot 단계의 실패는 runtime TrustZone 무력화.
-
-    **왜 헷갈리는가**: "이름 다른 기능 = 독립" 이라는 직관. 실제는 같은 trust chain 의 다른 단계.
-
 !!! warning "실무 주의점 — ROM/HSM 키 fuse 가 NS world 에서 read 가능"
     **현상**: NS world 에서 OTP/eFuse mirror 레지스터를 읽었더니 root key 또는 HUK 가 그대로 노출된다.
 

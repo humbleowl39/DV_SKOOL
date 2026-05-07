@@ -26,6 +26,12 @@
 ## 핵심 개념
 **I/O 가상화 = 물리 디바이스를 여러 VM이 공유하거나, 특정 VM에 전용 할당하는 기술. 에뮬레이션(SW) → 준가상화(VirtIO) → 패스스루(SR-IOV/VFIO)로 발전하며, 성능과 격리의 트레이드오프를 다룬다.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Passthrough 가 항상 빠름
+
+    **실제**: Passthrough 는 throughput ↑, latency ↓. 그러나 live migration 불가, IOMMU 필수, density ↓. trade-off 정확히 평가 필요.
+
+    **왜 헷갈리는가**: "direct = 빠름" 의 직관. 실제로는 multi-axis trade-off.
 ---
 
 ## I/O 가상화가 어려운 이유
@@ -374,14 +380,6 @@ DPDK: 모든 것을 user-space에서 처리 (polling 기반)
 > "PF(Physical Function)는 물리 디바이스의 완전한 PCIe Function으로 초기화, VF 생성/삭제를 담당하며 Hypervisor가 관리한다. VF(Virtual Function)는 PF에서 파생된 경량 PCIe Function으로, 자체 BAR, MSI-X, TX/RX 큐를 갖지만 관리 기능은 없고 데이터 경로만 제공한다. 확장성: 일반 pass-through는 NIC 1개 = VM 1개이지만, SR-IOV는 NIC 1개에서 VF 128개 생성 가능. 각 VF가 HW 독립 데이터 경로를 가지므로 bare metal 근접 성능을 유지하면서 128개 VM을 지원한다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Passthrough 가 항상 빠름
-
-    **실제**: Passthrough 는 throughput ↑, latency ↓. 그러나 live migration 불가, IOMMU 필수, density ↓. trade-off 정확히 평가 필요.
-
-    **왜 헷갈리는가**: "direct = 빠름" 의 직관. 실제로는 multi-axis trade-off.
-
 !!! warning "실무 주의점 — virtio queue full 시 backend silent drop"
     **현상**: Guest 가 IO timeout/retransmit 만 인지하고, host 측 로그에는 명확한 error 가 없어 원인 파악이 늦어짐.
 

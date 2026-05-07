@@ -30,6 +30,12 @@ UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading
 ## 핵심 개념
 **실무에서 반복되는 설계 패턴을 익히면 환경 구축 속도와 품질이 동시에 향상. 안티패턴을 알면 디버그 시간을 대폭 줄일 수 있다. 이 Unit은 6년 실무에서 축적된 패턴/안티패턴을 정리.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Sequence library 를 한 폴더에 모아 두기만 하면 재사용 가능하다
+
+    **실제**: Sequence 재사용 = 같은 sequencer/agent 인터페이스를 가정함. 다른 프로젝트에서 재사용하려면 sequencer type, item type 이 호환되어야 한다.
+
+    **왜 헷갈리는가**: "코드를 분리해 둠 = 재사용 가능" 이라는 단순 가정 — 실제 재사용성은 type 호환과 config object 의존성에 달려 있음.
 ---
 
 ## 설계 패턴
@@ -297,14 +303,6 @@ MangoBoost / Samsung에서 반복한 환경 구축 순서:
         3. **Driver 도입**: 기존 task 자극을 Sequence + Driver로 재구성. 검증: 같은 시드에서 같은 자극 인가 패턴 (signal-level diff).
         4. **Sequence Library 정비**: 시나리오를 sequence 단위로 모듈화 + Virtual Sequence. 검증: 기존 테스트 리스트와 1:1 매핑 확인 + coverage가 떨어지지 않았는지.
         **위험 감소 포인트**: 각 단계에서 *기능 동등성*을 sanity로 확인하는 게 핵심. 한 번에 다 갈아엎지 않기.
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Sequence library 를 한 폴더에 모아 두기만 하면 재사용 가능하다
-
-    **실제**: Sequence 재사용 = 같은 sequencer/agent 인터페이스를 가정함. 다른 프로젝트에서 재사용하려면 sequencer type, item type 이 호환되어야 한다.
-
-    **왜 헷갈리는가**: "코드를 분리해 둠 = 재사용 가능" 이라는 단순 가정 — 실제 재사용성은 type 호환과 config object 의존성에 달려 있음.
-
 !!! warning "실무 주의점 — derived test 의 super.build_phase 누락"
     **현상**: 파생 테스트에서 env 인스턴스가 안 만들어지거나, `set_type_override` 가 안 먹힌 채 시뮬레이션이 시작된다. UVM_FATAL 없이 통과하는데 결과가 이상함.
 

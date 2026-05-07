@@ -26,6 +26,12 @@
 ## 핵심 개념
 **컨테이너는 OS 커널을 공유하면서 프로세스 수준 격리를 제공하는 경량 가상화. VM보다 빠르고 가볍지만 격리 수준이 낮다. 현대 클라우드는 VM + 컨테이너 + 마이크로VM을 혼합하여 사용한다.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Container 는 VM 만큼 안전하다
+
+    **실제**: Kernel 공유로 인해 container escape (CVE-2022-0492 류) 가능. multi-tenant 보안에는 microVM (Firecracker) 이 더 적합.
+
+    **왜 헷갈리는가**: "격리 = 안전" 의 일반화. 실제로는 격리의 boundary 가 중요.
 ---
 
 ## VM vs 컨테이너
@@ -275,14 +281,6 @@ Timeline:
 > "네 가지 전략이다. (1) 최소 커널(~5MB) — 필요 기능만 포함하여 ~125ms 부팅. (2) 최소 디바이스 — VirtIO 네트워크/블록만 에뮬레이션, 공격 표면 최소화. (3) KVM 기반 격리 — VT-x/ARM EL2로 VM 수준 메모리/CPU 격리, 커널 비공유로 container escape 없음. (4) 낮은 오버헤드 — VM당 ~5MB, 서버당 수천 개 동시 실행. AWS Lambda와 Fargate가 이 기술로 서버리스의 보안과 성능을 모두 확보했다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Container 는 VM 만큼 안전하다
-
-    **실제**: Kernel 공유로 인해 container escape (CVE-2022-0492 류) 가능. multi-tenant 보안에는 microVM (Firecracker) 이 더 적합.
-
-    **왜 헷갈리는가**: "격리 = 안전" 의 일반화. 실제로는 격리의 boundary 가 중요.
-
 !!! warning "실무 주의점 — kernel 공유로 인한 namespace escape (CVE-2022-0492 류)"
     **현상**: Container 내부 프로세스가 host root 권한을 획득하거나 다른 container 의 파일 시스템/프로세스에 접근.
 

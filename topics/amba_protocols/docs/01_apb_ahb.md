@@ -88,6 +88,12 @@ PREADY가 0인 동안 Access Phase가 연장됨
 | 리셋 | Reset 후 레지스터 기본값 |
 | 연속 접근 | Back-to-back 트랜잭션 |
 
+!!! danger "❓ 흔한 오해"
+    **오해**: AHB 가 APB 보다 항상 좋다
+
+    **실제**: APB 는 register / 저속 peripheral 에 의도적으로 단순 — 게이트 비용 ↓, 검증 부담 ↓. AHB 의 파이프라인은 "고속 + DMA" 환경에서만 의미.
+
+    **왜 헷갈리는가**: "새 버전 = 항상 더 좋음" 의 직관 + APB / AHB 가 동시 등장한 역사적 맥락을 모르면 trade-off 가 안 보임.
 ---
 
 ## APB 버전 진화: APB3 → APB4 → APB5
@@ -403,14 +409,6 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
    <details><summary>정답</summary>4개의 독립적인 APB 단일 전송으로 분해된다. APB는 burst를 지원하지 않으므로.</details>
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: AHB 가 APB 보다 항상 좋다
-
-    **실제**: APB 는 register / 저속 peripheral 에 의도적으로 단순 — 게이트 비용 ↓, 검증 부담 ↓. AHB 의 파이프라인은 "고속 + DMA" 환경에서만 의미.
-
-    **왜 헷갈리는가**: "새 버전 = 항상 더 좋음" 의 직관 + APB / AHB 가 동시 등장한 역사적 맥락을 모르면 trade-off 가 안 보임.
-
 !!! warning "실무 주의점 — APB ACCESS / AHB stall 중 신호 변경"
     **현상**: APB slave 가 PREADY=0 으로 wait state 를 유지하는 동안 master 가 PWDATA 또는 PADDR 을 바꾸거나, AHB master 가 HREADY=0 인 사이클에 HADDR/HWDATA 를 변경한다. 시뮬레이션은 통과하지만 실제 SoC 에서 random 하게 wrong-data 가 기록된다.
 

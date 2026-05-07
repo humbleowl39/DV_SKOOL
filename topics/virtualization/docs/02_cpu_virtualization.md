@@ -26,6 +26,12 @@
 ## 핵심 개념
 **CPU 가상화 = Guest OS의 특권 명령어를 안전하게 처리하면서, 일반 명령어는 HW에서 직접 실행하여 성능을 유지하는 것. SW 방식(Binary Translation)에서 HW 지원(VT-x, ARM EL2)으로 발전했다.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: VMM 이 모든 instruction 을 emulate 한다
+
+    **실제**: Modern HW (VT-x) 는 대부분 native 실행, 특정 sensitive instruction 만 trap → VMExit. 99%+ 의 코드는 그대로 실행.
+
+    **왜 헷갈리는가**: 초기 SW-only virtualization (VMware ESX 1.0 등) 시대의 mental model 이 남아 있어서.
 ---
 
 ## x86 Protection Ring
@@ -324,14 +330,6 @@ User App (EL0)
 > "Para-virtualization은 x86의 Non-privileged Sensitive 명령어를 trap할 수 없어서 Guest OS를 수정하여 hypercall로 대체하는 방식이었다. VT-x/ARM EL2가 모든 Sensitive 명령어를 HW에서 자동 trap하므로 Guest OS 수정이 불필요해졌고, 미수정 OS(Windows 포함)도 그대로 실행 가능해졌다. 다만 VirtIO 같은 I/O para-virtualization은 에뮬레이션보다 VM Exit이 적어 여전히 성능 이점이 있어 현재도 널리 사용된다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: VMM 이 모든 instruction 을 emulate 한다
-
-    **실제**: Modern HW (VT-x) 는 대부분 native 실행, 특정 sensitive instruction 만 trap → VMExit. 99%+ 의 코드는 그대로 실행.
-
-    **왜 헷갈리는가**: 초기 SW-only virtualization (VMware ESX 1.0 등) 시대의 mental model 이 남아 있어서.
-
 !!! warning "실무 주의점 — VM Exit 빈도 과다로 인한 성능 절벽"
     **현상**: HW-assisted 가상화 환경에서 CPU 집약적 Guest workload의 실제 처리량이 기대치의 50% 이하로 떨어지며, perf 카운터에서 `vm_exit` 이벤트가 초당 수십만 회 발생한다.
     

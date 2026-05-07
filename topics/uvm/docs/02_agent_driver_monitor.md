@@ -31,6 +31,12 @@ Agent는 **UVM 재사용의 최소 단위**입니다. 잘못 설계된 Agent는 
 ## 핵심 개념
 **Agent = 하나의 인터페이스에 대한 검증 인프라 묶음 (Driver + Monitor + Sequencer). Active Agent는 자극 생성+관찰, Passive Agent는 관찰만. DUT의 프로토콜 인터페이스마다 1개 Agent를 배치하는 것이 원칙.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Monitor 가 신호를 driving 해도 된다
+
+    **실제**: Monitor 는 read-only — virtual interface 의 signal 을 inout 으로 잡으면 안 된다. driving 은 driver 의 책임이고, monitor 는 sample 만.
+
+    **왜 헷갈리는가**: 둘 다 vif 를 보유하므로 driver 와 monitor 의 역할이 코드상 비슷해 보이는 시각적 혼동.
 ---
 
 ## Agent 구조
@@ -474,14 +480,6 @@ Security Driver: force/release로 DUT 내부 신호에 직접 접근
     ??? answer "예시 답안"
         - **Pipelining 적절**: AXI write 채널 — AW/W 독립, outstanding 4+ 정상. 단순 driver는 throughput 측정 불가, OoO 응답 커버 불가.
         - **단순 driver 충분**: APB — outstanding 개념 없음(매 트랜잭션 SETUP→ACCESS→IDLE 순차). Pipelining 도입 시 오히려 protocol 위반.
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Monitor 가 신호를 driving 해도 된다
-
-    **실제**: Monitor 는 read-only — virtual interface 의 signal 을 inout 으로 잡으면 안 된다. driving 은 driver 의 책임이고, monitor 는 sample 만.
-
-    **왜 헷갈리는가**: 둘 다 vif 를 보유하므로 driver 와 monitor 의 역할이 코드상 비슷해 보이는 시각적 혼동.
-
 !!! warning "실무 주의점 — `item_done()` 누락 시 두 번째 트랜잭션부터 hang"
     **현상**: 첫 번째 트랜잭션은 정상 구동되지만 이후 `get_next_item()`이 영원히 block되어 시뮬이 hang 또는 타임아웃.
 

@@ -1,6 +1,6 @@
 # Module 02 — Array & Hash Map
 
-## 학습 목표 (Learning Objectives)
+## 학습 목표
 
 이 모듈을 마치면:
 
@@ -10,12 +10,12 @@
 4. (Analyze) "왜 array 만으론 O(N²) 인 문제가 hash map 으로 O(N) 이 되는가" 를 trace 할 수 있다.
 5. (Evaluate) Hash map 사용이 부적합한 경우(순서 의존, 메모리 제약) 를 판단할 수 있다.
 
-## 선수 지식 (Prerequisites)
+## 선수 지식
 
 - Module 01 — Big-O 와 패턴 사고법
 - Array indexing, mutability, Python dict / Java HashMap 한 가지 친숙성
 
-## 왜 이 모듈이 중요한가 (Why it matters)
+## 왜 이 모듈이 중요한가
 
 LeetCode Easy / Medium 의 30~40% 는 hash map 한 자료구조로 O(N) 풀이가 가능하다. 이 모듈은 "어떤 신호가 보이면 hash map 을 꺼내는가" 를 명확히 만들어 면접 첫 풀이를 빠르게 시작할 수 있게 한다.
 
@@ -182,7 +182,6 @@ Dry Run:
    → Group Anagrams
 ```
 
-
 ---
 
 ## 부록: SystemVerilog 예제 코드
@@ -306,14 +305,6 @@ endmodule
 ```
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Hash Map average O(1) 이 항상 보장된다
-
-    **실제**: Hash collision (의도적 attack 또는 unfortunate distribution) 시 worst case O(N). DoS 가능. java/python/c++ 의 collision handling 다름.
-
-    **왜 헷갈리는가**: 교과서가 average 만 강조 + worst 는 "드물다" 로 처리해서 attack scenario 못 본다.
-
 !!! warning "실무 주의점 — Hash Collision 으로 의도된 O(N²) (DoS)"
     **현상**: 평균 O(1) 을 믿고 만든 서비스에 특정 패턴의 key 들이 들어오자 응답 시간이 폭주, 사실상 다운된다 (Hash-Flooding DoS).
 
@@ -328,7 +319,14 @@ endmodule
 
 ---
 
-## 핵심 정리 (Key Takeaways)
+!!! danger "❓ 흔한 오해"
+    **오해**: Hash Map average O(1) 이 항상 보장된다
+
+    **실제**: Hash collision (의도적 attack 또는 unfortunate distribution) 시 worst case O(N). DoS 가능. java/python/c++ 의 collision handling 다름.
+
+    **왜 헷갈리는가**: 교과서가 average 만 강조 + worst 는 "드물다" 로 처리해서 attack scenario 못 본다.
+
+## 핵심 정리
 
 - **Array** : index-by-position 이 강점, 순서 보존, lookup-by-value 는 O(N).
 - **Hash Map** : key 기반 평균 O(1) lookup. 순서 보존이 필요하면 LinkedHashMap / dict (Python 3.7+) 사용.
@@ -336,7 +334,7 @@ endmodule
 - **Collision** 은 Java(체이닝→트리) / Python(open addressing) / C++ (체이닝) 처리 방식이 다르다.
 - **메모리 trade-off** — hash map 은 시간을 사기 위해 공간을 쓴다. 메모리 제약이 빡빡하면 다른 패턴 검토.
 
-## 다음 단계 (Next Steps)
+## 다음 단계
 
 - 다음 모듈: [Two Pointers & Sliding Window →](../03_two_pointers_sliding_window_explained/) — 정렬 가능한 입력에서 더 적은 메모리로 푸는 패턴.
 - 퀴즈: [Module 02 Quiz](../quiz/02_array_hashmap_explained_quiz/) — 5문항.

@@ -32,6 +32,12 @@
 ## 핵심 개념
 **MMU 검증 = 기능 정확성(주소 변환) + 성능 검증(TLB/Throughput) + 프로토콜 준수(AXI-S). 상용 VIP의 한계를 Custom VIP으로 극복하고, Dual-Reference Model로 기능과 성능을 동시에 검증하며, AI로 스펙 변경에 즉시 대응하는 것이 핵심.**
 
+!!! danger "❓ 흔한 오해"
+    **오해**: MMU DV = TLB 검증 + Page Table walk 검증
+
+    **실제**: MMU DV 는 그 외에도 fault handling (no perm, no pte, level mismatch), Stage 2 + Stage 1 결합, ASID rotation, TLBI 동작 등 다축. 단순 "hit/miss" 보다 깊다.
+
+    **왜 헷갈리는가**: TLB 가 가장 가시적인 결과물이라 검증의 중심으로 여기지만 fault path 와 maintenance op 가 더 미묘한 버그 모음.
 ---
 
 ## 검증 환경 아키텍처
@@ -777,14 +783,6 @@ Agile 개발에서의 MMU 스펙 변경:
 > "세 가지 축으로 랜덤화했다: (1) VA 분포 — Hotspot(60%), 일반 범위(30%), 넓은 범위(10%)로 가중하여 실제 트래픽 패턴을 모사. (2) Page Table 구성 — 정상 PTE 85%, Invalid 5%, Permission 위반 7%, AF 미설정 3%로 Fault 주입. (3) 시나리오 조합 — 대량 Translation + 주기적 TLB Invalidation + 간헐적 Fault 주입을 병렬로 실행하여 실제 운영 환경의 복잡한 상호작용을 검증했다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: MMU DV = TLB 검증 + Page Table walk 검증
-
-    **실제**: MMU DV 는 그 외에도 fault handling (no perm, no pte, level mismatch), Stage 2 + Stage 1 결합, ASID rotation, TLBI 동작 등 다축. 단순 "hit/miss" 보다 깊다.
-
-    **왜 헷갈리는가**: TLB 가 가장 가시적인 결과물이라 검증의 중심으로 여기지만 fault path 와 maintenance op 가 더 미묘한 버그 모음.
-
 !!! warning "실무 주의점 — Page Walk 중 중간 레벨 PTE Fault 미검증"
     **현상**: 최하위(L3) PTE는 정상이지만 상위(L1/L2) 테이블 디스크립터의 Valid 비트가 0인 경우, Walk Engine이 올바른 Fault Type(Translation Fault at Level N)을 생성하지 않고 잘못된 PA를 반환하는 버그가 릴리즈까지 미검출.
     

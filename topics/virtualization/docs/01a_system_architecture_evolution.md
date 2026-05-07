@@ -27,6 +27,12 @@
 
 > 이 Unit은 DV TechForum #54 "Evolution of system architecture, HW virtualization" 발표 내용을 기반으로 정리한 것이다.
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Container 는 VM 의 가벼운 버전이다
+
+    **실제**: Container 는 같은 host kernel 공유 (process 격리 강화), VM 은 자체 kernel + HW emulation. 격리 모델이 근본적으로 다름.
+
+    **왜 헷갈리는가**: "가벼운 = 같은 카테고리" 의 직관. 실제로는 다른 격리 model.
 ---
 
 ## 진화 7단계 전체 조감도
@@ -623,14 +629,6 @@ Hypervisor 입장:
 > "AxUSER(ARUSER/AWUSER)는 AXI 트랜잭션에 'VM 정체성(identity)'을 부여하는 메커니즘이다. 디바이스가 메모리 접근 시 AxUSER에 SW 엔티티 정보를 실어 보내면, IOMMU가 이를 읽고 해당 VM의 Stage 1 PT로 VA→IPA, Stage 2 PT로 IPA→PA 변환을 수행한다. AxUSER 없이는 IOMMU가 어떤 VM의 접근인지 구분 불가. ARM SMMU에서는 이것이 StreamID에 해당하며, Stream Table Entry(STE)를 인덱싱하여 디바이스/VM별 변환 설정을 찾는다."
 
 ---
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Container 는 VM 의 가벼운 버전이다
-
-    **실제**: Container 는 같은 host kernel 공유 (process 격리 강화), VM 은 자체 kernel + HW emulation. 격리 모델이 근본적으로 다름.
-
-    **왜 헷갈리는가**: "가벼운 = 같은 카테고리" 의 직관. 실제로는 다른 격리 model.
-
 !!! warning "실무 주의점 — IOMMU 미활성화 상태의 Device Passthrough 위험"
     **현상**: VM에 PCIe 디바이스를 직접 할당(passthrough)했을 때 Guest가 Host 메모리 영역을 DMA로 접근하여 Host 커널이 크래시(Kernel Panic)된다.
     
