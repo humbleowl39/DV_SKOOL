@@ -1,4 +1,9 @@
-/* DV SKOOL — 학습 사이트 스타일 */
+/* DV SKOOL — 학습 사이트 스타일 (calm tone) */
+
+/* ===========================================================
+   웹폰트 — Pretendard (한국어 우선)
+   =========================================================== */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
 /* ===========================================================
    디자인 토큰 (Design Tokens) — 모든 컴포넌트가 공유
@@ -13,22 +18,88 @@
   --dvs-gap-row:     1rem;
   --dvs-gap-tight:   0.5rem;
 
-  --dvs-shadow-card:       0 2px 6px rgba(0,0,0,0.08);
-  --dvs-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.15);
+  /* Softer shadows — 깊이감 ↓, 눈 피로 ↓ */
+  --dvs-shadow-card:       0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --dvs-shadow-card-hover: 0 4px 10px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.06);
 
-  --dvs-brand-c1: #4fc3f7;
-  --dvs-brand-c2: #7c4dff;
+  /* Calm brand: muted steel blue → dusty violet (채도 ↓, 명도 안정) */
+  --dvs-brand-c1: #4d7cba;
+  --dvs-brand-c2: #7a5ec0;
   --dvs-brand-grad:      linear-gradient(135deg, var(--dvs-brand-c1) 0%, var(--dvs-brand-c2) 100%);
-  --dvs-brand-grad-soft: linear-gradient(135deg, rgba(79,195,247,0.06) 0%, rgba(124,77,255,0.06) 100%);
-  --dvs-brand-border:    rgba(79,195,247,0.25);
+  --dvs-brand-grad-soft: linear-gradient(135deg, rgba(77,124,186,0.05) 0%, rgba(122,94,192,0.05) 100%);
+  --dvs-brand-border:    rgba(77,124,186,0.22);
 
-  --dvs-transition: transform 0.15s ease, box-shadow 0.15s ease;
+  --dvs-transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+  /* 한국어 우선 폰트 스택 — Pretendard → Noto Sans KR → 시스템 폴백 */
+  --dvs-font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
 }
 [data-md-color-scheme="slate"] {
-  --dvs-shadow-card:       0 2px 6px rgba(0,0,0,0.4);
-  --dvs-shadow-card-hover: 0 4px 12px rgba(0,0,0,0.55);
-  --dvs-brand-grad-soft:   linear-gradient(135deg, rgba(79,195,247,0.10) 0%, rgba(124,77,255,0.10) 100%);
-  --dvs-brand-border:      rgba(79,195,247,0.35);
+  --dvs-shadow-card:       0 1px 3px rgba(0, 0, 0, 0.30), 0 1px 2px rgba(0, 0, 0, 0.20);
+  --dvs-shadow-card-hover: 0 4px 10px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.25);
+  --dvs-brand-grad-soft:   linear-gradient(135deg, rgba(125,170,235,0.08) 0%, rgba(170,140,225,0.08) 100%);
+  --dvs-brand-border:      rgba(125,170,235,0.28);
+}
+
+/* ===========================================================
+   타이포그래피 (Typography) — 한국어 가독성 우선
+   =========================================================== */
+:root {
+  --md-text-font-family: var(--dvs-font-sans);
+}
+.md-typeset {
+  font-family: var(--dvs-font-sans);
+  line-height: 1.75;          /* 한국어 본문 친화 */
+  font-feature-settings: "ss03", "tnum";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* H2 호흡 — 섹션 간 구분 명확 */
+.md-typeset h2 {
+  margin-top: 2.4em;
+  margin-bottom: 0.8em;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+.md-typeset h2:first-of-type {
+  margin-top: 1.2em;
+}
+.md-typeset h3 {
+  margin-top: 1.8em;
+  letter-spacing: -0.005em;
+  font-weight: 700;
+}
+/* 본문 단락의 vertical rhythm */
+.md-typeset p {
+  line-height: 1.75;
+}
+.md-typeset li {
+  line-height: 1.7;
+  margin-bottom: 0.25em;
+}
+/* 코드: 한국어와 같이 쓰일 때 줄간격 살짝 ↑ */
+.md-typeset code, .md-typeset pre code {
+  font-feature-settings: normal;
+}
+
+/* ===========================================================
+   Admonition (tip / warning / danger) — 부드럽게
+   =========================================================== */
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--dvs-radius-mid);
+  box-shadow: none;
+  border-width: 1px;
+}
+.md-typeset .admonition-title,
+.md-typeset summary {
+  font-weight: 600 !important;   /* 700 → 600 */
+  letter-spacing: -0.005em;
+}
+.md-typeset .admonition > p,
+.md-typeset .admonition > ul,
+.md-typeset .admonition > ol {
+  line-height: 1.7;
 }
 
 /* ===========================================================
