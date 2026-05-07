@@ -34,7 +34,7 @@
 - **Evaluate (평가)** UVM 실무 패턴/안티패턴을 식별하고 코드 리뷰에서 근거 있는 피드백 제공
 
 ## 📋 사전 지식
-이 코스는 **심화** 과정입니다. 다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
+다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
 
 - **SystemVerilog 객체지향**: class, virtual function/task, polymorphism, parameterized class
 - **랜덤화**: `randomize()`, constraint, `rand`/`randc` 차이

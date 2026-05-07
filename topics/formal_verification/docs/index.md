@@ -31,7 +31,7 @@
 - **Critique (평가)** Vacuous Pass / Over-constraint 같은 흔한 함정 식별
 
 ## 📋 사전 지식
-이 코스는 **심화** 과정입니다.
+다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
 
 - **SystemVerilog**: class, module, interface (IEEE 1800)
 - **시뮬레이션 기반 검증 경험** (UVM 또는 directed test)
