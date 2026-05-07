@@ -322,26 +322,12 @@
       border-radius: var(--radius-pill);
       letter-spacing: 0.02em;
       border: 1px solid transparent;
-    }
-    .badge.lvl-int {
-      background: rgba(245,158,11,0.12);
-      color: #b45309;
-      border-color: rgba(245,158,11,0.28);
-    }
-    .badge.lvl-adv {
-      background: rgba(239,68,68,0.10);
-      color: #b91c1c;
-      border-color: rgba(239,68,68,0.28);
-    }
-    .badge.chapters {
+    }.badge.chapters {
       background: var(--surface-2);
       color: var(--text-dim);
       border-color: var(--border-soft);
     }
-    @media (prefers-color-scheme: dark) {
-      .badge.lvl-int { color: #fbbf24; }
-      .badge.lvl-adv { color: #f87171; }
-    }
+    @media (prefers-color-scheme: dark) {}
 
     /* ===========================================================
        Footer
@@ -476,7 +462,6 @@
           </div>
           <div class="card-desc">Universal Verification Methodology — 아키텍처, phase, agent, sequence, factory, TLM</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">7 챕터</span>
           </div>
         </a>
@@ -487,7 +472,6 @@
           </div>
           <div class="card-desc">APB, AHB, AXI, AXI-Stream — ARM의 표준 버스 프로토콜</div>
           <div class="card-meta">
-            <span class="badge lvl-int">★★ 중급</span>
             <span class="badge chapters">4 챕터</span>
           </div>
         </a>
@@ -498,7 +482,6 @@
           </div>
           <div class="card-desc">SVA, JasperGold — 정형 검증 기법과 실전 전략</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">4 챕터</span>
           </div>
         </a>
@@ -514,7 +497,6 @@
           </div>
           <div class="card-desc">페이지 테이블, TLB, IOMMU/SMMU, 성능 분석</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">7 챕터</span>
           </div>
         </a>
@@ -525,7 +507,6 @@
           </div>
           <div class="card-desc">DRAM 기본, 메모리 컨트롤러, PHY, DV 방법론</div>
           <div class="card-meta">
-            <span class="badge lvl-int">★★ 중급</span>
             <span class="badge chapters">5 챕터</span>
           </div>
         </a>
@@ -536,7 +517,6 @@
           </div>
           <div class="card-desc">UFS 프로토콜 스택, HCI 아키텍처, UPIU command flow</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">5 챕터</span>
           </div>
         </a>
@@ -552,7 +532,6 @@
           </div>
           <div class="card-desc">3-layer, TLP/DLLP, LTSSM, Config/AER, SR-IOV/CXL</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">9 챕터</span>
           </div>
         </a>
@@ -570,7 +549,6 @@
             </div>
             <div class="card-desc">이더넷 기본, DCMAC 아키텍처와 DV</div>
             <div class="card-meta">
-              <span class="badge lvl-adv">★★★ 심화</span>
               <span class="badge chapters">4 챕터</span>
             </div>
           </a>
@@ -581,7 +559,6 @@
             </div>
             <div class="card-desc">TCP/IP Offload Engine — 아키텍처와 핵심 기능</div>
             <div class="card-meta">
-              <span class="badge lvl-adv">★★★ 심화</span>
               <span class="badge chapters">5 챕터</span>
             </div>
           </a>
@@ -592,7 +569,6 @@
             </div>
             <div class="card-desc">IB 프로토콜 스택, RoCEv2, QP/Memory Model, DV 전략</div>
             <div class="card-meta">
-              <span class="badge lvl-adv">★★★ 심화</span>
               <span class="badge chapters">9 챕터</span>
             </div>
           </a>
@@ -609,7 +585,6 @@
           </div>
           <div class="card-desc">SoC top integration, 공통 task, TB top, AI 활용</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">4 챕터</span>
           </div>
         </a>
@@ -620,7 +595,6 @@
           </div>
           <div class="card-desc">Hardware RoT, chain of trust, crypto, attack surface</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">7 챕터</span>
           </div>
         </a>
@@ -631,7 +605,6 @@
           </div>
           <div class="card-desc">Exception level, TrustZone, secure enclave, TEE</div>
           <div class="card-meta">
-            <span class="badge lvl-adv">★★★ 심화</span>
             <span class="badge chapters">4 챕터</span>
           </div>
         </a>
@@ -642,7 +615,6 @@
           </div>
           <div class="card-desc">CPU/메모리/IO 가상화, 하이퍼바이저, 컨테이너</div>
           <div class="card-meta">
-            <span class="badge lvl-int">★★ 중급</span>
             <span class="badge chapters">8 챕터</span>
           </div>
         </a>
@@ -653,7 +625,6 @@
           </div>
           <div class="card-desc">CAN bus, 자동차 SoC 보안, Tesla FSD case study</div>
           <div class="card-meta">
-            <span class="badge lvl-int">★★ 중급</span>
             <span class="badge chapters">5 챕터</span>
           </div>
         </a>
@@ -669,7 +640,6 @@
           </div>
           <div class="card-desc">LLM, 프롬프트 엔지니어링, RAG, agent 아키텍처, DV 활용</div>
           <div class="card-meta">
-            <span class="badge lvl-int">★★ 중급</span>
             <span class="badge chapters">8 챕터</span>
           </div>
         </a>
@@ -680,7 +650,6 @@
           </div>
           <div class="card-desc">코딩 인터뷰 핵심 — Big-O, 자료구조, 알고리즘 + SystemVerilog 예제</div>
           <div class="card-meta">
-            <span class="badge lvl-int">★★ 중급</span>
             <span class="badge chapters">7 챕터</span>
           </div>
         </a>
