@@ -173,6 +173,41 @@ Type 1 의 차이:
 
 → 64-bit BAR 는 **두 개의 BAR slot 차지** (BAR0+BAR1, BAR2+BAR3, BAR4+BAR5).
 
+!!! example "BAR sizing 의 마법 — 하드웨어가 협력하는 절묘한 트릭"
+    "write all-1 → read → invert+1 = size" 가 동작하는 이유는 **device 의 하드웨어가 spec 에 명시된 협조** 를 하기 때문:
+
+    1. SW 가 BAR 에 `0xFFFFFFFF` 강제로 write.
+    2. 하드웨어 device 는 이 special value 를 인식 → 자기가 필요한 size 만큼의 **하위 비트를 0 으로 고정** (예: 1 MB 필요 → 하위 20 bit 강제 0).
+    3. SW 가 BAR 다시 read → 하위 20 bit 가 0 인 값.
+    4. 뒤에서부터 0 갯수 카운트 = 2^20 = 1 MB.
+    5. SW 가 메모리 맵에서 빈 공간 찾아 base 주소를 BAR 에 최종 write.
+
+    → **device register 의 실제 값이 망가지지 않음** — 0xFFFFFFFF 는 sizing 모드만 활성화. OS 는 부팅 때마다 안전하게 호출 가능.
+
+!!! note "Resizable BAR vs DMA — 왜 둘 다 필요한가"
+    "GPU 가 DMA 로 대용량 전송 잘 하는데 왜 BAR 를 16 GB 로 키워야 하는가?" 는 자주 나오는 질문.
+
+    | 방식 | 용도 | 특징 |
+    |------|------|------|
+    | **BAR (MMIO)** | 제어 레지스터, 빈번한 작은 데이터 | CPU 가 직접 load/store |
+    | **DMA** | 대용량 데이터 (텍스처, 패킷) | GPU DMA 엔진이 능동, CPU 는 명령만 |
+
+    DMA 는 setup overhead 가 있어 **빈번하고 작은 random access** 에는 불리. 256 MB BAR 의 경우 GPU 의 16 GB VRAM 에서 일부만 mapping → 범위 밖 access 시 매번 **address remapping** = 큰 지연.
+
+    Resizable BAR (16 GB 까지) → 전체 VRAM 을 일반 메모리처럼 즉시 access 가능.
+
+    **비유**: DMA = 대형 트럭 (대량 운송), Resizable BAR = 항상 열려 있는 복도 (옆방에 서류 한 장 빠르게).
+
+!!! note "PCIe Bifurcation — 한 connector 를 여러 link 로"
+    한 x16 connector 를 BIOS/UEFI 설정으로 **x8 + x8** 또는 **x4 + x4 + x4 + x4** 등으로 분할해 여러 device 를 직접 연결 가능 (switch 없이).
+
+    RC 가 분할을 인지하는 방법:
+
+    1. **BIOS/UEFI 설정**: 부팅 전 POST 단계에서 사용자/펌웨어가 슬롯 분할 모드 설정.
+    2. **LTSSM 응답**: 전원 인가 후 RC 가 각 sub-port 그룹별로 TS1/TS2 송신, 응답 lane 들을 묶어 link 형성.
+
+    → 같은 보드에서 **그래픽카드 1 개 (x16)** 또는 **NVMe 4 개 (x4×4)** 의 유연한 운용 가능.
+
 ---
 
 ## 5. Enumeration — DFS 시퀀스

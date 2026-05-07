@@ -322,6 +322,26 @@
 
 ---
 
+## 19. PCIe 진화 한 줄 요약
+
+> **"PCIe 의 진화 = CPU 간섭을 최소화하면서 device ↔ device 또는 VM ↔ VM 이 직접 대화하게 만드는 역사."**
+
+| 세대/기술 | 해결한 문제 |
+|-----------|------------|
+| 직렬 통신 | 병렬 버스의 클럭 스큐 |
+| Point-to-Point | 공유 버스의 병목 |
+| MSI / MSI-X | Legacy INTx 의 line 공유 |
+| ASPM | OS 가 매번 power 관리 |
+| SR-IOV | 가상화 SW (hypervisor) 의 trap 오버헤드 |
+| Resizable BAR | CPU 의 VRAM 접근 창 한계 |
+| ATS / PASID | IOMMU 의 매번 walk 부담 |
+| PAM4 + FLIT + FEC | NRZ 의 주파수 한계 |
+| CXL.mem / .cache | Memory Wall + 가속기와의 cache 일관성 |
+
+검증/설계 결정 시 "이 선택이 어느 축의 CPU 간섭을 줄이는가?" 라는 질문이 spec 의 의도를 빠르게 환기시켜 줌.
+
+---
+
 ## 다음 단계
 
 - [용어집](glossary.md) — 핵심 용어 ISO 11179 형식

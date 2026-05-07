@@ -178,6 +178,33 @@
 
 → Polling 단계에서 서로 capable 한 최대 속도 가 정해짐. 하지만 실제로 그 속도로 link 진입하려면 **Configuration → L0 → Recovery (EQ) → 새 속도의 L0** 절차를 거침 (Gen3+).
 
+!!! example "Bit Lock ↔ Symbol Lock — Polling 의 두 단계 박자 맞추기"
+    **Bit Lock (비트 박자 맞추기)**:
+
+    - Sender 가 `01010101...` 처럼 1-bit 단위로 규칙적으로 변하는 훈련용 신호 (TS1/TS2 의 일부) 를 송출.
+    - Receiver 의 **CDR (Clock Data Recovery)** 회로가 이 신호의 transition 을 보고 자기 내부 시계를 sender 의 박자에 동기화.
+    - 이 단계에서는 "한 비트의 시작/끝" 만 알아냄.
+
+    **Symbol Lock (문자 경계 찾기)**:
+
+    - Bit 박자는 맞췄지만 10-bit (8b/10b) 또는 130-bit (128b/130b) 의 시작/끝을 알아야 데이터로 해석 가능.
+    - Sender 가 **COM (Comma) symbol** 이라는 특수 패턴을 주기적으로 섞어 송출.
+    - Receiver 가 COM 을 발견하는 순간 "그 위치가 symbol 경계" 로 인식, alignment 완료.
+
+    → 두 lock 이 모두 끝나야 Polling 이 다음 state 로 진행. PHY 검증 시 "Polling 에서 stuck" 의 진단은 Bit Lock 단계 vs Symbol Lock 단계 어디서 막혔는지부터.
+
+!!! note "PCIe link 는 항상 Gen 1 부터 시작"
+    모든 PCIe device 는 처음 깨어날 때 **무조건 Gen 1 (2.5 GT/s)** 으로 시작. 이유: 호환성 보장 — 양 끝의 capability 를 모를 때 가장 보수적인 속도가 안전.
+
+    절차:
+
+    1. Detect → Polling.Active 진입 시 **Gen 1** 으로 동작.
+    2. Polling 단계에서 양 끝이 TS1/TS2 안에 "나는 Gen N 까지 지원" 정보 교환.
+    3. 합의된 최대 속도가 정해진 뒤, **Recovery 상태로 일부러 넘어가** clock 을 새 Gen 으로 올리고 retraining.
+    4. Retraining 성공 시 합의 속도의 L0 진입.
+
+    검증 시 "Gen 4 capable 인데 link 가 Gen 1 으로 떠 있다" → Recovery + speed change 가 안 일어났다는 의미. 보통 LTSSM trace 에서 EQ phase 결과 또는 양 끝 capability mismatch 가 원인.
+
 ---
 
 ## 4. Equalization — Gen3+ 의 4 Phase

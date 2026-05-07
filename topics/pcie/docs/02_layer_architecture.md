@@ -195,6 +195,35 @@
 | **LTSSM** | 11 state link training + recovery + L0s/L1 entry |
 | **Ordered Sets** | TS1/TS2 = training, FTS = fast training, EIOS = electrical idle, SKP = clock comp |
 
+!!! example "차동 신호 (Differential Signaling) 의 노이즈 제거 — 정량 예시"
+    한 lane 은 TX 2 가닥 + RX 2 가닥 = **총 4 핀** (TX+/TX-/RX+/RX-). 송신 시 데이터를 정상 신호(+) 와 역상 신호(-) 두 개로 나눠 한 쌍으로 송출.
+
+    예: 송신 (+0.1V, -0.1V) → **차이 = 0.2V** = 1 로 해석.
+
+    중간에 외부 노이즈가 두 선에 동시에 +0.5V 더해진다고 가정 → 도착 시 (+0.6V, +0.4V).
+
+    수신 측은 **두 신호의 차이만** 계산: 0.6 − 0.4 = **0.2V**. 노이즈는 상쇄되고 원래 값 그대로.
+
+    덕분에 PCIe 는 **수백 mV 수준의 매우 작은 전압 차이** 로도 안정적 통신 가능 — 저전압 + 고속화의 토대.
+
+!!! example "8b/10b vs 128b/130b — encoding 의 본질"
+    **연속된 0 또는 1 의 공포**: `00000000` 처럼 변화 없는 데이터가 길게 흐르면 수신 측 CDR 이 박자 (clock edge) 를 잃어 동기화 실패.
+
+    **8b/10b (Gen1, Gen2) — Lookup Table 방식**:
+
+    - 8 bit 데이터 → 사전에 약속된 10 bit 코드로 변환.
+    - 연속된 0 또는 1 의 길이를 5 개 이하로 제한 + DC balance (0/1 갯수 동일).
+    - 1 bit 가 아닌 2 bit 추가 이유 — DC 균형 + K-Code (`COM`, `SKP` 등 제어 패턴) 공간 확보. 9 bit (512 조합) 으로는 256 데이터 모두에 대해 DC 균형이 수학적으로 불가.
+    - 대가: **20% 대역폭 오버헤드**.
+
+    **128b/130b (Gen3+) — LFSR 스크램블링 방식**:
+
+    - 송수신 양쪽이 같은 LFSR 알고리즘으로 데이터를 무작위 섞음 (encoding table 폐기).
+    - 무작위 섞인 데이터는 0 또는 1 이 길게 이어질 확률이 매우 낮아짐.
+    - 추가된 2 bit 의 역할은 에러 검사 아님 — **Sync Header**: "이 128 bit 가 데이터인지 제어 명령인지" 구분.
+    - 결과: **오버헤드 20% → 1.5%**.
+    - 가능해진 배경: 정밀해진 CDR + 강력한 EQ (Module 05 참조).
+
 ---
 
 ## 6. 송신 흐름 — Memory Write 예

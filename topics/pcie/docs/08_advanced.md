@@ -99,6 +99,53 @@
 
 → **ARI** (Module 06) 가 enable 되어야 256 개 VF 를 지원 (Function # 8-bit 확장).
 
+!!! example "SR-IOV 가 등장한 배경 — 가상화의 hypervisor overhead"
+    상황: 100 Gbps NIC 1 장 + VM 100 대.
+
+    **SR-IOV 이전 (Full Emulation)**:
+
+    - VM 의 게스트 OS 는 옛날 NIC (예: Intel e1000) 인 척 속는 **emulated device** 와 통신.
+    - VM driver 가 가짜 register 에 access 할 때마다 CPU 가 **Trap (VM-Exit)** → Hypervisor 로 제어 넘어감 → Hypervisor 가 명령 해석 후 실제 PF driver 로 전달.
+    - **packet 1 개 송신에 trap 수십 번** → 극도로 느림.
+
+    **VirtIO (반가상화)**:
+
+    - VM 이 자기가 가상이라는 사실을 인정하고 VirtIO driver 사용.
+    - VM 과 hypervisor 사이에 **Virtqueue (Ring Buffer)** 공유 메모리.
+    - VM 이 packet 50 개를 ring buffer 에 쌓아두고 trap 1 번 (Hypercall) → batching → 효율 ↑.
+
+    **SR-IOV (VF)**:
+
+    - 위 단계를 **하드웨어로 해결** — VF 가 직접 VM 에 패스스루.
+    - VM driver 가 VF BAR 에 직접 access → Trap 없음 (IOMMU 가 검증).
+    - **packet 1 개 송신에 trap 0 번** — line rate 가능.
+
+    **vDPA (최신)**:
+
+    - VM 안에서는 표준 **VirtIO driver** 그대로.
+    - 실제 동작은 SmartNIC 같은 하드웨어가 ring buffer 를 직접 read.
+    - **VirtIO 의 driver 표준화 + SR-IOV 의 성능** 결합.
+
+    | 방식 | CPU Trap | Live Migration | 드라이버 표준화 |
+    |------|----------|---------------|----------------|
+    | Full Emulation | 매우 많음 | 쉬움 | 표준 |
+    | VirtIO | 중간 (batching) | 쉬움 | 표준 |
+    | SR-IOV (VF) | 거의 없음 | 어려움 | 벤더 종속 |
+    | vDPA | 거의 없음 | 가능 | 표준 |
+
+!!! note "MFD vs SR-IOV — 헷갈리기 쉬운 두 가상화 개념"
+    둘 다 "한 device 에 여러 function" 이지만 **목적 / 생성 방식 / 권한** 모두 다름.
+
+    | 비교 | MFD (Multi-Function Device) | SR-IOV |
+    |------|----------------------------|--------|
+    | 기능의 종류 | **이질적** (NIC + Sound 등 서로 다름) | **동질적** (NIC 의 복제) |
+    | 생성 시점 | **정적** — 공장에서 HW 고정 | **동적** — 소프트웨어로 실시간 생성/제거 |
+    | 권한 | 각 Function 이 독립적 설정 권한 | PF 만 글로벌 권한, VF 는 데이터 통로만 |
+    | 목적 | 단가 절감, 공간 절약 | 가상화 성능 극대화 (hypervisor 우회) |
+    | Configuration Space | Function 별 full | PF full + VF lightweight |
+
+    **핵심 차이**: MFD 의 Function 들은 **별개의 기능** 을 묶은 것 (예: 한 칩에 NIC + audio). SR-IOV 의 VF 는 **같은 기능의 복제** (예: NIC 1 개의 100 개 가상 NIC).
+
 ---
 
 ## 2. ATS (Address Translation Service)

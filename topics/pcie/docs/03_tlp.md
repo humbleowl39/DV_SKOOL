@@ -146,6 +146,25 @@
 
 → **Why?** Producer-Consumer 패턴에서 Producer 의 MWr (P) 가 Consumer 의 MRd Cpl 보다 먼저 도착해야 함. Posted/Non-Posted/Cpl 분리가 PCI legacy 의 ordering 가정과 호환.
 
+!!! example "Write-passes-Read 의 두 얼굴 — Deadlock 방지 + 데이터 무결성"
+    **Strong ordering 의 기본 원칙**: 먼저 출발한 Memory Write 는 무조건 먼저 도착해야 한다 (FIFO). Write 32-bit / 64-bit 모두 Posted 로 동일 취급.
+
+    **Write 가 Read 를 새치기 가능 — Why?**
+
+    - Read 는 응답을 기다리는 transaction. 만약 Read 가 길을 막은 채 Write 가 그 뒤에 줄 서 있으면, Read 의 응답을 기다리는 쪽도 그 Write 가 있어야 진행 → **circular wait → deadlock**.
+    - 그래서 spec 가 명시적으로 "Write **MUST PASS** Read" 허용.
+
+    **Read 가 Write 를 새치기 절대 불가 — Why?**
+
+    - Producer-Consumer: GPU 가 RAM 에 결과 Write → CPU 가 그 영역 Read.
+    - 만약 Read 가 Write 를 추월하면 CPU 가 **이전 (쓰레기) 데이터** 를 받음 → 무결성 파괴.
+
+    **Relaxed Ordering (RO) 의 책임**:
+
+    - TLP 헤더의 RO bit 가 1 이면 "순서 섞여도 OK" 선언 — switch 가 ordering 무시하고 우선순위로 처리.
+    - Switch 는 주소 검사 안 함 → 같은 주소도 섞을 수 있음.
+    - 책임은 **sender** 에게. 순서가 중요한 제어 명령에는 절대 RO 금지.
+
 ---
 
 ## 5. Routing — 3 가지
@@ -262,6 +281,32 @@ Routing field (Type[2:0]) 이 destination 결정:
 - Hot Plug events
 - Vendor-defined messages
 - Error signaling (ERR_COR, ERR_NONFATAL, ERR_FATAL)
+
+!!! danger "❓ 흔한 오해 — MSI / MSI-X 는 Message TLP 가 아니다"
+    이름에 "Message" 가 들어가지만, MSI/MSI-X 는 실제로는 **Memory Write TLP** 로 전송된다.
+
+    - **MSI**: Configuration Space 에 등록된 한 메모리 주소에 32 vector 까지 (하위 비트만 변경). 개별 mask 불가.
+    - **MSI-X**: BAR 영역 안에 별도 **MSI-X Table** 생성. 최대 **2048 vector** (Table Size 11-bit). 각 vector 가 독립적인 주소 + 데이터, 개별 mask 가능.
+    - **SR-IOV 환경에서는 MSI-X 필수** — 각 VF 가 자기만의 vector 가 필요.
+
+    Message TLP 와 헷갈리면 **packet trace 의 MSI 식별** 이 안 됨 — Memory Write TLP 의 dst 주소가 MSI 영역인지 보고 판단해야 함.
+
+!!! example "MPS 가 작게 설정되는 진짜 이유 — HOL + 비용"
+    Length 필드 10 bit × 4 byte = **이론상 최대 4096 byte payload**. 그런데 실무 시스템은 보통 128 / 256 / 512 byte.
+
+    | MPS | 헤더 오버헤드 | 사용처 |
+    |-----|--------------|--------|
+    | 128 B | ~17% | PC 일반 |
+    | 256 B | ~9% | PC 기본 |
+    | 512 B | ~4.5% | 서버급 |
+    | 4096 B | ~0.5% | 이론적 최고, 실무 거의 미사용 |
+
+    **작게 쓰는 이유**:
+
+    1. **Head-of-Line (HOL) Blocking**: 4096-byte 화물차가 차선을 점유하는 동안 뒤에서 급한 인터럽트 (MSI Memory Write) 가 기다려야 함. 잘게 쪼개면 끼워 넣을 틈이 생김.
+    2. **수신 측 SRAM 비용**: MPS 가 4096 이면 모든 device 의 RX buffer / Replay Buffer 가 그만큼 커야 함 → 칩 면적, 발열, 단가 폭등.
+
+    → 즉 MPS 결정은 **"최고 효율 vs 빠른 반응성 + 저렴한 단가"** 의 trade-off. 현대 시스템은 오버헤드를 감수하고 반응성 / 비용 측을 선택.
 
 ---
 
