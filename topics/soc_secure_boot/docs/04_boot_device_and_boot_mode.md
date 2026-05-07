@@ -390,6 +390,13 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 
 ---
 
+!!! warning "실무 주의점 — Secondary boot 경로의 검증 누락 (test mode pin 우회)"
+    **현상**: Production silicon 에서 정상 boot 는 깨끗한데, test/debug 용 strap pin 을 특정 조합으로 묶으면 인증 검사를 건너뛰는 secondary boot 경로가 살아있어 임의 image 가 부팅된다.
+
+    **원인**: BootROM 분기 중 production / test / fallback 경로마다 ROTPK 검증 hook 이 따로 있는데, 그중 하나에서 OTP `secure_enable` flag 를 읽지 않거나 우선순위 비교 로직이 빠져 있음. Boot mode 매트릭스의 corner 가 DV plan 에서 빠진 결과.
+
+    **점검 포인트**: (boot mode × OTP secure flag × pinstrap override) 모든 조합에서 인증 단계까지 동일하게 도달하는가, 그리고 production fuse blow 후 test 경로가 닫히는지 silicon 등가의 시나리오로 확인했는가.
+
 ## 핵심 정리
 
 - **Boot mode 우선순위**: OTP > Pinstrap > Default. OTP는 양산 후 변경 불가 → 신중히 설계.

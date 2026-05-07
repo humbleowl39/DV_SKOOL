@@ -321,6 +321,13 @@ endclass
 
 ---
 
+!!! warning "실무 주의점 — JTAG 가 production 출하 시 disable 되지 않음"
+    **현상**: 양산 chip 을 거꾸로 분석해 보니 JTAG TAP 이 살아 있어 debug 권한으로 SRAM/레지스터에 접근, 부팅 중간 단계의 키 / 검증 결과를 읽거나 강제로 덮어쓸 수 있다.
+
+    **원인**: JTAG disable 이 OTP fuse 의 `jtag_lock` 비트와 연결돼 있는데, 양산 라인에서 해당 fuse 를 blow 하지 않거나, BootROM 이 fuse 값을 읽어 TAP controller 를 잠그는 시퀀스를 누락. Test/bring-up 편의 때문에 default 가 "open" 으로 남는 경우가 흔함.
+
+    **점검 포인트**: production OTP profile 에서 JTAG 가 닫혔는가 (TAP IDCODE 외 응답 차단), 그리고 secure boot 실패 시 fail-secure 로 JTAG 가 닫힌 채 정지하는가 (debug 우회 금지).
+
 ## 핵심 정리
 
 - **공격 표면**: Fault Injection (전압/클럭 글리치, 레이저), Side-Channel (전력/EM/timing), Rollback (이전 버전 강제), TOCTOU (verify ↔ use 사이 race), JTAG (debug port).

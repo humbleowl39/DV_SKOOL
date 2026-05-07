@@ -368,6 +368,13 @@ DPDK: 모든 것을 user-space에서 처리 (polling 기반)
 
 ---
 
+!!! warning "실무 주의점 — virtio queue full 시 backend silent drop"
+    **현상**: Guest 가 IO timeout/retransmit 만 인지하고, host 측 로그에는 명확한 error 가 없어 원인 파악이 늦어짐.
+
+    **원인**: virtio vring 의 avail/used index 가 가득 찼을 때 backend(QEMU/vhost) 가 추가 descriptor 를 단순 무시하거나 notification 을 throttling 하여 guest 는 정상 enqueue 로 오해.
+
+    **점검 포인트**: vhost stat 의 queue full counter, backend 의 notify suppression flag (`VIRTIO_F_EVENT_IDX`), guest 측 queue depth vs in-flight ratio.
+
 ## 핵심 정리
 
 - **3 가지 모델**:

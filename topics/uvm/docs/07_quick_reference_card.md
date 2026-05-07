@@ -22,6 +22,13 @@ UVM = Factory(유연한 생성) + config_db(유연한 설정) + Phase(자동 순
 
 ---
 
+!!! warning "실무 주의점 — run_phase 와 sub-phase 혼용"
+    **현상**: `run_phase` 안에서 `raise_objection` 했는데 시뮬레이션이 즉시 종료되거나, sub-phase(`main_phase`, `shutdown_phase` 등) 시퀀스가 한 번도 안 도는 경우가 있다.
+
+    **원인**: `run_phase` 와 `main_phase`/`pre_main_phase`/... 같은 sub-phase 는 **같은 시간축에서 병렬 실행**된다. `run_phase` 에서 objection 을 안 잡거나 sub-phase 에서 잡지 않으면 어느 한쪽이 먼저 끝나고 시뮬레이션이 종료. 또 `forever` 루프를 둘 다에 두면 종료 조건이 영원히 안 만족된다.
+
+    **점검 포인트**: 한 컴포넌트에서 `run_phase` 와 sub-phase 를 동시에 사용하지 말 것. drain time 이 0 이면 마지막 transaction 이 잘릴 수 있으므로 `phase.phase_done.set_drain_time(this, 100ns)` 명시.
+
 ## 핵심 정리
 
 | 주제 | 핵심 포인트 |

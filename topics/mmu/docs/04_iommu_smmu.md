@@ -437,6 +437,13 @@ Resume의 Technical Challenge #3에서 언급:
 
 ---
 
+!!! warning "실무 주의점 — Stage 2 미설정 시 Guest 메모리 격리 무효화"
+    **현상**: 가상화 환경에서 Guest OS가 Stage 2 변환 없이 IPA를 그대로 PA로 사용하게 되어, 다른 Guest 또는 Hypervisor 메모리 영역에 DMA 접근 가능.
+    
+    **원인**: SMMU의 Two-Stage 변환에서 Stage 1(Guest OS 제어)만 활성화하고 Stage 2(Hypervisor 제어)를 bypass 상태로 두면 Guest가 임의의 PA를 지정한 DMA로 시스템 전체 메모리에 접근할 수 있음. Hypervisor 초기화 시 모든 Stream에 대해 Stage 2 Context Descriptor를 설정해야 함.
+    
+    **점검 포인트**: SMMU CD(Context Descriptor)에서 `S2_CFG` 필드가 `0b00`(bypass)이 아닌지 확인. DV 시나리오에서 Guest DMA 주소에 Hypervisor 메모리 범위 PA를 주입했을 때 SMMU가 Abort를 생성하는지 검증.
+
 ## 핵심 정리
 
 - **SMMU = SoC-level MMU**: DMA 마스터(GPU/NIC/DMA/가속기)의 시스템 메모리 access를 가상화·격리.

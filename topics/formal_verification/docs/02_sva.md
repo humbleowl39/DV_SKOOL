@@ -509,6 +509,13 @@ SVA에서 존재하지 않는 신호를 참조하면:
 
 ---
 
+!!! warning "실무 주의점 — Vacuous Pass (cover 누락)"
+    **현상**: assert property 가 "PROVEN" 으로 통과해 안심하고 있었는데, 실제로는 antecedent 자체가 한 번도 도달하지 못해 명제가 공허하게 참(vacuously true) 이었다. 버그를 잡지 못하고 sign-off 한다.
+
+    **원인**: `req |-> ##[1:5] gnt` 같은 implication 에서 `req` 가 한 번도 1 이 안 되면 명제는 자동으로 참. assume 이 너무 강해서 antecedent 가 unreachable 한 경우, 또는 신호 이름 오타로 cover 가 없는 경우 발견 못한다.
+
+    **점검 포인트**: 모든 assert 마다 매칭되는 cover 를 작성 — `cover property (req)`, `cover property (req ##[1:5] gnt)`. JasperGold 의 "trace 1 covered" 가 실제 출력되었는지 확인. Sign-off 체크리스트에 "every assert has a covered antecedent" 를 항목으로 포함.
+
 ## 핵심 정리
 
 - **SVA 3가지 역할**: `assert`(버그 검출), `assume`(Formal 입력 제약), `cover`(도달성). assert와 cover는 항상 짝으로.

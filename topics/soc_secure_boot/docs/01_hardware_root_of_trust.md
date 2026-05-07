@@ -380,6 +380,13 @@ otp_model.rotpk_hash.set(expected_hash);
 
 ---
 
+!!! warning "실무 주의점 — ROTPK 미기록 상태에서 Secure Boot 활성화"
+    **현상**: OTP에서 Secure Boot Enable 비트는 blown됐지만 ROTPK hash가 기록되지 않은 상태로 칩이 출고된다. 부팅 시 BootROM이 ROTPK를 읽어 all-zero와 비교하여 임의 서명이 통과되거나 즉시 halt된다.
+
+    **원인**: Lifecycle 전환 스크립트에서 Secure Boot Enable eFuse와 ROTPK blow 순서가 분리되어 있고, 중간 단계 검증 없이 진행 시 ROTPK 미기록 상태가 양산 칩에 고착된다. OTP는 재시도 불가이므로 해당 칩은 폐기 대상.
+
+    **점검 포인트**: DV Negative 시나리오에 ROTPK=0 + Secure Boot EN=1 조합을 명시적으로 추가. BootROM 로그에서 `ROTPK_READ` 이후 `ROTPK_ZERO_ERR` 코드 확인. Lifecycle 전환 스크립트의 blow 순서를 ROTPK → Secure Boot Enable 순으로 고정하고 중간 읽기 검증 단계를 삽입.
+
 ## 핵심 정리
 
 - **HW RoT = BootROM + OTP/eFuse**. BootROM은 mask ROM (제조 시 결정 + 변경 불가), OTP는 1회 쓰기만 가능.

@@ -298,6 +298,13 @@ endmodule
 
 ---
 
+!!! warning "실무 주의점 — Amortized vs Worst-Case 혼동"
+    **현상**: `vector::push_back` 을 N 번 호출하는 루프를 O(N) 이라 적었는데, 면접관이 "한 번 호출의 worst-case 는?" 이라고 되묻자 답이 막힌다.
+
+    **원인**: amortized O(1) 과 single-call worst-case O(N) (재할당 시점) 을 동일시한 것. 평균과 최악을 분리해서 보지 않음.
+
+    **점검 포인트**: 자료구조의 연산 비용이 amortized 인지 worst-case 인지 명시했는가, 그리고 "면접 기본은 worst-case" 기준으로 다시 합산했는가.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **상수항 / 하한 항 무시** — 입력이 커질수록 지배 항(highest order) 만 살아남는다.

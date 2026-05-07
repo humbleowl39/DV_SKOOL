@@ -159,6 +159,13 @@ mmu_ko Unit 4:                sysMMU = Common Task의 대표 항목
 → ai_engineering_ko가 "어떻게(AI)" / soc_integration_cctv_ko가 "무엇을(CCTV)"
 ```
 
+!!! warning "실무 주의점 — 주소 디코더 범위 중첩 무음 응답"
+    **현상**: 두 IP의 주소 범위가 겹치는 경우 AXI 버스에서 OKAY 응답이 돌아오지만, 기록한 데이터가 의도한 IP가 아닌 다른 IP 레지스터에 반영되어 기능 오류가 발생한다.
+
+    **원인**: 주소 디코더가 중첩 구간에서 두 slave를 동시 선택할 때, 버스 중재기는 에러 없이 임의의 slave 응답을 선택한다. DECERR가 발생하지 않으므로 시뮬에서 바로 드러나지 않는다.
+
+    **점검 포인트**: Config JSON의 `memory_map` 전체 항목을 정렬하여 인접 범위 `base + size > next_base` 조건 자동 검사. 미할당 주소 DECERR 시나리오와 함께 각 IP 경계 ±4B 접근 테스트를 회귀에 포함.
+
 ---
 
 ## 코스 마무리

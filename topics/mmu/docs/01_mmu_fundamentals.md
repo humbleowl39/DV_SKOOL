@@ -305,6 +305,13 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 
 ---
 
+!!! warning "실무 주의점 — MMU Enable 직후 ISB 누락"
+    **현상**: MMU Enable(SCTLR.M=1) 직후 Instruction Fetch가 stale 변환 주소로 실행되어 예기치 않은 Fault 또는 오동작 발생.
+    
+    **원인**: 파이프라인에 이미 페치된 명령어들이 SCTLR 업데이트 이전 상태로 실행됨. ISB를 삽입하지 않으면 컴파일러/CPU가 명령어 순서를 재배치하여 변환이 활성화되기 전 코드가 실행될 수 있음.
+    
+    **점검 포인트**: 부트 코드에서 `SCTLR_EL1.M = 1` 설정 직후 `ISB` 명령어 존재 여부 확인. 시뮬레이션 로그에서 MMU Enable 시점 이후 첫 번째 Translation Fault가 Enable 이전 VA 범위를 참조하면 ISB 누락 의심.
+
 ## 핵심 정리
 
 - **VA의 3가지 동기**: Process isolation / Memory efficiency (CoW, demand paging) / Fragmentation 해결.

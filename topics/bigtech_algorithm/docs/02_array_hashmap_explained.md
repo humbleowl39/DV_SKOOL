@@ -307,6 +307,13 @@ endmodule
 
 ---
 
+!!! warning "실무 주의점 — Hash Collision 으로 의도된 O(N²) (DoS)"
+    **현상**: 평균 O(1) 을 믿고 만든 서비스에 특정 패턴의 key 들이 들어오자 응답 시간이 폭주, 사실상 다운된다 (Hash-Flooding DoS).
+
+    **원인**: 공격자가 동일 bucket 으로 매핑되는 key 를 골라 넣으면 lookup 이 worst-case O(N) 으로 떨어지고, N 번 삽입은 O(N²) 가 된다. 결정론적 hash 함수 + 외부 입력의 조합이 함정.
+
+    **점검 포인트**: 외부 입력 key 에는 randomized / SipHash 류를 쓰는가, 아니면 입력 검증으로 collision 가능성을 차단했는가.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **Array** : index-by-position 이 강점, 순서 보존, lookup-by-value 는 O(N).

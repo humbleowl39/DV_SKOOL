@@ -691,6 +691,13 @@ Gap C: Technical Gap
 
 ---
 
+!!! warning "실무 주의점 — Common Task 호출 순서 의존성 무시"
+    **현상**: 개별 Common Task 시퀀스는 단독 실행 시 PASS지만, sysMMU Enable → DVFS transition 조합 시나리오에서 간헐적으로 DMA 트랜잭션이 손실된다.
+
+    **원인**: CCTV 매트릭스는 각 (IP, Task) 쌍의 독립 검증 여부만 추적한다. Task 간 순서 의존성(sysMMU 활성화 완료 전 DVFS 주파수 변경 → 진행 중 트랜잭션 중단)은 매트릭스 커버리지에 표현되지 않아 놓치기 쉽다.
+
+    **점검 포인트**: Virtual sequencer의 Common Task 호출 순서를 확인. `fork/join` 또는 sequential 실행 여부를 검토. CCTV 매트릭스에 Task pair 커버리지 (`cx_task_order`) 크로스 빈을 추가하여 순서 조합을 명시적으로 추적.
+
 ## 핵심 정리
 
 - **Common Task 후보**: sysMMU access, Security 권한 검사, DVFS transition, Clock Gating, Power Domain ON/OFF.

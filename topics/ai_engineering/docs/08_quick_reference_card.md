@@ -138,6 +138,13 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 
 ---
 
+!!! warning "실무 주의점 — 계측 없는 Agent 배포는 운영 부채"
+    **현상**: Agent 파이프라인을 계측 없이 운영하면, 어느 단계(Retrieval, LLM, Tool 호출)에서 실패가 발생했는지 사후에 추적할 수 없어 장애 대응 시간이 수 배 길어진다.
+
+    **원인**: Agent는 단일 API와 달리 다단계 호출 체인이므로, 단계별 latency·성공률·비용을 별도로 수집하지 않으면 전체 응답 시간만 측정된다.
+
+    **점검 포인트**: LangSmith, Langfuse 등의 tracing 도구나 자체 미들웨어로 `retrieval_time`, `llm_time`, `tool_call_count`, `total_cost`를 스텝 단위로 로깅. 도입 첫날부터 대시보드를 구성해 비용 이상 증가 알림을 설정.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **LLM 호출만이 끝이 아니다** — Prompt → RAG → Agent → Eval 의 4축으로 구성.

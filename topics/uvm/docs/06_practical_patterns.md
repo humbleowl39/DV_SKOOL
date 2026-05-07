@@ -291,6 +291,13 @@ MangoBoost / Samsung에서 반복한 환경 구축 순서:
         4. **Sequence Library 정비**: 시나리오를 sequence 단위로 모듈화 + Virtual Sequence. 검증: 기존 테스트 리스트와 1:1 매핑 확인 + coverage가 떨어지지 않았는지.
         **위험 감소 포인트**: 각 단계에서 *기능 동등성*을 sanity로 확인하는 게 핵심. 한 번에 다 갈아엎지 않기.
 
+!!! warning "실무 주의점 — derived test 의 super.build_phase 누락"
+    **현상**: 파생 테스트에서 env 인스턴스가 안 만들어지거나, `set_type_override` 가 안 먹힌 채 시뮬레이션이 시작된다. UVM_FATAL 없이 통과하는데 결과가 이상함.
+
+    **원인**: `extends base_test` 한 클래스의 `build_phase` 첫 줄에 `super.build_phase(phase);` 를 잊으면 base_test 가 만든 env / config_db / factory override 가 모두 사라진다. UVM 은 phase 함수를 자동으로 chain 하지 않는다.
+
+    **점검 포인트**: 모든 derived 클래스의 `build_phase`/`connect_phase`/`run_phase` 첫 줄에 `super.<phase>` 호출이 있는지. `+UVM_VERBOSITY=UVM_HIGH` 로 hierarchy print 의 env 가 base_test 결과를 포함하는지 확인.
+
 ## 핵심 정리
 
 - **Config Object 패턴**: 환경 설정을 한 객체에 모아 config_db로 전달 — 흩어진 set/get 폭발 방지.

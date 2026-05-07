@@ -54,6 +54,7 @@ plugins:
   - tags
 
 nav:
+  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
   - "코스 홈": index.md
   - "학습 모듈":
       - "Unit 1: UFS 프로토콜 스택": 01_ufs_protocol_stack.md

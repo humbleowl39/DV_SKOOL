@@ -375,6 +375,13 @@ MangoBoost MMU IP 맥락:
 
 ---
 
+!!! warning "실무 주의점 — ASID 고갈 시 전체 TLB Flush로 성능 절벽"
+    **현상**: 프로세스를 빠르게 생성/종료하는 워크로드에서 주기적으로 TLB Miss Rate가 급등하고 처리량이 수십% 하락.
+    
+    **원인**: 8-bit ASID(256개) 또는 16-bit ASID(65536개)가 소진되면 OS는 ASID를 재활용하기 위해 전체 TLB Flush(`TLBI VMALLE1`)를 수행함. 이때 모든 코어의 TLB 엔트리가 무효화되어 대규모 Cold Miss가 발생. 컨테이너/VM 환경에서 ASID 소비 속도가 예상보다 훨씬 빠를 수 있음.
+    
+    **점검 포인트**: 성능 저하 주기와 ASID 재활용 주기 일치 여부 확인. PMU 카운터에서 `L1D_TLB_REFILL` 이벤트 급증 시점과 TLBI 명령 발행 로그 타임스탬프 비교.
+
 ## 핵심 정리
 
 - **MMU 성능 = TLB Hit Rate × Throughput × Latency** 함수. 단일 지표가 아닌 다차원.

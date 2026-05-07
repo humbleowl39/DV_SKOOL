@@ -581,6 +581,13 @@ TCP Options 필드는 최대 40바이트(헤더 최대 60B - 고정 20B). Timest
 
 ---
 
+!!! warning "실무 주의점 — RTO 타이머와 Fast Retransmit 동시 트리거"
+    **현상**: 패킷 손실 시나리오에서 동일 세그먼트가 두 번 재전송되며 수신 측에서 중복 ACK 폭주가 발생한다.
+    
+    **원인**: 3 Duplicate ACK로 Fast Retransmit이 이미 발동되었음에도 RTO 타이머가 동시에 만료되면 RTX 엔진이 두 경로에서 동일 세그먼트를 독립적으로 전송한다. HW 구현에서 Fast Retransmit 진입 시 RTO 타이머를 반드시 리셋해야 하는데 이 처리가 누락되기 쉽다.
+    
+    **점검 포인트**: 패킷 손실 주입 직후 `rto_timer_active`와 `fast_retx_trigger` 신호가 동시에 High인 사이클이 있는지 파형에서 확인. 두 신호가 동시 assert 되면 어느 쪽이 실제로 전송을 먼저 수행했는지 `tx_seq_num` 로그로 추적.
+
 ## 핵심 정리
 
 - **5대 기능**: Checksum, Segmentation/Reassembly, Retransmission, Flow Control, Congestion Control.

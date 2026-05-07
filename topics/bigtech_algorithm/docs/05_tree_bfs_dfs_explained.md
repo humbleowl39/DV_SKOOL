@@ -477,6 +477,13 @@ endmodule
 
 ---
 
+!!! warning "실무 주의점 — 재귀 깊이로 인한 stack overflow 임계"
+    **현상**: skewed tree / 긴 linked-list 형태 그래프에서 DFS 재귀가 도중에 죽는다. Python 은 대략 N≈1000, C++ 은 환경에 따라 수만 깊이에서 한계.
+
+    **원인**: 언어/OS 의 기본 stack 크기 제한. Python 은 `sys.setrecursionlimit` 기본값 (~1000), C++ 은 thread stack (~1MB → 프레임당 수십 byte 가정 시 수만 프레임).
+
+    **점검 포인트**: 입력 크기가 한계에 닿을 가능성이 있는가, 그렇다면 반복문 + 명시적 stack 으로 변환했는가, 또는 한계 상향이 환경적으로 안전한가.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **BFS** — Queue, level by level. 최단 경로 / 가장 가까운 X 류 문제.

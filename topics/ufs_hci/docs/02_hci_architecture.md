@@ -429,6 +429,13 @@ SDB vs MCQ 비교:
 
 ---
 
+!!! warning "실무 주의점 — UTRLDBR 와 UTRLRSR race"
+    **현상**: 명령을 doorbell 로 발행했는데 HCI 가 해당 슬롯을 무시해 명령이 실종된다.
+
+    **원인**: UTRLDBR set 직후 UTRLRSR(Run/Stop) 의 busy 상태를 확인하지 않아, run-stop 토글 타이밍과 race 가 발생한다.
+
+    **점검 포인트**: UTRLDBR write 전 UTRLRSR == 1 인지, UTRD 가 메모리에 fully visible 한지(memory barrier) 드라이버 시퀀스에서 확인.
+
 ## 핵심 정리
 
 - **HCI register map**: HCS (status), IS (interrupt), UTRLBA (UTRD list base), UTMRLBA (Task Management list base), CAP (capabilities).

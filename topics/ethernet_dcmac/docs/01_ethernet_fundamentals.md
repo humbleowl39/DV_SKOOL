@@ -365,6 +365,13 @@ DV 관점:
 
 ---
 
+!!! warning "실무 주의점 — FCS 계산 범위 착각"
+    **현상**: Scoreboard에서 FCS 값이 항상 mismatch로 보고되며, TB가 삽입한 FCS가 DUT 출력과 다르다.
+    
+    **원인**: FCS(CRC-32)는 Dst MAC부터 Payload까지만 계산한다. Preamble과 SFD(총 8B)는 제외 대상임에도 TB 코드에서 Preamble을 CRC 입력 버퍼에 포함시키는 실수가 빈번하다.
+    
+    **점검 포인트**: TX 모델의 CRC 계산 시작 오프셋이 Preamble(7B)+SFD(1B) = 8B 이후인지 확인. VLAN 태그 삽입 시 EtherType 이전 4B가 추가되므로 총 프레임 길이에서 Jumbo 임계값(1518B → 1522B)도 재계산 필요.
+
 ## 핵심 정리
 
 - **Frame 구조**: Preamble (7 bytes) + SFD (1) + DA (6) + SA (6) + Type/Length (2) + Payload (46-1500) + FCS (4). 최소 64 bytes (without preamble), 최대 1518 (or jumbo 9000+).

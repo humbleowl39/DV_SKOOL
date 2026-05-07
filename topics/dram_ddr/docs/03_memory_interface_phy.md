@@ -371,6 +371,13 @@ ZQ Calibration:
 
 ---
 
+!!! warning "실무 주의점 — ZQ Calibration 타이밍 위반으로 ODT 임피던스 오동작"
+    **현상**: 온도 변화 이후 Write 데이터가 Eye 중심에서 벗어나 비트 오류율이 증가하거나, 주기적 ZQ Calibration 도중 RD/WR 명령이 겹쳐 데이터 오염 발생.
+    
+    **원인**: ZQCS(Short Calibration)는 tZQCS(80ns) 동안 DQ/DQS 드라이버를 완전히 점유하므로, 이 구간에 RD/WR 명령이 발행되면 정의되지 않은 동작. MC가 Calibration 스케줄러와 명령 스케줄러를 독립적으로 운용할 때 충돌 발생 가능.
+    
+    **점검 포인트**: ZQCS 명령 발행 시점에서 tZQCS 이전 RD/WR 명령의 완료 여부 확인. SVA에서 `zq_start → ##[1:tZQCS_ns] (no_rd && no_wr)` assertion 구현. 주기적 Calibration 간격이 온도 변화 속도보다 충분히 짧은지 스펙(tZQCAL_interval ≤ 1ms) 확인.
+
 ## 핵심 정리
 
 - **PHY = 명령/데이터의 전기적 변환 + 캘리브레이션**: DLL/PLL로 클럭 위상 정렬, ZQ로 임피던스 보정.

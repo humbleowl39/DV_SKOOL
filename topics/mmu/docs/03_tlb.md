@@ -413,6 +413,13 @@ DV 검증 핵심:
 
 ---
 
+!!! warning "실무 주의점 — TLB Shootdown 순서 오류로 stale 변환 사용"
+    **현상**: Multi-core 환경에서 한 코어가 PTE를 변경했음에도 다른 코어가 이전 변환 결과를 계속 사용하여 잘못된 PA로 접근, 데이터 오염 또는 보안 취약점 발생.
+    
+    **원인**: PTE 업데이트 후 반드시 다른 코어에 IPI(Inter-Processor Interrupt)를 보내 TLBI를 수행시켜야 하는데, 순서가 `PTE 수정 → 자신의 TLBI → IPI 전송 → 상대 코어 TLBI 완료 확인` 이어야 함. IPI 전송 전에 새로운 주소로 접근을 허용하거나 DSB 없이 진행하면 race가 발생함.
+    
+    **점검 포인트**: Shootdown 코드에서 `TLBI → DSB ISH → IPI 발송 → 상대 코어 TLBI 완료 확인` 순서 검증. 시뮬레이션 파형에서 PTE store 완료 시점과 원격 코어 TLBI 발행 시점 사이에 해당 VA 접근이 발생하면 race 발생.
+
 ## 핵심 정리
 
 - **TLB는 latency 게임**: hit 1 cycle vs miss + walk 100+ cycle. Hit rate가 IPC를 좌우.

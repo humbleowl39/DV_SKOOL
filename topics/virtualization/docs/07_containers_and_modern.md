@@ -269,6 +269,13 @@ Timeline:
 
 ---
 
+!!! warning "실무 주의점 — kernel 공유로 인한 namespace escape (CVE-2022-0492 류)"
+    **현상**: Container 내부 프로세스가 host root 권한을 획득하거나 다른 container 의 파일 시스템/프로세스에 접근.
+
+    **원인**: Container 는 host kernel 을 공유하므로 cgroup v1 `release_agent`, user namespace + CAP_SYS_ADMIN, 또는 dirty pipe 같은 kernel 취약점 하나로 namespace 경계가 무너짐.
+
+    **점검 포인트**: kernel 버전 패치 레벨, seccomp/AppArmor profile 적용, `--privileged` flag 사용 여부, user namespace remap, cgroup v2 마이그레이션, runtime (runc/crun) 보안 패치 상태.
+
 ## 핵심 정리
 
 - **Container = OS 공유 + namespace 격리**: VM은 kernel 별도, container는 host kernel 공유.

@@ -617,6 +617,13 @@ Hypervisor 입장:
 
 ---
 
+!!! warning "실무 주의점 — IOMMU 미활성화 상태의 Device Passthrough 위험"
+    **현상**: VM에 PCIe 디바이스를 직접 할당(passthrough)했을 때 Guest가 Host 메모리 영역을 DMA로 접근하여 Host 커널이 크래시(Kernel Panic)된다.
+    
+    **원인**: IOMMU(VT-d/AMD-Vi/ARM SMMU)가 비활성화된 상태에서 passthrough를 수행하면 디바이스가 발행하는 DMA 주소에 아무 제약이 없다. Malicious 또는 버그 있는 Guest 드라이버가 Host PA를 직접 타겟으로 지정할 수 있다.
+    
+    **점검 포인트**: `dmesg | grep -i iommu`에서 `IOMMU enabled` 확인. BIOS/UEFI에서 VT-d(Intel) 또는 AMD IOMMU 옵션이 Enable 상태인지 검증. 시뮬레이션 환경에서는 IOMMU 미설정 시 Host PA 범위 외 DMA 시도 발생 여부를 SVA로 모니터링.
+
 ## 핵심 정리
 
 - **진화 단계**: 고정 기능 HW → 프로그래머블 CPU → MMU (메모리 격리) → IOMMU (device 격리) → CPU 가상화 (VT-x/EL2) → 컨테이너.

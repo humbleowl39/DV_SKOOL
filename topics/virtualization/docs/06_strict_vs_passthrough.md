@@ -345,6 +345,13 @@ Azure:
 
 ---
 
+!!! warning "실무 주의점 — IOMMU disable 실수로 DMA 가 host RAM 직접 access"
+    **현상**: Passthrough 된 device 가 VM 의 게스트 메모리 영역을 넘어 host kernel/다른 VM 메모리까지 read/write 가능 → 보안 격리 붕괴.
+
+    **원인**: BIOS `Intel VT-d` / `AMD-Vi` 비활성, kernel cmdline 에 `intel_iommu=on` / `amd_iommu=on` 누락, 또는 `iommu=pt` (passthrough mode) 로 설정해 SVM 격리가 비활성화.
+
+    **점검 포인트**: `dmesg | grep -i "DMAR\|IOMMU"`, `/sys/class/iommu/` 존재 여부, VFIO group 의 isolation, ATS/PRI 옵션과 ACS override 패치 사용 여부.
+
 ## 핵심 정리
 
 - **Strict**: 모든 IO를 hypervisor 중재 → 강한 격리 + 성능 ↓.

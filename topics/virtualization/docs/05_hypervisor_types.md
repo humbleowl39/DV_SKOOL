@@ -240,6 +240,13 @@ ARM VHE 이후:
 
 ---
 
+!!! warning "실무 주의점 — KVM dirty bit emulation 누락 시 live migration 데이터 손실"
+    **현상**: Live migration 후 destination VM 에서 일부 page 가 source 의 최신 상태와 불일치하여 application 단에서 silent corruption 발생.
+
+    **원인**: EPT/NPT 의 D-bit 또는 PML(Page Modification Logging) 설정이 누락되거나, write-protect fault 기반 dirty tracking 에서 race 로 인해 일부 modified page 가 dirty bitmap 에 누락.
+
+    **점검 포인트**: `KVM_CAP_MANUAL_DIRTY_LOG_PROTECT` 사용 여부, PML buffer flush 시점, migration 마지막 round 의 throttle threshold, post-copy fallback 활성화 여부.
+
 ## 핵심 정리
 
 - **Type 1 (Bare Metal)**: HW 위에 직접 hypervisor. 예: VMware ESXi, Xen, Hyper-V (Windows Server). 데이터센터 표준.

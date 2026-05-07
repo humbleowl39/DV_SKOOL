@@ -468,6 +468,13 @@ Security Driver: force/release로 DUT 내부 신호에 직접 접근
         - **Pipelining 적절**: AXI write 채널 — AW/W 독립, outstanding 4+ 정상. 단순 driver는 throughput 측정 불가, OoO 응답 커버 불가.
         - **단순 driver 충분**: APB — outstanding 개념 없음(매 트랜잭션 SETUP→ACCESS→IDLE 순차). Pipelining 도입 시 오히려 protocol 위반.
 
+!!! warning "실무 주의점 — `item_done()` 누락 시 두 번째 트랜잭션부터 hang"
+    **현상**: 첫 번째 트랜잭션은 정상 구동되지만 이후 `get_next_item()`이 영원히 block되어 시뮬이 hang 또는 타임아웃.
+
+    **원인**: `get_next_item()`과 `item_done()`은 lock-step 짝이다. `item_done()`을 빠뜨리면 Sequencer는 이전 item이 아직 처리 중이라고 판단해 다음 item을 보내지 않는다. `drive_item()` 안에서 예외 경로(에러 처리, early return)가 있을 때 한 쪽 분기에서 `item_done()` 호출이 빠지는 경우가 가장 흔하다.
+
+    **점검 포인트**: 로그에서 `[get_next_item]` 메시지 이후 `[item_done]` 메시지가 나오는지 확인. Driver `run_phase`의 모든 분기(if/case)에서 `item_done()`이 반드시 호출되는지 코드 경로 추적. `try_next_item` 사용 시에도 non-null이면 반드시 `item_done()` 필요.
+
 ## 핵심 정리
 
 - **Agent = Driver + Monitor + Sequencer** 묶음. Active/Passive 모드 분기로 재사용성 확보.

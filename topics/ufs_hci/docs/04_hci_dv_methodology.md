@@ -675,6 +675,13 @@ Resume:
 
 ---
 
+!!! warning "실무 주의점 — Doorbell-Completion ISR race 검증 누락"
+    **현상**: 회귀에서 가끔 명령이 timeout 으로 빠지지만 재현이 어려워 silent fail 로 묻힌다.
+
+    **원인**: doorbell ring 과 completion interrupt 사이에서 IS write-1-to-clear 와 UTRLDBR slot clear 의 순서 race 를 검증 시나리오에 포함하지 않았다.
+
+    **점검 포인트**: ISR 진입 → IS clear → UTRLDBR poll 사이에 새로운 doorbell 을 ring 하는 stress 시퀀스와, 해당 race 를 cover 하는 covergroup 이 있는지 확인.
+
 ## 핵심 정리
 
 - **양방향 검증**: driver-side (register/UTRD) + device-side (UPIU/UniPro) 모두.

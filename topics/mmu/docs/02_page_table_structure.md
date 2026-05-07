@@ -401,6 +401,13 @@ TLB Entry:
 
 ---
 
+!!! warning "실무 주의점 — Page Walk 중 Access Flag 미설정으로 반복 Fault"
+    **현상**: 처음 접근하는 페이지에서 Permission Fault가 아닌 반복적 Access Flag Fault가 발생하여 OS Handler가 무한 루프에 빠지거나 성능이 급격히 저하됨.
+    
+    **원인**: ARMv8은 PTE의 AF(Access Flag) 비트가 0이면 Fault를 발생시켜 SW가 명시적으로 AF를 설정하도록 강제함. 페이지 테이블 초기화 시 AF=0으로 세팅하면 해당 페이지에 접근할 때마다 Fault가 반복 발생.
+    
+    **점검 포인트**: PTE 생성 코드에서 AF 비트(bit[10]) 초기값 확인. Walk 로그에서 동일 VA에 대해 Fault → PTE 업데이트 → 재Fault가 반복되면 AF 누락 의심. `FEAT_HAFDBS`(HW AF 자동 관리) 미지원 환경에서는 SW Handler가 반드시 AF를 set해야 함.
+
 ## 핵심 정리
 
 - **Multi-level이 메모리 효율의 핵심**: Single-level은 모든 VA를 위해 page table 통째로 할당 (TB 단위). Multi-level은 사용 중인 영역의 sub-tree만 할당.

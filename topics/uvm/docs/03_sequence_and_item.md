@@ -550,6 +550,13 @@ endpackage
         endclass
         ```
 
+!!! warning "실무 주의점 — `start_item` / `finish_item` 없이 `randomize()` 단독 호출"
+    **현상**: Sequence Item이 randomize는 되지만 Sequencer/Driver로 전달되지 않아 DUT에 자극이 인가되지 않음. 시뮬은 정상 종료되고 커버리지도 0이지만 에러 메시지는 없음.
+
+    **원인**: `uvm_do` / `uvm_do_with` 매크로를 쓰지 않고 `req.randomize()` 후 바로 다음 로직으로 넘어갈 때 발생한다. `start_item(req)`가 Sequencer에 item 전달 요청을 등록하고, `finish_item(req)`가 Driver로 item을 실제 전송한다. 이 둘 중 하나라도 빠지면 item은 Sequencer 큐에 들어가지 않는다.
+
+    **점검 포인트**: `UVM_HIGH` verbosity 로그에서 `[Sequencer]` 수신 메시지 카운트를 확인. Sequence `body()` 안에 `start_item(req)` → `req.randomize()` → `finish_item(req)` 순서로 3개가 모두 존재하는지 코드 리뷰. `uvm_do_with` 사용 시에는 내부에서 자동 처리되므로 이 문제가 없다.
+
 ## 핵심 정리
 
 - **Sequence Item = 데이터+constraint, Sequence = 시나리오 로직.** 둘은 다른 클래스 계층 (`uvm_sequence_item` vs `uvm_sequence`).

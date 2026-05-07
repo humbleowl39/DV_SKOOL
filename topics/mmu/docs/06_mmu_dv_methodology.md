@@ -771,6 +771,13 @@ Agile 개발에서의 MMU 스펙 변경:
 
 ---
 
+!!! warning "실무 주의점 — Page Walk 중 중간 레벨 PTE Fault 미검증"
+    **현상**: 최하위(L3) PTE는 정상이지만 상위(L1/L2) 테이블 디스크립터의 Valid 비트가 0인 경우, Walk Engine이 올바른 Fault Type(Translation Fault at Level N)을 생성하지 않고 잘못된 PA를 반환하는 버그가 릴리즈까지 미검출.
+    
+    **원인**: 대부분의 DV 시나리오가 L3 PTE만 Invalid로 주입하고 중간 레벨 디스크립터 Fault는 커버하지 않음. Walk Engine 구현 버그는 상위 레벨 Fault 발생 시 Fault Level 인코딩을 잘못 보고하거나 스킵하는 형태로 나타남.
+    
+    **점검 포인트**: Fault 주입 시나리오에 L0/L1/L2 각각의 `valid=0` 케이스를 독립적으로 포함시키고, ESR_EL1의 `IFSC/DFSC[3:2]` 필드(Fault Level)가 실제 Walk 깊이와 일치하는지 검증.
+
 ## 핵심 정리
 
 - **MMU 검증 3축**: 기능(주소 변환) + 성능(TLB/throughput) + 프로토콜(AXI/AXI-S). 단일 axis 검증으론 부족.

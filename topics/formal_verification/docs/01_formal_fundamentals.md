@@ -361,6 +361,13 @@ Formal의 근본 한계:
 
 ---
 
+!!! warning "실무 주의점 — BOUNDED 를 PROVEN 으로 오해"
+    **현상**: 회의에서 "이 property 는 formal 로 통과했다" 라고 보고했는데, 보드에서 같은 property 가 위반되어 시간 늦게 발견된다.
+
+    **원인**: JasperGold/VC Formal 의 PROVEN 과 BOUNDED 는 다르다. BOUNDED 는 "현재 도달한 N cycle 까지 위반 없음" 일 뿐 N+1 cycle 부터의 동작은 보장하지 않는다. tool 의 status 만 보고 "통과" 라고 판단하면 induction 실패를 놓친다.
+
+    **점검 포인트**: 매 property 의 결과를 PROVEN / BOUNDED / CEX 별로 분류해 보고. BOUNDED 인 경우 (1) helper invariant 추가, (2) abstraction (blackbox / cut), (3) max bound 명시 후 sign-off 위험을 문서화. Sign-off 시 BOUNDED 만 있는 property 는 "검증 불완전" 으로 표시.
+
 ## 핵심 정리
 
 - **Sim = 샘플링, Formal = 증명**: Sim은 시드/입력 조합을 일부 샘플; Formal은 가능한 모든 입력에 대해 명제를 증명.

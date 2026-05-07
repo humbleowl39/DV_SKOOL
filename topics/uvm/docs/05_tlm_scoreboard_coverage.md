@@ -590,6 +590,13 @@ endgroup
         endgroup
         ```
 
+!!! warning "실무 주의점 — `check_phase`에서 잔여 expected 미확인으로 miss 버그 방치"
+    **현상**: 시뮬이 PASS로 종료되지만 DUT가 일부 응답을 아예 보내지 않은 경우(drop/miss)가 있어도 탐지되지 않는다. Scoreboard가 actual을 받을 때만 비교하므로, actual 자체가 오지 않으면 expected 큐에 항목이 쌓인 채로 검사 없이 종료된다.
+
+    **원인**: `run_phase`에서 `expected_fifo.get(expected)`와 `actual_fifo.get(actual)`를 쌍으로 비교하는 로직만 있고, `check_phase`에서 `expected_fifo`에 남은 항목이 없는지 확인하지 않는 설계 때문이다. DUT가 응답을 누락하면 scoreboard는 영원히 대기하지 않고 objection drop 시점에 그냥 종료된다.
+
+    **점검 포인트**: Scoreboard `check_phase`에서 `expected_fifo.size() != 0` 조건을 확인하고 남은 항목이 있으면 `` `uvm_error `` 발생시키는 코드가 있는지 점검. `check_phase`의 `` `uvm_error `` 메시지가 로그에 있는지 grep: `grep "SCOREBOARD" run.log`.
+
 ## 핵심 정리
 
 - **Analysis Port = 1:N broadcast**. Monitor 한 곳에서 send → 여러 구독자(SB, Coverage)가 각자 처리.

@@ -570,6 +570,13 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 
 ---
 
+!!! warning "실무 주의점 — V2X Sybil 공격 임계값 설정 오류"
+    **현상**: V2X Misbehavior Detection의 물리 타당성(Plausibility) 임계값이 느슨하면 Sybil 차량이 소수의 위장 메시지만으로 전방 정체 또는 긴급 제동 신호를 위조할 수 있다. 반대로 너무 엄격하면 정상 밀집 구간(교차로, 주차장)에서 오탐이 발생한다.
+
+    **원인**: 임계값은 차량 밀도 시뮬레이션 기반으로 설정하지만, 실도로 엣지 케이스(대형 주차장, 터널 출구 밀집)를 커버하지 못하는 경우가 많다.
+
+    **점검 포인트**: BSM(Basic Safety Message) 수신 로그에서 동일 위치 좌표를 공유하는 Certificate가 임계 개수(예: 3개) 이상 있는지 확인. Misbehavior Authority 보고 API 호출 여부와 CRL 갱신 주기가 실시간에 준하는지 검토.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **3축 공격 표면** — 물리(OBD/USB), 무선(BT/WiFi/Cellular/V2X), 공급망(ECU FW/Tier-1).

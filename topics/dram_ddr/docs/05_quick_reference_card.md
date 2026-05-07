@@ -25,6 +25,13 @@ MI/PHY = DDR 전기 신호 변환 + Training(타이밍 캘리브레이션)
 
 ---
 
+!!! warning "실무 주의점 — tFAW + Bank conflict 동시 발생 시 throughput cliff"
+    **현상**: 평균 BW는 정상이나 특정 트래픽 패턴에서 effective BW가 50% 이하로 급락하고 latency tail 이 길어짐.
+
+    **원인**: tFAW window 내 4 activate 한도 + 같은 bank row miss 가 겹치면 tRC/tRP 가 직렬화되어 단순 latency 합산보다 큰 stall 이 발생.
+
+    **점검 포인트**: Bank-level activate 분포(시간축), tFAW 카운터, Row-buffer hit rate, 동일 bank-group 연속 access 비율을 함께 측정.
+
 ## 핵심 정리
 
 | 주제 | 핵심 포인트 |

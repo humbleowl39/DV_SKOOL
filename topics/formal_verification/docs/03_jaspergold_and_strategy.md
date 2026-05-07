@@ -421,6 +421,13 @@ assert property (@(posedge clk) disable iff (rst)
 
 ---
 
+!!! warning "실무 주의점 — Blackbox 후 false counterexample"
+    **현상**: state-explosion 을 풀려고 sub-module 을 blackbox 했더니 갑자기 reasonable 한 property 가 fail 하면서 이상한 counterexample (CEX) 가 등장한다. 시간을 들여 디버그하다 보면 blackbox 출력에 "임의 값" 이 들어와서 발생한 가짜 violation 이다.
+
+    **원인**: blackbox 는 해당 모듈의 출력에 대한 모든 가정을 제거한다. 즉 tool 은 "blackbox 출력이 어떤 값이든 가질 수 있다" 고 가정하고 worst case 를 찾는다. 실제로 그 출력은 spec 에 의해 제약되지만 그것을 명시하지 않으면 false CEX 가 나온다.
+
+    **점검 포인트**: blackbox 사용 시 반드시 그 모듈의 spec 동작을 `assume` 으로 모델링 (예: handshake protocol, output range). Over-constraint 가 되지 않도록 simulation 에서 같은 assume 들이 위반되지 않는지 cross-check. 의심되는 CEX 는 blackbox 입출력 신호의 trace 부터 확인.
+
 ## 핵심 정리
 
 - **JasperGold 워크플로**: elaborate → assume(입력 제약) → assert(spec 규칙) → run → analyze.

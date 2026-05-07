@@ -612,6 +612,13 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 
 ---
 
+!!! warning "실무 주의점 — Agent Infinite Loop로 인한 비용 폭주"
+    **현상**: ReAct Agent가 도구 호출 실패나 모호한 결과를 만나면 동일한 Action을 반복 시도하는 루프에 빠져, 수백 번의 LLM 호출이 발생하고 API 비용이 폭주한다.
+
+    **원인**: Agent loop에 최대 스텝 수 제한(`max_steps`)이 없거나, 이전 시도와 동일한 Action을 재시도할 때 중단하는 탈출 조건이 없는 경우 발생한다.
+
+    **점검 포인트**: Agent 프레임워크 설정에서 `max_iterations` 또는 `max_steps` 값이 설정되어 있는지 확인. 운영 환경의 LLM API 호출 로그에서 동일 tool + 동일 input의 반복 호출 패턴을 모니터링하고, 비용 알림 임계값을 설정.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **Agent = LLM + Tool + Memory + Planner** — 한 단계 호출이 아닌 loop.

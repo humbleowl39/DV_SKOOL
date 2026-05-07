@@ -389,6 +389,13 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
 
 ---
 
+!!! warning "실무 주의점 — TVALID hold 중 TKEEP/TUSER 변경"
+    **현상**: 같은 beat 의 처음과 끝에서 TKEEP/TLAST/TUSER 값이 달라져 packet 이 잘리거나 sideband flag 가 잘못된 beat 에 부착된다. 시뮬레이션은 우연히 통과하지만 게이트 sim 또는 실제 칩에서 random fail.
+
+    **원인**: AXI-Stream 의 invariant: TVALID=1 이면 TREADY=1 이 될 때까지 모든 신호(TDATA, TKEEP, TSTRB, TLAST, TID, TDEST, TUSER) 를 hold 해야 한다. 송신 FSM 이 TREADY 와 무관하게 다음 beat 데이터를 미리 update 하면 위반.
+
+    **점검 포인트**: SVA 로 `(TVALID && !TREADY) |=> $stable({TDATA, TKEEP, TSTRB, TLAST, TID, TDEST, TUSER})` 검증. monitor 에서 같은 transaction 을 두 번 sample 해 비교. RTL 의 데이터 source FF 가 `TREADY || !TVALID` 조건으로만 update 되는지 확인.
+
 ## 핵심 정리
 
 - **주소 없는 단방향 스트림**: AXI-Stream은 점대점. memory-mapped 모델 아니므로 read/write 구분도 없음.

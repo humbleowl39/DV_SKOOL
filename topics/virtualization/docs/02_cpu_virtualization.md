@@ -318,6 +318,13 @@ User App (EL0)
 
 ---
 
+!!! warning "실무 주의점 — VM Exit 빈도 과다로 인한 성능 절벽"
+    **현상**: HW-assisted 가상화 환경에서 CPU 집약적 Guest workload의 실제 처리량이 기대치의 50% 이하로 떨어지며, perf 카운터에서 `vm_exit` 이벤트가 초당 수십만 회 발생한다.
+    
+    **원인**: VT-x/EL2 환경에서도 CPUID 명령어, MSR 읽기/쓰기, 일부 I/O port 접근은 여전히 VM Exit을 유발한다. Guest OS나 애플리케이션이 이런 명령어를 타이트 루프 안에서 반복 실행하면 context switch 오버헤드가 누적된다.
+    
+    **점검 포인트**: `perf kvm stat` 또는 시뮬레이터의 VM Exit reason 카운터를 확인. `EXIT_REASON_CPUID`, `EXIT_REASON_MSR_READ` 비중이 높으면 해당 명령어 패턴을 Guest 코드에서 찾아 loop 밖으로 호이스팅하거나 Hypervisor 측에서 synthetic value로 캐시.
+
 ## 핵심 정리
 
 - **Trap-and-emulate**: privileged instruction 실행 시 trap → hypervisor가 emulate → resume.

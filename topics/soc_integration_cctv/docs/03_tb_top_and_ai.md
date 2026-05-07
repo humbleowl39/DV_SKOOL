@@ -820,6 +820,13 @@ JSON Config 파일 1개만 교체하면 된다. Config에 IP 목록, Memory Map,
 
 ---
 
+!!! warning "실무 주의점 — AI 생성 시퀀스의 Clock Domain 무시"
+    **현상**: AI가 생성한 시퀀스가 단일 클럭 기준으로 작성되어, 멀티 클럭 도메인 TB에서 적용 시 서로 다른 도메인 에이전트에 동기화 없이 동시 구동되어 데이터 레이스가 발생한다.
+
+    **원인**: LLM은 IP-XACT 구조 정보에서 clock domain 경계를 추론하지 못한다. AI가 생성한 시퀀스 초안은 단일 클럭 가정하에 fork/join 패턴을 사용하는 경우가 많아, 리뷰 없이 그대로 적용하면 CDC 무검증 상태가 된다.
+
+    **점검 포인트**: AI 생성 시퀀스에서 각 에이전트 `start_item`/`finish_item` 앞에 해당 에이전트의 클럭 도메인을 명시했는지 확인. TB Top Config JSON의 `clock_domain` 필드가 에이전트 연결과 일치하는지 대조.
+
 ## 핵심 정리
 
 - **TB Top 재사용성**: 프로젝트마다 IP 종류는 다르지만 통합 패턴은 비슷 → layered TB (Common 부분 + 프로젝트별 customization).

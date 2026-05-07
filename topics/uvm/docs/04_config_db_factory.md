@@ -238,6 +238,13 @@ BootROM 검증에서의 config_db 활용:
         - **(b) instance override**: `set_inst_override_by_type("uvm_test_top.env.cpu_agent.driver", my_normal_drv::get_type(), my_glitch_drv::get_type())` — 특정 경로만 교체. 다른 driver들은 정상.
         - **결정 규칙**: 변경의 scope가 *모든 곳*이면 type, *특정 경로/인스턴스*면 instance.
 
+!!! warning "실무 주의점 — `config_db` 타입 불일치로 인한 silent get 실패"
+    **현상**: `uvm_config_db::get()`이 `0`을 반환하지만 `uvm_fatal`을 붙이지 않으면 변수가 `null` 또는 기본값인 채로 시뮬이 진행된다. 이후 null 참조 또는 의도와 다른 설정으로 인해 전혀 관계없어 보이는 하위 컴포넌트에서 에러가 터진다.
+
+    **원인**: `set`은 `#(my_agent_config)` 타입으로, `get`은 `#(uvm_object)` 타입(또는 반대)으로 호출하면 UVM 내부 타입 키가 달라 매칭이 안 된다. 경로 오타와 달리 타입 불일치는 `uvm_config_db::dump()` 출력에 항목이 보이더라도 get이 실패하므로 더 찾기 어렵다.
+
+    **점검 포인트**: `set`과 `get`의 `#(TYPE)` 파라미터가 완전히 동일한지 확인. `uvm_config_db::dump()`로 set된 항목 목록 출력 후 field_name 문자열 일치 여부 점검. 모든 `get()` 호출에 반드시 `` `uvm_fatal("TAG", "...") `` 을 붙여 silent failure 방지.
+
 ## 핵심 정리
 
 - **`config_db`는 hierarchical path 기반**. 첫 인자(시작 컨텍스트) + 두 번째 인자(상대 경로)의 결합이 실제 경로.

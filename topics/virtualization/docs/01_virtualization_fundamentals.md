@@ -212,6 +212,13 @@ Guest OS 계속 실행 (trap이 일어난 줄 모름)
 
 ---
 
+!!! warning "실무 주의점 — Para-virtualization 드라이버와 Full 가상화 혼용 오판"
+    **현상**: KVM 환경에서 Guest OS에 VirtIO 드라이버를 설치했음에도 불구하고 디스크/네트워크 성능이 에뮬레이션과 차이가 없다.
+    
+    **원인**: Guest OS가 VirtIO 드라이버를 인식하더라도 Hypervisor 측에서 VirtIO backend(vhost-net, vhost-blk)가 활성화되지 않으면 여전히 QEMU user-space를 경유하는 full emulation 경로를 사용한다. 드라이버 설치만으로 para-virtualization이 완성된다고 착각하기 쉽다.
+    
+    **점검 포인트**: Hypervisor에서 `lspci -k` 결과의 드라이버 항목과 `/sys/bus/virtio/drivers/` 마운트 여부를 동시 확인. vhost 커널 모듈 로드 여부(`lsmod | grep vhost`)도 함께 검증.
+
 ## 핵심 정리
 
 - **가상화 = HW 자원 추상화**: 1 physical → N virtual. 격리, 효율, multi-tenant.

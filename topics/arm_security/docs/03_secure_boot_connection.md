@@ -510,6 +510,13 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
 
 ---
 
+!!! warning "실무 주의점 — ROM/HSM 키 fuse 가 NS world 에서 read 가능"
+    **현상**: NS world 에서 OTP/eFuse mirror 레지스터를 읽었더니 root key 또는 HUK 가 그대로 노출된다.
+
+    **원인**: 키가 저장된 fuse mirror 가 secure-only 영역으로 매핑되지 않아, TZPC/TZASC filter 가 해당 주소를 secure 로 lock 하지 못한다.
+
+    **점검 포인트**: BL1/BL2 가 키 fuse 영역을 secure-only 로 잠그는지, 그리고 NS world 에서 해당 주소 read 시 BusError/zero 반환되는지 boot 직후 부정 시나리오로 검증.
+
 ## 핵심 정리
 
 - **두 메커니즘의 결합**: Verified Boot = "무엇을 실행하는가" (서명 검증), Architecture = "어떤 권한으로" (EL + TrustZone).

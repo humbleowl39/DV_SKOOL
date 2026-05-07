@@ -259,6 +259,13 @@ Host SoC (BootROM)            Partner Chip
 
 ---
 
+!!! warning "실무 주의점 — Anti-Rollback 카운터 미증가 후 FW 업데이트"
+    **현상**: 취약점이 패치된 FW를 배포했지만 공격자가 이전 버전 이미지로 downgrade하여 패치 이전 취약점을 재활용한다. Secure Boot 서명 검증은 통과한다.
+
+    **원인**: FW 업데이트 절차에서 이미지 서명 검증 후 flash 기록까지는 수행하지만, OTP Anti-Rollback 카운터 blow 단계를 누락한다. 카운터 blow는 비가역적 작업이므로 별도 스크립트로 분리된 경우 자동화 실패 시 조용히 건너뛰어진다.
+
+    **점검 포인트**: FW 업데이트 시나리오 DV에서 업데이트 완료 후 OTP counter 값이 `current_version_counter + 1`로 증가했는지 읽기 검증. BootROM 로그의 `ANTI_RB_CHECK` 항목에서 image version < OTP counter 조건 차단 동작 확인.
+
 ## 핵심 정리
 
 - **Hash + Signature**: hash로 무결성, signature로 인증성. boot image = hash + RSA/ECDSA 서명.

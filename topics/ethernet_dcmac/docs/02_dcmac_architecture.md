@@ -408,6 +408,13 @@ MangoBoost Data Path:
 
 ---
 
+!!! warning "실무 주의점 — Lane Skew / Swap 미검증으로 인한 silent 링크 실패"
+    **현상**: 단일 레인 단독 테스트에서는 정상이지만, 4레인 또는 8레인 구성 시 간헐적 Frame Error가 발생하거나 링크 업 자체가 안 된다.
+    
+    **원인**: DCMAC Multi-lane 구성에서 각 SerDes 레인은 물리 배선 차이로 스큐(Skew)가 발생하고, 보드 레이아웃에 따라 레인 순서가 뒤바뀌는(Swap) 경우가 있다. PCS의 Lane Deskew/Reorder 기능이 제대로 설정되지 않으면 조용히 CRC 오류가 누적된다.
+    
+    **점검 포인트**: 시뮬레이션에서 lane_skew 파라미터를 최대 허용 skew(보통 ±half bit period)까지 변화시킨 시나리오를 반드시 포함. `rx_pcs_align_status` 및 `rx_lane_lock` 신호가 모든 레인에서 동시에 assert 되는지 로그 확인.
+
 ## 핵심 정리
 
 - **DCMAC = MAC + PCS + FEC 통합 IP**. 100/200/400GbE 라인 레이트 처리.

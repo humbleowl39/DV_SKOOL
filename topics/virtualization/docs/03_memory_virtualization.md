@@ -287,6 +287,13 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
 
 ---
 
+!!! warning "실무 주의점 — 2-stage translation 후 TLB invalidate 누락"
+    **현상**: Guest 가 page 를 unmap/remap 했음에도 stale 한 IPA→PA 매핑으로 옛 데이터를 읽거나 잘못된 페이지에 write.
+
+    **원인**: Stage-1 (guest OS) 와 Stage-2 (hypervisor) TLB 가 별도이고, IPI 기반 broadcast TLBI 가 모든 vCPU/PE 에 도달하지 않으면 일부 코어가 옛 entry 를 그대로 사용.
+
+    **점검 포인트**: ARM `TLBI VMALLE1IS` / Intel `INVEPT` 발행 시점, vCPU 마이그레이션 직후 재발행 여부, ASID/VMID 재할당 정책.
+
 ## 핵심 정리
 
 - **2단계 변환**: VA (guest virtual) → IPA (guest "physical", OS 관점) → PA (실제 물리). Stage 1 (OS) + Stage 2 (hypervisor).

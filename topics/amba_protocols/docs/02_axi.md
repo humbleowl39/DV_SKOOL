@@ -487,6 +487,13 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
 
 ---
 
+!!! warning "실무 주의점 — WSTRB 와 narrow transfer"
+    **현상**: 32-bit 만 쓰려고 했는데 64-bit register 의 다른 byte 가 0 으로 덮어쓰여 register 가 깨진다. 또는 WSTRB 가 all-1 로 deafult 라 partial write 가 무시된 채 전체 word 가 기록된다.
+
+    **원인**: AXI 의 byte-lane 동작은 `WSTRB[i]==1` 인 byte 만 유효하다. master 가 narrow transfer 를 하면서 WSTRB 를 정확히 set 하지 않으면, slave 는 spec 상 어느 byte 가 valid 인지 알 길이 없어 default 값(0 또는 그대로) 으로 기록한다. 또 AxSIZE 와 WSTRB pattern 이 일치하지 않으면 IP-vendor 간 해석이 갈린다.
+
+    **점검 포인트**: 모든 write transaction 에 대해 `AxSIZE`, `AxADDR[low_bits]`, `WSTRB` 의 일관성을 SVA 로 검증 (`AxSIZE=2 (4B) → WSTRB 의 set bit 가 정확히 4 개 이며 byte address 정렬에 맞는지`). slave 의 partial-write 동작은 IP doc 으로 확정 후 monitor 에서 동일 동작 확인.
+
 ## 핵심 정리
 
 - **5채널 분리 = full-duplex의 본질**: Read와 Write 동시 진행 가능. 각 채널이 독립적이라 throughput 극대화.

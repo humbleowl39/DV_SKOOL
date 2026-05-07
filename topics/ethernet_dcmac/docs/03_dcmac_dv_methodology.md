@@ -598,6 +598,13 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
 
 ---
 
+!!! warning "실무 주의점 — Statistics Counter Clear-on-Read 레이스 컨디션"
+    **현상**: 회귀 테스트에서 통계 카운터(rx_frame_count, rx_error_count 등) 값이 읽을 때마다 달라지거나 0으로 리셋된 것처럼 보인다.
+    
+    **원인**: DCMAC 통계 레지스터는 Read-on-Clear 방식이 많다. Scoreboard와 Coverage 수집 루틴이 동일 카운터를 서로 다른 타임스텝에서 각각 읽으면 첫 번째 읽기에서 카운터가 클리어되어 두 번째 읽기값이 0이 된다.
+    
+    **점검 포인트**: RAL task 내에서 통계 읽기를 단일 atomic 시퀀스로 묶고, Scoreboard/Checker가 동일 레지스터를 중복 읽지 않도록 구현. `stat_snapshot` 방식으로 전체 카운터를 한 번에 래치한 뒤 비교하는 패턴을 채택할 것.
+
 ## 핵심 정리
 
 - **검증 4축**: Frame integrity (FCS), AXI-S protocol, Flow control (Pause/PFC), Error handling.

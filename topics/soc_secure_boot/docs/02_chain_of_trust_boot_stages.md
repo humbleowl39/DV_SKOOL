@@ -370,6 +370,13 @@ BL2 DRAM 초기화 단계:
 
 ---
 
+!!! warning "실무 주의점 — BL1→BL2 Jump 직전 검증 생략 경로"
+    **현상**: 서명 검증 함수가 SUCCESS를 반환했지만 실제 이미지 무결성은 깨진 채로 BL2로 jump하여, 이후 단계에서 임의 코드가 Secure EL3 권한으로 실행된다.
+
+    **원인**: BL1 코드에서 `signature_verify()` 반환값을 `if (ret != SUCCESS) halt();` 패턴으로 확인하는 대신, 반환값을 변수에 저장 후 다른 경로에서 분기하는 구조일 때 컴파일러 최적화 또는 글리치 공격으로 분기가 건너뛰어진다. verify-then-execute 패턴이 단일 조건 분기로 구현된 경우 취약.
+
+    **점검 포인트**: BootROM DV에서 `signature_verify()` 반환값을 `FAIL`로 주입한 뒤 BL2 entry point가 실행되지 않음을 확인. 로그에서 `BL1_VERIFY_FAIL → HALT` 시퀀스 추적. 이중 검증 패턴(반환값 + 독립 hash 재확인) 구현 여부를 코드 리뷰로 점검.
+
 ## 핵심 정리
 
 - **단계별 책임**: BootROM (HW RoT) → BL1 (trusted boot init) → BL2 (DRAM init + load BL31/BL33) → BL31 (EL3 secure monitor) → BL33 (U-Boot/non-secure) → kernel.

@@ -464,6 +464,13 @@ Post-silicon Bring-up 시나리오:
 
 ---
 
+!!! warning "실무 주의점 — ROM patch 적용 후 ROTPK 체인 재검증 누락"
+    **현상**: BootROM patch (ROM-RAM remap / hot-fix) 를 적용한 다음, 후속 stage 의 서명 검증이 patch 이전 버전의 ROTPK 로 통과해 버린다. 결과적으로 patch 가 의도한 키 교체가 우회된다.
+
+    **원인**: Patch 진입 후에도 ROTPK 핸들 / hash 캐시가 patch-pre 값으로 남아 있고, DV scenario matrix 가 (patch on/off) × (ROTPK 변형) 교차를 cover 하지 않아 회귀에서 잡히지 않음.
+
+    **점검 포인트**: patch 적용 직후 ROTPK 가 재로드되어 image signature 검증에 사용되는가, 그리고 reference model 이 patch 경로의 expected ROTPK 와 검증 결과를 정확히 예측하는지 scoreboard 에서 확인하는가.
+
 ## 핵심 정리
 
 - **BootROM DV의 특수성**: BootROM은 silicon에 mask로 fixed → bug = silicon revision (수억 원). Defect Zero가 절대 목표.

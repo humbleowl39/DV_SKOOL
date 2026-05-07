@@ -209,6 +209,13 @@ AXI-Stream:
 3. **실전 적용** — 본인의 검증 환경에서 VALID/READY 데드락 패턴 검사
 4. **다음 토픽** — UVM 위에 AMBA를 올린 [UVM 코스](../../uvm/), 또는 메모리 서브시스템 [MMU](../../mmu/) / [DRAM](../../dram_ddr/)
 
+!!! warning "실무 주의점 — Burst 길이 인코딩 off-by-one"
+    **현상**: 4-beat burst 를 보내려고 `AxLEN=4` 로 설정했는데 slave 가 5 beat 를 기대하거나 reverse 로 8-beat burst 가 7-beat 로 잘린다. 또는 `AxSIZE` 가 데이터 폭과 안 맞아 alignment 가 깨진다.
+
+    **현상**: AXI4 의 `AxLEN` 은 `(beat 수 − 1)` 인코딩이다. 즉 4-beat = `AxLEN=3`, 16-beat = `AxLEN=15`. AXI3 는 4-bit 라서 16-beat 가 한계, AXI4 INCR 만 8-bit (256-beat). FIXED/WRAP 은 여전히 16-beat 제한.
+
+    **점검 포인트**: master 에서 `AxLEN` 계산 코드가 `beat_count − 1` 인지 확인. WRAP burst 는 `wrap_boundary = (start_addr / total_bytes) × total_bytes` 이고 `total_bytes = (AxLEN+1) × (1<<AxSIZE)`. monitor / scoreboard 에서 expected beat 수와 실제 수신 beat 수를 매 transaction 별로 비교.
+
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_axi_stream/">
     <div class="nav-label">◀ 이전</div>

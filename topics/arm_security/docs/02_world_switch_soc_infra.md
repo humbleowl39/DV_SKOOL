@@ -479,6 +479,13 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
 
 ---
 
+!!! warning "실무 주의점 — SMC 후 register save/restore 부족으로 secure state 누설"
+    **현상**: NS world 가 secure key/credential 의 일부를 GPR/SIMD 레지스터에서 읽어낸다.
+
+    **원인**: SMC 호출 후 BL31 이 GPR x0~x30 만 save 하고 NEON/FP/SVE/sysreg 일부를 누락해, 이전 secure context 의 잔여 값이 NS world ERET 후에도 그대로 남는다.
+
+    **점검 포인트**: world switch 진입/탈출 시 SIMD/FP, TPIDR_EL*, vector regs 까지 모두 zeroize 또는 save/restore 하는지 BL31 context 코드와 register dump 로 확인.
+
 ## 핵심 정리
 
 - **World switch는 EL3 강제**: SMC instruction → EL3 trap → secure monitor (BL31)이 context save → world switch → 새 world로 ERET.

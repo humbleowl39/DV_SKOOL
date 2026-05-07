@@ -403,6 +403,13 @@ MC의 역할:
 
 ---
 
+!!! warning "실무 주의점 — tFAW 위반으로 Rank 내 동시 ACT 과전류 위험"
+    **현상**: 짧은 시간 내에 서로 다른 Bank에 4개 초과의 ACT 명령이 발행되어 DRAM의 순간 전류가 스펙을 초과, 전압 강하(Vdd Droop)로 인한 데이터 오류 발생.
+    
+    **원인**: tFAW(Four Activate Window)는 임의의 tFAW 시간 창 내에 ACT를 최대 4회로 제한함. MC 스케줄러가 Bank 병렬화 극대화를 추구하다가 tFAW 윈도우를 무시하고 5번째 ACT를 발행할 수 있음. Open Page Policy에서 Row Conflict가 많은 워크로드일수록 ACT 빈도가 높아 위험 증가.
+    
+    **점검 포인트**: Timing SVA에서 `tFAW_window` assertion 활성화 여부 확인. 시뮬레이션 파형에서 슬라이딩 윈도우(tFAW 길이) 내 ACT 명령 수 카운트. 랜덤 워크로드 시 Bank 분산 패턴을 로그로 수집하여 tFAW 위반 발생 seed 식별.
+
 ## 핵심 정리
 
 - **MC = scheduler + 명령 변환기**: AXI request → ACT/RD/WR/PRE/REF 시퀀스로 변환, timing 종속성 준수.

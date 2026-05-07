@@ -434,6 +434,13 @@ Resume:
 
 ---
 
+!!! warning "실무 주의점 — Open Page Policy에서 Row Conflict 폭증 시 Latency 급등"
+    **현상**: 랜덤 주소 패턴 워크로드에서 Bank당 Active Row가 지속적으로 교체되어, Row Miss 비율이 90%를 초과하고 평균 Latency가 순차 접근 대비 3-5배 이상으로 폭증.
+    
+    **원인**: Open Page Policy는 마지막으로 열린 Row를 유지하는 최적화인데, 랜덤 주소 패턴에서는 오히려 매 접근마다 PRE(현재 Row 닫기) + ACT(새 Row 열기) 오버헤드가 필연적으로 발생. Closed Page Policy 또는 Adaptive Policy와 비교 없이 설계 고정 시 실제 워크로드에서 성능 미달.
+    
+    **점검 포인트**: 성능 시뮬레이션에서 Row Hit/Miss/Conflict 비율을 Bank별로 수집하여 Conflict Rate 30% 초과 시 Page Policy 파라미터 재검토. `tRC`(ACT→ACT 같은 Bank) 위반 여부를 Timing SVA로 동시에 검증.
+
 ## 핵심 정리
 
 - **3축 검증**: 타이밍 (timing constraint 준수) + 무결성 (data correctness, ECC) + 성능 (BW, latency).

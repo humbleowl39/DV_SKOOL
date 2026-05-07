@@ -359,6 +359,13 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 
 ---
 
+!!! warning "실무 주의점 — Task Tag 재사용 시점 오해"
+    **현상**: 다른 LU 로 보낸 명령이 엉뚱한 LU 의 응답과 매칭되어 scoreboard mismatch 가 발생한다.
+
+    **원인**: Response UPIU 수신만으로 Task Tag 를 재사용 가능하다고 판단했지만, 실제로는 OCS clear + UTRLDBR slot bit clear 까지 끝나야 free 상태다.
+
+    **점검 포인트**: pending_tag table 을 OCS write-back 시점에만 갱신하는지, 같은 Tag 가 두 LU 로 동시에 발행되지 않는지 sequence-level assertion 으로 확인.
+
 ## 핵심 정리
 
 - **UPIU 6종**: Command, Response, Data In/Out, Task Management, Query, NOP, Reject. 모든 명령은 UPIU로 캡슐.

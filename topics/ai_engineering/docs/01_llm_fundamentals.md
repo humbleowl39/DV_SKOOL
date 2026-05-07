@@ -581,6 +581,13 @@ Temperature 효과:
 
 ---
 
+!!! warning "실무 주의점 — KV Cache 미활성화 시 추론 지연 폭증"
+    **현상**: 동일 프롬프트를 반복 호출하거나 스트리밍 응답 중에 KV Cache가 비활성화되면, 매 토큰 생성마다 전체 컨텍스트를 재계산해 latency가 수십 배 증가한다.
+
+    **원인**: 추론 서버 설정에서 `use_cache=False`가 디버그 목적으로 설정된 채 운영에 배포되거나, 배치 크기가 급증할 때 캐시 메모리 부족으로 자동 비활성화되는 경우가 있다.
+
+    **점검 포인트**: 추론 서버 응답 헤더 또는 로그에서 `cached_tokens` 카운트가 0인지 확인. `time-to-first-token`이 `total_tokens × generation_time`에 비례하면 KV Cache 미작동 의심. 배포 설정 파일의 `max_cache_size` 항목이 모델 레이어 수 × batch × context에 충분한지 검토.
+
 ## 핵심 정리 (Key Takeaways)
 
 - **Transformer = Self-Attention + Position Encoding + FFN** — 토큰 간 관계를 한 번의 행렬곱으로 계산.

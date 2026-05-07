@@ -54,6 +54,7 @@ plugins:
   - tags
 
 nav:
+  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
   - "코스 홈": index.md
   - "학습 모듈":
       - "Unit 1: UVM 아키텍처 & Phase": 01_architecture_and_phase.md

@@ -388,6 +388,7 @@ def make_quiz_placeholder(chapter_title: str, chapter_filename: str) -> str:
 def make_mkdocs_yml(slug: str, site_name: str, site_desc: str, nav_entries: list[tuple[str, str]],
                     has_legacy: bool, has_glossary: bool, has_quiz: bool) -> str:
     nav_yaml = ""
+    nav_yaml += '  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"\n'
     nav_yaml += '  - "코스 홈": index.md\n'
     nav_yaml += '  - "학습 모듈":\n'
     for title, fname in nav_entries:

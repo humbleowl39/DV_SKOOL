@@ -404,6 +404,13 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
 
 ---
 
+!!! warning "실무 주의점 — tREFI 초과 시 Row Hammer 취약점 노출"
+    **현상**: Refresh 간격(tREFI = 7.8μs @ 85°C 이하) 내에 같은 Row를 반복 ACT/PRE하면 인접 Row의 전하가 누설되어 비트 플립 발생. 보안 공격 및 데이터 손상으로 이어짐.
+    
+    **원인**: MC가 트래픽 집중 구간에서 Refresh를 지연시키거나, Deferred Refresh 횟수가 JEDEC 허용 한도(최대 8개)를 초과할 때 발생. DDR5의 RFM(Refresh Management) 미구현 시 Row Hammer 방어가 무력화됨.
+    
+    **점검 포인트**: Timing SVA에서 `tREFI` 위반 assertion 동작 여부 확인. 로그에서 Deferred Refresh 누적 카운터가 8을 초과하는 시점 탐색. DDR5 시뮬 모델에서 `RAAIMT` 레지스터(Row Activation Threshold) 설정값 검증.
+
 ## 핵심 정리
 
 - **Cell = capacitor + access transistor**: 전하가 누설되므로 주기적 refresh 필수.

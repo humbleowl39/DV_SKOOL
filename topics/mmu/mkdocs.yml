@@ -54,6 +54,7 @@ plugins:
   - tags
 
 nav:
+  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
   - "코스 홈": index.md
   - "학습 모듈":
       - "Unit 1: MMU 기본 개념 및 주소 변환": 01_mmu_fundamentals.md

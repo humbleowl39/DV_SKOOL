@@ -17,6 +17,13 @@ ARM 보안 = Exception Level(EL0~3, 권한 수직 계층) × TrustZone(S/NS, 월
 
 ---
 
+!!! warning "실무 주의점 — Stage 2 translation 미설정으로 hypervisor 격리 실패"
+    **현상**: VM-A 가 VM-B 또는 hypervisor 메모리를 그대로 read/write 할 수 있다.
+
+    **원인**: EL2 진입 후 VTTBR_EL2/VTCR_EL2 에 Stage 2 page table 을 설정하지 않은 채 guest 를 ERET 하여, IPA→PA 변환이 identity 로 동작한다.
+
+    **점검 포인트**: VM 부팅 전 VTCR_EL2.T0SZ/SL0 와 VTTBR_EL2 가 유효한 S2 table 을 가리키는지, guest 가 다른 VM IPA 영역 access 시 Stage 2 abort 가 발생하는지 SVA/coverage 로 확인.
+
 ## 핵심 정리
 
 | 주제 | 핵심 포인트 |

@@ -344,6 +344,13 @@ BootROM의 UFS 부팅 시퀀스 (soc_secure_boot_ko Unit 4와 연결):
 
 ---
 
+!!! warning "실무 주의점 — HS-Gear 전환 중 in-flight UPIU 손실"
+    **현상**: Gear 변경 직후 CRC 에러가 폭증하면서 다수 명령이 retry/abort 로 빠진다.
+
+    **원인**: HS-Gear 전환 시 PHY recalibration 동안 in-flight 상태였던 UPIU 가 drain 되지 않아, 새 Gear 의 라인 코딩으로 잘못 디코딩된다.
+
+    **점검 포인트**: DME_SET(PA_PWRMode) 발행 전 UTRLDBR 이 0 인지, RTT/Data-Out 흐름이 모두 종료됐는지 sequence-level 에서 확인.
+
 ## 핵심 정리
 
 - **5계층**: Application (SCSI command) → UTP (transport) → UPIU (frame) → UniPro (link/network) → M-PHY (physical).

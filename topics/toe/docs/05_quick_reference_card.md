@@ -17,6 +17,13 @@ TOE = TCP/IP 프로토콜 처리(Checksum/Segmentation/Retx/Flow Control)를 CPU
 
 ---
 
+!!! warning "실무 주의점 — LRO(Large Receive Offload)와 IP Fragment 혼용"
+    **현상**: LRO를 활성화한 환경에서 IP Fragment 패킷이 유입되면 재조합 오류가 발생하거나, 이후 정상 TCP 세그먼트도 LRO로 묶이지 않는다.
+    
+    **원인**: LRO는 연속 TCP 세그먼트를 하나의 대형 버퍼로 합산하는 기능인데, IP Fragmented 패킷은 TCP 헤더가 첫 Fragment에만 있어 LRO 엔진이 연속성을 판단하지 못한다. 두 경로가 동일 수신 큐를 공유하면 상태 머신이 충돌한다.
+    
+    **점검 포인트**: IP Fragment 패킷과 일반 TCP 세그먼트가 교차하는 시나리오를 시뮬레이션에 포함. `lro_active` 플래그와 `ip_frag_in_progress` 플래그가 동시에 set 되는 사이클을 검출하는 SVA assertion 추가.
+
 ## 핵심 정리
 
 | 주제 | 핵심 포인트 |

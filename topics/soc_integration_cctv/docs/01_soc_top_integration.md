@@ -636,6 +636,13 @@ PLL Lock → Bus Fabric → Memory Controller (+ DRAM Init 완료 대기) → CP
 
 ---
 
+!!! warning "실무 주의점 — 인터럽트 SPI 번호 1씩 오프셋 뒤바뀜"
+    **현상**: IP는 단독 테스트에서 인터럽트를 정상 발생시키지만, SoC 통합 후 ISR이 전혀 실행되지 않거나 엉뚱한 핸들러가 호출된다.
+
+    **원인**: soc_top.sv의 포트 매핑에서 GIC SPI 인덱스가 스펙 대비 1 차이나게 연결된 경우, IP-level DV는 GIC 없이 인터럽트 신호만 확인하므로 통과된다. SoC 통합 시점에서야 드러나는 전형적인 connectivity 버그.
+
+    **점검 포인트**: SVA `assert property (@(posedge clk) ip_a_irq_out == gic_spi[47])` 구문에서 GIC SPI 인덱스를 IP-XACT interrupt_map과 1:1 대조. `soc_top.sv` 포트 매핑에서 `irq_out` 연결 라인을 grep하여 스펙 CSV와 직접 비교.
+
 ## 핵심 정리
 
 - **IP DV vs Top DV**: IP는 부품 정확성, Top은 조립 정확성 (IP 간 상호작용).

@@ -499,6 +499,13 @@ Hypervisor Stage 2:
 
 ---
 
+!!! warning "실무 주의점 — SCR_EL3.NS 비트 전파 누락"
+    **현상**: NS world 에서 secure-only 메모리/레지스터를 read 했는데 BusError 없이 정상 데이터가 반환된다.
+
+    **원인**: EL3 진입/탈출 시 SCR_EL3.NS 비트가 트랜잭션 어트리뷰트로 버스에 정확히 전파되지 않아, downstream filter(TZASC/TZPC) 가 NS 트랜잭션을 secure 로 오인한다.
+
+    **점검 포인트**: AxPROT[1]/AxNSE 등 NS 어트리뷰트가 모든 master IF 에서 SCR_EL3.NS 와 일치하는지 SVA 로 강제하고, NS world coverage 시 secure resource read 가 차단되는지 확인.
+
 ## 핵심 정리
 
 - **두 축의 보안**: 수직 (Exception Level: EL0 user → EL1 kernel → EL2 hypervisor → EL3 secure monitor) + 수평 (Secure World vs Non-Secure World).
