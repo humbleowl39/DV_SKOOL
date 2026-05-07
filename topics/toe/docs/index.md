@@ -5,31 +5,35 @@
   <div class="topic-hero-mark">📡</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">TOE (TCP/IP Offload Engine)</div>
-    <p class="topic-hero-sub">호스트 CPU의 TCP/IP 처리 부담을 NIC HW로 옮기는 표준 architecture와 DV.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">4</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.6h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">TCP/IP Offload Engine 아키텍처와 DV</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#모듈-흐름">📊 모듈 흐름</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 - **Trace** TCP/IP 스택 처리를 host SW vs TOE HW로 비교 추적
 - **Diagram** TOE의 connection state machine + segment processing pipeline
 - **Apply** TX/RX path, ARP, checksum offload, RSS 시나리오 매핑
 - **Plan** TOE DV 환경 (packet generator, connection model, error injection)
 
-## 사전 지식
-
+## 📋 사전 지식
 - TCP/IP 스택 (3-way handshake, sliding window, congestion control 기본)
 - NIC 동작 원리
 - AMBA AXI / AXI-Stream
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -63,65 +67,43 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 <!-- DV-SKOOL-MODULES:start -->
 <div class="module-grid">
   <a class="module-card" data-cat="network" href="01_tcp_ip_and_toe_concept/">
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">TCP/IP & TOE Concept</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 15분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="02_toe_architecture/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">TOE Architecture</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 22분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="03_toe_key_functions/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">TOE Key Functions</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 28분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="04_toe_dv_methodology/">
     <div class="module-num">04</div>
     <div class="module-body">
       <div class="module-title">TOE DV Methodology</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 28분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="05_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 6분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 학습 경로
-
+## 📊 모듈 흐름
 <div class="path-chain">
   <div class="path-pill tier-core">
     <div class="pill-num">M01</div>
@@ -149,16 +131,14 @@
   </div>
 </div>
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집**](glossary.md)
 - 📝 [**퀴즈**](quiz/index.md)
 - 📋 [**코스 개요**](_legacy_overview.md)
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/ethernet_dcmac/">
     <div class="course-card-num">🌐 관련</div>

@@ -54,9 +54,9 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Module 01: RDMA 동기와 핵심 모델": 01_rdma_motivation.md
       - "Module 02: InfiniBand 프로토콜 스택": 02_ib_protocol_stack.md
       - "Module 03: RoCEv2 — Ethernet 위의 RDMA": 03_rocev2.md
@@ -66,9 +66,9 @@ nav:
       - "Module 07: Congestion Control & Error Handling": 07_congestion_error.md
       - "Module 08: RDMA-TB 검증 환경 & DV 전략": 08_rdma_tb_dv.md
       - "Quick Reference Card": 09_quick_reference_card.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
@@ -82,6 +82,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:

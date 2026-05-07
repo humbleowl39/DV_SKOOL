@@ -54,9 +54,9 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Unit 1: Hardware Root of Trust (하드웨어 신뢰 기반)": 01_hardware_root_of_trust.md
       - "Unit 2: Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)": 02_chain_of_trust_boot_stages.md
       - "Unit 3: Secure Boot 암호학 — 서명 검증과 키 관리": 03_crypto_in_boot.md
@@ -64,9 +64,9 @@ nav:
       - "Unit 5: 공격 표면과 방어": 05_attack_surface_and_defense.md
       - "SoC Secure Boot Flow — Quick Reference Card": 06_quick_reference_card.md
       - "Unit 7: BootROM DV 검증 방법론": 07_bootrom_dv_methodology.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
@@ -80,6 +80,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

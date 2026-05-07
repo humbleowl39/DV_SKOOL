@@ -54,17 +54,17 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Unit 1: TCP/IP 기본 + TOE 개념": 01_tcp_ip_and_toe_concept.md
       - "Unit 2: TOE 아키텍처": 02_toe_architecture.md
       - "Unit 3: TOE 핵심 기능 상세": 03_toe_key_functions.md
       - "Unit 4: TOE DV 검증 전략": 04_toe_dv_methodology.md
       - "TOE — Quick Reference Card": 05_quick_reference_card.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
@@ -78,6 +78,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

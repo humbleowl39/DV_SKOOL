@@ -54,9 +54,9 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Module 01 — LLM Fundamentals": 01_llm_fundamentals.md
       - "Module 02 — Prompt Engineering": 02_prompt_engineering.md
       - "Module 03 — Embedding & Vector DB": 03_embedding_vectordb.md
@@ -65,9 +65,9 @@ nav:
       - "Module 06 — Strategy Selection": 06_strategy_selection.md
       - "Module 07 — DV/EDA Application": 07_dv_application.md
       - "Module 08 — Quick Reference Card": 08_quick_reference_card.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
       - "Module 01 Quiz": quiz/01_llm_fundamentals_quiz.md
       - "Module 02 Quiz": quiz/02_prompt_engineering_quiz.md
@@ -89,6 +89,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

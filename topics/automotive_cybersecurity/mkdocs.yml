@@ -54,17 +54,17 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Module 01 — CAN Bus Fundamentals": 01_can_bus_fundamentals.md
       - "Module 02 — Automotive SoC Security": 02_automotive_soc_security.md
       - "Module 03 — Tesla FSD Case Study": 03_tesla_fsd_case_study.md
       - "Module 04 — Attack Surface & Defense": 04_attack_surface_and_defense.md
       - "Module 05 — Quick Reference Card": 05_quick_reference_card.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
       - "Module 01 Quiz": quiz/01_can_bus_fundamentals_quiz.md
       - "Module 02 Quiz": quiz/02_automotive_soc_security_quiz.md
@@ -83,6 +83,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

@@ -5,31 +5,35 @@
   <div class="topic-hero-mark">🛡️</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">ARM Security</div>
-    <p class="topic-hero-sub">Exception Level, TrustZone, Secure Enclave, TEE 계층, Secure Boot 연계.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.4h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">Exception Level, TrustZone, secure enclave, TEE</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#모듈-흐름">📊 모듈 흐름</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 - **Diagram** ARMv8 4-level Exception Level (EL0-EL3) 구조와 TrustZone 격리
 - **Trace** Secure / Non-secure World 전환 흐름과 SMC instruction
 - **Apply** Secure Enclave (Apple SEP, Samsung Knox) 및 TEE 계층의 격리 모델
 - **Plan** Secure Boot와 ARM Security 연계 (BL31, EL3 secure monitor)
 
-## 사전 지식
-
+## 📋 사전 지식
 - ARM ISA 기본 (ARMv8 architecture overview)
 - 권한 / 격리 / 가상 메모리 일반 ([MMU 코스](../../mmu/) 참고)
 - [Secure Boot](../../soc_secure_boot/) 코스
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -63,55 +67,37 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 <!-- DV-SKOOL-MODULES:start -->
 <div class="module-grid">
   <a class="module-card" data-cat="soc" href="01_exception_level_trustzone/">
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">Exception Level & TrustZone</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 23분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="02_world_switch_soc_infra/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">World Switch & SoC Security Infra</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 23분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="03_secure_boot_connection/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">Secure Boot Connection</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 26분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="04_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 10분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 학습 경로
-
+## 📊 모듈 흐름
 <div class="path-chain">
   <div class="path-pill tier-core">
     <div class="pill-num">M01</div>
@@ -139,16 +125,14 @@
   </div>
 </div>
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집**](glossary.md)
 - 📝 [**퀴즈**](quiz/index.md)
 - 📋 [**코스 개요**](_legacy_overview.md)
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/soc_secure_boot/">
     <div class="course-card-num">🔐 관련</div>

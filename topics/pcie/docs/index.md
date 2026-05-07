@@ -5,18 +5,23 @@
   <div class="topic-hero-mark">🔌</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">PCI Express (PCIe)</div>
-    <p class="topic-hero-sub">3-layer architecture, TLP/DLLP, LTSSM, Configuration, Power/Error, 그리고 SR-IOV/CXL 의 미래.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">8</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.7h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">PCIe — 3-layer, TLP/DLLP, LTSSM, SR-IOV/CXL</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#참조-자료">📖 참조 자료</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 - **Explain** PCI parallel → PCIe serial point-to-point 전환의 동기와 Gen1~Gen7 진화의 핵심을 설명한다.
 - **Diagram** Transaction / Data Link / Physical 3-layer 의 책임과 데이터 흐름을 그릴 수 있다.
 - **Decode** TLP header (Fmt/Type/Length/Address) 와 DLLP 의 type/sequence number 를 해독한다.
@@ -25,14 +30,12 @@
 - **Evaluate** Power state (D/L/ASPM), AER, Hot Plug 가 운영 안정성에 미치는 영향을 평가한다.
 - **Compare** SR-IOV, ATS+IOMMU, P2P, CXL.io/cache/mem 의 차이와 사용 시점을 비교한다.
 
-## 사전 지식
-
+## 📋 사전 지식
 - 일반 디지털 시스템 (직렬/병렬 인터페이스, clock, encoding)
 - 메모리 매핑 IO, 인터럽트 (MSI/MSI-X) 기본
 - TCP/이더넷 등 layered protocol 경험 (선택)
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -87,105 +90,67 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 <!-- DV-SKOOL-MODULES:start -->
 <div class="module-grid">
   <a class="module-card" data-cat="intercon" href="01_pcie_motivation/">
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">PCIe 동기와 진화</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 17분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="02_layer_architecture/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">3-Layer Architecture</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 18분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="03_tlp/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">TLP (Transaction Layer Packet)</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 22분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="04_dllp_flow_control/">
     <div class="module-num">04</div>
     <div class="module-body">
       <div class="module-title">DLLP, Flow Control, ACK/NAK</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 14분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="05_phy_ltssm/">
     <div class="module-num">05</div>
     <div class="module-body">
       <div class="module-title">Physical Layer & LTSSM</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 18분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="06_config_enumeration/">
     <div class="module-num">06</div>
     <div class="module-body">
       <div class="module-title">Configuration Space & Enumeration</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 20분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="07_power_aer_hotplug/">
     <div class="module-num">07</div>
     <div class="module-body">
       <div class="module-title">Power Management, AER, Hot Plug</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 18분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="08_advanced/">
     <div class="module-num">08</div>
     <div class="module-body">
       <div class="module-title">SR-IOV, ATS, P2P, CXL</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 21분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="intercon" href="09_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 13분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 참조 자료
-
+## 📖 참조 자료
 - **PCI Express Base Specification 6.0 / 7.0** — PCI-SIG (회원사 비공개, 일부 white paper 공개)
 - **PCI Express System Architecture (MindShare)** — 학습용 표준 참고서
 - **Linux Kernel `Documentation/PCI/`** — 공개, 실 구현 관점
@@ -194,8 +159,7 @@
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
     <div class="course-card-num">🔄 관련</div>

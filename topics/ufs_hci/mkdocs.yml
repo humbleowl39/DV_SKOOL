@@ -54,17 +54,17 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Unit 1: UFS 프로토콜 스택": 01_ufs_protocol_stack.md
       - "Unit 2: UFS HCI 아키텍처": 02_hci_architecture.md
       - "Unit 3: UPIU와 명령 처리 흐름": 03_upiu_command_flow.md
       - "Unit 4: UFS HCI DV 검증 전략": 04_hci_dv_methodology.md
       - "UFS HCI — Quick Reference Card": 05_quick_reference_card.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
@@ -78,6 +78,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

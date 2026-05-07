@@ -5,32 +5,36 @@
   <div class="topic-hero-mark">🪟</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">Virtualization</div>
-    <p class="topic-hero-sub">CPU / 메모리 / I/O 가상화부터 컨테이너까지, 현대 인프라의 토대.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">7</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.1h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">CPU/메모리/IO 가상화, 하이퍼바이저, 컨테이너</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#모듈-흐름">📊 모듈 흐름</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 - **Trace** 시스템 아키텍처 진화 (HW only → process → kernel/user → 가상화)
 - **Diagram** CPU / 메모리 / I/O 가상화의 각 layer 동작
 - **Distinguish** Type 1 vs Type 2 hypervisor, strict vs passthrough
 - **Apply** Container (Docker/K8s) 와 hypervisor 가상화의 trade-off
 - **Plan** Modern infrastructure (microVM, gVisor, kata-containers) 적합성
 
-## 사전 지식
-
+## 📋 사전 지식
 - OS 기본 (process, kernel/user mode)
 - CPU 권한 모드 (ring, EL)
 - 가상 메모리 ([MMU 코스](../../mmu/) 참고)
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag dag-long">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -86,95 +90,61 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 <!-- DV-SKOOL-MODULES:start -->
 <div class="module-grid">
   <a class="module-card" data-cat="soc" href="01_virtualization_fundamentals/">
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">Virtualization Fundamentals</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 12분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="02_cpu_virtualization/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">CPU Virtualization</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 17분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="03_memory_virtualization/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">Memory Virtualization</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 15분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="04_io_virtualization/">
     <div class="module-num">04</div>
     <div class="module-body">
       <div class="module-title">I/O Virtualization</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 18분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="05_hypervisor_types/">
     <div class="module-num">05</div>
     <div class="module-body">
       <div class="module-title">Hypervisor Types</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 14분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="06_strict_vs_passthrough/">
     <div class="module-num">06</div>
     <div class="module-body">
       <div class="module-title">Strict vs Passthrough</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 17분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="07_containers_and_modern/">
     <div class="module-num">07</div>
     <div class="module-body">
       <div class="module-title">Containers & Modern Virtualization</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 15분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="soc" href="08_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 16분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 학습 경로
-
+## 📊 모듈 흐름
 <div class="path-chain">
   <div class="path-pill tier-core">
     <div class="pill-num">M01</div>
@@ -202,16 +172,14 @@
   </div>
 </div>
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집**](glossary.md)
 - 📝 [**퀴즈**](quiz/index.md)
 - 📋 [**코스 개요**](_legacy_overview.md)
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/mmu/">
     <div class="course-card-num">🧭 관련</div>

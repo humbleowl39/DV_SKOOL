@@ -5,22 +5,26 @@
   <div class="topic-hero-mark">📐</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">BigTech Algorithm</div>
-    <p class="topic-hero-sub">코딩 인터뷰 핵심 — Big-O, 자료구조, 알고리즘</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">7</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.6h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">코딩 인터뷰 — Big-O, 자료구조, 알고리즘</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 사전 지식
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+  <a class="page-toc-link" href="#개요-컨셉-맵">🗺️ 개요 & 컨셉 맵</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 📋 사전 지식
 프로그래밍 일반, 자료구조 기초
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag dag-long">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -64,91 +68,60 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 <!-- DV-SKOOL-MODULES:start -->
 <div class="module-grid">
   <a class="module-card" data-cat="applied" href="01_big_o_explained/">
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">Big-O Complexity & Pattern Thinking</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 14분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="applied" href="02_array_hashmap_explained/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">Array & Hash Map</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 13분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="applied" href="03_two_pointers_sliding_window_explained/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">Two Pointers & Sliding Window</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 14분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="applied" href="04_stack_binary_search_explained/">
     <div class="module-num">04</div>
     <div class="module-body">
       <div class="module-title">Stack & Binary Search</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 14분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="applied" href="05_tree_bfs_dfs_explained/">
     <div class="module-num">05</div>
     <div class="module-body">
       <div class="module-title">Tree & BFS/DFS</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 17분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="applied" href="06_dynamic_programming_explained/">
     <div class="module-num">06</div>
     <div class="module-body">
       <div class="module-title">Dynamic Programming</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 13분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="applied" href="07_interview_strategy/">
     <div class="module-num">07</div>
     <div class="module-body">
       <div class="module-title">Interview Strategy</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 9분</span>
-        
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집 (Glossary)**](glossary.md) — 핵심 용어 정의 및 교차 참조
 - 📝 [**퀴즈 (Quizzes)**](quiz/index.md) — 챕터별 이해도 점검
 
-## 개요 & 컨셉 맵
-
+## 🗺️ 개요 & 컨셉 맵
 코스 전체의 컨셉 맵과 깊이 있는 개요는 다음 문서를 참고하세요:
 
 → [**코스 개요 & 컨셉 맵**](_legacy_overview.md)
@@ -156,8 +129,7 @@
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/ai_engineering/">
     <div class="course-card-num">🤖 관련</div>

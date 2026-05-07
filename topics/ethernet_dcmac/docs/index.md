@@ -5,31 +5,35 @@
   <div class="topic-hero-mark">🌐</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">Ethernet DCMAC</div>
-    <p class="topic-hero-sub">프레임 구조부터 100/400G DCMAC 검증까지.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.2h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">이더넷 기본부터 100/400G DCMAC 검증까지</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#모듈-흐름">📊 모듈 흐름</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 - **Diagram** Ethernet 프레임 구조와 OSI 1-2 layer 매핑
 - **Distinguish** GbE / 10GbE / 100GbE / 400GbE 차이와 DCMAC의 위치
 - **Apply** PCS / FEC / MAC layer의 책임 분리 및 검증 시나리오
 - **Plan** DCMAC DV 환경 (traffic generator, packet checker, FEC injection)
 
-## 사전 지식
-
+## 📋 사전 지식
 - OSI 모델 (특히 L1/L2)
 - MAC vs PHY 분리 개념
 - 패킷 / 프레임 / 패딩 같은 네트워킹 기본 용어
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -56,55 +60,37 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 <!-- DV-SKOOL-MODULES:start -->
 <div class="module-grid">
   <a class="module-card" data-cat="network" href="01_ethernet_fundamentals/">
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">Ethernet Fundamentals</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 18분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="02_dcmac_architecture/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">DCMAC Architecture</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 21분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="03_dcmac_dv_methodology/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">DCMAC DV Methodology</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 26분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="network" href="04_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 9분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 학습 경로
-
+## 📊 모듈 흐름
 <div class="path-chain">
   <div class="path-pill tier-core">
     <div class="pill-num">M01</div>
@@ -127,16 +113,14 @@
   </div>
 </div>
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집**](glossary.md)
 - 📝 [**퀴즈**](quiz/index.md)
 - 📋 [**코스 개요**](_legacy_overview.md)
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/toe/">
     <div class="course-card-num">📡 관련</div>

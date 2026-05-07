@@ -54,9 +54,9 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Unit 1: UVM 아키텍처 & Phase": 01_architecture_and_phase.md
       - "Unit 2: Agent / Driver / Monitor": 02_agent_driver_monitor.md
       - "Unit 3: Sequence & Sequence Item": 03_sequence_and_item.md
@@ -64,9 +64,9 @@ nav:
       - "Unit 5: TLM, Scoreboard, Coverage": 05_tlm_scoreboard_coverage.md
       - "Unit 6: UVM 실무 패턴 & 안티패턴": 06_practical_patterns.md
       - "UVM — Quick Reference Card": 07_quick_reference_card.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
 
 markdown_extensions:
@@ -80,6 +80,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

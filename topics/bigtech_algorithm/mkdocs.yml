@@ -54,9 +54,9 @@ plugins:
   - tags
 
 nav:
-  - "🏠 DV SKOOL 메인": "https://humbleowl39.github.io/DV_SKOOL/"
-  - "코스 홈": index.md
-  - "학습 모듈":
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
       - "Module 01 — Big-O & Pattern Thinking": 01_big_o_explained.md
       - "Module 02 — Array & Hash Map": 02_array_hashmap_explained.md
       - "Module 03 — Two Pointers & Sliding Window": 03_two_pointers_sliding_window_explained.md
@@ -64,9 +64,9 @@ nav:
       - "Module 05 — Tree & BFS/DFS": 05_tree_bfs_dfs_explained.md
       - "Module 06 — Dynamic Programming": 06_dynamic_programming_explained.md
       - "Module 07 — Interview Strategy": 07_interview_strategy.md
-  - "코스 개요": _legacy_overview.md
-  - "용어집": glossary.md
-  - "퀴즈":
+  - "📋 코스 개요": _legacy_overview.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
       - "Module 01 Quiz": quiz/01_big_o_explained_quiz.md
       - "Module 02 Quiz": quiz/02_array_hashmap_explained_quiz.md
@@ -87,6 +87,9 @@ markdown_extensions:
   - toc:
       permalink: true
       toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
   - pymdownx.details
   - pymdownx.superfences:
       custom_fences:

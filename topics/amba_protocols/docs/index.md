@@ -5,18 +5,25 @@
   <div class="topic-hero-mark">🔄</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">AMBA Protocols</div>
-    <p class="topic-hero-sub">APB, AHB, AXI, AXI-Stream을 검증 엔지니어 관점에서 통합 학습. 핸드셰이크, 채널 구조, outstanding/OoO, 패킷 스트림까지.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~1.4h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">중급</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">ARM AMBA — APB, AHB, AXI, AXI-Stream</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#모듈-흐름">📊 모듈 흐름</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+  <a class="page-toc-link" href="#학습-팁">💡 학습 팁</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 코스를 마치면 다음을 할 수 있습니다:
 
 - **Distinguish (분석)** APB / AHB / AXI / AXI-Stream의 핵심 차이를 핸드셰이크·신호·용도 기준으로 구분
@@ -25,8 +32,7 @@
 - **Implement (생성)** AXI-Stream의 TUSER/TKEEP/TLAST를 활용한 패킷 전송 검증 환경 설계
 - **Evaluate (평가)** SoC 통합 시 어느 인터페이스에 어느 프로토콜을 쓸지 trade-off 기반 결정
 
-## 사전 지식
-
+## 📋 사전 지식
 이 코스는 **중급** 과정입니다. 다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
 
 - **디지털 회로 기본**: 클럭 도메인, 동기 회로, FIFO
@@ -35,8 +41,7 @@
 
 UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -63,8 +68,7 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 순차 학습 권장 (APB→AHB→AXI는 점진적 복잡도 증가):
 
 <!-- DV-SKOOL-MODULES:start -->
@@ -73,47 +77,30 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">Unit 1: APB & AHB</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 23분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="02_axi/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">AXI (Advanced eXtensible Interface)</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 26분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="03_axi_stream/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">AXI-Stream</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 21분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="04_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 13분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 학습 경로
-
+## 📊 모듈 흐름
 <div class="path-chain">
   <div class="path-pill tier-core">
     <div class="pill-num">M01</div>
@@ -138,14 +125,12 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 
 **언제 어느 프로토콜?** APB = 레지스터 접근, AHB = 레거시 중간 성능, AXI = 고성능 메모리/IP 인터커넥트, AXI-Stream = 패킷/프레임 데이터 패스.
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집 (Glossary)**](glossary.md) — AMBA 핵심 용어 ISO 11179 형식 정의
 - 📝 [**퀴즈 (Quizzes)**](quiz/index.md) — 챕터별 5문항 (Bloom mix)
 - 📋 [**코스 개요 & 컨셉 맵**](_legacy_overview.md) — AMBA 진화 역사와 SoC 적용 매핑
 
-## 학습 팁
-
+## 💡 학습 팁
 !!! tip "효율적 학습"
     - **APB는 빠르게**: 가장 단순. SETUP→ACCESS 2단계 핸드셰이크만 이해하면 됨
     - **AXI는 깊게**: 5채널 분리 + outstanding이 핵심. VALID/READY 데드락 패턴 반드시 숙지
@@ -158,8 +143,7 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/uvm/">
     <div class="course-card-num">🧪 관련</div>

@@ -5,18 +5,26 @@
   <div class="topic-hero-mark">🧪</div>
   <div class="topic-hero-body">
     <div class="topic-hero-title">UVM (Universal Verification Methodology)</div>
-    <p class="topic-hero-sub">클래스 계층, Phase, Agent, Sequence, Factory, TLM, Coverage까지 6년+ 실무자 관점으로 통합 학습.</p>
-    <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">6</span><span class="topic-stat-lbl">모듈</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">⏱</span><span class="topic-stat-val">~2.5h</span><span class="topic-stat-lbl">예상</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">심화</span><span class="topic-stat-lbl">난이도</span></span>
-    </div>
+    <p class="topic-hero-sub">UVM 방법론 — phase, agent, sequence, factory, TLM</p>
   </div>
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
-## 이 코스에서 얻는 것
+<!-- DV-SKOOL-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">🎯 학습 목표</a>
+  <a class="page-toc-link" href="#사전-지식">📋 사전 지식</a>
+  <a class="page-toc-link" href="#개념-맵">🗺️ 개념 맵</a>
+  <a class="page-toc-link" href="#학습-모듈">📚 학습 모듈</a>
+  <a class="page-toc-link" href="#모듈-흐름">📊 모듈 흐름</a>
+  <a class="page-toc-link" href="#코스-운영-방식">🎓 코스 운영 방식</a>
+  <a class="page-toc-link" href="#관련-자료">📖 관련 자료</a>
+  <a class="page-toc-link" href="#학습-팁">💡 학습 팁</a>
+</div>
+<!-- DV-SKOOL-TOC:end -->
 
+## 🎯 학습 목표
 코스를 마치면 다음을 할 수 있습니다:
 
 - **Diagram (분석)** UVM 클래스 계층 전체와 Phase 실행 순서를 화이트보드로 그리며 설계 의사결정을 설명
@@ -25,8 +33,7 @@
 - **Analyze (분석)** config_db 계층 전달, TLM 포트 연결, Scoreboard 비교 로직을 트레이스
 - **Evaluate (평가)** UVM 실무 패턴/안티패턴을 식별하고 코드 리뷰에서 근거 있는 피드백 제공
 
-## 사전 지식
-
+## 📋 사전 지식
 이 코스는 **심화** 과정입니다. 다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
 
 - **SystemVerilog 객체지향**: class, virtual function/task, polymorphism, parameterized class
@@ -36,8 +43,7 @@
 
 부족한 부분이 있다면 [SystemVerilog IEEE 1800](https://standards.ieee.org/ieee/1800/) 사양서나 *SystemVerilog for Verification* (Spear) 1-7장을 먼저 보세요.
 
-## 🗺️ 학습 경로
-
+## 🗺️ 개념 맵
 <div class="concept-dag dag-long">
   <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
   <div class="concept-dag-row">
@@ -81,8 +87,7 @@
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
-## 학습 모듈
-
+## 📚 학습 모듈
 순차 학습을 권장합니다 (특히 1→4까지). 5~7은 토픽 단위로도 가능합니다.
 
 <!-- DV-SKOOL-MODULES:start -->
@@ -91,77 +96,48 @@
     <div class="module-num">01</div>
     <div class="module-body">
       <div class="module-title">UVM 아키텍처 & Phase</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 31분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="02_agent_driver_monitor/">
     <div class="module-num">02</div>
     <div class="module-body">
       <div class="module-title">Agent / Driver / Monitor</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 23분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="03_sequence_and_item/">
     <div class="module-num">03</div>
     <div class="module-body">
       <div class="module-title">Sequence & Sequence Item</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 26분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="04_config_db_factory/">
     <div class="module-num">04</div>
     <div class="module-body">
       <div class="module-title">config_db & Factory</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 16분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="05_tlm_scoreboard_coverage/">
     <div class="module-num">05</div>
     <div class="module-body">
       <div class="module-title">TLM, Scoreboard, Coverage</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 28분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="06_practical_patterns/">
     <div class="module-num">06</div>
     <div class="module-body">
       <div class="module-title">실무 패턴 & 안티패턴</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 17분</span>
-        
-      </div>
     </div>
   </a>
   <a class="module-card" data-cat="core" href="07_quick_reference_card/">
     <div class="module-num is-special" title="Quick Reference">★</div>
     <div class="module-body">
       <div class="module-title">Quick Reference Card</div>
-      <div class="module-meta">
-        <span class="module-time">⏱ 10분</span>
-        <span class="module-tag">Quick Ref</span>
-      </div>
     </div>
   </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
-## 학습 경로
-
+## 📊 모듈 흐름
 코어(Module 01-04) → 심화(05-06) → 참조(07) 순서로 의존성이 있습니다.
 
 <div class="path-chain">
@@ -203,8 +179,7 @@
 
 **Tier 색상**: <span style="color:#1976d2">■</span> 코어 (M01-M04, 강한 의존) ・ <span style="color:#6a1b9a">■</span> 심화 (M05-M06) ・ <span style="color:#e65100">■</span> 참조 (M07, 치트시트)
 
-## 코스 운영 방식
-
+## 🎓 코스 운영 방식
 각 모듈은 다음 순서로 구성됩니다:
 
 1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
@@ -215,14 +190,12 @@
 6. **핵심 정리** — 5~7개의 압축된 takeaway
 7. **퀴즈** — 이해도 점검 (별도 페이지)
 
-## 관련 자료
-
+## 📖 관련 자료
 - 📚 [**용어집 (Glossary)**](glossary.md) — UVM 핵심 용어 ISO 11179 형식 정의
 - 📝 [**퀴즈 (Quizzes)**](quiz/index.md) — 챕터별 5-8문항 (Bloom mix)
 - 📋 [**코스 개요 & 컨셉 맵**](_legacy_overview.md) — 학습 단위 개요와 이력서 매핑
 
-## 학습 팁
-
+## 💡 학습 팁
 !!! tip "효율적 학습"
     - **순서 고수**: Module 01-04는 강한 의존이 있으므로 순차 학습
     - **퀴즈 즉시**: 각 모듈 끝나면 바로 퀴즈 풀고 본문 재방문
@@ -234,8 +207,7 @@
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 
-## 관련 토픽
-
+## 🔗 관련 토픽
 <div class="course-grid">
   <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/amba_protocols/">
     <div class="course-card-num">🔄 관련</div>
