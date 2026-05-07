@@ -374,7 +374,7 @@
    =========================================================== */
 .phase-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
   margin: 1.5rem 0;
 }
@@ -383,6 +383,8 @@
   padding: 1rem;
   border-top: 4px solid;
   background: var(--md-default-bg-color);
+  min-width: 0;          /* allow grid item to shrink below content width */
+  overflow-wrap: anywhere;
 }
 .phase-col.phase-build   { border-top-color: #1976d2; background: rgba(25, 118, 210, 0.04); }
 .phase-col.phase-run     { border-top-color: #e65100; background: rgba(230, 81, 0, 0.04); }
@@ -410,6 +412,9 @@
   font-family: var(--md-code-font-family, monospace);
   font-size: 0.82rem;
   border-left: 2px solid var(--md-default-fg-color--lightest);
+  /* long identifiers like end_of_elaboration_phase must wrap, not overflow */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .phase-step.phase-step-sub {
   margin-left: 0.8rem;
@@ -475,6 +480,8 @@
   border: 1px solid;
   font-size: 0.82rem;
   background: var(--md-default-bg-color);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .layered-mini.mini-drv { border-color: #1976d2; }
 .layered-mini.mini-mon { border-color: #00838f; }
@@ -503,8 +510,12 @@
 }
 .parallel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.5rem;
+}
+.parallel-grid > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .parallel-grid > .phase-step {
   margin: 0;
