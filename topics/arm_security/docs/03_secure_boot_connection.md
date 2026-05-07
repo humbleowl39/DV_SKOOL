@@ -1,8 +1,32 @@
 # Module 03 — Secure Boot Connection
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🛡️</span>
+    <span class="chapter-back-text">ARM Security</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#boot-stage별-보안-레벨-상세">Boot Stage별 보안 레벨 상세</a>
+  <a class="page-toc-link" href="#anti-rollback-버전-다운그레이드-방어">Anti-Rollback — 버전 다운그레이드 방어</a>
+  <a class="page-toc-link" href="#measured-boot-remote-attestation">Measured Boot & Remote Attestation</a>
+  <a class="page-toc-link" href="#보안-레벨과-공격-방어의-연결">보안 레벨과 공격 방어의 연결</a>
+  <a class="page-toc-link" href="#dv-관점-보안-레벨-검증">DV 관점 — 보안 레벨 검증</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#확인-문제">확인 문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

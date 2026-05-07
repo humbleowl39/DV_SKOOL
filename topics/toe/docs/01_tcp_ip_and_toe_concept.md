@@ -1,8 +1,32 @@
 # Module 01 — TCP/IP & TOE Concept
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📡</span>
+    <span class="chapter-back-text">TOE</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#tcpip-4계층-모델">TCP/IP 4계층 모델</a>
+  <a class="page-toc-link" href="#tcp-핵심-기능-요약">TCP 핵심 기능 요약</a>
+  <a class="page-toc-link" href="#왜-toe가-필요한가">왜 TOE가 필요한가?</a>
+  <a class="page-toc-link" href="#toe-vs-다른-offload-기술">TOE vs 다른 Offload 기술</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

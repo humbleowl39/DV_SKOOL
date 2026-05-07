@@ -1,5 +1,39 @@
 # Module 03 — Tesla FSD Case Study
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🚗</span>
+    <span class="chapter-back-text">Automotive Cybersec</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#사건-타임라인">사건 타임라인</a>
+  <a class="page-toc-link" href="#역사적-차량-해킹-사례-fsd-탈옥과의-비교">역사적 차량 해킹 사례 — FSD 탈옥과의 비교</a>
+  <a class="page-toc-link" href="#tesla-fsd-하드웨어-아키텍처">Tesla FSD 하드웨어 아키텍처</a>
+  <a class="page-toc-link" href="#fsd-기능-활성화-메커니즘">FSD 기능 활성화 메커니즘</a>
+  <a class="page-toc-link" href="#탈옥-기법-상세-분석">탈옥 기법 상세 분석</a>
+  <a class="page-toc-link" href="#tesla의-대응-분석">Tesla의 대응 분석</a>
+  <a class="page-toc-link" href="#교훈-했어야-했던-것-vs-한-것">교훈: "했어야 했던 것" vs "한 것"</a>
+  <a class="page-toc-link" href="#다른-oem과의-비교">다른 OEM과의 비교</a>
+  <a class="page-toc-link" href="#대표-문제">대표 문제</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

@@ -1,8 +1,35 @@
 # Module 04 — TOE DV Methodology
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📡</span>
+    <span class="chapter-back-text">TOE</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
+  <a class="page-toc-link" href="#핵심-테스트-시나리오">핵심 테스트 시나리오</a>
+  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
+  <a class="page-toc-link" href="#reference-model-tcp-동작의-기준-모델">Reference Model — TCP 동작의 기준 모델</a>
+  <a class="page-toc-link" href="#scoreboard-설계-트랜잭션-레벨-비교">Scoreboard 설계 — 트랜잭션 레벨 비교</a>
+  <a class="page-toc-link" href="#sva-systemverilog-assertions-프로토콜-준수-검증">SVA (SystemVerilog Assertions) — 프로토콜 준수 검증</a>
+  <a class="page-toc-link" href="#network-agent-설계-에러-주입">Network Agent 설계 — 에러 주입</a>
+  <a class="page-toc-link" href="#이력서-연결-toe-검증-기여">이력서 연결 — TOE 검증 기여</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,34 @@
 # Module 04 — Boot Device & Boot Mode
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#boot-mode-결정">Boot Mode 결정</a>
+  <a class="page-toc-link" href="#부팅-장치-비교">부팅 장치 비교</a>
+  <a class="page-toc-link" href="#부팅-장치별-초기화-상세">부팅 장치별 초기화 상세</a>
+  <a class="page-toc-link" href="#boot-image-format-fip-firmware-image-package">Boot Image Format — FIP (Firmware Image Package)</a>
+  <a class="page-toc-link" href="#boot-fallback-메커니즘">Boot Fallback 메커니즘</a>
+  <a class="page-toc-link" href="#secure-boot-상태에서의-usb-dl-mode">Secure Boot 상태에서의 USB DL Mode</a>
+  <a class="page-toc-link" href="#rpmb-replay-protected-memory-block">RPMB (Replay Protected Memory Block)</a>
+  <a class="page-toc-link" href="#dv-관점-부팅-장치-검증">DV 관점 — 부팅 장치 검증</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

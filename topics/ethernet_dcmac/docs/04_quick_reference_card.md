@@ -1,8 +1,30 @@
 # Module 04 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🌐</span>
+    <span class="chapter-back-text">Ethernet DCMAC</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#한줄-요약">한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#ethernet-frame-빠른-참조">Ethernet Frame 빠른 참조</a>
+  <a class="page-toc-link" href="#dv-검증-빠른-참조">DV 검증 빠른 참조</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#이력서-연결">이력서 연결</a>
+  <a class="page-toc-link" href="#mangoboost-데이터-패스-전체">MangoBoost 데이터 패스 전체</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     참조용 치트시트. **Recall**: Ethernet frame, RS-FEC, AXI-S, multi-channel, 면접 골든 룰.

@@ -1,8 +1,37 @@
 # Module 03 — TLB
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#tlb가-필요한-이유">TLB가 필요한 이유</a>
+  <a class="page-toc-link" href="#tlb-구조">TLB 구조</a>
+  <a class="page-toc-link" href="#tlb-계층-구조">TLB 계층 구조</a>
+  <a class="page-toc-link" href="#tlb-설계-split-vs-unified">TLB 설계 — Split vs Unified</a>
+  <a class="page-toc-link" href="#tlb-교체-정책-replacement-policy">TLB 교체 정책 (Replacement Policy)</a>
+  <a class="page-toc-link" href="#hw-managed-vs-sw-managed-tlb">HW-Managed vs SW-Managed TLB</a>
+  <a class="page-toc-link" href="#tlb-prefetch-speculative-walk">TLB Prefetch / Speculative Walk</a>
+  <a class="page-toc-link" href="#tlb-invalidation-무효화">TLB Invalidation (무효화)</a>
+  <a class="page-toc-link" href="#tlb-coherency-문제">TLB Coherency 문제</a>
+  <a class="page-toc-link" href="#dv-관점-tlb-검증-포인트">DV 관점 — TLB 검증 포인트</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

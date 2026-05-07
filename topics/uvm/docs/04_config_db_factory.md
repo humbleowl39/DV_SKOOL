@@ -1,8 +1,32 @@
 # Module 04 — config_db & Factory
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧪</span>
+    <span class="chapter-back-text">UVM</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#config_db-설정-전달">config_db — 설정 전달</a>
+  <a class="page-toc-link" href="#factory-객체-생성과-오버라이드">Factory — 객체 생성과 오버라이드</a>
+  <a class="page-toc-link" href="#config_db-경로-디버그">config_db 경로 디버그</a>
+  <a class="page-toc-link" href="#otp-abstraction-layer와-config_db-이력서-연결">OTP Abstraction Layer와 config_db (이력서 연결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#연습문제">연습문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

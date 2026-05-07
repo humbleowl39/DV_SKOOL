@@ -1,8 +1,32 @@
 # Module 05 — Hypervisor Types
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🪟</span>
+    <span class="chapter-back-text">Virtualization</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#type-1-bare-metal-hypervisor">Type 1: Bare Metal Hypervisor</a>
+  <a class="page-toc-link" href="#type-2-hosted-hypervisor">Type 2: Hosted Hypervisor</a>
+  <a class="page-toc-link" href="#type-1-vs-type-2-비교">Type 1 vs Type 2 비교</a>
+  <a class="page-toc-link" href="#경계를-넘는-구현-kvm">경계를 넘는 구현: KVM</a>
+  <a class="page-toc-link" href="#xen-아키텍처">Xen 아키텍처</a>
+  <a class="page-toc-link" href="#hypervisor-선택-가이드">Hypervisor 선택 가이드</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

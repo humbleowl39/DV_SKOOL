@@ -1,8 +1,38 @@
 # Module 08 — RDMA-TB 검증 환경 & DV 전략
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 08</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-rdma-tb-디렉터리-한-장-뷰">1. RDMA-TB 디렉터리 한 장 뷰</a>
+  <a class="page-toc-link" href="#2-lib-분류-기준-base-ext-external-submodule">2. lib 분류 기준 — base / ext / external / submodule</a>
+  <a class="page-toc-link" href="#3-vrdmatb_top_env-두-노드-통합-환경">3. `vrdmatb_top_env` — 두 노드 통합 환경</a>
+  <a class="page-toc-link" href="#4-agent-와-handler-패턴-gof-strategy">4. Agent 와 Handler 패턴 (GoF Strategy)</a>
+  <a class="page-toc-link" href="#5-object-model">5. Object Model</a>
+  <a class="page-toc-link" href="#6-sequence-라이브러리-25-files">6. Sequence 라이브러리 — 25+ files</a>
+  <a class="page-toc-link" href="#7-coverage-plan-base-와-feature">7. Coverage Plan — base 와 feature</a>
+  <a class="page-toc-link" href="#8-sub-ip-검증-환경-submodule">8. Sub-IP 검증 환경 (`submodule/`)</a>
+  <a class="page-toc-link" href="#9-mrun-명령-워크플로">9. mrun 명령 워크플로</a>
+  <a class="page-toc-link" href="#10-새-feature-추가-시-결정-트리">10. 새 Feature 추가 시 결정 트리</a>
+  <a class="page-toc-link" href="#11-검증-가치-우선순위-coverage-driven">11. 검증 가치 우선순위 (Coverage-driven)</a>
+  <a class="page-toc-link" href="#12-rdma-tb-검증의-실전-디버그-흐름">12. RDMA-TB 검증의 실전 디버그 흐름</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

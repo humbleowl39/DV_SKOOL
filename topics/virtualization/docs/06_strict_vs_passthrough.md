@@ -1,8 +1,31 @@
 # Module 06 — Strict vs Passthrough
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🪟</span>
+    <span class="chapter-back-text">Virtualization</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 06</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#strict-system-상세">Strict System 상세</a>
+  <a class="page-toc-link" href="#hypervisor-pass-through-상세">Hypervisor Pass-through 상세</a>
+  <a class="page-toc-link" href="#관련-기술-스택-상세">관련 기술 스택 상세</a>
+  <a class="page-toc-link" href="#strict-vs-pass-through-종합-비교">Strict vs Pass-through 종합 비교</a>
+  <a class="page-toc-link" href="#현대-시스템-혼합-모델">현대 시스템: 혼합 모델</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

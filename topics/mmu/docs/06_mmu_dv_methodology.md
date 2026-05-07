@@ -1,8 +1,38 @@
 # Module 06 — MMU DV Methodology
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 06</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
+  <a class="page-toc-link" href="#custom-thin-vip-상용-vip-메모리-문제-해결">Custom "Thin" VIP — 상용 VIP 메모리 문제 해결</a>
+  <a class="page-toc-link" href="#계층적-검증-전략-tlb-서브모듈-mmu-top">계층적 검증 전략 — TLB 서브모듈 → MMU Top</a>
+  <a class="page-toc-link" href="#page-table-reference-model-구현-전략">Page Table Reference Model 구현 전략</a>
+  <a class="page-toc-link" href="#register-model-mmu-csr-검증">Register Model (MMU CSR 검증)</a>
+  <a class="page-toc-link" href="#sva-assertions-for-mmu">SVA Assertions for MMU</a>
+  <a class="page-toc-link" href="#constrained-random-전략">Constrained Random 전략</a>
+  <a class="page-toc-link" href="#uvm-sequence-예제">UVM Sequence 예제</a>
+  <a class="page-toc-link" href="#ai-assisted-환경-자동화-dac-2026">AI-Assisted 환경 자동화 (DAC 2026)</a>
+  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
+  <a class="page-toc-link" href="#주요-테스트-시나리오">주요 테스트 시나리오</a>
+  <a class="page-toc-link" href="#면접-종합-qa">면접 종합 Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

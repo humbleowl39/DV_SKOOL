@@ -1,8 +1,35 @@
 # Module 01 — Hardware Root of Trust
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-하드웨어-기반인가">왜 하드웨어 기반인가?</a>
+  <a class="page-toc-link" href="#bootrom의-역할">BootROM의 역할</a>
+  <a class="page-toc-link" href="#otp-구현-기술-efuse-vs-antifuse">OTP 구현 기술 — eFuse vs Antifuse</a>
+  <a class="page-toc-link" href="#otpefuse-변경-불가능한-보안-저장소">OTP/eFuse — 변경 불가능한 보안 저장소</a>
+  <a class="page-toc-link" href="#bootrom-버그-rom-patch-메커니즘">BootROM 버그 — ROM Patch 메커니즘</a>
+  <a class="page-toc-link" href="#secure-boot-lifecycle-states">Secure Boot Lifecycle States</a>
+  <a class="page-toc-link" href="#puf-physically-unclonable-function-efuseotp의-대안">PUF (Physically Unclonable Function) — eFuse/OTP의 대안</a>
+  <a class="page-toc-link" href="#흔한-오해">흔한 오해</a>
+  <a class="page-toc-link" href="#dv-관점-otp-검증-전략">DV 관점 — OTP 검증 전략</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

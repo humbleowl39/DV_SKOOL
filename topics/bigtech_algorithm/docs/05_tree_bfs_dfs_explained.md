@@ -1,5 +1,35 @@
 # Module 05 — Tree & BFS/DFS
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📐</span>
+    <span class="chapter-back-text">BigTech Algorithm</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#트리-기본-용어">트리 기본 용어</a>
+  <a class="page-toc-link" href="#dfs-vs-bfs-언제-어떤-것">DFS vs BFS — 언제 어떤 것?</a>
+  <a class="page-toc-link" href="#dfs-템플릿-대부분의-트리-문제를-이것으로-해결">DFS 템플릿 — 대부분의 트리 문제를 이것으로 해결</a>
+  <a class="page-toc-link" href="#bfs-level-order-traversal">BFS — Level-Order Traversal</a>
+  <a class="page-toc-link" href="#path-sum-leetcode-112-dfs-응용-dry-run">Path Sum (LeetCode #112) — DFS 응용 Dry Run</a>
+  <a class="page-toc-link" href="#면접-팁">면접 팁</a>
+  <a class="page-toc-link" href="#부록-systemverilog-예제-코드">부록: SystemVerilog 예제 코드</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

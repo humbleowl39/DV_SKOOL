@@ -1,5 +1,36 @@
 # Module 04 — RAG (Retrieval-Augmented Generation)
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🤖</span>
+    <span class="chapter-back-text">AI Engineering</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-rag가-필요한가">왜 RAG가 필요한가?</a>
+  <a class="page-toc-link" href="#rag-아키텍처">RAG 아키텍처</a>
+  <a class="page-toc-link" href="#rag-파이프라인-상세">RAG 파이프라인 상세</a>
+  <a class="page-toc-link" href="#rag-품질-평가-지표">RAG 품질 평가 지표</a>
+  <a class="page-toc-link" href="#rag-실패-모드와-대응">RAG 실패 모드와 대응</a>
+  <a class="page-toc-link" href="#dvcon-논문의-rag-아키텍처-이력서-직결">DVCon 논문의 RAG 아키텍처 (이력서 직결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

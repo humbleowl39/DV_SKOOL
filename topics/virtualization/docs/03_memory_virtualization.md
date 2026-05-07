@@ -1,8 +1,33 @@
 # Module 03 — Memory Virtualization
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🪟</span>
+    <span class="chapter-back-text">Virtualization</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-메모리-가상화가-필요한가">왜 메모리 가상화가 필요한가?</a>
+  <a class="page-toc-link" href="#주소-변환-계층-구조">주소 변환 계층 구조</a>
+  <a class="page-toc-link" href="#방법-1-shadow-page-table-sw-방식">방법 1: Shadow Page Table (SW 방식)</a>
+  <a class="page-toc-link" href="#방법-2-2-stage-translation-hw-방식">방법 2: 2-Stage Translation (HW 방식)</a>
+  <a class="page-toc-link" href="#stage-1-vs-stage-2-최적화-비교">Stage 1 vs Stage 2 최적화 비교</a>
+  <a class="page-toc-link" href="#huge-page로-tlb-효율-개선">Huge Page로 TLB 효율 개선</a>
+  <a class="page-toc-link" href="#메모리-가상화-방식-비교-요약">메모리 가상화 방식 비교 요약</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

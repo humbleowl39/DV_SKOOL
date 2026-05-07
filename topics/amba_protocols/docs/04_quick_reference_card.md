@@ -1,8 +1,34 @@
 # Module 04 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔄</span>
+    <span class="chapter-back-text">AMBA Protocols</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#한줄-요약">한줄 요약</a>
+  <a class="page-toc-link" href="#프로토콜-비교-테이블">프로토콜 비교 테이블</a>
+  <a class="page-toc-link" href="#핸드셰이크-빠른-참조">핸드셰이크 빠른 참조</a>
+  <a class="page-toc-link" href="#axi-5채널-빠른-참조">AXI 5채널 빠른 참조</a>
+  <a class="page-toc-link" href="#axi-stream-핵심-신호">AXI-Stream 핵심 신호</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#이력서-연결-프로토콜별-사용처">이력서 연결 — 프로토콜별 사용처</a>
+  <a class="page-toc-link" href="#soc-내-amba-프로토콜-위치">SoC 내 AMBA 프로토콜 위치</a>
+  <a class="page-toc-link" href="#프로토콜-버전-빠른-참조">프로토콜 버전 빠른 참조</a>
+  <a class="page-toc-link" href="#흔한-프로토콜-위반-버그-dv-pitfall-목록">흔한 프로토콜 위반 버그 — DV Pitfall 목록</a>
+  <a class="page-toc-link" href="#면접-빈출-비교-질문-한줄-답변">면접 빈출 비교 질문 — 한줄 답변</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     참조용 치트시트. 정독용이 아니라 면접/코드 리뷰/디버그 중에 빠르게 확인하는 용도.

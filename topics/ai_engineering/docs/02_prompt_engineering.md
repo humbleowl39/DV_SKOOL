@@ -1,5 +1,41 @@
 # Module 02 — Prompt Engineering & In-Context Learning
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🤖</span>
+    <span class="chapter-back-text">AI Engineering</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-prompt가-중요한가">왜 Prompt가 중요한가?</a>
+  <a class="page-toc-link" href="#핵심-프롬프트-기법">핵심 프롬프트 기법</a>
+  <a class="page-toc-link" href="#에러-분류">에러 분류</a>
+  <a class="page-toc-link" href="#근본-원인">근본 원인</a>
+  <a class="page-toc-link" href="#수정-방안">수정 방안</a>
+  <a class="page-toc-link" href="#in-context-learning-icl">In-Context Learning (ICL)</a>
+  <a class="page-toc-link" href="#system-prompt-vs-user-prompt">System Prompt vs User Prompt</a>
+  <a class="page-toc-link" href="#고급-추론-기법">고급 추론 기법</a>
+  <a class="page-toc-link" href="#prompt-품질-측정">Prompt 품질 측정</a>
+  <a class="page-toc-link" href="#dv-특화-prompt-패턴">DV 특화 Prompt 패턴</a>
+  <a class="page-toc-link" href="#prompt-최적화-체크리스트">Prompt 최적화 체크리스트</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

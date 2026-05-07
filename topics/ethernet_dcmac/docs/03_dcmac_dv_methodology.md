@@ -1,8 +1,39 @@
 # Module 03 — DCMAC DV Methodology
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🌐</span>
+    <span class="chapter-back-text">Ethernet DCMAC</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
+  <a class="page-toc-link" href="#핵심-테스트-시나리오">핵심 테스트 시나리오</a>
+  <a class="page-toc-link" href="#시퀀스-전략">시퀀스 전략</a>
+  <a class="page-toc-link" href="#constraint-random-전략">Constraint-Random 전략</a>
+  <a class="page-toc-link" href="#ral-register-abstraction-layer-전략">RAL (Register Abstraction Layer) 전략</a>
+  <a class="page-toc-link" href="#sva-assertion-전략">SVA / Assertion 전략</a>
+  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
+  <a class="page-toc-link" href="#e2e-데이터-무결성-검증">E2E 데이터 무결성 검증</a>
+  <a class="page-toc-link" href="#리셋-초기화-검증">리셋 / 초기화 검증</a>
+  <a class="page-toc-link" href="#cdc-clock-domain-crossing-고려사항">CDC (Clock Domain Crossing) 고려사항</a>
+  <a class="page-toc-link" href="#dcmac-디버그-방법론">DCMAC 디버그 방법론</a>
+  <a class="page-toc-link" href="#이력서-연결-dcmac-서브시스템-기여">이력서 연결 — DCMAC 서브시스템 기여</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

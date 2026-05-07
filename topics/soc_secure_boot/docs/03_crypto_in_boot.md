@@ -1,8 +1,36 @@
 # Module 03 — Crypto in Boot
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#두-가지-연산의-결합">두 가지 연산의 결합</a>
+  <a class="page-toc-link" href="#hash-디지털-지문">Hash — 디지털 지문</a>
+  <a class="page-toc-link" href="#전자-서명-인증">전자 서명 — 인증</a>
+  <a class="page-toc-link" href="#rsa-vs-ecdsa-면접-단골-비교">RSA vs ECDSA — 면접 단골 비교</a>
+  <a class="page-toc-link" href="#nist-curve-vs-brainpool">NIST Curve vs Brainpool</a>
+  <a class="page-toc-link" href="#pqc-양자내성-암호학">PQC (양자내성 암호학)</a>
+  <a class="page-toc-link" href="#키-계층-구조-왜-계층화하는가">키 계층 구조 — 왜 계층화하는가?</a>
+  <a class="page-toc-link" href="#rotpk-침해-최악의-경우">ROTPK 침해 — 최악의 경우</a>
+  <a class="page-toc-link" href="#hw-crypto-engine-vs-sw-crypto">HW Crypto Engine vs SW Crypto</a>
+  <a class="page-toc-link" href="#dpi-c-hwsw-co-verification-인터칩-키-교환">DPI-C HW/SW Co-verification — 인터칩 키 교환</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

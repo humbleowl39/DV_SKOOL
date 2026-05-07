@@ -1,8 +1,36 @@
 # Module 02 — InfiniBand 프로토콜 스택
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-ib-5-계층-모델">1. IB 5 계층 모델</a>
+  <a class="page-toc-link" href="#2-ib-패킷-포맷-한-장-뷰">2. IB 패킷 포맷 — 한 장 뷰</a>
+  <a class="page-toc-link" href="#3-lrh-local-route-header-8-byte">3. LRH (Local Route Header) — 8 byte</a>
+  <a class="page-toc-link" href="#4-grh-global-route-header-40-byte">4. GRH (Global Route Header) — 40 byte</a>
+  <a class="page-toc-link" href="#5-bth-base-transport-header-12-byte">5. BTH (Base Transport Header) — 12 byte</a>
+  <a class="page-toc-link" href="#6-icrc-vs-vcrc-두-crc-가-분리된-이유">6. ICRC vs VCRC — 두 CRC 가 분리된 이유</a>
+  <a class="page-toc-link" href="#7-virtual-lanes-와-service-level">7. Virtual Lanes 와 Service Level</a>
+  <a class="page-toc-link" href="#8-패킷-길이-제약-mtu-와-pktlen">8. 패킷 길이 제약 — MTU 와 PktLen</a>
+  <a class="page-toc-link" href="#9-flow-control-credit-기반">9. Flow Control — Credit 기반</a>
+  <a class="page-toc-link" href="#10-link-상태-머신-요약">10. Link 상태 머신 요약</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

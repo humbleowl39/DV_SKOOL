@@ -1,8 +1,36 @@
 # Module 03 — TB Top & AI Automation
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🏗️</span>
+    <span class="chapter-back-text">SoC Integration</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#tb-top-환경-설계-이력서-직결">TB Top 환경 설계 (이력서 직결)</a>
+  <a class="page-toc-link" href="#ai-기반-cctv-자동화-파이프라인">AI 기반 CCTV 자동화 파이프라인</a>
+  <a class="page-toc-link" href="#성과-정량적-데이터">성과 — 정량적 데이터</a>
+  <a class="page-toc-link" href="#면접-종합-qa">면접 종합 Q&A</a>
+  <a class="page-toc-link" href="#코드-예시-구체적-json-config">코드 예시: 구체적 JSON Config</a>
+  <a class="page-toc-link" href="#코드-예시-config-기반-uvm-env-자동-구성">코드 예시: Config 기반 UVM Env 자동 구성</a>
+  <a class="page-toc-link" href="#ai-파이프라인-상세-실무-구현">AI 파이프라인 상세: 실무 구현</a>
+  <a class="page-toc-link" href="#gap-report-v-plan-반영-실무-워크플로우">Gap Report → V-Plan 반영 실무 워크플로우</a>
+  <a class="page-toc-link" href="#tb-top-release-프로세스-상세">TB Top Release 프로세스 상세</a>
+  <a class="page-toc-link" href="#연습-문제">연습 문제</a>
+  <a class="page-toc-link" href="#퀴즈">퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

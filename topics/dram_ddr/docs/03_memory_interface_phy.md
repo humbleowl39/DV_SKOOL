@@ -1,8 +1,34 @@
 # Module 03 — Memory Interface / PHY
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💾</span>
+    <span class="chapter-back-text">DRAM / DDR</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#ddr-신호-구성">DDR 신호 구성</a>
+  <a class="page-toc-link" href="#odt-on-die-termination-신호-무결성의-핵심">ODT (On-Die Termination) — 신호 무결성의 핵심</a>
+  <a class="page-toc-link" href="#dll-pll-클럭-생성과-분배">DLL / PLL — 클럭 생성과 분배</a>
+  <a class="page-toc-link" href="#equalization-고속-신호-보상-기법">Equalization — 고속 신호 보상 기법</a>
+  <a class="page-toc-link" href="#training-왜-필요한가">Training — 왜 필요한가?</a>
+  <a class="page-toc-link" href="#zq-calibration-임피던스-매칭">ZQ Calibration — 임피던스 매칭</a>
+  <a class="page-toc-link" href="#bl2에서의-dram-training-bootrom-연결">BL2에서의 DRAM Training (BootROM 연결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

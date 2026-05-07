@@ -1,8 +1,36 @@
 # Module 01 — CAN Bus Fundamentals
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🚗</span>
+    <span class="chapter-back-text">Automotive Cybersec</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#can-bus-탄생-배경">CAN Bus 탄생 배경</a>
+  <a class="page-toc-link" href="#can-프레임-구조">CAN 프레임 구조</a>
+  <a class="page-toc-link" href="#can-bus-통신-메커니즘">CAN Bus 통신 메커니즘</a>
+  <a class="page-toc-link" href="#can-프로토콜-진화">CAN 프로토콜 진화</a>
+  <a class="page-toc-link" href="#can-에러-처리-메커니즘-bus-off-공격의-기반">CAN 에러 처리 메커니즘 (Bus-Off 공격의 기반)</a>
+  <a class="page-toc-link" href="#can-arbitration-상세-비트-단위-dry-run">CAN Arbitration 상세 (비트 단위 dry-run)</a>
+  <a class="page-toc-link" href="#obd-ii-공격의-물리적-진입점">OBD-II: 공격의 물리적 진입점</a>
+  <a class="page-toc-link" href="#구조적-취약점-요약">구조적 취약점 요약</a>
+  <a class="page-toc-link" href="#automotive-ethernet과의-비교">Automotive Ethernet과의 비교</a>
+  <a class="page-toc-link" href="#대표-문제">대표 문제</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

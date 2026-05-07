@@ -1,5 +1,35 @@
 # Module 07 — DV/EDA Application
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🤖</span>
+    <span class="chapter-back-text">AI Engineering</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 07</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#dv에서-ai가-해결하는-문제-유형">DV에서 AI가 해결하는 문제 유형</a>
+  <a class="page-toc-link" href="#사례-1-dvcon-2025-검증-갭-자동-발견">사례 1: DVCon 2025 — 검증 갭 자동 발견</a>
+  <a class="page-toc-link" href="#사례-2-dac-2026-ai-assisted-uvm-환경-자동화">사례 2: DAC 2026 — AI-Assisted UVM 환경 자동화</a>
+  <a class="page-toc-link" href="#사례-3-로그-분석-자동화-실무-활용">사례 3: 로그 분석 자동화 (실무 활용)</a>
+  <a class="page-toc-link" href="#dv-ai의-현실적-한계와-대응">DV + AI의 현실적 한계와 대응</a>
+  <a class="page-toc-link" href="#면접-종합-qa">면접 종합 Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

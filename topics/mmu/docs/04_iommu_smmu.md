@@ -1,8 +1,37 @@
 # Module 04 — IOMMU / SMMU
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-iommu가-필요한가">왜 IOMMU가 필요한가?</a>
+  <a class="page-toc-link" href="#arm-smmu-system-mmu-아키텍처">ARM SMMU (System MMU) 아키텍처</a>
+  <a class="page-toc-link" href="#2-stage-translation-가상화">2-Stage Translation (가상화)</a>
+  <a class="page-toc-link" href="#iommu-용어-벤더별-차이">IOMMU 용어 — 벤더별 차이</a>
+  <a class="page-toc-link" href="#pcie-ats-pri-디바이스-측-주소-변환">PCIe ATS / PRI — 디바이스 측 주소 변환</a>
+  <a class="page-toc-link" href="#smmu-command-event-queue-상세">SMMU Command / Event Queue 상세</a>
+  <a class="page-toc-link" href="#iommu-page-fault-처리-cpu-page-fault와의-차이">IOMMU Page Fault 처리 — CPU Page Fault와의 차이</a>
+  <a class="page-toc-link" href="#svm-sva-shared-virtual-memory">SVM / SVA — Shared Virtual Memory</a>
+  <a class="page-toc-link" href="#iommu-보안-기능">IOMMU 보안 기능</a>
+  <a class="page-toc-link" href="#soc-통합-관점-sysmmu-삼성">SoC 통합 관점 — sysMMU (삼성)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,29 @@
 # Module 05 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📡</span>
+    <span class="chapter-back-text">TOE</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#toe-한줄-요약">TOE 한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#이력서-연결">이력서 연결</a>
+  <a class="page-toc-link" href="#tcp-핵심-수치">TCP 핵심 수치</a>
+  <a class="page-toc-link" href="#offload-수준-비교">Offload 수준 비교</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     참조용 치트시트.

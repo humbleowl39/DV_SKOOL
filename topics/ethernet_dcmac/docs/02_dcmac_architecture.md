@@ -1,8 +1,36 @@
 # Module 02 — DCMAC Architecture
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🌐</span>
+    <span class="chapter-back-text">Ethernet DCMAC</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#dcmac-블록-다이어그램">DCMAC 블록 다이어그램</a>
+  <a class="page-toc-link" href="#multi-port-아키텍처-및-속도-모드">Multi-Port 아키텍처 및 속도 모드</a>
+  <a class="page-toc-link" href="#axi-stream-인터페이스-user-side">AXI-Stream 인터페이스 (User Side)</a>
+  <a class="page-toc-link" href="#tx-mac-engine-상세">TX MAC Engine 상세</a>
+  <a class="page-toc-link" href="#rx-mac-engine-상세">RX MAC Engine 상세</a>
+  <a class="page-toc-link" href="#axi-lite-레지스터-인터페이스-configurationstatus">AXI-Lite 레지스터 인터페이스 (Configuration/Status)</a>
+  <a class="page-toc-link" href="#ptpieee-1588-타임스탬프">PTP/IEEE 1588 타임스탬프</a>
+  <a class="page-toc-link" href="#통계-카운터-rmon">통계 카운터 (RMON)</a>
+  <a class="page-toc-link" href="#toe-dcmac-연동-상세-이력서-직결">TOE ↔ DCMAC 연동 상세 (이력서 직결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

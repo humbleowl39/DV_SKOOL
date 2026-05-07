@@ -1,8 +1,31 @@
 # Module 07 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#주소-변환-한줄-요약">주소 변환 한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#흔한-실수와-올바른-답변">흔한 실수와 올바른 답변</a>
+  <a class="page-toc-link" href="#이력서-연결-포인트">이력서 연결 포인트</a>
+  <a class="page-toc-link" href="#면접-스토리-흐름-technical-challenge-2">면접 스토리 흐름 (Technical Challenge #2)</a>
+  <a class="page-toc-link" href="#성능-공식-빠른-참조">성능 공식 빠른 참조</a>
+  <a class="page-toc-link" href="#다음-학습-추천">다음 학습 추천</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     참조용 치트시트 — 면접 / 코드 리뷰 / 디버그 중 빠른 확인용.

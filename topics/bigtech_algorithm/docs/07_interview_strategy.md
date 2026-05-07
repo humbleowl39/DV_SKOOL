@@ -1,5 +1,36 @@
 # Module 07 — Interview Strategy
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📐</span>
+    <span class="chapter-back-text">BigTech Algorithm</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 07</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#45분-타임라인">45분 타임라인</a>
+  <a class="page-toc-link" href="#반드시-할-명확화-질문-5가지">반드시 할 명확화 질문 5가지</a>
+  <a class="page-toc-link" href="#입력-크기-필요-복잡도">입력 크기 → 필요 복잡도</a>
+  <a class="page-toc-link" href="#엣지-케이스-체크리스트">엣지 케이스 체크리스트</a>
+  <a class="page-toc-link" href="#의사소통-템플릿">의사소통 템플릿</a>
+  <a class="page-toc-link" href="#패턴별-1줄-식별-키워드">패턴별 1줄 식별 키워드</a>
+  <a class="page-toc-link" href="#dv-엔지니어가-알고리즘-면접을-보는-이유">DV 엔지니어가 알고리즘 면접을 보는 이유</a>
+  <a class="page-toc-link" href="#16문제-학습-순서-우선순위">16문제 학습 순서 (우선순위)</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

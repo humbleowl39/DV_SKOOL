@@ -1,8 +1,31 @@
 # Module 04 — I/O Virtualization
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🪟</span>
+    <span class="chapter-back-text">Virtualization</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#io-가상화가-어려운-이유">I/O 가상화가 어려운 이유</a>
+  <a class="page-toc-link" href="#방법-1-디바이스-에뮬레이션-full-emulation">방법 1: 디바이스 에뮬레이션 (Full Emulation)</a>
+  <a class="page-toc-link" href="#방법-2-준가상화-io-virtio">방법 2: 준가상화 I/O (VirtIO)</a>
+  <a class="page-toc-link" href="#방법-3-디바이스-pass-through">방법 3: 디바이스 Pass-through</a>
+  <a class="page-toc-link" href="#io-가상화-방식-종합-비교">I/O 가상화 방식 종합 비교</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,34 @@
 # Module 02 — 3-Layer Architecture
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-3-layer-한-장-뷰">1. 3 Layer 한 장 뷰</a>
+  <a class="page-toc-link" href="#2-각-layer-의-packet-단위">2. 각 layer 의 packet 단위</a>
+  <a class="page-toc-link" href="#3-transaction-layer-tl-책임">3. Transaction Layer (TL) 책임</a>
+  <a class="page-toc-link" href="#4-data-link-layer-dll-책임">4. Data Link Layer (DLL) 책임</a>
+  <a class="page-toc-link" href="#5-physical-layer-pl-책임">5. Physical Layer (PL) 책임</a>
+  <a class="page-toc-link" href="#6-송신-흐름-memory-write-예">6. 송신 흐름 — Memory Write 예</a>
+  <a class="page-toc-link" href="#7-수신-측-acknak-의-layer-분리">7. 수신 측 ACK/NAK 의 layer 분리</a>
+  <a class="page-toc-link" href="#8-디버그-시-layer-추적">8. 디버그 시 layer 추적</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

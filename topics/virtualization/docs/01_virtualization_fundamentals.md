@@ -1,8 +1,32 @@
 # Module 01 — Virtualization Fundamentals
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🪟</span>
+    <span class="chapter-back-text">Virtualization</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-가상화가-필요한가">왜 가상화가 필요한가?</a>
+  <a class="page-toc-link" href="#가상화의-핵심-원리-추상화-계층">가상화의 핵심 원리: 추상화 계층</a>
+  <a class="page-toc-link" href="#가상화의-3대-요소">가상화의 3대 요소</a>
+  <a class="page-toc-link" href="#popek-goldberg-가상화-조건-1974">Popek-Goldberg 가상화 조건 (1974)</a>
+  <a class="page-toc-link" href="#특권-명령어와-trap">특권 명령어와 Trap</a>
+  <a class="page-toc-link" href="#가상화의-역사-간략">가상화의 역사 (간략)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

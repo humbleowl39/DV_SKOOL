@@ -1,8 +1,32 @@
 # Unit 1: APB & AHB
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔄</span>
+    <span class="chapter-back-text">AMBA Protocols</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#apb-advanced-peripheral-bus">APB (Advanced Peripheral Bus)</a>
+  <a class="page-toc-link" href="#apb-버전-진화-apb3-apb4-apb5">APB 버전 진화: APB3 → APB4 → APB5</a>
+  <a class="page-toc-link" href="#ahb-advanced-high-performance-bus">AHB (Advanced High-performance Bus)</a>
+  <a class="page-toc-link" href="#ahb-to-apb-bridge">AHB-to-APB Bridge</a>
+  <a class="page-toc-link" href="#apb-vs-ahb-비교">APB vs AHB 비교</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#연습문제">연습문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1077,3 +1077,76 @@ input, button, select, textarea {
   .page-toc-label { font-size: 0.66rem; padding-right: 0.3rem; }
   .page-toc-link { font-size: 0.76rem; padding: 0.25rem 0.6rem; }
 }
+
+/* ===========================================================
+   Chapter context — 챕터 페이지 상단 컨텍스트 바
+   "← 토픽 이름 › Module NN" 브레드크럼 형식
+   =========================================================== */
+.chapter-context {
+  --c-c1: #4d7cba;
+  --c-c2: #7a5ec0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0.85rem;
+  margin: -0.3rem 0 1.4rem 0;
+  border-radius: var(--dvs-radius-mid, 10px);
+  background: var(--md-code-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  font-size: 0.85rem;
+}
+.chapter-context[data-cat="core"]     { --c-c1:#5e72e4; --c-c2:#7a5ec0; }
+.chapter-context[data-cat="memory"]   { --c-c1:#f59e0b; --c-c2:#ef9a3a; }
+.chapter-context[data-cat="intercon"] { --c-c1:#8b5cf6; --c-c2:#7a5ec0; }
+.chapter-context[data-cat="network"]  { --c-c1:#10b981; --c-c2:#14b8a6; }
+.chapter-context[data-cat="soc"]      { --c-c1:#ef4444; --c-c2:#c0392b; }
+.chapter-context[data-cat="applied"]  { --c-c1:#14b8a6; --c-c2:#0e9488; }
+
+.chapter-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none !important;
+  color: var(--md-default-fg-color);
+  font-weight: 600;
+  padding: 0.1rem 0.1rem;
+  transition: color 0.15s ease;
+}
+.chapter-back:hover { color: var(--c-c1); }
+.chapter-back-arrow {
+  font-size: 0.95rem;
+  color: var(--c-c1);
+}
+.chapter-back-icon { font-size: 1rem; line-height: 1; }
+.chapter-divider {
+  color: var(--md-default-fg-color--lightest);
+  font-size: 0.95rem;
+  user-select: none;
+  margin: 0 0.05rem;
+}
+.chapter-marker {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--c-c1), var(--c-c2));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}
+.chapter-quickref-marker {
+  background: var(--md-default-fg-color--lightest);
+  color: var(--md-default-fg-color);
+}
+
+@media (max-width: 600px) {
+  .chapter-context { padding: 0.45rem 0.7rem; gap: 0.4rem; font-size: 0.8rem; }
+  .chapter-marker { font-size: 0.7rem; padding: 0.12rem 0.45rem; }
+}
+
+/* learning-meta가 더 이상 필요 없지만 legacy 호환 위해 무해하게 축소 */
+.learning-meta {
+  display: none;          /* 새 chapter-context로 대체됨 */
+}

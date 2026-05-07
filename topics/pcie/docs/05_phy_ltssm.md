@@ -1,8 +1,33 @@
 # Module 05 — Physical Layer & LTSSM
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-physical-layer-sub-block">1. Physical Layer Sub-block</a>
+  <a class="page-toc-link" href="#2-ltssm-11-states">2. LTSSM — 11 States</a>
+  <a class="page-toc-link" href="#3-polling-상세">3. Polling 상세</a>
+  <a class="page-toc-link" href="#4-equalization-gen3-의-4-phase">4. Equalization — Gen3+ 의 4 Phase</a>
+  <a class="page-toc-link" href="#5-lane-reversal-polarity-inversion-de-skew">5. Lane Reversal / Polarity Inversion / De-skew</a>
+  <a class="page-toc-link" href="#6-lane-width-down-train">6. Lane Width Down-train</a>
+  <a class="page-toc-link" href="#7-디버그-link-up-안-됨">7. 디버그 — Link up 안 됨</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

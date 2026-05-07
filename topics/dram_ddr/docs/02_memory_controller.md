@@ -1,8 +1,37 @@
 # Module 02 — Memory Controller
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💾</span>
+    <span class="chapter-back-text">DRAM / DDR</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#mc-블록-다이어그램">MC 블록 다이어그램</a>
+  <a class="page-toc-link" href="#command-scheduler-mc의-두뇌">Command Scheduler — MC의 두뇌</a>
+  <a class="page-toc-link" href="#qos-quality-of-service-arbitration">QoS (Quality of Service) / Arbitration</a>
+  <a class="page-toc-link" href="#read-write-turnaround-숨은-성능-병목">Read-Write Turnaround — 숨은 성능 병목</a>
+  <a class="page-toc-link" href="#reorder-buffer-write-coalescing">Reorder Buffer / Write Coalescing</a>
+  <a class="page-toc-link" href="#address-mapping-인터리빙">Address Mapping (인터리빙)</a>
+  <a class="page-toc-link" href="#refresh-관리">Refresh 관리</a>
+  <a class="page-toc-link" href="#dram-초기화-시퀀스">DRAM 초기화 시퀀스</a>
+  <a class="page-toc-link" href="#power-management-전력-상태-머신">Power Management — 전력 상태 머신</a>
+  <a class="page-toc-link" href="#주요-dram-명령">주요 DRAM 명령</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

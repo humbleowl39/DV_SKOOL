@@ -1,8 +1,34 @@
 # Module 03 — UPIU & Command Flow
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💿</span>
+    <span class="chapter-back-text">UFS HCI</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#scsi-명령과-upiu-매핑">SCSI 명령과 UPIU 매핑</a>
+  <a class="page-toc-link" href="#well-known-lu-logical-unit">Well-Known LU (Logical Unit)</a>
+  <a class="page-toc-link" href="#nop-out-nop-in-상세">NOP OUT / NOP IN 상세</a>
+  <a class="page-toc-link" href="#query-명령-디바이스-설정상태">Query 명령 — 디바이스 설정/상태</a>
+  <a class="page-toc-link" href="#task-management-명령-제어">Task Management — 명령 제어</a>
+  <a class="page-toc-link" href="#에러-처리-흐름">에러 처리 흐름</a>
+  <a class="page-toc-link" href="#device-initiated-동작">Device-Initiated 동작</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

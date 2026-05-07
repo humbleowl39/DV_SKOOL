@@ -1,8 +1,31 @@
 # Module 07 — Containers & Modern Virtualization
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🪟</span>
+    <span class="chapter-back-text">Virtualization</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 07</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#vm-vs-컨테이너">VM vs 컨테이너</a>
+  <a class="page-toc-link" href="#컨테이너의-격리-메커니즘">컨테이너의 격리 메커니즘</a>
+  <a class="page-toc-link" href="#컨테이너의-보안-한계">컨테이너의 보안 한계</a>
+  <a class="page-toc-link" href="#마이크로vm-vm-컨테이너의-장점-결합">마이크로VM: VM + 컨테이너의 장점 결합</a>
+  <a class="page-toc-link" href="#현대-가상화-트렌드-요약">현대 가상화 트렌드 요약</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

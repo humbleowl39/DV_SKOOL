@@ -1,8 +1,35 @@
 # Module 01 — UFS Protocol Stack
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💿</span>
+    <span class="chapter-back-text">UFS HCI</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#3계층-구조">3계층 구조</a>
+  <a class="page-toc-link" href="#ufs-vs-emmc-비교">UFS vs eMMC 비교</a>
+  <a class="page-toc-link" href="#upiu-ufs-protocol-information-unit">UPIU (UFS Protocol Information Unit)</a>
+  <a class="page-toc-link" href="#ufs-버전-진화">UFS 버전 진화</a>
+  <a class="page-toc-link" href="#unipro-핵심-dl-layer">UniPro 핵심 — DL Layer</a>
+  <a class="page-toc-link" href="#unipro-상세-l4dme-l3-l15">UniPro 상세 — L4(DME) / L3 / L1.5</a>
+  <a class="page-toc-link" href="#m-phy-물리-계층">M-PHY — 물리 계층</a>
+  <a class="page-toc-link" href="#bootrom에서의-ufs-접근-기존-자료-연결">BootROM에서의 UFS 접근 (기존 자료 연결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

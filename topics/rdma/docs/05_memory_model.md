@@ -1,8 +1,34 @@
 # Module 05 — Memory Model: PD, MR, L_Key/R_Key, IOVA
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-객체-계층">1. 객체 계층</a>
+  <a class="page-toc-link" href="#2-memory-registration-흐름">2. Memory Registration 흐름</a>
+  <a class="page-toc-link" href="#3-access-flag">3. Access Flag</a>
+  <a class="page-toc-link" href="#4-key-검증-responder-측-동작">4. Key 검증 — Responder 측 동작</a>
+  <a class="page-toc-link" href="#5-iova-ats-ptw-tlb-검증-환경의-핵심">5. IOVA, ATS, PTW, TLB — 검증 환경의 핵심</a>
+  <a class="page-toc-link" href="#6-memory-window-mw">6. Memory Window (MW)</a>
+  <a class="page-toc-link" href="#7-odp-on-demand-paging">7. ODP (On-Demand Paging)</a>
+  <a class="page-toc-link" href="#8-메모리-모델-검증-시-자주-보는-문제">8. 메모리 모델 검증 시 자주 보는 문제</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

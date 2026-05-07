@@ -1,8 +1,35 @@
 # Module 05 — Attack Surface & Defense
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#공격-표면-맵">공격 표면 맵</a>
+  <a class="page-toc-link" href="#1-fault-injection-글리치-공격">(1) Fault Injection (글리치 공격)</a>
+  <a class="page-toc-link" href="#5-rollback-attack-다운그레이드-공격">(5) Rollback Attack (다운그레이드 공격)</a>
+  <a class="page-toc-link" href="#3-side-channel-attack-부채널-공격">(3) Side-Channel Attack (부채널 공격)</a>
+  <a class="page-toc-link" href="#7-jtagdebug-port-공격">(7) JTAG/Debug Port 공격</a>
+  <a class="page-toc-link" href="#10-toctou-time-of-check-to-time-of-use">(10) TOCTOU (Time-of-Check-to-Time-of-Use)</a>
+  <a class="page-toc-link" href="#종합-공격-방어-테이블">종합 공격 & 방어 테이블</a>
+  <a class="page-toc-link" href="#negative-test-시나리오-프레임워크">Negative Test 시나리오 프레임워크</a>
+  <a class="page-toc-link" href="#dv-관점-uvm-forcerelease로-보안-공격-재현">DV 관점 — UVM force/release로 보안 공격 재현</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

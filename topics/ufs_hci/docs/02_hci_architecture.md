@@ -1,8 +1,35 @@
 # Module 02 — HCI Architecture
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💿</span>
+    <span class="chapter-back-text">UFS HCI</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#hci-블록-다이어그램">HCI 블록 다이어그램</a>
+  <a class="page-toc-link" href="#명령-처리-흐름-read-명령-예시">명령 처리 흐름 (READ 명령 예시)</a>
+  <a class="page-toc-link" href="#utrd-상세-필드-레이아웃">UTRD 상세 필드 레이아웃</a>
+  <a class="page-toc-link" href="#hce-enabledisable-시퀀스">HCE Enable/Disable 시퀀스</a>
+  <a class="page-toc-link" href="#interrupt-종류별-분류">Interrupt 종류별 분류</a>
+  <a class="page-toc-link" href="#uic-command-상세">UIC Command 상세</a>
+  <a class="page-toc-link" href="#핵심-레지스터">핵심 레지스터</a>
+  <a class="page-toc-link" href="#mcq-multi-circular-queue-ufs-40">MCQ (Multi-Circular Queue) — UFS 4.0+</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

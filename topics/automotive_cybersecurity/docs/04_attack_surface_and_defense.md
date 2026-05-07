@@ -1,5 +1,35 @@
 # Module 04 — Attack Surface & Defense
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🚗</span>
+    <span class="chapter-back-text">Automotive Cybersec</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#차량-공격-표면-전체-맵">차량 공격 표면 전체 맵</a>
+  <a class="page-toc-link" href="#공격-벡터-분류">공격 벡터 분류</a>
+  <a class="page-toc-link" href="#방어-계층-defense-in-depth">방어 계층 (Defense in Depth)</a>
+  <a class="page-toc-link" href="#규제-프레임워크">규제 프레임워크</a>
+  <a class="page-toc-link" href="#대표-문제">대표 문제</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

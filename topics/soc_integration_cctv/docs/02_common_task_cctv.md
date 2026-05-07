@@ -1,8 +1,36 @@
 # Module 02 — Common Task & CCTV
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🏗️</span>
+    <span class="chapter-back-text">SoC Integration</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-common-task가-누락되는가">왜 Common Task가 누락되는가?</a>
+  <a class="page-toc-link" href="#common-task-항목-상세">Common Task 항목 상세</a>
+  <a class="page-toc-link" href="#cctv-방법론">CCTV 방법론</a>
+  <a class="page-toc-link" href="#cctv-coverage-model">CCTV Coverage Model</a>
+  <a class="page-toc-link" href="#코드-예시-cctv-coverage-matrix-systemverilog">코드 예시: CCTV Coverage Matrix (SystemVerilog)</a>
+  <a class="page-toc-link" href="#코드-예시-sysmmu-통합-검증-시나리오">코드 예시: sysMMU 통합 검증 시나리오</a>
+  <a class="page-toc-link" href="#코드-예시-security-access-control-검증">코드 예시: Security Access Control 검증</a>
+  <a class="page-toc-link" href="#실전-사례-gap이-silicon-bug로-이어지는-시나리오">실전 사례: Gap이 Silicon Bug로 이어지는 시나리오</a>
+  <a class="page-toc-link" href="#연습-문제">연습 문제</a>
+  <a class="page-toc-link" href="#퀴즈">퀴즈</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

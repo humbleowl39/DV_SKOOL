@@ -1,8 +1,38 @@
 # Module 02 — Page Table Structure
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-multi-level인가">왜 Multi-level인가?</a>
+  <a class="page-toc-link" href="#armv8-4-level-page-table-4kb-granule">ARMv8 4-Level Page Table (4KB Granule)</a>
+  <a class="page-toc-link" href="#page-table-entry-pte-구조-armv8">Page Table Entry (PTE) 구조 — ARMv8</a>
+  <a class="page-toc-link" href="#page-walk-cache-pwc-walk-비용-절감">Page Walk Cache (PWC) — Walk 비용 절감</a>
+  <a class="page-toc-link" href="#contiguous-bit-tlb-효율-향상">Contiguous Bit — TLB 효율 향상</a>
+  <a class="page-toc-link" href="#copy-on-write-cow-메커니즘">Copy-on-Write (COW) 메커니즘</a>
+  <a class="page-toc-link" href="#risc-v-page-table-비교-sv39-sv48">RISC-V Page Table 비교 — Sv39 / Sv48</a>
+  <a class="page-toc-link" href="#asid-address-space-identifier">ASID (Address Space Identifier)</a>
+  <a class="page-toc-link" href="#vmid-virtual-machine-identifier-가상화">VMID (Virtual Machine Identifier) — 가상화</a>
+  <a class="page-toc-link" href="#page-table-walk의-성능-비용">Page Table Walk의 성능 비용</a>
+  <a class="page-toc-link" href="#dv-관점-page-table-검증-포인트">DV 관점 — Page Table 검증 포인트</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,35 @@
 # Module 03 — Sequence & Sequence Item
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧪</span>
+    <span class="chapter-back-text">UVM</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#sequence-item-트랜잭션-데이터">Sequence Item — 트랜잭션 데이터</a>
+  <a class="page-toc-link" href="#sequence-시나리오-로직">Sequence — 시나리오 로직</a>
+  <a class="page-toc-link" href="#virtual-sequence-멀티-agent-시나리오">Virtual Sequence — 멀티 Agent 시나리오</a>
+  <a class="page-toc-link" href="#p_sequencer-sequencer-리소스-접근">p_sequencer — Sequencer 리소스 접근</a>
+  <a class="page-toc-link" href="#response-핸들링-driver-sequence-응답">Response 핸들링 — Driver → Sequence 응답</a>
+  <a class="page-toc-link" href="#sequencer-arbitration-다중-sequence-제어">Sequencer Arbitration — 다중 Sequence 제어</a>
+  <a class="page-toc-link" href="#sequence-library-패턴">Sequence Library 패턴</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#연습문제">연습문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

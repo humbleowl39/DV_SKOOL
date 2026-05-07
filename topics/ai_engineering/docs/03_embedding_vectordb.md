@@ -1,5 +1,35 @@
 # Module 03 — Embedding & Vector DB
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🤖</span>
+    <span class="chapter-back-text">AI Engineering</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#embedding이란">Embedding이란?</a>
+  <a class="page-toc-link" href="#embedding-모델">Embedding 모델</a>
+  <a class="page-toc-link" href="#faiss-facebook-ai-similarity-search">FAISS (Facebook AI Similarity Search)</a>
+  <a class="page-toc-link" href="#chunking-전략-문서를-어떻게-분할하는가">Chunking 전략 — 문서를 어떻게 분할하는가</a>
+  <a class="page-toc-link" href="#대안-다른-vector-db">대안: 다른 Vector DB</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

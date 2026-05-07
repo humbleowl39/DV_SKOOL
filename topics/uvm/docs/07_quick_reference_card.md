@@ -1,8 +1,32 @@
 # Module 07 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧪</span>
+    <span class="chapter-back-text">UVM</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#한줄-요약">한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#uvm-환경-구조-빠른-참조">UVM 환경 구조 빠른 참조</a>
+  <a class="page-toc-link" href="#factory-등록-빠른-참조">Factory 등록 빠른 참조</a>
+  <a class="page-toc-link" href="#phase-빠른-참조">Phase 빠른 참조</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#안티패턴-빠른-참조">안티패턴 빠른 참조</a>
+  <a class="page-toc-link" href="#이력서-연결">이력서 연결</a>
+  <a class="page-toc-link" href="#전체-학습-자료와의-연결">전체 학습 자료와의 연결</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     이 페이지는 **참조용 치트시트**입니다. 정독 자료가 아니라 인터뷰/코드 리뷰/디버그 중에 빠르게 펴보는 용도. 새로 배우는 사람은 [Module 01-06](01_architecture_and_phase.md)부터 보고 마지막에 이 페이지로 정리.

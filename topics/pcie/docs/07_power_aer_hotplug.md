@@ -1,8 +1,33 @@
 # Module 07 — Power Management, AER, Hot Plug
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 07</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-d-state-device-power-state">1. D-State (Device Power State)</a>
+  <a class="page-toc-link" href="#2-l-state-link-power-state">2. L-State (Link Power State)</a>
+  <a class="page-toc-link" href="#3-aer-advanced-error-reporting">3. AER — Advanced Error Reporting</a>
+  <a class="page-toc-link" href="#4-common-aer-errors">4. Common AER Errors</a>
+  <a class="page-toc-link" href="#5-hot-plug">5. Hot Plug</a>
+  <a class="page-toc-link" href="#6-aer-hot-plug-의-상호작용">6. AER + Hot Plug 의 상호작용</a>
+  <a class="page-toc-link" href="#7-검증-dv-시-자주-하는-시나리오">7. 검증 (DV) 시 자주 하는 시나리오</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

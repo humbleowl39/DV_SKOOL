@@ -1,8 +1,36 @@
 # Module 01 — SoC Top Integration
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🏗️</span>
+    <span class="chapter-back-text">SoC Integration</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#ip-검증-vs-soc-top-검증">IP 검증 vs SoC Top 검증</a>
+  <a class="page-toc-link" href="#soc-top-검증-항목">SoC Top 검증 항목</a>
+  <a class="page-toc-link" href="#soc-top-tb-아키텍처-이력서-연결">SoC Top TB 아키텍처 (이력서 연결)</a>
+  <a class="page-toc-link" href="#코드-예시-connectivity-검증-sva">코드 예시: Connectivity 검증 SVA</a>
+  <a class="page-toc-link" href="#코드-예시-memory-map-검증-uvm-sequence">코드 예시: Memory Map 검증 UVM Sequence</a>
+  <a class="page-toc-link" href="#실전-디버그-시나리오-interrupt-라우팅-오류">실전 디버그 시나리오: Interrupt 라우팅 오류</a>
+  <a class="page-toc-link" href="#soc-top-tb의-uvm-env-구조">SoC Top TB의 UVM Env 구조</a>
+  <a class="page-toc-link" href="#연습-문제">연습 문제</a>
+  <a class="page-toc-link" href="#퀴즈">퀴즈</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

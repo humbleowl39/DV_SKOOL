@@ -1,8 +1,38 @@
 # Module 09 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#1-rdma-family-at-a-glance">1. RDMA family at a glance</a>
+  <a class="page-toc-link" href="#2-ib-packet-layout-ib-rocev2-비교">2. IB Packet Layout (IB / RoCEv2 비교)</a>
+  <a class="page-toc-link" href="#3-bth-12-byte-field">3. BTH (12 byte) Field</a>
+  <a class="page-toc-link" href="#4-rc-opcode-빠른-참조">4. RC OpCode 빠른 참조</a>
+  <a class="page-toc-link" href="#5-xth-카탈로그">5. xTH 카탈로그</a>
+  <a class="page-toc-link" href="#6-aeth-syndrome">6. AETH Syndrome</a>
+  <a class="page-toc-link" href="#7-qp-fsm">7. QP FSM</a>
+  <a class="page-toc-link" href="#8-service-type-비교">8. Service Type 비교</a>
+  <a class="page-toc-link" href="#9-psn">9. PSN</a>
+  <a class="page-toc-link" href="#10-memory-model">10. Memory Model</a>
+  <a class="page-toc-link" href="#11-error-wc-status">11. Error & WC Status</a>
+  <a class="page-toc-link" href="#12-congestion-control-rocev2">12. Congestion Control (RoCEv2)</a>
+  <a class="page-toc-link" href="#13-rdma-tb-빠른-참조">13. RDMA-TB 빠른 참조</a>
+  <a class="page-toc-link" href="#14-spec-인용을-빨리-찾는-법">14. Spec 인용을 빨리 찾는 법</a>
+  <a class="page-toc-link" href="#15-30-second-mental-checklist-코드-리뷰-시">15. 30-second mental checklist (코드 리뷰 시)</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 > 한 페이지 cheat sheet. 본문 학습 후 검증/리뷰 시 보조 자료로 사용.
 

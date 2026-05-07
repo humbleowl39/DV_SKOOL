@@ -1,8 +1,40 @@
 # Module 02 — AXI (Advanced eXtensible Interface)
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔄</span>
+    <span class="chapter-back-text">AMBA Protocols</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#5채널-구조">5채널 구조</a>
+  <a class="page-toc-link" href="#validready-핸드셰이크-axi의-근본-메커니즘">VALID/READY 핸드셰이크 — AXI의 근본 메커니즘</a>
+  <a class="page-toc-link" href="#burst-전송">Burst 전송</a>
+  <a class="page-toc-link" href="#outstanding-out-of-order">Outstanding & Out-of-Order</a>
+  <a class="page-toc-link" href="#wstrb-write-strobe-바이트-단위-쓰기-제어">WSTRB (Write Strobe) — 바이트 단위 쓰기 제어</a>
+  <a class="page-toc-link" href="#exclusive-access-axlock-exokay">Exclusive Access (AxLOCK + EXOKAY)</a>
+  <a class="page-toc-link" href="#narrow-transfer">Narrow Transfer</a>
+  <a class="page-toc-link" href="#추가-제어-신호-axcache-axprot-axqos">추가 제어 신호: AxCACHE, AxPROT, AxQOS</a>
+  <a class="page-toc-link" href="#axi3-vs-axi4-핵심-차이">AXI3 vs AXI4 핵심 차이</a>
+  <a class="page-toc-link" href="#axi-ordering-규칙-요약">AXI Ordering 규칙 요약</a>
+  <a class="page-toc-link" href="#axi-응답-코드">AXI 응답 코드</a>
+  <a class="page-toc-link" href="#dv-핵심-검증-포인트">DV 핵심 검증 포인트</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#연습문제">연습문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

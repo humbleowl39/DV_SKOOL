@@ -1,8 +1,33 @@
 # Module 01 — Exception Level & TrustZone
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🛡️</span>
+    <span class="chapter-back-text">ARM Security</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#exception-level-el0-el3">Exception Level (EL0 ~ EL3)</a>
+  <a class="page-toc-link" href="#trustzone-secure-non-secure-분리">TrustZone — Secure / Non-Secure 분리</a>
+  <a class="page-toc-link" href="#el-전환-메커니즘-어떻게-el을-오르내리는가">EL 전환 메커니즘 — 어떻게 EL을 오르내리는가?</a>
+  <a class="page-toc-link" href="#el별-메모리-번역-체계-translation-regime">EL별 메모리 번역 체계 (Translation Regime)</a>
+  <a class="page-toc-link" href="#el3가-항상-secure인-이유">EL3가 항상 Secure인 이유</a>
+  <a class="page-toc-link" href="#secure-el2-armv84-secure-가상화">Secure EL2 (ARMv8.4+) — Secure 가상화</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#확인-문제">확인 문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,35 @@
 # Unit 1: MMU 기본 개념 및 주소 변환
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-가상-주소가-필요한가">왜 가상 주소가 필요한가?</a>
+  <a class="page-toc-link" href="#주소-변환의-기본-원리">주소 변환의 기본 원리</a>
+  <a class="page-toc-link" href="#mmu의-핵심-기능-3가지">MMU의 핵심 기능 3가지</a>
+  <a class="page-toc-link" href="#mmu-enable-disable">MMU Enable / Disable</a>
+  <a class="page-toc-link" href="#translation-regime-누가-어디서-변환하는가">Translation Regime — 누가, 어디서 변환하는가</a>
+  <a class="page-toc-link" href="#secure-vs-non-secure-trustzone과-mmu">Secure vs Non-secure — TrustZone과 MMU</a>
+  <a class="page-toc-link" href="#mmu가-soc에서-위치하는-곳">MMU가 SoC에서 위치하는 곳</a>
+  <a class="page-toc-link" href="#cpu-mmu-vs-iommusmmu-비교">CPU MMU vs IOMMU/SMMU 비교</a>
+  <a class="page-toc-link" href="#page-fault-변환-실패-처리">Page Fault — 변환 실패 처리</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! tip "💡 이해를 위한 비유"
     **MMU = 가상-실주소 변환기** ≈ **도시의 주소록 — 동·호수(가상) ↔ 실제 빌딩 좌표(물리)**

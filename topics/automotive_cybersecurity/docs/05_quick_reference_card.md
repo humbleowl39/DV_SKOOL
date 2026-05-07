@@ -1,5 +1,41 @@
 # Module 05 — Quick Reference Card
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🚗</span>
+    <span class="chapter-back-text">Automotive Cybersec</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#can-bus-한줄-요약">CAN Bus 한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#프로토콜-비교표">프로토콜 비교표</a>
+  <a class="page-toc-link" href="#공격방어-매트릭스">공격/방어 매트릭스</a>
+  <a class="page-toc-link" href="#soc-보안-모듈-비교">SoC 보안 모듈 비교</a>
+  <a class="page-toc-link" href="#tesla-fsd-탈옥-root-cause-한줄-정리">Tesla FSD 탈옥 — Root Cause 한줄 정리</a>
+  <a class="page-toc-link" href="#defense-in-depth-6개-레이어">Defense in Depth — 6개 레이어</a>
+  <a class="page-toc-link" href="#secure-boot와의-개념-대응">Secure Boot와의 개념 대응</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#흔한-실수와-올바른-답변">흔한 실수와 올바른 답변</a>
+  <a class="page-toc-link" href="#차량-보안-역사-타임라인">차량 보안 역사 타임라인</a>
+  <a class="page-toc-link" href="#면접-핵심-키워드-맵">면접 핵심 키워드 맵</a>
+  <a class="page-toc-link" href="#규제-빠른-참조">규제 빠른 참조</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

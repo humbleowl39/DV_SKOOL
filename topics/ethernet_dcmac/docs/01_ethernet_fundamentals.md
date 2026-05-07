@@ -1,8 +1,36 @@
 # Module 01 — Ethernet Fundamentals
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🌐</span>
+    <span class="chapter-back-text">Ethernet DCMAC</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#ethernet-속도-진화">Ethernet 속도 진화</a>
+  <a class="page-toc-link" href="#ethernet-프레임-구조">Ethernet 프레임 구조</a>
+  <a class="page-toc-link" href="#fcs-crc-32-핵심-에러-검출">FCS (CRC-32) — 핵심 에러 검출</a>
+  <a class="page-toc-link" href="#ethernet-흐름-제어">Ethernet 흐름 제어</a>
+  <a class="page-toc-link" href="#mac-주소-구조">MAC 주소 구조</a>
+  <a class="page-toc-link" href="#ethernet-계층-구조-mac-pcs-pma-pmd">Ethernet 계층 구조 (MAC / PCS / PMA / PMD)</a>
+  <a class="page-toc-link" href="#mii-인터페이스-종류">MII 인터페이스 종류</a>
+  <a class="page-toc-link" href="#pcs-64b66b-인코딩">PCS 64b/66b 인코딩</a>
+  <a class="page-toc-link" href="#rs-fec-reed-solomon-forward-error-correction">RS-FEC (Reed-Solomon Forward Error Correction)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

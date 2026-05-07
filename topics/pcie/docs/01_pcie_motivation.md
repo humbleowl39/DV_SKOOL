@@ -1,8 +1,34 @@
 # Module 01 — PCIe 동기와 진화
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-pci-parallel-의-한계">1. PCI parallel 의 한계</a>
+  <a class="page-toc-link" href="#2-pcie-의-핵심-결정">2. PCIe 의 핵심 결정</a>
+  <a class="page-toc-link" href="#3-토폴로지-rc-switch-endpoint-bridge">3. 토폴로지 — RC, Switch, Endpoint, Bridge</a>
+  <a class="page-toc-link" href="#4-generation-진화">4. Generation 진화</a>
+  <a class="page-toc-link" href="#5-bandwidth-계산-예제">5. Bandwidth 계산 예제</a>
+  <a class="page-toc-link" href="#6-lane-구성-bifurcation-reversal">6. Lane 구성 — bifurcation, reversal</a>
+  <a class="page-toc-link" href="#7-pcie-의-두-sw-model">7. PCIe 의 두 SW model</a>
+  <a class="page-toc-link" href="#8-axiamba-는-왜-여전히-병렬인가">8. AXI/AMBA 는 왜 여전히 병렬인가?</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

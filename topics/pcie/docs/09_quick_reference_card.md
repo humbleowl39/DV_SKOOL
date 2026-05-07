@@ -1,8 +1,42 @@
 # Module 09 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#1-pcie-generation-진화">1. PCIe Generation 진화</a>
+  <a class="page-toc-link" href="#2-3-layer-architecture">2. 3-Layer Architecture</a>
+  <a class="page-toc-link" href="#3-tlp-header-fmt-type">3. TLP Header — Fmt × Type</a>
+  <a class="page-toc-link" href="#4-posted-non-posted-completion">4. Posted / Non-Posted / Completion</a>
+  <a class="page-toc-link" href="#5-routing">5. Routing</a>
+  <a class="page-toc-link" href="#6-dllp">6. DLLP</a>
+  <a class="page-toc-link" href="#7-ltssm-11-state">7. LTSSM 11-State</a>
+  <a class="page-toc-link" href="#8-configuration-header-type-0-1">8. Configuration Header — Type 0 / 1</a>
+  <a class="page-toc-link" href="#9-bar-sizing">9. BAR Sizing</a>
+  <a class="page-toc-link" href="#10-capability-id-linked-list">10. Capability ID (Linked List)</a>
+  <a class="page-toc-link" href="#11-power-state">11. Power State</a>
+  <a class="page-toc-link" href="#12-aer-error-class">12. AER Error Class</a>
+  <a class="page-toc-link" href="#13-hot-plug-slot-status">13. Hot Plug Slot Status</a>
+  <a class="page-toc-link" href="#14-sr-iov-핵심">14. SR-IOV 핵심</a>
+  <a class="page-toc-link" href="#15-ats-pasid-p2p">15. ATS / PASID / P2P</a>
+  <a class="page-toc-link" href="#16-cxl-quick-reference">16. CXL Quick Reference</a>
+  <a class="page-toc-link" href="#17-30-second-mental-checklist">17. 30-second mental checklist</a>
+  <a class="page-toc-link" href="#18-자주-쓰는-디버그-명령-linux">18. 자주 쓰는 디버그 명령 (Linux)</a>
+  <a class="page-toc-link" href="#19-pcie-진화-한-줄-요약">19. PCIe 진화 한 줄 요약</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 > 한 페이지 cheat sheet. 본문 학습 후 검증/리뷰 시 보조 자료.
 

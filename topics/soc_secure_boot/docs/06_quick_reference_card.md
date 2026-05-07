@@ -1,8 +1,34 @@
 # Module 07 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#부팅-흐름-한줄-요약">부팅 흐름 한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#흔한-실수와-올바른-답변">흔한 실수와 올바른 답변</a>
+  <a class="page-toc-link" href="#이력서-연결-포인트">이력서 연결 포인트</a>
+  <a class="page-toc-link" href="#dv-방법론-빠른-참조-unit-7">DV 방법론 빠른 참조 (Unit 7)</a>
+  <a class="page-toc-link" href="#boot-stage-화이트보드-템플릿">Boot Stage 화이트보드 템플릿</a>
+  <a class="page-toc-link" href="#secure-boot-검증-시퀀스-3단계-요약">Secure Boot 검증 시퀀스 (3단계 요약)</a>
+  <a class="page-toc-link" href="#공격별-방어-빠른-참조">공격별 방어 빠른 참조</a>
+  <a class="page-toc-link" href="#면접-스토리-흐름-technical-challenge-1">면접 스토리 흐름 (Technical Challenge #1)</a>
+  <a class="page-toc-link" href="#다음-학습-추천">다음 학습 추천</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     참조용 치트시트 — Boot flow / 암호 알고리즘 / 공격 패턴 / DV 체크리스트.

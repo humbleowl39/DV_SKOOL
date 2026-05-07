@@ -1,8 +1,34 @@
 # Unit 1: Formal Verification 기본 개념
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">✅</span>
+    <span class="chapter-back-text">Formal Verification</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#simulation-vs-formal">Simulation vs Formal</a>
+  <a class="page-toc-link" href="#formal의-3가지-결과">Formal의 3가지 결과</a>
+  <a class="page-toc-link" href="#formal이-강력한-영역">Formal이 강력한 영역</a>
+  <a class="page-toc-link" href="#formal-engine의-동작-원리">Formal Engine의 동작 원리</a>
+  <a class="page-toc-link" href="#induction-bounded와-proven의-차이를-이해하는-열쇠">Induction — BOUNDED와 PROVEN의 차이를 이해하는 열쇠</a>
+  <a class="page-toc-link" href="#formal의-핵심-기법">Formal의 핵심 기법</a>
+  <a class="page-toc-link" href="#state-explosion-문제와-대응-기법">State Explosion 문제와 대응 기법</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,36 @@
 # Module 03 — JasperGold & DV Strategy
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">✅</span>
+    <span class="chapter-back-text">Formal Verification</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#jaspergold-워크플로">JasperGold 워크플로</a>
+  <a class="page-toc-link" href="#jaspergold-주요-앱">JasperGold 주요 앱</a>
+  <a class="page-toc-link" href="#convergence-전략-bounded에서-proven으로">Convergence 전략 — BOUNDED에서 PROVEN으로</a>
+  <a class="page-toc-link" href="#blackboxing-cut-point-상세">Blackboxing & Cut Point 상세</a>
+  <a class="page-toc-link" href="#formal-디버깅-기법">Formal 디버깅 기법</a>
+  <a class="page-toc-link" href="#formal-sign-off-기준">Formal Sign-off 기준</a>
+  <a class="page-toc-link" href="#assume-전략-formal의-성패를-좌우">Assume 전략 — Formal의 성패를 좌우</a>
+  <a class="page-toc-link" href="#mapping-table-ip-formal-검증-이력서-직결">Mapping Table IP Formal 검증 (이력서 직결)</a>
+  <a class="page-toc-link" href="#formal-simulation-병행-전략">Formal + Simulation 병행 전략</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

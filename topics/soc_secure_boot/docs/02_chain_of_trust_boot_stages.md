@@ -1,8 +1,35 @@
 # Module 02 — Chain of Trust & Boot Stages
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#왜-단계를-나누는가">왜 단계를 나누는가?</a>
+  <a class="page-toc-link" href="#arm-trusted-firmware-부팅-단계">ARM Trusted Firmware 부팅 단계</a>
+  <a class="page-toc-link" href="#단계별-요약-테이블">단계별 요약 테이블</a>
+  <a class="page-toc-link" href="#인증서-체인-인증-전파-구조">인증서 체인 — 인증 전파 구조</a>
+  <a class="page-toc-link" href="#침해-시-영향-범위-blast-radius">침해 시 영향 범위 (Blast Radius)</a>
+  <a class="page-toc-link" href="#secure-boot-vs-verified-boot-vs-measured-boot">Secure Boot vs Verified Boot vs Measured Boot</a>
+  <a class="page-toc-link" href="#measured-boot-remote-attestation">Measured Boot & Remote Attestation</a>
+  <a class="page-toc-link" href="#bl2의-dram-training-왜-복잡한가">BL2의 DRAM Training — 왜 복잡한가?</a>
+  <a class="page-toc-link" href="#exception-level과-보안-아키텍처">Exception Level과 보안 아키텍처</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

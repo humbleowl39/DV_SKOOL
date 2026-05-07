@@ -1,8 +1,35 @@
 # Module 06 — Data Path Operations
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 06</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-rc-opcode-카탈로그">1. RC OpCode 카탈로그</a>
+  <a class="page-toc-link" href="#2-multi-packet-message-의-일관성">2. Multi-packet Message 의 일관성</a>
+  <a class="page-toc-link" href="#3-psn-24-bit-와-window-모델">3. PSN 24-bit 와 Window 모델</a>
+  <a class="page-toc-link" href="#4-ack-nak-aeth">4. ACK / NAK / AETH</a>
+  <a class="page-toc-link" href="#5-rnr-receiver-not-ready">5. RNR — Receiver Not Ready</a>
+  <a class="page-toc-link" href="#6-rdma-read-양방향-흐름">6. RDMA READ — 양방향 흐름</a>
+  <a class="page-toc-link" href="#7-atomic-cmp_swap-fetch_add">7. ATOMIC — CMP_SWAP, FETCH_ADD</a>
+  <a class="page-toc-link" href="#8-ordering-rules-transaction-ordering">8. Ordering Rules — Transaction Ordering</a>
+  <a class="page-toc-link" href="#9-data-path-timing-rc-send-8kb-mtu4kb-상세-예">9. Data Path Timing (RC SEND 8KB, MTU=4KB) 상세 예</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,33 @@
 # Module 04 — DLLP, Flow Control, ACK/NAK
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-dllp-구조-8-byte-고정">1. DLLP 구조 (8 byte 고정)</a>
+  <a class="page-toc-link" href="#2-ack-nak-타임라인">2. ACK / NAK 타임라인</a>
+  <a class="page-toc-link" href="#3-sequence-number-12-bit">3. Sequence Number 12-bit</a>
+  <a class="page-toc-link" href="#4-flow-control-6-credit-groups">4. Flow Control — 6 Credit Groups</a>
+  <a class="page-toc-link" href="#5-디버그-stall-의-원인-분류">5. 디버그 — Stall 의 원인 분류</a>
+  <a class="page-toc-link" href="#6-gen6-flit-mode">6. Gen6 FLIT mode</a>
+  <a class="page-toc-link" href="#7-검증-dv-시-자주-보는-시나리오">7. 검증 (DV) 시 자주 보는 시나리오</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

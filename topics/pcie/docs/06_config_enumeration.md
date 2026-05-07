@@ -1,8 +1,35 @@
 # Module 06 — Configuration Space & Enumeration
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 06</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-configuration-space-영역-구분">1. Configuration Space — 영역 구분</a>
+  <a class="page-toc-link" href="#2-type-0-configuration-header-endpoint">2. Type 0 Configuration Header (Endpoint)</a>
+  <a class="page-toc-link" href="#3-type-1-configuration-header-bridge-switch-port">3. Type 1 Configuration Header (Bridge / Switch port)</a>
+  <a class="page-toc-link" href="#4-bar-sizing-알고리즘">4. BAR Sizing 알고리즘</a>
+  <a class="page-toc-link" href="#5-enumeration-dfs-시퀀스">5. Enumeration — DFS 시퀀스</a>
+  <a class="page-toc-link" href="#6-capability-list-주요-id">6. Capability List 주요 ID</a>
+  <a class="page-toc-link" href="#7-function-level-reset-flr">7. Function-Level Reset (FLR)</a>
+  <a class="page-toc-link" href="#8-configuration-request-retry-status-crs">8. Configuration Request Retry Status (CRS)</a>
+  <a class="page-toc-link" href="#9-ari-alternative-routing-id">9. ARI — Alternative Routing-ID</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

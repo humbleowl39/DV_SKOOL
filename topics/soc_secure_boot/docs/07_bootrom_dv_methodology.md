@@ -1,8 +1,34 @@
 # Module 06 — BootROM DV Methodology
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔐</span>
+    <span class="chapter-back-text">SoC Secure Boot</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 06</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#legacy-환경의-문제-왜-바꿔야-했는가">Legacy 환경의 문제 — 왜 바꿔야 했는가</a>
+  <a class="page-toc-link" href="#uvm-프레임워크-전환-아키텍처">UVM 프레임워크 전환 — 아키텍처</a>
+  <a class="page-toc-link" href="#otp-abstraction-layer-ral-모델링">OTP Abstraction Layer — RAL 모델링</a>
+  <a class="page-toc-link" href="#active-uvm-driver-결정론적-보안-테스트">Active UVM Driver — 결정론적 보안 테스트</a>
+  <a class="page-toc-link" href="#dpi-c-hwsw-co-verification">DPI-C HW/SW Co-verification</a>
+  <a class="page-toc-link" href="#coverage-driven-검증-전략">Coverage-Driven 검증 전략</a>
+  <a class="page-toc-link" href="#환경-포팅-전략-applemeta-프로젝트">환경 포팅 전략 — Apple/Meta 프로젝트</a>
+  <a class="page-toc-link" href="#post-silicon-연결-pre-silicon-검증이-bring-up을-가속하는-이유">Post-Silicon 연결 — Pre-silicon 검증이 Bring-up을 가속하는 이유</a>
+  <a class="page-toc-link" href="#면접-종합-qa">면접 종합 Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

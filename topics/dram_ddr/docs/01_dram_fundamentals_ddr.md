@@ -1,8 +1,36 @@
 # Module 01 — DRAM Fundamentals + DDR4/5
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💾</span>
+    <span class="chapter-back-text">DRAM / DDR</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#dram-셀-동작">DRAM 셀 동작</a>
+  <a class="page-toc-link" href="#dram-주소-체계">DRAM 주소 체계</a>
+  <a class="page-toc-link" href="#ddr-세대별-비교">DDR 세대별 비교</a>
+  <a class="page-toc-link" href="#prefetch-아키텍처-ddr-대역폭의-핵심">Prefetch 아키텍처 — DDR 대역폭의 핵심</a>
+  <a class="page-toc-link" href="#bank-group-왜-존재하는가">Bank Group — 왜 존재하는가?</a>
+  <a class="page-toc-link" href="#dram-타이밍-파라미터-핵심">DRAM 타이밍 파라미터 핵심</a>
+  <a class="page-toc-link" href="#lpddr5-특징-모바일soc">LPDDR5 특징 (모바일/SoC)</a>
+  <a class="page-toc-link" href="#dbi-data-bus-inversion-전력-절감-기법">DBI (Data Bus Inversion) — 전력 절감 기법</a>
+  <a class="page-toc-link" href="#mode-register-dram-설정의-핵심">Mode Register — DRAM 설정의 핵심</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,35 @@
 # Module 02 — TOE Architecture
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📡</span>
+    <span class="chapter-back-text">TOE</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#toe-전체-블록-다이어그램">TOE 전체 블록 다이어그램</a>
+  <a class="page-toc-link" href="#tx-path-송신-경로">TX Path (송신 경로)</a>
+  <a class="page-toc-link" href="#rx-path-수신-경로">RX Path (수신 경로)</a>
+  <a class="page-toc-link" href="#connection-table-연결-상태-관리">Connection Table — 연결 상태 관리</a>
+  <a class="page-toc-link" href="#타이머-관리-아키텍처-수백만-연결의-rto">타이머 관리 아키텍처 — 수백만 연결의 RTO</a>
+  <a class="page-toc-link" href="#메모리-아키텍처-버퍼와-테이블-배치">메모리 아키텍처 — 버퍼와 테이블 배치</a>
+  <a class="page-toc-link" href="#hwsw-분리-control-path-vs-data-path">HW/SW 분리 — Control Path vs Data Path</a>
+  <a class="page-toc-link" href="#toe와-dcmac-연동-이력서-연결">TOE와 DCMAC 연동 (이력서 연결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

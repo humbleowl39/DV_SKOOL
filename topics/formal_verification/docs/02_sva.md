@@ -1,8 +1,37 @@
 # Module 02 — SVA (SystemVerilog Assertions)
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">✅</span>
+    <span class="chapter-back-text">Formal Verification</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#sva-기본-구조">SVA 기본 구조</a>
+  <a class="page-toc-link" href="#시퀀스와-프로퍼티">시퀀스와 프로퍼티</a>
+  <a class="page-toc-link" href="#핵심-sva-연산자">핵심 SVA 연산자</a>
+  <a class="page-toc-link" href="#실무-sva-패턴">실무 SVA 패턴</a>
+  <a class="page-toc-link" href="#bind-비침습적-sva-적용">Bind — 비침습적 SVA 적용</a>
+  <a class="page-toc-link" href="#vacuous-pass-공허한-성공-가장-흔한-sva-함정">Vacuous Pass (공허한 성공) — 가장 흔한 SVA 함정</a>
+  <a class="page-toc-link" href="#local-variable-in-sequence-복잡한-데이터-추적">Local Variable in Sequence — 복잡한 데이터 추적</a>
+  <a class="page-toc-link" href="#strong-vs-weak-sequence">strong vs weak Sequence</a>
+  <a class="page-toc-link" href="#멀티-클럭-assertion">멀티 클럭 Assertion</a>
+  <a class="page-toc-link" href="#sva-흔한-실수-함정-모음">SVA 흔한 실수 & 함정 모음</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,36 @@
 # Module 04 — DRAM DV Methodology
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-intermediate">📊 Intermediate</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💾</span>
+    <span class="chapter-back-text">DRAM / DDR</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
+  <a class="page-toc-link" href="#핵심-테스트-시나리오">핵심 테스트 시나리오</a>
+  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
+  <a class="page-toc-link" href="#초기화-검증-시나리오">초기화 검증 시나리오</a>
+  <a class="page-toc-link" href="#성능-검증-bandwidth-latency">성능 검증 (Bandwidth / Latency)</a>
+  <a class="page-toc-link" href="#error-injection-ecc-검증">Error Injection / ECC 검증</a>
+  <a class="page-toc-link" href="#sva-systemverilog-assertions-예시-ddr-타이밍">SVA (SystemVerilog Assertions) 예시 — DDR 타이밍</a>
+  <a class="page-toc-link" href="#protocol-checker-타이밍-검증">Protocol Checker — 타이밍 검증</a>
+  <a class="page-toc-link" href="#이력서-연결">이력서 연결</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

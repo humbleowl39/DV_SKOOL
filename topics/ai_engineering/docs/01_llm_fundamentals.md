@@ -1,5 +1,42 @@
 # Module 01 — LLM Fundamentals
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🤖</span>
+    <span class="chapter-back-text">AI Engineering</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#transformer-아키텍처">Transformer 아키텍처</a>
+  <a class="page-toc-link" href="#self-attention-메커니즘">Self-Attention 메커니즘</a>
+  <a class="page-toc-link" href="#tokenization-텍스트를-숫자로">Tokenization — 텍스트를 숫자로</a>
+  <a class="page-toc-link" href="#positional-encoding-발전사">Positional Encoding 발전사</a>
+  <a class="page-toc-link" href="#attention-복잡도와-최적화">Attention 복잡도와 최적화</a>
+  <a class="page-toc-link" href="#kv-cache-추론-속도의-핵심">KV Cache — 추론 속도의 핵심</a>
+  <a class="page-toc-link" href="#moe-mixture-of-experts-아키텍처">MoE (Mixture of Experts) 아키텍처</a>
+  <a class="page-toc-link" href="#quantization-모델-경량화">Quantization — 모델 경량화</a>
+  <a class="page-toc-link" href="#scaling-laws-모델-크기와-성능의-관계">Scaling Laws — 모델 크기와 성능의 관계</a>
+  <a class="page-toc-link" href="#llm의-학습-단계">LLM의 학습 단계</a>
+  <a class="page-toc-link" href="#추론-inference-과정">추론 (Inference) 과정</a>
+  <a class="page-toc-link" href="#핵심-파라미터-정리">핵심 파라미터 정리</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

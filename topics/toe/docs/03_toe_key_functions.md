@@ -1,8 +1,34 @@
 # Module 03 — TOE Key Functions
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📡</span>
+    <span class="chapter-back-text">TOE</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-checksum-무결성-검증">1. Checksum — 무결성 검증</a>
+  <a class="page-toc-link" href="#2-tcp-segmentation-reassembly">2. TCP Segmentation / Reassembly</a>
+  <a class="page-toc-link" href="#3-retransmission-재전송">3. Retransmission — 재전송</a>
+  <a class="page-toc-link" href="#4-flow-control-흐름-제어">4. Flow Control — 흐름 제어</a>
+  <a class="page-toc-link" href="#5-congestion-control-혼잡-제어">5. Congestion Control — 혼잡 제어</a>
+  <a class="page-toc-link" href="#6-tcp-options-toe가-처리해야-하는-확장">6. TCP Options — TOE가 처리해야 하는 확장</a>
+  <a class="page-toc-link" href="#tcp-상태-머신-fsm-hw-구현">TCP 상태 머신 (FSM) — HW 구현</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

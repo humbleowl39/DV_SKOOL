@@ -1,8 +1,34 @@
 # Module 05 — Performance Analysis
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧭</span>
+    <span class="chapter-back-text">MMU</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#성능-지표-3가지">성능 지표 3가지</a>
+  <a class="page-toc-link" href="#dual-reference-model-전략-이력서-핵심">Dual-Reference Model 전략 (이력서 핵심)</a>
+  <a class="page-toc-link" href="#tlb-miss-ratio-분석-기법">TLB Miss Ratio 분석 기법</a>
+  <a class="page-toc-link" href="#page-walk-cache-pwc-성능-영향">Page Walk Cache (PWC) 성능 영향</a>
+  <a class="page-toc-link" href="#dv-환경에서-성능-모니터링-구현">DV 환경에서 성능 모니터링 구현</a>
+  <a class="page-toc-link" href="#성능-병목-진단-프로세스">성능 병목 진단 프로세스</a>
+  <a class="page-toc-link" href="#서버급-hw-가속기의-성능-요구사항-이력서-연결">서버급 HW 가속기의 성능 요구사항 (이력서 연결)</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

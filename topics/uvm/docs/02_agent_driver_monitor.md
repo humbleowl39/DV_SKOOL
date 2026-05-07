@@ -1,8 +1,36 @@
 # Module 02 — Agent / Driver / Monitor
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="core">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧪</span>
+    <span class="chapter-back-text">UVM</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#agent-구조">Agent 구조</a>
+  <a class="page-toc-link" href="#driver-dut에-자극-인가">Driver — DUT에 자극 인가</a>
+  <a class="page-toc-link" href="#monitor-dut-신호-관찰">Monitor — DUT 신호 관찰</a>
+  <a class="page-toc-link" href="#response-핸들링-driver-sequence-양방향">Response 핸들링 — Driver ↔ Sequence 양방향</a>
+  <a class="page-toc-link" href="#pipelining-driver-고성능-구동">Pipelining Driver — 고성능 구동</a>
+  <a class="page-toc-link" href="#sequencer-arbitration-다중-sequence-관리">Sequencer Arbitration — 다중 Sequence 관리</a>
+  <a class="page-toc-link" href="#virtual-interface-dut-연결">Virtual Interface — DUT 연결</a>
+  <a class="page-toc-link" href="#이력서-연결-custom-thin-vip-active-driver">이력서 연결 — Custom Thin VIP, Active Driver</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#연습문제">연습문제</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

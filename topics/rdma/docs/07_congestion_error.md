@@ -1,8 +1,33 @@
 # Module 07 — Congestion Control & Error Handling
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 07</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-layered-congestion-control">1. Layered Congestion Control</a>
+  <a class="page-toc-link" href="#2-error-의-두-클래스">2. Error 의 두 클래스</a>
+  <a class="page-toc-link" href="#3-rdma-tb-의-9-error-scenarios-s1s9">3. RDMA-TB 의 9 Error Scenarios (S1~S9)</a>
+  <a class="page-toc-link" href="#4-coverage-모델-7-항목">4. Coverage 모델 — 7 항목</a>
+  <a class="page-toc-link" href="#5-qp-recovery-흐름">5. QP Recovery 흐름</a>
+  <a class="page-toc-link" href="#6-실무-에러-디버그-트리">6. 실무 에러 디버그 트리</a>
+  <a class="page-toc-link" href="#7-congestion-검증-시나리오">7. Congestion 검증 시나리오</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

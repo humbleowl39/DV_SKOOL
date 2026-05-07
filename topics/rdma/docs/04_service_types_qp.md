@@ -1,8 +1,32 @@
 # Module 04 — Service Types & QP FSM
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-네-가지-service-type">1. 네 가지 Service Type</a>
+  <a class="page-toc-link" href="#2-qp-state-machine-7-state">2. QP State Machine — 7 State</a>
+  <a class="page-toc-link" href="#3-rc-의-신뢰성-메커니즘-요약">3. RC 의 신뢰성 메커니즘 요약</a>
+  <a class="page-toc-link" href="#4-uc-ud-xrc-추가-사항">4. UC, UD, XRC 추가 사항</a>
+  <a class="page-toc-link" href="#5-메시지-패킷-매핑-rc-send-rc-write-의-fragmentation">5. 메시지 ↔ 패킷 매핑 (RC SEND, RC WRITE 의 fragmentation)</a>
+  <a class="page-toc-link" href="#6-rdma-tb-에서의-qp-service-검증-포인트">6. RDMA-TB 에서의 QP / Service 검증 포인트</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

@@ -1,8 +1,38 @@
 # Module 04 — HCI DV Methodology
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">💿</span>
+    <span class="chapter-back-text">UFS HCI</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 04</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
+  <a class="page-toc-link" href="#핵심-테스트-시나리오">핵심 테스트 시나리오</a>
+  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
+  <a class="page-toc-link" href="#hci-초기화-검증-시나리오">HCI 초기화 검증 시나리오</a>
+  <a class="page-toc-link" href="#sequence-전략-계층적-설계">Sequence 전략 — 계층적 설계</a>
+  <a class="page-toc-link" href="#scoreboard-알고리즘-상세">Scoreboard 알고리즘 상세</a>
+  <a class="page-toc-link" href="#sva-systemverilog-assertions-예시-hci-프로토콜">SVA (SystemVerilog Assertions) 예시 — HCI 프로토콜</a>
+  <a class="page-toc-link" href="#protocol-checker-hci-규약-검증">Protocol Checker — HCI 규약 검증</a>
+  <a class="page-toc-link" href="#error-injection-방법론">Error Injection 방법론</a>
+  <a class="page-toc-link" href="#regression-전략">Regression 전략</a>
+  <a class="page-toc-link" href="#이력서-연결-ufs-hci-검증-기여">이력서 연결 — UFS HCI 검증 기여</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

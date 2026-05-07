@@ -1,8 +1,33 @@
 # Module 03 — RoCEv2: Ethernet 위의 RDMA
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-rocev1-vs-rocev2-한-장-비교">1. RoCEv1 vs RoCEv2 한 장 비교</a>
+  <a class="page-toc-link" href="#2-rocev2-패킷-구조">2. RoCEv2 패킷 구조</a>
+  <a class="page-toc-link" href="#3-icrc-rocev2-의-미묘한-차이">3. ICRC — RoCEv2 의 미묘한 차이</a>
+  <a class="page-toc-link" href="#4-ib-rocev2-헤더-매핑-표">4. IB ↔ RoCEv2 헤더 매핑 표</a>
+  <a class="page-toc-link" href="#5-rocev2-에서-ib-의-어떤-부분이-사라지는가">5. RoCEv2 에서 IB 의 어떤 부분이 사라지는가</a>
+  <a class="page-toc-link" href="#6-rocev2-의-신뢰성-lossless-ethernet-가정">6. RoCEv2 의 신뢰성 — Lossless Ethernet 가정</a>
+  <a class="page-toc-link" href="#7-rdma-tb-에서-rocev2-검증-시-자주-보는-항목">7. RDMA-TB 에서 RoCEv2 검증 시 자주 보는 항목</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

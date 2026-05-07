@@ -1,5 +1,36 @@
 # Module 06 — Dynamic Programming
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📐</span>
+    <span class="chapter-back-text">BigTech Algorithm</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 06</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#dp란">DP란?</a>
+  <a class="page-toc-link" href="#dp-3단계-공식-모든-dp-문제에-적용">DP 3단계 공식 (모든 DP 문제에 적용)</a>
+  <a class="page-toc-link" href="#구현-방식">구현 방식</a>
+  <a class="page-toc-link" href="#climbing-stairs-대표-문제-dry-run">Climbing Stairs — 대표 문제 Dry Run</a>
+  <a class="page-toc-link" href="#house-robber-dry-run">House Robber — Dry Run</a>
+  <a class="page-toc-link" href="#dp-유형별-키워드">DP 유형별 키워드</a>
+  <a class="page-toc-link" href="#면접-팁">면접 팁</a>
+  <a class="page-toc-link" href="#부록-systemverilog-예제-코드">부록: SystemVerilog 예제 코드</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

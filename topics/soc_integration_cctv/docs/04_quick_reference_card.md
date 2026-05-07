@@ -1,8 +1,32 @@
 # Module 04 — Quick Reference Card
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="soc">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🏗️</span>
+    <span class="chapter-back-text">SoC Integration</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">★ Quick Reference</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#한줄-요약">한줄 요약</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#핵심-코드-패턴-요약">핵심 코드 패턴 요약</a>
+  <a class="page-toc-link" href="#cctv-매트릭스-빠른-참조">CCTV 매트릭스 빠른 참조</a>
+  <a class="page-toc-link" href="#dvcon-2025-정량-성과">DVCon 2025 정량 성과</a>
+  <a class="page-toc-link" href="#디버그-체크리스트">디버그 체크리스트</a>
+  <a class="page-toc-link" href="#면접-골든-룰">면접 골든 룰</a>
+  <a class="page-toc-link" href="#이력서-연결">이력서 연결</a>
+  <a class="page-toc-link" href="#기존-자료와의-연결">기존 자료와의 연결</a>
+  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "사용 목적"
     참조용 치트시트.

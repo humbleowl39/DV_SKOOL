@@ -1,5 +1,41 @@
 # Module 05 — Agent Architecture
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🤖</span>
+    <span class="chapter-back-text">AI Engineering</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 05</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#agent-vs-일반-llm">Agent vs 일반 LLM</a>
+  <a class="page-toc-link" href="#agent-핵심-구성요소">Agent 핵심 구성요소</a>
+  <a class="page-toc-link" href="#agent-동작-패턴">Agent 동작 패턴</a>
+  <a class="page-toc-link" href="#function-calling-llm이-도구를-선택하는-메커니즘">Function Calling — LLM이 도구를 선택하는 메커니즘</a>
+  <a class="page-toc-link" href="#reflection-self-critique-패턴">Reflection / Self-Critique 패턴</a>
+  <a class="page-toc-link" href="#multi-agent-시스템-상세">Multi-Agent 시스템 상세</a>
+  <a class="page-toc-link" href="#mcp-model-context-protocol-도구-연결의-표준">MCP (Model Context Protocol) — 도구 연결의 표준</a>
+  <a class="page-toc-link" href="#agent-평가-벤치마크와-성공-지표">Agent 평가 — 벤치마크와 성공 지표</a>
+  <a class="page-toc-link" href="#agent-프레임워크">Agent 프레임워크</a>
+  <a class="page-toc-link" href="#dv-도메인-agent-설계-이력서-연결">DV 도메인 Agent 설계 (이력서 연결)</a>
+  <a class="page-toc-link" href="#agent-안전성과-한계">Agent 안전성과 한계</a>
+  <a class="page-toc-link" href="#qa">Q&A</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

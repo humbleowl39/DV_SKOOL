@@ -1,5 +1,34 @@
 # Module 01 — Big-O Complexity & Pattern Thinking
 
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="applied">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">📐</span>
+    <span class="chapter-back-text">BigTech Algorithm</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#학습-목표">학습 목표</a>
+  <a class="page-toc-link" href="#선수-지식">선수 지식</a>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#왜-패턴인가">왜 패턴인가?</a>
+  <a class="page-toc-link" href="#big-o-빠른-참조">Big-O 빠른 참조</a>
+  <a class="page-toc-link" href="#brute-force-최적화-사고법">Brute Force → 최적화 사고법</a>
+  <a class="page-toc-link" href="#공간-복잡도-space-complexity">공간 복잡도 (Space Complexity)</a>
+  <a class="page-toc-link" href="#dry-run-예시-코드-01_big_osv-참조">Dry Run 예시 (코드 01_big_o.sv 참조)</a>
+  <a class="page-toc-link" href="#부록-systemverilog-예제-코드">부록: SystemVerilog 예제 코드</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 ## 학습 목표
 
 이 모듈을 마치면:

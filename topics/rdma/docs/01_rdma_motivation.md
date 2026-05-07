@@ -1,8 +1,32 @@
 # Module 01 — RDMA 동기와 핵심 모델
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">⚡</span>
+    <span class="chapter-back-text">RDMA</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 01</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-tcpip-가-가진-세-가지-비용">1. TCP/IP 가 가진 세 가지 비용</a>
+  <a class="page-toc-link" href="#2-dma-vs-rdma-한-글자-차이의-의미">2. DMA vs RDMA — 한 글자 차이의 의미</a>
+  <a class="page-toc-link" href="#3-rdma-의-세-가지-변형-ib-iwarp-roce">3. RDMA 의 세 가지 변형 — IB / iWARP / RoCE</a>
+  <a class="page-toc-link" href="#4-verbs-api-rdma-의-사용자-인터페이스">4. Verbs API — RDMA 의 사용자 인터페이스</a>
+  <a class="page-toc-link" href="#5-rdma-가-어울리는-워크로드-어울리지-않는-워크로드">5. RDMA 가 어울리는 워크로드 / 어울리지 않는 워크로드</a>
+  <a class="page-toc-link" href="#6-rdma-검증-dv-의-출발점">6. RDMA 검증 (DV) 의 출발점</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

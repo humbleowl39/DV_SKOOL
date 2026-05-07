@@ -1,8 +1,35 @@
 # Module 03 — TLP (Transaction Layer Packet)
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 03</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-tlp-format">1. TLP Format</a>
+  <a class="page-toc-link" href="#2-tlp-header-3dw-일반-구조">2. TLP Header — 3DW 일반 구조</a>
+  <a class="page-toc-link" href="#3-fmt-type-조합-주요-tlp-카탈로그">3. Fmt × Type 조합 — 주요 TLP 카탈로그</a>
+  <a class="page-toc-link" href="#4-posted-non-posted-completion">4. Posted / Non-Posted / Completion</a>
+  <a class="page-toc-link" href="#5-routing-3-가지">5. Routing — 3 가지</a>
+  <a class="page-toc-link" href="#6-memory-read-흐름-tag-matching">6. Memory Read 흐름 (Tag matching)</a>
+  <a class="page-toc-link" href="#7-ecrc-end-to-end-crc">7. ECRC — End-to-End CRC</a>
+  <a class="page-toc-link" href="#8-atomic-operations">8. Atomic Operations</a>
+  <a class="page-toc-link" href="#9-message-tlp">9. Message TLP</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:

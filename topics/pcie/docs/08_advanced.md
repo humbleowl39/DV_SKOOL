@@ -1,8 +1,33 @@
 # Module 08 — SR-IOV, ATS, P2P, CXL
 
-<div class="learning-meta">
-  <span class="meta-badge meta-level-advanced">📊 Advanced</span>
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="intercon">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🔌</span>
+    <span class="chapter-back-text">PCI Express</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 08</span>
 </div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-sr-iov-single-root-io-virtualization">1. SR-IOV (Single-Root I/O Virtualization)</a>
+  <a class="page-toc-link" href="#2-ats-address-translation-service">2. ATS (Address Translation Service)</a>
+  <a class="page-toc-link" href="#3-pasid-process-address-space-id">3. PASID (Process Address Space ID)</a>
+  <a class="page-toc-link" href="#4-p2p-peer-to-peer-dma">4. P2P (Peer-to-Peer) DMA</a>
+  <a class="page-toc-link" href="#5-cxl-compute-express-link">5. CXL (Compute Express Link)</a>
+  <a class="page-toc-link" href="#6-pcie-와-cxl-의-검증-영역-비교">6. PCIe 와 CXL 의 검증 영역 비교</a>
+  <a class="page-toc-link" href="#7-검증-시나리오-advanced-영역">7. 검증 시나리오 — Advanced 영역</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
