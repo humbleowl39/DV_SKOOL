@@ -570,3 +570,101 @@
     font-size: 0.66rem;
   }
 }
+
+/* ===========================================================
+   Concept DAG (학습 경로 시각화)
+   토픽 홈에서 모듈 간 의존성을 한 눈에.
+   =========================================================== */
+.concept-dag {
+  background: linear-gradient(135deg, rgba(79,195,247,0.06) 0%, rgba(124,77,255,0.06) 100%);
+  border: 1px solid rgba(79,195,247,0.25);
+  border-radius: 12px;
+  padding: 1.5rem 1.2rem;
+  margin: 1.5rem 0;
+}
+[data-md-color-scheme="slate"] .concept-dag {
+  background: linear-gradient(135deg, rgba(79,195,247,0.10) 0%, rgba(124,77,255,0.10) 100%);
+  border-color: rgba(79,195,247,0.35);
+}
+.concept-dag-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  color: var(--md-default-fg-color, #1f2937);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.concept-dag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.6rem;
+}
+.concept-dag-row:last-child {
+  margin-bottom: 0;
+}
+.concept-dag-node {
+  background: linear-gradient(135deg, #4fc3f7 0%, #7c4dff 100%);
+  color: #ffffff !important;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  text-decoration: none !important;
+  font-weight: 600;
+  font-size: 0.85rem;
+  min-width: 120px;
+  max-width: 220px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(79,195,247,0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: inline-block;
+}
+.concept-dag-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(124,77,255,0.4);
+}
+.concept-dag-node-num {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.85;
+  letter-spacing: 0.05em;
+}
+.concept-dag-node-title {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+.concept-dag-arrow {
+  font-size: 1.4rem;
+  color: var(--md-default-fg-color--light, #94a3b8);
+  user-select: none;
+  font-weight: 300;
+}
+.concept-dag-legend {
+  font-size: 0.78rem;
+  color: var(--md-default-fg-color--light, #6b7280);
+  text-align: center;
+  margin-top: 0.9rem;
+  font-style: italic;
+}
+
+/* Mobile: stack vertically */
+@media (max-width: 600px) {
+  .concept-dag {
+    padding: 1rem 0.7rem;
+  }
+  .concept-dag-row {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .concept-dag-arrow {
+    transform: rotate(90deg);
+  }
+  .concept-dag-node {
+    width: 100%;
+    max-width: none;
+  }
+}

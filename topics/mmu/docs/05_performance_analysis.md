@@ -21,6 +21,13 @@
 
 **MMU 성능 검증은 functional verification보다 미묘**합니다. PASS/FAIL이 아니라 "Ideal 대비 얼마나 효율적인가"를 정량 분석. **Dual-Reference Model**은 이력서에서 가장 강조된 패턴 — Ideal Model을 기준으로 DUT 성능 갭을 자동 측정해 시뮬에서 회귀를 잡습니다. P99 tail latency는 실제 워크로드의 SLA 위반 원인으로, 평균만 보면 놓치는 문제입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **MMU 성능 = TLB 히트율** ≈ **도시의 교통량 = 즐겨찾기 매칭율**
+
+    TLB hit rate 가 95% 가 되어도 5% miss 가 4 메모리 access × frequency 만큼의 latency 폭증을 만든다. hit rate 가 단순 평균이 아닌 critical path.
+
+---
+
 ## 핵심 개념
 **MMU 성능 = TLB Hit Rate × 처리량(Throughput) × 지연(Latency)의 함수. DUT의 실제 성능을 Ideal Model과 비교하여 병목을 찾아내고, 마이크로아키텍처 수준에서 원인을 분석하는 것이 핵심.**
 
@@ -374,6 +381,13 @@ MangoBoost MMU IP 맥락:
 > "평균만 보면 간헐적 병목을 놓친다. 예를 들어 평균 Latency가 3 cycle이라도 P99가 200 cycle이면, 상위 1% 트랜잭션이 극심한 지연을 겪고 있다는 뜻이다. 서버 워크로드에서는 Tail Latency가 SLA 위반의 원인이 되므로, P99/P99.9를 별도로 측정하여 메모리 대역폭 경쟁이나 TLB Miss 집중 구간을 찾아낸다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: TLB 만 키우면 성능 항상 ↑
+
+    **실제**: TLB 가 너무 크면 lookup latency 자체가 ↑ (associative search). modern CPU 는 L1 TLB(작고 빠름) + L2 TLB(크고 느림) hierarchy 로 균형.
+
+    **왜 헷갈리는가**: "cache 큰 게 무조건 좋다" 의 직관. 실제로는 search latency vs miss penalty 의 trade-off.
 
 !!! warning "실무 주의점 — ASID 고갈 시 전체 TLB Flush로 성능 절벽"
     **현상**: 프로세스를 빠르게 생성/종료하는 워크로드에서 주기적으로 TLB Miss Rate가 급등하고 처리량이 수십% 하락.

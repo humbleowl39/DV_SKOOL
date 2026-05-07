@@ -20,6 +20,11 @@
 
 **DCMAC 검증은 라인 레이트 throughput + 무결성 동시 보장**. Multi-channel + RS-FEC 조합이 만드는 corner case가 많고, IFG 위반 같은 protocol 위반은 silent.
 
+!!! tip "💡 이해를 위한 비유"
+    **DCMAC 검증 환경** ≈ **택배 물류센터 품질 감사**
+
+    한쪽에서 쉼 없이 밀려오는 택배(프레임)를 받아 분류하고(Scoreboard) 봉인 확인(FCS)을 하면서, 동시에 트럭 도착 간격(IFG)이 규정을 지키는지 감시(SVA)한다.
+
 ## 핵심 개념
 **DCMAC 검증 = 프레임 무결성(FCS) + AXI-S 프로토콜 준수 + 흐름 제어(Pause/PFC) + 에러 처리 + E2E 데이터 패스. UVM 환경을 from scratch로 구축한 경험이 이력서 핵심.**
 
@@ -597,6 +602,13 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
 > "UVM RAL을 구축하고 세 가지를 검증했다. (1) Reset Value — 모든 레지스터의 리셋 후 값이 스펙과 일치하는지 RAL mirror로 자동 확인. (2) Access Policy — RW/RO/W1C 등 각 필드의 접근 정책이 올바른지. (3) Functional — 통계 카운터가 실제 트래픽과 일치하는지, Config 변경이 올바른 시점에 적용되는지. 특히 통계 카운터의 Read-on-Clear 특성 때문에 읽기 순서/타이밍 검증이 까다로웠다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: VLAN 태그를 붙이면 헤더 길이만 4B 늘어날 뿐, 실제 throughput에는 영향이 없다.
+
+    **실제**: VLAN 태그가 붙으면 프레임 최소 길이 조건 및 MTU 계산 기준이 바뀌어, 동일 payload를 보낼 때 IFG 포함 전체 대역폭 점유가 달라진다.
+
+    **왜 헷갈리는가**: payload 크기 자체는 변하지 않으므로 "데이터는 그대로"라고 생각하기 쉽지만, 프레임 단위 오버헤드가 증가하면 line-rate 시나리오에서 차이가 드러난다.
 
 !!! warning "실무 주의점 — Statistics Counter Clear-on-Read 레이스 컨디션"
     **현상**: 회귀 테스트에서 통계 카운터(rx_frame_count, rx_error_count 등) 값이 읽을 때마다 달라지거나 0으로 리셋된 것처럼 보인다.

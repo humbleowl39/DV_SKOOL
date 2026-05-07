@@ -13,6 +13,56 @@ LLM 기본, 프롬프트 엔지니어링, RAG, agent 아키텍처, DV 적용
 
 Python, 머신러닝/딥러닝 개요, API 호출 경험
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_llm_fundamentals/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">LLM Fundamentals</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_prompt_engineering/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">Prompt Engineering</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_embedding_vectordb/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">Embedding & Vector DB</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_rag/">
+      <span class="concept-dag-node-num">M04</span>
+      <span class="concept-dag-node-title">RAG</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="05_agent_architecture/">
+      <span class="concept-dag-node-num">M05</span>
+      <span class="concept-dag-node-title">Agent Architecture</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="06_strategy_selection/">
+      <span class="concept-dag-node-num">M06</span>
+      <span class="concept-dag-node-title">Strategy Selection</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="07_dv_application/">
+      <span class="concept-dag-node-num">M07</span>
+      <span class="concept-dag-node-title">DV Application</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="08_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

@@ -24,6 +24,51 @@
 - **OS 메모리 관리 기초**: 프로세스별 가상 주소 공간, 페이지
 - **AMBA AXI** (Module 04 IOMMU에서 transaction 분석 시 도움)
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_mmu_fundamentals/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">MMU Fundamentals</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_page_table_structure/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">Page Table</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_tlb/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">TLB</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_iommu_smmu/">
+      <span class="concept-dag-node-num">M04</span>
+      <span class="concept-dag-node-title">IOMMU / SMMU</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="05_performance_analysis/">
+      <span class="concept-dag-node-num">M05</span>
+      <span class="concept-dag-node-title">Performance</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="06_mmu_dv_methodology/">
+      <span class="concept-dag-node-num">M06</span>
+      <span class="concept-dag-node-title">DV Methodology</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="07_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

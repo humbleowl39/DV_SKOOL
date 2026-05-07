@@ -18,6 +18,13 @@
 
 ---
 
+!!! tip "💡 이해를 위한 비유"
+    **AI Engineering 마스터 = 4축 (Prompt/RAG/Agent/Eval) 의 즉답** ≈ **AI 솔루션 아키텍트 — 어떤 비즈니스 case 든 적합한 조합 30초 내 답변**
+
+    Task 특성 → 전략 매핑을 즉시 그리는 것이 마스터. 모든 case 를 RAG 로 풀려고 하면 hammer-nail.
+
+---
+
 ## 핵심 정리
 
 | 주제 | 핵심 포인트 |
@@ -137,6 +144,13 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 | Multi-Agent System | 복잡한 DV 워크플로 자동화 |
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: AI 는 더 큰 모델이면 다 해결
+
+    **실제**: Frontier 모델조차 hallucination, context 한계, retrieval 부재로 실패. 모델 ↑ 보다 "task 분해 + RAG 품질 + Agent loop guard" 가 더 효과적.
+
+    **왜 헷갈리는가**: AI 발전이 "model 크기" 로 매년 보고되어 "크기 = 능력" 단순화.
 
 !!! warning "실무 주의점 — 계측 없는 Agent 배포는 운영 부채"
     **현상**: Agent 파이프라인을 계측 없이 운영하면, 어느 단계(Retrieval, LLM, Tool 호출)에서 실패가 발생했는지 사후에 추적할 수 없어 장애 대응 시간이 수 배 길어진다.

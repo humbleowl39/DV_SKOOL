@@ -404,12 +404,26 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
 
 ---
 
+!!! danger "❓ 흔한 오해"
+    **오해**: AHB 가 APB 보다 항상 좋다
+
+    **실제**: APB 는 register / 저속 peripheral 에 의도적으로 단순 — 게이트 비용 ↓, 검증 부담 ↓. AHB 의 파이프라인은 "고속 + DMA" 환경에서만 의미.
+
+    **왜 헷갈리는가**: "새 버전 = 항상 더 좋음" 의 직관 + APB / AHB 가 동시 등장한 역사적 맥락을 모르면 trade-off 가 안 보임.
+
 !!! warning "실무 주의점 — APB ACCESS / AHB stall 중 신호 변경"
     **현상**: APB slave 가 PREADY=0 으로 wait state 를 유지하는 동안 master 가 PWDATA 또는 PADDR 을 바꾸거나, AHB master 가 HREADY=0 인 사이클에 HADDR/HWDATA 를 변경한다. 시뮬레이션은 통과하지만 실제 SoC 에서 random 하게 wrong-data 가 기록된다.
 
     **원인**: 두 프로토콜 모두 "transfer 완료 신호(PREADY/HREADY) 가 1 이 될 때까지 모든 신호를 hold" 가 필수 invariant 다. master/slave 어느 쪽이든 wait state 동안 신호를 바꾸면 받는 쪽이 어느 사이클의 값을 sample 할지 정의되지 않는다.
 
     **점검 포인트**: SVA 로 `assert property (@(posedge PCLK) (PSEL && !PREADY) |=> $stable(PADDR) && $stable(PWDATA))` 같은 stable 속성 작성. 리뷰 시 RTL master 의 wait state handling 코드에서 register-update 가 PREADY/HREADY 조건과 묶여 있는지 확인.
+
+!!! tip "💡 이해를 위한 비유"
+    **APB vs AHB** ≈ **APB = 단일 차선 + 신호등(2-phase) / AHB = 신호등 + 파이프라인**
+
+    APB 는 매 transaction 이 SETUP→ACCESS 2-phase 로 단순. AHB 는 주소 phase 와 데이터 phase 가 1 cycle 차이로 겹쳐(파이프라인) throughput 이 높다.
+
+---
 
 ## 핵심 정리
 

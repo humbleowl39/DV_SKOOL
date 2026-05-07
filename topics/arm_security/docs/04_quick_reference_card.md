@@ -17,12 +17,26 @@ ARM 보안 = Exception Level(EL0~3, 권한 수직 계층) × TrustZone(S/NS, 월
 
 ---
 
+!!! danger "❓ 흔한 오해"
+    **오해**: EL3 가 항상 활성화되어 있다
+
+    **실제**: EL3 가 OEM 에 따라 disable 될 수 있음 (예: Cortex-A 에서 EL3 미사용 SoC). 그 경우 secure ↔ non-secure 전환은 EL2 / hypervisor 가 담당.
+
+    **왜 헷갈리는가**: ARM 표준 spec 의 "EL3 가 monitor" 표현 때문에 항상 있다고 가정.
+
 !!! warning "실무 주의점 — Stage 2 translation 미설정으로 hypervisor 격리 실패"
     **현상**: VM-A 가 VM-B 또는 hypervisor 메모리를 그대로 read/write 할 수 있다.
 
     **원인**: EL2 진입 후 VTTBR_EL2/VTCR_EL2 에 Stage 2 page table 을 설정하지 않은 채 guest 를 ERET 하여, IPA→PA 변환이 identity 로 동작한다.
 
     **점검 포인트**: VM 부팅 전 VTCR_EL2.T0SZ/SL0 와 VTTBR_EL2 가 유효한 S2 table 을 가리키는지, guest 가 다른 VM IPA 영역 access 시 Stage 2 abort 가 발생하는지 SVA/coverage 로 확인.
+
+!!! tip "💡 이해를 위한 비유"
+    **ARM Security 마스터 = EL × NS × Stage 의 모든 조합 인지** ≈ **권한 매트릭스 전문가**
+
+    EL0/1/2/3 × Secure/NS × Stage1/Stage2 = 다축 권한 모델. 각 조합에서 어떤 자원이 visible / accessible 한지 즉시 그리는 것이 마스터.
+
+---
 
 ## 핵심 정리
 

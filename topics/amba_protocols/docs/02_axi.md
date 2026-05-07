@@ -22,6 +22,13 @@
 
 **AXI는 현대 SoC의 사실상 표준**입니다. NoC 기반 인터커넥트, 메모리 컨트롤러, GPU/CPU 트랜잭션, 가속기 IP 연결 모두 AXI로 흐릅니다. 검증에서 AXI를 깊이 이해하지 못하면 timing, throughput, OoO 시나리오에서 silent bug를 놓치기 쉽습니다. 특히 **VALID/READY 데드락**과 **outstanding 응답 매칭** 두 가지가 AXI 검증의 핵심 위험 영역입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **AXI 5-Channel** ≈ **5개 독립 차선 고속도로 (AR, R, AW, W, B)**
+
+    Read 와 Write 가 따로, 그리고 각각 address/data/response 가 따로 흐른다. 차선이 막혀도 다른 차선이 영향받지 않아 throughput 이 극대화.
+
+---
+
 ## 핵심 개념
 **AXI = AMBA에서 가장 고성능인 버스. 5개 독립 채널(AW/W/B/AR/R), Out-of-Order 완료, Burst, Outstanding 트랜잭션으로 최대 대역폭 달성. CPU↔MC, IP↔IP 고성능 연결의 사실상 표준.**
 
@@ -486,6 +493,13 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
    <details><summary>정답</summary>(0xFF + 1) × 8 = 256 × 8 = 2048 bytes = 2KB. AXI4에서 단일 burst로 전송 가능한 최대량.</details>
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: AxLEN = beat 수다
+
+    **실제**: AxLEN = (beat 수 − 1). 4-beat = AxLEN=3, 16-beat = AxLEN=15. AXI3 는 4-bit (max 16-beat), AXI4 INCR 만 8-bit (max 256).
+
+    **왜 헷갈리는가**: 다른 프로토콜 (CHI, AHB) 은 직접 beat 수를 인코딩 — AXI 만 -1 인코딩이라 처음 만나면 off-by-one.
 
 !!! warning "실무 주의점 — WSTRB 와 narrow transfer"
     **현상**: 32-bit 만 쓰려고 했는데 64-bit register 의 다른 byte 가 0 으로 덮어쓰여 register 가 깨진다. 또는 WSTRB 가 all-1 로 deafult 라 partial write 가 무시된 채 전체 word 가 기록된다.

@@ -15,6 +15,13 @@
     - OS 기본 (process, kernel/user mode)
     - CPU 권한 모드
 
+!!! tip "💡 이해를 위한 비유"
+    **Virtualization** ≈ **호텔 객실 (각 손님이 다른 OS 같은 환경)**
+
+    한 hardware 위에 여러 guest OS 가 마치 각자 hardware 를 갖는 것처럼 동작. hypervisor = 호텔 매니저.
+
+---
+
 ## 핵심 개념
 **가상화 = 물리 하드웨어 자원을 추상화하여, 하나의 물리 머신 위에 여러 독립된 실행 환경(VM)을 만드는 기술. CPU, 메모리, I/O를 소프트웨어로 분할/공유/격리한다.**
 
@@ -211,6 +218,13 @@ Guest OS 계속 실행 (trap이 일어난 줄 모름)
 > "x86에는 POPF, SGDT 같은 'Sensitive하지만 Non-privileged'한 명령어가 있었다. HW 상태를 변경/읽지만 비특권 모드에서 trap 없이 실행되어 Hypervisor가 가로챌 수 없었다. VMware는 Binary Translation(명령어 동적 치환)으로 SW 우회했고, Intel이 VT-x로 VMX non-root 모드를 추가하여 모든 Sensitive 명령어가 자동 VM Exit되도록 HW 근본 해결했다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Virtualization = software 만의 영역
+
+    **실제**: Modern virtualization 은 HW assist (Intel VT-x, AMD-V, ARM EL2) 가 핵심. SW 만으로는 trap-and-emulate overhead 가 ↑.
+
+    **왜 헷갈리는가**: "virtual = soft" 라는 명칭 직관. 실제로는 HW + SW 협업.
 
 !!! warning "실무 주의점 — Para-virtualization 드라이버와 Full 가상화 혼용 오판"
     **현상**: KVM 환경에서 Guest OS에 VirtIO 드라이버를 설치했음에도 불구하고 디스크/네트워크 성능이 에뮬레이션과 차이가 없다.

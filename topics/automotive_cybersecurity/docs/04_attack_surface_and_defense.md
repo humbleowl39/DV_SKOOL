@@ -22,6 +22,13 @@
 
 ---
 
+!!! tip "💡 이해를 위한 비유"
+    **Attack Surface** ≈ **성벽의 모든 출입구 — 정문(OBD), 창문(BT/WiFi), 굴뚝(V2X), 비밀통로(공급망)**
+
+    차량 attack 은 단일 vector 가 아니라 다축. 각 surface 마다 별도 방어 layer 필요. defense-in-depth.
+
+---
+
 ## 핵심 개념
 **차량 보안은 단일 방어가 아닌 다중 계층(Defense in Depth)으로 설계해야 한다 — 물리적 접근(OBD), 무선 접근(V2X/BT/WiFi), 공급망(ECU FW)의 세 축을 모두 방어해야 한다.**
 
@@ -569,6 +576,13 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
 </details>
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: 외부 무선만 막으면 안전
+
+    **실제**: 차량은 무선 외 OBD-II (물리), supply chain (Tier-1 FW), JTAG, USB 등 다축 surface. 무선만 보면 ⅓ 만 본 것.
+
+    **왜 헷갈리는가**: 마케팅이 "커넥티드카" 위협 강조해서 무선이 가장 가시적이지만 실제 surface 는 다축.
 
 !!! warning "실무 주의점 — V2X Sybil 공격 임계값 설정 오류"
     **현상**: V2X Misbehavior Detection의 물리 타당성(Plausibility) 임계값이 느슨하면 Sybil 차량이 소수의 위장 메시지만으로 전방 정체 또는 긴급 제동 신호를 위조할 수 있다. 반대로 너무 엄격하면 정상 밀집 구간(교차로, 주차장)에서 오탐이 발생한다.

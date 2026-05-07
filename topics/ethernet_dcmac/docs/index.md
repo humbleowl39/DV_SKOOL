@@ -22,6 +22,34 @@
 - MAC vs PHY 분리 개념
 - 패킷 / 프레임 / 패딩 같은 네트워킹 기본 용어
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_ethernet_fundamentals/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">Ethernet Fundamentals</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_dcmac_architecture/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">DCMAC Architecture</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_dcmac_dv_methodology/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">DV Methodology</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

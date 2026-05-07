@@ -15,6 +15,13 @@
 !!! info "사전 지식"
     - [Module 01-02](01_exception_level_trustzone.md)
 
+!!! tip "💡 이해를 위한 비유"
+    **Secure Enclave / TEE** ≈ **회사 안의 별도 보안실 — 신원 확인 후만 입장**
+
+    TEE 는 같은 SoC 내 별도 실행 환경 (TrustZone 기반). 핵심 자산 (key, biometric) 만 secure 처리.
+
+---
+
 ## 핵심 개념
 **TrustZone은 CPU 기반 TEE이므로 Trusted OS 취약점, 캐시 공유 부채널, CPU 자원 경합의 한계가 있다. Secure Enclave는 전용 프로세서+RAM으로 이 한계를 물리적으로 제거하며, TrustZone과 상호 불신(mutually distrusting) 관계로 공존한다.**
 
@@ -435,6 +442,13 @@ Internal과 External Secure Enclave는 SPI 버스로 연결되는데, SPI는 SoC
 </details>
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: TEE = SGX / SEV 와 동일
+
+    **실제**: TEE 는 ARM TrustZone-based, SGX 는 Intel enclave (다른 모델 — runtime 격리 + memory 암호화), SEV 는 AMD VM 단위 암호화. 카테고리 다름.
+
+    **왜 헷갈리는가**: "보안 enclave" 라는 generic 용어가 다른 model 들 모두를 포괄해서.
 
 ## 핵심 정리
 

@@ -16,6 +16,13 @@
     - 해시 / 비대칭 키 기본
     - [Module 01-02](01_hardware_root_of_trust.md)
 
+!!! tip "💡 이해를 위한 비유"
+    **Crypto in Boot** ≈ **봉인된 인계 봉투 — 서명(sender 인증) + 해시(내용 무결성) + 인증서 체인**
+
+    RSA/ECDSA 서명 + SHA-256 해시 + ROTPK 의 hash 가 OTP 에 봉인. 모두 함께 작동해야 신뢰.
+
+---
+
 ## 핵심 개념
 **Secure Boot 검증 = Hash (무결성) + Digital Signature (인증성)**
 
@@ -258,6 +265,13 @@ Host SoC (BootROM)            Partner Chip
 > "최악의 시나리오 — 공격자가 어떤 악성 펌웨어든 정당한 것으로 서명할 수 있다. 대응: OTP 다중 슬롯 키 폐기(사전 할당), 키 계층으로 피해 범위 제한, Anti-Rollback 카운터 증가와 함께 FW 업데이트. 근본적 한계: OTP 슬롯은 유한하다. 예방이 가장 중요하다 — HSM 저장, 에어갭 서명, 접근 감사."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Crypto 알고리즘만 강하면 안전하다
+
+    **실제**: Algorithm 외에 key management, OTP write protection, RNG quality, side-channel 방어 등이 같이 critical.
+
+    **왜 헷갈리는가**: Algorithm 비교 (RSA vs ECC) 가 가시적이지만 implementation hygiene 이 더 자주 실패 source.
 
 !!! warning "실무 주의점 — Anti-Rollback 카운터 미증가 후 FW 업데이트"
     **현상**: 취약점이 패치된 FW를 배포했지만 공격자가 이전 버전 이미지로 downgrade하여 패치 이전 취약점을 재활용한다. Secure Boot 서명 검증은 통과한다.

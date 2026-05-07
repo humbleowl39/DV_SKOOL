@@ -4,6 +4,13 @@
   <span class="meta-badge meta-level-advanced">📊 Advanced</span>
 </div>
 
+!!! tip "💡 이해를 위한 비유"
+    **MMU = 가상-실주소 변환기** ≈ **도시의 주소록 — 동·호수(가상) ↔ 실제 빌딩 좌표(물리)**
+
+    프로세스마다 자기만의 주소 공간을 갖고, MMU 가 그것을 실제 메모리로 매핑. 같은 가상 주소가 다른 프로세스에선 다른 물리 주소.
+
+---
+
 ## 핵심 개념
 **MMU = Virtual Address를 Physical Address로 변환하고, 접근 권한을 검사하는 HW 블록. 프로세스 격리, 메모리 보호, 물리 메모리 추상화의 핵심.**
 
@@ -304,6 +311,13 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 > "Secure World와 Normal World 각각이 독립적인 Translation Regime을 가진다. PTE의 NS 비트로 Secure/Non-secure 물리 메모리를 구분하며, Normal World에서 Secure 메모리 접근 시도 시 Bus Error로 차단된다. World 전환 시 TLB 관리가 중요한데, Secure TLB와 Normal TLB가 독립적으로 관리되어야 stale 엔트리로 인한 보안 누출을 방지할 수 있다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: MMU 가 켜지면 자동으로 안전하다
+
+    **실제**: MMU 가 켜져도 page table entry 가 잘못 설정되면 (예: NS 비트 미설정, U/K 권한 오류) 보안 격리가 깨진다. MMU = 정책 적용 도구이지 정책 자체가 아님.
+
+    **왜 헷갈리는가**: "기능 켜짐 = 안전" 이라는 직관 + page table 을 SW 가 채우는 책임이라는 사실이 흐릿하게 다가와서.
 
 !!! warning "실무 주의점 — MMU Enable 직후 ISB 누락"
     **현상**: MMU Enable(SCTLR.M=1) 직후 Instruction Fetch가 stale 변환 주소로 실행되어 예기치 않은 Fault 또는 오동작 발생.

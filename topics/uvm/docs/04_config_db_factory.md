@@ -20,6 +20,13 @@
 
 UVM 환경의 **유연성과 재사용성은 모두 config_db + Factory에서 나옵니다**. 동시에 두 메커니즘은 가장 silent한 실패 원천: 경로 한 글자 차이로 set한 값이 get에 안 잡혀도 시뮬은 그냥 default로 동작합니다. **silent failure → cascading bug**의 전형적 패턴입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **config_db** ≈ **사내 게시판 (Bulletin Board)**
+
+    set 은 게시판에 "이 경로에 이 값을 붙여둠", get 은 "내 자리에서 가장 가까운 게시물 찾기". 경로 wildcard 가 매칭되면 첫 매칭이 적용된다.
+
+---
+
 ## 핵심 개념
 **config_db = 계층 구조를 통해 설정을 전달하는 글로벌 데이터베이스. Factory = 클래스 이름(타입)으로 객체를 생성하되, 런타임에 다른 타입으로 대체 가능한 메커니즘. 이 둘이 UVM 환경의 유연성과 재사용성의 핵심.**
 
@@ -237,6 +244,13 @@ BootROM 검증에서의 config_db 활용:
         - **(a) type override**: `set_type_override_by_type(my_normal_drv::get_type(), my_err_drv::get_type())` — 모든 인스턴스에 적용. 환경 전체의 동작을 한 줄로 변경.
         - **(b) instance override**: `set_inst_override_by_type("uvm_test_top.env.cpu_agent.driver", my_normal_drv::get_type(), my_glitch_drv::get_type())` — 특정 경로만 교체. 다른 driver들은 정상.
         - **결정 규칙**: 변경의 scope가 *모든 곳*이면 type, *특정 경로/인스턴스*면 instance.
+
+!!! danger "❓ 흔한 오해"
+    **오해**: set 한 값은 항상 get 으로 받을 수 있다
+
+    **실제**: set 의 instance_path 와 get 의 instance_path 가 정확히 (혹은 wildcard 로) 매칭되어야 함. 한 글자 오타 / hierarchy 차이 시 silent miss → null handle.
+
+    **왜 헷갈리는가**: factory_db 처럼 string-based key 라 컴파일러가 검증을 못 해 줌. 런타임에 silent 로 실패하는 것이 가장 빈번한 버그.
 
 !!! warning "실무 주의점 — `config_db` 타입 불일치로 인한 silent get 실패"
     **현상**: `uvm_config_db::get()`이 `0`을 반환하지만 `uvm_fatal`을 붙이지 않으면 변수가 `null` 또는 기본값인 채로 시뮬이 진행된다. 이후 null 참조 또는 의도와 다른 설정으로 인해 전혀 관계없어 보이는 하위 컴포넌트에서 에러가 터진다.

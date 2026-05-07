@@ -21,6 +21,13 @@
 
 Agent는 **UVM 재사용의 최소 단위**입니다. 잘못 설계된 Agent는 모든 환경에 cascading failure를 만듭니다. 특히 Active/Passive 분리를 안 해 두면, 같은 인터페이스를 다른 위치에서(예: PCIe RC vs EP) 검증할 때 Agent를 새로 짜야 합니다. Driver와 Monitor의 책임 경계도 헷갈리기 쉬운 영역으로, **Monitor가 신호를 절대 driving하지 않는다**는 원칙은 격리/관찰의 본질입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **Active Agent ↔ Passive Agent** ≈ **취재팀의 인터뷰어(Active) ↔ 관찰자(Passive)**
+
+    Active 는 질문(자극) 을 던지고 답을 받지만, Passive 는 입에 열지 않고 관찰만 한다. DUT 도 마찬가지로 driver 가 자극, monitor 는 관찰.
+
+---
+
 ## 핵심 개념
 **Agent = 하나의 인터페이스에 대한 검증 인프라 묶음 (Driver + Monitor + Sequencer). Active Agent는 자극 생성+관찰, Passive Agent는 관찰만. DUT의 프로토콜 인터페이스마다 1개 Agent를 배치하는 것이 원칙.**
 
@@ -467,6 +474,13 @@ Security Driver: force/release로 DUT 내부 신호에 직접 접근
     ??? answer "예시 답안"
         - **Pipelining 적절**: AXI write 채널 — AW/W 독립, outstanding 4+ 정상. 단순 driver는 throughput 측정 불가, OoO 응답 커버 불가.
         - **단순 driver 충분**: APB — outstanding 개념 없음(매 트랜잭션 SETUP→ACCESS→IDLE 순차). Pipelining 도입 시 오히려 protocol 위반.
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Monitor 가 신호를 driving 해도 된다
+
+    **실제**: Monitor 는 read-only — virtual interface 의 signal 을 inout 으로 잡으면 안 된다. driving 은 driver 의 책임이고, monitor 는 sample 만.
+
+    **왜 헷갈리는가**: 둘 다 vif 를 보유하므로 driver 와 monitor 의 역할이 코드상 비슷해 보이는 시각적 혼동.
 
 !!! warning "실무 주의점 — `item_done()` 누락 시 두 번째 트랜잭션부터 hang"
     **현상**: 첫 번째 트랜잭션은 정상 구동되지만 이후 `get_next_item()`이 영원히 block되어 시뮬이 hang 또는 타임아웃.

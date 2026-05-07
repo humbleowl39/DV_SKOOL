@@ -21,6 +21,13 @@
 
 **PHY는 MC와 DRAM 사이의 물리 계층**으로, 고속(4800+ MT/s)에서 신호 무결성이 가장 큰 도전. **Training 실패 = silent corruption** — silicon이 동작하는 것처럼 보이지만 데이터 변조. PVT 변동(같은 칩이라도 온도 다르면 timing 변경)을 보정하는 것이 검증의 가장 미묘한 영역입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **Memory PHY** ≈ **고속 도로의 톨게이트 + 차량 정렬 (training)**
+
+    DDR 의 GHz 동작은 strobe 정렬, drive strength, ZQ calibration, training 같은 PHY 레이어 작업이 매 순간 보정해 가능. 컨트롤러보다 PHY 가 더 미묘한 영역.
+
+---
+
 ## 핵심 개념
 **Memory Interface(MI) / PHY = MC의 명령을 DDR 전기 신호로 변환하고, 고속 데이터 전송을 위한 타이밍 캘리브레이션(Training)을 수행하는 물리 계층. PVT(공정/전압/온도) 변동에도 안정적인 데이터 수신을 보장하는 것이 핵심.**
 
@@ -370,6 +377,13 @@ ZQ Calibration:
 > "CA Training(CS Training)이 가장 중요한 추가 항목이다. DDR5에서 CA 버스가 멀티플렉싱으로 변경되어 타이밍 마진이 축소되었기 때문이다. 또한 DFE 계수 Training, Read/Write Preamble Training이 추가되었다. LPDDR5에서는 WCK2CK Training(WCK-CK 위상 정렬)과 CBT(Command Bus Training)가 추가된다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: PHY 는 한 번 training 하면 그대로다
+
+    **실제**: Training 은 boot 시 + 주기적 재training (온도 / 전압 변화 대응) 필요. 운영 중 ZQ Calibration 도 수십 초마다 자동.
+
+    **왜 헷갈리는가**: "한 번 잘 맞추면 계속 맞을 것" 이라는 직관. 실제로는 환경 drift 보정이 상시적.
 
 !!! warning "실무 주의점 — ZQ Calibration 타이밍 위반으로 ODT 임피던스 오동작"
     **현상**: 온도 변화 이후 Write 데이터가 Eye 중심에서 벗어나 비트 오류율이 증가하거나, 주기적 ZQ Calibration 도중 RD/WR 명령이 겹쳐 데이터 오염 발생.

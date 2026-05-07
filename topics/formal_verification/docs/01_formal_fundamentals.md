@@ -22,6 +22,13 @@
 
 **Formal은 "모든 입력에 대해 증명"하는 검증**입니다. Simulation은 시드별 샘플링이라 corner case를 놓칠 수 있지만 Formal은 PROVEN이면 수학적으로 모든 케이스를 커버한 것. 단, **PROVEN의 의미를 잘못 해석하면 false confidence**로 이어집니다 — Vacuous Pass, Over-constraint, Blackbox 영역 등의 함정을 이해해야 sign-off가 의미를 가집니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **Sim vs Formal** ≈ **Sim = 일부 시뮬에이션 (시드 샘플) / Formal = 모든 가능성 수학 증명**
+
+    Sim 은 "이 시드에서는 통과" 같은 sample-based 결론. Formal 은 "가능한 모든 입력 조합에 대해 위반 없음" 같은 수학 증명.
+
+---
+
 ## 핵심 개념
 **Formal Verification = 수학적 증명으로 설계의 모든 가능한 입력/상태에서 속성(Property)이 성립함을 보장. 시뮬레이션이 "샘플링"이라면, Formal은 "전수 검사".**
 
@@ -360,6 +367,13 @@ Formal의 근본 한계:
 > "핵심은 상태 공간 축소이다. (1) Blackboxing — 검증 대상이 아닌 모듈을 빈 박스로 교체. (2) Data/Counter Abstraction — 데이터 폭이나 카운터 범위를 축소. (3) Assume — 입력을 실제 환경 범위로 제한. (4) Cut Point — 큰 설계를 블록 단위로 분할하여 각각 증명. 이 기법들을 조합하여 Formal이 수렴(PROVEN)하도록 만드는 것이 Formal 엔지니어의 핵심 역량이다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Formal PROVEN = 영원히 안전
+
+    **실제**: PROVEN 은 induction 의 "step n → n+1" 이 모든 n 에 대해 성립할 때만 진짜 무한 안전. BOUNDED 만 통과한 경우는 N+1 cycle 부터의 동작은 미증명.
+
+    **왜 헷갈리는가**: "Formal 은 완벽" 이라는 마케팅 문구 + PROVEN/BOUNDED 의 미묘한 차이를 첫 학습 시 흘려듣기 때문.
 
 !!! warning "실무 주의점 — BOUNDED 를 PROVEN 으로 오해"
     **현상**: 회의에서 "이 property 는 formal 로 통과했다" 라고 보고했는데, 보드에서 같은 property 가 위반되어 시간 늦게 발견된다.

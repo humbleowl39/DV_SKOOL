@@ -15,6 +15,13 @@
     - [Module 01](01_virtualization_fundamentals.md)
     - 컴퓨터 architecture 일반
 
+!!! tip "💡 이해를 위한 비유"
+    **시스템 아키텍처 진화** ≈ **교통 수단의 진화 — 도보 → 자전거 → 자동차 → 자율주행**
+
+    Bare metal → process → VM → container → microVM 으로 진화하며 격리/효율의 trade-off 점진 변화.
+
+---
+
 ## 핵심 개념
 **현대 가상화 시스템은 하루아침에 만들어진 것이 아니다. 고정 기능 HW → 프로그래머블 프로세서 → HW 가속기 통합 → OS 도입 → MMU/IOMMU → 가상화로 이어지는 진화 과정의 결과물이다. 각 단계마다 이전 단계의 한계를 극복하기 위한 HW/SW가 추가되었다.**
 
@@ -616,6 +623,13 @@ Hypervisor 입장:
 > "AxUSER(ARUSER/AWUSER)는 AXI 트랜잭션에 'VM 정체성(identity)'을 부여하는 메커니즘이다. 디바이스가 메모리 접근 시 AxUSER에 SW 엔티티 정보를 실어 보내면, IOMMU가 이를 읽고 해당 VM의 Stage 1 PT로 VA→IPA, Stage 2 PT로 IPA→PA 변환을 수행한다. AxUSER 없이는 IOMMU가 어떤 VM의 접근인지 구분 불가. ARM SMMU에서는 이것이 StreamID에 해당하며, Stream Table Entry(STE)를 인덱싱하여 디바이스/VM별 변환 설정을 찾는다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Container 는 VM 의 가벼운 버전이다
+
+    **실제**: Container 는 같은 host kernel 공유 (process 격리 강화), VM 은 자체 kernel + HW emulation. 격리 모델이 근본적으로 다름.
+
+    **왜 헷갈리는가**: "가벼운 = 같은 카테고리" 의 직관. 실제로는 다른 격리 model.
 
 !!! warning "실무 주의점 — IOMMU 미활성화 상태의 Device Passthrough 위험"
     **현상**: VM에 PCIe 디바이스를 직접 할당(passthrough)했을 때 Guest가 Host 메모리 영역을 DMA로 접근하여 Host 커널이 크래시(Kernel Panic)된다.

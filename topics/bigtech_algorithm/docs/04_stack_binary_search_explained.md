@@ -364,12 +364,26 @@ endmodule
 
 ---
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Binary Search = sorted array 에서만 가능
+
+    **실제**: Sorted 외에 단조 boolean 함수 (예: "이 capacity 로 가능?" 함수가 X 이상에서 true) 에도 적용 가능. parametric search.
+
+    **왜 헷갈리는가**: 교과서 첫 예시가 "sorted array" 라 "sorted = 필수" 로 일반화.
+
 !!! warning "실무 주의점 — `mid = (lo+hi)/2` 의 integer overflow"
     **현상**: 큰 배열(특히 C/C++/Java 의 `int`) 에서 binary search 가 음수 인덱스를 만들거나 segfault 로 죽는다. 작은 입력 테스트는 다 통과해서 production 에서 처음 발견된다.
 
     **원인**: `lo + hi` 가 `INT_MAX` 를 넘어 wrap-around. 1985 년 JDK `Arrays.binarySearch` 버그로 유명한 그 함정.
 
     **점검 포인트**: `mid = lo + (hi - lo) / 2` 로 작성했는가, 또는 unsigned/`size_t` 타입에 음수 결과를 대입하지 않는가.
+
+!!! tip "💡 이해를 위한 비유"
+    **Stack / Binary Search** ≈ **Stack = 책 더미 (최근 것이 위), Binary Search = 사전 가운데 펼치기**
+
+    Stack 은 LIFO + 최근 상태 미루기. Binary Search 는 단조 함수에서 매번 절반 제거 → O(log N).
+
+---
 
 ## 핵심 정리 (Key Takeaways)
 

@@ -22,6 +22,34 @@
 - [AMBA AXI](../../amba_protocols/) (인터커넥트)
 - IP-level 검증 경험 1회 이상
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_soc_top_integration/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">SoC Top Integration</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_common_task_cctv/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">Common Task & CCTV</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_tb_top_and_ai/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">TB Top & AI</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

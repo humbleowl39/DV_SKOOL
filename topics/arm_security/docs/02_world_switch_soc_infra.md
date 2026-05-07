@@ -16,6 +16,13 @@
     - [Module 01](01_exception_level_trustzone.md)
     - GIC (Generic Interrupt Controller) 기본
 
+!!! tip "💡 이해를 위한 비유"
+    **World Switch** ≈ **보안 출입 절차 — 신청서(SMC) + 신원 확인 + 개인 소지품 보관(register save)**
+
+    Normal World ↔ Secure World 전환 시 EL3 monitor 가 register / state 보관 후 다른 world 로 jump. 비싼 operation.
+
+---
+
 ## 핵심 개념
 **월드 전환은 반드시 EL3(Secure Monitor)을 경유해야 하며, SMC 명령으로만 가능. SoC 레벨에서는 TZPC, TZASC, GIC 보안 설정으로 버스/메모리/인터럽트를 Secure/Non-Secure로 분할하여 HW 격리를 완성.**
 
@@ -478,6 +485,13 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
 </details>
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: World switch 는 단순 instruction 한 번
+
+    **실제**: SMC instruction 한 번이지만 monitor 가 GPR / FP / vector / system register 모두 save/restore 필요. 잘못하면 secure state 누설.
+
+    **왜 헷갈리는가**: "call = 단순" 이라는 직관. 실제는 context save 의 정확성이 critical.
 
 !!! warning "실무 주의점 — SMC 후 register save/restore 부족으로 secure state 누설"
     **현상**: NS world 가 secure key/credential 의 일부를 GPR/SIMD 레지스터에서 읽어낸다.

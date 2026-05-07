@@ -23,6 +23,63 @@
 - CPU 권한 모드 (ring, EL)
 - 가상 메모리 ([MMU 코스](../../mmu/) 참고)
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_virtualization_fundamentals/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">Fundamentals</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="01a_system_architecture_evolution/">
+      <span class="concept-dag-node-num">M01A</span>
+      <span class="concept-dag-node-title">Architecture Evolution</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_cpu_virtualization/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">CPU</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_memory_virtualization/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">Memory</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="04_io_virtualization/">
+      <span class="concept-dag-node-num">M04</span>
+      <span class="concept-dag-node-title">I/O</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="05_hypervisor_types/">
+      <span class="concept-dag-node-num">M05</span>
+      <span class="concept-dag-node-title">Hypervisor Types</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="06_strict_vs_passthrough/">
+      <span class="concept-dag-node-num">M06</span>
+      <span class="concept-dag-node-title">Strict vs Passthrough</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="07_containers_and_modern/">
+      <span class="concept-dag-node-num">M07</span>
+      <span class="concept-dag-node-title">Containers</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="08_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

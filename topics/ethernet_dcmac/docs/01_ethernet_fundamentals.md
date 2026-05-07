@@ -20,6 +20,11 @@
 
 **Ethernet은 데이터센터의 backbone**. 100/400GbE로 진화하며 PCS/FEC가 점점 복잡해짐. DCMAC 검증의 출발점은 frame 구조와 lane mapping을 정확히 이해하는 것.
 
+!!! tip "💡 이해를 위한 비유"
+    **Ethernet 프레임** ≈ **봉투에 담긴 편지**
+
+    봉투에는 발신/수신 주소(MAC), 내용물(Payload), 봉인 확인 스탬프(FCS)가 있다. 배달부(PHY)는 봉투 겉만 보고 전달하고, 내용 해석은 MAC이 담당한다.
+
 ## 핵심 개념
 **Ethernet = LAN/데이터센터의 사실상 표준 L2 프로토콜. MAC(Media Access Control)이 프레임 생성/파싱/에러 검출을 담당하고, PHY가 물리적 전송을 담당.**
 
@@ -364,6 +369,13 @@ DV 관점:
 > "기존 MII는 한 사이클에 하나의 프레임만 처리하므로 짧은 프레임이 연속되면 IFG 오버헤드가 커진다. Segmented 인터페이스는 하나의 버스 사이클 내에 여러 프레임의 세그먼트를 담을 수 있어 IFG를 최소화하고 대역폭 활용률을 극대화한다. 100G+에서 라인 레이트 달성에 필수적이다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: FCS(CRC-32)는 Preamble과 SFD를 포함한 전체 프레임에 대해 계산된다.
+
+    **실제**: FCS는 SFD 이후의 Dst MAC 필드부터 Payload까지만 계산한다. Preamble(7B)과 SFD(1B)는 계산 범위 밖이다.
+
+    **왜 헷갈리는가**: 프레임 다이어그램에서 Preamble~FCS가 연속으로 표시되다 보니 FCS가 전체를 커버한다고 직관적으로 착각하기 쉽다.
 
 !!! warning "실무 주의점 — FCS 계산 범위 착각"
     **현상**: Scoreboard에서 FCS 값이 항상 mismatch로 보고되며, TB가 삽입한 FCS가 DUT 출력과 다르다.

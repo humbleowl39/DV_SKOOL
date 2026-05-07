@@ -22,6 +22,13 @@ LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰
 
 ---
 
+!!! tip "💡 이해를 위한 비유"
+    **Embedding + Vector DB** ≈ **도서관 의미 색인 — "비슷한 의미" 로 검색**
+
+    문서를 의미 보존 벡터로 변환 → 쿼리 벡터와 cosine 유사도 계산 → 가까운 문서 반환. 의미적 검색이 키워드 검색을 대체.
+
+---
+
 ## 핵심 개념
 **Embedding = 텍스트를 의미를 보존하는 고차원 벡터로 변환. Vector DB = 이 벡터들을 저장하고, 의미적 유사도로 빠르게 검색하는 데이터베이스. RAG의 핵심 인프라.**
 
@@ -391,6 +398,13 @@ DV 도메인 권장:
 > "MTEB(Massive Text Embedding Benchmark)가 표준이다. 56개 데이터셋에서 Retrieval, STS, Classification 등 8개 태스크 성능을 종합 평가한다. DV 도메인에서는 보안 요구사항(로컬 실행 필수)이 가장 먼저 필터링 기준이 되고, 그 다음 Retrieval 성능, 마지막으로 모델 크기/속도를 고려한다. 로컬 실행 시 BGE-large(326MB, Retrieval 54.3)가 성능-크기 균형이 좋다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Vector DB 가 모든 검색을 대체한다
+
+    **실제**: 의미 검색은 keyword exact match (코드 식별자, 약어) 에 약함. Hybrid (dense + sparse/BM25) 가 production 표준.
+
+    **왜 헷갈리는가**: 최근 hype 로 "vector = 만능" 이라는 인상. 실제로는 보완 관계.
 
 !!! warning "실무 주의점 — Embedding 모델 교체 시 기존 인덱스 전체 재구축 필요"
     **현상**: RAG 운영 중 더 성능 좋은 Embedding 모델로 교체하면, 기존 벡터 인덱스와 새 모델의 벡터 공간이 달라 검색 결과가 완전히 깨진다. 오류 없이 응답이 나오지만 관련 없는 문서가 검색되어 hallucination이 증가한다.

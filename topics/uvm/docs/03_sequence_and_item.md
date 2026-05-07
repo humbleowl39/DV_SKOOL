@@ -20,6 +20,13 @@
 
 검증 가치의 절반은 **자극의 다양성과 의도성**에서 나옵니다. Sequence가 부실하면 coverage가 안 메워지고, 너무 hard-coded면 재사용이 안 됩니다. Virtual Sequence는 SoC-level 시나리오의 핵심 — 여러 Agent를 시간/순서로 조율해야 의미 있는 시스템 검증이 됩니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **Sequence ↔ Sequence Item** ≈ **각본가(Sequence) ↔ 대사 한 줄(Item)**
+
+    각본가는 어떤 대사를 어떤 순서로 던질지 계획하고, item 은 실제로 던지는 한 줄. 같은 대사도 누가 어떤 흐름에서 던지느냐에 따라 의미가 달라진다.
+
+---
+
 ## 핵심 개념
 **Sequence Item = 하나의 트랜잭션 데이터 (주소, 데이터, 제어). Sequence = Sequence Item들을 생성하는 시나리오 로직. Virtual Sequence = 여러 Agent의 Sequence를 조합하는 시스템 레벨 시나리오. 이 계층이 자극 생성의 핵심.**
 
@@ -549,6 +556,13 @@ endpackage
           endtask
         endclass
         ```
+
+!!! danger "❓ 흔한 오해"
+    **오해**: `finish_item` 만 호출하면 충분하다
+
+    **실제**: `start_item` + `randomize` + `finish_item` 의 3-단계가 모두 필요. start_item 없이 finish_item 호출하면 sequencer arbitration 을 거치지 않아 race / hang.
+
+    **왜 헷갈리는가**: convenience 매크로(`uvm_do`) 가 이 셋을 한꺼번에 감춰주기 때문에 직접 작성할 때 한 단계를 빼먹기 쉽다.
 
 !!! warning "실무 주의점 — `start_item` / `finish_item` 없이 `randomize()` 단독 호출"
     **현상**: Sequence Item이 randomize는 되지만 Sequencer/Driver로 전달되지 않아 DUT에 자극이 인가되지 않음. 시뮬은 정상 종료되고 커버리지도 0이지만 에러 메시지는 없음.

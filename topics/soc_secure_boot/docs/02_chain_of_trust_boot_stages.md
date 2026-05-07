@@ -16,6 +16,13 @@
     - [Module 01](01_hardware_root_of_trust.md)
     - 비대칭 서명 검증 흐름
 
+!!! tip "💡 이해를 위한 비유"
+    **Chain of Trust** ≈ **릴레이 인계 — 한 사람이 다음 사람에게 봉인된 봉투를 인계, 한 단계라도 신뢰 깨지면 전부 무효**
+
+    ROM (RoT) → BL1 → BL2 → BL3 → kernel 각 단계가 다음 단계 서명 검증 후 jump. 한 단계 검증 실패 = halt.
+
+---
+
 ## 핵심 개념
 **Chain of Trust = 각 단계가 다음 단계를 인증한 후에만 제어권을 넘긴다. 신뢰는 전파되는 것이지, 생성되는 것이 아니다. 어떤 단계가 침해되면 그 이후의 모든 것은 무효.**
 
@@ -369,6 +376,13 @@ BL2 DRAM 초기화 단계:
 > "DRAM Training은 PVT 변동과 보드 배선 차이를 보상하여 수 GHz 데이터 버스의 타이밍 마진을 확보하는 과정이다. 코드만 수십~수백 KB에 달하고, DRAM 종류(DDR4/5, LPDDR4/5)별로 알고리즘이 다르며, 새 DRAM 벤더 지원을 위해 업데이트가 필요하다. BL1(ROM)에 넣으면 크기 부담 + 버그 수정 불가이므로, BL2(Flash, 업데이트 가능)에서 수행한다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Boot stage 가 적을수록 안전
+
+    **실제**: Stage 분리는 attack surface 분리 + 권한 escalation 방어. ROM 이 모든 일 하면 ROM 버그 = fleet 전체 영향. Stage 분리가 더 안전.
+
+    **왜 헷갈리는가**: "단순 = 안전" 의 직관. 실제로는 separation of concern 이 더 안전.
 
 !!! warning "실무 주의점 — BL1→BL2 Jump 직전 검증 생략 경로"
     **현상**: 서명 검증 함수가 SUCCESS를 반환했지만 실제 이미지 무결성은 깨진 채로 BL2로 jump하여, 이후 단계에서 임의 코드가 Secure EL3 권한으로 실행된다.

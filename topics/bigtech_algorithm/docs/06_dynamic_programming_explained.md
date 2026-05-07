@@ -303,12 +303,26 @@ endmodule
 
 ---
 
+!!! danger "❓ 흔한 오해"
+    **오해**: DP 는 항상 가장 빠른 풀이
+
+    **실제**: Greedy 가 작동하면 더 빠름 (단, optimality 증명 필요). DP 는 Greedy 가 안 될 때 안전한 default.
+
+    **왜 헷갈리는가**: "DP = 어려운 문제용 = 가장 강력" 이라는 학습 순서. 실제는 trade-off.
+
 !!! warning "실무 주의점 — State 차원 누락 (knapsack 의 weight axis 빠짐)"
     **현상**: 0/1 knapsack 을 `dp[i]` 1 차원으로 정의해 풀었는데, 같은 `i` 에 대해 서로 다른 잔여 capacity 에서 들어와 답이 cell 마다 달라진다. 작은 예제는 통과, 큰 예제에서 오답.
 
     **원인**: state 가 (item index, remaining weight) 두 축을 모두 식별해야 하는데 한 축을 빼먹어 동일 cell 에 의미가 다른 값들이 덮어써짐. Optimal substructure 자체가 깨진 상태.
 
     **점검 포인트**: state 정의를 한 줄로 적었을 때 "같은 입력 → 같은 답" 이 보장되는가 (deterministic), 그리고 점화식의 양변이 같은 차원의 `dp[...]` 를 참조하는가.
+
+!!! tip "💡 이해를 위한 비유"
+    **DP (Dynamic Programming)** ≈ **수식 풀 때 "이미 푼 부분 문제 메모" — 중복 계산 제거**
+
+    Optimal substructure + Overlapping subproblems 두 조건 충족 시. 부분 답을 표에 저장 → 큰 답 합성.
+
+---
 
 ## 핵심 정리 (Key Takeaways)
 

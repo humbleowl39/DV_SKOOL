@@ -16,6 +16,13 @@
     - [Module 01-04](01_hardware_root_of_trust.md)
     - 보안 취약점 / 공격 모델 일반
 
+!!! tip "💡 이해를 위한 비유"
+    **Attack Surface** ≈ **성벽의 모든 출입구 + 약점 — 정문(API), 후문(JTAG), 비밀통로(side-channel)**
+
+    Production HW 에서 JTAG, debug bus, side-channel, fault injection, supply chain 모두 surface. Defense in depth.
+
+---
+
 ## 핵심 개념
 **Secure Boot 공격 표면은 다층적(FI, Rollback, Side-Channel, JTAG, TOCTOU)이다. 방어도 다층 접근이 필요: HW (글리치 감지, SRAM Lock) + SW (이중 검증, Anti-Rollback) + 설계 (키 계층, Crypto Agility).**
 
@@ -320,6 +327,13 @@ endclass
 > "공격 유형별로 분류한다: (1) Crypto 실패 — 잘못된 서명, 불량 인증서, ROTPK 불일치. (2) 버전 공격 — Anti-RB Counter 미만으로 Rollback. (3) HW 변조 — verify 결과 Force-flip, TOCTOU 메모리 쓰기. (4) 입력 손상 — 잘린 이미지, 초과 크기 버퍼. (5) 설정 — Secure Boot ON 상태에서 미서명 FW, JTAG 비활성화 시 접근 시도. 각 시나리오에서 예상 응답(abort, fallback, lockdown)을 검증한다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: JTAG 만 disable 하면 충분
+
+    **실제**: JTAG 외에 boundary scan, debug bus, scan chain, observation pin 등 다축. Side-channel (power, EM, timing) 도 별도 영역.
+
+    **왜 헷갈리는가**: "가시적 인터페이스만 차단" 이라는 직관. 실제 attack 은 무수한 sub-channel.
 
 !!! warning "실무 주의점 — JTAG 가 production 출하 시 disable 되지 않음"
     **현상**: 양산 chip 을 거꾸로 분석해 보니 JTAG TAP 이 살아 있어 debug 권한으로 SRAM/레지스터에 접근, 부팅 중간 단계의 키 / 검증 결과를 읽거나 강제로 덮어쓸 수 있다.

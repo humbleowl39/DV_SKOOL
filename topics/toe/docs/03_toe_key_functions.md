@@ -16,6 +16,13 @@
     - [Module 01-02](01_tcp_ip_and_toe_concept.md)
     - TCP/IP detail: window, ACK, RTT/RTO
 
+!!! tip "💡 이해를 위한 비유"
+    **TCP 의 핵심 = 신뢰성 (재전송 + 순서)** ≈ **등기 우편 — 받았다는 확인이 와야 다음 보냄, 안 오면 다시 보냄**
+
+    ACK 안 오면 RTO 후 재전송, 순서 어긋난 segment 는 재정렬, 빠른 ACK 는 fast retransmit. 모두 "신뢰성" 보장 메커니즘.
+
+---
+
 ## 핵심 개념
 **TOE가 HW로 처리하는 5대 기능: Checksum, Segmentation/Reassembly, Retransmission, Flow Control, Congestion Control. 각각이 패킷마다 수행되므로 HW Offload의 효과가 극대화되는 영역.**
 
@@ -580,6 +587,13 @@ TCP Options 필드는 최대 40바이트(헤더 최대 60B - 고정 20B). Timest
 </details>
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: RTO 는 고정 값이다
+
+    **실제**: RTO 는 RTT(Round-Trip Time) 측정 기반 동적 계산 (RFC 6298). 네트워크 상태 변화에 따라 자동 조정.
+
+    **왜 헷갈리는가**: "timeout = 고정 상수" 의 직관. 실제로는 EWMA 기반 동적 추정.
 
 !!! warning "실무 주의점 — RTO 타이머와 Fast Retransmit 동시 트리거"
     **현상**: 패킷 손실 시나리오에서 동일 세그먼트가 두 번 재전송되며 수신 측에서 중복 ACK 폭주가 발생한다.

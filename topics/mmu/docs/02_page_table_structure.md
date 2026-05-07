@@ -21,6 +21,13 @@
 
 **Page Table walk은 MMU 성능의 핵심 비용**입니다. 4-level walk은 4번의 메모리 access가 발생하므로 cache miss 시 latency가 크게 늘어납니다. **PWC, Huge page, ASID 활용**이 walk 비용을 줄이는 표준 기법이며, 검증에서는 multi-level walk을 정확히 trace하는 능력이 필수입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **다단계 Page Table** ≈ **도서관 색인 (대분류 → 중분류 → 소분류 → 책 위치)**
+
+    L4 → L3 → L2 → L1 단계로 좁혀가며 최종 page 위치 도달. 각 단계 entry 가 다음 table 의 base 주소를 담고 있어 sparse 한 주소 공간을 효율적으로 표현.
+
+---
+
 ## 핵심 개념
 **Page Table = VPN → PPN 매핑을 저장하는 메모리 내 자료구조. 단일 레벨은 메모리 낭비가 심하므로 Multi-level로 계층화하여 필요한 영역만 할당한다.**
 
@@ -400,6 +407,13 @@ TLB Entry:
 > "COW는 fork() 시 물리 메모리 복사를 지연하는 최적화다. fork() 직후 부모/자식 모두 같은 물리 페이지를 RO로 공유한다. Write 시도 시 MMU가 Permission Fault를 발생시키고, OS의 COW Handler가 새 물리 페이지를 할당·복사한 뒤 PTE를 RW로 업데이트한다. MMU는 Permission Fault를 정확히 감지하고, Handler 후 TLB Invalidation → 재접근 시 새 PTE로 Walk하는 전체 흐름의 정확성이 핵심이다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Page table walk 는 1번의 메모리 read 다
+
+    **실제**: 4-level page table = 최대 4번의 메모리 read (각 level 의 table 이 메모리에 있으므로). TLB miss 시 비용이 큰 이유.
+
+    **왜 헷갈리는가**: L1 → 데이터 의 1-단계 매핑 직관 때문에 — 실제로는 multi-level 이 hierarchy 마다 메모리 access 추가.
 
 !!! warning "실무 주의점 — Page Walk 중 Access Flag 미설정으로 반복 Fault"
     **현상**: 처음 접근하는 페이지에서 Permission Fault가 아닌 반복적 Access Flag Fault가 발생하여 OS Handler가 무한 루프에 빠지거나 성능이 급격히 저하됨.

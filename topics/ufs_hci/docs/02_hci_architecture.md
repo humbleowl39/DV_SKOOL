@@ -21,6 +21,13 @@
 
 **HCI는 SW와 UFS HW 사이의 표준 contract** (JEDEC JESD223). HCI 검증은 driver-side와 device-side의 인터페이스 정확성 + queue 관리 + interrupt 효율을 모두 보장. **UTRD parsing 오류 = silent corruption** — driver가 보낸 명령을 HCI가 잘못 해석하면 storage write/read에 직접 영향.
 
+!!! tip "💡 이해를 위한 비유"
+    **UFS HCI** ≈ **음식점의 주방 호출 시스템 — 주문서(UTRD) + 호출벨(doorbell) + 응답(completion)**
+
+    Host 가 UTRD 를 메모리에 적고 doorbell ring → device(주방) 가 처리 → completion. 호출벨이 핵심 sync point.
+
+---
+
 ## 핵심 개념
 **UFS HCI = SW Driver(UFSHCD)와 UFS 프로토콜 사이의 HW 인터페이스. SW가 레지스터/메모리를 통해 SCSI 명령을 제출하면, HCI가 UPIU로 변환하여 UniPro/M-PHY를 통해 UFS Device에 전달. JEDEC JESD223 표준.**
 
@@ -428,6 +435,13 @@ SDB vs MCQ 비교:
 > "UIC Command는 HCI가 UniPro DME 레이어를 제어하는 인터페이스다. Gear 변경 과정: (1) DME_SET으로 PA_TxGear, PA_RxGear를 원하는 Gear 값으로 설정. (2) DME_SET으로 PA_PWRMode를 FAST로 설정하면 UniPro가 M-PHY Gear 전환을 시작. (3) IS[UPMS] (Power Mode Status) 인터럽트 대기. (4) HCS에서 새로운 Power Mode 확인. 각 DME_SET마다 IS[UCCS]로 완료를 확인해야 하며, Gear 전환 중에는 명령 발행을 자제해야 한다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Doorbell ring 즉시 처리된다
+
+    **실제**: Doorbell ring 후 device 가 UTRD 를 fetch 하고 처리하는 데 latency 존재. ring 과 처리 시작은 다른 시점.
+
+    **왜 헷갈리는가**: "링 = 즉시 시작" 이라는 직관. 실제로는 device 의 UTRL fetch + arbitration latency 있음.
 
 !!! warning "실무 주의점 — UTRLDBR 와 UTRLRSR race"
     **현상**: 명령을 doorbell 로 발행했는데 HCI 가 해당 슬롯을 무시해 명령이 실종된다.

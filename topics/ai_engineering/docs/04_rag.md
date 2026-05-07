@@ -21,6 +21,13 @@ LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은
 
 ---
 
+!!! tip "💡 이해를 위한 비유"
+    **RAG (Retrieval-Augmented Generation)** ≈ **참고서 + 인턴 — 질문이 오면 책상에 reference 펼쳐 두고 답변하라**
+
+    사용자 질의에 대해 외부 DB 에서 관련 chunk 검색 → LLM 입력에 첨부 → 응답. 도메인 지식을 가중치 변경 없이 활용.
+
+---
+
 ## 핵심 개념
 **RAG = LLM에 외부 지식을 검색하여 주입하는 아키텍처. LLM의 학습 데이터에 없는 최신/도메인 정보를 활용하면서, Fine-tuning의 비용과 Hallucination을 줄이는 실용적 접근법.**
 
@@ -258,6 +265,13 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 > "세 가지 전략: (1) Hybrid 검색 — Dense(의미) + Sparse(키워드) 결합으로 각각의 약점 보완. (2) 도메인 특화 Chunking — IP 스펙의 섹션/테이블/시퀀스 단위 분할로 의미 보존. (3) Re-ranking — 초기 Top-20을 Cross-encoder로 정밀 재정렬하여 최종 Top-5의 정확도 향상."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: RAG 가 fine-tune 을 완전히 대체
+
+    **실제**: RAG 는 지식 갱신에 강함, fine-tune 은 형식/스타일 내재화에 강함. 둘은 보완. 실무는 "prompt → RAG → 필요 시 FT" 순서.
+
+    **왜 헷갈리는가**: 최근 RAG hype 가 fine-tune 의 단점만 부각. 실제로는 trade-off.
 
 !!! warning "실무 주의점 — RAG 검색 실패가 Hallucination으로 보이는 문제"
     **현상**: Retrieval 단계에서 관련 문서가 반환되지 않으면 LLM은 학습 지식으로 답변을 생성한다. 사용자 입장에서는 RAG가 작동한 것처럼 보이지만 실제로는 검색이 실패한 응답이므로, 도메인 특화 정보가 틀릴 가능성이 높다.

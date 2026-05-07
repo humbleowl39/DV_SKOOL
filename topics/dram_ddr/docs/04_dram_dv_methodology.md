@@ -20,6 +20,13 @@
 
 **DRAM 검증은 타이밍 + 무결성 + 성능의 동시 검증**으로 일반 IP보다 복잡. tRC/tFAW/tREFI 등 수십 개의 timing constraint를 모두 trace해야 하고, ECC injection / refresh 누락 / training 실패 같은 silent corruption 시나리오를 빠짐없이 다뤄야 합니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **DRAM DV** ≈ **도서관 사서 검수 — 모든 책 입출고 시간이 spec 과 일치하는지 stopwatch 검증**
+
+    tRCD, tRP, tFAW 같은 timing 제약을 모두 준수했는지, refresh / training / scheduler 정책이 모든 시나리오에서 동작하는지 검증.
+
+---
+
 ## 핵심 개념
 **DRAM MC/MI 검증 = 타이밍 준수 + 데이터 무결성 + 스케줄링 정확성 + Training 동작 + Refresh + 전력 관리. DRAM 프로토콜의 엄격한 타이밍 제약과 방대한 상태 조합이 검증 난이도를 높이는 핵심 요인.**
 
@@ -433,6 +440,13 @@ Resume:
 > "DRAM Behavioral Model에서 단일 비트 에러를 주입하고, Read 시 수정된 값이 반환되는지 확인한다(투명성). 2-bit 이상 에러는 On-die ECC로 수정 불가하므로, 외부 SECDED ECC의 검출과 에러 인터럽트 발생을 검증한다. 또한 MC의 ECC Scrubbing이 주기적으로 모든 주소를 순회하며 에러를 교정하는지 확인한다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: DRAM 검증 = timing 위반 검사
+
+    **실제**: Timing 외에 refresh 누락, ECC scrubbing, training 실패 복구, throttle 정책, command bus protocol 등 광범위.
+
+    **왜 헷갈리는가**: "DRAM = timing critical" 라는 명성 때문에 timing 만 보면 다 본 것 같지만 실제 협업 시나리오가 더 다양.
 
 !!! warning "실무 주의점 — Open Page Policy에서 Row Conflict 폭증 시 Latency 급등"
     **현상**: 랜덤 주소 패턴 워크로드에서 Bank당 Active Row가 지속적으로 교체되어, Row Miss 비율이 90%를 초과하고 평균 Latency가 순차 접근 대비 3-5배 이상으로 폭증.

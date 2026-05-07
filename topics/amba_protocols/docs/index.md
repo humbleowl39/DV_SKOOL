@@ -29,6 +29,34 @@
 
 UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_apb_ahb/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">APB & AHB</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_axi/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">AXI</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_axi_stream/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">AXI-Stream</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 순차 학습 권장 (APB→AHB→AXI는 점진적 복잡도 증가):

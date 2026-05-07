@@ -23,6 +23,51 @@
 - 부팅 sequence 일반 (POR, reset, boot loader)
 - ARM TrustZone 기본 ([ARM Security 코스](../../arm_security/) 참고)
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_hardware_root_of_trust/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">HW Root of Trust</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_chain_of_trust_boot_stages/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">Chain of Trust</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_crypto_in_boot/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">Crypto in Boot</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_boot_device_and_boot_mode/">
+      <span class="concept-dag-node-num">M04</span>
+      <span class="concept-dag-node-title">Boot Device / Mode</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="05_attack_surface_and_defense/">
+      <span class="concept-dag-node-num">M05</span>
+      <span class="concept-dag-node-title">Attack & Defense</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="06_quick_reference_card/">
+      <span class="concept-dag-node-num">M06</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="07_bootrom_dv_methodology/">
+      <span class="concept-dag-node-num">M07</span>
+      <span class="concept-dag-node-title">BootROM DV</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

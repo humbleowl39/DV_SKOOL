@@ -21,6 +21,13 @@ LLM 단일 호출로 풀 수 없는 작업(다단계 추론, 환경 상호작용
 
 ---
 
+!!! tip "💡 이해를 위한 비유"
+    **Agent** ≈ **직원 + 도구 키트 — 목표 받고 도구를 자율 호출하며 단계 진행**
+
+    LLM(brain) + Tool + Memory + Planner 의 loop. ReAct/Plan-and-Execute 패턴. 단일 LLM 호출로 못 푸는 다단계 task 해결.
+
+---
+
 ## 핵심 개념
 **Agent = LLM이 외부 도구(Tool)를 사용하고, 계획(Plan)을 세우고, 기억(Memory)을 유지하면서 복잡한 작업을 자율적으로 수행하는 시스템. 단순 Q&A를 넘어 실제 행동을 취하는 AI.**
 
@@ -611,6 +618,13 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
 > "Model Context Protocol은 Anthropic이 제안한 LLM-도구 연결 표준이다. USB-C처럼 하나의 표준으로 어떤 LLM/Agent에서든 도구를 사용할 수 있게 한다. DV에서의 가치는 VCS 컴파일러, FAISS 검색, 파형 분석기 등을 MCP Server로 한 번 구현하면, Claude Code, VS Code Copilot, 커스텀 Agent 어디서든 동일하게 사용 가능하다는 것이다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Agent 는 자동으로 잘 멈춘다
+
+    **실제**: Agent loop 는 max_step / max_token / cost guard 없으면 무한 루프 + 비용 폭주. 종료 조건 명시 필수.
+
+    **왜 헷갈리는가**: demo 에서 짧은 task 만 보면 자율 종료가 자연스러워 보이지만 production 은 guard 필수.
 
 !!! warning "실무 주의점 — Agent Infinite Loop로 인한 비용 폭주"
     **현상**: ReAct Agent가 도구 호출 실패나 모호한 결과를 만나면 동일한 Action을 반복 시도하는 루프에 빠져, 수백 번의 LLM 호출이 발생하고 API 비용이 폭주한다.

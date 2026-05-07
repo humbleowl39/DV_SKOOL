@@ -13,6 +13,51 @@
 
 프로그래밍 일반, 자료구조 기초
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_big_o_explained/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">Big-O & Pattern</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_array_hashmap_explained/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">Array & Hash Map</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_two_pointers_sliding_window_explained/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">Two Pointers / Sliding</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_stack_binary_search_explained/">
+      <span class="concept-dag-node-num">M04</span>
+      <span class="concept-dag-node-title">Stack & Binary Search</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="05_tree_bfs_dfs_explained/">
+      <span class="concept-dag-node-num">M05</span>
+      <span class="concept-dag-node-title">Tree & BFS/DFS</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="06_dynamic_programming_explained/">
+      <span class="concept-dag-node-num">M06</span>
+      <span class="concept-dag-node-title">Dynamic Programming</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="07_interview_strategy/">
+      <span class="concept-dag-node-num">M07</span>
+      <span class="concept-dag-node-title">Interview Strategy</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 <div class="course-grid">

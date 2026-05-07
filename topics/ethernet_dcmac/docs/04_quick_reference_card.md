@@ -15,7 +15,19 @@
 DCMAC = AMD 100/200/400GbE MAC IP. 프레임 생성(Preamble+FCS+IFG), FCS 검증, 흐름 제어(Pause/PFC), AXI-S ↔ Line Side 변환.
 ```
 
+!!! tip "💡 이해를 위한 비유"
+    **DCMAC** ≈ **초고속 우체국 창구**
+
+    들어오는 편지(AXI-S 데이터)에 봉투(Preamble+FCS)를 씌워 배달망(Line Side)에 내보내고, 반대로 배달망에서 온 봉투를 열어 내용만 전달한다. 초당 수백억 비트를 처리하면서 하나도 빠뜨리지 않아야 한다.
+
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: IFG(Inter-Frame Gap)는 단순한 여백이라 검증 우선순위가 낮다.
+
+    **실제**: IFG 위반은 수신 측 버퍼 언더런, 링크 파트너 오동작을 조용히 유발한다. 라인 레이트 시나리오에서 IFG가 12B 미만이 되면 silent 프레임 손실이 발생할 수 있다.
+
+    **왜 헷갈리는가**: IFG 위반은 프레임 카운터나 CRC 에러에 직접 잡히지 않아 단순 통과처럼 보이기 때문이다.
 
 !!! warning "실무 주의점 — IFG Underrun과 EEE 진입 타이밍 충돌"
     **현상**: EEE(Energy Efficient Ethernet) 모드를 활성화한 상태에서 짧은 버스트 트래픽을 보내면, 링크 파트너가 LPI(Low Power Idle) 진입 중 도착한 프레임을 손실하거나 IFG 위반 오류가 발생한다.

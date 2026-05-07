@@ -17,6 +17,13 @@
 !!! info "사전 지식"
     - [Module 01-03](01_apb_ahb.md) 학습 완료 후 이 카드를 보면 효과 극대화
 
+!!! tip "💡 이해를 위한 비유"
+    **AMBA family** ≈ **도시 도로망 — 골목길(APB), 일반 도로(AHB), 고속도로(AXI), 인터컴(AXI-Stream)**
+
+    한 SoC 안에 여러 buses 가 공존하며 각자 적합한 곳에 배치된다. 한 가지로 통일이 아니라 도메인별 fit-for-purpose.
+
+---
+
 ## 한줄 요약
 ```
 APB(레지스터) → AHB(중간, 파이프라인) → AXI(고성능, 5채널, OOO) → AXI-S(스트리밍, 주소 없음)
@@ -208,6 +215,13 @@ AXI-Stream:
 2. **글로서리 스캔** — 모르는 용어 점검: [용어집](glossary.md)
 3. **실전 적용** — 본인의 검증 환경에서 VALID/READY 데드락 패턴 검사
 4. **다음 토픽** — UVM 위에 AMBA를 올린 [UVM 코스](../../uvm/), 또는 메모리 서브시스템 [MMU](../../mmu/) / [DRAM](../../dram_ddr/)
+
+!!! danger "❓ 흔한 오해"
+    **오해**: AMBA = AXI 다
+
+    **실제**: AMBA 는 ARM 의 bus 표준 family — APB(저속), AHB(중속), AXI(고속), AXI-Stream(streaming), CHI(coherent), 등 여러 표준 포함.
+
+    **왜 헷갈리는가**: 현대 SoC 의 main interconnect 가 AXI 가 많아 AMBA = AXI 로 자주 혼동.
 
 !!! warning "실무 주의점 — Burst 길이 인코딩 off-by-one"
     **현상**: 4-beat burst 를 보내려고 `AxLEN=4` 로 설정했는데 slave 가 5 beat 를 기대하거나 reverse 로 8-beat burst 가 7-beat 로 잘린다. 또는 `AxSIZE` 가 데이터 폭과 안 맞아 alignment 가 깨진다.

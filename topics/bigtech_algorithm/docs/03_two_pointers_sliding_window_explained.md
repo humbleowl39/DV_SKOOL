@@ -354,12 +354,26 @@ endmodule
 
 ---
 
+!!! danger "❓ 흔한 오해"
+    **오해**: Two Pointers / Sliding Window 는 같은 패턴
+
+    **실제**: Two Pointers = 양방향 좁힘 (보통 정렬된 입력), Sliding Window = invariant 유지 expand/shrink. 입력 조건과 invariant 가 다른 패턴.
+
+    **왜 헷갈리는가**: 둘 다 "포인터 두 개" 사용 → 시각적 유사성 때문에 같은 것으로 묶임.
+
 !!! warning "실무 주의점 — while 조건의 off-by-one (`lo<hi` vs `lo<=hi`)"
     **현상**: 정렬된 배열의 two-sum 에서 `[a, a]` 같은 동일 원소 두 번 사용 케이스를 놓치거나, 반대로 같은 인덱스를 두 번 더해 false positive 가 난다.
 
     **원인**: `lo < hi` (서로 다른 두 인덱스) 와 `lo <= hi` (자기 자신 허용) 의 의미 차이를 명세 없이 한 쪽으로 결정한 결과. invariant 가 글로 적혀 있지 않으면 매번 흔들린다.
 
     **점검 포인트**: "두 포인터가 가리키는 인덱스가 서로 달라야 하는가" 를 문제 제약과 맞춰 한 줄로 적었는가, 그리고 양 끝/싱글톤/중복 입력에 dry-run 했는가.
+
+!!! tip "💡 이해를 위한 비유"
+    **Two Pointers / Sliding Window** ≈ **양 끝에서 좁혀가는 사진 trim / 신축 가능한 봉투**
+
+    정렬된 배열의 양끝에서 좁히기 (Two Pointers) 또는 연속 부분 invariant 유지 (Sliding Window). hash map 없이 O(N).
+
+---
 
 ## 핵심 정리 (Key Takeaways)
 

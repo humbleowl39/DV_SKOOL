@@ -16,6 +16,13 @@
     - [Module 01-05](01_hardware_root_of_trust.md)
     - [UVM](../../uvm/), [AMBA](../../amba_protocols/)
 
+!!! tip "💡 이해를 위한 비유"
+    **BootROM DV** ≈ **발전소 검수원 — 모든 부팅 path 를 stopwatch 로 검증, 한 path 라도 빠지면 sign-off X**
+
+    ROM 은 변경 불가이므로 검증이 마지막 chance. ROTPK fuse, anti-rollback, fall-back path, ROM patch 등 모든 path 검증.
+
+---
+
 ## 핵심 개념
 **BootROM 검증 = 이론(Unit 1~5)을 실제 실리콘 품질로 전환하는 엔지니어링. Legacy SV 환경의 한계를 UVM 프레임워크로 극복하고, Coverage-Driven 방법론으로 Zero-Defect Silicon을 달성하는 과정.**
 
@@ -463,6 +470,13 @@ Post-silicon Bring-up 시나리오:
 > "Coverage-Driven 방법론과 구조적 Negative Test 전략의 조합이다. Positive(정상 부팅) 100%는 기본이고, 5개 공격 카테고리(Crypto, Rollback, Fault, Input, Config)별 Negative 시나리오를 체계적으로 커버했다. 결과적으로 Post-silicon Bring-up에서 BootROM 관련 이슈 제로를 달성하여, 비-ROM 이슈의 빠른 Root Cause 분리를 가능하게 했다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: BootROM 검증 = 정상 boot 만 확인
+
+    **실제**: 추가로 ROM patch 적용 후 chain 재검증, fail-safe boot, error path, JTAG isolation, side-channel 등 광범위.
+
+    **왜 헷갈리는가**: "정상 boot 만 본다" 는 sim mindset. 보안에서는 abnormal path 가 attack surface.
 
 !!! warning "실무 주의점 — ROM patch 적용 후 ROTPK 체인 재검증 누락"
     **현상**: BootROM patch (ROM-RAM remap / hot-fix) 를 적용한 다음, 후속 stage 의 서명 검증이 patch 이전 버전의 ROTPK 로 통과해 버린다. 결과적으로 patch 가 의도한 키 교체가 우회된다.

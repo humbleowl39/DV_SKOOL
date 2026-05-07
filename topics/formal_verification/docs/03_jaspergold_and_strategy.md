@@ -21,6 +21,13 @@
 
 **Formal 도구 사용은 "PROVEN 받기"와 다릅니다**. 실무에서 BOUNDED를 PROVEN으로 만드는 작업이 시간의 80%를 차지하고, Assume 작성과 감사가 검증 신뢰성의 핵심입니다. **잘못된 Assume = silent false PROVEN** — Formal 엔지니어의 핵심 역량은 도구 조작이 아니라 **Convergence 전략 + Sign-off 책임**입니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **JasperGold 워크플로** ≈ **법정 절차 — 사건 등록 → 가정 정리 → 주장 제기 → 판결**
+
+    elaborate (사건 등록) → assume (전제 정리) → assert (주장 제기) → run (판결 진행) → analyze (판결 결과 검토). 한 단계라도 빼면 신뢰 불가.
+
+---
+
 ## 핵심 개념
 **JasperGold = Cadence의 Formal Verification 도구. Property Checking, Equivalence Checking, Connectivity Checking 등을 지원. 실무에서는 Formal을 "시뮬레이션 보완 전략"으로 위치시키고, 제어 로직/프로토콜/보안에 집중 적용.**
 
@@ -420,6 +427,13 @@ assert property (@(posedge clk) disable iff (rst)
 > "Counterexample은 Formal의 가장 큰 장점이다. 엔진이 Property 위반을 유발하는 최소 입력 시퀀스를 자동 생성하므로, (1) 반례 파형에서 위반 시점을 확인하고, (2) 엔진이 생성한 입력의 의미를 파악하고, (3) RTL 코드에서 해당 경로의 로직을 추적하여 버그를 확정한다. 단, FAILED인데 실제 버그가 아닌 경우(False Negative)도 있다 — 이는 Assume 부족으로 불가능한 입력이 사용된 것이므로, 스펙을 확인한 후 assume을 추가한다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: Blackbox 는 항상 좋다 (state space ↓)
+
+    **실제**: Blackbox 는 그 모듈 출력을 "any value" 로 가정 → 종종 false counterexample. assume 으로 spec 동작을 모델링해야 함.
+
+    **왜 헷갈리는가**: 복잡도 ↓ = 항상 좋다는 직관 + blackbox 의 부작용(over-approximation) 을 첫 학습 때 잘 못 인지.
 
 !!! warning "실무 주의점 — Blackbox 후 false counterexample"
     **현상**: state-explosion 을 풀려고 sub-module 을 blackbox 했더니 갑자기 reasonable 한 property 가 fail 하면서 이상한 counterexample (CEX) 가 등장한다. 시간을 들여 디버그하다 보면 blackbox 출력에 "임의 값" 이 들어와서 발생한 가짜 violation 이다.

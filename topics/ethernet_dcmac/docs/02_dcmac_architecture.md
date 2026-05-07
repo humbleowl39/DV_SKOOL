@@ -20,6 +20,11 @@
 
 **DCMAC은 데이터센터 NIC의 핵심**. 400G 라인 레이트에서 multi-channel + RS-FEC 동시 처리는 검증이 가장 어려운 영역. SerDes lane mismatch나 FEC corner case가 silent throughput 저하를 만듭니다.
 
+!!! tip "💡 이해를 위한 비유"
+    **SerDes 레인** ≈ **고속도로 차선**
+
+    100GbE는 4개 차선(lane)을 동시에 달리는 구조다. 차선 순서가 바뀌거나 한 차선이 느려져도(skew) 고속도로 출구(PCS)에서 재정렬하여 원래 순서를 복원한다.
+
 ## 핵심 개념
 **DCMAC = AMD(Xilinx)의 100/200/400GbE 하드 IP MAC. FPGA/ASIC에 통합되어 라인 레이트 Ethernet 프레임 처리를 제공. 상위 계층(TOE, IP)과 AXI-Stream으로, 하위 계층(PCS/PHY)과 Segmented 인터페이스로 연결.**
 
@@ -407,6 +412,13 @@ MangoBoost Data Path:
 > "세 가지: (1) 통계 카운터의 Read-on-Clear 특성 — 읽기 순서를 잘못하면 값이 사라지므로 Latch-on-Read 구현을 검증. (2) Config 레지스터 적용 시점 — Write 직후 적용인지, 다음 프레임부터인지. (3) Reset Value — 모든 레지스터가 리셋 후 스펙상의 기본값을 가지는지. RAL frontdoor/backdoor 양쪽으로 확인한다."
 
 ---
+
+!!! danger "❓ 흔한 오해"
+    **오해**: 1G / 10G / 100G Ethernet은 동일한 PHY 위에서 속도만 설정을 바꾸면 동작한다.
+
+    **실제**: 속도가 올라갈수록 인코딩 방식(8b/10b → 64b/66b), 레인 수(1 → 4 → 8), FEC(없음 → RS-FEC) 등 PHY 구조 자체가 다르다.
+
+    **왜 헷갈리는가**: 소프트웨어 API나 레지스터 인터페이스가 추상화되어 있어 같은 드라이버로 다루는 것처럼 보이기 때문이다.
 
 !!! warning "실무 주의점 — Lane Skew / Swap 미검증으로 인한 silent 링크 실패"
     **현상**: 단일 레인 단독 테스트에서는 정상이지만, 4레인 또는 8레인 구성 시 간헐적 Frame Error가 발생하거나 링크 업 자체가 안 된다.

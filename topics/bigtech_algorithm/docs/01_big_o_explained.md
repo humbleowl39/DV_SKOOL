@@ -298,12 +298,26 @@ endmodule
 
 ---
 
+!!! danger "❓ 흔한 오해"
+    **오해**: O(1) = 무조건 빠름
+
+    **실제**: O(1) 이라도 그 상수가 클 수 있음 (예: hash map insert 의 hash 계산 + collision 처리). N 이 작으면 O(N) 이 더 빠를 수도.
+
+    **왜 헷갈리는가**: "상수 = 작음" 이라는 직관 + 학교에서 "O(1) > O(N)" 만 강조한 학습 패턴.
+
 !!! warning "실무 주의점 — Amortized vs Worst-Case 혼동"
     **현상**: `vector::push_back` 을 N 번 호출하는 루프를 O(N) 이라 적었는데, 면접관이 "한 번 호출의 worst-case 는?" 이라고 되묻자 답이 막힌다.
 
     **원인**: amortized O(1) 과 single-call worst-case O(N) (재할당 시점) 을 동일시한 것. 평균과 최악을 분리해서 보지 않음.
 
     **점검 포인트**: 자료구조의 연산 비용이 amortized 인지 worst-case 인지 명시했는가, 그리고 "면접 기본은 worst-case" 기준으로 다시 합산했는가.
+
+!!! tip "💡 이해를 위한 비유"
+    **Big-O** ≈ **운동 능력 측정 — 짐 무게(N) 가 늘 때 시간이 어떻게 늘어나는가**
+
+    고정된 횟수 (O(1)) vs 짐 비례 (O(N)) vs 짐의 제곱 (O(N²)). N 이 작을 땐 차이 미미하지만 N=10⁶ 가 되면 우주의 시간.
+
+---
 
 ## 핵심 정리 (Key Takeaways)
 

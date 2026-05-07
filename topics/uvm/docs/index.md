@@ -30,6 +30,51 @@
 
 부족한 부분이 있다면 [SystemVerilog IEEE 1800](https://standards.ieee.org/ieee/1800/) 사양서나 *SystemVerilog for Verification* (Spear) 1-7장을 먼저 보세요.
 
+## 🗺️ 학습 경로
+
+<div class="concept-dag">
+  <div class="concept-dag-title">개념 의존성 — 순서대로 학습 권장</div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="01_architecture_and_phase/">
+      <span class="concept-dag-node-num">M01</span>
+      <span class="concept-dag-node-title">Architecture & Phase</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="02_agent_driver_monitor/">
+      <span class="concept-dag-node-num">M02</span>
+      <span class="concept-dag-node-title">Agent / Driver / Monitor</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="03_sequence_and_item/">
+      <span class="concept-dag-node-num">M03</span>
+      <span class="concept-dag-node-title">Sequence & Item</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="04_config_db_factory/">
+      <span class="concept-dag-node-num">M04</span>
+      <span class="concept-dag-node-title">config_db & Factory</span>
+    </a>
+  </div>
+  <div class="concept-dag-row">
+    <span class="concept-dag-arrow">↪</span>
+    <a class="concept-dag-node" href="05_tlm_scoreboard_coverage/">
+      <span class="concept-dag-node-num">M05</span>
+      <span class="concept-dag-node-title">TLM / Scoreboard / Coverage</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="06_practical_patterns/">
+      <span class="concept-dag-node-num">M06</span>
+      <span class="concept-dag-node-title">실무 패턴</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="07_quick_reference_card/">
+      <span class="concept-dag-node-num">Ref</span>
+      <span class="concept-dag-node-title">Quick Reference</span>
+    </a>
+  </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
+</div>
+
 ## 학습 모듈
 
 순차 학습을 권장합니다 (특히 1→4까지). 5~7은 토픽 단위로도 가능합니다.
