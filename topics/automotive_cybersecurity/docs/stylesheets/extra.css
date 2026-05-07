@@ -45,10 +45,20 @@
    타이포그래피 (Typography) — 한국어 가독성 우선
    =========================================================== */
 :root {
+  --md-text-font: "Pretendard Variable";
   --md-text-font-family: var(--dvs-font-sans);
 }
+body,
+.md-typeset,
+.md-header,
+.md-tabs,
+.md-nav,
+.md-search,
+.md-content,
+input, button, select, textarea {
+  font-family: var(--dvs-font-sans) !important;
+}
 .md-typeset {
-  font-family: var(--dvs-font-sans);
   line-height: 1.75;          /* 한국어 본문 친화 */
   font-feature-settings: "ss03", "tnum";
   -webkit-font-smoothing: antialiased;
