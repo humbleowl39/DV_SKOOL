@@ -1,0 +1,144 @@
+# Module 02 — Component 계층 (`lib/base/component/`)
+
+<!-- DV-SKOOL-CH-CTX:start -->
+<div class="chapter-context" data-cat="network">
+  <a class="chapter-back" href="../">
+    <span class="chapter-back-arrow">←</span>
+    <span class="chapter-back-icon">🧪</span>
+    <span class="chapter-back-text">RDMA Verification</span>
+  </a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker">Module 02</span>
+</div>
+<!-- DV-SKOOL-CH-CTX:end -->
+
+!!! objective "학습 목표"
+    이 모듈을 마치면:
+
+    - **List** `lib/base/component/` 의 7개 직속 디렉토리를 나열할 수 있다.
+    - **Identify** `agent/` 의 driver / handler / sequencer 분리 패턴과 그 의도를 식별할 수 있다.
+    - **Compare** `data_env` / `dma_env` / `network_env` 의 검증 영역과 책임을 비교할 수 있다.
+    - **Locate** RDMA 리소스(QP/MR/PD/CQ/SQ/RQ)의 등록·관리가 어디에서 일어나는지 짚을 수 있다.
+
+## 왜 이 모듈이 중요한가
+디버깅의 80% 는 "이 에러가 어디서 나왔는지"를 빠르게 찾는 것입니다. 모든 에러 메시지는 특정 컴포넌트에서 발생하므로, 컴포넌트 계층을 알면 에러 ID prefix(`E-DRV-...`, `E-SB-...`, `F-C2H-...`, `F-CQHDL-...`)만 보고도 1초 만에 위치를 잡을 수 있습니다.
+
+## 핵심 개념
+
+### 1. 직속 디렉토리 7종 (Confluence Component 표 + 코드 검증)
+
+`lib/base/component/` 직속 디렉토리:
+
+| 디렉토리 | 카테고리 | 파일 수 (Confluence) | 설명 |
+|---------|---------|----------------------|------|
+| `config/` | Config | 4 | 토폴로지 / 노드 / 드라이버 설정 객체 |
+| `custom_phase/` | Custom Phase | 2 | 커스텀 UVM phase (host/arm reset) |
+| `env/` | Env Hierarchy | 12 | environment 계층 구조 |
+| `model/` | Model | 1 | 네트워크 지연 모델 |
+| `pool/` | Pool | 3 | RDMA 리소스 풀 (QP/MR/PD/CQ/SQ/RQ) |
+| `test/` | Test | 1 | base test 클래스 |
+| `util/` | Util | 4 | 링크 / 동기화 / 주소변환 유틸리티 |
+
+> Confluence 출처: [Component](https://mangoboost.atlassian.net/wiki/spaces/RDMADV/pages/1224867954/Component)
+
+### 2. `env/` 의 sub-디렉토리 — 검증 영역별 분리
+
+`lib/base/component/env/` 는 5개 핵심 sub-env 로 다시 나뉩니다:
+
+| sub-env | 책임 | 핵심 컴포넌트 |
+|--------|-----|--------------|
+| `agent/` | RDMA verb 발행 + CQE 처리 | `vrdma_agent`, `driver/`, `handler/`, `sequencer/` |
+| `data_env/` | 데이터 정합성 검증 | `vrdma_1side_compare`, `vrdma_2side_compare`, `vrdma_imm_compare`, `vrdma_data_scoreboard`, `vrdma_cqe_validation_checker`, `vrdma_iova_translator` |
+| `dma_env/` | C2H DMA 추적 | `vrdma_c2h_tracker/`, `vrdma_dma_scoreboard` |
+| `network_env/` | 패킷 프로토콜 모니터링 | `vrdma_pkt_base_monitor`, `vrdma_pkt_monitor`, `vrdma_ops_monitor`, `vrdma_rc_monitor`, `vrdma_ntw_sb_env` |
+| (top-level `*.svh`) | env 컨테이너 | `vrdmatb_top_env`, `vrdma_node_env`, `vrdma_host_env`, `vrdma_ipshell_env`, `vrdma_lp_env`, `vrdma_memory_env`, `vrdma_ntw_env`, `vrdma_ntw_model_env`, `vrdma_ral_env`, `vrdma_mbshell_ral_env`, `vrdma_elc_env` |
+
+### 3. `agent/` 의 3-요소 분리
+
+agent 는 RDMA-TB 의 핵심 워크호스입니다. 3가지 역할로 분리되어 있습니다.
+
+| 역할 | 파일 | 무엇을 하는가 |
+|-----|------|--------------|
+| **Driver** | `agent/driver/vrdma_driver.svh` | WQE 발행, QP/MR/CQ 등록, outstanding 추적, CQ 폴링 진입점 |
+| **Handler** | `agent/handler/{vrdma_cq_handler, vrdma_send_handler, vrdma_recv_handler, vrdma_write_handler, vrdma_read_handler}.svh` | 특정 op type별 stateless forwarder, CQE 분류·라우팅 |
+| **Sequencer** | `agent/sequencer/{vrdma_sequencer, vrdma_host_virtual_sequencer, vrdma_top_virtual_sequencer}.svh` | 시퀀스 실행 컨텍스트 + per-QP 에러 상태(`wc_error_status`, `debug_wc_flag`) 보유 |
+
+!!! note "왜 이렇게 나눴나"
+    [Module 05 — Extension 4원칙](05_extension_principles.md)의 "Stateless 보존" 원칙 때문입니다. `*_handler` 들은 **stateless forwarder** 로 설계되어 있고, 상태(예: per-QP error status)는 **sequencer 가 소유**합니다. 이를 잘못 섞으면 멀티노드/시퀀스 재사용에서 stale state 가 누적됩니다.
+
+### 4. `pool/` — RDMA 리소스 등록부
+
+```
+pool/
+├── vrdma_pool.svh        ← QP / MR / PD / CQ / SQ / RQ 통합 풀
+├── vrdma_qpool.svh       ← QP 전용 풀 (자세한 lifecycle)
+└── vrdma_gen_id_pool.svh ← gen_id 풀 (Fast Register / re-register 추적)
+```
+
+driver 가 RDMA verb 를 실행할 때마다 pool 이 갱신됩니다:
+
+- `RDMAQPCreate` → `qpool` 에 새 QP 객체 등록 + `qp_reg_ap` AP 송출
+- `RDMAMRRegister` → MR 풀에 등록 + `mr_reg_ap` 송출
+- `RDMAQPDestroy(.err(1))` → 해당 QP 를 ErrQP 로 전이, downstream comparator/tracker 에 deregister 알림
+
+> 코드 위치: `vrdma_driver.svh:638` (`qp_reg_ap.write(Q)`), `:725 / :824` (`mr_reg_ap.write(MR)`).
+
+### 5. `util/` — 횡단 유틸리티 4종
+
+| 파일 (예) | 역할 |
+|----------|-----|
+| `link_util` | 두 노드 간 인터페이스 wiring |
+| `sync_util` | 노드/handler 간 sync 이벤트 |
+| `addr_util` | IOVA → PA 변환 및 page table 빌드 |
+| `node_util` | 노드 ID 변환 / lookup |
+
+(정확한 파일명은 `lib/base/component/util/` 디렉토리에서 확인)
+
+## 코드 walkthrough
+
+### Driver 의 AP 선언
+```systemverilog
+// lib/base/component/env/agent/driver/vrdma_driver.svh:56-61
+uvm_analysis_export #(vrdma_base_command) issued_wqe_ap;    // Issued WQE
+uvm_analysis_export #(vrdma_base_command) completed_wqe_ap; // Completed WQE
+uvm_analysis_export #(vrdma_cqe_object)   cqe_ap;           // CQEs
+uvm_analysis_export #(vrdma_qp)           qp_reg_ap;        // QP Register
+uvm_analysis_export #(vrdma_mr)           mr_reg_ap;        // MR Register
+```
+이 5개 AP 가 [Module 04 — Analysis Port Topology](04_analysis_port_topology.md)의 모든 subscriber 의 출처입니다.
+
+### Sequencer 의 per-QP 에러 state
+```systemverilog
+// lib/base/component/env/agent/sequencer/vrdma_sequencer.svh:19-20
+RDMAWCStatus_t wc_error_status[int][$];
+RDMAMBWCFlag_t debug_wc_flag[int][$];
+```
+- 외부 인덱스 `int` = qp_num
+- 내부 큐 `[$]` = 시간순 에러 이벤트 리스트
+- `clearErrorStatus(qp_num)` (line 179-181) 으로 per-QP 초기화
+
+> 디버깅 시: `t_seqr.wc_error_status[qp_num][0]` 가 **첫 번째** 에러 상태 — [Module 11](11_debug_unexpected_err_cqe.md)에서 다시 등장.
+
+## 컴포넌트 → 에러 ID prefix 매핑
+
+| 컴포넌트 | 에러 ID prefix | 예 |
+|---------|---------------|----|
+| `vrdma_driver` | `E-DRV-*` / `F-DRV-*` | `E-DRV-TBERR-0001` (CQ Polling Timeout) |
+| `vrdma_cq_handler` | `F-CQHDL-*` | `F-CQHDL-TBERR-0003` (Unexpected Error CQE) |
+| `vrdma_1/2side/imm_compare` | `E-SB-MATCH-*`, `E-SB-TBERR-*` | `E-SB-MATCH-0003` (byte mismatch) |
+| `vrdma_c2h_tracker` | `F-C2H-MATCH-*`, `E-C2H-MATCH-*`, `W-C2H-MATCH-*` | `F-C2H-MATCH-0002` (PA 매칭 실패) |
+| `vrdma_data_scoreboard` | `E-SB-*` | `E-SB-TBERR-0007~0014` (MR key 불일치) |
+
+이 prefix 만 알면 에러 로그를 보자마자 어느 파일을 열지 결정할 수 있습니다.
+
+## 핵심 정리
+
+- `lib/base/component/` = `config / custom_phase / env / model / pool / test / util` (7종)
+- `env/` 안에서 검증은 `agent` (verb 발행) + `data_env` (정합성) + `dma_env` (DMA 추적) + `network_env` (패킷) 4영역으로 분리
+- `agent/` 는 driver(stateful) + handler(stateless forwarder) + sequencer(per-QP state owner) 3-요소 분리
+- 에러 ID prefix → 컴포넌트 매핑이 디버깅의 첫 단계
+
+## 다음 모듈
+[Module 03 — UVM Phase & Test Flow](03_phase_test_flow.md)에서 이 컴포넌트들이 시간 축에서 어떻게 협력하는지 본다.
+
+[퀴즈 풀어보기 →](quiz/02_component_hierarchy_quiz.md)

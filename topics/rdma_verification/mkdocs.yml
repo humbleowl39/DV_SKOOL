@@ -1,0 +1,109 @@
+site_name: RDMA Verification
+site_description: RDMA Verification — RDMA-TB 아키텍처, 컴포넌트 계층, 에러 처리 경로, 디버깅 케이스
+site_url: https://humbleowl39.github.io/DV_SKOOL/rdma_verification/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/rdma_verification/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+nav:
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 아키텍처":
+      - "Module 01: TB Overview & Multi-Node 구조": 01_tb_overview.md
+      - "Module 02: Component 계층 (lib/base/component)": 02_component_hierarchy.md
+      - "Module 03: UVM Phase & Test Flow": 03_phase_test_flow.md
+      - "Module 04: Analysis Port Topology": 04_analysis_port_topology.md
+      - "Module 05: Adding New Components — 4원칙": 05_extension_principles.md
+      - "Module 06: Error Handling Path": 06_error_handling_path.md
+      - "Module 07: H2C / C2H QID Reference": 07_h2c_c2h_qid_map.md
+  - "🔧 디버깅 케이스":
+      - "Module 08: Data Integrity Error": 08_debug_data_integrity.md
+      - "Module 09: CQ Poll Timeout": 09_debug_cq_poll_timeout.md
+      - "Module 10: C2H Tracker Error": 10_debug_c2h_tracker.md
+      - "Module 11: Unexpected Error CQE": 11_debug_unexpected_err_cqe.md
+      - "Module 12: Debug Cheatsheet": 12_debug_cheatsheet.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra:
+  homepage: https://humbleowl39.github.io/DV_SKOOL/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — 학습용 자료
