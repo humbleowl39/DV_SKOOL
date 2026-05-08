@@ -473,7 +473,7 @@ Log file 위치는 `mrun` 의 `vsim/<test>/run.log`. FSDB 는 `vsim/<test>/wave.
 
 ## 다음 모듈
 
-→ [Module 09 — Quick Reference Card](09_quick_reference_card.md)
+→ [Module 10 — Ultraethernet (UEC)](10_ultraethernet.md)
 
 
 --8<-- "abbreviations.md"

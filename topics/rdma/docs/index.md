@@ -161,12 +161,6 @@
       <div class="module-title">RDMA-TB 검증 환경 & DV 전략</div>
     </div>
   </a>
-  <a class="module-card" data-cat="network" href="09_quick_reference_card/">
-    <div class="module-num is-special" title="Quick Reference">★</div>
-    <div class="module-body">
-      <div class="module-title">Quick Reference Card</div>
-    </div>
-  </a>
   <a class="module-card" data-cat="network" href="10_ultraethernet/">
     <div class="module-num">10</div>
     <div class="module-body">
@@ -189,6 +183,12 @@
     <div class="module-num">13</div>
     <div class="module-body">
       <div class="module-title">Background & Industry Research</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="09_quick_reference_card/">
+    <div class="module-num is-special" title="Quick Reference">★</div>
+    <div class="module-body">
+      <div class="module-title">Quick Reference Card</div>
     </div>
   </a>
 </div>

@@ -146,7 +146,7 @@ MPI primer      ────▶ model  ───▶ (UEC SES 매핑)      ──
 
 ## 다음 단계
 
-- [모듈 09 — Quick Reference Card](09_quick_reference_card.md) 으로 핵심 표 한 번 더 훑기.
+- [Quick Reference Card](09_quick_reference_card.md) 로 핵심 표 한 번 더 훑기 (코스 마무리).
 - [용어집](glossary.md) 의 Appendix A/B/C 에서 사내 / UEC / 산업 용어 다시 확인.
 - [퀴즈 13](quiz/13_background_research_quiz.md) 으로 이해도 점검.
 

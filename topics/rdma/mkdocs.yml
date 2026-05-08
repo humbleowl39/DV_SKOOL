@@ -65,11 +65,11 @@ nav:
       - "Module 06: Data Path Operations": 06_data_path.md
       - "Module 07: Congestion Control & Error Handling": 07_congestion_error.md
       - "Module 08: RDMA-TB 검증 환경 & DV 전략": 08_rdma_tb_dv.md
-      - "Quick Reference Card": 09_quick_reference_card.md
       - "Module 10: Ultraethernet (UEC)": 10_ultraethernet.md
       - "Module 11: GPUBoost / RDMA-IP HW Architecture": 11_gpuboost_rdma_ip.md
       - "Module 12: FPGA Prototyping & Lab Manuals": 12_fpga_proto_manuals.md
       - "Module 13: Background & Industry Research": 13_background_research.md
+      - "Quick Reference Card": 09_quick_reference_card.md
   - "📋 코스 개요": _legacy_overview.md
   - "📖 용어집": glossary.md
   - "❓ 퀴즈":
