@@ -38,8 +38,13 @@ jobs:
           cp -r landing/* _site/
 
           # Build each topic site into _site/<slug>/
+          # Skip directories without mkdocs.yml (e.g. topics/_shared/ holds shared abbr only).
           for topic_dir in topics/*/; do
             slug=$(basename "$topic_dir")
+            if [ ! -f "$topic_dir/mkdocs.yml" ]; then
+              echo "==> Skipping $slug (no mkdocs.yml)"
+              continue
+            fi
             echo "==> Building topic: $slug"
             cd "$topic_dir"
             mkdocs build --strict --site-dir "../../_site/$slug"
