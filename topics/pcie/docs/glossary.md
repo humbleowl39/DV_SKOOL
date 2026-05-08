@@ -487,3 +487,100 @@
 **Related.** TC, FC.
 
 **See also.** [Module 04](04_dllp_flow_control.md)
+
+---
+
+## 추가 항목 (Phase 2 검수 완료)
+
+### IOV (I/O Virtualization)
+
+**Definition.** PCIe 디바이스를 다수의 가상 머신에 분할 노출하는 가상화 기술 군의 총칭으로, SR-IOV / MR-IOV 등을 포함한다.
+
+**Source.** PCIe SIG IOV ECN; PCIe Base Spec ATS/PRI Annex.
+
+**Related.** SR-IOV, VF, PF, ATS.
+
+**See also.** [Module 03](03_tlp.md), [Module 06](06_config_enumeration.md)
+
+### SR-IOV (Single-Root I/O Virtualization)
+
+**Definition.** 단일 PCIe Root Complex 하의 디바이스가 PF 1개와 다수 VF 를 제공해 hypervisor 우회 (kernel bypass) 가상화를 지원하는 표준.
+
+**Source.** PCI SIG, *SR-IOV 1.1 Specification*.
+
+**Related.** PF, VF, IOV, BAR, ATS.
+
+**See also.** [Module 06](06_config_enumeration.md)
+
+### FEC (Forward Error Correction)
+
+**Definition.** PCIe Gen6 이상에서 PAM4 신호의 BER 를 보상하기 위해 송신측이 redundancy 코드를 추가하고 수신측이 정정하는 link-layer 기능.
+
+**Source.** PCIe Base Spec 6.0, §4.5 (Flit Mode FEC).
+
+**Related.** PAM4, Flit Mode, LCRC, ECRC.
+
+**See also.** [Module 05](05_phy_ltssm.md), [Module 08](08_advanced.md)
+
+### CDR (Clock-Data Recovery)
+
+**Definition.** Receiver 가 incoming serial bitstream 의 transition 으로부터 sampling clock 을 복원하는 PHY block.
+
+**Source.** PCIe Base Spec — Physical Layer; common SerDes terminology.
+
+**Related.** Equalization, Deskew, Symbol/Block Alignment.
+
+**See also.** [Module 05](05_phy_ltssm.md)
+
+### ARI (Alternative Routing-ID Interpretation)
+
+**Definition.** 단일 device function 수를 8 → 256 으로 확장하기 위해 BDF 의 Device 필드를 Function 필드로 재해석하는 PCIe Capability.
+
+**Source.** PCIe Base Spec — ARI Capability.
+
+**Related.** BDF, SR-IOV, PF, VF.
+
+**See also.** [Module 06](06_config_enumeration.md)
+
+
+
+### PAM4 (4-level Pulse Amplitude Modulation)
+
+**Definition.** 한 심볼에 2비트를 매핑(00/01/10/11)하여 동일 baud rate 에서 데이터율을 두 배로 늘리는 PCIe Gen6 의 신호 변조 방식.
+
+**Source.** PCIe Base Spec 6.0, §4.
+
+**Related.** NRZ, FEC, Flit Mode, link training.
+
+**See also.** [Module 05](05_phy_ltssm.md), [Module 08](08_advanced.md)
+
+### LTSSM (Link Training and Status State Machine)
+
+**Definition.** PCIe Physical Layer 가 link 의 detect / polling / configuration / L0 / L1 / recovery 등 상태 전이를 관리하는 표준 FSM.
+
+**Source.** PCIe Base Spec — Physical Layer LTSSM.
+
+**Related.** TS1, TS2, Recovery, Polling, Detect, L0, L0s.
+
+**See also.** [Module 05](05_phy_ltssm.md)
+
+### IOMMU (I/O Memory Management Unit)
+
+**Definition.** PCIe / AMBA 디바이스의 DMA 주소를 시스템 메모리의 가상 주소 → 물리 주소로 변환하고 보호 검사를 수행하는 하드웨어 유닛으로, 가상화·보안 모두에 사용된다.
+
+**Source.** Intel VT-d, AMD-Vi, ARM SMMU spec.
+
+**Related.** ATS, PRI, SR-IOV, MMU.
+
+**See also.** [Module 06](06_config_enumeration.md)
+
+### MMIO (Memory-Mapped I/O)
+
+**Definition.** 디바이스 레지스터를 시스템 메모리 주소 공간에 매핑하여 일반 load/store 명령으로 접근하도록 하는 방식.
+
+**Source.** PCIe Base Spec — Configuration & BAR.
+
+**Related.** BAR, Type 0/1 Header, prefetchable region.
+
+**See also.** [Module 06](06_config_enumeration.md)
+

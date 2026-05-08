@@ -149,3 +149,59 @@ READY  _______|‾‾‾|________
 | **AxQOS** | — | QoS 우선순위 (4-bit, AXI4부터) |
 | **TLAST** | — | AXI-Stream 패킷 종료 표시 |
 | **TKEEP** | — | AXI-Stream byte-level 유효성 마스크 |
+
+---
+
+## 추가 항목 (Phase 2 검수 완료)
+
+### APB4 (AMBA 4 APB)
+
+**Definition.** ARM AMBA 4 패밀리(2010)의 APB 리비전으로, PSTRB(byte enable) 와 PPROT(액세스 보호 속성) 를 추가해 보안/메모리 보호 기반 액세스를 지원한다.
+
+**Source.** ARM IHI 0024C — AMBA APB Protocol Specification.
+
+**Related.** APB, PSTRB, PPROT, AMBA 4.
+
+**See also.** [Module 01](01_apb_ahb.md)
+
+### HPROT (Protection Control)
+
+**Definition.** AHB 의 4-bit 사이드밴드 신호로, transfer 의 cacheable / bufferable / privileged / data-vs-instruction 속성을 표현한다.
+
+**Source.** ARM IHI 0033 — AMBA AHB Protocol Specification.
+
+**Related.** AWPROT/ARPROT (AXI), Cacheable, Bufferable.
+
+**See also.** [Module 01](01_apb_ahb.md)
+
+
+
+### AMBA (Advanced Microcontroller Bus Architecture)
+
+**Definition.** ARM 이 정의한 SoC 인터커넥트 프로토콜 패밀리의 총칭으로, APB / AHB / AXI / AXI-Stream / ACE / CHI 를 포함한다.
+
+**Source.** ARM AMBA Specification.
+
+**Related.** APB, AHB, AXI, ACE, CHI.
+
+**See also.** [Module 01](01_apb_ahb.md)
+
+### HREADY / HRESP (AHB Handshake & Response)
+
+**Definition.** AHB 의 핵심 사이드밴드 — HREADY 는 slave 가 현재 transfer 를 완료할 수 있는지를 master 에 알리고, HRESP 는 OKAY / ERROR 결과를 반환한다.
+
+**Source.** ARM IHI 0033 — AMBA AHB Protocol Specification.
+
+**Related.** HTRANS, HBURST, AHB pipeline.
+
+**See also.** [Module 01](01_apb_ahb.md)
+
+### AXI3 vs AXI4
+
+**Definition.** AXI3 는 burst 최대 16 beat + WID 신호 보유, AXI4 는 burst 최대 256 beat (단, INCR 만) + WID 제거 + QoS / Region / USER 신호 추가.
+
+**Source.** ARM IHI 0022 — AMBA AXI Protocol Specification.
+
+**Related.** WID, AxLEN, QoS.
+
+**See also.** [Module 02](02_axi.md)

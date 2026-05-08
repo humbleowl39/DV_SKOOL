@@ -444,3 +444,6 @@ MangoBoost MMU IP 맥락:
     <div class="nav-title">MMU DV 검증 방법론</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -4,6 +4,33 @@
 
 ---
 
+## Q-Conf-A. (Understand — Confluence)
+
+사내 *Coverage define* 운영에서 PR 단위로 의무화된 두 항목은?
+
+??? answer "정답 / 해설"
+    1. **Coverage define module list** 의 갱신 (단일 진실).
+    2. PR description 의 **min cov plan 한 단락** (새 feature 의 first PR).
+
+    추가로 격주 coverage sync meeting 에서 hole / dropped bin / cross 추가 확정.
+
+## Q-Conf-B. (Apply — Confluence)
+
+새 wrapper 의 *base coverage* 와 *feature coverage* 를 설계할 때 다음 중 어디에 분류해야 하는지 답하라.
+
+> (i) MTU=1024 의 4-packet WRITE 의 first/middle/last 분포
+> (ii) Atomic Write (MPE) opcode 적중 분포
+> (iii) NAK syndrome 종류별 발생 분포
+> (iv) Adaptive Routing 활성 시 OOO PSN gap 분포
+
+??? answer "정답 / 해설"
+    - (i) **base** — 모든 wrapper 에서 닫혀야 할 데이터 path.
+    - (ii) **feature** — MPE 지원이 옵션이므로.
+    - (iii) **base** — 표준 RC 동작.
+    - (iv) **feature** — AR mode 활성 시에만.
+
+---
+
 ## Q1. (Remember)
 
 RDMA-TB 의 `lib/` 분류 4 가지를 들어라.

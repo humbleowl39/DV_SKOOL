@@ -259,3 +259,6 @@ endclass
 [Module 07 — H2C / C2H QID Reference](07_h2c_c2h_qid_map.md): DMA 인터페이스의 QID 로 어느 서브시스템이 동작했는지 즉시 식별.
 
 [퀴즈 풀어보기 →](quiz/06_error_handling_path_quiz.md)
+
+
+--8<-- "abbreviations.md"

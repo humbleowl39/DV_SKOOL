@@ -160,3 +160,6 @@ vrdma_sequencer (stateful: wc_error_status[qp][$], debug_wc_flag[qp][$], outstan
 [Module 06 — Error Handling Path](06_error_handling_path.md): 위 4원칙이 에러 처리 경로에서 어떻게 구현되어 있는지.
 
 [퀴즈 풀어보기 →](quiz/05_extension_principles_quiz.md)
+
+
+--8<-- "abbreviations.md"

@@ -210,3 +210,6 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

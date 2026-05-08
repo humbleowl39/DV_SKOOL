@@ -381,3 +381,7 @@
 - [용어집](glossary.md) — 핵심 용어 ISO 11179 형식
 - [퀴즈](quiz/index.md) — 모듈별 이해도 체크
 - 추가 학습: PCI-SIG white paper, *PCI Express System Architecture* (MindShare), Linux kernel `Documentation/PCI/`.
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

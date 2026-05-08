@@ -461,3 +461,7 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
     <div class="nav-title">공격 표면과 방어</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

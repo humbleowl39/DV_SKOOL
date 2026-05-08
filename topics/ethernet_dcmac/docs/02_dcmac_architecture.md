@@ -478,3 +478,6 @@ MangoBoost Data Path:
     <div class="nav-title">DCMAC DV 검증 전략</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

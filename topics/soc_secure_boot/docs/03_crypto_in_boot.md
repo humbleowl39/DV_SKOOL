@@ -329,3 +329,7 @@ Host SoC (BootROM)            Partner Chip
     <div class="nav-title">Boot Device & Boot Mode (부팅 장치와 부팅 모드)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

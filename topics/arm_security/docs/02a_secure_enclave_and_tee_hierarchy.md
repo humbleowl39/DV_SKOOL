@@ -471,3 +471,6 @@ Internal과 External Secure Enclave는 SPI 버스로 연결되는데, SPI는 SoC
     <div class="nav-title">Secure Boot에서의 보안 레벨 적용</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -650,3 +650,6 @@ TCP Options 필드는 최대 40바이트(헤더 최대 60B - 고정 20B). Timest
     <div class="nav-title">TOE DV 검증 전략</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

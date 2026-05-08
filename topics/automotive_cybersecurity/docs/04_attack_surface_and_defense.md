@@ -643,3 +643,6 @@ SCMS는 **가명 인증서(Pseudonym Certificate)** 시스템으로 Sybil 공격
     <div class="nav-title">Automotive Cybersecurity — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

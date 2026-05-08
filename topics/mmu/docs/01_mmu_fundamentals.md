@@ -374,3 +374,6 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
     <div class="nav-title">Page Table 구조</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

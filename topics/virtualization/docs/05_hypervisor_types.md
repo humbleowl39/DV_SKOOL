@@ -306,3 +306,6 @@ ARM VHE 이후:
     <div class="nav-title">Strict System vs Hypervisor Pass-through</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

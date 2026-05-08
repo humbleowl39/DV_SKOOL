@@ -566,3 +566,6 @@ Hypervisor Stage 2:
     <div class="nav-title">보안 상태 전환 & SoC 보안 인프라</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

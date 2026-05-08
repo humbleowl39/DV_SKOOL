@@ -576,3 +576,6 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
     <div class="nav-title">ARM Security Architecture — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

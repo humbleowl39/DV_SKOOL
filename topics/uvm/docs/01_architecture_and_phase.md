@@ -537,3 +537,6 @@ UVM_INFO ... [TEST] scenario done               ← test의 run_phase 완료
     <div class="nav-title">Agent / Driver / Monitor</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

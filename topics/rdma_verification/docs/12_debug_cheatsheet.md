@@ -175,3 +175,6 @@ vrdma_cq_handler
 - QID 디버그: [Module 07 — QID Reference](07_h2c_c2h_qid_map.md)
 
 [퀴즈 풀어보기 →](quiz/12_debug_cheatsheet_quiz.md)
+
+
+--8<-- "abbreviations.md"

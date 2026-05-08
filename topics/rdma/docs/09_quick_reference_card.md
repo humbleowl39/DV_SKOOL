@@ -292,6 +292,41 @@ mrun clean
 
 ---
 
+## 14b. Confluence 보강 — 사내 RDMA-IP Default 한 장
+
+!!! note "Internal — 자주 묻는 사내 default 한 장 요약"
+
+    | 항목 | 사내 default | 출처 |
+    |---|---|---|
+    | MTU | **1024 byte** (정적) | RDMA headers and header fields |
+    | P_Key | `0xFFFF` | RDMA headers and header fields |
+    | TVer / Reserved6 / MigReq | 0 zero-fill | RDMA headers and header fields |
+    | max_dest_rd_atomic | 16 (= ConnectX-5 호환) | PSN handling & retransmission |
+    | local_ack_timeout | `4.096 µs × 2^attr.timeout` | IBTA §11.6.2 |
+    | retry_cnt / rnr_retry | 별도 카운터, 별도 exhaust | Error handling in RDMA |
+    | MW type | **Type 2 (DH)** 우선 지원 | Memory Window (feat. DH) |
+    | APM | 비활성 (default) | Automatic Path Migration |
+    | CC | DCQCN (default) + RTTCC option | DCQCN in detail / Zero-touch RoCE |
+    | UEC fallback | (향후) PDS / Semantic | Ultraethernet |
+
+## 14c. UEC vs IB / RoCEv2 한 장 비교
+
+!!! note "Internal (Confluence: Ultraethernet 트리)"
+
+    | 영역 | IB | RoCEv2 | UEC |
+    |---|---|---|---|
+    | L2 | IB Link | Ethernet | Ethernet (lossy 허용) |
+    | L3 | IB Network | IPv4 / IPv6 | IPv4 / IPv6 |
+    | L4 | IB Transport | UDP 4791 + IB Transport | UDP + **PDS** |
+    | Reliability | per-QP RC | per-QP RC | **per-PDC** + selective retransmission + multipath |
+    | Ordering | strict in-order (RC) | strict in-order (RC) | **per-message** (out-of-order packet 허용) |
+    | Multicast | UD | UD | **MPI / Collective primitives** (Semantic Sublayer) |
+    | CC | CCMAD / DCQCN | DCQCN, RTTCC | UET-CC (예: NSCC) |
+    | Security | weak (Q_Key) | weak | TLS-ish framing (UEC Security) |
+    | Verb 시맨틱 호환 | — | IB 호환 | RDMA verbs subset 호환 + MPI 시맨틱 추가 |
+
+---
+
 ## 15. 30-second mental checklist (코드 리뷰 시)
 
 ```
@@ -312,3 +347,7 @@ mrun clean
 - [용어집](glossary.md) — 핵심 용어 ISO 11179 형식
 - [퀴즈](quiz/index.md) — 모듈별 이해도 체크
 - 실 환경 실습: `rdma list` → workspace 선택 → `mrun comp all` → `mrun test`
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

@@ -475,3 +475,6 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
     <div class="nav-title">Memory Controller 아키텍처</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -266,3 +266,7 @@ AXI-Stream:
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

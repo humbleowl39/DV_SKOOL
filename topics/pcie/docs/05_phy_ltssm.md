@@ -358,3 +358,7 @@
 ## 다음 모듈
 
 → [Module 06 — Configuration Space & Enumeration](06_config_enumeration.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

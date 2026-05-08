@@ -333,6 +333,58 @@ IB spec §9.6 에는 transaction ordering 의 정밀한 규칙이 있음. 핵심
 
 ---
 
+## 10. Confluence 보강 — PSN handling 의 정밀 동작
+
+!!! note "Internal (Confluence: PSN handling & retransmission of RDMA, id=32211061)"
+    **Go-Back-N 기반 retransmission**. 각 QP 에는 두 개의 독립 PSN 공간 (sq_psn, rq_psn) 이 있고, requester / responder 의 PSN 은 서로 무관.
+
+    1. **PSN sequence error (NAK)** — responder 가 incoming PSN > ePSN 검출 시 즉시 NAK 발행. requester 는 NAK 의 syndrome 으로 이를 식별 후 missing PSN 부터 재전송 (Go-Back-N).
+    2. **Implied NAK** — requester 가 expected PSN 보다 큰 ACK PSN 을 받으면, 그 사이 응답 안 온 PSN 들을 **암시적으로 ACK** 처리. 별도 NAK 없이 진행.
+    3. **Duplicate request (timer 만료 시 재전송)** — responder 는 단순히 캐시된 ACK 재전송. **MSN 비증가** (M02 §12 참조). RDMA READ 만 예외 — duplicate read 는 read response cache 를 retain 해두고 재 전송.
+    4. **RNR NAK** — responder 의 RECV WQE 가 없을 때. requester 는 `min_rnr_timer` 만큼 대기 후 재전송. RNR retry 도 `rnr_retry` 카운터로 제한.
+    5. **Retry timer** — `local_ack_timeout = 4.096 µs × 2^attr.timeout` (IBTA §11.6.2). 만료 시 timer-driven retransmission.
+    6. **Retry count exceeded** → **unrecoverable**, QP → Err.
+
+    !!! tip "검증 포인트"
+        - PSN wrap (24-bit, 16 M packet) 후에도 정상 동작하는 long-running 시나리오.
+        - ACK coalescing 으로 N 패킷이 한 번에 ACK 될 때 implied NAK 와 정상 ACK 의 경계.
+        - RNR retry 와 일반 retry 가 별도 카운터를 가짐 — 한쪽 exhaust 시 다른 쪽도 reset 되는지 spec 정확히 확인.
+
+## 11. Confluence 보강 — One-sided / Two-sided 의 검증 차이
+
+!!! note "Internal (Confluence: RDMA one-sided / two-sided operation, id=32178286 / 32178307)"
+    | 분류 | Verb | Receiver CPU 개입 | Receiver RECV WQE 소모 | Immediate 가능 |
+    |---|---|---|---|---|
+    | One-sided | RDMA READ | X | X | X |
+    | One-sided | RDMA WRITE | X | X | X |
+    | One-sided + 2-sided 변형 | **RDMA WRITE with Immediate** | O (CQE 생성) | **O** | O (4 byte) |
+    | Two-sided | SEND | O | O | X |
+    | Two-sided | SEND with Immediate | O | O | O (4 byte) |
+    | Two-sided | SEND with Invalidate | O | O | (R_Key 운반) |
+
+    검증 핵심: **WRITE_WITH_IMM 은 one-sided 의 외형이지만 receiver RECV WQE 를 소모**한다. RECV 부족 시 RNR. scoreboard 가 이를 단순 WRITE 처럼 처리하면 RNR injection 시 false fail.
+
+## 12. Confluence 보강 — CQE 의 PSN-related 필드 (DV spec)
+
+!!! note "Internal (Confluence: About PSN-related fields of CQE (DV spec delivery), id=1330839982)"
+    사내 RDMA-IP 의 CQE (`mb_cqe`, 512-bit) 에는 spec 외 **debug-friendly PSN 필드** 가 추가되어 있다.
+
+    - `last_completed_psn` — 이 WQE 가 완료된 시점의 ACK PSN.
+    - `error_psn` — 실패 시 NAK / timeout 직전의 PSN.
+    - `retry_count_observed` — 이 WQE 처리 중 발생한 retry 횟수 (debug only).
+
+    검증·로그 분석 시 이 필드를 이용해 retry 발생 위치를 PSN 정확도로 특정할 수 있다.
+
+## 13. Confluence 보강 — SACK (Selective ACK) 와 Out-of-Order
+
+!!! note "Internal (Confluence: An_Out-of-Order_Packet_Processing_Algorithm_of_RoCE_Based_on_Improved_SACK, id=42599274)"
+    표준 RC 는 strict in-order 만 허용 → 한 패킷 손실로 전체 window 재전송이 필요. SACK 확장은 **수신측이 받은 PSN 비트맵** 을 응답 패킷에 실어 송신측이 missing PSN 만 선택적으로 재전송하게 한다.
+
+    - 사내 RDMA-IP 의 `m_sack_info` (152-bit) 는 selective ack vector 를 requester 측 completer 에 전달.
+    - 검증: 일부 패킷 drop 후 SACK info 의 비트맵이 정확히 missing PSN 만 표시하는지, requester 가 정확한 패킷만 재발신하는지.
+
+---
+
 ## 핵심 정리 (Key Takeaways)
 
 - OpCode 가 모든 transaction 을 정의. RC 만 해도 25개 가량.
@@ -353,3 +405,7 @@ IB spec §9.6 에는 transaction ordering 의 정밀한 규칙이 있음. 핵심
 ## 다음 모듈
 
 → [Module 07 — Congestion Control & Error Handling](07_congestion_error.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

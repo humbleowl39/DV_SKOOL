@@ -400,3 +400,7 @@ P2P 를 허용/차단하는 정책:
 ## 다음 모듈
 
 → [Module 09 — Quick Reference Card](09_quick_reference_card.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

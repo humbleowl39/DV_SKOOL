@@ -277,3 +277,6 @@ Guest OS 계속 실행 (trap이 일어난 줄 모름)
     <div class="nav-title">Unit 1a: 시스템 아키텍처 진화 — HW Only에서 가상화까지</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

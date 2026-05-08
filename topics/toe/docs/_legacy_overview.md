@@ -98,3 +98,6 @@
 | Functional Coverage 확장 | Unit 4 | Coverage Model 설계 전략 |
 | DCMAC 서브시스템 연동 | Unit 2 | Ethernet MAC ↔ TOE 인터페이스 |
 | 100Gbps 서버급 가속기 | Unit 1 | 왜 TOE가 필수인지 성능 관점 |
+
+
+--8<-- "abbreviations.md"

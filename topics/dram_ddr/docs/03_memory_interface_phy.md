@@ -440,3 +440,6 @@ ZQ Calibration:
     <div class="nav-title">DRAM DV 검증 전략</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

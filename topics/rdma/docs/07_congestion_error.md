@@ -293,6 +293,67 @@ CNP/ECN 신호에 따른 **sender 의 rate 조절 알고리즘**:
 
 ---
 
+## 8. Confluence 보강 — PFC 의 정확한 동작과 한계
+
+!!! note "Internal (Confluence: Priority-based Flow Control, id=229998593 + 6 sub-pages)"
+    PFC 는 **8 priority class** 마다 독립적인 PAUSE / RESUME 메시지를 link partner 에 보낸다.
+
+    - **Pause Frame (802.1Qbb)**: 64-byte Ethernet control frame. `Pause Quanta` (16-bit) 가 *priority 별 정지 시간* 을 512-bit time 단위로 지정. 0 = resume.
+    - **Pause Operation**: 큐 임계치 초과 시 ingress 에서 자동 발생. 큐 길이가 임계치 미만으로 떨어지면 RESUME (=Pause 0).
+    - **DiffServ / Traffic Class**: PFC priority 는 **Ethernet PCP** 비트 또는 **DSCP→TC** 매핑으로 결정. RoCEv2 는 보통 DSCP 26 (AF31) → PFC priority 3 같은 deployment-specific mapping.
+    - **DELL switch 활성화 (참고)**: `dcb-map`, `priority-flow-control mode on`, `service-policy input <pfc-policy>` 의 3-step. 검증 환경 cabinet 의 운영 가이드에 동일.
+    - **Limitation**:
+      - PFC storm — cyclic dependency 시 dead-lock.
+      - HOL (Head-of-Line) blocking — 같은 priority class 의 다른 flow 전체 정지.
+      - Switch-vendor 별 buffer hysteresis 가 다름 → throughput dent 발생 위치가 다름.
+
+## 9. Confluence 보강 — Layered CC 의 사내 구성
+
+!!! note "Internal (Confluence: Basic Background, CC in IB Spec, DCQCN in detail, RoCEv2 ECN in detail, Google's CC, HPCC, CORN, Zero-touch RoCE, Programmable CC)"
+    사내 RDMA-IP 와 검증 자료에서 다루는 CC 알고리즘 계열:
+
+    | 계열 | 신호 | 대표 알고리즘 | 사내 위치 |
+    |---|---|---|---|
+    | **L2 immediate** | PFC pause | 802.1Qbb | network env |
+    | **L3 implicit** | ECN-CE marking | DCQCN | RDMA-IP CC module |
+    | **End-to-end RTT** | RTT 측정 | Swift, RTTCC, ZTR | DCQCN 대안 (programmable) |
+    | **In-network telemetry** | INT header | HPCC | research / 비교 |
+    | **Cloud-fairness** | per-tenant SLA | CORN | research / 비교 |
+    | **Hardware reliable transport** | full offload | Falcon, Nvidia BFD | competitor survey |
+
+    !!! tip "검증 결정 트리"
+        1. **PFC 만 활성** → buffer overflow 만 검증. ECN/DCQCN 비활성.
+        2. **PFC + ECN** → CNP 발생 빈도 확인. DCQCN α/R_min sweep.
+        3. **No-PFC (Lossy mode)** → ZTR 또는 DCQCN-only 로 packet loss 회복 검증 — 사내에서는 향후 UEC 호환 모드.
+
+## 10. Confluence 보강 — Error handling 카테고리 매핑
+
+!!! note "Internal (Confluence: Error handling in RDMA, id=152502273)"
+    Confluence 페이지의 error class 분류는 RDMA-TB 의 vplan S1~S9 와 다음과 같이 매핑된다.
+
+    | Confluence 분류 | RDMA-TB S/C | 노출 |
+    |---|---|---|
+    | Local PROT (sg lkey/access) | S1 | requester WC `LOC_PROT_ERR` |
+    | Remote ACCESS (rkey/access) | S2 | NAK + requester WC `REM_ACCESS_ERR` |
+    | Remote OP (illegal opcode) | S3 | NAK syndrome 0x91, WC `REM_INV_REQ_ERR` |
+    | PSN sequence error | S4 | NAK syndrome 0x60 |
+    | RNR | S5 | NAK syndrome 0x20 + min_rnr_timer 대기 |
+    | Implied NAK | S6 | 별도 NAK 없이 PSN 점프 |
+    | Local ACK timeout | S7 | timer 만료 → retry |
+    | Retry exceeded | S8 | QP → Err, WC `RETRY_EXC_ERR` |
+    | RNR retry exceeded | S9 | QP → Err, WC `RNR_RETRY_EXC_ERR` |
+
+    !!! warning "주의"
+        spec 의 syndrome 값은 IB Spec 1.4 vs 1.7 에서 일부 reserved → defined 로 변경됨. M03 §8 참조.
+
+## 11. Confluence 보강 — CCMAD 와 Adaptive Routing
+
+!!! note "Internal (Confluence: CCMAD Protocol, id=290127949; How to enable Adaptive Routing for CX, id=397967495)"
+    - **CCMAD (Congestion Control MAD)**: SM (Subnet Manager) 가 CC 파라미터 (예: CCT entry, CN_ROUNDS) 를 노드에 분배할 때 사용하는 IB MAD 클래스. RoCEv2 환경에서는 CC controller 가 같은 의미를 NVMe-oF/host SW 로 대체.
+    - **Adaptive Routing (CX)**: switch 가 link load 기반으로 **packet 단위 경로 선택**. RC 의 in-order 가정을 깰 수 있어, RDMA-IP 는 SACK + per-path PSN 추적을 같이 켜야 안전. 사내 검증에서는 이를 *AR mode* 라 부르고 별도 시나리오로 둠.
+
+---
+
 ## 핵심 정리 (Key Takeaways)
 
 - Congestion 은 PFC (즉시) + ECN (신호) + DCQCN (rate control) 의 layered 메커니즘.
@@ -313,3 +374,7 @@ CNP/ECN 신호에 따른 **sender 의 rate 조절 알고리즘**:
 ## 다음 모듈
 
 → [Module 08 — RDMA-TB 검증 환경 & DV 전략](08_rdma_tb_dv.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

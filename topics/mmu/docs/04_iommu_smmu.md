@@ -509,3 +509,6 @@ Resume의 Technical Challenge #3에서 언급:
     <div class="nav-title">MMU 성능 분석 및 최적화</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

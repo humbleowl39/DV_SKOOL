@@ -234,7 +234,33 @@ ibv_poll_cq(cq, 1, &wc);                // 완료 polling
 
 ---
 
-## 6. RDMA 검증 (DV) 의 출발점
+## 6. 사용자 드라이버 vs 커널 드라이버 — 실무 RDMA 스택
+
+!!! note "Internal (Confluence: RDMA Verbs (basic), id=32178388)"
+    실제 host 측 RDMA 스택은 **user-level driver** 와 **kernel-level driver** 두 갈래가 모두 있다.
+    user-level driver 는 `libibverbs` 가 RNIC 의 BAR 영역과 직접 통신해 syscall context-switch 를 회피하고, completion 을 polling 방식으로 가져온다 — datapath verbs (`ibv_post_send`, `ibv_poll_cq`) 가 여기에 속한다.
+    반면 kernel-level driver 는 자원 할당·매핑·MR pinning 처럼 **권한 / 안전성 검증** 이 필요한 control path verbs (`ibv_open_device`, `ibv_alloc_pd`, `ibv_reg_mr`, `ibv_create_qp`) 를 처리한다.
+    두 드라이버는 **기능 차이가 없고**, 같은 verb 가 user-level 에서는 `ibv_*`, kernel-level 에서는 `ib_*` 로 명명된다.
+    검증 환경에서도 control path 와 datapath 를 분리하는 이 모델을 그대로 따른다 — TB 의 sequence 는 verb-level 로 작성하고, agent 가 BAR write / mailbox 으로 변환한다.
+
+| Path | 대표 Verb | Kernel 개입 | TB 모델링 |
+|------|----------|------------|----------|
+| Control | `ibv_open_device` `ibv_alloc_pd` `ibv_reg_mr` `ibv_create_qp` | O (자원·권한) | 초기화 sequence + RAL |
+| Data | `ibv_post_send` `ibv_post_recv` `ibv_poll_cq` | X (kernel bypass) | scoreboard + agent |
+
+---
+
+## 7. 인접 영역 — AI Server, NRT, GPUBoost 사양
+
+!!! note "Internal (Confluence: AI Servers, RDMA for NRT, Latest GPUBoost Specification)"
+    사내 RDMA-IP 의 운용 환경은 **AI training / inference 노드**(예: NVIDIA DGX, AMD MI325X) 와 **NRT (Non-RDMA Transport) fallback** 시나리오를 모두 포함한다.
+    - **AI Servers** — RCCL/NCCL allreduce, all-to-all, scatter/gather 가 핵심. RDMA-IP 는 GPU peer-memory 를 IOVA 로 노출하기 위해 **MR Large MR 모드** 를 자주 사용한다 (참조: M05).
+    - **RDMA for NRT** — RDMA QP 를 사용할 수 없는 경로(예: CPU-only flow) 를 위해 IP 가 fallback path 를 노출. 검증에서는 두 path 가 **동일 application 시맨틱**을 보장하는지 비교 scoreboard 로 확인.
+    - **GPUBoost spec** — 사내 RNIC 의 외부 spec. opcode·MTU·QP 수 등의 cap 은 spec 에서 직접 인용한다.
+
+---
+
+## 8. RDMA 검증 (DV) 의 출발점
 
 검증자 관점에서 이 모듈의 take-away:
 
@@ -263,3 +289,6 @@ ibv_poll_cq(cq, 1, &wc);                // 완료 polling
 ## 다음 모듈
 
 → [Module 02 — InfiniBand 프로토콜 스택](02_ib_protocol_stack.md)
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

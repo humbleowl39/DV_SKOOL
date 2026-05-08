@@ -129,3 +129,6 @@
 | 시스템 아키텍처 이해 | Unit 01, 01a | HW only → 가상화까지 진화 과정, Popek-Goldberg 조건과 HW 지원 |
 | SR-IOV / PCIe DV | Unit 04, 06 | PF/VF 역할 차이, VirtIO vs Pass-through 트레이드오프 |
 | 클라우드/서버 환경 지식 | Unit 05, 06, 07 | KVM/Xen 구조 차이, Nitro의 HW 기반 보안 모델, Firecracker 마이크로VM |
+
+
+--8<-- "abbreviations.md"

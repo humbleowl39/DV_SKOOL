@@ -377,3 +377,6 @@ endmodule
     <div class="nav-title">면접 전략</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

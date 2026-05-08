@@ -474,3 +474,6 @@ TLB Entry:
     <div class="nav-title">TLB (Translation Lookaside Buffer)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

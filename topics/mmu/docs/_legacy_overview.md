@@ -128,3 +128,6 @@
 | AI-Assisted 환경 자동화 | Unit 6 | 스펙 변경 대응 → DAC 2026 제출 |
 | TLB 서브모듈 + MMU Top End-to-End | Unit 3, 6 | 계층적 검증 전략 (서브모듈 → Top) |
 | Server-grade 성능 요구사항 | Unit 5 | HW 가속기용 MMU 처리량 검증 |
+
+
+--8<-- "abbreviations.md"

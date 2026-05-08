@@ -263,6 +263,46 @@ MW 는 **MR 의 부분 영역에 대해 일시적으로 다른 R_Key 를 발급*
 
 ---
 
+## 9. Confluence 보강 — Memory Window (DH 변형)
+
+!!! note "Internal (Confluence: Memory Window (feat. DH), id=155812337)"
+    MW 는 기존 MR 의 부분 영역에 **임시 R_Key** 를 부여한다. IBTA 는 두 종류의 MW 를 정의한다.
+
+    | MW Type | Bind | Use case |
+    |---|---|---|
+    | **Type 1** | verb 호출로 bind / unbind | 표준 MW, Steering Tag 변경 빈도 낮음 |
+    | **Type 2 (DH)** | data-path 에서 SEND_BIND_MW / SEND_INVALIDATE 패킷으로 bind | DH (Dynamic Handle) — 동적/단명 R_Key, RPC-style 보안 |
+
+    사내 IP 는 Type 2 (DH) MW 를 우선 지원해 **R_Key lifetime** 을 단일 RPC 단위로 짧게 가져가는 패턴을 유도한다. M01 의 "R_Key 노출은 짧게 + MW 패턴" 권장과 직접 연결된다.
+
+## 10. Confluence 보강 — Local / Remote Invalidation
+
+!!! note "Internal (Confluence: Local/Remote Invalidation, id=155844886)"
+    R_Key 또는 MW 의 유효성을 즉시 무효화한다.
+
+    - **Local Invalidate**: SQ 에 `IBV_WR_LOCAL_INV` 를 post → 자기 IP 가 해당 R_Key 를 invalid 처리.
+    - **Remote Invalidate**: 송신측이 `SEND_WITH_INVALIDATE` 패킷으로 R_Key 를 운반 → 수신측이 SEND 처리 후 즉시 R_Key invalid.
+    - 검증: invalidate 후 동일 R_Key 로 들어오는 WRITE/READ → `IBV_WC_REM_ACCESS_ERR` (M07 §3 의 S5).
+
+## 11. Confluence 보강 — Memory Placement Extensions (MPE)
+
+!!! note "Internal (Confluence: Memory Placement Extensions (MPE), id=217808945) — IBTA Annex A19"
+    MPE 는 RDMA WRITE 시 receiver 측 cache·persistent memory placement 를 송신자가 제어할 수 있게 한다.
+
+    - **FLUSH** opcode: 이전 RDMA WRITE payload 가 PMEM 까지 **durable** 하게 flush 됐음을 ACK 받기 전 보장.
+    - **ATOMIC WRITE**: 1, 2, 4, 8 byte naturally aligned write 의 atomicity 보장 (메모리 controller 단위).
+    - **RDMA WRITE with Partial Flush**: WRITE 와 FLUSH 시맨틱 결합.
+    - 검증: FLUSH ACK 까지 latency, persistent memory model (예: nvdimm-style), 동일 영역의 ATOMIC WRITE + RDMA WRITE 순서.
+
+## 12. Confluence 보강 — Large MR 와 In-flight WR 관리
+
+!!! note "Internal (Confluence: Large MR support, id=93814912; In-flight WR management, id=133497307)"
+    - **Large MR**: GPU peer-memory (≥수십 GB) 를 단일 MR 로 등록. PTW/TLB 의 sparse range 를 지원해야 하며, dereg 시 in-flight DMA 를 모두 drain 해야 R_Key invalidate 안전.
+    - **In-flight WR management**: 사내 IP 는 SWQ 의 read port 다중화 (M11 의 `s_data_port_0/3/4` 참조) 로 **modify / read_init / read** 를 분리. 각 채널은 outstanding 한도가 다르며 retry 시 같은 read port 로 다시 fetch 된다.
+    - 검증: outstanding WR 한도까지 채운 상태에서 dereg → drain 동작; large MR 에서 PSN wraparound (24-bit) 까지 갈 수 있는 long-running WRITE.
+
+---
+
 ## 핵심 정리 (Key Takeaways)
 
 - PD/MR/Key 는 RDMA 의 **address space + protection** 을 동시에 표현하는 객체.
@@ -282,3 +322,7 @@ MW 는 **MR 의 부분 영역에 대해 일시적으로 다른 R_Key 를 발급*
 ## 다음 모듈
 
 → [Module 06 — Data Path Operations](06_data_path.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

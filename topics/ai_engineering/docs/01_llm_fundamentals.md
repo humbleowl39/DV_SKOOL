@@ -661,3 +661,6 @@ Temperature 효과:
     <div class="nav-title">Prompt Engineering & In-Context Learning</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

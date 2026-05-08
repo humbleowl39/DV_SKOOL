@@ -155,3 +155,6 @@ Python, 머신러닝/딥러닝 개요, API 호출 경험
 </div>
 
 <!-- DV-SKOOL-RELATED-TOPICS:end -->
+
+
+--8<-- "abbreviations.md"

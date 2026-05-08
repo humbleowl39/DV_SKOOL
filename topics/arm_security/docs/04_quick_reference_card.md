@@ -196,3 +196,6 @@ soc_secure_boot_ko Unit 7: BootROM DV
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

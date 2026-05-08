@@ -296,3 +296,7 @@ UpdateFC: 현재 credit consumed 의 총합 (modulo) 을 주기적으로 송신.
 ## 다음 모듈
 
 → [Module 05 — Physical Layer & LTSSM](05_phy_ltssm.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

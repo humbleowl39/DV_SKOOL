@@ -563,3 +563,7 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
     <div class="nav-title">AXI-Stream</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

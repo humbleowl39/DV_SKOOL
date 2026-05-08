@@ -163,3 +163,6 @@ RDMAMBWCFlag_t debug_wc_flag[int][$];
 [Module 03 — UVM Phase & Test Flow](03_phase_test_flow.md)에서 이 컴포넌트들이 시간 축에서 어떻게 협력하는지 본다.
 
 [퀴즈 풀어보기 →](quiz/02_component_hierarchy_quiz.md)
+
+
+--8<-- "abbreviations.md"

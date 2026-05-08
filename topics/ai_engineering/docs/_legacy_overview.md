@@ -121,3 +121,6 @@
 | AI-Assisted UVM 자동화 (DAC 2026) | Unit 5, 7 | UVM 컴포넌트 자동 생성 |
 | AI Expert (삼성+서울대) | 전체 | AI 전문성의 공식 자격 증명 |
 | 293/216 Gap 발견 | Unit 4, 7 | 정량적 성과 (2.75% / 4.99% gap rate) |
+
+
+--8<-- "abbreviations.md"

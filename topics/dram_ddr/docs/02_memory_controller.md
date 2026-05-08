@@ -476,3 +476,6 @@ MC의 역할:
     <div class="nav-title">Memory Interface / PHY</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

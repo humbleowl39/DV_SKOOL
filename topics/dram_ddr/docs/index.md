@@ -176,3 +176,6 @@
 </div>
 
 <!-- DV-SKOOL-RELATED-TOPICS:end -->
+
+
+--8<-- "abbreviations.md"

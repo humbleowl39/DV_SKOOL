@@ -208,3 +208,6 @@ ufs_hci_ko:         UFS → BL2 이미지 로드 → BL2가 DRAM 초기화
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

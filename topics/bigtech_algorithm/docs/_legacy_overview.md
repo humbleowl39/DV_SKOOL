@@ -159,3 +159,6 @@
 06_dynamic_programming_explained.md
 07_interview_strategy.md   ← 면접 전략 (한글)
 ```
+
+
+--8<-- "abbreviations.md"

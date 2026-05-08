@@ -173,3 +173,7 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 </div>
 
 <!-- DV-SKOOL-RELATED-TOPICS:end -->
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

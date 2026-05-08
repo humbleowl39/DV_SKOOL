@@ -162,3 +162,7 @@
 | TOE ↔ DCMAC | **AXI-Stream** | 패킷 스트리밍 |
 | MMU (변환 요청/응답) | AXI-Stream | Translation 인터페이스 |
 | Custom Thin VIP | AXI-Stream | tdata/tvalid/tready 핵심 경로 |
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

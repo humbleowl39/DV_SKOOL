@@ -434,3 +434,6 @@ endmodule
     <div class="nav-title">Tree & BFS/DFS</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

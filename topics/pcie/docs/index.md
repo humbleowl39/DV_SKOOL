@@ -189,3 +189,7 @@
 </div>
 
 <!-- DV-SKOOL-RELATED-TOPICS:end -->
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

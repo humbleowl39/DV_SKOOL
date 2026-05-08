@@ -447,3 +447,7 @@ otp_model.rotpk_hash.set(expected_hash);
     <div class="nav-title">Chain of Trust & Boot Stages (신뢰 체인과 부팅 단계)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

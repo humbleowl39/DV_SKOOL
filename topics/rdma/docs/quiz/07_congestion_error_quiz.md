@@ -4,6 +4,27 @@
 
 ---
 
+## Q-Conf-A. (Apply — Confluence)
+
+PFC 의 PAUSE 메시지가 0xFFFF (Pause Quanta) 로 실려 왔을 때 link partner 의 정확한 동작은? RESUME 을 명시적으로 보내야 하는가?
+
+??? answer "정답 / 해설"
+    - PAUSE Quanta = 0xFFFF → 약 0xFFFF × 512 bit-time 동안 정지 (link rate 별 시간 다름).
+    - RESUME 은 별도 메시지가 아니라 **PAUSE Quanta = 0** 의 PAUSE 프레임이다.
+    - 큐 점유율이 임계치 미만으로 내려가면 sender (=ingress 측) 가 PAUSE 0 을 발행해 RESUME 효과.
+
+    Confluence: *Pause Frame* / *Pause Operation* (id=229998745, id=229998696).
+
+## Q-Conf-B. (Evaluate — Confluence)
+
+DCQCN 만 활성, RTTCC 만 활성, 두 알고리즘 모두 활성 (혹은 hybrid) 의 세 옵션이 가능할 때 사내 IP 의 `cc_module` 인터페이스는 어떤 형태가 바람직한가?
+
+??? answer "정답 / 해설"
+    Algorithm-agnostic interface — `m_ack_info` / `m_nak_info` / `m_notify_cnp_qpn` / per-RTT sample 을 모두 공급하고, 알고리즘 모듈은 plug-in 으로 swap. *Programmable CC* 의 발상과 동일.
+    이렇게 두면 검증도 알고리즘별 directed test + 알고리즘 swap 의 cross check 가 모두 가능.
+
+---
+
 ## Q1. (Remember)
 
 RDMA-TB 의 error_handling vplan 에서 다음 WC status 의 트리거를 매칭하라.

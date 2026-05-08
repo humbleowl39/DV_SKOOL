@@ -492,3 +492,6 @@ assert property (@(posedge clk) disable iff (rst)
     <div class="nav-title">Formal Verification — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

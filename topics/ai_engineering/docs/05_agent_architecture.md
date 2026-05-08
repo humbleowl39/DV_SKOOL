@@ -691,3 +691,6 @@ result = agent.invoke({"input": "sysMMU 검증 갭을 찾아라"})
     <div class="nav-title">Fine-tuning vs RAG vs Prompt — 전략 선택</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

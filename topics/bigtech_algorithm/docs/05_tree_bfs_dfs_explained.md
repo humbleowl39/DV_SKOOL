@@ -550,3 +550,6 @@ endmodule
     <div class="nav-title">Dynamic Programming (DP)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

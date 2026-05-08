@@ -305,3 +305,6 @@ BootROM 검증에서의 config_db 활용:
     <div class="nav-title">TLM, Scoreboard, Coverage</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

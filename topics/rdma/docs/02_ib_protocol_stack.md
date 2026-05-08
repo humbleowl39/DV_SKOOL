@@ -337,6 +337,44 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
 
 ---
 
+## 11. Confluence 보강 — BTH 필드별 사내 default 와 사용 정책
+
+!!! note "Internal (Confluence: RDMA headers and header fields, id=32178321)"
+    사내 RDMA-IP 의 BTH 사용 정책은 다음과 같다 (spec 자체가 강제하지 않는 사용자 결정 항목).
+
+    | BTH 필드 | 사내 default / 정책 |
+    |---|---|
+    | **MTU** | **1024 byte (정적)** — 4KB write 는 4 패킷으로 분할 (first / middle×2 / last) |
+    | **Pad count** | spec 정의대로 4-byte 정렬을 위해 0~3 |
+    | **TVer** | 0 으로 zero-fill |
+    | **P_Key** | `0xFFFF` (default partition) 사용 |
+    | **Reserved6** | 0 으로 zero-fill |
+    | **SE (Solicited Event)** | SEND/SEND_WITH_IMM/SEND_WITH_INVALIDATE/WRITE_WITH_IMM 의 only/last 패킷에 한해 1 set — `notify_cq` 시맨틱을 hardware 로 구현 |
+    | **MigReq** | 미사용 (APM 비활성) |
+    | **AckReq** | RC 에서만 의미. only/last 또는 ACK coalescing 정책에 따라 set |
+
+    이 표는 **검증 시 BTH 비교 scoreboard 의 mask** 이기도 하다 — `0xFFFF`/`0` 으로 zero-fill 된 필드는 `==` 가 아닌 *internal-default-aware* 비교를 사용한다.
+
+---
+
+## 12. Confluence 보강 — MSN 필드의 미세한 동작
+
+!!! note "Internal (Confluence: Details of MSN field, id=32211107) — IB Spec 1.4 §C9-147..149"
+    AETH 의 MSN 은 "responder 가 성공적으로 완료한 메시지 수" 를 나타내며, 다음 규칙이 검증 핵심이다.
+
+    1. **다중 패킷 메시지 (예: 4KB WRITE → 4 packet, MTU=1KB)**: MSN 은 **마지막 패킷에서만** 증가.
+    2. **ACK coalescing**: N 개의 요청을 하나의 ACK 로 묶을 때, MSN 은 **마지막으로 완료된 SSN 값** 으로 단번에 증가.
+    3. **Duplicate request**: MSN 은 **증가하지 않음**. responder 는 캐시된 마지막 ACK 의 MSN 을 그대로 재전송.
+    4. **RDMA READ**: validation (R_Key / PSN) 직후 MSN 을 증가시키고, **첫 응답 패킷의 AETH** 에 새 MSN 을 실을 수 있다 (구현 선택). 이후 동일 read 의 모든 응답 패킷은 같은 MSN.
+    5. MSN 은 **roll-back 금지** — 단조 증가만 허용.
+
+    SoftRoCE (`rxe`) 는 WRITE/SEND 는 END_MASK 패킷에서, READ 는 validation 직후 증가시킨다. 사내 IP 는 동일 정책.
+
+    !!! tip "검증 포인트"
+        Scoreboard 는 (a) duplicate request 시 MSN 비증가, (b) READ 의 first response packet 에서 MSN 증가, (c) coalesced ACK 의 MSN = last-completed SSN 이라는 세 조건을 직접 assertion 으로 두면 좋다.
+
+---
+
 ## 핵심 정리 (Key Takeaways)
 
 - IB 는 자체 5 계층. 모든 패킷은 LRH로 시작, BTH 가 transport, GRH 는 cross-subnet/multicast 시.
@@ -355,3 +393,7 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
 ## 다음 모듈
 
 → [Module 03 — RoCEv2 — Ethernet 위의 RDMA](03_rocev2.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

@@ -430,3 +430,6 @@ Formal의 근본 한계:
     <div class="nav-title">SVA (SystemVerilog Assertions)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

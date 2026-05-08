@@ -106,3 +106,6 @@
 | Mapping Table IP FV Lead | Unit 3 | JasperGold 실무 + 검증 전략 |
 | SVA 기술 스킬 | Unit 2 | Assertion 작성 능력 |
 | BootROM/HCI 검증에서 SVA 활용 | Unit 2 | 시뮬레이션 + Formal 병행 전략 |
+
+
+--8<-- "abbreviations.md"

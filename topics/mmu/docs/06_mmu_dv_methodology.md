@@ -844,3 +844,6 @@ Agile 개발에서의 MMU 스펙 변경:
     <div class="nav-title">MMU — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

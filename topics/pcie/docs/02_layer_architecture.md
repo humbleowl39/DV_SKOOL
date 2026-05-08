@@ -339,3 +339,7 @@
 ## 다음 모듈
 
 → [Module 03 — TLP](03_tlp.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

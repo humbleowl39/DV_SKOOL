@@ -407,6 +407,52 @@ Log file 위치는 `mrun` 의 `vsim/<test>/run.log`. FSDB 는 `vsim/<test>/wave.
 
 ---
 
+## 13. Confluence 보강 — RDMA-IP 모듈 구성과 Wrapper 책임
+
+!!! note "Internal (Confluence: RDMA IP architecture, High-Level Architecture Description for DV team, Completer)"
+    사내 RDMA-IP 는 다음 wrapper 들로 구성된다 (DV 관점 ground-truth, M11 에 상세).
+
+    | Wrapper | 역할 | 외부 spec 대응 |
+    |---|---|---|
+    | **requester_frontend** | SQ → packet build, BTH/RETH 채움, retry 시 fetch | (없음 — 송신 전체) |
+    | **completer_frontend** | 응답 패킷(ACK/NAK/Read Response) 처리, WQE 완료, CQE 생성 | requester 측 ACK 처리 |
+    | **completer_retry** | timer / NAK / SACK 기반 재전송 결정 | spec §11.6 retry |
+    | **info_arb** | WQE metadata (`tx_info`) 보관·중재 | (사내 SWQ 인프라) |
+    | **payload engine** | drop / DMA write 경로 결정 | (사내) |
+    | **responder_frontend** | incoming 요청 처리, 메모리 access, ACK 생성, MSN 증가 | responder 전체 |
+    | **mmu wrapper** | IOVA→PA 변환, TLB, dereg flush | IBTA address translation |
+    | **cc_module** | DCQCN / RTTCC 등 CC 알고리즘 구현 | Annex A17 + 사내 |
+
+    Scoreboard 는 wrapper 경계마다 transaction 단위로 설치 — packet (network 측) ↔ WQE/CQE (host 측) ↔ DMA (memory 측) 의 3 종 transaction 비교가 핵심.
+
+## 14. Confluence 보강 — Coverage 정의 운영
+
+!!! note "Internal (Confluence: Coverage define, Coverage define module list, Meeting - coverage define sync)"
+    사내 coverage 운영 표준:
+
+    1. 모듈별로 **base coverage** (필수 closure) + **feature coverage** (옵션 sub-IP) 를 분리. M07 §4 의 7 항목은 base.
+    2. **Coverage define module list** 페이지가 단일 진실 — 모듈 PR 시 이 목록 갱신이 PR 체크리스트.
+    3. 격주 **coverage sync meeting** 에서 hole / dropped bin / cross 추가를 확정. 마지막 회의 (10/22) 에서 결정된 항목은 `lib/vtb/coverage/` 에 반영됨.
+    4. 새 feature 의 first PR 에는 **min cov plan 한 단락** 이 description 에 들어가야 함.
+
+## 15. Confluence 보강 — Debug Register / Bitfile 운용
+
+!!! note "Internal (Confluence: RDMA debug register guide id=884966146; Debug register 정리 id=381845599; Bitfile status id=1228931074 — 운영 페이지는 본문 미반영)"
+    - **Debug register**: 각 wrapper 가 `s_debug_reg` (AXI4-Lite slave) 를 노출. RDMA-TB RAL 에서 `vrdma_dbg_reg_block` 으로 모델. failure triage 시 `last_psn`, `last_opcode`, `error_code` 같은 sticky bit 를 먼저 read.
+    - **검증 시 의무 항목**: bring-up 직후 모든 wrapper 의 dbg reg 가 초기값을 갖는지 RAL `mirror_check`.
+    - **Bitfile / FPGA prototype**: emulation 환경의 bitfile 은 별도 페이지에서 추적 — 여기서는 *어떤 bitfile 이 어떤 testset 을 통과했는지* 운영 정보. 학습 자료는 본문에 포함하지 않고 M12 의 운영 가이드로만 링크.
+
+## 16. Confluence 보강 — Bitwidth Trimming / FIFO 최적화
+
+!!! note "Internal (Confluence: [SKRP-371] module list for bitwidth trimming, id=683212851; Fifo optimization, id=357269665)"
+    PPA 개선의 정기적 활동.
+
+    - **Bitwidth trimming**: HLS C++ 에서 32-bit 로 표현된 카운터·필드를 spec 상한에 맞춰 줄여 ResourceUtil↓. 예: PSN 카운터는 24-bit 면 충분, MSN 24-bit, R_Key index 14-bit 등.
+    - **FIFO 최적화**: 데이터 path FIFO 의 depth × width 를 Little's law (depth ≥ throughput × max-stall) 로 재산정. 검증 영향: FIFO almost-full 도달 빈도가 변하므로 backpressure coverage 갱신.
+    - 검증 의무: trimming PR 마다 **regression diff** 첨부, FIFO 변경 PR 마다 **buffer-occupancy cov** 비교.
+
+---
+
 ## 핵심 정리 (Key Takeaways)
 
 - RDMA-TB 는 work/ (design hierarchy 별 TB) + lib/ (base/ext/external/submodule) 의 두 축.
@@ -428,3 +474,7 @@ Log file 위치는 `mrun` 의 `vsim/<test>/run.log`. FSDB 는 `vsim/<test>/wave.
 ## 다음 모듈
 
 → [Module 09 — Quick Reference Card](09_quick_reference_card.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

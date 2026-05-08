@@ -370,3 +370,6 @@ endmodule
     <div class="nav-title">Array & Hash Map (연관 배열)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

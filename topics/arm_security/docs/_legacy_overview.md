@@ -147,3 +147,6 @@
 | Secure Boot Flow | Unit 3 | EL 전환과 Boot Stage 연결 |
 | 보안 공격/방어 | Unit 2 | TrustZone이 방어하는 공격 |
 | OTP/JTAG 보안 | Unit 2 | SoC 보안 인프라와 연결 |
+
+
+--8<-- "abbreviations.md"

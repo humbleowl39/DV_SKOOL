@@ -384,3 +384,6 @@ User App (EL0)
     <div class="nav-title">메모리 가상화</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

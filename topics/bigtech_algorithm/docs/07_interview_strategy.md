@@ -246,3 +246,6 @@ Week 3 (Medium 도전):
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

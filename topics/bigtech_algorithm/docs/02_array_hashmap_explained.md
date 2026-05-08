@@ -380,3 +380,6 @@ endmodule
     <div class="nav-title">Two Pointers & Sliding Window</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

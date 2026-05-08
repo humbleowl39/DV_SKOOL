@@ -169,3 +169,6 @@ uvm_test_top (rdma_basic_test)
 [Module 02 — Component 계층](02_component_hierarchy.md): `lib/base/component/` 의 11 하위 디렉토리를 분해합니다.
 
 [퀴즈 풀어보기 →](quiz/01_tb_overview_quiz.md)
+
+
+--8<-- "abbreviations.md"

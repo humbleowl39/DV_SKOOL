@@ -333,3 +333,6 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
     <div class="nav-title">Agent 아키텍처</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

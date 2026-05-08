@@ -656,3 +656,6 @@ endgroup
     <div class="nav-title">UVM 실무 패턴 & 안티패턴</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

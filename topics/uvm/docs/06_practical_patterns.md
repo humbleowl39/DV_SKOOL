@@ -358,3 +358,6 @@ MangoBoost / Samsung에서 반복한 환경 구축 순서:
     <div class="nav-title">UVM — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

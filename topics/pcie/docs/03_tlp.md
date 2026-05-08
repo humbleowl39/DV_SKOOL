@@ -357,3 +357,7 @@ Routing field (Type[2:0]) 이 destination 결정:
 ## 다음 모듈
 
 → [Module 04 — DLLP, Flow Control, ACK/NAK](04_dllp_flow_control.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

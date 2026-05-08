@@ -336,3 +336,6 @@ Timeline:
     <div class="nav-title">Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

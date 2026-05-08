@@ -171,3 +171,6 @@ RDMACQPoll(cq_num, try_once=0)
 [Module 10 — C2H Tracker Error](10_debug_c2h_tracker.md): C2H DMA 가 일어났는데 매칭이 실패할 때.
 
 [퀴즈 풀어보기 →](quiz/09_debug_cq_poll_timeout_quiz.md)
+
+
+--8<-- "abbreviations.md"

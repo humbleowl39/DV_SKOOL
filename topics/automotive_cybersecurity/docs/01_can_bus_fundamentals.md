@@ -497,3 +497,6 @@ bit 7: 둘 다 `1` → 동일
     <div class="nav-title">Automotive SoC Security (차량 SoC 보안 아키텍처)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

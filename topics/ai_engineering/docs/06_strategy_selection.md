@@ -488,3 +488,6 @@ Fine-tuning이 비효율적인 경우:
     <div class="nav-title">DV/EDA 도메인 적용 사례</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

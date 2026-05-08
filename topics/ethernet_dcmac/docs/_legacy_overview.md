@@ -101,3 +101,6 @@
 | DCMAC 서브시스템 E2E 검증 Lead | Unit 2, 3 | 환경 아키텍처 + 검증 전략 |
 | TOE ↔ DCMAC 연동 | Unit 2 | AXI-S 인터페이스 검증 |
 | UVM 환경 from scratch | Unit 3 | 환경 설계 경험 |
+
+
+--8<-- "abbreviations.md"

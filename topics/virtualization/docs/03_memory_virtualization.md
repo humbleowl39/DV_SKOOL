@@ -354,3 +354,6 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
     <div class="nav-title">I/O 가상화</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -114,3 +114,6 @@
 | MC Verification Follow × 2 (S5E9945, V920) | Unit 2, 4 | MC 스케줄링 + 검증 시나리오 |
 | MI Verification Follow (S5E9945) | Unit 3, 4 | PHY Training + 타이밍 검증 |
 | DDR4/5, LPDDR5 프로토콜 경험 | Unit 1 | 세대별 차이 + 설계 트레이드오프 |
+
+
+--8<-- "abbreviations.md"

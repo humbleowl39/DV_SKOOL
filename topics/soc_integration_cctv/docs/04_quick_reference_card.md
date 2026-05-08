@@ -217,3 +217,6 @@ mmu_ko Unit 4:                sysMMU = Common Task의 대표 항목
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

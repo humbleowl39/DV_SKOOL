@@ -424,3 +424,6 @@ endmodule
     <div class="nav-title">Stack & Binary Search</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -283,3 +283,7 @@ DV 엔지니어 관점에서 자주 나오는 질문 — "PCIe 가 직렬로 갔
 ## 다음 모듈
 
 → [Module 02 — 3-Layer Architecture](02_layer_architecture.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

@@ -86,6 +86,27 @@
       <span class="concept-dag-node-title">Quick Reference</span>
     </a>
   </div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="10_ultraethernet/">
+      <span class="concept-dag-node-num">M10</span>
+      <span class="concept-dag-node-title">Ultraethernet</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="11_gpuboost_rdma_ip/">
+      <span class="concept-dag-node-num">M11</span>
+      <span class="concept-dag-node-title">GPUBoost / IP HW</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="12_fpga_proto_manuals/">
+      <span class="concept-dag-node-num">M12</span>
+      <span class="concept-dag-node-title">FPGA Proto / Manuals</span>
+    </a>
+    <span class="concept-dag-arrow">→</span>
+    <a class="concept-dag-node" href="13_background_research/">
+      <span class="concept-dag-node-num">M13</span>
+      <span class="concept-dag-node-title">Background</span>
+    </a>
+  </div>
   <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름</div>
 </div>
 
@@ -146,6 +167,30 @@
       <div class="module-title">Quick Reference Card</div>
     </div>
   </a>
+  <a class="module-card" data-cat="network" href="10_ultraethernet/">
+    <div class="module-num">10</div>
+    <div class="module-body">
+      <div class="module-title">Ultraethernet (UEC)</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="11_gpuboost_rdma_ip/">
+    <div class="module-num">11</div>
+    <div class="module-body">
+      <div class="module-title">GPUBoost / RDMA-IP HW Architecture</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="12_fpga_proto_manuals/">
+    <div class="module-num">12</div>
+    <div class="module-body">
+      <div class="module-title">FPGA Prototyping & Lab Manuals</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="13_background_research/">
+    <div class="module-num">13</div>
+    <div class="module-body">
+      <div class="module-title">Background & Industry Research</div>
+    </div>
+  </a>
 </div>
 <!-- DV-SKOOL-MODULES:end -->
 
@@ -183,3 +228,7 @@
 </div>
 
 <!-- DV-SKOOL-RELATED-TOPICS:end -->
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

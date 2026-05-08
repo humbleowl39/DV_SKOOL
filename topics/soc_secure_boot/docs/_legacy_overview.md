@@ -149,3 +149,7 @@ Unit 3 (암호학)        Unit 4 (Boot Device)   Unit 5 (공격/방어)
 | Legacy → UVM 전환 | **Unit 7** | 문제 분석 → 해결 → 성과 스토리 |
 | Coverage-Driven 방법론 | **Unit 7** | 5개 Covergroup 구조 + Closure 전략 |
 | Zero-Defect Silicon | **Unit 7** | Pre-silicon 완전성 → Post-silicon 디버그 가속 |
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

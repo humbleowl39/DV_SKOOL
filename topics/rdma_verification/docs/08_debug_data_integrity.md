@@ -175,3 +175,6 @@ mismatch byte 위치
 [Module 09 — CQ Poll Timeout](09_debug_cq_poll_timeout.md): CQE 가 안 올 때.
 
 [퀴즈 풀어보기 →](quiz/08_debug_data_integrity_quiz.md)
+
+
+--8<-- "abbreviations.md"

@@ -180,3 +180,6 @@ endclass
 [Module 04 — Analysis Port Topology](04_analysis_port_topology.md): driver 가 발행한 WQE/CQE 가 어떤 AP를 통해 누구에게 도달하는지.
 
 [퀴즈 풀어보기 →](quiz/03_phase_test_flow_quiz.md)
+
+
+--8<-- "abbreviations.md"

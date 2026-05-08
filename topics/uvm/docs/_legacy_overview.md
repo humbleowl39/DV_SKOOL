@@ -116,3 +116,6 @@
 | Custom Thin VIP | Unit 2 | Agent 경량화 전략 |
 | Coverage-driven 방법론 | Unit 5 | Covergroup 설계 + Closure |
 | 다중 프로젝트 포팅 | Unit 4, 6 | 재사용 가능한 설계 패턴 |
+
+
+--8<-- "abbreviations.md"

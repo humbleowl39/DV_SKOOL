@@ -302,3 +302,6 @@ L0: Physical — OBD 격리, 포트 비활성화, 물리 접근 제어
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -223,3 +223,6 @@ Pseudo-LRU HW 비용 (N-way):
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

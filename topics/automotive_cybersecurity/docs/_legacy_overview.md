@@ -180,3 +180,6 @@ Unit 3 (Tesla Case)   Unit 4 (Attack/Defense)
                   - SecOC = Chain of Trust의 메시지 버전
                   - Secure Gateway = TrustZone의 버스 버전
 ```
+
+
+--8<-- "abbreviations.md"

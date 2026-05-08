@@ -485,3 +485,6 @@ DV 검증 핵심:
     <div class="nav-title">IOMMU / SMMU — SoC에서의 MMU</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

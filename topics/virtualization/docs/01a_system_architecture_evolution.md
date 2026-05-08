@@ -657,3 +657,6 @@ Hypervisor 입장:
     <div class="nav-title">CPU 가상화</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

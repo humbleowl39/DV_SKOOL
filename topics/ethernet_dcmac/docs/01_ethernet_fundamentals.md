@@ -434,3 +434,6 @@ DV 관점:
     <div class="nav-title">DCMAC 아키텍처</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

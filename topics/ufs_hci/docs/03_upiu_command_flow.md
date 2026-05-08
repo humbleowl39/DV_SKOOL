@@ -429,3 +429,7 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
     <div class="nav-title">UFS HCI DV 검증 전략</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

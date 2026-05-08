@@ -203,3 +203,6 @@ uvm_ko = 모든 DV 자료의 "검증 방법론" 기반
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

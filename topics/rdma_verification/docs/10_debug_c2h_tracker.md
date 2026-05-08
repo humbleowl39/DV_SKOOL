@@ -172,3 +172,6 @@ end
 [Module 11 — Unexpected Error CQE](11_debug_unexpected_err_cqe.md): DUT 가 에러 CQE 를 발생시킬 때.
 
 [퀴즈 풀어보기 →](quiz/10_debug_c2h_tracker_quiz.md)
+
+
+--8<-- "abbreviations.md"

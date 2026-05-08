@@ -35,3 +35,7 @@ M01 RDMA 동기  →  M02 IB Stack  →  M03 RoCEv2
 - 검증 엔지니어 권장: 전 모듈 (10-15시간)
 - HW 설계자: M02-M07 (8-10시간)
 - SW (Verbs 사용자): M01, M04-M06 (4-6시간)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

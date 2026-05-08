@@ -155,3 +155,6 @@ verdi -fsdbDump <run.fsdb> -nologo &
 [Module 08 — Data Integrity Error](08_debug_data_integrity.md): 데이터 비교 실패 케이스 단계별 디버깅.
 
 [퀴즈 풀어보기 →](quiz/07_h2c_c2h_qid_map_quiz.md)
+
+
+--8<-- "abbreviations.md"

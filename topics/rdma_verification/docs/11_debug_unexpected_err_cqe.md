@@ -215,3 +215,6 @@ endclass
 [Module 12 — Debug Cheatsheet](12_debug_cheatsheet.md): 4개 케이스의 통합 cheatsheet.
 
 [퀴즈 풀어보기 →](quiz/11_debug_unexpected_err_cqe_quiz.md)
+
+
+--8<-- "abbreviations.md"

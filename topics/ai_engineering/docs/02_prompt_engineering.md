@@ -495,3 +495,6 @@ DV 적용:
     <div class="nav-title">Embedding & Vector DB (FAISS)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

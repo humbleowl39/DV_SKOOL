@@ -539,3 +539,6 @@ Security Driver: force/release로 DUT 내부 신호에 직접 접근
     <div class="nav-title">Sequence & Sequence Item</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

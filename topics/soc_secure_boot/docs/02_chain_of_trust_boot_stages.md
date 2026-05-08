@@ -439,3 +439,7 @@ BL2 DRAM 초기화 단계:
     <div class="nav-title">Secure Boot 암호학 — 서명 검증과 키 관리</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

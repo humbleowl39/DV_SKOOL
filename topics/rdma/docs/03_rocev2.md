@@ -258,6 +258,28 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
 
 ---
 
+## 8. Confluence 보강 — IB Spec v1.7 vs v1.4 변경의 RoCEv2 영향
+
+!!! note "Internal (Confluence: Infiniband Spec Comparison v1.7 w v1.4, id=77758684)"
+    - **MPE / Atomic Write / FLUSH** 가 v1.7 에서 새로 추가 (Annex A19/A20). RoCEv2 에서도 사용 가능.
+    - **AETH** 의 일부 syndrome 영역이 reserved → defined 로 채워짐 — 재검증 필요.
+    - **PSN sequence error** 의 invalid-PSN 정의가 더 명확해져 v1.4 기반 테스트 (특히 "wraparound 미처리") 가 v1.7 기준에서는 false positive 가 됨.
+    - **MTU** 옵션 (256/512/1024/2048/4096) 자체는 동일하지만, v1.7 은 **path MTU 협상** 시맨틱을 더 명시. 사내 IP 는 정적 MTU=1024.
+
+## 9. Confluence 보강 — RDMA-CM (Communication Manager)
+
+!!! note "Internal (Confluence: RDMA CM (Communication manager), id=113934352)"
+    RoCEv2 환경에서 QP 가 RTR/RTS 까지 진입하려면 양 단의 dest_qp_num, sq_psn, rq_psn, rkey 같은 metadata 가 사전에 교환돼야 한다. 표준 사용은 **RDMA-CM** (RFC 5040 의 변형이 아니라 IBTA 의 CM MAD 를 RoCEv2 에서는 TCP/IP 위로 옮긴 것):
+
+    1. Active 가 `rdma_resolve_addr` → ARP/ND → GID 해석.
+    2. `rdma_resolve_route` → path MTU, hop limit 결정.
+    3. `rdma_connect` → REQ/REP/RTU 핸드셰이크 (TCP).
+    4. CM 핸드셰이크 안에 **private data** 영역으로 ECE (Enhanced Connection Establishment) 비트맵이 동승 — MPE, AETH variant 같은 확장 기능 협상.
+
+    검증에서는 CM 자체는 host SW 가 처리하므로 sequence 는 **post-handshake state**(QP=RTS, MR=registered, key 교환 완료) 만 모델링하면 된다.
+
+---
+
 ## 핵심 정리 (Key Takeaways)
 
 - RoCEv2 = IB transport (BTH 부터) 를 그대로 두고 link/network 를 Ethernet/IP/UDP(4791) 로 교체.
@@ -276,3 +298,7 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
 ## 다음 모듈
 
 → [Module 04 — Service Types & QP FSM](04_service_types_qp.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

@@ -620,3 +620,6 @@ endpackage
     <div class="nav-title">config_db & Factory</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

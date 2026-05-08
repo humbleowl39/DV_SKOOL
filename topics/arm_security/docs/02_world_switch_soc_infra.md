@@ -544,3 +544,6 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
     <div class="nav-title">Unit 2A: Secure Enclave & TEE 계층 구조</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

@@ -13,6 +13,10 @@
 - **Module 07** — [Congestion Control & Error Handling](07_congestion_error_quiz.md)
 - **Module 08** — [RDMA-TB 검증 환경 & DV 전략](08_rdma_tb_dv_quiz.md)
 - **Module 09** — [Quick Reference Card](09_quick_reference_card_quiz.md)
+- **Module 10** — [Ultraethernet (UEC)](10_ultraethernet_quiz.md)
+- **Module 11** — [GPUBoost / RDMA-IP Hardware Architecture](11_gpuboost_rdma_ip_quiz.md)
+- **Module 12** — [FPGA Prototyping & Lab Manuals](12_fpga_proto_manuals_quiz.md)
+- **Module 13** — [Background & Industry Research](13_background_research_quiz.md)
 
 ## 사용법
 

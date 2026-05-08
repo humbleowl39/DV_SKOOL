@@ -394,3 +394,7 @@ PCIe ARI (Alternative Routing-ID Interpretation) Capability:
 ## 다음 모듈
 
 → [Module 07 — Power, AER, Hot Plug](07_power_aer_hotplug.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

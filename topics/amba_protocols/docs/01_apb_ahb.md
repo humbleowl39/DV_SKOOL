@@ -470,3 +470,7 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
     <div class="nav-title">AXI (Advanced eXtensible Interface)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

@@ -759,3 +759,6 @@ Gap C: Technical Gap
     <div class="nav-title">TB Top 환경 구축 + AI 자동화</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

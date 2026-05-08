@@ -410,3 +410,6 @@ Azure:
     <div class="nav-title">컨테이너와 현대 가상화</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

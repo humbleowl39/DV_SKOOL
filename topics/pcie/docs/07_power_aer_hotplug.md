@@ -335,3 +335,7 @@ OS 개입 없이 link 자체가 idle 검출 후 진입.
 ## 다음 모듈
 
 → [Module 08 — SR-IOV, ATS, P2P, CXL](08_advanced.md)
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

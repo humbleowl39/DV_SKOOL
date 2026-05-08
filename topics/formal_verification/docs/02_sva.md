@@ -581,3 +581,6 @@ SVA에서 존재하지 않는 신호를 참조하면:
     <div class="nav-title">JasperGold 활용 + DV 전략</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

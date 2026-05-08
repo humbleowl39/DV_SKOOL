@@ -217,3 +217,6 @@ BOUNDED → ① Blackbox → ② Abstraction → ③ Helper Assert
     <div class="nav-title">퀴즈로 이동</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

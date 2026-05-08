@@ -224,3 +224,7 @@ Flash교체 → 서명 검증 (항상 활성)
     <div class="nav-title">BootROM DV 검증 방법론</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

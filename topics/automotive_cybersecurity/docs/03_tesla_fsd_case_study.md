@@ -535,3 +535,6 @@ Tesla의 현재 방어:
     <div class="nav-title">Attack Surface & Defense (공격 표면과 방어 계층)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

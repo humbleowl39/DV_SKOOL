@@ -96,3 +96,6 @@
 | TB TOP environment release Lead | Unit 1, 3 | Top TB 아키텍처 설계 |
 | DVCon 2025 (CCTV AI 자동화) | Unit 2, 3 | 293/216 Gap, 96.30% |
 | Multiple SoC 프로젝트 환경 구축 | Unit 1 | 재사용 가능한 Top TB |
+
+
+--8<-- "abbreviations.md"

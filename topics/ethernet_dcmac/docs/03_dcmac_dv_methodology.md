@@ -669,3 +669,6 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
     <div class="nav-title">Ethernet & DCMAC — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

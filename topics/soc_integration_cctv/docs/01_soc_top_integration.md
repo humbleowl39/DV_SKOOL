@@ -704,3 +704,6 @@ PLL Lock → Bus Fabric → Memory Controller (+ DRAM Init 완료 대기) → CP
     <div class="nav-title">Common Task & CCTV (Common Task Coverage Verification)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

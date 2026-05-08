@@ -747,3 +747,7 @@ Resume:
     <div class="nav-title">UFS HCI — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

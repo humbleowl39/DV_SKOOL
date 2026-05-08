@@ -435,3 +435,6 @@ DPDK: 모든 것을 user-space에서 처리 (polling 기반)
     <div class="nav-title">Hypervisor 유형</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

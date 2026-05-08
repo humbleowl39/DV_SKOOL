@@ -465,3 +465,6 @@ DV 도메인 권장:
     <div class="nav-title">RAG (Retrieval-Augmented Generation)</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

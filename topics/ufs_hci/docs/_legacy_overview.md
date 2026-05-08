@@ -111,3 +111,7 @@
 | UFS HCI Lead × 2 (S5P9855, V920) | Unit 2, 4 | HCI 아키텍처 이해 + 검증 전략 |
 | Coverage-driven TB | Unit 4 | Covergroup 설계 + Closure 전략 |
 | BootROM UFS boot | Unit 1 | Boot LU 접근 + 초기화 시퀀스 |
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

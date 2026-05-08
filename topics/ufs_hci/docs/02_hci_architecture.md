@@ -499,3 +499,7 @@ SDB vs MCQ 비교:
     <div class="nav-title">UPIU와 명령 처리 흐름</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
+--8<-- "_inc/topic_abbr.md"

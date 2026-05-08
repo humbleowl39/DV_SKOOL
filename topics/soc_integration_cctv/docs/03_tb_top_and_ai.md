@@ -888,3 +888,6 @@ JSON Config 파일 1개만 교체하면 된다. Config에 IP 목록, Memory Map,
     <div class="nav-title">SoC Integration & CCTV — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"

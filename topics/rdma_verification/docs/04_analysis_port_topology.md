@@ -172,3 +172,6 @@ drv.qp_reg_ap.connect(this.qp_subscriber.analysis_export);
 [Module 05 — Adding New Components 4원칙](05_extension_principles.md): 위 토폴로지를 안전하게 확장하는 4가지 원칙.
 
 [퀴즈 풀어보기 →](quiz/04_analysis_port_topology_quiz.md)
+
+
+--8<-- "abbreviations.md"

@@ -506,3 +506,6 @@ Resume:
     <div class="nav-title">DRAM Memory Controller & DDR4/5 — Quick Reference Card</div>
   </a>
 </div>
+
+
+--8<-- "abbreviations.md"
