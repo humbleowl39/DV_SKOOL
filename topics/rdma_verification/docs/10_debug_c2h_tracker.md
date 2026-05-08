@@ -12,12 +12,34 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-대표-에러-메시지">1. 대표 에러 메시지</a>
+  <a class="page-toc-link" href="#2-ordering-규칙">2. Ordering 규칙</a>
+  <a class="page-toc-link" href="#디버깅-단계별">디버깅 단계별</a>
+  <a class="page-toc-link" href="#흔한-원인-매트릭스">흔한 원인 매트릭스</a>
+  <a class="page-toc-link" href="#빠른-트리아지--한-줄-결정">빠른 트리아지</a>
+  <a class="page-toc-link" href="#errqp-와의-상호작용-module-06-연결">ErrQP 와의 상호작용</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Distinguish** 3가지 C2H tracker 실패 — PA 매칭 실패 / ordering 위반 / 크기 초과 — 를 구분할 수 있다.
     - **Apply** RC FIFO 순서 강제 vs OPS/SR out-of-order 허용 규칙을 적용할 수 있다.
     - **Trace** 진단 로그(`W-C2H-MATCH-0001~0003`)에서 unprocessed PA 리스트를 추출하고 expected vs actual PA 를 비교할 수 있다.
+
+!!! info "사전 지식"
+    - [RDMA Module 04 — Service Types & QP FSM](../../rdma/04_service_types_qp/) (RC vs OPS/SR 의 ordering 의미)
+    - [RDMA Module 05 — Memory Model](../../rdma/05_memory_model/) (IOVA → PA 변환, page table)
+    - [Module 06 — Error Handling Path](06_error_handling_path.md) (`is_err_qp_registered`)
+    - [Module 07 — H2C/C2H QID Reference](07_h2c_c2h_qid_map.md) (C2H QID 8/9 의 RESP 의미)
 
 ## 왜 이 모듈이 중요한가
 C2H tracker 는 DUT 가 host 에 쓴 모든 DMA 가 "기대된 위치, 기대된 순서"인지 검증합니다. 매칭 실패는 DUT 의 PTW / QP routing / MR page table 어디든 의심해야 하므로, 진단 로그를 정확히 해석하는 능력이 필수입니다.

@@ -12,12 +12,36 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-top-env-계층">1. Top env 계층</a>
+  <a class="page-toc-link" href="#2-노드-간-통신-모델">2. 노드 간 통신 모델</a>
+  <a class="page-toc-link" href="#3-lib-디렉토리-분류-confluence-submodule--코드-검증">3. lib 디렉토리 분류</a>
+  <a class="page-toc-link" href="#코드-walkthrough">코드 walkthrough</a>
+  <a class="page-toc-link" href="#실전-예시--한-테스트의-컴포넌트-인스턴스-그림">실전 예시</a>
+  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Diagram** RDMA-TB 가 두 노드(host) 간 RDMA 트랜잭션을 어떻게 모델링하는지 그릴 수 있다.
     - **Identify** `vrdmatb_top_env` 가 컨테이너로 가지는 sub-env 5종을 식별할 수 있다.
     - **Differentiate** `lib/base` / `lib/ext` / `lib/external` / `lib/submodule` 의 분류 기준을 설명할 수 있다.
+
+!!! info "사전 지식"
+    - [RDMA Module 04 — Service Types & QP FSM](../../rdma/04_service_types_qp/) (RC vs OPS/SR 의 의미)
+    - [UVM Topic — Environment / Agent](../../uvm/) (env 계층, agent 패턴)
+    - DMA / PCIe 기본 — host memory 모델
+
+!!! tip "💡 이해를 위한 비유"
+    RDMA-TB ≈ **두 개의 동일한 사무실 + 가운데 도로 + 상시 감시 카메라**.
+    각 사무실(`vrdma_node_env`) 은 host 메모리, IP shell, agent 가 모두 들어 있어 자체적으로 verb 를 발행한다. 가운데 도로(`ntw_env`) 는 두 사무실을 잇는 네트워크 패킷을 본다. 그리고 가운데에 매달린 감시 카메라 3대(`data_env` / `dma_env` / 검증 scoreboard) 가 두 사무실을 동시에 본다 — "양쪽 메모리가 일치하는가?", "DMA 가 기대된 위치/순서로 갔는가?", "트랜잭션 의미가 보존됐는가?"
 
 ## 왜 이 모듈이 중요한가
 RDMA 검증은 본질적으로 **두 노드 간 통신**을 검증합니다. 한 노드에서 보낸 데이터가 다른 노드의 메모리에 정확히 도착하는지(1-side write/read, 2-side send/recv) 확인해야 합니다. RDMA-TB 는 이 multi-node 모델을 UVM env 계층으로 구현했고, 모든 컴포넌트가 어느 노드에 속하는지를 명확히 합니다.

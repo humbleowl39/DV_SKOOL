@@ -12,12 +12,33 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-h2c-qid--host--card">1. H2C QID — Host → Card</a>
+  <a class="page-toc-link" href="#2-c2h-qid--card--host">2. C2H QID — Card → Host</a>
+  <a class="page-toc-link" href="#3-채널-매핑">3. 채널 매핑</a>
+  <a class="page-toc-link" href="#qid-기반-디버깅--패턴-매트릭스">QID 기반 디버깅 매트릭스</a>
+  <a class="page-toc-link" href="#디버깅-워크플로우">디버깅 워크플로우</a>
+  <a class="page-toc-link" href="#실전--fsdb-에서-qid-검증">실전 — fsdb 검증</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **List** H2C 6종 / C2H 4종 QID 와 그 용도를 나열할 수 있다.
     - **Identify** fsdb 의 QDMA 인터페이스에서 QID 를 보고 어느 서브시스템이 DMA 를 일으켰는지 즉시 식별할 수 있다.
     - **Apply** "CQ 폴링 타임아웃 났는데 DUT 가 WQE fetch 했나?" 같은 질문을 QID 로 답할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 02 — Component 계층](02_component_hierarchy.md) (c2h_tracker 의 위치)
+    - QDMA bypass interface 기본 — host ↔ card DMA 채널
+    - fsdb 신호 검색 방법 (Verdi)
 
 ## 왜 이 모듈이 중요한가
 QDMA bypass 인터페이스는 모든 DMA 트랜잭션이 흐르는 단일 지점입니다. QID 만 보면 "지금 DUT 의 어느 서브시스템이 host 와 통신하는가" 를 즉시 알 수 있고, 4대 디버그 케이스(M08-M11)에서 모두 활용됩니다.

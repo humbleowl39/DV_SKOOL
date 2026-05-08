@@ -12,12 +12,35 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-대표-에러-메시지">1. 대표 에러 메시지</a>
+  <a class="page-toc-link" href="#2-타임아웃-두-조건-둘-다-충족해야-발동">2. 타임아웃 두 조건</a>
+  <a class="page-toc-link" href="#3-timeout_count-기본값">3. timeout_count 기본값</a>
+  <a class="page-toc-link" href="#4-폴링-중-주기적-로그-10회마다-약-10us-간격">4. 폴링 중 주기적 로그</a>
+  <a class="page-toc-link" href="#5단계-디버깅-절차">5단계 디버깅 절차</a>
+  <a class="page-toc-link" href="#흔한-원인-매트릭스">흔한 원인 매트릭스</a>
+  <a class="page-toc-link" href="#빠른-트리아지--한-줄-결정">빠른 트리아지</a>
+  <a class="page-toc-link" href="#폴링-동작-한-줄-흐름">폴링 동작 한 줄 흐름</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Recognize** `E-DRV-TBERR-0001/0002` 에러 ID 와 graceful 종료(`uvm_shutdown_phase`) 흐름을 인식할 수 있다.
     - **Analyze** 타임아웃 두 조건(`try_cnt > timeout_count` AND `!c2h_tracker::active`)을 분석할 수 있다.
     - **Apply** Phase bit / Tail pointer / unprocessed wqe 카운트로 5단계 디버깅을 적용할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 03 — Phase & Test Flow](03_phase_test_flow.md) (CQ polling 패턴 3 — `cq_handler.RDMACQPoll`)
+    - [Module 07 — H2C/C2H QID Reference](07_h2c_c2h_qid_map.md) (QID 14–17 / 8 / 10–11 의 의미)
+    - [RDMA Module 06 — Data Path](../../rdma/06_data_path/) (CQ 의 phase bit, tail pointer)
 
 ## 왜 이 모듈이 중요한가
 CQ polling 타임아웃은 "DUT 가 내가 보낸 work 를 처리하긴 했나?" 라는 가장 기본적인 질문에 답이 안 오는 상태입니다. 무엇이 멈춘 것인지(SQ doorbell 미인식 / WQE 처리 시작 안 됨 / completion engine 버그 / phase bit 동기화 실패) 단계적으로 좁혀가야 합니다.

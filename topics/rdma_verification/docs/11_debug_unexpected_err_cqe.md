@@ -12,6 +12,24 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-에러-cqe-발생-원칙">1. 에러 CQE 발생 원칙</a>
+  <a class="page-toc-link" href="#2-대표-에러-메시지">2. 대표 에러 메시지</a>
+  <a class="page-toc-link" href="#3-wc_status-레퍼런스">3. wc_status 레퍼런스</a>
+  <a class="page-toc-link" href="#4-에러-발생-경로">4. 에러 발생 경로</a>
+  <a class="page-toc-link" href="#디버깅-단계별">디버깅 단계별</a>
+  <a class="page-toc-link" href="#에러-발생-후-tb-state">에러 발생 후 TB state</a>
+  <a class="page-toc-link" href="#expected-error-로-promote-하는-방법">Expected Error 로 promote 하기</a>
+  <a class="page-toc-link" href="#빠른-트리아지--한-줄-결정">빠른 트리아지</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
@@ -19,6 +37,14 @@
     - **Justify** "RETRY_EXC 외 모든 에러 CQE 는 정상 시뮬에서 발생하면 안 된다" 원칙을 정당화할 수 있다.
     - **Promote** 의도한 에러는 `cmd.expected_error = 1` 로 promote 하여 `F-CQHDL-TBERR-0003` 를 회피할 수 있다.
     - **Trace** 에러 발생 후 TB state(QP/Outstanding/CQ폴링/Scoreboard/Sequencer)의 변화를 추적할 수 있다.
+
+!!! info "사전 지식"
+    - [RDMA Module 07 — Congestion / Error Handling](../../rdma/07_congestion_error/) (`wc_status` IBTA 정의)
+    - [Module 06 — Error Handling Path](06_error_handling_path.md) (`expected_error`, `setErrState`, `enable_error_cq_poll`)
+    - [Module 03 — Phase & Test Flow](03_phase_test_flow.md) (`try_once` 단발 폴링 패턴)
+
+!!! warning "실무 주의점"
+    `WC_WR_FLUSH_ERR` (5) 는 항상 **2차 영향**이다. 이 에러를 보고 그 자리부터 디버깅하면 잘못된 가설로 시간을 잃는다. 시간을 거꾸로 가서 **첫 에러 CQE** 를 찾고, 그것부터 root cause 추적을 시작해야 한다.
 
 ## 왜 이 모듈이 중요한가
 RDMA-TB 의 가장 강한 invariant 중 하나: **RETRY_EXC 계열을 제외한 모든 에러 CQE 는 정상 시뮬레이션에서 발생하면 안 된다.** 발생하면 곧 DUT 버그입니다. 이 invariant 가 깨졌을 때 어떻게 분류·트리아지하는지가 이 모듈의 주제입니다.

@@ -12,11 +12,31 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#1-에러-id--모듈--첫-액션">1. 에러 ID → 모듈 → 첫 액션</a>
+  <a class="page-toc-link" href="#2-h2c--c2h-qid-한-줄-표">2. QID 한 줄 표</a>
+  <a class="page-toc-link" href="#3-static-flag-한-줄-표-module-06">3. Static Flag 한 줄 표</a>
+  <a class="page-toc-link" href="#4-errqp-흐름-한-장-그림">4. ErrQP 흐름</a>
+  <a class="page-toc-link" href="#5-5단계-디버그-절차-모듈-89101112-공통">5. 5단계 디버그 절차</a>
+  <a class="page-toc-link" href="#6-빠른-검색-키워드-runlog">6. 빠른 검색 키워드</a>
+  <a class="page-toc-link" href="#7-의도된-에러-시나리오-시퀀스--미니-템플릿">7. 의도된 에러 시퀀스 템플릿</a>
+  <a class="page-toc-link" href="#8-컴포넌트--ap--subscriber-한-장-그림">8. AP Subscriber 한 장 그림</a>
+  <a class="page-toc-link" href="#9-다음에-어디로-가나">9. 다음에 어디로 가나</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈은 cheatsheet 입니다 — 시뮬 실패 시 한 페이지 안에서 어디로 갈지 결정.
 
     - **Lookup** 에러 ID → 모듈 → 첫 액션
     - **Recall** QID, static flag, 5단계 디버그 절차
+
+!!! info "사용 시나리오"
+    - 시뮬 fail 직후 5분 내에 어느 모듈로 갈지 결정 (§1, §6)
+    - QID / static flag / AP topology 가 헷갈릴 때 빠른 참조 (§2, §3, §8)
+    - 의도된 에러 시퀀스 작성 시 보일러플레이트 복사 (§7)
 
 ## 1. 에러 ID → 모듈 → 첫 액션
 

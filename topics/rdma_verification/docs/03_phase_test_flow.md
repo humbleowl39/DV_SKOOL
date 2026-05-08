@@ -12,12 +12,32 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-phase-별-매핑-confluence-test-flow">1. Phase 별 매핑</a>
+  <a class="page-toc-link" href="#2-시퀀스-실행-패턴-4종">2. 시퀀스 실행 패턴 4종</a>
+  <a class="page-toc-link" href="#3-sequencer-계층">3. Sequencer 계층</a>
+  <a class="page-toc-link" href="#코드-walkthrough">코드 walkthrough</a>
+  <a class="page-toc-link" href="#흔한-실수와-회피">흔한 실수와 회피</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Sequence** UVM phase 8단계가 RDMA-TB 에서 어떻게 매핑되는지 차례로 설명할 수 있다.
     - **Differentiate** default sequence / `start_item-finish_item` / cq_handler 직접 호출 / 테스트 레벨 시퀀스 시작 4가지 시퀀스 패턴을 구분할 수 있다.
     - **Trace** `top_vseqr` 에서 시작한 `vrdma_top_sequence` 가 어떻게 노드별 `rdma_seqr` 로 라우팅되는지 추적할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 02 — Component 계층](02_component_hierarchy.md) (sequencer / driver / handler 분리)
+    - UVM phase 모델 — build/connect/reset/configure/main/shutdown/check
+    - `start_item / finish_item` 표준 호출 페어
 
 ## 왜 이 모듈이 중요한가
 RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 가 잘못 구성되면 race / dead-lock 이 쉽게 생깁니다. RDMA-TB 는 이를 해결하기 위해 phase 별 책임을 명확히 나눴고, `post_configure_phase` 에서 default sequence 로 HW 초기화를 자동 수행합니다.

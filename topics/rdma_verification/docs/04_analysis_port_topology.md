@@ -12,12 +12,32 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-driver-의-5개-ap">1. Driver 의 5개 AP</a>
+  <a class="page-toc-link" href="#2-cq-handler-의-derived-ap">2. CQ Handler 의 derived AP</a>
+  <a class="page-toc-link" href="#3-subscriber-매핑">3. Subscriber 매핑</a>
+  <a class="page-toc-link" href="#4-stateless-_handler-의-역할">4. Stateless `*_handler` 의 역할</a>
+  <a class="page-toc-link" href="#코드-walkthrough">코드 walkthrough</a>
+  <a class="page-toc-link" href="#새-컴포넌트가-이-토폴로지를-활용하는-패턴">새 컴포넌트 활용 패턴</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Identify** `vrdma_driver` 가 발행하는 5개 핵심 AP 와 `vrdma_cq_handler` 의 derived AP 를 식별할 수 있다.
     - **Trace** 한 WQE 가 driver→handler→comparator/scoreboard 로 어떻게 전파되는지 추적할 수 있다.
     - **Apply** "기존 데이터를 다시 쓰지 말고 AP 를 구독하라" 원칙(Module 05 #3)을 새 컴포넌트 설계에 적용할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 02 — Component 계층](02_component_hierarchy.md) (driver / cq_handler 위치)
+    - UVM TLM analysis port — 1:N broadcast, `analysis_export`, `analysis_imp`
 
 ## 왜 이 모듈이 중요한가
 RDMA-TB 의 모든 횡단 검증(comparator, tracker, scoreboard)은 **driver/handler 가 broadcasting 하는 AP** 를 구독해서 동작합니다. AP 토폴로지를 알면 새 검증 컴포넌트 추가 시 어디에 tap 할지 결정할 수 있고, 디버깅 시 어느 단계에서 데이터가 끊겼는지 거꾸로 추적할 수 있습니다.

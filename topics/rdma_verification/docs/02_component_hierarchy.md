@@ -12,6 +12,23 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-직속-디렉토리-7종-confluence-component-표--코드-검증">1. 직속 디렉토리 7종</a>
+  <a class="page-toc-link" href="#2-env-의-sub-디렉토리--검증-영역별-분리">2. env/ sub-디렉토리 (검증 영역)</a>
+  <a class="page-toc-link" href="#3-agent-의-3-요소-분리">3. agent/ 의 3-요소 분리</a>
+  <a class="page-toc-link" href="#4-pool--rdma-리소스-등록부">4. pool/ — 리소스 등록부</a>
+  <a class="page-toc-link" href="#5-util--횡단-유틸리티-4종">5. util/ — 횡단 유틸리티</a>
+  <a class="page-toc-link" href="#코드-walkthrough">코드 walkthrough</a>
+  <a class="page-toc-link" href="#컴포넌트--에러-id-prefix-매핑">컴포넌트 → 에러 ID prefix 매핑</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
@@ -19,6 +36,10 @@
     - **Identify** `agent/` 의 driver / handler / sequencer 분리 패턴과 그 의도를 식별할 수 있다.
     - **Compare** `data_env` / `dma_env` / `network_env` 의 검증 영역과 책임을 비교할 수 있다.
     - **Locate** RDMA 리소스(QP/MR/PD/CQ/SQ/RQ)의 등록·관리가 어디에서 일어나는지 짚을 수 있다.
+
+!!! info "사전 지식"
+    - [Module 01 — TB Overview](01_tb_overview.md) (top env 계층 큰 그림)
+    - UVM agent 패턴 — driver / sequencer / monitor
 
 ## 왜 이 모듈이 중요한가
 디버깅의 80% 는 "이 에러가 어디서 나왔는지"를 빠르게 찾는 것입니다. 모든 에러 메시지는 특정 컴포넌트에서 발생하므로, 컴포넌트 계층을 알면 에러 ID prefix(`E-DRV-...`, `E-SB-...`, `F-C2H-...`, `F-CQHDL-...`)만 보고도 1초 만에 위치를 잡을 수 있습니다.

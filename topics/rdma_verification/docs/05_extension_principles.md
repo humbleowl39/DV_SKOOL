@@ -12,12 +12,38 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#원칙-1--open-closed-기존-컴포넌트-비침투적-확장">#1 Open-Closed</a>
+  <a class="page-toc-link" href="#원칙-2--interface-stability-안정된-인터페이스--객체-기반-통신">#2 Interface Stability</a>
+  <a class="page-toc-link" href="#원칙-3--dry-via-analysis-port-reuse">#3 DRY via Analysis Port Reuse</a>
+  <a class="page-toc-link" href="#원칙-4--stateless-클래스에-state-추가-금지">#4 Stateless 보존</a>
+  <a class="page-toc-link" href="#새-컴포넌트-추가-체크리스트">체크리스트</a>
+  <a class="page-toc-link" href="#케이스-스터디--congestion-control-추가">케이스 스터디</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Apply** Open-Closed / Interface Stability / DRY via AP / Stateless 보존 원칙을 새 컴포넌트 설계에 적용할 수 있다.
     - **Evaluate** 어떤 변경이 기존 컴포넌트를 침투(intrusive)하는지 평가할 수 있다.
     - **Justify** state 가 sequence 가 아니라 sequencer 에 있어야 하는 이유를 설명할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 02 — Component 계층](02_component_hierarchy.md) (handler stateless 의 의도)
+    - [Module 04 — Analysis Port Topology](04_analysis_port_topology.md) (1:N broadcast)
+    - SOLID 원칙 중 Open-Closed 의 일반 개념
+
+!!! danger "❓ 흔한 오해"
+    **오해**: "내가 필요한 정보는 driver 안에 있으니 driver 안에 hook 을 추가하자" 가 가장 빠른 길이다.
+
+    **실제**: driver 가 이미 5개 AP 로 broadcasting 하고 있다(M04). hook 추가는 (1) Open-Closed 위반 (driver 코드 변경), (2) DRY 위반 (이미 있는 정보 재계산), (3) Interface Stability 위험 (port 시그니처가 흔들림) — 3 원칙 동시 위반.
 
 ## 왜 이 모듈이 중요한가
 RDMA-TB 는 수십 명이 동시에 변경하는 코드베이스입니다. "기존 동작을 바꾸지 않으면서 새 기능을 추가한다"는 규율이 깨지면 회귀(regression)가 폭증합니다. 이 4 원칙은 그 규율을 명문화한 것입니다.

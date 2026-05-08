@@ -12,12 +12,32 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-대표-에러-메시지">1. 대표 에러 메시지</a>
+  <a class="page-toc-link" href="#2-발생-경로별-분류">2. 발생 경로별 분류</a>
+  <a class="page-toc-link" href="#5단계-디버깅-절차">5단계 디버깅 절차</a>
+  <a class="page-toc-link" href="#흔한-원인-매트릭스">흔한 원인 매트릭스</a>
+  <a class="page-toc-link" href="#실전-트리아지--한-줄-결정">실전 트리아지</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
     - **Identify** `E-SB-MATCH-*` 에러 ID 를 보고 어느 comparator(1side/2side/imm)에서 발생했는지 식별할 수 있다.
     - **Decompose** 로그에서 byte index, local PA, remote PA 정보를 추출하고 source / dest / IOVA 변환 단계 중 어디가 문제인지 분리할 수 있다.
     - **Apply** 5단계 디버깅 절차(로그→SW엔티티→HW인터페이스→DUT→MR/SGE)를 적용할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 04 — Analysis Port Topology](04_analysis_port_topology.md) (comparator 가 구독하는 AP)
+    - [Module 06 — Error Handling Path](06_error_handling_path.md) (ErrQP 게이트가 검증 정합성에 미치는 영향)
+    - [Module 07 — H2C/C2H QID Reference](07_h2c_c2h_qid_map.md) (HW 인터페이스 단계 디버깅 도구)
 
 ## 왜 이 모듈이 중요한가
 Data mismatch 는 RDMA 검증의 가장 빈번하고 까다로운 실패입니다. 원인이 SW 설정(MR/QP/IOVA), HW 인터페이스(C2H/H2C), DUT 데이터 경로 모두에 있을 수 있어 단계적 분리(triangulation)가 필수입니다.

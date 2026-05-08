@@ -12,6 +12,25 @@
 </div>
 <!-- DV-SKOOL-CH-CTX:end -->
 
+<!-- DV-SKOOL-CH-TOC:start -->
+<div class="page-toc">
+  <span class="page-toc-label">목차</span>
+  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
+  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
+  <a class="page-toc-link" href="#1-시작점--rdmasqdestroyerr--rdmaqpdestroyerr">1. 시작점 — `RDMA*Destroy(.err)`</a>
+  <a class="page-toc-link" href="#2-경로-1-driver--qp-error-state">2. 경로 1: Driver → ErrQP</a>
+  <a class="page-toc-link" href="#3-경로-2-cq-handler--error-cqe">3. 경로 2: CQ Handler → Error CQE</a>
+  <a class="page-toc-link" href="#4-경로-3-error-cq-백그라운드-모니터링">4. 경로 3: Error CQ 백그라운드 모니터</a>
+  <a class="page-toc-link" href="#5-컴포넌트별-에러-시-동작">5. 컴포넌트별 동작</a>
+  <a class="page-toc-link" href="#static-flag-요약">Static Flag 요약</a>
+  <a class="page-toc-link" href="#적용-범위-비교--무엇을-어떤-단위로-끄나">적용 범위 비교</a>
+  <a class="page-toc-link" href="#에러-테스트-시퀀스-작성-패턴">에러 테스트 시퀀스 패턴</a>
+  <a class="page-toc-link" href="#디버깅-지침">디버깅 지침</a>
+  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
+  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+</div>
+<!-- DV-SKOOL-CH-TOC:end -->
+
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
@@ -19,6 +38,11 @@
     - **Distinguish** `cmd.expected_error` (per-cmd) 와 `qp.isErrQP()` (per-QP) 와 static `err_enabled` (per-component, all QP) 의 적용 범위를 구분할 수 있다.
     - **Configure** 의도된 에러 시나리오를 위해 5개 static flag (각 comparator·tracker 의 `err_enabled`, `enable_error_cq_poll`, `turn_off`)를 설정할 수 있다.
     - **Author** 정상 코드 흐름과 동등한 에러 테스트 시퀀스를 작성할 수 있다.
+
+!!! info "사전 지식"
+    - [Module 04 — Analysis Port Topology](04_analysis_port_topology.md) (`completed_wqe_ap` 의 ErrQP 게이트)
+    - [Module 05 — Extension 4원칙](05_extension_principles.md) (Stateless 보존)
+    - [RDMA Module 04 — QP FSM](../../rdma/04_service_types_qp/) (Reset/Init/RTR/RTS/SQErr/Err)
 
 ## 왜 이 모듈이 중요한가
 RDMA 검증에서 "에러 시나리오" 는 정상 시나리오만큼 중요합니다. 그러나 에러 케이스에 다른 정상 검증이 휩쓸려가면(false positive fatal) 디버깅이 불가능해집니다. RDMA-TB 는 에러를 **격리(isolate)** 하면서도 **검증(check)** 하는 정밀한 메커니즘을 가지고 있습니다.

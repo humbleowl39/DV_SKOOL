@@ -107,34 +107,135 @@
       <span class="concept-dag-node-title">Cheatsheet</span>
     </a>
   </div>
+  <div class="concept-dag-legend">각 노드 = 모듈 (클릭하여 이동) · 화살표(→) = 선수 지식 흐름 · 1부 끝(M07) → 2부 진입(M08)</div>
 </div>
 
 ## 📚 학습 모듈
 
-### 1부 — 아키텍처 (Module 01-07)
+### 1부 — 아키텍처
+<!-- DV-SKOOL-MODULES-PART1:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="network" href="01_tb_overview/">
+    <div class="module-num">01</div>
+    <div class="module-body">
+      <div class="module-title">TB Overview & Multi-Node 구조</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="02_component_hierarchy/">
+    <div class="module-num">02</div>
+    <div class="module-body">
+      <div class="module-title">Component 계층 (lib/base/component)</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="03_phase_test_flow/">
+    <div class="module-num">03</div>
+    <div class="module-body">
+      <div class="module-title">UVM Phase & Test Flow</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="04_analysis_port_topology/">
+    <div class="module-num">04</div>
+    <div class="module-body">
+      <div class="module-title">Analysis Port Topology</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="05_extension_principles/">
+    <div class="module-num">05</div>
+    <div class="module-body">
+      <div class="module-title">Adding New Components — 4원칙</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="06_error_handling_path/">
+    <div class="module-num">06</div>
+    <div class="module-body">
+      <div class="module-title">Error Handling Path</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="07_h2c_c2h_qid_map/">
+    <div class="module-num">07</div>
+    <div class="module-body">
+      <div class="module-title">H2C / C2H QID Reference</div>
+    </div>
+  </a>
+</div>
+<!-- DV-SKOOL-MODULES-PART1:end -->
 
-| 모듈 | 핵심 내용 | 핵심 파일 |
-|------|----------|----------|
-| [M01 TB Overview](01_tb_overview.md) | Multi-node TB top, env 계층 | `lib/base/component/env/vrdmatb_top_env.svh` |
-| [M02 Component 계층](02_component_hierarchy.md) | 11 디렉토리(config / pool / agent / data_env / dma_env / network_env / …) | `lib/base/component/` |
-| [M03 Phase & Test Flow](03_phase_test_flow.md) | UVM phase, default sequence, 시퀀서 계층 | `vrdma_top_sequence`, `vrdma_init_seq` |
-| [M04 Analysis Port Topology](04_analysis_port_topology.md) | `issued_wqe_ap` / `completed_wqe_ap` / `cqe_ap` / `qp_reg_ap` / `mr_reg_ap` | `vrdma_driver.svh:56-61` |
-| [M05 Extension 4원칙](05_extension_principles.md) | Open-Closed / Interface / DRY / Stateless | Confluence Adding New Components |
-| [M06 Error Handling Path](06_error_handling_path.md) | `isErrQP` / `expected_error` / static `err_enabled` | `vrdma_driver`, `vrdma_cq_handler`, comparator/tracker |
-| [M07 H2C / C2H QID Reference](07_h2c_c2h_qid_map.md) | 10가지 QID 정의 + 채널 매핑 | `lib/base/def/vrdma_defs.svh:75-88` |
+### 2부 — 디버깅 케이스
+<!-- DV-SKOOL-MODULES-PART2:start -->
+<div class="module-grid">
+  <a class="module-card" data-cat="network" href="08_debug_data_integrity/">
+    <div class="module-num">08</div>
+    <div class="module-body">
+      <div class="module-title">Data Integrity Error</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="09_debug_cq_poll_timeout/">
+    <div class="module-num">09</div>
+    <div class="module-body">
+      <div class="module-title">CQ Poll Timeout</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="10_debug_c2h_tracker/">
+    <div class="module-num">10</div>
+    <div class="module-body">
+      <div class="module-title">C2H Tracker Error</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="11_debug_unexpected_err_cqe/">
+    <div class="module-num">11</div>
+    <div class="module-body">
+      <div class="module-title">Unexpected Error CQE</div>
+    </div>
+  </a>
+  <a class="module-card" data-cat="network" href="12_debug_cheatsheet/">
+    <div class="module-num is-special" title="Cheatsheet">★</div>
+    <div class="module-body">
+      <div class="module-title">Debug Cheatsheet</div>
+    </div>
+  </a>
+</div>
+<!-- DV-SKOOL-MODULES-PART2:end -->
 
-### 2부 — 디버깅 케이스 (Module 08-12)
+### 에러 ID prefix 빠른 인덱스
 
-| 모듈 | 케이스 | 대표 에러 ID |
-|------|------|-----------|
-| [M08 Data Integrity Error](08_debug_data_integrity.md) | 1side / 2side / IMM compare 실패 | `E-SB-MATCH-0001~0005` |
-| [M09 CQ Poll Timeout](09_debug_cq_poll_timeout.md) | CQE 미생성 → polling 타임아웃 | `E-DRV-TBERR-0001/0002` |
-| [M10 C2H Tracker Error](10_debug_c2h_tracker.md) | PA 매칭 실패 / ordering 위반 / 크기 초과 | `F-C2H-MATCH-0001~0005`, `E-C2H-MATCH-0001` |
-| [M11 Unexpected Error CQE](11_debug_unexpected_err_cqe.md) | 예상치 못한 에러 CQE → DUT 버그 의심 | `F-CQHDL-TBERR-0003` |
-| [M12 Debug Cheatsheet](12_debug_cheatsheet.md) | 통합 디버그 cheatsheet | (요약) |
+| Prefix | 컴포넌트 | 모듈 |
+|--------|---------|-----|
+| `E-DRV-TBERR-*` | `vrdma_driver` | [M09 CQ Poll Timeout](09_debug_cq_poll_timeout.md) |
+| `F-CQHDL-TBERR-*` | `vrdma_cq_handler` | [M11 Unexpected Error CQE](11_debug_unexpected_err_cqe.md) |
+| `E-SB-MATCH-*` | comparator (1side / 2side / imm) | [M08 Data Integrity](08_debug_data_integrity.md) |
+| `F-C2H-MATCH-*` / `E-C2H-MATCH-*` | `vrdma_c2h_tracker` | [M10 C2H Tracker](10_debug_c2h_tracker.md) |
 
 ## 📖 참조 자료
-- Confluence space `RDMADV` — Testbench Architecture / Debugging Cases (Source of truth)
-- Code base: `/home/jaehyeok.lee/RDMA/RDMA-TB/lib/`
-- 용어 정의: [용어집](glossary.md)
-- 학습 점검: [퀴즈 인덱스](quiz/index.md)
+- **Confluence — `RDMADV` space** — [Testbench Architecture](https://mangoboost.atlassian.net/wiki/spaces/RDMADV/pages/1224310992/Testbench+Architecture), [Debugging Cases](https://mangoboost.atlassian.net/wiki/spaces/RDMADV/pages/1334608001/Debugging+Cases) (source of truth)
+- **`RDMA-TB/lib/`** — RDMA IP 검증 환경 본체 (`base/`, `ext/`, `external/`, `submodule/` 4-layer)
+- **`RDMA-TB/lib/base/def/vrdma_defs.svh:75-88`** — H2C/C2H QID 단일 출처
+- **[용어집](glossary.md)** — 29 terms (ISO 11179 형식)
+- **[퀴즈 인덱스](quiz/index.md)** — 챕터별 학습 점검 (Bloom 단계 라벨)
+
+<!-- DV-SKOOL-RELATED-TOPICS:start -->
+
+## 🔗 관련 토픽
+<div class="course-grid">
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/rdma/">
+    <div class="course-card-num">⚡ 자매</div>
+    <div class="course-card-title">RDMA (IB & RoCEv2)</div>
+    <div class="course-card-desc">프로토콜 / IBTA 스펙 / Verbs API</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/uvm/">
+    <div class="course-card-num">🧪 선수</div>
+    <div class="course-card-title">UVM</div>
+    <div class="course-card-desc">Agent / Sequence / Phase / TLM</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/pcie/">
+    <div class="course-card-num">🔌 관련</div>
+    <div class="course-card-title">PCI Express</div>
+    <div class="course-card-desc">QDMA bypass interface 의 모태</div>
+  </a>
+  <a class="course-card" href="https://humbleowl39.github.io/DV_SKOOL/" style="border-style:dashed;">
+    <div class="course-card-num">🏠 HOME</div>
+    <div class="course-card-title">DV SKOOL 홈</div>
+    <div class="course-card-desc">전체 토픽 / 학습 경로 보기</div>
+  </a>
+</div>
+
+<!-- DV-SKOOL-RELATED-TOPICS:end -->
