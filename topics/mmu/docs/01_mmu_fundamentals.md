@@ -1,4 +1,4 @@
-# Unit 1: MMU 기본 개념 및 주소 변환
+# Module 01 — MMU 기본 개념 및 주소 변환
 
 <!-- DV-SKOOL-CH-CTX:start -->
 <div class="chapter-context" data-cat="memory">
@@ -15,71 +15,241 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#왜-가상-주소가-필요한가">왜 가상 주소가 필요한가?</a>
-  <a class="page-toc-link" href="#주소-변환의-기본-원리">주소 변환의 기본 원리</a>
-  <a class="page-toc-link" href="#mmu의-핵심-기능-3가지">MMU의 핵심 기능 3가지</a>
-  <a class="page-toc-link" href="#mmu-enable-disable">MMU Enable / Disable</a>
-  <a class="page-toc-link" href="#translation-regime-누가-어디서-변환하는가">Translation Regime — 누가, 어디서 변환하는가</a>
-  <a class="page-toc-link" href="#secure-vs-non-secure-trustzone과-mmu">Secure vs Non-secure — TrustZone과 MMU</a>
-  <a class="page-toc-link" href="#mmu가-soc에서-위치하는-곳">MMU가 SoC에서 위치하는 곳</a>
-  <a class="page-toc-link" href="#cpu-mmu-vs-iommusmmu-비교">CPU MMU vs IOMMU/SMMU 비교</a>
-  <a class="page-toc-link" href="#page-fault-변환-실패-처리">Page Fault — 변환 실패 처리</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-process-a-가-va-0x40001234-를-읽는-한-사이클">3. 작은 예 — VA 0x4000_1234 읽기</a>
+  <a class="page-toc-link" href="#4-일반화-mmu-3대-기능과-translation-regime">4. 일반화 — 3대 기능 + Regime</a>
+  <a class="page-toc-link" href="#5-디테일-페이지-크기-권한-속성-trustzone-page-fault">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
-!!! tip "💡 이해를 위한 비유"
-    **MMU = 가상-실주소 변환기** ≈ **도시의 주소록 — 동·호수(가상) ↔ 실제 빌딩 좌표(물리)**
+!!! objective "학습 목표"
+    이 모듈을 마치면:
 
-    프로세스마다 자기만의 주소 공간을 갖고, MMU 가 그것을 실제 메모리로 매핑. 같은 가상 주소가 다른 프로세스에선 다른 물리 주소.
+    - **Explain** 가상 주소(Virtual Address)가 해결하는 5가지 문제(주소 충돌 / 메모리 보호 / 단편화 / 물리 한계 / 보안 격리)를 설명할 수 있다.
+    - **Distinguish** MMU 의 3대 기능(주소 변환 / 권한 검사 / 캐시 속성 제어)을 PTE 비트 단위로 구분할 수 있다.
+    - **Trace** 한 번의 VA → PA 변환을 (TLB lookup → page walk → permission check → access) 흐름으로 끝까지 추적할 수 있다.
+    - **Identify** Translation Regime(EL0/EL1 Stage 1, EL2 Stage 2, Secure)별 책임자를 식별한다.
+    - **Apply** MMU Enable 시퀀스(Page Table → TTBR → TCR/MAIR → SCTLR.M → ISB) 를 부트 코드에 적용할 수 있다.
+
+!!! info "사전 지식"
+    - TCP/IP 또는 일반 OS의 process memory 모델 (heap/stack 분리)
+    - 이진/16진 비트 마스킹, 페이지 정렬
 
 ---
 
-## 핵심 개념
-**MMU = Virtual Address를 Physical Address로 변환하고, 접근 권한을 검사하는 HW 블록. 프로세스 격리, 메모리 보호, 물리 메모리 추상화의 핵심.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: MMU 가 켜지면 자동으로 안전하다
+이 토픽의 모든 후속 모듈은 한 가정에서 시작합니다 — **"CPU 와 device 가 보는 주소(Virtual Address)는 실제 DRAM 주소(Physical Address)가 아니다"**. Page table 이 왜 multi-level 인지, TLB 가 왜 latency-critical 인지, IOMMU 가 왜 SoC 보안의 토대인지 — 모두 이 한 가정의 파생입니다.
 
-    **실제**: MMU 가 켜져도 page table entry 가 잘못 설정되면 (예: NS 비트 미설정, U/K 권한 오류) 보안 격리가 깨진다. MMU = 정책 적용 도구이지 정책 자체가 아님.
+이 모듈을 건너뛰면 이후 검증 시 마주칠 모든 fault, permission error, ASID mismatch, identity-mapping 누락 같은 증상이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이건 process isolation 을 위한 거구나"** 처럼 _이유_ 가 보입니다.
 
-    **왜 헷갈리는가**: "기능 켜짐 = 안전" 이라는 직관 + page table 을 SW 가 채우는 책임이라는 사실이 흐릿하게 다가와서.
 ---
 
-## 왜 가상 주소가 필요한가?
+## 2. Intuition — 비유와 한 장 그림
 
-### 가상 주소 없는 세계의 문제
+!!! tip "💡 한 줄 비유"
+    **MMU** = 도시의 _주소록_. 같은 "302호" 라는 가상 주소가 어느 동(어느 process) 인지에 따라 전혀 다른 실제 빌딩(physical address) 으로 번역됩니다. 우편물(load/store) 은 _주소록을 거치지 않고는 배달되지 않습니다_.<br>
+    **Page Table** = 그 주소록의 _두꺼운 종이 책_. 통째로 외우기엔 무거워서, MMU 는 자주 본 페이지(TLB) 만 _즐겨찾기_ 해 둡니다.
+
+### 한 장 그림 — VA → PA 흐름
 
 ```
-물리 주소 직접 사용 시:
-
-  Process A: 0x1000 ~ 0x2000 사용
-  Process B: 0x1000 ~ 0x2000 사용 → 충돌!
-
-  문제 1: 프로세스 간 주소 충돌
-  문제 2: Process A가 Process B 메모리 직접 접근 가능 → 보안 위험
-  문제 3: 물리 메모리 연속 배치 필요 → 메모리 단편화
-  문제 4: 프로세스마다 사용 가능 메모리가 물리 크기에 제한
+   App / Driver                     CPU core                       DRAM
+   ───────────────                  ──────────────────────         ────────────
+       │                                │
+       │ load r0, [VA=0x4000_1234]      │
+       ▼                                │
+                                  ┌─────▼─────┐
+                                  │  TLB look │ ─── Hit  ──▶ PA + perm + attr
+                                  │  ASID/VA  │              (1 cycle)
+                                  └─────┬─────┘
+                                        │ Miss
+                                        ▼
+                                  ┌───────────┐
+                                  │ Page Walk │ ◀── L0 → L1 → L2 → L3 PTE read ── DRAM
+                                  │  Engine   │     (4 mem access, ~400 ns)
+                                  └─────┬─────┘
+                                        │ done
+                                  ┌─────▼─────┐
+                                  │ Perm chk  │ ── 위반 ──▶ Page Fault → OS Handler
+                                  │ R/W/X     │
+                                  │ EL0/EL1   │
+                                  └─────┬─────┘
+                                        │ ok
+                                        ▼
+                                  TLB fill (PA, ASID, attrs) + bus access
+                                        │
+                                        ▼
+                                  attr=Cacheable → cache line
+                                  attr=Device    → strict-ordered MMIO
 ```
 
-### 가상 주소가 해결하는 것
+### 왜 이렇게 설계됐는가 — Design rationale
 
-| 문제 | 가상 주소의 해결 |
-|------|----------------|
-| 주소 충돌 | 각 프로세스가 독립적 가상 주소 공간 보유 |
-| 메모리 보호 | Page 단위 접근 권한 (R/W/X) 검사 |
-| 메모리 단편화 | 가상으로 연속, 물리로 불연속 가능 |
-| 메모리 크기 제한 | Swap으로 물리 메모리 이상의 공간 사용 가능 |
-| 보안 격리 | Process A가 Process B의 물리 주소를 알 수 없음 |
+세 가지 요구가 동시에 만족돼야 했습니다.
+
+1. **Process A 와 Process B 가 같은 VA 0x4000_1234 를 동시에 _다른_ DRAM 위치로 매핑** → page table 이 process 마다 따로 있어야 → TTBR0 + ASID.
+2. **하지만 store 마다 메모리를 4번 읽으면 IPC 가 무너짐** → TLB 가 hit-rate 95%+ 로 walk 비용을 1 cycle 로 압축.
+3. **그래도 권한 위반은 _하드웨어가 즉시_ 잡아야** → PTE 의 AP/UXN/PXN/AF/NS bit 가 walk 결과에 같이 실려나옴.
+
+이 세 요구의 교집합이 **"VA = (VPN, offset) → 주소록 색인 → PA + permission + attribute"** 라는 한 줄 모델입니다.
 
 ---
 
-## 주소 변환의 기본 원리
+## 3. 작은 예 — Process A 가 VA 0x4000_1234 를 읽는 한 사이클
 
-### Page 기반 변환
+가장 단순한 시나리오. ARMv8 EL0 에서 동작하는 Process A 가 `ldr w0, [x1]` 로 **VA = 0x0000_0000_4000_1234** 를 읽으려 합니다. 4KB granule, ASID=5, 처음 접근이라 TLB 는 비어 있습니다.
+
+### 단계별 추적
+
+```
+   Process A (ASID=5, EL0, TTBR0_EL1 = 0x0000_8000_0000)
+     ▼
+   VA = 0x0000_0000_4000_1234
+        │
+        ├── VA[63:48] = 0x0000  (sign-ext, TTBR0 영역)
+        ├── VA[47:39] = 0x000   (L0 index = 0)
+        ├── VA[38:30] = 0x001   (L1 index = 1)
+        ├── VA[29:21] = 0x000   (L2 index = 0)
+        ├── VA[20:12] = 0x001   (L3 index = 1)
+        └── VA[11:0]  = 0x234   (page offset, 변환 안 함)
+        ▼
+   ┌────────────────────────────────────────────────────┐
+   │ ① TLB lookup (ASID=5, VPN=0x0_0000_0000_4000_1)    │
+   │     → MISS                                         │
+   ├────────────────────────────────────────────────────┤
+   │ ② Page Walk Engine 발동                             │
+   │     L0 read: 0x0000_8000_0000 + 0×8 = ..._0000     │
+   │       PTE = 0x0000_0000_8001_0003 (Table, V=1)     │
+   │     L1 read: 0x0000_8001_0000 + 1×8 = ..._0008     │
+   │       PTE = 0x0000_0000_8002_0003 (Table, V=1)     │
+   │     L2 read: 0x0000_8002_0000 + 0×8 = ..._0000     │
+   │       PTE = 0x0000_0000_8003_0003 (Table, V=1)     │
+   │     L3 read: 0x0000_8003_0000 + 1×8 = ..._0008     │
+   │       PTE = 0x0040_0000_0009_2783 (Page descriptor)│
+   │         AP[7:6]=01  → EL0/EL1 RW                   │
+   │         AF=1        → already accessed             │
+   │         AttrIdx=2   → Normal WB Cacheable          │
+   │         OutputAddr  = 0x0000_0009_2000             │
+   ├────────────────────────────────────────────────────┤
+   │ ③ Permission check                                 │
+   │     access = Read at EL0 → AP=01 허용 → OK         │
+   ├────────────────────────────────────────────────────┤
+   │ ④ PA 합성                                           │
+   │     PA = OutputAddr | offset                       │
+   │        = 0x0000_0009_2000 | 0x234                  │
+   │        = 0x0000_0009_2234                          │
+   ├────────────────────────────────────────────────────┤
+   │ ⑤ TLB fill (ASID=5, VPN, PPN, AP, attrs, size=4KB)│
+   ├────────────────────────────────────────────────────┤
+   │ ⑥ DRAM read at PA=0x9_2234, attr=WB → fill L1$     │
+   └────────────────────────────────────────────────────┘
+        ▼
+   r0 = *(0x9_2234)
+```
+
+### 단계별 의미
+
+| Step | 누가 | 무엇을 | 왜 |
+|---|---|---|---|
+| ① | CPU MMU | TLB 에서 (ASID, VPN) 검색 | TLB hit 면 walk 생략 — 1 cycle path |
+| ② | Page Walk Engine | TTBR0 부터 L0..L3 PTE 4개 읽기 | Multi-level 의 본질 — sparse VA space 를 효율 표현 |
+| ③ | MMU permission unit | AP[7:6], UXN/PXN, AF 검사 | 위반 시 즉시 Synchronous Exception |
+| ④ | MMU | PPN || offset | offset 은 변환 없이 그대로 통과 |
+| ⑤ | TLB fill logic | 결과 캐싱 | 다음 접근부터는 ① 만으로 끝 |
+| ⑥ | Bus + cache | 실제 DRAM 접근 | attr 이 cacheable / device 인지에 따라 path 분기 |
+
+### 만약 PTE 가 잘못됐다면? (3 분기)
+
+| 시나리오 | PTE 상태 | 결과 |
+|---|---|---|
+| **Translation fault** | L2 PTE 의 V=0 | Page Fault, ESR.IFSC=0b0001_xx (Level 2) |
+| **Permission fault** | AP[7:6]=10 (RO/RO) 인데 store | Permission Fault, ESR.WnR=1 |
+| **Access Flag fault** | AF=0 | AF Fault → SW 가 AF=1 로 update 후 재실행 (FEAT_HAFDBS 없을 때) |
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) VPN 만 변환되고 offset 은 그대로 통과** — 이게 page-aligned 라는 단어의 본질입니다. Page 크기 = (offset bit 의 2^N) 이라는 정의도 여기서 옵니다. <br>
+    **(2) walk 결과가 "PA + permission + attribute" 의 _한 묶음_ 으로 나온다** — TLB 엔트리는 단순한 PA 캐시가 아니라 _권한과 속성도 함께_ 캐싱합니다. PTE 변경 후 TLB invalidate 를 안 하면 stale permission 이 살아있는 게 그 때문입니다.
+
+---
+
+## 4. 일반화 — MMU 3대 기능과 Translation Regime
+
+### 4.1 MMU 의 3대 기능
+
+| 기능 | PTE 의 어디 | 검증 포인트 |
+|---|---|---|
+| **주소 변환 (VA→PA)** | OutputAddress[47:12] | walk 결과의 PA bit-exact 일치 |
+| **접근 권한 검사** | AP[7:6], UXN, PXN, NS, AF | 위반 시 정확한 fault class + level |
+| **캐시 속성 제어** | AttrIdx[4:2] → MAIR_EL1 lookup | Normal WB / Device-nGnRnE 등 attr 이 bus 로 정확히 전파 |
+
+### 4.2 Translation Regime — 누가, 어디서
+
+```
+ARMv8 Exception Level 별 Translation:
+
+  EL0/EL1 Stage 1    : TTBR0_EL1 (user) + TTBR1_EL1 (kernel)  → VA → IPA (or PA)
+                       관리자 = OS kernel
+  EL2     Stage 2    : VTTBR_EL2                               → IPA → PA
+                       관리자 = Hypervisor
+  EL3     별도 regime: TTBR0_EL3                               → Secure Monitor 전용
+                       관리자 = Secure Firmware (TF-A 등)
+
+핵심:
+  - EL0 (User) 와 EL1 (Kernel) 은 같은 Stage 1 regime 을 공유
+    → TTBR0 = user-half, TTBR1 = kernel-half
+  - 가상화 켜지면 EL1 의 PA 는 _진짜 PA 가 아님_ — IPA → S2 walk 한번 더
+  - 각 regime 은 독립 page table + 독립 TLB tag (ASID/VMID)
+```
+
+### 4.3 가상 주소가 해결하는 5가지 문제
+
+| 문제 | VA 의 해결 | 검증 시 보일 증상 (없으면) |
+|------|---------|------|
+| 주소 충돌 | 각 process 가 독립 VA space | 두 test 가 같은 PA 를 덮어씀 |
+| 메모리 보호 | Page 단위 R/W/X + AP | EL0 가 kernel 영역에 store 성공 |
+| 단편화 | 가상 연속 / 물리 불연속 | DMA buffer 할당 실패 |
+| 메모리 한계 | Swap (demand paging) | OOM, fault-on-load 미동작 |
+| 보안 격리 | Process A 가 B 의 PA 를 모름 | side-channel 또는 leak |
+
+### 4.4 MMU 의 위치 — CPU 내장 vs SoC 레벨
+
+```
++------------------------------------------------------------------+
+|                           SoC                                     |
+|                                                                   |
+|  +-------+    +-----+                                             |
+|  | CPU   +--->| MMU +---> Memory Controller ---> DRAM             |
+|  +-------+    +-----+                                             |
+|                                                                   |
+|  +--------+   +-------+                                           |
+|  | GPU    +-->| SMMU  +---> Memory Controller ---> DRAM           |
+|  +--------+   +-------+                                           |
+|                                                                   |
+|  +--------+   +-------+                                           |
+|  | DMA    +-->| IOMMU +---> Memory Controller ---> DRAM           |
+|  +--------+   +-------+                                           |
+|                                                                   |
+|  +--------+   +-------+                                           |
+|  | NIC/   +-->| sysMMU+---> Memory Controller ---> DRAM           |
+|  | Accel  |   +-------+                                           |
+|  +--------+                                                       |
++------------------------------------------------------------------+
+
+CPU → MMU (CPU 전용, 보통 CPU 내부)
+GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
+```
+
+**SoC 에서 MMU 가 중요한 이유**: HW 가속기(NPU, GPU, DMA)가 직접 메모리에 접근할 때, 가상 주소를 사용해야 OS의 메모리 관리 체계와 일관성을 유지하고, 잘못된 접근으로부터 시스템을 보호할 수 있다. 자세한 SMMU 구조는 [Module 04](04_iommu_smmu.md) 에서 다룹니다.
+
+---
+
+## 5. 디테일 — 페이지 크기, 권한, 속성, TrustZone, Page Fault
+
+### 5.1 Page 기반 변환 — VPN vs Offset
 
 ```
 가상 주소 (예: 48-bit VA, 4KB Page)
@@ -104,7 +274,7 @@
 
 **핵심**: VPN(Virtual Page Number)만 변환하고, Page Offset(하위 12bit)은 그대로 통과한다.
 
-### Page 크기와 Offset 관계
+### 5.2 Page 크기와 Offset 관계
 
 | Page 크기 | Offset 비트 | 용도 |
 |----------|-----------|------|
@@ -116,20 +286,7 @@
 
 **면접 포인트**: Page 크기가 클수록 TLB 하나의 엔트리가 커버하는 범위가 넓어져 TLB Miss가 줄어든다. 그러나 내부 단편화(Internal Fragmentation)가 증가한다.
 
----
-
-## MMU의 핵심 기능 3가지
-
-### 1. 주소 변환 (Address Translation)
-
-```
-VA → PA 매핑:
-  VA 0x0000_1000 → PA 0x8000_1000  (Process A)
-  VA 0x0000_1000 → PA 0xA000_1000  (Process B)
-  → 같은 VA가 다른 PA로 매핑 가능 = 프로세스 격리
-```
-
-### 2. 접근 권한 검사 (Permission Check)
+### 5.3 PTE 권한 비트 (개념도)
 
 ```
 Page Table Entry (PTE)에 포함된 권한 비트:
@@ -150,7 +307,9 @@ Page Table Entry (PTE)에 포함된 권한 비트:
   위반 시 → Page Fault (Exception) 발생
 ```
 
-### 3. 캐시 속성 제어 (Memory Attributes)
+(실제 ARMv8 의 AP/UXN/PXN/AF/NG 인코딩은 [Module 02 §5](02_page_table_structure.md) 에서 정밀하게 다룸)
+
+### 5.4 캐시 속성 제어 (Memory Attributes)
 
 | 속성 | 의미 | 용도 |
 |------|------|------|
@@ -160,9 +319,9 @@ Page Table Entry (PTE)에 포함된 권한 비트:
 | Write-through | 캐시와 메모리에 동시 쓰기 | 일관성 우선 |
 | Device | 순서 보장, 캐시 불가 | HW 레지스터 |
 
----
+ARMv8 에서는 PTE 의 `AttrIdx[4:2]` 가 `MAIR_EL1` 의 8 슬롯 중 하나를 지칭하고, 그 슬롯의 8-bit 인코딩이 실제 attribute (`Device-nGnRnE`, `Normal WB` 등) 를 결정합니다. 즉 PTE 에는 attr 의 _이름_ 만, MAIR 에 attr 의 _내용_ 이 들어 있는 indirection 입니다.
 
-## MMU Enable / Disable
+### 5.5 MMU Enable / Disable 시퀀스
 
 ```
 SCTLR_EL1.M (bit[0]) — MMU 활성화 제어:
@@ -194,9 +353,7 @@ MMU 활성화 순서 (부트 시):
    (VA = PA인 매핑이 있어야 Enable 후에도 실행 계속)
 ```
 
----
-
-## Translation Regime — 누가, 어디서 변환하는가
+### 5.6 Translation Regime 상세
 
 ```
 ARMv8에서 Exception Level별 Translation Regime:
@@ -222,9 +379,7 @@ ARMv8에서 Exception Level별 Translation Regime:
   - 각 Regime은 독립적인 Page Table + TLB 공간을 가짐
 ```
 
----
-
-## Secure vs Non-secure — TrustZone과 MMU
+### 5.7 Secure vs Non-secure — TrustZone 과 MMU
 
 ```
 ARM TrustZone: Secure World와 Normal World 분리
@@ -252,41 +407,7 @@ DV 관점:
   - World 전환 시 TLB Flush 범위 검증 (Secure TLB와 Normal TLB 독립성)
 ```
 
----
-
-## MMU가 SoC에서 위치하는 곳
-
-```
-+------------------------------------------------------------------+
-|                           SoC                                     |
-|                                                                   |
-|  +-------+    +-----+                                             |
-|  | CPU   +--->| MMU +---> Memory Controller ---> DRAM             |
-|  +-------+    +-----+                                             |
-|                                                                   |
-|  +--------+   +-------+                                           |
-|  | GPU    +-->| SMMU  +---> Memory Controller ---> DRAM           |
-|  +--------+   +-------+                                           |
-|                                                                   |
-|  +--------+   +-------+                                           |
-|  | DMA    +-->| IOMMU +---> Memory Controller ---> DRAM           |
-|  +--------+   +-------+                                           |
-|                                                                   |
-|  +--------+   +-------+                                           |
-|  | NIC/   +-->| sysMMU+---> Memory Controller ---> DRAM           |
-|  | Accel  |   +-------+                                           |
-|  +--------+                                                       |
-+------------------------------------------------------------------+
-
-CPU → MMU (CPU 전용, 보통 CPU 내부)
-GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
-```
-
-**SoC에서 MMU가 중요한 이유**: HW 가속기(NPU, GPU, DMA)가 직접 메모리에 접근할 때, 가상 주소를 사용해야 OS의 메모리 관리 체계와 일관성을 유지하고, 잘못된 접근으로부터 시스템을 보호할 수 있다.
-
----
-
-## CPU MMU vs IOMMU/SMMU 비교
+### 5.8 CPU MMU vs IOMMU/SMMU 비교
 
 | 항목 | CPU MMU | IOMMU / SMMU |
 |------|---------|-------------|
@@ -298,11 +419,9 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 | 성능 요구 | 매우 높음 (매 명령어마다) | 높음 (DMA 트래픽 의존) |
 | 가상화 지원 | Stage 2 (EL2) | Stage 2 (Hypervisor) |
 
----
+### 5.9 Page Fault — 변환 실패 처리
 
-## Page Fault — 변환 실패 처리
-
-### Page Fault 유형
+#### Page Fault 유형
 
 | 유형 | 원인 | 처리 |
 |------|------|------|
@@ -310,7 +429,7 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 | Permission (권한 위반) | Write 시도 but W=0 | Segfault 또는 COW (Copy-on-Write) |
 | Not Present (스왑) | 물리 메모리에 없음 (디스크로 스왑됨) | 디스크에서 읽어 복원 |
 
-### Page Fault 처리 흐름
+#### Page Fault 처리 흐름
 
 ```
 1. CPU가 VA 접근 시도
@@ -326,43 +445,66 @@ GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: MMU의 핵심 기능 3가지는?**
-> "주소 변환(VA→PA), 접근 권한 검사(R/W/X, User/Kernel), 캐시 속성 제어(Cacheable/Device). 주소 변환은 Page 단위로 수행되며, VPN만 변환하고 Offset은 그대로 통과한다."
+### 흔한 오해
 
-**Q: 왜 가상 메모리가 필요한가?**
-> "다섯 가지 이유: (1) 프로세스 격리 — 각 프로세스가 독립적 주소 공간. (2) 메모리 보호 — Page 단위 권한 검사. (3) 단편화 해결 — 가상 연속, 물리 불연속 가능. (4) 물리 크기 초과 사용 — Swap 활용. (5) 보안 — Process A가 B의 물리 주소를 알 수 없음."
+!!! danger "❓ 오해 1 — 'MMU 가 켜지면 자동으로 안전하다'"
+    **실제**: MMU 가 켜져도 page table entry 가 잘못 설정되면(예: NS 비트 미설정, AP 권한 오류, 같은 PA 를 두 process 가 RW 로 공유) 보안 격리가 즉시 깨집니다. MMU 는 _정책 적용 도구_ 이지 _정책 자체_ 가 아닙니다 — 정책은 SW(OS, hypervisor) 가 PTE 에 채워 넣어야 비로소 효력이 생깁니다.<br>
+    **왜 헷갈리는가**: "기능 켜짐 = 안전" 이라는 직관 + page table 을 SW 가 채우는 책임이라는 사실이 이름만으로는 드러나지 않아서.
 
-**Q: Huge Page의 장단점은?**
-> "장점: TLB 엔트리 하나가 커버하는 범위가 넓어져(2MB vs 4KB) TLB Miss가 크게 줄어든다. 서버, HW 가속기처럼 대용량 연속 메모리를 사용하는 경우 성능이 크게 향상된다. 단점: 내부 단편화 — 2MB 중 일부만 사용해도 2MB 전체를 할당해야 한다. 메모리 효율이 떨어질 수 있다."
+!!! danger "❓ 오해 2 — 'MMU 가 hardware 라 SW 가 신경 쓸 필요 없다'"
+    **실제**: MMU 동작은 **HW + SW 협업 contract** 입니다. Page table 채우기, ASID 할당/회수, TLBI 호출, fault handler 작성, MAIR 인덱스 정의 — _전부_ SW 책임. HW 는 그 contract 위에서 lookup/walk/check 만 수행합니다.<br>
+    **왜 헷갈리는가**: "하드웨어 모듈 = SW 무관" 이라는 명칭 함정.
 
-**Q: MMU Enable 시 주의할 점은?**
-> "Enable 직후의 첫 명령어부터 주소 변환이 적용되므로, Enable 전에 현재 실행 중인 코드 영역에 Identity Mapping(VA=PA)이 반드시 있어야 한다. 순서는: Page Table 구성 → TTBR 설정 → TCR/MAIR 설정 → SCTLR.M=1 → ISB(파이프라인 플러시). ISB가 없으면 파이프라인의 이전 명령어가 변환 없이 실행될 수 있다."
+!!! danger "❓ 오해 3 — 'MMU 를 끄면 (M=0) 변환이 그냥 사라진다'"
+    **실제**: M=0 이면 VA = PA 의 _identity mapping_ 으로 동작하지만, 이 때도 캐시 attribute 는 reset 또는 SCTLR 의 다른 비트에 의해 결정됩니다. 보통 강제 Device-nGnRnE 또는 구현 정의값 — 즉 _캐시 비활성_ 으로 떨어집니다. 그래서 MMU enable 직전과 직후의 _성능_ 이 극적으로 달라집니다.<br>
+    **왜 헷갈리는가**: "M=0 = MMU 무관" 으로 단순화하기 쉬워서.
 
-**Q: TrustZone 환경에서 MMU의 역할은?**
-> "Secure World와 Normal World 각각이 독립적인 Translation Regime을 가진다. PTE의 NS 비트로 Secure/Non-secure 물리 메모리를 구분하며, Normal World에서 Secure 메모리 접근 시도 시 Bus Error로 차단된다. World 전환 시 TLB 관리가 중요한데, Secure TLB와 Normal TLB가 독립적으로 관리되어야 stale 엔트리로 인한 보안 누출을 방지할 수 있다."
+!!! danger "❓ 오해 4 — 'TLB 만 비우면 page table 변경이 즉시 반영된다'"
+    **실제**: TLBI 명령은 _완료를 보장하지 않습니다_. 반드시 `DSB ISH` (Inner Shareable barrier) + `ISB` 가 따라와야 다른 코어 / 같은 코어의 후속 instr 이 새 매핑을 봅니다. 멀티코어에서 이 sequence 누락 = stale translation race.<br>
+    **왜 헷갈리는가**: TLBI 가 즉시 효력을 갖는 atomic 으로 직관됨.
 
----
+!!! danger "❓ 오해 5 — 'PTE 의 V=1 이면 access 가 보장된다'"
+    **실제**: V=1 은 _이 PTE 가 의미를 가짐_ 만을 의미. 실제 access 가 통과하려면 (V=1) AND (AP 권한) AND (AF=1 또는 HW AF update 지원) AND (executable 의 경우 UXN/PXN 통과) 모두 만족해야 합니다.<br>
+    **왜 헷갈리는가**: V 가 가장 눈에 띄는 single bit 라서 "valid = good to go" 로 줄여 기억하기 쉽다.
+
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| MMU enable 직후 즉시 Prefetch/Data Abort | 부트 코드 영역의 Identity Mapping 부족 | TTBR0 dump → 현재 PC 의 PA 가 mapping 되어 있는가 |
+| Translation Fault 인데 Level 정보가 0 | walk engine 이 L0 에서 fault → ESR.IFSC 가 Level 0 인코딩 | ESR_EL1.IFSC[5:2], FAR_EL1, TTBR 값 dump |
+| 같은 VA 가 Process A 에선 OK, B 에선 Permission Fault | TTBR0 가 process 별로 swap 됐으나 ASID 만 그대로 | context switch 코드의 TTBR0 + ASID 동시 update |
+| Store 가 silently 무시 (값이 안 변함) | PTE 의 AP 가 RO 로 떨어졌고 TLB 에 stale RW 가 살아있음 | PTE 변경 후 `TLBI VAE1, Xt; DSB ISH; ISB` 시퀀스 |
+| Device 레지스터 write 가 reorder 되어 보임 | AttrIdx → MAIR 슬롯이 Normal Cacheable 로 잘못 설정 | MAIR_EL1 의 해당 슬롯 8-bit 인코딩 vs Device-nGnRnE 기대값 |
+| Secure 영역 access 가 통과 (Normal world 에서) | PTE.NS 미설정 또는 TZASC 미초기화 | PTE[5] (NS) + TZASC 의 region 설정 |
+| MMU enable 후 첫 instr 이 untranslated 로 실행 | `SCTLR.M=1` 직후 ISB 누락 | enable code 의 `MSR SCTLR_EL1, ...; ISB` 두 줄 |
+| Page Fault 가 무한 루프 | Handler 가 PTE 만 update 하고 TLBI 안 함 → 재실행 시 stale | Handler 의 마무리 코드에 TLBI by VA 호출 |
+
+### 흔한 오해 종합 — Page Fault Handler 가 안 끝남
+
 !!! warning "실무 주의점 — MMU Enable 직후 ISB 누락"
     **현상**: MMU Enable(SCTLR.M=1) 직후 Instruction Fetch가 stale 변환 주소로 실행되어 예기치 않은 Fault 또는 오동작 발생.
-    
+
     **원인**: 파이프라인에 이미 페치된 명령어들이 SCTLR 업데이트 이전 상태로 실행됨. ISB를 삽입하지 않으면 컴파일러/CPU가 명령어 순서를 재배치하여 변환이 활성화되기 전 코드가 실행될 수 있음.
-    
+
     **점검 포인트**: 부트 코드에서 `SCTLR_EL1.M = 1` 설정 직후 `ISB` 명령어 존재 여부 확인. 시뮬레이션 로그에서 MMU Enable 시점 이후 첫 번째 Translation Fault가 Enable 이전 VA 범위를 참조하면 ISB 누락 의심.
 
-## 핵심 정리
+---
 
-- **VA의 3가지 동기**: Process isolation / Memory efficiency (CoW, demand paging) / Fragmentation 해결.
-- **VA→PA 변환은 page table walk + TLB caching**: TLB hit이면 1 cycle, miss면 page walk N cycle (N = level 깊이).
-- **MMU 위치**: CPU 내장 (Core 단위) vs SoC 레벨 IOMMU/SMMU (DMA 마스터들 보호).
-- **PTE 핵심 필드**: PFN(Physical Frame Number) / V(valid) / R/W / U/S(user/supervisor) / ASID / dirty / access.
-- **MMU enable 순서**: Page Table 구성 → TTBR 설정 → TCR/MAIR → SCTLR.M=1 → ISB. ISB 누락 시 파이프라인 잔여 명령이 untranslated 실행.
+## 7. 핵심 정리 (Key Takeaways)
+
+- **VA → PA 변환은 _주소록 색인_ + _권한 + 속성 묶음_** 의 한 묶음으로 나옴 — TLB 는 PA 만 캐시하지 않는다.
+- **VA 의 5가지 동기**: Process isolation / 메모리 보호 / 단편화 해결 / 물리 한계 우회 (swap) / 보안 격리.
+- **MMU 3대 기능**: 주소 변환 + 권한 검사 + 캐시 속성 제어. PTE 의 비트 영역이 각각 담당.
+- **MMU 위치**: CPU 내장 (core 단위) vs SoC 레벨 IOMMU/SMMU (DMA 마스터들 격리).
+- **MMU enable 시퀀스**: Page Table 구성 → TTBR → TCR/MAIR → SCTLR.M=1 → ISB. ISB 누락 시 파이프라인 잔여 instr 이 untranslated 로 실행.
 
 ## 다음 단계
 
 - 📝 [**Module 01 퀴즈**](quiz/01_mmu_fundamentals_quiz.md)
-- ➡️ [**Module 02 — Page Table Structure**](02_page_table_structure.md)
+- ➡️ [**Module 02 — Page Table Structure**](02_page_table_structure.md): 4-level walk 의 비트 분할, PTE descriptor format, granule trade-off, PWC 까지.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

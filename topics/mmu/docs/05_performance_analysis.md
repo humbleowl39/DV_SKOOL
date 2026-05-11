@@ -15,59 +15,160 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#성능-지표-3가지">성능 지표 3가지</a>
-  <a class="page-toc-link" href="#dual-reference-model-전략-이력서-핵심">Dual-Reference Model 전략 (이력서 핵심)</a>
-  <a class="page-toc-link" href="#tlb-miss-ratio-분석-기법">TLB Miss Ratio 분석 기법</a>
-  <a class="page-toc-link" href="#page-walk-cache-pwc-성능-영향">Page Walk Cache (PWC) 성능 영향</a>
-  <a class="page-toc-link" href="#dv-환경에서-성능-모니터링-구현">DV 환경에서 성능 모니터링 구현</a>
-  <a class="page-toc-link" href="#성능-병목-진단-프로세스">성능 병목 진단 프로세스</a>
-  <a class="page-toc-link" href="#서버급-hw-가속기의-성능-요구사항-이력서-연결">서버급 HW 가속기의 성능 요구사항 (이력서 연결)</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-교통-체증-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-1m-translation-에서-tlb-miss-ratio-3-2-가-실제로-어떻게-나타나는가">3. 작은 예 — 1M trans 의 latency 분포</a>
+  <a class="page-toc-link" href="#4-일반화-3-지표-dual-reference-model-3c">4. 일반화 — 3 지표 + 3C</a>
+  <a class="page-toc-link" href="#5-디테일-pwc-impact-uvm-perf-monitor-bottleneck-진단-server-grade-요구">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Calculate** TLB hit rate, miss penalty, page walk cost를 측정값으로부터 계산할 수 있다.
-    - **Apply** Dual-Reference Model (Ideal vs DUT)로 성능 갭을 분석할 수 있다.
-    - **Distinguish** 평균 vs P99/P99.9 latency를 측정하고 tail latency가 의미하는 것을 해석할 수 있다.
-    - **Identify** Performance bottleneck의 원천(TLB miss, walk depth, memory bandwidth)을 분리할 수 있다.
-    - **Design** UVM Performance Monitor를 통한 실시간 성능 데이터 수집 구조를 설계할 수 있다.
+    - **Calculate** TLB hit rate, miss penalty, page walk cost 를 측정값으로부터 계산할 수 있다.
+    - **Apply** Dual-Reference Model (Ideal vs DUT) 로 성능 갭을 분석할 수 있다.
+    - **Distinguish** 평균 vs P99 / P99.9 latency 를 측정하고 tail latency 가 의미하는 것을 해석할 수 있다.
+    - **Identify** Performance bottleneck 의 원천 (TLB miss, walk depth, memory bandwidth) 을 분리할 수 있다.
+    - **Design** UVM Performance Monitor 를 통한 실시간 성능 데이터 수집 구조를 설계할 수 있다.
 
 !!! info "사전 지식"
     - [Module 01-04](01_mmu_fundamentals.md)
     - 통계 기본 (평균, percentile, histogram)
 
-## 왜 이 모듈이 중요한가
+---
 
-**MMU 성능 검증은 functional verification보다 미묘**합니다. PASS/FAIL이 아니라 "Ideal 대비 얼마나 효율적인가"를 정량 분석. **Dual-Reference Model**은 이력서에서 가장 강조된 패턴 — Ideal Model을 기준으로 DUT 성능 갭을 자동 측정해 시뮬에서 회귀를 잡습니다. P99 tail latency는 실제 워크로드의 SLA 위반 원인으로, 평균만 보면 놓치는 문제입니다.
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! tip "💡 이해를 위한 비유"
-    **MMU 성능 = TLB 히트율** ≈ **도시의 교통량 = 즐겨찾기 매칭율**
+**MMU 성능 검증은 functional verification 보다 미묘**합니다. PASS/FAIL 이 아니라 _"Ideal 대비 얼마나 효율적인가"_ 를 정량 분석. 100 Gbps NIC / SmartNIC 가속기는 64 byte packet 기준 **150 M+ translations/sec** 를 요구하고, miss ratio 0.1% 차이가 throughput SLA 를 좌우합니다.
 
-    TLB hit rate 가 95% 가 되어도 5% miss 가 4 메모리 access × frequency 만큼의 latency 폭증을 만든다. hit rate 가 단순 평균이 아닌 critical path.
+**Dual-Reference Model** (Functional + Ideal) 은 이력서의 시그니처 패턴 — Ideal 을 기준으로 DUT 성능 갭을 _자동_ 측정해 시뮬레이션에서 회귀를 잡습니다. P99 tail latency 는 평균만 봐선 보이지 않는 SLA 위반의 실제 원인. 이 모듈을 못 잡으면 검증이 _"되긴 한다"_ 단계에서 멈추고, _"충분히 빠른가"_ 단계로 못 넘어갑니다.
 
 ---
 
-## 핵심 개념
-**MMU 성능 = TLB Hit Rate × 처리량(Throughput) × 지연(Latency)의 함수. DUT의 실제 성능을 Ideal Model과 비교하여 병목을 찾아내고, 마이크로아키텍처 수준에서 원인을 분석하는 것이 핵심.**
+## 2. Intuition — 교통 체증 비유와 한 장 그림
 
-!!! danger "❓ 흔한 오해"
-    **오해**: TLB 만 키우면 성능 항상 ↑
+!!! tip "💡 한 줄 비유"
+    **MMU 성능 = 도시의 교통량**. TLB hit rate 95% 는 _대로의 95% 가 신호 없이 통과_, 5% 는 _신호등 4번 + 사거리 4번 (page walk)_. 평균만 보면 _"잘 흐른다"_ 지만 사거리 한 번이 평균의 800 배라 **상위 1% (P99)** 에서 급격히 막힘. **Tail latency = 도심 출퇴근 시간** — 평균은 20 분이어도 P99 는 2 시간.
 
-    **실제**: TLB 가 너무 크면 lookup latency 자체가 ↑ (associative search). modern CPU 는 L1 TLB(작고 빠름) + L2 TLB(크고 느림) hierarchy 로 균형.
+### 한 장 그림 — Latency 분포가 정상이라면
 
-    **왜 헷갈리는가**: "cache 큰 게 무조건 좋다" 의 직관. 실제로는 search latency vs miss penalty 의 trade-off.
+```
+     count
+       ▲                                 (logarithmic 비슷한 분포)
+       │  ▓▓▓▓▓▓▓▓▓▓▓▓▓ (90%)  ← μTLB hit (1 cycle)
+       │  ▓▓▓▓▓▓▓▓▓▓▓▓▓
+       │  ▓▓▓▓▓▓▓▓▓▓▓▓▓
+       │  ▓▓▓▓▓▓▓▓▓▓▓▓▓
+       │  ▓▓▓▓▓▓▓▓▓▓▓▓▓
+       │       ▒▒▒▒▒    (8%)   ← L2 TLB hit (3-5 cycle)
+       │       ▒▒▒▒▒
+       │            ░░░ (1.5%) ← walk + PWC (~수십)
+       │              ─── (0.4%) ← walk + PWC miss (~수백)
+       │                ─        ← walk + memory contention (>400)
+       │                          ↑
+       │                       이 꼬리가 P99/P99.9 → SLA 결정
+       └────────────────────────────────────────────────▶ latency
+```
+
+### 왜 평균은 거짓말을 하는가 — Design rationale
+
+세 가지가 동시에 일어납니다.
+
+1. **Hit/Miss 의 두 봉우리 (bimodal)**: 평균은 두 봉우리의 _가중 평균_ — 어느 한 쪽 정보를 잃습니다.
+2. **꼬리는 수가 적지만 _효과는 큼_**: P99 1 trans 의 400 ns 가 P50 1000 trans 의 0.5 ns 와 _같은 영향_.
+3. **꼬리가 _SLA_ 를 결정**: 서버 워크로드는 worst-case latency 가 SLO/SLA 의 척도. 평균 latency 좋은 시스템도 tail 이 나쁘면 _service degradation_ 으로 간주.
+
+이 세 가지의 교집합이 "평균 + P99 + P99.9 + Histogram" 의 _multi-metric_ 측정을 강제합니다.
+
 ---
 
-## 성능 지표 3가지
+## 3. 작은 예 — 1M translation 에서 TLB miss ratio 3.2% 가 실제로 어떻게 나타나는가
 
-### 1. TLB Miss Ratio
+가장 단순한 시나리오. DUT MMU 가 1,000,000 회의 random VA translation 을 처리. 측정 결과를 Ideal Model 과 비교하여 _성능 갭_ 의 root cause 를 추적합니다.
+
+### 측정 raw data
+
+```
+   1M random VA translations, 4 KB granule, ASID=다양
+
+   DUT 측정:                                Ideal Model:
+   ──────────────────────                    ──────────────────────
+   μTLB hit:        850,000                   μTLB hit:      950,000
+   L2 TLB hit:      118,000                   L2 TLB hit:     45,000
+   Page walk:        32,000                   Page walk:       5,000
+   ─────────────────────                     ─────────────────────
+   TLB miss ratio:   3.2%                    TLB miss ratio:  0.5%
+   avg latency:      5.8 cycle                avg latency:    1.2 cycle
+   P99 latency:      48 cycle                  P99 latency:    8 cycle
+   P99.9 latency:    420 cycle                 P99.9 latency:  120 cycle
+   throughput:       0.62 req/cycle           throughput:     0.95 req/cycle
+```
+
+### Histogram — DUT 의 latency 분포
+
+```
+   Cycles | Count    | %     | Source
+   -------+----------+-------+------------------
+   1      | 850,000  | 85.0% | μTLB hit
+   3-5    | 118,000  | 11.8% | L2 TLB hit
+   20-50  |  25,000  |  2.5% | Page walk + PWC hit
+   100-400|   6,500  |  0.65%| Page walk + PWC miss
+   >400   |     500  |  0.05%| Walk + 메모리 경쟁
+   -------+----------+-------+------------------
+   total  |1,000,000 | 100%  |
+```
+
+### 진단 단계
+
+```
+   ① Functional 비교: DUT.PA == FuncModel.PA?
+        → 모든 1M trans 일치 ✓ (정확성 OK)
+
+   ② Performance 비교: DUT vs Ideal
+        miss_ratio_gap = 3.2% / 0.5% = 6.4×       ← 6.4 배 높음 ⚠
+        avg_latency_gap = 5.8 / 1.2 = 4.8×
+        P99_gap        = 48 / 8 = 6.0×
+        P99.9_gap      = 420 / 120 = 3.5×
+
+   ③ 3C 분석으로 miss 원인 분류
+        - Compulsory: cold miss (TLB 첫 채움) — 약 3%
+        - Capacity:   working set > TLB capacity — 약 60%   ← 주범
+        - Conflict:   set-assoc 충돌 — 약 37%
+
+   ④ 마이크로아키텍처 가설
+        - L2 TLB capacity 가 working set 대비 작다
+        - 또는 set-associativity 가 부족 (4-way → 8-way 필요?)
+        - 또는 replacement policy 가 random VA 패턴에 약한 PLRU
+
+   ⑤ Re-spin: TLB associativity 4 → 8 way 변경 후 재측정
+        → miss ratio 3.2% → 1.1%, P99 48 → 18 cycle
+        → server-grade SLA 충족
+```
+
+### 단계별 의미
+
+| Step | 누가 | 무엇 | 왜 |
+|---|---|---|---|
+| ① | Scoreboard | DUT.PA 와 FuncModel.PA 비교 | 정확성 — 모든 trans 일치해야 (필수) |
+| ② | Performance scoreboard | DUT 와 Ideal 의 miss/latency 비율 | 정확성과 _독립적_ 인 차원 — 100% 정확해도 너무 느릴 수 있음 |
+| ③ | 분석가 | miss 들을 3C 로 분류 (Compulsory/Capacity/Conflict) | 어떤 _구조_ 변경이 효과적인지 결정 |
+| ④ | 분석가 | replacement / capacity / associativity 가설 | "TLB 키워라" 가 아니라 _어느_ axis 를 바꿀지 |
+| ⑤ | Re-spin | RTL 파라미터 변경 후 재측정 | Dual-reference 가 자동 회귀 검출 |
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) 정확성과 성능은 _다른 axis_ 다.** PA 가 모두 정확해도 P99 가 SLA 를 어기면 production 에서 _장애_. Functional model 만으로는 이 axis 를 못 잡습니다 — Ideal Performance Model 이 두 번째 reference. <br>
+    **(2) 평균은 4.8× 차이지만 P99 는 6.0×, P99.9 는 3.5×** — 꼬리가 _다른 비율_ 로 움직임. P99 가 더 나쁘다는 건 _간헐적_ 병목 (capacity miss burst) 이 있다는 신호. P99.9 가 P99 와 비례하지 않으면 _다른 root cause_ (memory bandwidth contention) 가능성.
+
+---
+
+## 4. 일반화 — 3 지표, Dual-Reference Model, 3C
+
+### 4.1 성능 지표 3가지
+
+#### TLB Miss Ratio
 
 ```
 TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
@@ -84,7 +185,7 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
   → TLB Miss = 0일 때 (0.5ns) 대비 9배 느림
 ```
 
-### 2. Translation Latency
+#### Translation Latency
 
 ```
 요청 → 변환 완료까지의 시간:
@@ -99,7 +200,7 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
     - 평균 / P99 / 최악 지연
 ```
 
-### 3. Throughput (처리량)
+#### Throughput (처리량)
 
 ```
 단위 시간당 처리 가능한 변환 요청 수:
@@ -112,11 +213,9 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
     Ideal Throughput = 1 / TLB Hit Latency (파이프라인 기준)
 ```
 
----
+### 4.2 Dual-Reference Model (이력서 핵심)
 
-## Dual-Reference Model 전략 (이력서 핵심)
-
-### 왜 모델이 두 개 필요한가?
+#### 왜 모델이 두 개 필요한가?
 
 ```
 문제:
@@ -131,7 +230,7 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
   2. Ideal Performance Model: 이론적 성능 상한 제공 (성능 기준)
 ```
 
-### 모델 구조
+#### 모델 구조
 
 ```
 +----------------------------------------------------------+
@@ -156,7 +255,7 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
 +----------------------------------------------------------+
 ```
 
-### Functional Model vs Ideal Performance Model
+#### Functional Model vs Ideal Performance Model
 
 | 항목 | Functional Model | Ideal Performance Model |
 |------|-----------------|------------------------|
@@ -166,7 +265,7 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
 | 출력 | PA + 권한 | PA + 최소 가능 Latency |
 | 비교 기준 | DUT PA == Model PA (반드시 일치) | DUT Latency / Model Latency (비율) |
 
-### 성능 갭 분석 (이력서 직결)
+#### 성능 갭 분석 (이력서 직결)
 
 ```
 DUT vs Ideal Model 비교:
@@ -193,14 +292,10 @@ DUT vs Ideal Model 비교:
 
 **면접 답변 준비**:
 
-**Q: Dual-Reference Model을 어떻게 활용했나?**
+**Q: Dual-Reference Model 을 어떻게 활용했나?**
 > "두 가지 Reference Model을 만들었다. (1) Functional Model — DUT와 동일한 TLB/Page Walk을 모델링하여 비트 정확한 변환 결과를 비교. (2) Ideal Performance Model — 이론적 최적 성능(최소 Miss Ratio, 최소 Latency)을 정의하여 DUT 성능의 상한 기준을 제공. DUT를 두 모델과 비교하여 'TLB Miss Ratio가 이론치의 6배'라는 성능 갭을 발견했고, 마이크로아키텍처 분석으로 교체 정책의 비효율을 특정하여 서버급 처리량 요구사항을 충족시켰다."
 
----
-
-## TLB Miss Ratio 분석 기법
-
-### Miss 원인 분류 (3C 모델)
+### 4.3 TLB Miss 의 3C 분류
 
 | 원인 | 설명 | 대응 |
 |------|------|------|
@@ -208,7 +303,7 @@ DUT vs Ideal Model 비교:
 | **Capacity** | TLB 크기 부족 — 워킹셋이 TLB보다 큼 | TLB 크기 증가 또는 Huge Page |
 | **Conflict** | Set-associative 충돌 — 같은 set에 경쟁 | Associativity 증가 |
 
-### 트래픽 패턴별 예상 Miss Ratio
+### 4.4 트래픽 패턴별 예상 Miss Ratio
 
 | 패턴 | 설명 | 예상 Miss Ratio |
 |------|------|----------------|
@@ -219,7 +314,9 @@ DUT vs Ideal Model 비교:
 
 ---
 
-## Page Walk Cache (PWC) 성능 영향
+## 5. 디테일 — PWC impact, UVM Perf Monitor, Bottleneck 진단, Server-grade 요구
+
+### 5.1 Page Walk Cache (PWC) 성능 영향
 
 ```
 PWC가 Walk Latency에 미치는 영향 — 구체적 수치:
@@ -240,11 +337,7 @@ PWC가 Walk Latency에 미치는 영향 — 구체적 수치:
   → TLB 크기 + PWC 크기의 조합이 전체 성능을 결정
 ```
 
----
-
-## DV 환경에서 성능 모니터링 구현
-
-### Performance Counter 수집 (UVM)
+### 5.2 Performance Counter 수집 (UVM)
 
 ```systemverilog
 class mmu_perf_monitor extends uvm_component;
@@ -303,7 +396,7 @@ class mmu_perf_monitor extends uvm_component;
 endclass
 ```
 
-### Latency 분포 분석
+### 5.3 Latency 분포 분석
 
 ```
 Latency Histogram 예시 (1M 트랜잭션 후):
@@ -323,7 +416,7 @@ Latency Histogram 예시 (1M 트랜잭션 후):
   - 평균 vs P99 비율이 10배 이상 → 간헐적 병목 존재
 ```
 
-### Ideal Model과 DUT 비교 자동화
+### 5.4 Ideal Model 과 DUT 비교 자동화
 
 ```
 Scoreboard에서 자동 성능 비교:
@@ -345,9 +438,7 @@ Scoreboard에서 자동 성능 비교:
     → "DUT는 Ideal 대비 평균 1.3x, P99에서 2.1x" 형태로 정량화
 ```
 
----
-
-## 성능 병목 진단 프로세스
+### 5.5 성능 병목 진단 프로세스
 
 ```
 1. TLB Miss Ratio 측정
@@ -369,9 +460,7 @@ Scoreboard에서 자동 성능 비교:
    → 평균 대비 P99가 크게 높으면 → TLB Miss 집중 구간? Lock 경쟁?
 ```
 
----
-
-## 서버급 HW 가속기의 성능 요구사항 (이력서 연결)
+### 5.6 서버급 HW 가속기의 성능 요구사항 (이력서 연결)
 
 ```
 서버용 HW 가속기 (NPU, SmartNIC 등):
@@ -395,44 +484,65 @@ MangoBoost MMU IP 맥락:
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: MMU 성능을 어떻게 분석했나?**
-> "세 가지 지표를 측정했다: TLB Miss Ratio, Translation Latency, Throughput. Dual-Reference Model을 사용하여 DUT 성능을 이론적 상한과 비교했다. Functional Model로 정확성을 보장하고, Ideal Performance Model로 '얼마나 빨라야 하는가'의 기준을 정의했다. DUT의 Miss Ratio가 이론치의 수 배인 것을 발견하고, 마이크로아키텍처 분석으로 원인을 특정했다."
+### 흔한 오해
 
-**Q: TLB Miss Ratio가 높은 원인을 어떻게 진단하나?**
-> "3C 분석을 적용한다: Compulsory(첫 접근, 불가피), Capacity(TLB 크기 부족), Conflict(Set-associative 충돌). 워킹셋 크기와 TLB 엔트리 수를 비교하여 Capacity 문제를 판단하고, 같은 set에 몰리는 패턴이 있는지로 Conflict를 판단한다. Capacity가 원인이면 Huge Page 적용이나 TLB 크기 증가를, Conflict면 Associativity 증가를 제안한다."
+!!! danger "❓ 오해 1 — 'TLB 만 키우면 성능이 항상 향상된다'"
+    **실제**: TLB 가 너무 크면 _lookup latency_ 자체가 증가합니다 (associative search 의 한계). modern CPU 는 L1 TLB (작고 빠름) + L2 TLB (크고 느림) hierarchy 로 _search latency vs miss penalty_ 의 trade-off 를 분산합니다. 단순한 "TLB 두 배" 는 critical path 를 침해해 IPC 저하.<br>
+    **왜 헷갈리는가**: "cache 큰 게 무조건 좋다" 의 직관.
 
-**Q: 서버급 가속기에서 MMU 성능이 왜 중요한가?**
-> "100Gbps 네트워크에서 64B 패킷 기준 ~150M 패킷/초를 처리해야 한다. 각 패킷이 주소 변환을 필요로 하므로 MMU는 150M+ translations/sec의 처리량이 필요하다. TLB Miss 한 번이 수백 ns의 지연을 유발하므로, Miss Ratio 0.1% 차이도 전체 시스템 처리량에 직접 영향을 미친다."
+!!! danger "❓ 오해 2 — '평균 latency 만 좋으면 성능이 좋다'"
+    **실제**: 서버 워크로드의 SLA 는 _P99 / P99.9_ 의 tail latency 가 결정합니다. 평균이 3 cycle 이라도 P99 가 200 cycle 이면 상위 1% trans 가 _40,000 ns_ 의 지연 — RPC timeout / queue overflow 유발. 평균이 _숨기는_ 정보.<br>
+    **왜 헷갈리는가**: 단일 지표로 요약하려는 본능.
 
-**Q: DV 환경에서 성능을 어떻게 측정하고 보고했나?**
-> "UVM Performance Monitor 컴포넌트를 구현하여 모든 트랜잭션의 Latency, Hit/Miss, 소스(L1/L2/Walk)를 실시간 수집했다. Latency Histogram으로 분포를 분석하고, 평균/P99/최악 지연을 보고했다. Ideal Model과 DUT의 Latency 비율(Performance Ratio)을 트랜잭션별로 비교하여 임계값(2x) 초과 시 자동 경고를 생성했다. 최종적으로 'DUT는 Ideal 대비 평균 1.3x, P99에서 2.1x'처럼 정량적 성능 갭을 리포트했다."
+!!! danger "❓ 오해 3 — 'Miss ratio 1% 면 무시해도 되는 수준'"
+    **실제**: T_eff = 0.99 × 0.5 + 0.01 × 400 = **4.5 ns**, T_eff(0%) = 0.5 ns → _9 배 느려짐_. 100 Gbps NIC 에서 1% miss = 1.5 M miss/sec × 400 ns = 600 ms/sec 의 walk 부담 → 파이프라인 stall. 1% 는 _작아 보이지만_ 800-배 latency 차이 때문에 영향이 비례 이상.<br>
+    **왜 헷갈리는가**: 1% 의 직관적 작음.
 
-**Q: Latency의 평균과 P99를 왜 구분하여 측정하나?**
-> "평균만 보면 간헐적 병목을 놓친다. 예를 들어 평균 Latency가 3 cycle이라도 P99가 200 cycle이면, 상위 1% 트랜잭션이 극심한 지연을 겪고 있다는 뜻이다. 서버 워크로드에서는 Tail Latency가 SLA 위반의 원인이 되므로, P99/P99.9를 별도로 측정하여 메모리 대역폭 경쟁이나 TLB Miss 집중 구간을 찾아낸다."
+!!! danger "❓ 오해 4 — 'PWC = TLB 의 일부'"
+    **실제**: PWC 는 _intermediate-level PTE_ (next-level table 주소) 를 캐싱하는 _별도_ 구조. TLB 는 (VA → PA) 의 _최종_ 매핑을 캐싱. 둘은 invalidation 정책이 다를 수 있고, capacity 도 따로 측정해야 합니다 (PWC hit rate vs TLB hit rate).<br>
+    **왜 헷갈리는가**: 둘 다 walk 비용을 줄이는 보조 캐시.
 
----
+!!! danger "❓ 오해 5 — 'Throughput 이 높으면 latency 도 좋다'"
+    **실제**: 둘은 _다른 차원_. Pipeline 이 깊으면 throughput 은 높아도 single-trans latency 는 길어질 수 있음. 또 throughput 이 한도에 닿으면 _큐 대기_ 로 latency 가 폭발 (M/M/1 큐의 latency = 1/(μ-λ)). 0.95 utilization 이 넘어가면 _작은 입력 증가_ 가 _큰 latency 증가_.<br>
+    **왜 헷갈리는가**: "빠르다" 라는 단어가 둘 다 가리켜서.
+
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Avg latency 는 spec 안인데 P99 가 3 배 초과 | Capacity miss burst (working set spike) | latency histogram 의 bimodal, miss-rate vs time |
+| Throughput 이 0.7 req/cycle 정체 (이상 0.95) | Walk engine 의 single-port 병목 | walk engine 의 outstanding 카운터, queue 깊이 |
+| Miss ratio 가 모든 test 에서 동일하게 높음 | TLB capacity 자체가 working set 보다 작음 | UVM perf monitor 의 hit/miss 비율, working set 측정 |
+| Random pattern 만 P99 가 폭발 | Conflict miss (set-assoc 부족) | TLB set 분포 dump, 같은 set 의 충돌 빈도 |
+| ASID rollover 직후 1 ms 동안 cold miss | OS 의 ASID alloc strategy + TLB 전체 flush | ASID alloc 로그, TLBI ALL 발행 시점 |
+| 주기적인 latency spike (1 ms 마다) | 다른 master 의 memory bandwidth 경쟁 | bus monitor, walk 시 memory access latency 분포 |
+| PWC hit rate 가 spec 보다 낮음 | PWC capacity 부족 또는 invalidation 빈번 | PWC counter, TLBI 발행 빈도 |
+| Stage 2 활성화 시 throughput 절반 | nested walk (S1 PTE 도 S2 walk) 비용 | combined walk count vs S1-only count |
+
 !!! warning "실무 주의점 — ASID 고갈 시 전체 TLB Flush로 성능 절벽"
     **현상**: 프로세스를 빠르게 생성/종료하는 워크로드에서 주기적으로 TLB Miss Rate가 급등하고 처리량이 수십% 하락.
-    
+
     **원인**: 8-bit ASID(256개) 또는 16-bit ASID(65536개)가 소진되면 OS는 ASID를 재활용하기 위해 전체 TLB Flush(`TLBI VMALLE1`)를 수행함. 이때 모든 코어의 TLB 엔트리가 무효화되어 대규모 Cold Miss가 발생. 컨테이너/VM 환경에서 ASID 소비 속도가 예상보다 훨씬 빠를 수 있음.
-    
+
     **점검 포인트**: 성능 저하 주기와 ASID 재활용 주기 일치 여부 확인. PMU 카운터에서 `L1D_TLB_REFILL` 이벤트 급증 시점과 TLBI 명령 발행 로그 타임스탬프 비교.
 
-## 핵심 정리
+---
 
-- **MMU 성능 = TLB Hit Rate × Throughput × Latency** 함수. 단일 지표가 아닌 다차원.
-- **Dual-Reference Model**: Ideal(완벽한 walk + TLB) vs DUT 비교. Performance Ratio 임계값(2x) 초과 시 회귀.
-- **TLB miss penalty**: walk N levels × memory access cost. PWC가 hit하면 1-2 access로 줄어듦.
-- **Tail latency (P99/P99.9)**: 평균은 간헐 병목 가림. SLA 위반은 tail에서 발생.
-- **Bottleneck 분리**: TLB miss / walk depth / memory bandwidth — 각각 측정해 원인 식별.
-- **UVM Performance Monitor**: trans 별 latency / hit 소스 / walk count 실시간 수집 + histogram.
+## 7. 핵심 정리 (Key Takeaways)
+
+- **MMU 성능 = TLB Hit Rate × Throughput × Latency** 의 함수. 단일 지표로 요약 불가 — 다차원 측정 필수.
+- **Dual-Reference Model**: Ideal (완벽한 walk + TLB) vs DUT 비교. Performance Ratio 임계값 (2×) 초과 시 회귀.
+- **TLB miss penalty**: walk N levels × memory access cost. PWC 가 hit 면 1-2 access 로 줄어듦.
+- **Tail latency (P99 / P99.9)**: 평균은 간헐 병목 가림. SLA 위반은 tail 에서 발생. 반드시 histogram + P99 + P99.9 측정.
+- **Bottleneck 분리**: TLB miss / walk depth / memory bandwidth — 각각 측정해 root cause 특정.
+- **UVM Performance Monitor**: trans 별 latency / hit 소스 / walk count 실시간 수집 + histogram + 자동 회귀.
 
 ## 다음 단계
 
 - 📝 [**Module 05 퀴즈**](quiz/05_performance_analysis_quiz.md)
-- ➡️ [**Module 06 — MMU DV Methodology**](06_mmu_dv_methodology.md)
+- ➡️ [**Module 06 — MMU DV Methodology**](06_mmu_dv_methodology.md): 지금까지의 _측정_ 을 _체계적인 검증 환경_ 으로 — Custom Thin VIP, SVA bind, Constrained Random.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_iommu_smmu/">

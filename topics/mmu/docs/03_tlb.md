@@ -15,101 +15,160 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#tlb가-필요한-이유">TLB가 필요한 이유</a>
-  <a class="page-toc-link" href="#tlb-구조">TLB 구조</a>
-  <a class="page-toc-link" href="#tlb-계층-구조">TLB 계층 구조</a>
-  <a class="page-toc-link" href="#tlb-설계-split-vs-unified">TLB 설계 — Split vs Unified</a>
-  <a class="page-toc-link" href="#tlb-교체-정책-replacement-policy">TLB 교체 정책 (Replacement Policy)</a>
-  <a class="page-toc-link" href="#hw-managed-vs-sw-managed-tlb">HW-Managed vs SW-Managed TLB</a>
-  <a class="page-toc-link" href="#tlb-prefetch-speculative-walk">TLB Prefetch / Speculative Walk</a>
-  <a class="page-toc-link" href="#tlb-invalidation-무효화">TLB Invalidation (무효화)</a>
-  <a class="page-toc-link" href="#tlb-coherency-문제">TLB Coherency 문제</a>
-  <a class="page-toc-link" href="#dv-관점-tlb-검증-포인트">DV 관점 — TLB 검증 포인트</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-즐겨찾기-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-tlb-miss-fill-2nd-hit-의-3-사이클">3. 작은 예 — Miss → Fill → Hit</a>
+  <a class="page-toc-link" href="#4-일반화-tlb-구조-계층-tagging">4. 일반화 — 구조/계층/Tagging</a>
+  <a class="page-toc-link" href="#5-디테일-replacement-hwsw-managed-prefetch-invalidation-coherency">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Diagram** TLB의 구조(set-associative, fully associative, micro-TLB / L1 / L2)와 동작을 그릴 수 있다.
+    - **Diagram** TLB 의 구조 (set-associative, fully associative, micro-TLB / L1 / L2) 와 동작을 그릴 수 있다.
     - **Trace** TLB hit / TLB miss / page walk 흐름과 각 경우의 latency 영향을 추적할 수 있다.
-    - **Apply** ASID/VMID tagging이 어떻게 process/VM 간 TLB sharing을 가능하게 하는지 시나리오에 적용할 수 있다.
-    - **Decide** 언제 TLB invalidate (TLBI), shootdown이 필요한지 식별할 수 있다.
-    - **Distinguish** HW-managed TLB (ARM/x86)와 SW-managed TLB (MIPS) 차이를 설명할 수 있다.
+    - **Apply** ASID/VMID tagging 이 어떻게 process / VM 간 TLB sharing 을 가능하게 하는지 시나리오에 적용할 수 있다.
+    - **Decide** 언제 TLB invalidate (TLBI), shootdown 이 필요한지 식별할 수 있다.
+    - **Distinguish** HW-managed TLB (ARM/x86) 와 SW-managed TLB (MIPS) 차이를 설명할 수 있다.
 
 !!! info "사전 지식"
-    - [Module 01-02](01_mmu_fundamentals.md) (VA→PA, multi-level walk)
+    - [Module 01-02](01_mmu_fundamentals.md) (VA → PA 변환, multi-level walk)
     - 캐시 기본 (associativity, replacement policy)
 
-## 왜 이 모듈이 중요한가
+---
 
-**TLB는 MMU 성능의 90%를 결정**합니다. Page walk이 100+ cycle이면 TLB hit는 1 cycle. **Stale TLB entry는 silent correctness bug**의 흔한 원인 — page table 업데이트 후 invalidate 누락 시 잘못된 PA에 access. 검증에서는 TLB invalidation 시나리오를 빠짐없이 다루는 것이 핵심.
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! tip "💡 이해를 위한 비유"
-    **TLB** ≈ **자주 가는 곳 즐겨찾기 (Bookmark)**
+**TLB 는 MMU 성능의 90% 를 결정**합니다. Page walk 이 ~400 ns 인 반면 TLB hit 는 ~1 cycle (~0.5 ns) — _800 배_ 차이. Hit rate 가 99% 에서 95% 로 4%p 만 떨어져도 effective access time 이 4.5 ns 에서 20.5 ns 로 _4.6배_ 늘어납니다. 즉, TLB hit-rate 가 IPC 를 직접 결정.
 
-    Page table walk 결과를 cache 해 두는 작은 hardware. hit 시 ~1 cycle, miss 시 4 메모리 access. 즐겨찾기가 많을수록 빠르지만 stale 우려.
+검증 관점에서 **stale TLB entry 는 silent correctness bug 의 가장 흔한 원인** 입니다 — page table update 후 invalidate 누락이면 잘못된 PA 에 access 하지만 _아무 경고도 없이_ 진행. 이 모듈의 invalidation 시나리오를 빠짐없이 다루는 것이 핵심.
 
 ---
 
-## 핵심 개념
-**TLB = 주소 변환 결과(VPN→PPN)를 캐싱하는 고속 하드웨어 캐시. Page Walk의 수백 배 지연을 1사이클로 줄여주는, MMU 성능의 핵심 컴포넌트.**
+## 2. Intuition — 즐겨찾기 비유와 한 장 그림
 
-!!! danger "❓ 흔한 오해"
-    **오해**: TLB invalidate = 모든 entry 삭제
+!!! tip "💡 한 줄 비유"
+    **TLB** ≈ **자주 가는 곳 즐겨찾기 (Bookmark)**. Page table walk 결과를 cache 해 두는 작은 hardware. Hit 시 ~1 cycle, miss 시 4 mem access. 즐겨찾기가 많을수록 빠르지만 **stale 우려** — 책 위치가 바뀌었는데 즐겨찾기를 안 지우면 엉뚱한 책장으로 안내됨.
 
-    **실제**: TLBI ALL 은 전체 무효화이지만, TLBI by VA / by ASID 는 일부만 무효화. 전체 무효화는 비싸므로 fine-grained 가 표준.
-
-    **왜 헷갈리는가**: "clear = 전부 지움" 이라는 직관 + ASID/VA 단위 invalidate 가 디테일이라 처음엔 "전체 = 안전" 으로 단순화.
----
-
-## TLB가 필요한 이유
+### 한 장 그림 — TLB 의 latency 게임
 
 ```
-Page Walk 없이 (TLB Hit):
-  VA → [TLB: 1 cycle] → PA → 메모리 접근
-  총: ~1 cycle + 메모리 접근 시간
-
-Page Walk 필요 (TLB Miss):
-  VA → [TLB Miss] → [Level 0: ~100ns] → [Level 1: ~100ns]
-    → [Level 2: ~100ns] → [Level 3: ~100ns] → PA
-  총: ~400 ns + 메모리 접근 시간
-
-  TLB Hit  ≈ 0.5 ns
-  TLB Miss ≈ 400 ns
-  → 800배 차이!
-
-  따라서 TLB Miss Ratio 1%만 되어도 성능에 상당한 영향
+   request(VA, ASID, EL)
+        │
+        ▼
+  ┌────────────┐                                         L1 cache hit ▶ ~3 cycles
+  │ μTLB (L1)  │ ── hit ▶ PA + perm + attr ── bus ────▶  L1 cache miss ▶ DRAM
+  │ ~32-64 ent │
+  │ fully-assoc│
+  └────────────┘   total: ~1 cycle
+        │ miss
+        ▼
+  ┌────────────┐
+  │ L2 TLB     │ ── hit ▶ PA + perm + attr (재캐싱은 μTLB 에) ▶ bus
+  │ ~512-2048  │
+  │ 4-8 way SA │
+  └────────────┘   total: ~3-5 cycles
+        │ miss
+        ▼
+  ┌────────────┐
+  │ Page Walk  │ ── L0/L1/L2/L3 read (PWC 가 끼면 단축) ▶ TLB fill + bus
+  │ Engine     │
+  └────────────┘   total: ~수십~수백 cycles  (4 mem access)
 ```
 
-### Effective Memory Access Time 계산
+### 왜 이 디자인인가 — Design rationale
 
-```
-T_eff = TLB_Hit_Rate × T_hit + TLB_Miss_Rate × T_miss
+세 요구가 동시에 만족돼야 했습니다.
 
-예시 (4-level, DDR4):
-  T_hit  = 0.5 ns (1 cycle @ 2GHz)
-  T_miss = 400 ns (4 × 100ns page walk)
+1. **매 instruction 마다 _1 cycle_ 안에 끝나야** → μTLB 가 fully-associative + 32-64 entries 의 _아주 작은_ CAM. 검색 latency 가 cycle time 안에 들어와야 IPC 무너지지 않음.
+2. **그래도 working set 은 수천 page 가능** → L2 TLB 가 set-associative 로 더 크게. Hit 가 μTLB 보다 몇 cycle 느리지만 walk 보단 100 배 빠름.
+3. **walk 자체도 줄여야** → PWC (Module 02 §4.6).
 
-  Hit Rate 99%:  0.99 × 0.5 + 0.01 × 400 = 0.495 + 4.0 = 4.5 ns
-  Hit Rate 95%:  0.95 × 0.5 + 0.05 × 400 = 0.475 + 20  = 20.5 ns
-  Hit Rate 90%:  0.90 × 0.5 + 0.10 × 400 = 0.45  + 40  = 40.5 ns
-
-  → 99% vs 95%: 4.6배 차이
-  → 99% vs 90%: 9배 차이
-  → 1%의 Miss Rate 변화가 전체 성능에 막대한 영향
-```
+이 세 단계가 **μTLB → L2 TLB → PWC → page walk** 의 정확히 4 단계 hierarchy 를 만듭니다. 각 단계가 다음 단계의 비용을 _분산 흡수_ 하는 구조.
 
 ---
 
-## TLB 구조
+## 3. 작은 예 — TLB miss → fill → 2nd hit 의 3 사이클
 
-### 기본 TLB 엔트리
+가장 단순한 시나리오. 같은 VA = `0x4000_2000` 을 1 ms 사이에 두 번 읽습니다. 첫 접근은 cold (TLB miss → walk → fill), 두 번째는 hot (TLB hit). ASID=5, 4 KB granule.
+
+### 단계별 추적
+
+```
+   T0: 첫 접근 — cold
+
+      ldr w0, [VA=0x4000_2000]   (ASID=5)
+        ▼
+      ┌────────────┐
+      │ μTLB lookup│ ── MISS (cold)
+      └────────────┘
+        ▼
+      ┌────────────┐
+      │ L2 TLB     │ ── MISS (cold)
+      └────────────┘
+        ▼
+      ┌────────────────────────────────────┐
+      │ Page Walk Engine                    │
+      │   L0 read → PWC miss → mem (100ns)  │
+      │   L1 read → PWC miss → mem (100ns)  │
+      │   L2 read → PWC miss → mem (100ns)  │
+      │   L3 read → PTE = page descriptor   │
+      │              (100ns) → PA=0xA000    │
+      │   Total walk: ~400 ns               │
+      └────────────────────────────────────┘
+        ▼
+      TLB fill:  μTLB ← (ASID=5, VPN, PA=0xA000, perm, attr)
+                 L2 TLB ← (same)
+                 PWC L0/L1/L2 ← intermediate PTEs
+        ▼
+      DRAM read at PA=0xA_2000 → fill L1$ → r0 ready
+      Total path: ~400 ns + bus
+
+   T1 = T0 + 1 ms: 두 번째 접근 — hot
+
+      ldr w0, [VA=0x4000_2000]   (ASID=5)
+        ▼
+      ┌────────────┐
+      │ μTLB lookup│ ── HIT! (ASID & VPN match, V=1)
+      │            │     PA = 0xA_2000, perm OK, attr OK
+      └────────────┘
+        ▼ ~1 cycle
+      L1 cache lookup at PA=0xA_2000 → 보통 hit → r0 ready
+
+      Total path: ~1 cycle + (cache hit 1-3 cycle) = ~5 ns
+
+   비율:  T0 / T1 ≈ 400 / 5 = 80배
+```
+
+### 단계별 의미
+
+| Step | 시점 | 누가 | 무엇 |
+|---|---|---|---|
+| ① | T0 | μTLB | (ASID=5, VPN) match 검색 — 32 entries CAM 동시 비교 |
+| ② | T0 | L2 TLB | μTLB miss → 더 큰 SA 검색 |
+| ③ | T0 | PWE | walk → 4 mem access |
+| ④ | T0 | TLB fill logic | μTLB + L2 TLB + PWC 모두 채움 (replacement 가 victim 선택) |
+| ⑤ | T1 | μTLB | hit → 1 cycle 에 PA + perm + attr 반환 |
+
+### 만약 T0 와 T1 사이에 다른 ASID 의 같은 VA 가 끼어들면?
+
+- 다른 ASID (예: 7) 의 _같은_ VA = `0x4000_2000` 이 들어옴.
+- μTLB 검색 시 (ASID=7, VPN) match — 기존 (ASID=5) entry 와 _별개_.
+- ASID 가 _구분 태그_ 라서 충돌 안 함.
+- **단**, μTLB 가 작아서 (ASID=7) entry 가 (ASID=5) entry 를 _eviction_ 시킬 수 있음 → T1 에서 (ASID=5) miss 가능 → L2 TLB 로 fall-through → 여전히 walk 보다 빠름.
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) hit / miss 의 latency 차이 = 80~800 배.** 1% 의 miss rate 변화도 effective access time 에 _수배_ 영향. 평균이 아닌 _critical path_ 라는 점이 본질입니다. <br>
+    **(2) TLB fill 은 _다음 access 만_ 보호한다.** 첫 cold miss 의 비용 (~400 ns) 은 _불가피_. 그래서 prefetch / huge page / PWC 가 cold miss 를 줄이는 보조 수단으로 쓰입니다.
+
+---
+
+## 4. 일반화 — TLB 구조 / 계층 / Tagging
+
+### 4.1 기본 TLB 엔트리
 
 ```
 +------+------+------+------+----+----+----+----+------+-------+
@@ -124,7 +183,7 @@ Attr = 캐시 속성
 Size = Page 크기 (4KB/2MB/1GB)
 ```
 
-### TLB Lookup 과정
+### 4.2 TLB Lookup 과정
 
 ```
 입력: VMID + ASID + VA
@@ -139,11 +198,7 @@ Size = Page 크기 (4KB/2MB/1GB)
    → Miss: Page Walk Engine에 요청
 ```
 
----
-
-## TLB 계층 구조
-
-### 일반적인 2-Level TLB
+### 4.3 일반적인 2-Level TLB
 
 ```
 +-------+     +--------+     +-----------+
@@ -168,7 +223,7 @@ Page Walk Engine:
   - 결과를 L1, L2에 모두 캐싱
 ```
 
-### IOTLB (IOMMU/SMMU용)
+### 4.4 IOTLB (IOMMU/SMMU 용)
 
 ```
 디바이스(GPU, DMA, NIC)의 주소 변환용 TLB:
@@ -186,9 +241,7 @@ Page Walk Engine:
     → GPU: 불규칙 접근 패턴 → TLB 크기가 중요
 ```
 
----
-
-## TLB 설계 — Split vs Unified
+### 4.5 TLB 설계 — Split vs Unified
 
 ```
 방식 1: Split TLB (Instruction + Data 분리)
@@ -220,9 +273,29 @@ Page Walk Engine:
 → DV에서 I-TLB/D-TLB 동시 접근 시나리오 검증 필수
 ```
 
+### 4.6 Effective Memory Access Time
+
+```
+T_eff = TLB_Hit_Rate × T_hit + TLB_Miss_Rate × T_miss
+
+예시 (4-level, DDR4):
+  T_hit  = 0.5 ns (1 cycle @ 2GHz)
+  T_miss = 400 ns (4 × 100ns page walk)
+
+  Hit Rate 99%:  0.99 × 0.5 + 0.01 × 400 = 0.495 + 4.0 = 4.5 ns
+  Hit Rate 95%:  0.95 × 0.5 + 0.05 × 400 = 0.475 + 20  = 20.5 ns
+  Hit Rate 90%:  0.90 × 0.5 + 0.10 × 400 = 0.45  + 40  = 40.5 ns
+
+  → 99% vs 95%: 4.6배 차이
+  → 99% vs 90%: 9배 차이
+  → 1%의 Miss Rate 변화가 전체 성능에 막대한 영향
+```
+
 ---
 
-## TLB 교체 정책 (Replacement Policy)
+## 5. 디테일 — Replacement, HW/SW-managed, Prefetch, Invalidation, Coherency
+
+### 5.1 TLB 교체 정책 (Replacement Policy)
 
 | 정책 | 원리 | 장단점 |
 |------|------|--------|
@@ -231,7 +304,7 @@ Page Walk Engine:
 | Random | 랜덤 선택 | 가장 간단, 최악 케이스 없음 |
 | FIFO | 가장 먼저 들어온 엔트리 교체 | 간단하지만 성능 낮음 |
 
-### Pseudo-LRU 알고리즘 상세 (Tree-based PLRU)
+### 5.2 Pseudo-LRU 알고리즘 상세 (Tree-based PLRU)
 
 ```
 4-way Set-Associative TLB의 Pseudo-LRU 예시:
@@ -266,9 +339,7 @@ Page Walk Engine:
 
 **DV 포인트**: PLRU 검증 시 교체 순서가 True LRU와 정확히 일치하지 않는다. "근사"이므로 특정 접근 패턴에서 LRU와 다른 Way를 교체할 수 있다 — Reference Model도 동일한 PLRU 알고리즘으로 구현해야 한다.
 
----
-
-## HW-Managed vs SW-Managed TLB
+### 5.3 HW-Managed vs SW-Managed TLB
 
 ```
 HW-Managed TLB (ARM, x86):
@@ -299,9 +370,7 @@ SW-Managed TLB (MIPS, SPARC):
 | DV 복잡도 | Walk Engine 검증 필요 | Exception 흐름 검증 필요 |
 | 대표 ISA | ARM, x86, RISC-V | MIPS, SPARC |
 
----
-
-## TLB Prefetch / Speculative Walk
+### 5.4 TLB Prefetch / Speculative Walk
 
 ```
 TLB Prefetch — Miss를 사전에 방지:
@@ -330,11 +399,9 @@ TLB Prefetch — Miss를 사전에 방지:
 
 **면접 포인트**: "TLB Miss Latency를 줄이는 방법?" → (1) TLB 크기 증가, (2) Huge Page, (3) Page Walk Cache로 중간 레벨 캐싱, (4) Prefetch. 이 중 PWC가 가장 실질적이며 대부분의 현대 MMU에 구현되어 있다.
 
----
+### 5.5 TLB Invalidation (무효화)
 
-## TLB Invalidation (무효화)
-
-### 무효화가 필요한 시점
+#### 무효화가 필요한 시점
 
 | 이벤트 | 이유 | 무효화 범위 |
 |--------|------|-----------|
@@ -344,7 +411,7 @@ TLB Prefetch — Miss를 사전에 방지:
 | 권한 변경 | mprotect() 등 | 변경된 VA |
 | Unmap | 매핑 제거 | 제거된 VA |
 
-### ARMv8 TLB Invalidation 명령어
+#### ARMv8 TLB Invalidation 명령어
 
 ```
 TLBI ALLE1        // EL1 전체 TLB 무효화
@@ -358,11 +425,9 @@ ISB                // 파이프라인 플러시
 
 **DV 핵심**: TLB Invalidation 후 같은 VA를 접근하면 반드시 TLB Miss가 발생하고 Page Walk가 수행되어야 한다. Stale 엔트리가 남아있으면 보안 취약점이 된다.
 
----
+### 5.6 TLB Coherency 문제
 
-## TLB Coherency 문제
-
-### 문제: Page Table 변경 시 TLB 불일치
+#### 문제: Page Table 변경 시 TLB 불일치
 
 ```
 시간 순서:
@@ -377,7 +442,7 @@ T3: CPU가 VA=0x1000 접근 → TLB Hit → PA=0x8000 (오래된 값!)
      → T3에서 TLB Miss → Page Walk → PA=0xA000 (올바른 값)
 ```
 
-### 멀티코어 환경에서의 TLB Coherency
+#### 멀티코어 환경에서의 TLB Coherency
 
 ```
 Core 0: TLB에 VA=0x1000 → PA=0x8000
@@ -390,7 +455,7 @@ Core 1: OS가 Page Table 변경 후 자신의 TLB만 Invalidation
   DSB ISH            // 모든 코어의 완료 보장
 ```
 
-### TLB Shootdown 프로토콜 (멀티코어 상세)
+#### TLB Shootdown 프로토콜 (멀티코어 상세)
 
 ```
 TLB Shootdown = 한 코어가 다른 코어들의 TLB를 원격 무효화하는 프로토콜
@@ -416,9 +481,7 @@ DV 검증 핵심:
   - Race condition: invalidation 진행 중 같은 VA로 walk 시작 시 처리
 ```
 
----
-
-## DV 관점 — TLB 검증 포인트
+### 5.7 DV 관점 — TLB 검증 포인트
 
 | 검증 항목 | 시나리오 | 확인 사항 |
 |----------|---------|----------|
@@ -433,47 +496,65 @@ DV 검증 핵심:
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: TLB Miss Ratio가 성능에 미치는 영향은?**
-> "TLB Hit은 ~1 cycle, Miss는 4-level Page Walk로 ~수백 ns가 소요된다. 800배 차이이므로 Miss Ratio 1% 변화도 전체 성능에 크게 영향을 미친다. 예를 들어 Hit Rate 99%→95%만 해도 Effective Access Time이 4.5ns→20.5ns로 4.6배 증가한다. 이것이 TLB 크기와 교체 정책이 MMU 설계에서 핵심인 이유다."
+### 흔한 오해
 
-**Q: TLB Invalidation이 왜 중요한가?**
-> "Page Table 변경 후 TLB에 남아있는 Stale Entry는 잘못된 물리 주소로 접근하게 만든다 — 데이터 오염이나 보안 취약점으로 이어진다. 특히 멀티코어에서는 한 코어가 변경해도 다른 코어의 TLB에 Stale 엔트리가 남을 수 있으므로, Broadcast Invalidation(TLBI + IS suffix) + Barrier(DSB ISH)가 필수적이다."
+!!! danger "❓ 오해 1 — 'TLB invalidate = 모든 entry 삭제'"
+    **실제**: `TLBI ALLE1` 은 전체 무효화이지만, `TLBI VAE1` (by VA) / `TLBI ASIDE1` (by ASID) 은 _일부만_ 무효화. 전체 flush 는 비싸므로 (cold miss 폭발) **fine-grained** 가 표준입니다. OS 의 mprotect() 는 boundary VA 범위만, context switch 도 이전 ASID 만 비웁니다.<br>
+    **왜 헷갈리는가**: "clear = 전부 지움" 이라는 직관 + 명령어가 한 개로 보여서 모두 같은 효과로 오인.
 
-**Q: IOTLB와 CPU TLB의 차이점은?**
-> "세 가지 차이: (1) 식별자 — CPU TLB는 ASID로 프로세스를 구분하고, IOTLB는 StreamID(디바이스)와 SubstreamID(프로세스)로 구분한다. (2) 트래픽 패턴 — CPU는 명령어 단위 접근, DMA는 대량 순차 접근, GPU는 불규칙 접근이므로 최적 TLB 설계가 다르다. (3) Invalidation — IOTLB Invalidation은 디바이스 DMA가 진행 중일 때 동기화 문제가 더 복잡하다."
+!!! danger "❓ 오해 2 — 'TLB 만 키우면 성능이 항상 향상된다'"
+    **실제**: TLB 가 너무 크면 _lookup latency_ 자체가 늘어납니다 (associative search 의 한계). 그래서 modern CPU 는 **L1 TLB (작고 빠름) + L2 TLB (크고 느림)** 의 hierarchy 로 _search latency vs miss penalty_ 의 trade-off 를 분산합니다. 단순히 size up 만으론 critical path 침해.<br>
+    **왜 헷갈리는가**: "cache 큰 게 무조건 좋다" 의 직관.
 
-**Q: Pseudo-LRU가 True LRU 대신 사용되는 이유는?**
-> "HW 비용이다. 4-way TLB에서 True LRU는 접근 순서를 완전히 기록하려면 5비트가 필요하고, N-way에서는 O(N·log₂N)비트로 급증한다. Pseudo-LRU는 이진 트리(N-1비트)로 근사하여, 4-way에서 3비트면 충분하다. 성능은 True LRU의 95% 이상에 근접하면서 HW 면적은 크게 절약된다."
+!!! danger "❓ 오해 3 — 'TLB invalidate 가 다른 코어까지 즉시 전파된다'"
+    **실제**: ARM 의 `TLBI VAE1` (single-core) 은 자기 코어만. 다른 코어까지 보내려면 `TLBI VAE1IS` (Inner Shareable) + `DSB ISH` 가 필요합니다. x86 은 _SW shootdown_ (IPI) 으로만 가능. 이 차이가 multi-core 에서 stale TLB race 의 단골 원인.<br>
+    **왜 헷갈리는가**: "global state = 자동 sync" 라는 가정.
 
-**Q: Page Walk Cache란 무엇이고 왜 중요한가?**
-> "Page Walk 중 중간 레벨(Level 0, 1, 2)의 PTE를 캐싱하는 구조다. 4-level Walk은 4번의 메모리 접근이 필요하지만, 상위 레벨이 PWC에 Hit하면 2~3번으로 줄어든다. 같은 가상 주소 범위 내의 여러 페이지는 상위 레벨 PTE를 공유하므로, 연속적인 접근에서 PWC Hit Rate가 높다. TLB Miss 시의 penalty를 50% 이상 줄일 수 있어 현대 MMU에서 필수적이다."
+!!! danger "❓ 오해 4 — 'ASID 가 다르면 TLB 엔트리는 절대 충돌 안 한다'"
+    **실제**: _logical_ 으로는 충돌 안 하지만, _physical_ TLB way 가 한정되므로 같은 set 에 ASID 5 와 7 의 엔트리가 동시에 들어가면 _서로 eviction 시킴_. ASID 는 hit/miss 의 _구분_ 일 뿐 _격리_ 가 아닙니다.<br>
+    **왜 헷갈리는가**: ASID 의 이름이 "isolation" 같이 들려서.
 
-**Q: HW-Managed TLB vs SW-Managed TLB의 차이는?**
-> "HW-Managed(ARM, x86, RISC-V)는 TLB Miss 시 HW Walk Engine이 자동으로 Page Table을 탐색하여 TLB를 채운다. SW-Managed(MIPS)는 Miss 시 Exception이 발생하고 OS Handler가 직접 TLB를 채운다. HW 방식이 수십~수백 cycle 더 빠르고, SW 개입이 없어 파이프라인 효율이 좋다. 현재 주류는 HW-Managed이며, DV 관점에서는 Walk Engine의 정확성 검증이 핵심이다."
+!!! danger "❓ 오해 5 — 'TLB hit 면 page walk 가 절대 일어나지 않는다'"
+    **실제**: Speculative execution 의 결과로 TLB hit 인 path 를 따라가더라도, _다른_ speculative branch 가 동시에 walk 를 트리거할 수 있습니다 (HW prefetch / stride / sequential). 즉, _이 access 의_ walk 는 안 일어나도 _주변_ walk 는 일어나는 게 정상.<br>
+    **왜 헷갈리는가**: scalar 모델 ("이 instr 의 결과만") 로 simplification.
 
----
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Page table 변경 후에도 옛 PA 로 access | TLBI 누락 또는 DSB/ISB 누락 | Code 의 `TLBI ...; DSB ISH; ISB` 3-line 시퀀스 |
+| Multi-core 에서 한쪽 core 만 stale | TLBI 가 IS suffix 없이 single-core | TLBI 명령어의 `IS` / `OS` suffix 확인 |
+| Context switch 마다 첫 100 instr 모두 miss | ASID rollover 로 전체 flush 발생 중 | ASID alloc 로그, OS 의 ASID generation counter |
+| 같은 VA, 다른 ASID 가 같은 PA 로 변환 | TLB lookup 시 ASID 비교 누락 또는 nG=0 (global) | TLB dump 의 ASID field, PTE.nG bit |
+| Random 패턴에서 throughput 급락 | TLB capacity miss + PWC 도 miss | working set vs TLB 크기, PWC 적중률 |
+| TLBI VA 후에도 _근처_ VA 가 hit | TLBI 가 size mask 를 잘못 처리 (huge page mask) | TLB entry 의 size 필드와 invalidation VA mask |
+| I-fetch 와 D-fetch 동시에 TLB miss → 직렬화 | walk engine 이 single-port (1 walk at a time) | 동시 walk 발생 시 stall 신호, walk port 수 |
+| Stage 2 켜진 후 TLB hit rate 급락 | combined TLB 의 capacity 부족 (S1+S2 entries) | IOTLB 또는 combined TLB 의 분리/통합 정책 |
+
 !!! warning "실무 주의점 — TLB Shootdown 순서 오류로 stale 변환 사용"
     **현상**: Multi-core 환경에서 한 코어가 PTE를 변경했음에도 다른 코어가 이전 변환 결과를 계속 사용하여 잘못된 PA로 접근, 데이터 오염 또는 보안 취약점 발생.
-    
+
     **원인**: PTE 업데이트 후 반드시 다른 코어에 IPI(Inter-Processor Interrupt)를 보내 TLBI를 수행시켜야 하는데, 순서가 `PTE 수정 → 자신의 TLBI → IPI 전송 → 상대 코어 TLBI 완료 확인` 이어야 함. IPI 전송 전에 새로운 주소로 접근을 허용하거나 DSB 없이 진행하면 race가 발생함.
-    
+
     **점검 포인트**: Shootdown 코드에서 `TLBI → DSB ISH → IPI 발송 → 상대 코어 TLBI 완료 확인` 순서 검증. 시뮬레이션 파형에서 PTE store 완료 시점과 원격 코어 TLBI 발행 시점 사이에 해당 VA 접근이 발생하면 race 발생.
 
-## 핵심 정리
+---
 
-- **TLB는 latency 게임**: hit 1 cycle vs miss + walk 100+ cycle. Hit rate가 IPC를 좌우.
-- **계층화**: micro-TLB (L1 cache 옆 4-16 entries) → L1 TLB (수십 entries) → L2 TLB (수천 entries).
-- **ASID/VMID**: process/VM 간 TLB 공유 가능. Context switch 시 flush 회피로 cold miss 폭증 방지.
-- **TLBI 명령**: ASID-by, VA-by, full flush. context switch / page table 변경 시 필수.
-- **TLB shootdown**: Multi-core SMP에서 다른 코어의 TLB도 무효화하는 IPI(inter-processor interrupt) 메커니즘. 비싸므로 batch 처리.
-- **HW-managed가 표준**: 검증에서는 walk engine + TLB의 정확성 (특히 invalidation 후 stale 없는지) 핵심.
+## 7. 핵심 정리 (Key Takeaways)
+
+- **TLB 는 latency 게임**: hit ~1 cycle vs miss + walk ~수백 cycle. Hit rate 가 IPC 를 좌우. 1% miss rate 변화가 4-9 배의 effective access time 변화.
+- **계층화**: μTLB (L1, fully-assoc, 32-64 ent) → L2 TLB (set-assoc, 수백-수천 ent) → PWC → page walk. 각 단계가 다음 비용을 흡수.
+- **ASID/VMID**: process / VM 간 TLB 공유 가능. Context switch 시 flush 회피 → cold miss 폭증 방지. 단, ASID rollover 시 전체 flush 강제됨.
+- **TLBI 명령**: `ASIDE1` / `VAE1` / `VMALLE1` / `ALLE1`. Page table 변경 / context switch 시 필수. 반드시 `DSB ISH; ISB` 동반.
+- **TLB shootdown**: Multi-core SMP 에서 _다른_ 코어의 TLB 도 무효화하는 메커니즘. ARM = HW broadcast (TLBI ... IS), x86 = SW IPI. 둘 다 비싸므로 batch 처리.
+- **HW-managed 가 표준**: 검증에서는 walk engine + TLB 의 정확성 (특히 invalidation 후 stale 없는지) 핵심.
 
 ## 다음 단계
 
 - 📝 [**Module 03 퀴즈**](quiz/03_tlb_quiz.md)
-- ➡️ [**Module 04 — IOMMU / SMMU**](04_iommu_smmu.md)
+- ➡️ [**Module 04 — IOMMU / SMMU**](04_iommu_smmu.md): CPU 가 아닌 _device_ 도 같은 TLB 게임을 하지만, StreamID / SubstreamID / 비동기 page fault 가 추가됨.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_page_table_structure/">

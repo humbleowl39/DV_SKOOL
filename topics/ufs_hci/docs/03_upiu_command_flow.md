@@ -15,58 +15,214 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#scsi-명령과-upiu-매핑">SCSI 명령과 UPIU 매핑</a>
-  <a class="page-toc-link" href="#well-known-lu-logical-unit">Well-Known LU (Logical Unit)</a>
-  <a class="page-toc-link" href="#nop-out-nop-in-상세">NOP OUT / NOP IN 상세</a>
-  <a class="page-toc-link" href="#query-명령-디바이스-설정상태">Query 명령 — 디바이스 설정/상태</a>
-  <a class="page-toc-link" href="#task-management-명령-제어">Task Management — 명령 제어</a>
-  <a class="page-toc-link" href="#에러-처리-흐름">에러 처리 흐름</a>
-  <a class="page-toc-link" href="#device-initiated-동작">Device-Initiated 동작</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-task-mgmt-abort-task-한-사이클">3. 작은 예 — Abort Task 한 사이클</a>
+  <a class="page-toc-link" href="#4-일반화-upiu-종류와-multi-upiu-sequence">4. 일반화 — UPIU 종류 + multi-UPIU sequence</a>
+  <a class="page-toc-link" href="#5-디테일-scsi-매핑-well-known-lu-query-tm-error">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Identify** UPIU의 6가지 종류 (Command/Response/Data In/Out/Task Mgmt/Query/NOP/Reject) 및 용도.
-    - **Trace** READ / WRITE / QUERY UPIU의 전체 흐름을 host와 device 양측에서 추적.
-    - **Apply** Task Tag (0-31)와 LUN으로 multi-command + multi-LU 시나리오를 작성.
-    - **Distinguish** Sense Data, Response Code, Status Code의 의미와 fault 처리.
+    - **Identify** UPIU 의 6 종류 (Command / Response / Data In/Out / Task Mgmt / Query / NOP / Reject) 및 용도.
+    - **Trace** READ / WRITE / QUERY UPIU 의 전체 흐름을 host 와 device 양측에서 추적한다.
+    - **Apply** Task Tag (0~31) 와 LUN 으로 multi-command + multi-LU 시나리오를 작성한다.
+    - **Distinguish** Sense Data, Response Code, Status Code 의 의미와 fault 처리.
+    - **Decompose** Task Management 명령 (Abort / LUN Reset 등) 의 별도 list / doorbell / IRQ 경로를 분해한다.
 
 !!! info "사전 지식"
     - [Module 01-02](01_ufs_protocol_stack.md)
-    - SCSI CDB 기본 (READ/WRITE/INQUIRY 등)
-
-## 왜 이 모듈이 중요한가
-
-**UPIU는 UFS의 통신 단위**. 모든 명령/응답/데이터가 UPIU로 캡슐화되므로 검증의 거의 모든 시나리오가 UPIU 정합성 + flow 정확성으로 귀결. **Task Tag 매칭 오류 = 잘못된 응답 매핑** — driver가 잘못된 command에 응답을 받으면 데이터 corruption 직결.
-
-!!! tip "💡 이해를 위한 비유"
-    **UPIU command flow** ≈ **주문서 ↔ 영수증 (Request UPIU ↔ Response UPIU)**
-
-    Request 보내고 Response 받는 한 쌍이 한 transaction. Task Tag 가 "같은 주문 식별자" 역할.
+    - SCSI CDB 기본 (READ / WRITE / INQUIRY 등)
 
 ---
 
-## 핵심 개념
-**UPIU = UFS의 명령/데이터/응답을 담는 표준 패킷 형식. HCI가 SCSI CDB를 Command UPIU로 감싸서 전송하고, Device가 Response/Data UPIU로 응답. Task Tag(0~31)로 동시 32개 명령을 식별.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: Task Tag 는 unique 면 충분하다
+**UPIU 는 UFS 의 통신 단위** 입니다. 모든 명령 / 응답 / 데이터가 UPIU 로 캡슐화되므로 검증의 거의 모든 시나리오가 UPIU 정합성 + flow 정확성으로 귀결됩니다. Command UPIU 한 번에 Response UPIU 가 항상 한 번 — 이 _request/response 짝_ 만 정확히 잡으면 어떤 SCSI 명령도 같은 패턴으로 검증할 수 있습니다.
 
-    **실제**: Task Tag 는 "command 발행 ~ completion" 사이에는 unique 해야 하지만, completion 후 reuse 가능. reuse timing 을 잘못 잡으면 다른 LU 로 라우팅.
+특히 **Task Tag 매칭 오류 = 잘못된 응답 매핑** 입니다. driver 가 잘못된 command 에 응답을 받으면 데이터 corruption 으로 직결. Task Tag lifecycle 을 정확히 잡아야 multi-LU + multi-command 시나리오에서 silent bug 를 거를 수 있습니다.
 
-    **왜 헷갈리는가**: "unique key" 라는 단순 직관 + lifecycle 의 미묘한 reuse 시점이 spec 깊은 곳에 있어서.
 ---
 
-## SCSI 명령과 UPIU 매핑
+## 2. Intuition — 비유와 한 장 그림
 
-### 주요 SCSI 명령
+!!! tip "💡 한 줄 비유"
+    **UPIU command flow** = 식당의 _주문서 ↔ 영수증_ 짝. 주문서(**Command UPIU**) 보내고 영수증(**Response UPIU**) 받는 한 쌍이 한 transaction. **Task Tag** 가 "같은 주문 식별자" — 같은 손님이 동시에 32 개 주문을 넣어도 영수증마다 Tag 가 붙어 있어 어떤 주문에 대한 응답인지 즉시 매칭.
+
+### 한 장 그림 — 4 가지 명령의 UPIU 전개
+
+```
+   READ                    WRITE                   QUERY                 ABORT
+   (data path)             (data path)             (control path)        (task mgmt)
+   ─────────               ─────────               ─────────             ─────────
+   Cmd  ───▶               Cmd  ───▶               Q-Req ───▶            TM-Req ───▶
+                                                                            (UTMRD,
+                                                                             UTMRLDBR)
+   ◀─── Data-In ×N         ◀─── RTT                ◀── Q-Resp            ◀── TM-Resp
+                           Data-Out ───▶ ×N
+                           ◀─── RTT (next chunk)
+                           Data-Out ───▶ ×N
+   ◀── Response            ◀── Response
+   (single tag)            (single tag, RTT 가 buffer 협상)
+
+   같은 Task Tag 로 묶임          ↑                  Tag 는 Q-Resp 매칭용  Task Tag = abort 대상
+                                  Device 가 buffer
+                                  ready 알림
+```
+
+### 왜 이 디자인인가 — Design rationale
+
+세 가지 패턴이 동시에 풀려야 했습니다.
+
+1. **고정 길이 header + 가변 length payload** — Cmd (16 B CDB), Response (sense), Data (~MTU), Query (parameter), TM (control) 이 모두 같은 12 B header 로 시작 → driver / HCI 가 _Transaction Type_ 만 보고 디스패치.
+2. **Multi-packet 메시지** (READ 4 KB → Data-In × N) 의 식별 — Task Tag 가 모든 fragment 에 동일하게 붙어 reassembly 가능.
+3. **Data path 와 Task Mgmt 의 분리** — Abort / Reset 이 _별도 list (UTMRL)_ 과 _별도 doorbell (UTMRLDBR)_ 로 가야 Transfer 가 stuck 됐을 때도 control 가능.
+
+이 셋의 교집합이 **공통 12 B UPIU header + Transaction Type 디스패치 + Task Tag lifecycle + Transfer/Task-Mgmt 분리** 의 디자인입니다.
+
+---
+
+## 3. 작은 예 — Task Mgmt Abort Task 한 사이클
+
+가장 단순한 시나리오. slot=5 의 READ 명령이 device 에서 응답 없이 stuck. SW 가 30 ms timeout 후 **Abort Task** 를 발행 → device 가 해당 task 를 취소 → Transfer slot 이 정리. 이 한 사이클의 두 list / 두 doorbell / 두 IRQ 흐름을 추적합니다.
+
+```
+   ┌─── SW (Driver) ───┐                  ┌─── HCI ───┐         ┌─── Device ───┐
+   │                    │                  │            │         │              │
+   │  ① READ@slot=5    │                  │            │         │              │
+   │     UTRLDBR[5]=1  │──────────────────▶│ Cmd UPIU  │────────▶│ NAND read    │
+   │                    │                  │ tag=5     │         │ ... pending..│
+   │       (30 ms 대기, Data-In 안 옴)     │            │         │              │
+   │                    │                  │            │         │              │
+   │  ② SW 가 timeout 결정                  │            │         │              │
+   │     pending_tag[5]=ABORT_PENDING       │            │         │              │
+   │                    │                  │            │         │              │
+   │  ③ UTMRD@slot=0   │                  │            │         │              │
+   │     (TM Function = ABORT TASK,        │            │         │              │
+   │      target Task Tag = 5,             │            │         │              │
+   │      LUN = 0)                          │            │         │              │
+   │       │            │                  │            │         │              │
+   │       ▼            │                  │            │         │              │
+   │  ④ UTMRLDBR[0]=1 ──┼──────────────────▶│ ⑤ TM-Req  │────────▶│ ⑥ Abort tag=5│
+   │                    │                  │ UPIU       │         │   pending list│
+   │                    │                  │            │         │   에서 제거    │
+   │                    │                  │            │         │      │       │
+   │                    │                  │            │         │      ▼       │
+   │                    │                  │            │         │  ⑦ TM-Resp  │
+   │                    │                  │ ⑧ TM-Resp │◀────────│   (Func Cmpl)│
+   │                    │                  │ → UTMRD   │         │              │
+   │                    │                  │   업데이트  │         │              │
+   │                    │                  │            │         │              │
+   │  ⑨ ◀───────────────┼─── IS[UTMRCS] ──│ + doorbell │         │              │
+   │       │            │                  │ clear      │         │              │
+   │       ▼            │                  │            │         │              │
+   │  ⑩ ISR: TM 완료    │                  │            │         │              │
+   │     OCS 확인       │                  │            │         │              │
+   │       │            │                  │            │         │              │
+   │       ▼            │                  │            │         │              │
+   │  ⑪ slot=5 정리     │                  │            │         │              │
+   │     UTRLCLR[5]=1   │──────────────────▶│ slot 5 가  │         │              │
+   │                    │                  │ aborted    │         │              │
+   │                    │                  │ → UTRLDBR[5]=0       │              │
+   │                    │                  │ + OCS=ABORTED        │              │
+   │                    │                  │            │         │              │
+   │  ⑫ ◀── IS[UTRCS]──┼──────────────────│            │         │              │
+   │     pending_tag[5] = FREE              │            │         │              │
+   └────────────────────┘                  └────────────┘         └──────────────┘
+```
+
+### 단계별 추적
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | SW | slot=5 에 READ 발행 | 정상 명령 — 평소 패턴 |
+| ② | SW | Watchdog 30 ms 후 timeout 인식 | Task Mgmt 진입 결정 |
+| ③ | SW | UTMRD slot=0 작성 (Function=ABORT_TASK, Task Tag=5, LUN=0) | Transfer 와 _별도 list_ 에 작성 |
+| ④ | SW | `UTMRLDBR[0] = 1` | 별도 doorbell (UTRLDBR 와 분리) |
+| ⑤ | HCI | TM Request UPIU 조립 → 송신 | Transaction Type = Task Mgmt Req |
+| ⑥ | Device | Abort 대상 task 의 pending state 제거 | Device 측 책임 |
+| ⑦ | Device | TM Response UPIU (Function Complete) | Device → Host |
+| ⑧ | HCI | UTMRD update + UTMRLDBR clear | TM 의 OCS 갱신 |
+| ⑨ | HCI | IS[UTMRCS] = 1 + IRQ | 별도 IRQ bit |
+| ⑩ | SW | ISR 에서 TM 완료 인지 | Function Code 확인 |
+| ⑪ | SW | `UTRLCLR[5] = 1` 로 transfer slot 정리 | Transfer side cleanup |
+| ⑫ | HCI | UTRLDBR[5] = 0, OCS = ABORTED, IS[UTRCS] | Transfer slot 의 final state |
+
+```c
+// SW 측 ② ~ ④ 의 골격
+if (time_after(jiffies, utrd[5].submit_jiffies + msecs_to_jiffies(30))) {
+    struct utp_task_req_desc *utmrd = &utmrl[0];
+    build_tm_req(utmrd, /*func=*/TM_ABORT_TASK,
+                 /*lun=*/0, /*target_tag=*/5);
+    utmrd->ocs = OCS_INVALID;
+    wmb();
+    hci_writel(BIT(0), UTMRLDBR);   // ④ 별도 doorbell
+}
+// ⑪ TM 완료 후
+hci_writel(BIT(5), UTRLCLR);        // transfer slot cleanup
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) Transfer 와 Task Mgmt 는 _완전히 별도 채널_** 이다. UTRL ↔ UTRLDBR ↔ IS[UTRCS] 와 UTMRL ↔ UTMRLDBR ↔ IS[UTMRCS] 가 평행하게 존재. Transfer 가 stuck 돼도 Task Mgmt 는 동작 — _이 분리가 곧 복구 가능성_. <br>
+    **(2) Abort 후 Task Tag reuse 는 _ABORTED OCS 까지 본 뒤_** 가능하다. TM Response 만 보고 reuse 하면 race — UTRLCLR 발행 → IS[UTRCS] → OCS=ABORTED 확인 후에야 free.
+
+---
+
+## 4. 일반화 — UPIU 종류와 multi-UPIU sequence
+
+### 4.1 UPIU 6 종류와 Transaction Type
+
+| UPIU Type | TT | 방향 | 누가 시작 | data segment |
+|-----------|----|----|----------|------------|
+| Command | 0x01 | H → D | SW | 0 (CDB 는 fixed field) |
+| Data-Out | 0x02 | H → D | SW (RTT 후) | up to MTU |
+| Data-In | 0x22 | D → H | Device | up to MTU |
+| Response | 0x21 | D → H | Device | sense data (옵션) |
+| Query Request | 0x16 | H → D | SW | descriptor 등 |
+| Query Response | 0x36 | D → H | Device | descriptor data |
+| Task Mgmt Request | 0x04 | H → D | SW | 0 |
+| Task Mgmt Response | 0x24 | D → H | Device | 0 |
+| NOP OUT | 0x00 | H → D | SW | 0 |
+| NOP IN | 0x20 | D → H | Device | 0 |
+| Reject | 0x3F | D → H | Device | 0 |
+
+### 4.2 한 명령 당 UPIU sequence
+
+| 명령 종류 | UPIU sequence |
+|----------|--------------|
+| READ | Cmd → Data-In × N → Response |
+| WRITE | Cmd → RTT × M → (Data-Out × N₁) → RTT → (Data-Out × N₂) → ... → Response |
+| QUERY (Read Attr/Flag) | Q-Req → Q-Resp |
+| QUERY (Read Descriptor) | Q-Req → Q-Resp (data segment 에 descriptor) |
+| Task Mgmt | TM-Req → TM-Resp |
+| NOP | NOP OUT → NOP IN |
+
+이 sequence 가 **검증의 monitor 분기** 의 기본 구조 — 같은 Task Tag 의 UPIU 가 이 순서대로 도착하는지 / 누락 / 순서 위반 / 잉여를 체크.
+
+### 4.3 Task Tag lifecycle
+
+```
+   FREE ──────▶ SUBMITTED ───────▶ IN_FLIGHT ───────▶ COMPLETED ─────▶ FREE
+            ①                ②                  ③                   ④
+   ① UTRD 작성 + UTRLDBR set
+   ② HCI 가 Cmd UPIU 송신
+   ③ Response UPIU 수신 (또는 ABORTED OCS)
+   ④ OCS 읽고 SW 가 free 처리
+
+   재사용 가능 시점 = ④ 이후 (③ 만으로는 부족 — race)
+```
+
+**핵심 invariant**: 같은 Task Tag 가 동시에 두 명령에 할당되면 안 된다. Response 가 먼저 도착한 명령 / 나중 도착한 명령을 구분 못 함 → silent corruption.
+
+---
+
+## 5. 디테일 — SCSI 매핑 / Well-Known LU / Query / TM / Error
+
+### 5.1 주요 SCSI 명령
 
 | 명령 | CDB Opcode | 용도 | 데이터 방향 |
 |------|-----------|------|-----------|
@@ -79,7 +235,7 @@
 | UNMAP | 0x42 | 블록 해제 (TRIM) | Host → Device |
 | START STOP UNIT | 0x1B | 전원 관리 | 없음 |
 
-### READ 명령 UPIU 흐름
+### 5.2 READ UPIU 흐름
 
 ```
 1. Command UPIU (Host → Device)
@@ -115,7 +271,7 @@
    +------------------------------------------+
 ```
 
-### WRITE 명령 UPIU 흐름
+### 5.3 WRITE UPIU 흐름
 
 ```
 1. Command UPIU (Host → Device)
@@ -131,9 +287,7 @@
    완료 상태
 ```
 
----
-
-## Well-Known LU (Logical Unit)
+### 5.4 Well-Known LU
 
 ```
 UFS Device는 여러 Logical Unit을 지원 — 각각 독립적인 "가상 디스크"
@@ -173,9 +327,7 @@ RPMB W-LU:
   - 일반 READ/WRITE가 아닌 SECURITY PROTOCOL IN/OUT 명령 사용
 ```
 
----
-
-## NOP OUT / NOP IN 상세
+### 5.5 NOP OUT / NOP IN
 
 ```
 NOP = No Operation — 링크 상태 확인 (Ping)
@@ -214,11 +366,7 @@ NOP IN UPIU (Device → Host):
   SW: 응답 확인 (타임아웃 시 에러)
 ```
 
----
-
-## Query 명령 — 디바이스 설정/상태
-
-### Query UPIU 구조
+### 5.6 Query 명령 — 디바이스 설정/상태
 
 ```
 Query Request UPIU (Host → Device):
@@ -260,8 +408,6 @@ Query Response UPIU (Device → Host):
   +------------------------------------------+
 ```
 
-### Query 유형
-
 | Query Function | 용도 | 예시 |
 |---------------|------|------|
 | Read Descriptor | 디바이스 정보 읽기 | Device Descriptor, Unit Descriptor |
@@ -270,8 +416,6 @@ Query Response UPIU (Device → Host):
 | Write Attribute | 속성 변경 | bRefClkFreq |
 | Read Flag | 플래그 읽기 | fDeviceInit, fPurgeEnable |
 | Set/Clear/Toggle Flag | 플래그 변경 | fPurgeEnable 설정 |
-
-### 부팅 관련 Query (BootROM 연결)
 
 ```
 BootROM이 UFS 부팅 시 사용하는 Query:
@@ -286,11 +430,7 @@ BootROM이 UFS 부팅 시 사용하는 Query:
   3. READ(Boot LU): BL2 이미지 로드
 ```
 
----
-
-## Task Management — 명령 제어
-
-### Task Management 명령
+### 5.7 Task Management — 명령 제어
 
 | 명령 | 용도 | 시나리오 |
 |------|------|---------|
@@ -312,9 +452,7 @@ Task Management 흐름:
   → Transfer Request와 독립적으로 처리
 ```
 
----
-
-## 에러 처리 흐름
+### 5.8 에러 처리 흐름
 
 ```
 에러 감지 경로:
@@ -340,9 +478,7 @@ Task Management 흐름:
   Level 5: Full Link Reset (UniPro 재초기화)
 ```
 
----
-
-## Device-Initiated 동작
+### 5.9 Device-Initiated 동작
 
 ```
 UFS는 Host-initiated가 기본이지만, Device가 자발적으로 알리는 메커니즘도 있음:
@@ -376,27 +512,61 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: UPIU의 Task Tag 역할은?**
-> "동시에 처리 중인 최대 32개 명령을 식별하는 고유 ID다. Host가 Command UPIU에 Task Tag를 부여하면, Device는 해당 명령의 Data-In/Response UPIU에 같은 Task Tag를 붙여 반환한다. HCI가 이 Tag로 어떤 UTRD 슬롯의 응답인지를 매칭한다. 명령 큐잉의 핵심 메커니즘이다."
+### 흔한 오해
 
-**Q: READ와 WRITE의 UPIU 흐름 차이는?**
-> "READ: Command UPIU → Device가 바로 Data-In UPIU로 데이터 반환 → Response UPIU. WRITE: Command UPIU → Device가 먼저 RTT(Ready to Transfer) UPIU로 수신 준비 알림 → Host가 Data-Out UPIU로 데이터 전송 → Response UPIU. WRITE에 RTT가 있는 이유는 Device의 내부 버퍼 준비 상태를 확인하여 데이터 손실을 방지하기 위해서다."
+!!! danger "❓ 오해 1 — 'Task Tag 는 unique 면 충분하다'"
+    **실제**: Task Tag 는 "command 발행 ~ completion (OCS writeback) 사이" 에는 unique 해야 하지만, 그 후엔 reuse 가능 — _그 reuse 시점_ 이 핵심입니다. Response UPIU 만 받고 reuse 하면 race. UTRLDBR clear + OCS read 까지 끝나야 free.<br>
+    **왜 헷갈리는가**: "unique key" 라는 단순 직관 + lifecycle 의 미묘한 reuse 시점이 spec 깊은 곳에 있어서.
 
-**Q: UFS HCI의 에러 복구 단계를 설명하라.**
-> "5단계 에스컬레이션: (1) 명령 재시도 — 같은 명령 재전송. (2) Abort Task — 특정 명령 취소. (3) LUN Reset — 해당 LUN의 모든 명령 취소 + LUN 리셋. (4) Host Reset — HCE 레지스터 토글로 HCI 전체 리셋. (5) Full Link Reset — UniPro/M-PHY 재초기화. 낮은 단계에서 해결되면 상위로 올라가지 않으며, 각 단계에서 Task Management UPIU를 사용한다."
+!!! danger "❓ 오해 2 — 'WRITE 도 READ 처럼 Cmd 후 바로 Data 보내면 됨'"
+    **실제**: WRITE 는 반드시 **Cmd → RTT → Data-Out** 순서. Device 의 internal write buffer 가 ready 됐다고 RTT 로 알려야 host 가 Data-Out 전송. RTT 의 _Data Transfer Count_ 가 한 번에 받을 크기를 지정하므로 큰 WRITE 는 RTT/Data-Out 이 여러 round 반복.<br>
+    **왜 헷갈리는가**: READ 의 즉시 data-in 패턴과 대칭일 거라는 직관.
 
-**Q: RPMB(Replay Protected Memory Block)란 무엇이고 왜 중요한가?**
-> "RPMB는 UFS Device 내의 보안 저장 영역(Well-Known LU)이다. 일반 READ/WRITE가 아닌 SECURITY PROTOCOL IN/OUT 명령으로 접근하며, HMAC(SHA-256) 인증과 Write Counter로 Replay Attack을 방지한다. 키, 인증서, 부팅 무결성 값 등 보안 데이터를 저장하는 데 사용되며, 인증 없이는 읽기/쓰기가 불가능하다. BootROM의 Secure Boot에서 OTP 대안으로 활용되기도 한다."
+!!! danger "❓ 오해 3 — 'UPIU 의 Task Tag 와 UTRD slot 은 같다'"
+    **실제**: 일반적인 driver / HCI 에서는 같게 운영하지만 (slot N → Task Tag N), spec 상 _필수가 아닙니다_. HCI 가 다른 매핑을 쓰면 scoreboard 의 매칭 키가 바뀌어야 함. 우리 사내 IP 기준은 _같다_ 로 가정하지만, 검증 시 매핑 invariant 를 명시적으로 assertion 으로 둬야 합니다.<br>
+    **왜 헷갈리는가**: 가장 흔한 1:1 매핑이 spec 의 강제처럼 보임.
 
-**Q: Query Request UPIU와 Command UPIU의 차이는?**
-> "용도가 다르다. Command UPIU는 SCSI CDB를 전달하여 데이터 R/W를 수행하고, Query Request UPIU는 디바이스의 Descriptor/Attribute/Flag를 읽거나 변경한다. 구조적으로 Command UPIU는 16B CDB를 담지만, Query UPIU는 Query Function(Read/Write/Set/Clear) + IDN + Index + Selector + Value 형식이다. 데이터패스가 아닌 제어패스(컨트롤 플레인)에 해당한다."
+!!! danger "❓ 오해 4 — 'Abort 는 발행하면 즉시 명령이 사라진다'"
+    **실제**: Abort 발행 → Device 가 인지 → Device 가 pending list 에서 제거 → TM Response → HCI 가 transfer slot OCS 를 ABORTED 로 갱신 → IS[UTRCS]. 이 사이에 in-flight Data-In 이 남아 있으면 _늦게 도착한 Data-In_ 의 Task Tag 가 이미 free 된 슬롯과 충돌. 그래서 reuse 는 OCS=ABORTED 까지 본 후.<br>
+    **왜 헷갈리는가**: "Abort = 즉시" 라는 직관.
 
-**Q: WRITE에서 RTT(Ready to Transfer) UPIU가 필요한 이유는?**
-> "Device의 내부 Write 버퍼 관리를 위해서다. Host가 일방적으로 데이터를 밀어넣으면 Device 버퍼 오버플로가 발생할 수 있다. RTT는 Device가 '이 만큼의 데이터를 보내도 된다'고 허가하는 흐름 제어 메커니즘이다. RTT의 Data Transfer Count 필드가 허용 크기를 지정하며, 대용량 WRITE는 여러 번의 RTT→Data-Out 반복으로 진행된다. READ에는 RTT가 없는 이유는 Host가 PRDT로 DMA 버퍼를 미리 할당해놓기 때문이다."
+!!! danger "❓ 오해 5 — 'CRC 에러 = 명령 실패'"
+    **실제**: UniPro DL 의 CRC 에러는 _NAK 후 자동 재전송_ — HCI / driver 에 노출되지 않습니다. driver 가 보는 건 _재전송도 실패한 link error_ (IS[UE]) 뿐. UPIU 레벨 에러는 _Response UPIU 의 Status_ 와 _Residual Count_ 를 보고 판단.<br>
+    **왜 헷갈리는가**: "CRC fail = transfer fail" 의 일반 직관.
+
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Response UPIU 가 안 옴 (slot stuck) | UPIU sequence 깨짐 (Data-In 누락 / 잘못된 tag) | UniPro monitor 의 UPIU 시퀀스, Task Tag 일치 |
+| WRITE 가 hang | RTT 안 옴 / RTT Data Transfer Count 불일치 | Device agent 의 buffer 상태, RTT field |
+| 다른 LU 의 응답이 매칭됨 | Task Tag reuse 너무 빠름 | OCS writeback 시점 vs reuse 시점 |
+| Abort 했는데 Data-In 이 계속 옴 | Device 측 abort handling lag | TM Response 시점, in-flight Data-In count |
+| Query Read Attr 결과가 0 | bBootLunEn 미설정 또는 잘못된 IDN | Q-Req 의 IDN/Index/Selector |
+| INQUIRY 결과 길이가 의도보다 짧음 | Residual Count 가 nonzero 인데 SW 무시 | Response UPIU 의 Residual Count |
+| RPMB read 가 access denied | HMAC counter / nonce mismatch | Security Protocol IN/OUT 의 인증 chain |
+| LUN Reset 후 다른 LU 도 영향 | 잘못된 LUN 으로 reset 발행 | UTMRD 의 LUN field |
+
+### 흔한 오해 5 (추가) — 디버그 의문
+
+!!! danger "❓ 오해 6 — 'NOP IN 만 받으면 link 가 정상이다'"
+    **실제**: NOP 은 _UTP layer 까지_ 가 정상임을 알려줍니다. UniPro link 가 fluctuation 중이면 가끔 NOP 은 통과하지만 큰 Data-In 이 NAK 으로 깨질 수 있음. 종합적인 link health 는 UE 카운터 + AFC 통계 + actual transfer 로 판단.<br>
+    **왜 헷갈리는가**: "ping 통과 = link OK" 의 일반 직관.
 
 ---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **UPIU 6+ 종**: Command / Response / Data-In / Data-Out / Query Req-Resp / Task Mgmt Req-Resp / NOP / Reject. 모든 명령은 UPIU 로 캡슐.
+- **공통 12 B header** + Transaction Type 디스패치 + 4 B 단위 길이 — driver/HCI 의 단순화 핵심.
+- **Task Tag (0~31)** = queue depth 32 의 식별자. lifecycle = SUBMIT → IN-FLIGHT → COMPLETE → FREE. reuse 는 OCS writeback 후.
+- **READ**: Cmd → Data-In × N → Response. **WRITE**: Cmd → RTT → Data-Out × N (반복) → Response.
+- **Query** = control path. Read/Write × Descriptor/Attribute/Flag 의 6 function. BootROM 이 bBootLunEn 등에 사용.
+- **Task Mgmt** = 별도 list (UTMRL) + 별도 doorbell (UTMRLDBR) + 별도 IRQ (IS[UTMRCS]). Transfer 가 stuck 돼도 동작 가능.
+- **Sense Data** = SCSI sense key + ASC/ASCQ. 명령 실패 시 Response UPIU 에 동봉.
+
 !!! warning "실무 주의점 — Task Tag 재사용 시점 오해"
     **현상**: 다른 LU 로 보낸 명령이 엉뚱한 LU 의 응답과 매칭되어 scoreboard mismatch 가 발생한다.
 
@@ -404,20 +574,13 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 
     **점검 포인트**: pending_tag table 을 OCS write-back 시점에만 갱신하는지, 같은 Tag 가 두 LU 로 동시에 발행되지 않는지 sequence-level assertion 으로 확인.
 
-## 핵심 정리
+---
 
-- **UPIU 6종**: Command, Response, Data In/Out, Task Management, Query, NOP, Reject. 모든 명령은 UPIU로 캡슐.
-- **UPIU 헤더**: Transaction Type, Flags, LUN, Task Tag, Command Set Type, Total EHS Length 등.
-- **Task Tag (0-31)**: queue depth 32 — Task Tag로 동시 명령 식별. response의 Task Tag로 매칭.
-- **READ flow**: Command UPIU (host→device) → Data In UPIU N개 (device→host) → Response UPIU.
-- **WRITE flow**: Command UPIU → Ready-To-Transfer UPIU (device→host) → Data Out UPIU N개 (host→device) → Response UPIU.
-- **QUERY**: device 속성 read/write (descriptor, attribute, flag).
-- **Sense Data**: 명령 실패 시 상세 fail 원인. SCSI sense key + ASC/ASCQ.
+## 다음 모듈
 
-## 다음 단계
+→ [Module 04 — HCI DV Methodology](04_hci_dv_methodology.md): UPIU sequence 와 Task Tag lifecycle 을 어떻게 UVM env / scoreboard / SVA / coverage 로 검증할지.
 
-- 📝 [**Module 03 퀴즈**](quiz/03_upiu_command_flow_quiz.md)
-- ➡️ [**Module 04 — DV Methodology**](04_hci_dv_methodology.md)
+[퀴즈 풀어보기 →](quiz/03_upiu_command_flow_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_hci_architecture/">

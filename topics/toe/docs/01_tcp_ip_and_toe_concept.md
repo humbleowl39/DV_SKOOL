@@ -15,85 +15,221 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#tcpip-4계층-모델">TCP/IP 4계층 모델</a>
-  <a class="page-toc-link" href="#tcp-핵심-기능-요약">TCP 핵심 기능 요약</a>
-  <a class="page-toc-link" href="#왜-toe가-필요한가">왜 TOE가 필요한가?</a>
-  <a class="page-toc-link" href="#toe-vs-다른-offload-기술">TOE vs 다른 Offload 기술</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#확인-퀴즈">확인 퀴즈</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-1-mb-http-응답이-toe-를-거쳐-나가는-여정">3. 작은 예 — 1 MB HTTP 응답</a>
+  <a class="page-toc-link" href="#4-일반화-offload-의-스펙트럼과-toe-의-범위">4. 일반화 — Offload 스펙트럼</a>
+  <a class="page-toc-link" href="#5-디테일-tcpip-스택-tcp-기능-toe-효과">5. 디테일 — 스택, 기능, 효과</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + 디버그</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Trace** TCP/IP 스택 처리 단계와 host CPU의 부하 발생 지점 식별
-    - **Distinguish** Partial offload (checksum, segmentation) vs Full offload (state machine 전체) 차이
-    - **Quantify** 100GbE에서 TOE 없이 CPU가 처리해야 하는 cycle 수 계산
-    - **Identify** TOE의 등장 동기 (HPC, RDMA, hyperscale data center)
+    - **Trace** TCP/IP 스택 처리 단계와 host CPU 의 부하 발생 지점을 단계별로 추적할 수 있다.
+    - **Distinguish** Partial offload (checksum, segmentation) 와 Full offload (state machine 전체) 의 경계를 구분할 수 있다.
+    - **Quantify** 100 GbE 라인레이트에서 CPU 가 TCP 처리에 쓰는 cycle/packet 을 어림셈으로 계산할 수 있다.
+    - **Identify** TOE 의 등장 동기 (HPC, hyperscale data center, AI/storage 가속) 와 한계 영역을 식별한다.
+    - **Compare** Checksum/TSO/LRO/TOE/RDMA/DPDK 의 offload 범위 차이를 비교한다.
 
 !!! info "사전 지식"
-    - TCP/IP 스택 (3-way handshake, ACK, sliding window)
-    - NIC 동작 일반 원리
+    - TCP/IP 스택 (3-way handshake, ACK, sliding window, sk_buff)
+    - NIC 의 일반 동작 원리 (descriptor ring, DMA, IRQ)
 
-## 왜 이 모듈이 중요한가
-
-**100GbE 시대에 host CPU는 TCP/IP만으로 압도**됩니다. TOE는 이를 HW로 옮겨 CPU를 다른 워크로드에 활용 가능하게 함. 검증의 출발점은 어떤 기능을 offload하는가(scope)와 host와의 interface 모델 이해.
-
-!!! tip "💡 이해를 위한 비유"
-    **TCP** ≈ **우체국 등기 우편**
-
-    보내는 쪽이 수신 확인(ACK)을 받을 때까지 원본을 보관하고, 답신이 없으면 다시 보낸다(재전송). TOE는 이 등기 처리 과정을 CPU 대신 전용 직원(HW)이 맡아 처리하는 것이다.
-
-## 핵심 개념
-**TOE = TCP/IP 프로토콜 처리를 CPU에서 전용 HW로 이전(Offload)하여, CPU 부하를 줄이고 네트워크 처리량을 극대화하는 엔진. 100Gbps+ 서버 환경에서 CPU가 TCP 처리에 압도되는 문제를 해결.**
-
-!!! danger "❓ 흔한 오해"
-    **오해**: TOE는 모든 TCP 처리를 HW에서 완전히 처리하므로 CPU는 네트워크와 무관하다.
-
-    **실제**: TOE는 stateful한 데이터 패스(Checksum, Segmentation, 재전송)만 offload한다. 연결 수립/해제 등 control path는 여전히 CPU(SW)가 담당한다.
-
-    **왜 헷갈리는가**: "TCP offload"라는 표현이 TCP 전체를 HW가 처리한다는 인상을 주지만, 실제로는 HW/SW 역할이 Data Path와 Control Path로 분리되어 있다.
 ---
 
-## TCP/IP 4계층 모델
+## 1. Why care? — 이 모듈이 왜 필요한가
+
+이후 모든 TOE 모듈은 한 가정에서 출발합니다 — **"100 Gbps 라인레이트에서 host CPU 가 TCP/IP 를 처리하면 코어 여러 개가 100 % 점유되어 애플리케이션이 멈춘다"**. 왜 TOE 의 connection table 이 hardware 에 있어야 하는지, 왜 RTO 타이머가 SW timer 가 아니라 HW timer wheel 인지, 왜 DV TB 가 host agent 와 network agent 를 둘 다 두어야 하는지 — 전부 이 한 가정의 파생입니다.
+
+이 모듈을 건너뛰면 이후의 모든 architecture/기능/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이게 CPU cycle 을 줄이려는 거구나"** 처럼 _이유_ 가 보입니다.
+
+---
+
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **TCP** = 등기 우편. 원본을 보관하다가 ACK 가 안 오면 다시 보낸다.<br>
+    **CPU SW TCP** = 한 명의 우체부가 모든 등기 봉투의 송장 작성·체크섬·재전송 타이머·창구 응대를 _직접_ 수행 — 처리량이 라인레이트를 못 따라감.<br>
+    **TOE** = 등기 처리 전용 자동화 라인. 송장 작성·CRC·재전송·창구 응대를 전용 HW 가 처리하고, CPU 는 _연결 개설_ 같은 드문 결정만 한다.
+
+### 한 장 그림 — SW TCP path vs TOE path
+
+```
+            Software TCP (CPU 풀로드)                    TOE (HW offload)
+            ──────────────────────────                   ──────────────────────
+   App ──▶ user buf                              App ──▶ user buf
+            │ copy_from_user      ●                       │ DMA descriptor
+            ▼                                             ▼
+         socket buf (sk_buff)                          TOE TX queue
+            │ TCP header build    ●                       │ HW Segmentation
+            │ Checksum (sw)       ●                       │ HW Checksum
+            │ Segmentation        ●                       │ HW Header build
+            │ Retx timer (sw)     ●                       │ HW RTO timer
+            ▼                                             ▼
+           NIC → wire                                   MAC → wire
+            ▲                                             ▲
+            │ ksoftirqd / IRQ     ●                       │ HW ACK process
+            │ Reassembly (sw)     ●                       │ HW Reassembly
+            │ copy_to_user        ●                       │ DMA
+            ▼                                             ▼
+           App                                          App
+       ● = CPU cycle / cache pollution
+```
+
+빨간 원이 SW TCP 에서는 packet 마다 발생하지만, TOE 에서는 모두 **HW pipeline** 안에서 처리됩니다. CPU 는 `connect()` / `accept()` / `close()` 같은 **연결당 1~2 회** 의 control path 만 담당.
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+100 Gbps 라인레이트에서 64 byte 패킷 도착 간격은 **~5.12 ns**. CPU 한 코어가 packet 하나에 쓸 수 있는 cycle 은 사실상 한 자릿수 — checksum 한 번 못 돌립니다. 즉 **CPU 가 packet 별로 끼는 한 라인레이트를 못 채웁니다**. 그래서 TOE 의 세 축 — **Data path 의 HW offload + Connection state 의 HW 보존 + Control path 의 SW 잔류** — 는 동시에 만족돼야 의미가 있고, 셋 중 하나라도 빠지면 전체가 의미를 잃습니다. 이 세 축이 곧 TOE 의 architecture, 기능 분배, 그리고 검증 환경의 구조를 결정합니다.
+
+---
+
+## 3. 작은 예 — 1 MB HTTP 응답이 TOE 를 거쳐 나가는 여정
+
+가장 단순한 시나리오. 웹 서버가 클라이언트에게 **1 MB HTTP 응답** 을 보냅니다. 연결은 이미 ESTABLISHED 상태, MSS = 1460 byte 라고 가정.
+
+```
+   ┌─── Server (TOE 장착) ──────────────┐                ┌── Client ──┐
+   │                                     │                │            │
+   │  app: write(fd, buf=1MB, ...)       │                │            │
+   │       │                              │                │            │
+   │       ▼ ① descriptor post (단 1회)  │                │            │
+   │   Host DMA ───── 1 MB ───────▶ TOE TX queue          │            │
+   │                                  │                    │            │
+   │                                  ▼ ② HW Segmentation │            │
+   │                              [seg1, seg2, ..., seg720]              │
+   │                                  │ (1MB / 1460B ≈ 720 segs)        │
+   │                                  ▼ ③ HW header build (TCP/IP)       │
+   │                                  ▼ ④ HW Checksum (TCP+IP)           │
+   │                                  ▼ ⑤ Retx buffer copy + RTO arm     │
+   │                                  ▼                                  │
+   │                                MAC ════════ wire ═══════════════════▶ NIC
+   │                                                                    │ │
+   │                                  ▲                                ◀ │ ⑥ ACK(ack=N×1460)
+   │                                  │ ⑦ HW ACK 처리 → Retx buffer 해제│ │
+   │                                  │ ⑧ Window slide → 다음 seg burst │ │
+   │                                  │                                  │ │
+   │                                  ▼ ⑨ 모든 byte ACK 완료              │
+   │       ◀──── descriptor done IRQ ──┘                                  │
+   │   app: write() return                                                │
+   └─────────────────────────────────────┘                ┌────────────┘
+```
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | App + driver | `write()` → 1 MB buffer 의 descriptor 1 개를 TOE 에 post | CPU 는 _한 번_ 만 개입. SW TCP 라면 720 회의 segment 처리가 필요 |
+| ② | TOE HW | 1 MB → 720 개 segment (MSS = 1460) 로 분할 (TSO 의 full-offload 버전) | CPU 가 segmentation 안 함 — 핵심 cycle 절감 |
+| ③ | TOE HW | segment 마다 TCP header (seq, ack, window, flags) 와 IP header (src, dst, length, ttl) 채움 | Connection table 에서 4-tuple lookup → 상태 가져옴 |
+| ④ | TOE HW | TCP checksum (pseudo header + payload) 와 IP checksum 계산해 헤더에 삽입 | pipeline 으로 1 cycle/word — 1500 B ≈ 94 cycle |
+| ⑤ | TOE HW | retransmission buffer 에 사본 보관 + 연결별 RTO 타이머 arm | ACK 가 안 오면 자동 재전송 |
+| ⑥ | Peer NIC | ACK packet 송신 (cumulative ACK, 일정 간격) | 보통 두 segment 마다 1 ACK |
+| ⑦ | TOE HW | RX path 에서 ACK 수신 → connection table 의 send_unacked 갱신 → retx buffer 해당 영역 해제 | 모두 HW 가 처리 |
+| ⑧ | TOE HW | window slide → 다음 burst 의 segment 송신 (cwnd × MSS 만큼) | Congestion control 도 HW 가 직접 |
+| ⑨ | TOE HW | 마지막 byte ACK 도착 → descriptor 완료 IRQ 또는 polling completion | App 의 `write()` 가 return |
+
+```c
+// Step ① 의 SW 측 코드. 이 한 줄이 ②~⑨ 를 트리거.
+ssize_t n = write(socket_fd, buf, 1024 * 1024);   // 1 MB
+// SW TCP 라면 같은 write() 가 내부에서 720 회 segment 처리.
+// TOE 라면 descriptor 1 개 post → HW 가 720 segment 자동 처리.
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) CPU 개입 횟수의 비대칭** — SW TCP 는 packet 마다 (수백~수천 cycle), TOE 는 1 MB 당 1~2 회 (descriptor post + completion). 이게 TOE 의 본질. <br>
+    **(2) Connection state 가 HW 안에 있다** — Step ③ 의 header build 가 가능하려면 seq/ack/window/cwnd 가 HW 가 즉시 읽을 수 있는 곳에 있어야 함. 이게 다음 모듈의 Connection Table 이야기로 이어집니다.
+
+---
+
+## 4. 일반화 — Offload 의 스펙트럼과 TOE 의 범위
+
+### 4.1 Offload 의 4 단계 — 어디까지 HW 가 가져가나
+
+| 단계 | Offload 항목 | 남는 SW 부담 | HW 복잡도 |
+|---|---|---|---|
+| **Stateless** | Checksum (IP/TCP/UDP) | Segmentation, retx, window, FSM 모두 SW | 낮음 |
+| **Segment** | + TSO (TX), LRO (RX) | retx, window, FSM 은 여전히 SW | 중간 |
+| **Stateful (TOE)** | + Connection state, retx, RTO, flow/cong control | 연결 setup/teardown 만 SW | 높음 |
+| **Bypass (RDMA)** | TCP 자체를 우회, user-space 가 NIC 에 직접 명령 | TCP API 호환 안 됨 | 매우 높음 |
+
+핵심: **TOE 는 "stateful offload"** — 연결 상태가 HW 에 있다는 점에서 TSO/LRO 와 본질적으로 다름.
+
+### 4.2 데이터 패스 vs 컨트롤 패스 — 분리의 원칙
+
+```
+   Frequency × Latency-sensitivity 매트릭스
+
+         높은 빈도 (packet/s)          낮은 빈도 (conn/s)
+        ─────────────────────────    ────────────────────
+   ┌── Data Path (HW) ──┐         ┌── Control Path (SW) ──┐
+   │ Checksum            │         │ socket() / bind()      │
+   │ Segmentation        │         │ connect() / accept()   │
+   │ Header build        │         │ close() / shutdown()   │
+   │ ACK process         │         │ setsockopt()           │
+   │ RTO retransmit      │         │ Routing table update   │
+   │ Window slide        │         │ ARP resolution         │
+   │ Cong control update │         │ Statistics polling     │
+   └────────────────────┘         └───────────────────────┘
+   ns~µs latency 요구              ms 단위 허용
+```
+
+**원칙**: "자주 발생하는 Data Path 는 HW 로, 드문 Control Path 는 SW 로." 이 한 줄이 TOE architecture 모든 결정의 근거입니다.
+
+### 4.3 DMA / TSO / TOE / RDMA — 한 그림
+
+```
+   App 의 buffer 가 wire 까지 가는 경로
+
+   [SW TCP]      App ─copy─▶ sk_buff ─stack─▶ NIC ──▶ wire
+                         CPU         CPU       DMA
+   [TSO]         App ─copy─▶ sk_buff(big) ─NIC TSO─▶ wire
+                         CPU         (HW segment)
+   [TOE]         App ─DMA─▶ TOE buf ─HW seg+chksum+retx─▶ wire
+                         (DMA)        (전부 HW)
+   [RDMA]        App buffer ──MR── HCA ─DMA─▶ wire     (TCP 자체 우회)
+                  (사전 등록)         (kernel bypass)
+```
+
+오른쪽으로 갈수록 CPU 개입이 줄지만, _기존 socket API 호환성_ 도 같이 줄어듭니다 — RDMA 는 별도 verbs API. TOE 는 **socket API 를 유지하면서 가장 많은 cycle 을 줄이는 지점**.
+
+---
+
+## 5. 디테일 — TCP/IP 스택, TCP 기능, TOE 효과
+
+### 5.1 TCP/IP 4 계층 모델
 
 ```
 +-------------------------------+
 | 4. Application Layer          |  HTTP, FTP, SSH, NVMe-oF
-|    (사용자 데이터)             |
+|    (사용자 데이터)            |
 +-------------------------------+
 | 3. Transport Layer            |  TCP, UDP
 |    (신뢰성, 흐름 제어)        |  ← TOE가 Offload하는 영역
 +-------------------------------+
 | 2. Internet Layer             |  IP, ICMP, ARP
-|    (라우팅, 주소)             |  ← 일부 Offload
+|    (라우팅, 주소)             |  ← 일부 Offload (checksum, fragment)
 +-------------------------------+
 | 1. Network Access Layer       |  Ethernet (MAC + PHY)
 |    (물리 전송)                |  ← NIC/DCMAC이 처리
 +-------------------------------+
 ```
 
----
-
-## TCP 핵심 기능 요약
-
-### TCP가 하는 일 (UDP와 차이)
+### 5.2 TCP 의 핵심 기능 (UDP 와의 차이)
 
 | 기능 | TCP | UDP |
 |------|-----|-----|
 | 연결 | Connection-oriented (3-way handshake) | Connectionless |
 | 신뢰성 | 보장 (ACK, 재전송) | 미보장 |
-| 순서 보장 | Sequence Number로 보장 | 미보장 |
+| 순서 보장 | Sequence Number 로 보장 | 미보장 |
 | 흐름 제어 | Window 기반 | 없음 |
 | 혼잡 제어 | Slow Start, Congestion Avoidance | 없음 |
 | 오버헤드 | 높음 (헤더 20B+, 상태 관리) | 낮음 (헤더 8B) |
 
-### TCP 연결 수명 주기
+UDP 는 헤더 8 B + 상태 관리 없음 → **CPU 부하가 작아 offload 효과 미미**. TCP 는 packet 마다 반복 연산이 많아 **HW offload 효과 극대화**.
+
+### 5.3 TCP 연결 수명 주기
 
 ```
 연결 수립: 3-Way Handshake
@@ -113,7 +249,9 @@
   Client → ACK →        Server
 ```
 
-### TCP 헤더 구조
+→ **연결 setup/teardown 은 연결당 1 회**. 데이터 전송은 packet 당 발생 → 빈도 격차가 100 만 배 이상. 이 비대칭이 HW/SW 분리의 근거.
+
+### 5.4 TCP 헤더 구조 (TOE HW 가 만들어야 하는 필드)
 
 ```
  0                   1                   2                   3
@@ -140,17 +278,13 @@
   Checksum:        헤더 + 데이터 무결성 검증
 ```
 
----
-
-## 왜 TOE가 필요한가?
-
-### CPU에서 TCP 처리 시 병목
+### 5.5 100 Gbps 에서 CPU 가 부담하는 비용 — 어림셈
 
 ```
-100Gbps 네트워크에서 CPU TCP 처리:
+100 Gbps 네트워크에서 CPU TCP 처리:
 
-  64B 패킷 기준: ~150M packets/sec
-  각 패킷마다 CPU가:
+  64 B 패킷 기준: ~150 M packets/sec (라인레이트)
+  각 패킷마다 CPU 가:
     1. Checksum 계산/검증
     2. Sequence Number 관리
     3. ACK 생성/처리
@@ -161,10 +295,10 @@
   결과:
     CPU 코어 여러 개가 TCP 처리에 100% 점유
     → 애플리케이션 처리 능력 없음
-    → CPU가 "네트워크 프로세서"로 전락
+    → CPU 가 "네트워크 프로세서" 로 전락
 ```
 
-### TOE의 효과
+### 5.6 TOE 적용 후 효과
 
 ```
 TOE 있을 때:
@@ -178,29 +312,25 @@ TOE 있을 때:
 
   CPU:
     - 연결 수립/해제만 관여 (Control Path)
-    - 데이터 전달만 수행 (Data Path은 DMA)
-    - → CPU 부하 80-90% 감소
+    - 데이터 전달만 수행 (Data Path 은 DMA)
+    - → CPU 부하 80~90% 감소
     - → 애플리케이션에 CPU 할당 가능
 ```
 
-### 성능 비교
-
 | 항목 | SW TCP (CPU) | TOE (HW) |
 |------|-------------|----------|
-| Throughput | ~40Gbps (CPU 한계) | 100Gbps+ (라인 레이트) |
-| Latency | ~10-50 μs (커널 경유) | ~1-5 μs (HW 직접) |
-| CPU 사용률 | 80-100% (TCP 처리) | ~10% (제어만) |
+| Throughput | ~40 Gbps (CPU 한계) | 100 Gbps+ (라인 레이트) |
+| Latency | ~10–50 µs (커널 경유) | ~1–5 µs (HW 직접) |
+| CPU 사용률 | 80–100 % (TCP 처리) | ~10 % (제어만) |
 | 연결 수 | 수만 (메모리/CPU 한계) | 수백만 (HW 상태 테이블) |
 | 전력 | 높음 (CPU 풀로드) | 낮음 (전용 HW 효율) |
 
----
-
-## TOE vs 다른 Offload 기술
+### 5.7 TOE vs 다른 Offload 기술
 
 | 기술 | Offload 범위 | 복잡도 | 성능 | 사용 사례 |
 |------|-------------|--------|------|----------|
-| **Checksum Offload** | Checksum만 | 낮음 | 약간 향상 | 거의 모든 NIC |
-| **TSO/LSO** | TCP Segmentation만 | 중간 | 중간 향상 | 대부분의 NIC |
+| **Checksum Offload** | Checksum 만 | 낮음 | 약간 향상 | 거의 모든 NIC |
+| **TSO/LSO** | TCP Segmentation 만 | 중간 | 중간 향상 | 대부분의 NIC |
 | **TOE** | TCP/IP 전체 | 높음 | 대폭 향상 | 서버, 가속기, 스토리지 |
 | **RDMA** | TCP 우회 (직접 메모리 접근) | 매우 높음 | 최고 | HPC, 저지연 |
 | **DPDK** | 커널 우회 (유저스페이스) | 높음 | 높음 | NFV, 라우터 |
@@ -215,75 +345,79 @@ Offload 수준:
   DPDK: SW이지만 커널을 우회 → Offload라기보다 최적화
 ```
 
----
+### 5.8 실무 주의점 — Partial Checksum Offload 와 부분 헤더 처리 오류
 
-## Q&A
-
-**Q: TOE가 왜 필요한가?**
-> "100Gbps 네트워크에서 CPU가 TCP/IP 프로토콜을 처리하면 코어 여러 개가 100% 점유되어 애플리케이션에 CPU를 할당할 수 없다. TOE는 Checksum, Segmentation, 재전송, 흐름 제어를 전용 HW로 Offload하여 CPU 부하를 80-90% 줄이고, 라인 레이트 처리량과 마이크로초 단위 지연을 달성한다."
-
-**Q: TOE와 TSO/Checksum Offload의 차이는?**
-> "Offload 범위의 차이다. Checksum Offload는 체크섬 계산만, TSO는 여기에 TCP Segmentation을 추가한다. TOE는 TCP/IP 전체 스택(연결 관리, 재전송, 흐름 제어까지)을 HW로 Offload한다. TSO는 대부분의 NIC에 이미 있지만 TOE는 전용 가속기가 필요하다."
-
-**Q: TOE의 단점은?**
-> "세 가지: (1) HW 복잡도 — TCP 상태 머신 전체를 HW로 구현해야 하므로 설계/검증 비용이 높다. (2) 유연성 — 프로토콜 변경 시 HW 수정이 필요(SW 스택은 패치로 해결). (3) 디버그 난이도 — HW 내부 TCP 상태를 관찰하기 어려움. 그러나 100Gbps+ 서버 가속기에서는 성능 이점이 이 단점을 압도한다."
-
----
-
-## 확인 퀴즈
-
-**Q1.** 100Gbps 네트워크에서 64B 패킷 기준 초당 약 몇 개의 패킷을 처리해야 하는가? 그리고 이것이 CPU에 어떤 문제를 일으키는가?
-
-<details>
-<summary>정답</summary>
-
-약 **1억 5천만(~150M) packets/sec**. 각 패킷마다 Checksum, Seq 관리, ACK 처리, Window 관리, 재전송 타이머 등을 CPU가 수행하면 코어 여러 개가 100% 점유되어 애플리케이션에 CPU를 할당할 수 없다. CPU가 사실상 "네트워크 프로세서"로 전락하는 문제.
-</details>
-
-**Q2.** TCP와 UDP의 가장 근본적인 차이를 한 문장으로 설명하고, TOE가 TCP만 Offload하는 이유를 서술하라.
-
-<details>
-<summary>정답</summary>
-
-TCP는 연결 지향(Connection-oriented)으로 신뢰성(ACK, 재전송, 순서 보장)을 제공하고, UDP는 비연결(Connectionless)으로 이를 제공하지 않는다. UDP는 헤더 8B에 상태 관리가 없어 CPU 부하가 작으므로 Offload 필요성이 낮다. 반면 TCP는 상태 머신, 재전송, 흐름/혼잡 제어 등 패킷마다 반복적 연산이 필요하여 HW Offload 효과가 크다.
-</details>
-
-**Q3.** TSO(TCP Segmentation Offload)와 TOE의 차이를 Offload 범위 관점에서 비교하라. TSO만으로 부족한 이유는?
-
-<details>
-<summary>정답</summary>
-
-TSO는 Segmentation(대용량 데이터를 MSS 단위로 분할 + 헤더 생성)만 Offload한다. TOE는 Segmentation에 더해 Checksum, 재전송, 흐름 제어, 혼잡 제어, 연결 관리까지 TCP/IP 전체를 Offload한다. TSO만으로는 재전송 타이머 관리, 연결별 Window 추적, Congestion Control 등 나머지 반복 작업이 여전히 CPU에 남아 100Gbps에서 병목이 해결되지 않는다.
-</details>
-
-**Q4. (사고력)** RDMA는 TCP 자체를 우회하여 직접 메모리에 접근한다. 그렇다면 RDMA가 있는데도 TOE가 여전히 필요한 사용 사례는 무엇인가?
-
-<details>
-<summary>정답</summary>
-
-RDMA는 양쪽 모두 RDMA NIC + 전용 SW 스택이 필요하고, 기존 TCP 기반 애플리케이션(HTTP, NVMe-oF over TCP, 일반 소켓 앱 등)과 호환되지 않는다. 또한 RDMA는 보통 손실 없는(lossless) 네트워크를 전제한다. 반면 TOE는 기존 TCP 소켓 API와 호환되면서 성능을 높이므로, 레거시 애플리케이션 호환이 필요하거나 일반 인터넷/데이터센터 환경(손실 가능)에서 사용된다.
-</details>
-
----
 !!! warning "실무 주의점 — Partial Checksum Offload와 부분 헤더 처리 오류"
     **현상**: RX 체크섬 오프로드를 활성화했을 때 특정 패킷에서만 IP/TCP 체크섬 오류가 보고되며, 동일 패킷을 SW 스택으로 처리하면 정상이다.
-    
+
     **원인**: Partial offload는 IP/TCP 헤더가 단일 DMA 버퍼에 연속으로 존재한다고 가정한다. IP 옵션 필드가 있거나 TCP 헤더가 세그먼트 경계에 걸리면 HW가 헤더 끝 위치를 잘못 계산하여 체크섬 오류를 발생시킨다.
-    
+
     **점검 포인트**: TB에서 IP Options(IHL>5) 패킷과 TCP Options(Data Offset>5) 패킷을 별도 시나리오로 구성. `csum_start`와 `csum_offset` 디스크립터 필드가 옵션 길이에 따라 정확히 갱신되는지 DMA 디스크립터 덤프에서 확인.
 
-## 핵심 정리
+---
 
-- **TOE = TCP/IP HW offload**. Host CPU 부하 ↓ + throughput ↑.
-- **Partial offload**: checksum, TSO/LRO (segment offload), simple cases. 일반 NIC도 지원.
-- **Full offload**: connection state machine 전체 HW. RDMA / iWARP 등 특수 NIC.
-- **동기**: 100GbE에서 packet rate가 1.5M pps/Gbps → CPU cycle/packet 한도 초과.
-- **활용**: HPC, hyperscale (AWS Nitro, Azure SmartNIC), storage networks.
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+!!! danger "❓ 오해 1 — 'TOE 는 TCP 전체를 HW 에서 처리한다'"
+    **실제**: TOE 는 **stateful 한 데이터 패스** (Checksum, Segmentation, 재전송, Flow/Congestion control) 만 HW 가 처리합니다. **연결 수립/해제 같은 control path 는 여전히 CPU(SW)** 가 담당. <br>
+    **왜 헷갈리는가**: "TCP offload" 라는 표현이 _전부_ 라는 인상을 주지만, 실제 분배는 빈도 기준 (Data path = 빈번 → HW, Control path = 드묾 → SW).
+
+!!! danger "❓ 오해 2 — 'TOE = 빠른 NIC'"
+    **실제**: 일반 NIC + Checksum/TSO 도 100 Gbps 라인레이트 자체는 채울 수 있습니다. TOE 의 차별점은 **CPU 점유율** (보통 5–10× 감소) 과 **tail latency**. throughput 만 보면 큰 차이가 안 날 수도 있음. <br>
+    **왜 헷갈리는가**: 마케팅 자료가 "라인레이트" 만 강조해서.
+
+!!! danger "❓ 오해 3 — 'TOE 가 있으면 항상 throughput 이 향상된다'"
+    **실제**: TOE 가 효과 있는 워크로드는 **small packet, 다수 connection, CPU bound** 환경. **Large MTU (jumbo frame) + bulk transfer** 에서는 일반 NIC + GSO 만으로도 충분하고, TOE 의 connection table lookup 오버헤드가 오히려 작은 손해를 줄 수도 있습니다.<br>
+    **왜 헷갈리는가**: "HW = 항상 빠름" 이라는 직관. 실제로는 workload-dependent.
+
+!!! danger "❓ 오해 4 — 'Connection state 는 한번 만들어지면 영구 보존된다'"
+    **실제**: TOE Connection Table 은 고정 크기 SRAM. TIME_WAIT 만료, RST, idle timeout 등으로 entry 가 회수되며, 비활성 connection 은 LRU 로 DRAM 에 swap-out 됩니다. 재접근 시 swap-in 지연이 발생. <br>
+    **왜 헷갈리는가**: "stateful" 이 _상태가 무한히 유지된다_ 로 들려서.
+
+!!! danger "❓ 오해 5 — 'UDP 도 TOE 가 처리해야 한다'"
+    **실제**: UDP 는 헤더 8 B + 상태 관리 없음. 즉 packet 당 CPU 부담이 작아 offload 의 ROI 가 낮습니다. TOE 가 UDP 의 checksum 정도는 도와줄 수 있어도, "TCP Offload Engine" 이름에서 보듯 핵심은 TCP. <br>
+    **왜 헷갈리는가**: "프로토콜 스택 전체 = TCP+UDP" 이미지 때문.
+
+### DV 디버그 체크리스트 (TOE 개념 단계에서 마주칠 첫 실패들)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| `write()` 가 빨라졌는데 throughput 이 그대로 | TOE descriptor 가 너무 작게 분할 (1 MB 가 1024 개 1 KB descriptor 로) | host driver 의 SG list, descriptor count |
+| TOE 활성화했더니 small packet workload 가 _느려짐_ | connection table lookup latency > 절약된 CPU cycle | 워크로드 통계: pkt size 분포, conn 수 |
+| Checksum offload 켰더니 특정 패킷만 fail | IP options 또는 TCP options 가 있어 헤더 길이 가변 | §5.8 의 csum_start/csum_offset 갱신 |
+| iperf 결과 SW vs TOE 가 같은 값 | TSO 가 이미 동작 중이라 추가 offload 효과 없음 | `ethtool -k` 로 features 확인 |
+| Connection 다수 생성 시 새 conn 거부 | Connection Table full 또는 TIME_WAIT 누적 | conn table used count, half-open count |
+| ACK 가 늦게 오는 듯한 latency 증가 | CPU 가 ACK process 까지 하느라 대기 큐 누적 (TOE 가 ACK offload 안 켜진 경우) | TOE config 의 ack offload flag |
+| `tcpdump` 로는 정상인데 app 이 데이터 못 받음 | RX path DMA descriptor lookup 실패 | host RX ring 의 producer/consumer pointer |
+| RDMA-aware app 이 TOE 를 안 씀 | RDMA 는 TCP 자체를 우회 → TOE 와 다른 범주 | app 의 socket family (AF_INET vs AF_RDMA) |
+
+이 체크리스트는 이후 모듈에서 더 정교한 형태로 다시 나옵니다. 지금 단계에서는 "TOE 효과 = (workload 가 small packet + many conn + CPU bound) ✕ (TOE config 가 stateful offload 켜져 있음)" 만 기억하세요.
+
+---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **TOE = TCP/IP HW offload**. Host CPU 부하 ↓ + throughput ↑ + tail latency ↓.
+- **Partial offload**: checksum, TSO/LRO (segment offload). 일반 NIC 도 지원.
+- **Full offload (= TOE)**: connection state machine 전체 HW. RDMA / iWARP 등 특수 NIC.
+- **동기**: 100 GbE 에서 packet rate 가 1.5 M pps/Gbps → CPU cycle/packet 한도 초과.
+- **활용**: HPC, hyperscale (AWS Nitro, Azure SmartNIC), storage networks (NVMe-oF).
+- **HW/SW 분리 원칙**: 빈도 높은 Data Path = HW, 드문 Control Path = SW. 이 한 줄이 TOE 모든 설계 결정의 근거.
+
+!!! warning "실무 주의점"
+    - "TOE = 빠르다" 는 **CPU 점유율 / tail latency** 의 이야기. throughput 만 보면 일반 NIC + TSO 도 라인레이트 가능.
+    - **Workload dependence**: small packet + many conn + CPU bound 일 때 효과 큼. bulk + jumbo 는 효과 작음.
+    - **Connection state 유한**: Table full, TIME_WAIT 누적 시 새 연결 거부 가능 → 검증의 핵심 abnormal scenario.
+
+---
 
 ## 다음 단계
 
+→ [Module 02 — TOE Architecture](02_toe_architecture.md): TOE 의 가정 위에서 TX/RX path, Connection Table, Timer Wheel, Memory hierarchy 가 어떻게 그려지는지.
+
 - 📝 [**Module 01 퀴즈**](quiz/01_tcp_ip_and_toe_concept_quiz.md)
-- ➡️ [**Module 02 — TOE Architecture**](02_toe_architecture.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

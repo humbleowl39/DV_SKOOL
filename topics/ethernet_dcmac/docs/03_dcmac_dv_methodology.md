@@ -15,59 +15,165 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
-  <a class="page-toc-link" href="#핵심-테스트-시나리오">핵심 테스트 시나리오</a>
-  <a class="page-toc-link" href="#시퀀스-전략">시퀀스 전략</a>
-  <a class="page-toc-link" href="#constraint-random-전략">Constraint-Random 전략</a>
-  <a class="page-toc-link" href="#ral-register-abstraction-layer-전략">RAL (Register Abstraction Layer) 전략</a>
-  <a class="page-toc-link" href="#sva-assertion-전략">SVA / Assertion 전략</a>
-  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
-  <a class="page-toc-link" href="#e2e-데이터-무결성-검증">E2E 데이터 무결성 검증</a>
-  <a class="page-toc-link" href="#리셋-초기화-검증">리셋 / 초기화 검증</a>
-  <a class="page-toc-link" href="#cdc-clock-domain-crossing-고려사항">CDC (Clock Domain Crossing) 고려사항</a>
-  <a class="page-toc-link" href="#dcmac-디버그-방법론">DCMAC 디버그 방법론</a>
-  <a class="page-toc-link" href="#이력서-연결-dcmac-서브시스템-기여">이력서 연결 — DCMAC 서브시스템 기여</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-host-한-byte-가-tx-driver-dut-rx-monitor-scoreboard-까지-가는-길">3. 작은 예 — 1 byte E2E</a>
+  <a class="page-toc-link" href="#4-일반화-검증-4축-환경-구조-시퀀스-계층">4. 일반화 — 검증 4축</a>
+  <a class="page-toc-link" href="#5-디테일-test-시나리오-ral-sva-coverage-cdc-디버그">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + 디버그</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Design** DCMAC DV 환경 (UVM env + traffic generator + scoreboard + FEC injector)을 설계.
-    - **Apply** Frame integrity (FCS), AXI-Stream protocol, Pause/PFC flow control 시나리오.
-    - **Implement** RS-FEC error injection (within / beyond correction limit) 시나리오.
-    - **Plan** Performance regression (line-rate throughput, IFG enforcement, latency).
+    - **Design** DCMAC DV 환경 (UVM env + traffic gen + scoreboard + FEC injector) 을 설계할 수 있다.
+    - **Apply** Frame integrity (FCS), AXI-S protocol, Pause/PFC flow control 시나리오를 매핑할 수 있다.
+    - **Implement** RS-FEC error injection (within / beyond correction limit) 시나리오를 구현할 수 있다.
+    - **Plan** Performance regression (line-rate throughput, IFG enforcement, latency tail) 을 계획할 수 있다.
+    - **Decompose** 한 transaction 이 driver → DUT → monitor → scoreboard 를 통과하는 path 를 분해할 수 있다.
 
 !!! info "사전 지식"
-    - [Module 01-02](01_ethernet_fundamentals.md)
+    - [Module 01-02](01_ethernet_fundamentals.md) — frame, MAC/PCS 분담, DCMAC 5 블록
     - [UVM](../../uvm/), [AXI-Stream](../../amba_protocols/03_axi_stream/)
+    - 일반 UVM env (agent, scoreboard, virtual sequence) 어휘
 
-## 왜 이 모듈이 중요한가
-
-**DCMAC 검증은 라인 레이트 throughput + 무결성 동시 보장**. Multi-channel + RS-FEC 조합이 만드는 corner case가 많고, IFG 위반 같은 protocol 위반은 silent.
-
-!!! tip "💡 이해를 위한 비유"
-    **DCMAC 검증 환경** ≈ **택배 물류센터 품질 감사**
-
-    한쪽에서 쉼 없이 밀려오는 택배(프레임)를 받아 분류하고(Scoreboard) 봉인 확인(FCS)을 하면서, 동시에 트럭 도착 간격(IFG)이 규정을 지키는지 감시(SVA)한다.
-
-## 핵심 개념
-**DCMAC 검증 = 프레임 무결성(FCS) + AXI-S 프로토콜 준수 + 흐름 제어(Pause/PFC) + 에러 처리 + E2E 데이터 패스. UVM 환경을 from scratch로 구축한 경험이 이력서 핵심.**
-
-!!! danger "❓ 흔한 오해"
-    **오해**: VLAN 태그를 붙이면 헤더 길이만 4B 늘어날 뿐, 실제 throughput에는 영향이 없다.
-
-    **실제**: VLAN 태그가 붙으면 프레임 최소 길이 조건 및 MTU 계산 기준이 바뀌어, 동일 payload를 보낼 때 IFG 포함 전체 대역폭 점유가 달라진다.
-
-    **왜 헷갈리는가**: payload 크기 자체는 변하지 않으므로 "데이터는 그대로"라고 생각하기 쉽지만, 프레임 단위 오버헤드가 증가하면 line-rate 시나리오에서 차이가 드러난다.
 ---
 
-## 검증 환경 아키텍처
+## 1. Why care? — 이 모듈이 왜 필요한가
+
+DCMAC 검증의 핵심 어려움은 두 가지가 **동시에** 일어난다는 점입니다 — (1) **line-rate throughput 유지** 와 (2) **byte-level 무결성 / 프로토콜 / 흐름제어 모두 검증**. 한 쪽만 보면 통과하지만 동시에 두면 corner case 가 silent 로 누적됩니다 (예: pause + line-rate 가 같이 일어날 때 IFG underrun).
+
+또한 DCMAC 은 **TOE / IP / 다른 NIC subsystem 의 wire-side 끝단** 이라 — 여기서 통과시킨 frame 은 곧바로 wire 로 나갑니다. TB 가 발견하지 못한 bug 는 silicon 후 SerDes BER 통계로만 보이게 됩니다. 즉 DV 비용의 sweet spot 이 다른 IP 보다 훨씬 높습니다. 이 모듈이 그 sweet spot 의 시나리오 / scoreboard / SVA / coverage / RAL 설계의 청사진을 제공합니다.
+
+---
+
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **DCMAC 검증 환경** = **택배 물류센터 품질 감사**.<br>
+    한쪽에서 쉼 없이 밀려오는 택배(frame)를 받아 분류(scoreboard)하고 봉인(FCS)을 확인하면서, 동시에 트럭 도착 간격(IFG)이 규정을 지키는지 SVA 가 감시한다. 옆에서는 RAL 이 관제실 컴퓨터(register) 와 자동으로 동기화하면서 "지금 몇 개 들어왔는지" 카운터를 합산. coverage 는 "어떤 종류의 택배 × 어떤 시간대 × 어떤 우선순위" 를 빠짐없이 점검 표로 만든다.
+
+### 한 장 그림 — Env 구조 + 신호 흐름
+
+```
+   +------------------------ DCMAC UVM ENV ---------------------------+
+   |                                                                   |
+   |   +-- AXI-S TX agent --+                +-- Line agent ----+      |
+   |   | sequencer + driver |                | line driver/mon  |      |
+   |   |  + monitor         |                |  (Segmented IF)  |      |
+   |   +---------+----------+                +---------+--------+      |
+   |             │ (host side)                          │              |
+   |             ▼                                      ▼              |
+   |   +================================================+              |
+   |   |                  DUT (DCMAC)                   |              |
+   |   +================================================+              |
+   |             ▲                                      ▲              |
+   |             │ (host side)                          │              |
+   |   +-- AXI-S RX agent --+                +-- Line agent ----+      |
+   |   | (RX monitor)       |                | (TX line monitor)|      |
+   |   +---------+----------+                +---------+--------+      |
+   |             │                                      │              |
+   |             ▼                                      ▼              |
+   |   +-------------------- Scoreboard --------------------+          |
+   |   |  TX path : AXI-S in  →  Line out (Preamble/FCS 추가) │         |
+   |   |  RX path : Line in   →  AXI-S out (Preamble/FCS 검증)│         |
+   |   |  통계    : RAL 카운터 == 실제 frame 개수             │         |
+   |   +------------------------------------------------------+        |
+   |             │                                                     |
+   |             ▼                                                     |
+   |   +---- Functional Coverage + SVA bind + RAL ----+                |
+   +-------------------------------------------------------------------+
+```
+
+### 왜 이 구조 — Design rationale
+
+DCMAC 은 **양방향 + 프로토콜 + 통계 + 흐름제어 + reg** 가 모두 동시에 검증돼야 합니다.
+
+- 양방향 → host/line 양쪽 agent 필요.
+- 프로토콜 → AXI-S agent 가 byte-level + tuser 사이드밴드 모두 캡처.
+- 통계 → RAL 이 reg 카운터를 mirror, scoreboard 가 실제 frame count 와 비교.
+- 흐름제어 → virtual sequence 가 양 agent 를 시간 동기로 조율.
+- Reg → AXI-Lite agent + RAL adapter.
+
+이 모든 책임을 single agent 에 몰면 **agent 가 DUT 보다 복잡** 해집니다. 그래서 4 agent + scoreboard + RAL + SVA + coverage 의 **6 영역 분담** 이 굳어진 구조.
+
+---
+
+## 3. 작은 예 — Host 한 byte 가 TX driver → DUT → RX monitor → scoreboard 까지 가는 길
+
+가장 단순한 시나리오. **smoke test**: TOE 모델이 single 64-byte frame 을 TX 에 넣고, line-loopback 으로 다시 RX 로 들어오게 해서 scoreboard 가 byte-level 동일성과 FCS good 을 확인. (line-loopback 은 Segmented IF 두 끝을 wire connect.)
+
+```
+   tx_seq                 tx_drv           DUT (TX)        DUT (RX)         rx_mon          sb
+   ───┐                    ──┐             ───┐            ───┐              ───┐           ──
+   │  │  ① post item       │ │             │  │            │  │              │  │           │ 
+   │  │  (64-byte frame)   │ │             │  │            │  │              │  │           │
+   │  ├───────────────────►│ │             │  │            │  │              │  │           │
+   │  │                     │ │ ② AXI-S    │  │            │  │              │  │           │
+   │  │                     │ ├───────────►│  │            │  │              │  │           │
+   │  │                     │ │  beats     │  │            │  │              │  │           │
+   │  │                     │ │            │  │ ③ Preamble │  │              │  │           │
+   │  │                     │ │            │  │  +FCS+IFG  │  │              │  │           │
+   │  │                     │ │            │  ├──Line──────►│  │              │  │           │
+   │  │                     │ │            │  │  loopback  │  │              │  │           │
+   │  │                     │ │            │  │            │  │ ④ Preamble   │  │           │
+   │  │                     │ │            │  │            │  │  strip+      │  │           │
+   │  │                     │ │            │  │            │  │  FCS check   │  │           │
+   │  │                     │ │            │  │            │  ├──AXI-S──────►│  │           │
+   │  │                     │ │            │  │            │  │   tuser=good │  │           │
+   │  │                     │ │            │  │            │  │              │  │ ⑤ analysis│
+   │  │                     │ │ analysis   │  │            │  │              │  ├──port────►│
+   │  │                     │ ├ ───────────┼──┼────────────┼──┼──────────────┤  │           │
+   │  │                     │ │ tx in port │  │            │  │              │  │ rx in port│
+   │  │                     │ │            │  │            │  │              │  │           │ 
+   │  │                     │ │            │  │            │  │              │  │ ⑥ compare │
+   │  │                     │ │            │  │            │  │              │  │  byte-eq  │
+   │  │                     │ │            │  │            │  │              │  │  + tuser  │
+   │  │                     │ │            │  │            │  │              │  │  good     │
+   └──┘                    ──┘             ───┘            ───┘              ───┘           ──
+```
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | tx_seq | `dcmac_frame_item` 1 개를 sequencer 로 post | DA/SA/Type/Payload 64B 랜덤 |
+| ② | tx_drv | AXI-S 1 beat 로 driver | host 측 byte 흐름 |
+| ③ | DUT TX | Preamble (8B) + FCS (4B) + IFG 추가 | MAC engine 의 frame builder |
+| ④ | DUT RX | line loopback 으로 들어온 frame 의 Preamble strip + FCS 검증 | RX MAC pipeline |
+| ⑤ | tx_mon, rx_mon | analysis port 로 scoreboard 에 sample 송출 | 양쪽 monitor 가 비동기 캡처 |
+| ⑥ | scoreboard | TX 측 payload `==` RX 측 payload byte-eq + RX tuser.bad_fcs `==` 0 | E2E equality |
+
+```sv
+// scoreboard 의 비교 task (간단화)
+task automatic dcmac_sb::compare(dcmac_frame_item tx, dcmac_frame_item rx);
+  if (tx.payload != rx.payload)
+    `uvm_error("E2E", $sformatf("payload mismatch: tx=%0d B, rx=%0d B", tx.payload.size(), rx.payload.size()))
+  if (rx.tuser_bad_fcs)
+    `uvm_error("E2E", "rx reported bad_fcs on a clean loopback")
+endtask
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) frame 1 개가 두 번 monitor 된다** — TX side 는 host 의 byte 를, RX side 는 line 을 돌아 host 로 다시 올라온 byte 를. scoreboard 가 두 분량이 byte-equal 임을 확인. 즉 **agent 한 쪽만 보면 절대 E2E 검증 불가**.<br>
+    **(2) tuser 가 곧 메타데이터 채널** — payload 는 같아야 하지만, tuser.bad_fcs / vlan_tagged / poison 같은 사이드밴드 정보는 별도 비교. 같은 frame 의 두 표현을 모두 검증해야 protocol level 까지 covered.
+
+---
+
+## 4. 일반화 — 검증 4 축, 환경 구조, 시퀀스 계층
+
+### 4.1 검증 4 축
+
+| 축 | 의미 | 대표 시나리오 |
+|---|---|---|
+| **Frame integrity** | FCS / padding / size 의 byte-level 정확성 | min/max/jumbo, runt/oversize, bad FCS |
+| **AXI-S protocol** | tvalid/tready, tlast, tkeep, tuser 의 표준 준수 | backpressure, single-beat, partial keep |
+| **Flow control** | Pause / PFC 에 의한 TX 정지 / 재개 | pause mid-traffic, PFC priority subset |
+| **Performance** | line-rate, IFG, latency tail, multi-channel parallelism | sustained line-rate, min frame burst |
+
+이 4 축이 곧 sequence library, coverage group, SVA category 의 분류 기준.
+
+### 4.2 환경 구조 — 4 agent + scoreboard + RAL + SVA + coverage
 
 ```
 +------------------------------------------------------------------+
@@ -108,11 +214,27 @@
 +------------------------------------------------------------------+
 ```
 
+### 4.3 시퀀스 / 시나리오 계층
+
+```
+seq_lib/                                 vseq_lib/
+  ├── dcmac_base_seq                       ├── dcmac_tx_only_vseq
+  ├── dcmac_single_frame_seq               ├── dcmac_rx_only_vseq
+  ├── dcmac_random_frame_seq               ├── dcmac_bidir_vseq
+  ├── dcmac_burst_seq (line-rate)          ├── dcmac_e2e_vseq (TOE↔DCMAC)
+  ├── dcmac_error_inject_seq               ├── dcmac_flow_ctrl_vseq
+  ├── dcmac_pause_seq                      └── dcmac_stress_vseq
+  ├── dcmac_vlan_seq
+  └── dcmac_mixed_traffic_seq
+```
+
 ---
 
-## 핵심 테스트 시나리오
+## 5. 디테일 — Test 시나리오, RAL, SVA, Coverage, CDC, 디버그
 
-### Positive
+### 5.1 핵심 테스트 시나리오
+
+#### Positive
 
 | 카테고리 | 시나리오 | 검증 포인트 |
 |---------|---------|-----------|
@@ -126,7 +248,7 @@
 | **흐름 제어** | Pause Frame 수신 | TX 일시 중단 + 재개 |
 | | PFC 특정 우선순위 | 해당 우선순위만 중단 |
 
-### Negative / 에러
+#### Negative / 에러
 
 | 카테고리 | 시나리오 | 검증 포인트 |
 |---------|---------|-----------|
@@ -137,7 +259,7 @@
 | | IFG 부족 | 정상 처리 또는 에러 플래그 |
 | **AXI-S** | tlast 없는 프레임 | 타임아웃 또는 에러 처리 |
 
-### Stress / 성능
+#### Stress / 성능
 
 | 시나리오 | 측정 |
 |---------|------|
@@ -146,11 +268,9 @@
 | TX/RX 동시 라인 레이트 | Full-duplex 처리량 |
 | Pause 후 재개 반복 | 재개 시 즉시 라인 레이트 복구 |
 
----
+### 5.2 시퀀스 전략
 
-## 시퀀스 전략
-
-### Sequence Item 설계
+#### Sequence Item 설계
 
 ```
 class dcmac_frame_item extends uvm_sequence_item;
@@ -178,29 +298,7 @@ class dcmac_frame_item extends uvm_sequence_item;
 endclass
 ```
 
-### 시퀀스 라이브러리 구조
-
-```
-seq_lib/
-  ├── dcmac_base_seq.sv           // 공통 로직 (send_frame, wait_response)
-  ├── dcmac_single_frame_seq.sv   // 단일 프레임 (directed smoke)
-  ├── dcmac_random_frame_seq.sv   // 랜덤 크기/타입 프레임 연속 전송
-  ├── dcmac_burst_seq.sv          // Back-to-back 연속 전송 (라인 레이트)
-  ├── dcmac_error_inject_seq.sv   // FCS/Runt/Oversize 에러 주입
-  ├── dcmac_pause_seq.sv          // Pause/PFC 프레임 생성
-  ├── dcmac_vlan_seq.sv           // VLAN/QinQ 태그 프레임
-  └── dcmac_mixed_traffic_seq.sv  // 정상 + 에러 + Pause 혼합
-
-vseq_lib/
-  ├── dcmac_tx_only_vseq.sv       // TX 경로만 검증
-  ├── dcmac_rx_only_vseq.sv       // RX 경로만 검증
-  ├── dcmac_bidir_vseq.sv         // TX + RX 동시 (Full-Duplex)
-  ├── dcmac_e2e_vseq.sv           // TOE ↔ DCMAC E2E
-  ├── dcmac_flow_ctrl_vseq.sv     // 트래픽 중 Pause/PFC 삽입
-  └── dcmac_stress_vseq.sv        // 라인 레이트 + 에러 + Pause 동시
-```
-
-### Virtual Sequence 설계 원칙
+#### Virtual Sequence 설계 원칙
 
 ```
 Virtual Sequence가 필요한 이유:
@@ -227,11 +325,9 @@ Virtual Sequence가 필요한 이유:
   → Pause 해제 후 TX가 재개되는지
 ```
 
----
+### 5.3 Constraint-Random 전략
 
-## Constraint-Random 전략
-
-### 제약 조건 계층화
+#### 제약 조건 계층화
 
 ```
 Layer 1: Sequence Item 기본 제약 (항상 적용)
@@ -256,7 +352,7 @@ Layer 3: 테스트별 제약 (Test class에서 factory override 또는 config)
   uvm_config_db#(dcmac_frame_cfg)::set(this, "env.tx_agent*", "cfg", stress_cfg);
 ```
 
-### 분포 전략 (Distribution)
+#### 분포 전략 (Distribution)
 
 ```
 커버리지 홀에 따른 분포 조정:
@@ -279,9 +375,7 @@ Layer 3: 테스트별 제약 (Test class에서 factory override 또는 config)
   }
 ```
 
----
-
-## RAL (Register Abstraction Layer) 전략
+### 5.4 RAL (Register Abstraction Layer) 전략
 
 ```
 레지스터 검증 구조:
@@ -328,9 +422,7 @@ RAL 패키지 구조:
     └── dcmac_axi_lite_adapter.sv   // AXI-Lite ↔ RAL Adapter
 ```
 
----
-
-## SVA / Assertion 전략
+### 5.5 SVA / Assertion 전략
 
 ```
 프로토콜 어설션 분류:
@@ -339,42 +431,42 @@ RAL 패키지 구조:
   // tvalid가 올라간 후 tready 전에 떨어지면 안 됨
   assert property (@(posedge clk) disable iff (!rst_n)
     tx_axis_tvalid && !tx_axis_tready |=> tx_axis_tvalid
-  ) else $error("AXI-S: tvalid dropped before tready");
+  ) else `uvm_error("AXIS","tvalid dropped before tready")
 
   // tlast 후 tkeep이 유효해야 함
   assert property (@(posedge clk) disable iff (!rst_n)
     tx_axis_tvalid && tx_axis_tlast |-> (tx_axis_tkeep != 0)
-  ) else $error("AXI-S: tkeep zero on tlast beat");
+  ) else `uvm_error("AXIS","tkeep zero on tlast beat")
 
   // tdata는 tvalid 동안 안정적이어야 함
   assert property (@(posedge clk) disable iff (!rst_n)
     tx_axis_tvalid && !tx_axis_tready |=>
       $stable(tx_axis_tdata) && $stable(tx_axis_tkeep)
-  ) else $error("AXI-S: tdata/tkeep changed while waiting");
+  ) else `uvm_error("AXIS","tdata/tkeep changed while waiting")
 
 [A2] Frame Integrity Assertions
   // 프레임 최소 크기
   assert property (@(posedge clk)
     frame_complete |-> (frame_byte_count >= 64)
-  ) else $error("Frame smaller than minimum 64 bytes");
+  ) else `uvm_error("FRAME","Frame smaller than 64 bytes")
 
   // IFG 최소 간격
   assert property (@(posedge clk)
     frame_end |-> ##[12:$] next_frame_start
-  ) else $error("IFG violation: less than 12 bytes");
+  ) else `uvm_error("IFG","less than 12 bytes")
 
 [A3] Flow Control Assertions
   // Pause 수신 후 TX 멈춤
   assert property (@(posedge clk)
     pause_received && (pause_quanta > 0) |=>
       !tx_frame_start [*1:$] ##1 (pause_timer == 0)
-  ) else $error("TX did not stop after Pause");
+  ) else `uvm_error("PAUSE","TX did not stop after Pause")
 
 [A4] Configuration Assertions
   // TX Enable=0이면 새 프레임 시작하지 않음
   assert property (@(posedge clk)
     !tx_enable |-> !tx_frame_start
-  ) else $error("TX started frame while disabled");
+  ) else `uvm_error("CFG","TX started frame while disabled")
 
 Bind Module 구조:
   // RTL을 수정하지 않고 외부에서 어설션 바인드
@@ -385,9 +477,7 @@ Bind Module 구조:
   endmodule
 ```
 
----
-
-## Coverage Model
+### 5.6 Coverage Model
 
 ```
 [CG1] Frame Coverage
@@ -435,7 +525,7 @@ Bind Module 구조:
   - cp_post_reset: {IMMEDIATE_TRAFFIC, DELAYED_TRAFFIC}
 ```
 
-### 커버리지 클로저 전략
+#### 커버리지 클로저 전략
 
 ```
 Phase 1: 기본 커버리지 (Constrained-Random)
@@ -455,9 +545,7 @@ Phase 3: Corner Case 보완
 Sign-off 기준: 전체 functional coverage 95%+, cross 90%+
 ```
 
----
-
-## E2E 데이터 무결성 검증
+### 5.7 E2E 데이터 무결성 검증
 
 ```
 TX E2E:
@@ -476,9 +564,7 @@ TOE ↔ DCMAC E2E (서브시스템):
               TCP/Ethernet 프로토콜 모두 정확?
 ```
 
----
-
-## 리셋 / 초기화 검증
+### 5.8 리셋 / 초기화 검증
 
 ```
 리셋 종류:
@@ -515,9 +601,7 @@ TOE ↔ DCMAC E2E (서브시스템):
   7. 트래픽 시작
 ```
 
----
-
-## CDC (Clock Domain Crossing) 고려사항
+### 5.9 CDC (Clock Domain Crossing) 고려사항
 
 ```
 DCMAC의 클럭 도메인:
@@ -551,9 +635,7 @@ DV에서의 CDC 검증 접근:
     → 시뮬레이션에서는 비동기 FIFO의 기능적 정확성 위주로 검증
 ```
 
----
-
-## DCMAC 디버그 방법론
+### 5.10 DCMAC 디버그 방법론
 
 ```
 디버그 레벨 (DCMAC 특화):
@@ -594,9 +676,7 @@ DV에서의 CDC 검증 접근:
   | Pause 후 미재개 | Pause timer 리셋 로직 오류 |
 ```
 
----
-
-## 이력서 연결 — DCMAC 서브시스템 기여
+### 5.11 이력서 연결 — DCMAC 서브시스템 기여
 
 ```
 Resume: "Verified DCMAC-integrated subsystems by architecting and
@@ -619,9 +699,7 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
      - 프레임 무결성, 프로토콜 준수, 성능
 ```
 
----
-
-## Q&A
+### 5.12 Q&A 보강
 
 **Q: DCMAC 서브시스템 검증 환경을 어떻게 설계했나?**
 > "UVM 환경을 from scratch로 구축했다. 핵심 컴포넌트: (1) AXI-S Agent — TX/RX 양방향, 랜덤 크기/타입 프레임 생성 + 백프레셔 모델링. (2) Line Side Agent — Ethernet Frame 레벨 트래픽 생성 + FCS 에러 주입. (3) Scoreboard — TX/RX 양방향 E2E 데이터 비교 + FCS 결과 검증 + 통계 카운터 일치 확인. Coverage는 프레임 크기/타입, FCS 결과, AXI-S 프로토콜, 흐름 제어 상태를 교차 커버했다."
@@ -639,25 +717,66 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
 > "UVM RAL을 구축하고 세 가지를 검증했다. (1) Reset Value — 모든 레지스터의 리셋 후 값이 스펙과 일치하는지 RAL mirror로 자동 확인. (2) Access Policy — RW/RO/W1C 등 각 필드의 접근 정책이 올바른지. (3) Functional — 통계 카운터가 실제 트래픽과 일치하는지, Config 변경이 올바른 시점에 적용되는지. 특히 통계 카운터의 Read-on-Clear 특성 때문에 읽기 순서/타이밍 검증이 까다로웠다."
 
 ---
+
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+!!! danger "❓ 오해 1 — 'VLAN tag 를 붙여도 payload 는 그대로니까 throughput 에 영향 없다'"
+    **실제**: 4-byte tag 추가로 frame 최소 길이 / MTU 기준 / IFG 포함 effective bandwidth 가 모두 변합니다. line-rate 시나리오에서 같은 payload 라도 tagged frame 의 frame-rate 가 다름.<br>
+    **왜 헷갈리는가**: payload 가 불변이라 "데이터는 그대로" 라는 직관.
+
+!!! danger "❓ 오해 2 — 'Coverage 100% 면 검증 끝이다'"
+    **실제**: Functional coverage 는 sequence library 가 도달할 수 있는 시나리오의 dimension 만 봅니다. 정상 trace 의 timing race / cross-clock / multi-channel skew 같은 corner 는 별도 SVA + assertion-based stress test 가 채움. coverage 100% 는 entry condition 일 뿐.<br>
+    **왜 헷갈리는가**: coverage report 가 깔끔한 수치라서.
+
+!!! danger "❓ 오해 3 — '통계 카운터는 마지막에 한 번만 읽으면 된다'"
+    **실제**: Read-on-Clear 특성 때문에 monitor + scoreboard 가 같은 카운터를 다른 시점에 두 번 읽으면 두 번째 값은 0. atomic snapshot 으로 한 번에 캡처해야 함.<br>
+    **왜 헷갈리는가**: software driver 관점에서는 read 가 idempotent 라는 일반 직관.
+
+!!! danger "❓ 오해 4 — 'Pause frame 은 단순히 tx_enable 을 0 으로 만들면 된다'"
+    **실제**: 진행 중인 frame 은 완료해야 하고 (mid-frame stop 금지), pause_time tick 을 정확히 (512 bit time 단위) 세야 하며, PFC 인 경우 priority subset 만 멈춰야 함. tx_enable 한 비트로는 표현 안 됨.<br>
+    **왜 헷갈리는가**: tx_enable 이 제일 단순한 hook 이라.
+
+!!! danger "❓ 오해 5 — 'Scoreboard 의 byte equality 만 맞으면 정상'"
+    **실제**: tuser sideband (bad_fcs, vlan_tagged, port_id, timestamp) 와 통계 카운터 / pause state 가 모두 같이 일치해야 정상. byte 만 같고 tuser 불일치는 흔한 silent fail.<br>
+    **왜 헷갈리는가**: payload 가 user-visible data 라서 거기에만 집중하기 쉬움.
+
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Scoreboard mismatch (data) | tkeep 해석 오류, byte order (endian) | TX driver 의 byte packing + DUT 의 little/big endian |
+| FCS always bad | CRC 계산 범위 오류 또는 padding 누락 | TX TB 의 CRC 입력 = DA..Payload 인지, runt 의 padding 처리 |
+| TX hang (tready 영구 low) | TX MAC 내부 backpressure | flow control state, tx FIFO level, pause active vector |
+| Frame 누락 | RX FIFO overflow / backpressure 미처리 | rx_axis_tready toggle 패턴, FIFO almost-full 신호 |
+| Counter 불일치 | Read-on-Clear timing or CDC | RAL atomic snapshot, monitor / sb 가 reg 중복 read 안 했나 |
+| Pause 후 미재개 | pause_time tick 또는 timer reset 로직 | pause_timer state + tx_enable_per_priority |
+| Coverage hole 안 메워짐 | constraint 가 해당 영역을 배제 | constraint distribution + directed seq 추가 |
+| RAL frontdoor/backdoor mismatch | hdl_path 오설정 또는 reg width 불일치 | RAL 모델의 hdl_path + reg width annotation |
+
+---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **검증 4 축**: Frame integrity (FCS) / AXI-S protocol / Flow control (Pause, PFC) / Performance.
+- **6 영역 분담**: 4 agent (TX-host, RX-host, TX-line, RX-line) + scoreboard + RAL + SVA + coverage. 책임을 한 곳에 몰지 말 것.
+- **E2E 의 의미** = host AXI-S in 의 byte sequence 와 line out (또는 line loopback 후 host AXI-S out) 의 byte sequence + tuser sideband 가 byte-level 동일.
+- **3-layer constraint**: Item 기본 / Sequence 시나리오 / Test factory override. coverage hole 은 directed constraint 로 타겟.
+- **흐름제어 + 라인레이트는 동시에 봐야 한다** — 둘을 분리해서 검증하면 silent corner 발생. virtual sequence 가 시간 동기로 두 agent 조율.
+
 !!! warning "실무 주의점 — Statistics Counter Clear-on-Read 레이스 컨디션"
-    **현상**: 회귀 테스트에서 통계 카운터(rx_frame_count, rx_error_count 등) 값이 읽을 때마다 달라지거나 0으로 리셋된 것처럼 보인다.
-    
-    **원인**: DCMAC 통계 레지스터는 Read-on-Clear 방식이 많다. Scoreboard와 Coverage 수집 루틴이 동일 카운터를 서로 다른 타임스텝에서 각각 읽으면 첫 번째 읽기에서 카운터가 클리어되어 두 번째 읽기값이 0이 된다.
-    
-    **점검 포인트**: RAL task 내에서 통계 읽기를 단일 atomic 시퀀스로 묶고, Scoreboard/Checker가 동일 레지스터를 중복 읽지 않도록 구현. `stat_snapshot` 방식으로 전체 카운터를 한 번에 래치한 뒤 비교하는 패턴을 채택할 것.
+    **현상**: 회귀 테스트에서 통계 카운터 (rx_frame_count, rx_error_count 등) 값이 읽을 때마다 달라지거나 0 으로 리셋된 것처럼 보임.<br>
+    **원인**: DCMAC 통계 레지스터는 Read-on-Clear 방식이 많다. Scoreboard 와 Coverage 수집 루틴이 동일 카운터를 서로 다른 timestep 에서 각각 읽으면 첫 번째 read 에서 카운터가 클리어돼 두 번째 read 가 0.<br>
+    **점검 포인트**: RAL task 내에서 통계 read 를 single atomic sequence 로 묶고, scoreboard / checker 가 동일 reg 를 중복 읽지 않도록 구현. `stat_snapshot` 방식으로 전체 카운터를 한 번에 latch 한 뒤 비교하는 패턴 채택.
 
-## 핵심 정리
+---
 
-- **검증 4축**: Frame integrity (FCS), AXI-S protocol, Flow control (Pause/PFC), Error handling.
-- **Traffic generator**: random + directed (min frame, max frame, jumbo, VLAN, pause). Line-rate 시나리오.
-- **Scoreboard**: TX frame을 capture → RX에서 FCS 검증, ordering, payload match.
-- **RS-FEC injection**: within correction limit (수정 가능, hidden), beyond limit (drop, error counter ↑).
-- **Performance**: line-rate throughput, IFG enforcement, multi-channel parallelism.
+## 다음 모듈
 
-## 다음 단계
+→ [Module 04 — Quick Reference Card](04_quick_reference_card.md): 지금까지 3 모듈을 한 페이지로 압축한 cheat sheet — frame, AXI-S tuser, RS-FEC, 면접 골든 룰, MangoBoost 데이터 패스 한 장.
 
-- 📝 [**Module 03 퀴즈**](quiz/03_dcmac_dv_methodology_quiz.md)
-- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
+[퀴즈 풀어보기 →](quiz/03_dcmac_dv_methodology_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_dcmac_architecture/">

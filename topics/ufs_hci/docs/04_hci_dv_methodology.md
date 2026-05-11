@@ -15,22 +15,13 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#검증-환경-아키텍처">검증 환경 아키텍처</a>
-  <a class="page-toc-link" href="#핵심-테스트-시나리오">핵심 테스트 시나리오</a>
-  <a class="page-toc-link" href="#coverage-model">Coverage Model</a>
-  <a class="page-toc-link" href="#hci-초기화-검증-시나리오">HCI 초기화 검증 시나리오</a>
-  <a class="page-toc-link" href="#sequence-전략-계층적-설계">Sequence 전략 — 계층적 설계</a>
-  <a class="page-toc-link" href="#scoreboard-알고리즘-상세">Scoreboard 알고리즘 상세</a>
-  <a class="page-toc-link" href="#sva-systemverilog-assertions-예시-hci-프로토콜">SVA (SystemVerilog Assertions) 예시 — HCI 프로토콜</a>
-  <a class="page-toc-link" href="#protocol-checker-hci-규약-검증">Protocol Checker — HCI 규약 검증</a>
-  <a class="page-toc-link" href="#error-injection-방법론">Error Injection 방법론</a>
-  <a class="page-toc-link" href="#regression-전략">Regression 전략</a>
-  <a class="page-toc-link" href="#이력서-연결-ufs-hci-검증-기여">이력서 연결 — UFS HCI 검증 기여</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-interrupt-aggregation-한-사이클의-검증">3. 작은 예 — Interrupt aggregation 검증</a>
+  <a class="page-toc-link" href="#4-일반화-host-device-양단-검증-모델">4. 일반화 — Host/Device 양단 검증 모델</a>
+  <a class="page-toc-link" href="#5-디테일-env-coverage-sequence-scoreboard-sva-error-injection">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
@@ -38,37 +29,31 @@
     이 모듈을 마치면:
 
     - **Design** UFS HCI 검증 환경 (UFS device model + host driver + AXI host interface) 아키텍처를 설계할 수 있다.
-    - **Apply** UTRD/UPIU coverage, register coverage, command queue coverage 시나리오를 작성.
-    - **Implement** Error injection (CRC error, timeout, abort, reset) 시나리오와 복구 검증.
-    - **Plan** Performance 검증 (queue depth × command type matrix, throughput regression).
+    - **Apply** UTRD/UPIU coverage, register coverage, command queue coverage 시나리오를 작성한다.
+    - **Implement** Error injection (CRC error, timeout, abort, reset) 시나리오와 복구 검증을 구현한다.
+    - **Plan** Performance 검증 (queue depth × command type matrix, throughput regression) 을 수립한다.
+    - **Justify** Doorbell ↔ Completion ↔ ISR race 를 검증해야 하는 이유를 설명한다.
 
 !!! info "사전 지식"
     - [Module 01-03](01_ufs_protocol_stack.md)
     - [UVM](../../uvm/), [AXI](../../amba_protocols/02_axi/)
 
-## 왜 이 모듈이 중요한가
+---
 
-**UFS HCI 검증은 host-device 양방향**. driver-side (register/UTRD) + device-side (UPIU/UniPro) 모두 검증해야 silent corruption 회피. 특히 **error 복구 시나리오** (timeout, abort, reset)는 production silicon의 robustness를 좌우.
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! tip "💡 이해를 위한 비유"
-    **UFS HCI DV** ≈ **콜센터 검수원 — 호출벨 → 처리 → 응답의 모든 race 시나리오 검증**
+**UFS HCI 검증은 host-device 양방향** 입니다. driver-side (register / UTRD) 와 device-side (UPIU / UniPro) 가 모두 동시에 검증되어야 silent corruption 이 잡힙니다 — 한쪽만 검증하면 변환 오류가 그대로 통과. 특히 **error 복구 시나리오** (timeout, abort, reset) 는 production silicon 의 robustness 를 좌우 — happy path 는 곧 통과하지만 error path 는 silent bug 의 단골 source.
 
-    Host agent (master) + Device agent (slave) 가 양쪽으로 자극, doorbell race, abort/reset, error injection 등 corner case 모두 cover.
+이 모듈은 앞 세 모듈에서 정착시킨 어휘 (UTRD, UPIU, doorbell, IRQ, Task Tag) 를 **UVM env / sequence / scoreboard / SVA / coverage** 로 어떻게 매핑하는지 — 즉, _프로토콜 지식 → 검증 인프라_ 의 변환을 다룹니다.
 
 ---
 
-## 핵심 개념
-**UFS HCI 검증 = 레지스터 정확성 + UTRD/UPIU 변환 정확성 + DMA 무결성 + 명령 큐잉 + 에러 복구. SW Driver 관점의 인터페이스(레지스터/메모리)와 Device 관점의 프로토콜(UPIU)을 양 끝에서 동시에 검증.**
+## 2. Intuition — 비유와 한 장 그림
 
-!!! danger "❓ 흔한 오해"
-    **오해**: HCI DV = doorbell + UPIU 검사면 끝
+!!! tip "💡 한 줄 비유"
+    **UFS HCI DV** = 콜센터 검수원. Host agent (master) 와 Device agent (slave) 가 양쪽으로 자극을 주고, doorbell race / abort / reset / error injection 같은 corner case 를 모두 cover. **Scoreboard** 가 "주문서(UTRD) ↔ 영수증(Response)" 의 짝을 빠짐없이 확인하는 검수원 역할.
 
-    **실제**: 추가로 abort vs reset 선택, error recovery, gear switch 중 transfer, UTRLDBR race, queue 깊이 한계, MCQ 정책 등 광범위.
-
-    **왜 헷갈리는가**: Happy path 가 가장 가시적이라 검증의 중심으로 보이지만 error / recovery path 가 실제 silent bug 의 source.
----
-
-## 검증 환경 아키텍처
+### 한 장 그림 — Env 구조
 
 ```
 +------------------------------------------------------------------+
@@ -103,11 +88,139 @@
 +------------------------------------------------------------------+
 ```
 
+### 왜 이 디자인인가 — Design rationale
+
+**HCI 의 contract 가 "양 끝" 에서 정의** 되기 때문입니다 — SW 가 보는 register / 메모리 layout, device 가 보는 UPIU. DUT 가 그 사이의 변환 책임을 _가운데_ 에서 수행. 그래서 검증도 양 끝에서 zero-redundancy 로 자극과 비교가 들어가야 합니다.
+
+1. **Host agent** = "SW driver 가 spec 대로 register 만지고 UTRD 메모리에 쓴다" 는 시뮬레이션. AXI/AHB BFM + memory model + ISR.
+2. **Device agent** = "UFS device 가 UPIU 를 spec 대로 응답한다" 는 시뮬레이션. UniPro BFM + SCSI semantics + storage state.
+3. **Scoreboard** = 두 끝에서 본 트랜잭션이 _같은 명령에 대한 정합한 변환_ 인지 비교.
+4. **SVA** = register / doorbell / IRQ 의 _순간 timing_ invariant.
+
+이 4 컴포넌트가 분리돼야 _어느 layer 의 버그인지_ 가 자동으로 분류됩니다.
+
 ---
 
-## 핵심 테스트 시나리오
+## 3. 작은 예 — Interrupt aggregation 한 사이클의 검증
 
-### Positive
+가장 단순한 시나리오 한 개를 _시퀀스 → 모니터 캡처 → scoreboard 비교 → SVA → coverage_ 로 끝까지 끌고 갑니다. 시나리오: **Interrupt Aggregation** (UFS 3.x 의 IACR/IATC 설정으로 N 개 완료를 1 IRQ 로 묶음). 32 슬롯에 READ 를 깔고, IACR=4 일 때 IRQ 가 8 번만 발생해야 함.
+
+```
+   ┌─── Host Agent ───┐                  ┌─── DUT (HCI) ───┐         ┌─── Device Agent ───┐
+   │                   │                  │                  │         │                     │
+   │ ① IACR=4, IATC=10 │                  │                  │         │                     │
+   │   IE[UTRCS]=1     │                  │                  │         │                     │
+   │                   │                  │                  │         │                     │
+   │ ② 32 READ 동시 발행 (slot 0..31)   │                  │         │                     │
+   │   UTRLDBR=0xFFFFFFFF                  │                  │         │                     │
+   │       │           │                  │                  │         │                     │
+   │       ▼ ────────▶│ ③ 32 Cmd UPIU   │────────────────▶ │ 32 read 처리 │              │
+   │                   │                  │                  │         │       │             │
+   │                   │                  │ ④ Data-In ×N    │ ◀──────│       ▼             │
+   │                   │                  │   for each slot   │         │ 응답 생성 (랜덤 순서)│
+   │                   │                  │                  │         │                     │
+   │                   │                  │ ⑤ Resp UPIU      │ ◀──────│                     │
+   │                   │                  │   completion      │         │                     │
+   │                   │                  │   counter += 1   │         │                     │
+   │                   │                  │                  │         │                     │
+   │                   │                  │ counter==4 마다  │         │                     │
+   │ ⑥ ◀── IRQ ──────│ ⑥ IS[UTRCS]=1   │                  │         │                     │
+   │       (총 8회)    │                  │                  │         │                     │
+   │       │           │                  │                  │         │                     │
+   │       ▼           │                  │                  │         │                     │
+   │ ⑦ ISR: UTRLDBR   │                  │                  │         │                     │
+   │     read → done 4│                  │                  │         │                     │
+   │     UTRD.OCS read │                  │                  │         │                     │
+   │     IS W1C        │                  │                  │         │                     │
+   └───────────────────┘                  └──────────────────┘         └─────────────────────┘
+```
+
+### 검증 인프라 매핑
+
+| Step | 컴포넌트 | 무엇을 |
+|---|---|---|
+| ① | host_seq | IACR/IATC config_db 로 설정 + register write |
+| ② | host_seq | `repeat (32) `uvm_do(read_seq)` |
+| ③ | host_monitor | AXI 의 UTRD fetch / UPIU TX 캡처 → utrd_ap |
+| ④ | dev_agent | NAND 모델로 데이터 생성, Data-In UPIU 송신 |
+| ⑤ | dev_monitor | UPIU TX 캡처 → upiu_ap |
+| ⑥ | host_monitor | IRQ rising edge 캡처 → irq_ap |
+| ⑦ | scoreboard | (a) Task Tag 매칭, (b) PRDT 데이터 일치, (c) IRQ 횟수 = ⌈32/4⌉ = 8 |
+
+```systemverilog
+// SVA — IRQ 횟수가 IACR 와 정합한지
+property p_irq_aggregation_count;
+    @(posedge clk) disable iff (!rst_n)
+    (start_of_test) ##0 (1, irq_count = 0)
+        ##1 (eot_of_test)[->1]
+    |-> (irq_count == ((completed_count + iacr - 1) / iacr));
+endproperty
+assert_irq_aggr: assert property (p_irq_aggregation_count);
+```
+
+```systemverilog
+// Coverage — IACR × completed_count cross
+covergroup cg_irq_aggr @(posedge clk iff irq_pulse);
+    cp_iacr     : coverpoint iacr_value     { bins single = {1};
+                                              bins small  = {[2:4]};
+                                              bins big    = {[5:31]}; }
+    cp_done_in_window : coverpoint done_in_window
+                                     { bins matches_iacr = {iacr_value};
+                                       bins less = {[1:iacr_value-1]}; }
+    cp_iacr × cp_done_in_window;
+endgroup
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) 한 시나리오는 _4 컴포넌트가 동시에 동작_** 한다 — sequence (자극) + monitor (캡처) + scoreboard (비교) + SVA/coverage (invariant + 도달성). 네 가지가 모두 있어야 verification 이 _완성_. <br>
+    **(2) Aggregation 같이 _카운팅이 들어가는 시나리오_** 는 SVA 에 보조 카운터를 둬야 정확. ISR 의 IS W1C / IRQ pulse 카운트 / completed UTRD 카운트 — 세 카운터의 정합성이 invariant.
+
+---
+
+## 4. 일반화 — Host/Device 양단 검증 모델
+
+### 4.1 4 컴포넌트의 역할 정리
+
+| 컴포넌트 | 책임 | 입력 | 출력 |
+|----------|------|------|------|
+| **Host agent** | SW driver 행동 모델 | sequence item (READ/WRITE/QUERY/TM) | AXI write/read, memory write |
+| **Device agent** | UFS device 행동 모델 | UPIU on UniPro | UPIU response + (option) error inject |
+| **Scoreboard** | 양 끝의 transaction 정합성 비교 | utrd_ap, upiu_ap, irq_ap | UVM_ERROR / pass count |
+| **SVA / coverage** | 순간 timing invariant + 도달 분포 | DUT 신호 + register | assertion fail / cover bin |
+
+### 4.2 검증 axes — 무엇을 비교하나
+
+```
+   Host side                                       Device side
+   ─────────                                       ─────────
+   UTRD, register, IRQ          ←── DUT ──→        UPIU, RTT, completion
+       │                                              │
+       └──────── compare in scoreboard ───────────────┘
+       (1) Task Tag 일치
+       (2) Cmd CDB ↔ Cmd UPIU
+       (3) Data buffer ↔ Data UPIU
+       (4) Response Status ↔ UTRD.OCS
+       (5) Order: same LUN 순서 보존?
+```
+
+### 4.3 검증 stage
+
+| Stage | 목적 | 통과 기준 |
+|-------|------|----------|
+| **Smoke** (seed=0, 단일 명령) | 기본 데이터 path 동작 | 1 read + 1 write + 1 query 가 OCS=SUCCESS |
+| **Feature** (CR + 50 seed) | 각 기능의 정확성 | queue depth, multi-LU, TM, error response 모두 통과 |
+| **Stress** (random + 500 seed) | corner case 발견 | 32 슬롯 포화 + error inject + abort 혼합 |
+| **Coverage closure** (target seed) | bin 도달 | functional coverage ≥ 95 % |
+
+이 stage 분리는 모든 IP DV 의 공통 패턴 — UFS HCI 도 예외 아님.
+
+---
+
+## 5. 디테일 — Env / Coverage / Sequence / Scoreboard / SVA / Error Injection
+
+### 5.1 핵심 테스트 시나리오
+
+#### Positive
 
 | 카테고리 | 시나리오 | 검증 포인트 |
 |---------|---------|-----------|
@@ -124,7 +237,7 @@
 | **Interrupt** | Transfer 완료 IRQ | IS 비트 정확, IE 마스킹 동작 |
 | | UIC Error IRQ | 링크 에러 → IS[UE] 셋 |
 
-### Negative / 에러
+#### Negative / 에러
 
 | 카테고리 | 시나리오 | 검증 포인트 |
 |---------|---------|-----------|
@@ -137,7 +250,7 @@
 | **SW 오류** | 잘못된 레지스터 접근 | 안전하게 무시 또는 에러 |
 | | Doorbell 중복 셋 | 이미 진행 중인 슬롯 → 정의된 동작 |
 
-### Stress
+#### Stress
 
 | 시나리오 | 측정 |
 |---------|------|
@@ -146,9 +259,7 @@
 | 빈번한 Abort + 새 명령 | Task Mgmt와 Transfer 동시 처리 |
 | Power Mode 전환 중 명령 | 전환 완료 후 명령 정상 처리 |
 
----
-
-## Coverage Model
+### 5.2 Coverage Model
 
 ```
 [CG1] Command Coverage
@@ -181,9 +292,7 @@
   - cross: power_mode × gear × lane
 ```
 
----
-
-## HCI 초기화 검증 시나리오
+### 5.3 HCI 초기화 검증 시나리오
 
 ```
 HCI 초기화 시퀀스는 엄격한 순서를 요구 — 검증 필수
@@ -221,9 +330,7 @@ HCI 초기화 시퀀스는 엄격한 순서를 요구 — 검증 필수
   - 타이밍 경계: Link Startup 최소/최대 대기 시간
 ```
 
----
-
-## Sequence 전략 — 계층적 설계
+### 5.4 Sequence 전략 — 계층적 설계
 
 ```
 계층 구조:
@@ -279,8 +386,6 @@ Sequence 계층:
         init_seq → traffic → hibernate_seq → resume_seq → traffic
 ```
 
-### Config Object — 랜덤화 Knob
-
 ```
 class ufs_hci_cfg extends uvm_object;
   // 명령 관련
@@ -310,9 +415,7 @@ class ufs_hci_cfg extends uvm_object;
 endclass
 ```
 
----
-
-## Scoreboard 알고리즘 상세
+### 5.5 Scoreboard 알고리즘
 
 ```
 Scoreboard의 핵심 역할: Host 측 명령과 Device 측 UPIU의 정합성 검증
@@ -350,8 +453,6 @@ Scoreboard의 핵심 역할: Host 측 명령과 Device 측 UPIU의 정합성 검
   |     다른 LUN 명령 → Out-of-Order 허용?                      |
   +------------------------------------------------------------+
 ```
-
-### Scoreboard SV Pseudo-code
 
 ```systemverilog
 class ufs_hci_scoreboard extends uvm_scoreboard;
@@ -418,9 +519,7 @@ class ufs_hci_scoreboard extends uvm_scoreboard;
 endclass
 ```
 
----
-
-## SVA (SystemVerilog Assertions) 예시 — HCI 프로토콜
+### 5.6 SVA — HCI 프로토콜
 
 ```systemverilog
 // UFS HCI 프로토콜 검증 SVA 예시
@@ -532,9 +631,7 @@ SVA 설계 포인트:
   - 실 프로젝트에서는 HCI 스펙의 정확한 latency 값 사용
 ```
 
----
-
-## Protocol Checker — HCI 규약 검증
+### 5.7 Protocol Checker
 
 ```
 HCI Protocol Checker가 상시 감시하는 항목:
@@ -569,9 +666,7 @@ HCI Protocol Checker가 상시 감시하는 항목:
   위반 시 → 즉시 UVM_ERROR + 위반 내용 + 시뮬레이션 시점 보고
 ```
 
----
-
-## Error Injection 방법론
+### 5.8 Error Injection 방법론
 
 ```
 목적: DUT의 에러 핸들링 경로가 정확히 동작하는지 검증
@@ -634,9 +729,7 @@ HCI Protocol Checker가 상시 감시하는 항목:
   endclass
 ```
 
----
-
-## Regression 전략
+### 5.9 Regression 전략
 
 ```
 Regression 단계:
@@ -672,9 +765,7 @@ Regression 실행 예시:
   mrun regr --test_suite ufs_hci_stress --max_parallel_run 16
 ```
 
----
-
-## 이력서 연결 — UFS HCI 검증 기여
+### 5.10 이력서 연결
 
 ```
 Resume:
@@ -698,24 +789,62 @@ Resume:
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: UFS HCI 검증 환경을 어떻게 설계했나?**
-> "양 끝에서 검증하는 구조다. Host Agent가 SW Driver를 모델링하여 UTRD 작성 + Doorbell + ISR 처리를 수행하고, Device Agent가 UFS Device를 모델링하여 UPIU 응답을 생성한다. Scoreboard가 (1) UTRD→UPIU 변환 정확성, (2) DMA 데이터 무결성, (3) 완료 상태 정확성을 검증한다. Coverage-driven으로 Command × LUN × Size, Queue Depth, Error × Recovery를 교차 커버했다."
+### 흔한 오해
 
-**Q: Coverage-driven으로 어떤 Coverage를 설계했나?**
-> "5개 Covergroup: (1) Command — SCSI Opcode × LUN × 데이터 크기 교차. (2) Queue — Queue Depth × 슬롯 사용 패턴 × R/W 혼합. (3) Error/Recovery — 에러 소스 × 복구 방법 교차. (4) Register — 모든 R/W 레지스터의 접근 패턴. (5) Power/Mode — Gear × Lane × Power Mode 조합. 이 구조로 미커버 영역을 체계적으로 식별하고 Closure를 달성했다."
+!!! danger "❓ 오해 1 — 'HCI DV = doorbell + UPIU 검사면 끝'"
+    **실제**: 추가로 abort vs reset 선택, error recovery, gear switch 중 transfer, UTRLDBR race, queue 깊이 한계, MCQ 정책, ISR W1C race, IRQ aggregation 등 광범위. Happy path 는 가시적이라 검증의 중심으로 보이지만 _error / recovery path 가 silent bug 의 source_.<br>
+    **왜 헷갈리는가**: smoke test 가 통과하면 끝난 것 같은 착시.
 
-**Q: UFS HCI 검증에서 SVA를 어떻게 활용했나?**
-> "핵심 프로토콜 규약을 SVA로 상시 감시했다. (1) Doorbell→Command UPIU 생성 타이밍 — Doorbell 셋 후 N 사이클 이내 UPIU 전송 확인. (2) Response→Doorbell 클리어 — Response UPIU 수신 후 해당 슬롯 클리어 + IS 비트 셋 확인. (3) Interrupt 정합성 — IS & IE의 논리곱 결과와 IRQ 출력 일치 확인. (4) HCE 리셋 — HCE 비활성 시 모든 Doorbell 클리어 확인. generate로 32개 슬롯 각각에 인스턴스화하고 bind 모듈로 DUT에 비침투적으로 연결했다."
+!!! danger "❓ 오해 2 — 'UVM scoreboard 가 OCS 만 비교하면 데이터 정합 보장'"
+    **실제**: OCS=SUCCESS 여도 _Data 가 silently 깨질 수 있음_. WRITE 측 host memory 의 데이터와 device 가 받은 Data-Out UPIU 의 byte-by-byte 비교가 따로 필요. 그래서 scoreboard 의 4 단 비교 (Cmd/Data/Status/Order) 가 모두 있어야.<br>
+    **왜 헷갈리는가**: "completion = 성공" 의 직관.
 
-**Q: Scoreboard에서 무엇을 어떻게 비교하는가?**
-> "4가지를 비교한다. (1) UTRD→UPIU 변환 — Host Monitor가 UTRD를 캡처하면 예상 UPIU를 생성하고, Device Monitor가 캡처한 실제 UPIU와 Task Tag/LUN/CDB/Data Length를 필드별 비교. (2) DMA 데이터 무결성 — WRITE는 Host 메모리 데이터와 Device 수신 데이터, READ는 Device 송신 데이터와 Host 메모리 DMA 결과를 비교. (3) 완료 상태 — Response UPIU의 Status와 UTRD의 OCS가 일치하는지. (4) 순서 — 같은 LUN 내 명령 순서 보장을 확인. Task Tag를 key로 pending 명령을 추적하여 response와 매칭한다."
+!!! danger "❓ 오해 3 — 'SVA 만 잘 짜면 functional bug 다 잡힘'"
+    **실제**: SVA 는 _순간 timing invariant_ 만 잡습니다. 데이터 변환 정확성, 시나리오 흐름, 누락된 명령 같은 _긴 호흡의 정합성_ 은 scoreboard 의 영역. 둘이 _상보적_ — 한쪽만 의존하면 빈틈.<br>
+    **왜 헷갈리는가**: SVA 의 "강력해 보임" 이라는 인상.
 
-**Q: Error Injection은 어떻게 수행하는가?**
-> "에러는 TB의 Device Agent와 UniPro Agent에서 주입하며, DUT RTL은 절대 수정하지 않는다. (1) Device 응답 에러 — Response UPIU의 Status를 CHECK_CONDITION/BUSY로 조작. (2) 불완전 전송 — 요청 크기보다 적은 데이터 반환 → Residual Count 정확성. (3) 링크 에러 — UniPro CRC 에러 주입 → 재전송 투명성, Link Down → IS[UE]. (4) 타임아웃 — Response 의도적 지연 → Task Management 복구 경로. 정상→에러→정상 패턴으로 에러 후 복구까지 검증한다."
+!!! danger "❓ 오해 4 — 'Error injection 이 CRC 한 번 깨면 끝'"
+    **실제**: Error injection 은 _주입 지점 × 에러 종류 × 복구 방법_ 의 cross 가 핵심. CRC = link layer + transparent retry, BUSY = device layer + retry, CHECK_CONDITION = device layer + sense data 처리, RTT 누락 = device layer + WRITE timeout 복구 — 각각 다른 codepath 를 활성화. 한 번 깨고 끝이 아니라 _복구 후 정상 명령 재개_ 까지 cover.<br>
+    **왜 헷갈리는가**: "에러 한 번 = 실패 한 번" 의 직관.
+
+!!! danger "❓ 오해 5 — 'Device agent 가 spec 그대로면 충분'"
+    **실제**: spec 안의 _말 안 한 영역_ 이 매우 큽니다. RTT 의 chunk 분할 정책, ACK coalescing 시점, BKOPS 시작 시점, response delay 분포 등은 device 마다 다름. Device agent 에 _config knob_ 으로 이 변동성을 노출해야 우리 IP 가 다양한 device 와 호환됨을 검증 가능.<br>
+    **왜 헷갈리는가**: spec 만 따르면 unique 한 device 라는 잘못된 가정.
+
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| 회귀에서 random 하게 timeout | Doorbell ↔ Completion ↔ ISR race 미검증 | IS W1C 시점 vs UTRLDBR clear 시점 |
+| Coverage 가 아예 안 모임 (0 %) | sample event 가 안 fire | covergroup 의 trigger event, sample() 호출 |
+| Data 정합은 OK 인데 OCS 가 INVALID | UTRD writeback path 버그 | RTL 의 OCS write enable, PRDT 처리 종료 시점 |
+| 큰 stress 에서 scoreboard 가 mismatch | Task Tag reuse race | OCS writeback 후에만 free 하는지 |
+| MCQ 모드에서 일부 CQ 만 IRQ | CQ 별 IE 가 분리 | per-queue IE register |
+| Abort 후 다음 명령이 stuck | UTRLCLR 미발행 | TM 완료 후 transfer slot cleanup 시퀀스 |
+| Power transition 중 명령 fail | UTRLDBR 비어있는지 미확인 | Gear 변경 직전 UTRLDBR == 0 정합 |
+| Crypto config 변경 후 fatal | Index 갱신 + Key visible 순서 | Crypto Config Index 와 Key memory ordering |
+
+이 체크리스트의 모든 항목은 **race / ordering / mask 닫힘** 의 세 패턴에 속함 — DV 환경의 일반 디버그 골격.
+
+### 흔한 오해 — 추가
+
+!!! danger "❓ 오해 6 — 'Resume 에 좋다고 모든 시나리오 다 직접 짜야 함'"
+    **실제**: 가장 가치 있는 contribution 은 _coverage-driven design 결정_ 과 _silent bug 의 root cause 분석_ 입니다. 시나리오 양은 boilerplate 가 많고, 진짜 실력은 _어떤 cross 를 정의했나_, _에러 후 어떻게 복구를 검증했나_ 에 있음. 면접에서도 "왜 이 cross 를 정의했나" 에 답할 수 있어야.
 
 ---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **양방향 검증**: driver-side (register / UTRD) + device-side (UPIU / UniPro) 가 양 끝에서 자극 + 캡처. 한쪽만으로는 변환 오류가 통과.
+- **4 컴포넌트 모델**: Host agent + Device agent + Scoreboard + (SVA + coverage). 4 가지 책임이 분리.
+- **Scoreboard 4 단 비교**: Cmd UPIU 변환 + DMA 데이터 무결성 + OCS 정합 + 순서 보존.
+- **Coverage 5 축**: Command × LUN × Size, Queue depth, Error × Recovery, Register, Power × Gear × Lane.
+- **SVA 6 패턴**: HCE → no doorbell, Doorbell → Cmd UPIU latency, Resp → Doorbell clear, IS & IE → IRQ, HCE fall → all clear, OCS transition. generate × 32 슬롯.
+- **Error injection**: Device 응답 / 불완전 전송 / UniPro CRC / DMA / 타임아웃 — 각각 다른 codepath. 정상 → 에러 → 정상 패턴으로 복구까지.
+- **Regression 4 phase**: Smoke → Feature → Stress → Coverage closure. 각 phase 의 통과 기준 명확히.
+
 !!! warning "실무 주의점 — Doorbell-Completion ISR race 검증 누락"
     **현상**: 회귀에서 가끔 명령이 timeout 으로 빠지지만 재현이 어려워 silent fail 로 묻힌다.
 
@@ -723,19 +852,13 @@ Resume:
 
     **점검 포인트**: ISR 진입 → IS clear → UTRLDBR poll 사이에 새로운 doorbell 을 ring 하는 stress 시퀀스와, 해당 race 를 cover 하는 covergroup 이 있는지 확인.
 
-## 핵심 정리
+---
 
-- **양방향 검증**: driver-side (register/UTRD) + device-side (UPIU/UniPro) 모두.
-- **UFS Device Model**: UPIU 응답을 spec대로 생성. Storage state machine + LU 모델.
-- **Coverage 3축**: register coverage + UPIU type coverage + queue depth coverage.
-- **Error injection**: CRC error, timeout, abort, reset, sense data variations. 복구 동작 확인.
-- **Performance**: Queue depth × Command type matrix + Random/Sequential mix.
-- **Driver compatibility**: Linux UFS driver 시뮬레이션으로 SW-HW 인터페이스 검증.
+## 다음 모듈
 
-## 다음 단계
+→ [Module 05 — Quick Reference Card](05_quick_reference_card.md): 면접 / 회의 / 디버그 중에 즉시 떠올려야 하는 핵심 표 한 장.
 
-- 📝 [**Module 04 퀴즈**](quiz/04_hci_dv_methodology_quiz.md)
-- ➡️ [**Module 05 — Quick Reference Card**](05_quick_reference_card.md)
+[퀴즈 풀어보기 →](quiz/04_hci_dv_methodology_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_upiu_command_flow/">

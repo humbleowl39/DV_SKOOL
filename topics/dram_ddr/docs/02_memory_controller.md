@@ -15,21 +15,13 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#mc-블록-다이어그램">MC 블록 다이어그램</a>
-  <a class="page-toc-link" href="#command-scheduler-mc의-두뇌">Command Scheduler — MC의 두뇌</a>
-  <a class="page-toc-link" href="#qos-quality-of-service-arbitration">QoS (Quality of Service) / Arbitration</a>
-  <a class="page-toc-link" href="#read-write-turnaround-숨은-성능-병목">Read-Write Turnaround — 숨은 성능 병목</a>
-  <a class="page-toc-link" href="#reorder-buffer-write-coalescing">Reorder Buffer / Write Coalescing</a>
-  <a class="page-toc-link" href="#address-mapping-인터리빙">Address Mapping (인터리빙)</a>
-  <a class="page-toc-link" href="#refresh-관리">Refresh 관리</a>
-  <a class="page-toc-link" href="#dram-초기화-시퀀스">DRAM 초기화 시퀀스</a>
-  <a class="page-toc-link" href="#power-management-전력-상태-머신">Power Management — 전력 상태 머신</a>
-  <a class="page-toc-link" href="#주요-dram-명령">주요 DRAM 명령</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-네-개-axi-요청을-fr-fcfs-로-재배치하기">3. 작은 예 — FR-FCFS 재배치 추적</a>
+  <a class="page-toc-link" href="#4-일반화-mc-의-책임-과-스케줄링-축">4. 일반화 — MC 책임 + 스케줄링 축</a>
+  <a class="page-toc-link" href="#5-디테일-블록도-정책-qos-refresh-init-코드">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
@@ -37,39 +29,174 @@
     이 모듈을 마치면:
 
     - **Apply** Row Hit / Bank-level parallelism / Bank Group interleaving 개념을 throughput 최적화에 적용할 수 있다.
-    - **Implement** Read/Write reordering, Write batching, batch drain의 스케줄러 정책을 설계할 수 있다.
-    - **Plan** Refresh scheduling (per-bank, fine-grain), tREFI 충족 + 트래픽 영향 최소화 전략을 수립할 수 있다.
-    - **Apply** ECC (SECDED, on-die ECC) 구현 시 코드 종류와 검증 시나리오 매핑.
-    - **Diagnose** QoS / Aging / Bandwidth Regulation으로 multi-master starvation 방지 기법.
+    - **Design** Read/Write reordering, Write batching, batch drain 의 스케줄러 정책을 설계할 수 있다.
+    - **Plan** Refresh scheduling (per-bank, fine-grain) 으로 tREFI 충족 + 트래픽 영향 최소화 전략을 수립할 수 있다.
+    - **Apply** ECC (SECDED, on-die ECC) 구현 시 코드 종류와 검증 시나리오 매핑을 적용할 수 있다.
+    - **Diagnose** QoS / Aging / Bandwidth Regulation 으로 multi-master starvation 방지 기법을 진단할 수 있다.
 
 !!! info "사전 지식"
-    - [Module 01 — DRAM Fundamentals](01_dram_fundamentals_ddr.md)
+    - [Module 01 — DRAM Fundamentals](01_dram_fundamentals_ddr.md) (Row Hit/Miss/Conflict, timing parameter)
     - AXI / handshake 기본
     - Scheduler / FIFO 일반 지식
 
-## 왜 이 모듈이 중요한가
+---
 
-**MC는 SoC 성능의 가장 직접적인 결정자**입니다. CPU/GPU/Display 등 모든 마스터의 메모리 access가 통과. 잘못된 스케줄링 정책 하나가 BW 50% 저하를 만들 수 있고, refresh 누락은 데이터 손실, write batching 부족은 R↔W 전환 폭증 → throughput 절벽. **검증의 핵심은 functional correctness + performance regression**.
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! tip "💡 이해를 위한 비유"
-    **Memory Controller scheduler** ≈ **도로의 신호 제어기 + 회전 교차로 우선순위**
+Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지 봤습니다. 그러나 실제 SoC 에서는 **CPU + GPU + Display + DMA + ISP** 가 동시에 메모리에 access 하고, 각 요청은 bank conflict, refresh 충돌, R/W turnaround 라는 _시간_ 차원의 충돌을 겪습니다. **Memory Controller (MC) 는 이 모든 충돌을 해소하는 단일 결정자** — SoC 성능의 가장 직접적인 결정자입니다.
 
-    여러 master 의 read/write request 를 받아 bank 충돌, refresh, bus turnaround 를 고려해 순서 결정. FR-FCFS 등 정책으로 throughput 과 fairness 균형.
+이 모듈을 건너뛰면 "왜 같은 IP 에 같은 트래픽을 줘도 BW 가 다른가?" 같은 질문에 답할 수 없고, 검증 시 _기능적 정합성_ 외에 _성능 회귀_ 를 평가할 기준을 잡을 수 없습니다. 잘못된 스케줄링 정책 하나가 BW 50% 저하를 만들 수 있고, refresh 누락은 데이터 손실로 이어집니다. **MC 검증의 핵심은 functional correctness + performance regression 동시 관리**.
 
 ---
 
-## 핵심 개념
-**Memory Controller(MC) = SoC의 메모리 접근 요청을 DRAM 명령(ACT/RD/WR/PRE/REF)으로 변환하고, 타이밍 제약을 준수하면서 처리량을 최대화하는 스케줄러. 성능의 핵심은 Row Hit 극대화와 Bank-level Parallelism 활용.**
+## 2. Intuition — 비유와 한 장 그림
 
-!!! danger "❓ 흔한 오해"
-    **오해**: Open-page 정책이 항상 좋다
+!!! tip "💡 한 줄 비유"
+    **Memory Controller scheduler** ≈ **도로의 신호 제어기 + 회전 교차로 우선순위**.<br>
+    여러 master 의 read/write 요청을 받아 bank 충돌, refresh, bus turnaround 를 고려해 발행 순서를 결정. **FR-FCFS** 같은 정책으로 throughput 과 fairness 의 균형을 잡습니다 — 빨간불에 차를 세워 두는 것 같아 보여도 사실은 _전체 처리량_ 을 위한 결정.
 
-    **실제**: Open-page 는 row hit 시 빠르지만 row conflict (다른 row access) 시 페널티 큼. workload 가 random 이면 close-page 가 더 좋을 수 있음.
+### 한 장 그림 — MC 가 만드는 변환
 
-    **왜 헷갈리는가**: "row 열어 두면 다음에 빠름" 만 보고 row conflict 페널티는 직관에 잘 안 들어와서.
+```
+   ─── input side (host) ──────         ─── output side (DRAM) ───
+                                                                  
+   AXI master 들                          DRAM device(s)            
+     CPU  ─▶ ─┐                           ▲                       
+     GPU  ─▶ ─┤                           │ DDR phy / CA bus       
+     DMA  ─▶ ─┤                           │                        
+     Disp ─▶ ─┤                           │                        
+     ISP  ─▶ ─┤                           │                        
+              ▼                           │                        
+        +─────────────────────────────────────+                    
+        │             Memory Controller       │                    
+        │                                     │                    
+        │   1. AXI request 수집 (RQ)          │                    
+        │   2. 주소 → R/BG/B/Row/Col 디코드   │                    
+        │   3. Row buffer state 추적          │                    
+        │   4. timing constraint 체크         │                    
+        │   5. FR-FCFS 등 정책으로 재배치    │                    
+        │   6. Refresh 끼워넣기              │                    
+        │   7. Write batching / R/W turn     │                    
+        │   8. ACT/RD/WR/PRE/REF 발행        │                    
+        +─────────────────────────────────────+                    
+```
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+세 가지 동시 요구가 있습니다.
+
+1. **Functional correctness** — 모든 timing constraint (tRCD, tRP, tRAS, tFAW, tREFI ...) 를 위반하지 않아야 한다 → DRAM model 의 contract.
+2. **Maximum throughput** — Row Hit 극대화 + Bank-level Parallelism + tCCD_S 활용 + R/W batching → 효율을 nominal BW 의 80~95% 까지.
+3. **Fairness / QoS** — 어떤 master 도 starvation 되지 않고, 실시간 master (Display) 는 deadline 을 놓치지 않아야 한다.
+
+이 셋은 서로 trade-off 관계입니다. FR-FCFS 는 ①+② 에 강하지만 ③ 이 약하고, strict round-robin 은 ③ 에 강하지만 ② 가 약합니다. 그래서 실제 MC 는 _두 단계 (QoS Arbiter → Cmd Scheduler)_ 로 분할해 각 단계가 다른 목적을 책임집니다 — §5 의 블록도가 이 분할입니다.
+
 ---
 
-## MC 블록 다이어그램
+## 3. 작은 예 — 네 개 AXI 요청을 FR-FCFS 로 재배치하기
+
+가장 단순한 시나리오. AXI 4 개의 read request 가 거의 동시에 도착했고, MC 는 FR-FCFS + open-page 정책 (DDR4-3200) 입니다. 현재 bank 상태: Bank 0 에 Row 5 가 open, 나머지 bank 는 idle.
+
+### 도착 순서 (AXI ID 순)
+
+| 도착 # | AXI ID | 주소 디코드 결과 | Row buffer 상태 |
+|---|---|---|---|
+| ① | A | (Rank0, BG0, B0, Row=5, Col=0)  | Row 5 가 이미 open → **Row Hit** |
+| ② | B | (Rank0, BG0, B0, Row=9, Col=0)  | 같은 bank, 다른 row → **Row Conflict** |
+| ③ | C | (Rank0, BG1, B0, Row=3, Col=0)  | 다른 BG, idle → **Row Miss** |
+| ④ | D | (Rank0, BG0, B0, Row=5, Col=64) | Row 5 → **Row Hit** |
+
+### MC 가 다시 짜는 발행 순서
+
+```
+                  T=0       T=4      T=8      T=12     T=...    T=22     T=44     T=66
+ cycle             │         │        │         │       │         │        │        │
+ issue (BG0,B0)    │ RD-① Row5,col0   │ RD-④ Row5,col64                                  
+ issue (BG1,B0)    │         │ ACT-③ Row3                                                
+ issue (BG1,B0)    │         │        │         │       RD-③ Row3                         
+ issue (BG0,B0)    │         │        │         │       │         │ PRE     ACT-Row9 │ RD-② 
+                   ▲         ▲        ▲         ▲                          
+                   Hit       BG split  Hit       Conflict 마지막                       
+```
+
+| Step | 시점 (cycle) | MC action | 정책 근거 |
+|---|---|---|---|
+| ① | `T=0`   | `RD ①` (Bank 0, Row 5 hit, col=0) 발행 | Row Hit 우선 — 즉시 발행 가능 |
+| ② | `T=0`   | ④ 도 같은 row → 큐에서 ③ 보다 먼저 발행 가능으로 표시 | open-page hit 우선 |
+| ③ | `T=4`   | `ACT ③` (BG1, Bank 0, Row 3) 발행 — 다른 BG 라 ① 의 RD 와 병렬 | Bank-level Parallelism (다른 BG, tCCD_S 조차 적용) |
+| ④ | `T=4`   | `RD ④` (BG0, Bank 0, col=64) 발행 (`tCCD_L=8` 만족 전이라면 stall, 그 후 발행) | 같은 bank → tCCD_L 간격 |
+| ⑤ | `T=22`  | ② 차례 — 그러나 Row 5 가 아직 open. 이제 PRE 발행 | Row 5 의 hit 가능 요청 모두 소진. Row Conflict 를 _마지막에_ 처리 |
+| ⑥ | `T=44`  | `ACT ②` (BG0, B0, Row 9) — `tRP` 만족 후 | tRP 충족 보장 |
+| ⑦ | `T=66`  | `RD ②` (col=0) 발행 — `tRCD` 만족 후 | tRCD 충족 보장 |
+| ⑧ | `T=` ...| 전 요청 데이터 회수, AXI ID 순서대로 응답 (A→B→C→D) | AXI ordering rule (같은 ID 안 순서 보존) |
+
+```c
+// FR-FCFS 의사코드 — 매 cycle 호출
+function command_t mc_pick_next() {
+    // 1. Row Hit 후보 우선 (가장 빠름)
+    foreach (req in pending_queue) {
+        if (req.row == bank[req.bank].open_row && timing_ok(req))
+            return req;                    // Hit
+    }
+    // 2. Idle bank (Row Miss) 다음
+    foreach (req in pending_queue) {
+        if (bank[req.bank].open_row == NONE && timing_ok(req))
+            return req;                    // Miss
+    }
+    // 3. 마지막으로 Row Conflict — PRE/ACT 시작
+    foreach (req in pending_queue) {
+        if (timing_ok_for_pre_act(req)) return req;  // Conflict 진입
+    }
+    return NOP;
+}
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) FR-FCFS 의 본질은 "Hit 부터 짜내고 Conflict 는 가장 뒤로"**. Row Hit 두 번 (① 와 ④) 사이에 ② 의 PRE/ACT 를 끼워 넣으면 Hit 의 가속을 잃기 때문. <br>
+    **(2) 다른 BG 는 _완전히_ 병렬**. ③ 의 ACT 가 `T=4` 에 발행돼도 ① 의 데이터 회수와 타임라인이 겹칩니다. 이것이 BG interleaving 으로 effective BW 를 늘리는 메커니즘.
+
+---
+
+## 4. 일반화 — MC 의 책임 과 스케줄링 축
+
+### 4.1 MC 가 하는 일 — 단일 책임 → 다층 책임
+
+| Layer | 책임 | 대표 알고리즘 / 정책 |
+|------|------|---------|
+| **Address Mapping** | 물리주소 → (Rank, BG, Bank, Row, Col) | row:bg:bank:col 등 (§5.7) |
+| **QoS Arbiter** | master 간 priority / fairness / urgency | priority + aging + urgent + BW regulation (§5.4) |
+| **Command Scheduler** | timing-aware 명령 발행 | FR-FCFS / open vs close page / bank parallelism (§5.2) |
+| **Refresh Engine** | tREFI 보장, traffic 회피 | postpone / pull-in / per-bank (§5.6, Module 01 §5.6) |
+| **Power Manager** | idle 시 PD/SR 진입, latency 보전 | active-PD / precharge-PD / self-refresh (§5.9) |
+| **Init / Training** | 부팅 시 MRS / ZQ / Training | JEDEC sequence (§5.8) |
+| **PHY Interface** | CA/DQ/DQS 신호 형성 | Module 03 |
+
+### 4.2 두 핵심 자원 축
+
+```
+   throughput 자원         │  fairness / latency 자원
+   ─────────────────────   │  ──────────────────────
+   Row Hit                 │  AXI QoS field
+   Bank-level Parallelism  │  Aging counter
+   Bank Group Interleaving │  Urgent signal (Display)
+   Write Batching          │  Bandwidth Regulation
+   tCCD_S 분산             │  Round-robin fall-back
+```
+
+§3 의 worked example 은 _throughput_ 축을 보여줬습니다. 실 시스템에서는 _fairness_ 축이 아주 자주 throughput 을 제한합니다 — Display 의 Urgent 1번이 큐의 Hit 행렬을 통째로 깨고 들어옵니다.
+
+### 4.3 변형 / Edge case
+
+- **Row buffer thrashing**: 같은 bank 의 multiple-row 동시 access → row conflict 연쇄 → effective BW 50% 미만. 해결: address mapping 에서 hot bit 을 BG 로 옮김.
+- **Read starvation under heavy write**: write batching 이 너무 길면 read latency 폭발. Watermark 기반 drain 정책.
+- **Refresh storm**: postpone 누적 후 한 번에 8 REF 직렬 발행 → BW 절벽. Pull-in / staggering 으로 분산.
+- **Closed-page in random workload**: open-page 가 conflict 비싸므로 무조건 PRE close → 반대 trade-off.
+
+---
+
+## 5. 디테일 — 블록도, 정책, QoS, Refresh, Init, 코드
+
+### 5.1 MC 블록 다이어그램
 
 ```
 +------------------------------------------------------------------+
@@ -113,11 +240,7 @@
 +------------------------------------------------------------------+
 ```
 
----
-
-## Command Scheduler — MC의 두뇌
-
-### 스케줄링 정책
+### 5.2 Command Scheduler — 정책별 비교
 
 | 정책 | 동작 | 장단점 |
 |------|------|--------|
@@ -127,7 +250,7 @@
 | **Close Page** | RD/WR 후 즉시 PRE | Row Conflict 비용 없음, Hit 활용 못함 |
 | **Adaptive** | 트래픽 패턴에 따라 Open/Close 전환 | 최적이지만 구현 복잡 |
 
-### Bank-level Parallelism
+### 5.3 Bank-level Parallelism + BG Interleaving
 
 ```
 Bank 0: ACT ── RD ── PRE
@@ -145,9 +268,7 @@ Bank Group Interleaving (DDR4/5):
   → 다른 BG로 분산 → 처리량 향상
 ```
 
----
-
-## QoS (Quality of Service) / Arbitration
+### 5.4 QoS (Quality of Service) / Arbitration
 
 ```
 문제: SoC에는 여러 마스터(CPU, GPU, DMA, Display, ISP...)가 동시에
@@ -201,9 +322,7 @@ MC Arbiter 구조 (간략):
   +-------------+
 ```
 
----
-
-## Read-Write Turnaround — 숨은 성능 병목
+### 5.5 Read-Write Turnaround — 숨은 성능 병목
 
 ```
 문제: Read와 Write는 데이터 방향이 반대 (DQ 버스 양방향)
@@ -240,9 +359,7 @@ MC 스케줄러의 최적화:
    트레이드오프를 결정한다."
 ```
 
----
-
-## Reorder Buffer / Write Coalescing
+### 5.6 Reorder Buffer / Write Coalescing / RAW bypass
 
 ```
 MC는 AXI 요청을 도착 순서대로 처리하지 않는다 (Out-of-Order).
@@ -272,9 +389,7 @@ Read-After-Write Hazard:
   - → DRAM 접근 없이 즉시 응답 가능
 ```
 
----
-
-## Address Mapping (인터리빙)
+### 5.7 Address Mapping (인터리빙)
 
 ```
 물리 주소를 Rank/BG/Bank/Row/Col로 매핑하는 방식:
@@ -294,9 +409,7 @@ Read-After-Write Hazard:
 실무: SoC 트래픽 패턴에 따라 최적 매핑 선택 (configurable)
 ```
 
----
-
-## Refresh 관리
+### 5.8 Refresh 관리
 
 ```
 문제: Refresh 중 해당 Bank(또는 전체)에 접근 불가 → 성능 저하
@@ -315,9 +428,7 @@ MC의 Refresh 최적화:
   - Staggering: Rank별/Bank별 REF 시점 분산
 ```
 
----
-
-## DRAM 초기화 시퀀스
+### 5.9 DRAM 초기화 시퀀스
 
 ```
 전원 인가 후 DRAM을 사용하기까지 MC가 수행하는 초기화 절차:
@@ -361,9 +472,7 @@ DDR5 초기화 차이:
   - 초기화가 DDR4보다 복잡하고 단계가 많음
 ```
 
----
-
-## Power Management — 전력 상태 머신
+### 5.10 Power Management — 전력 상태 머신
 
 ```
 DRAM의 전력 상태:
@@ -410,9 +519,7 @@ MC의 역할:
   - LPDDR5: DVFSC와 연계하여 주파수+전력 동시 조절
 ```
 
----
-
-## 주요 DRAM 명령
+### 5.11 주요 DRAM 명령
 
 | 명령 | 기능 | 주요 타이밍 |
 |------|------|-----------|
@@ -424,9 +531,7 @@ MC의 역할:
 | MRS (Mode Register Set) | DRAM 설정 변경 | 초기화 시 사용 |
 | ZQ Calibration | 출력 임피던스 보정 | 주기적 수행 |
 
----
-
-## Q&A
+### 5.12 Q&A — 자주 묻는 질문
 
 **Q: Memory Controller의 가장 중요한 역할은?**
 > "DRAM 타이밍 제약(tRCD, tRP, tCCD 등)을 준수하면서 처리량을 최대화하는 스케줄링이다. 핵심 기법은 두 가지: (1) FR-FCFS로 Row Hit 명령을 우선 처리하여 불필요한 PRE+ACT를 피함. (2) Bank-level Parallelism으로 한 Bank가 대기 중일 때 다른 Bank에서 전송을 수행하여 대역폭을 극대화."
@@ -444,27 +549,71 @@ MC의 역할:
 > "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → MRS 명령으로 Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → ZQ Calibration(임피던스 보정) → Training(WL, DQ, Eye, VREF) → Refresh 시작. 특히 MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
 
 ---
+
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+!!! danger "❓ 오해 1 — 'Open-page 정책이 항상 좋다'"
+    **실제**: Open-page 는 row hit 시 빠르지만 row conflict 시 `tRP+tRCD` 페널티가 큽니다. random/streaming workload 에서 close-page 또는 adaptive 가 더 좋을 수 있습니다.<br>
+    **왜 헷갈리는가**: "row 열어 두면 다음에 빠름" 만 보고 row conflict 페널티는 직관에 잘 안 들어와서.
+
+!!! danger "❓ 오해 2 — 'AXI 요청은 도착 순서대로 처리된다'"
+    **실제**: MC 는 ROB 로 의도적으로 _Out-of-Order_ 처리합니다. 단 같은 AXI ID 안의 순서만 보장. 이 사실을 모르고 응답 순서를 가정하는 master 는 deadlock / data hazard 를 일으킬 수 있습니다.<br>
+    **왜 헷갈리는가**: "메모리 = 순차 모델" 이라는 software 측 직관 때문.
+
+!!! danger "❓ 오해 3 — 'Write Batching 이 길수록 throughput 이 높다'"
+    **실제**: Write batch 가 길면 R/W 전환은 줄지만 그 동안 _read latency tail_ 이 폭발합니다. CPU 의 cache miss latency 는 OS scheduling 까지 영향. Watermark 는 BW 와 latency 의 정밀한 균형점.
+
+!!! danger "❓ 오해 4 — 'QoS 우선순위만 잘 주면 starvation 없다'"
+    **실제**: Strict priority 는 저우선순위 master 의 _완전 starvation_ 을 만듭니다. Aging counter 가 명령 대기 시간을 추적하고, 임계값을 넘으면 priority 를 자동 승격해야 starvation 이 방지됩니다.
+
+!!! danger "❓ 오해 5 — 'Refresh 는 그냥 주기적인 background. MC 가 신경쓸 일 적음'"
+    **실제**: Postpone 가 누적되면 한 번에 8 REF 직렬 발행 → BW 절벽. 또 tREFI 위반은 Row Hammer 보안 취약점으로 직결. MC 의 refresh 엔진은 staggering / pull-in 을 신중히 설계합니다.
+
+### DV 디버그 체크리스트 (MC 검증 시 자주 보는 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| 평균 BW 정상이나 burst 단위로 급락 | tFAW 4-ACT 한도 초과 / Refresh storm | tFAW SVA, refresh queue depth 그래프 |
+| Read latency tail 이 길다 (p99) | Write batching watermark 가 너무 높음 / starvation | Write drain timestamp, aging counter |
+| 같은 row 인데 Row Hit 가 안 됨 | bank state tracker 에 PRE 누락 / open-row 갱신 버그 | bank tracker dump, ACT/PRE 로그 |
+| AXI ID 순서가 깨짐 | ROB 가 같은 ID 응답을 reorder | ROB rule check, ID-별 timestamp |
+| Display Underrun (FIFO empty) | Urgent signal 미인식 / BW regulation 부족 | Urgent assertion 발생, Display 트래픽 BW 측정 |
+| tCCD_L 이 적용돼야 할 자리에 tCCD_S 발행 | bank-group bit 매핑 mismatch | address mapper 의 BG 추출 logic |
+| Refresh interval 이 점점 길어짐 | postpone 카운터 race / pull-in 실패 | refresh issue timestamp 와 tREFI 비교 |
+| Write 후 즉시 Read 시 stale value | RAW bypass forward 누락 | write buffer 의 read-forward path |
+
 !!! warning "실무 주의점 — tFAW 위반으로 Rank 내 동시 ACT 과전류 위험"
     **현상**: 짧은 시간 내에 서로 다른 Bank에 4개 초과의 ACT 명령이 발행되어 DRAM의 순간 전류가 스펙을 초과, 전압 강하(Vdd Droop)로 인한 데이터 오류 발생.
-    
+
     **원인**: tFAW(Four Activate Window)는 임의의 tFAW 시간 창 내에 ACT를 최대 4회로 제한함. MC 스케줄러가 Bank 병렬화 극대화를 추구하다가 tFAW 윈도우를 무시하고 5번째 ACT를 발행할 수 있음. Open Page Policy에서 Row Conflict가 많은 워크로드일수록 ACT 빈도가 높아 위험 증가.
-    
+
     **점검 포인트**: Timing SVA에서 `tFAW_window` assertion 활성화 여부 확인. 시뮬레이션 파형에서 슬라이딩 윈도우(tFAW 길이) 내 ACT 명령 수 카운트. 랜덤 워크로드 시 Bank 분산 패턴을 로그로 수집하여 tFAW 위반 발생 seed 식별.
 
-## 핵심 정리
+---
 
-- **MC = scheduler + 명령 변환기**: AXI request → ACT/RD/WR/PRE/REF 시퀀스로 변환, timing 종속성 준수.
-- **Row Hit 극대화**: 같은 row에 연속 access면 PRE-ACT 회피 → throughput ↑.
-- **Bank-level parallelism**: 다른 bank에 동시 ACT 가능. BG 분산으로 tCCD_S 활용.
-- **Read/Write reordering + Write batching**: R↔W 전환 비용(tWTR/tRTW) 회피. Watermark로 batch 시점 제어.
-- **Refresh scheduling**: tREFI 내 모든 row REF, 트래픽 영향 최소화. per-bank refresh로 다른 bank는 계속 동작.
-- **QoS**: AXI QoS + Aging + Bandwidth Regulation. Display 같은 실시간 마스터는 Urgent 우선.
-- **Initialization**: tPW → RESET → CKE → MRS → ZQ → Training → Refresh start. MRS 순서는 JEDEC 표준.
+## 7. 핵심 정리 (Key Takeaways)
 
-## 다음 단계
+- **MC = scheduler + 명령 변환기**: AXI request → ACT/RD/WR/PRE/REF 시퀀스로 변환하면서 모든 timing 종속성을 보장.
+- **Row Hit 극대화**: 같은 row 연속 access 면 PRE/ACT 회피 → throughput ↑ — FR-FCFS 의 핵심.
+- **Bank-level parallelism + BG interleaving**: 다른 bank/BG 에 동시 ACT 가능. tCCD_S 활용으로 latency 겹침.
+- **Write batching + RAW bypass + ROB**: R↔W 전환 비용 회피, 단 latency tail 과의 trade-off.
+- **Refresh scheduling**: tREFI 보장 + traffic 영향 최소화. per-bank / staggering / pull-in.
+- **QoS**: AXI QoS field + Aging + Bandwidth Regulation. Display 같은 실시간 master 는 Urgent 우선.
 
-- 📝 [**Module 02 퀴즈**](quiz/02_memory_controller_quiz.md)
-- ➡️ [**Module 03 — PHY**](03_memory_interface_phy.md)
+!!! warning "실무 주의점"
+    - 평균 BW 가 정상이라도 latency tail / starvation 은 별도로 감시.
+    - Open-page 는 random workload 에서 _역효과_ 가능 — workload profiling 필수.
+    - Refresh 정책은 Module 01 의 cell physics 와 직결 — RFM/Row Hammer 와 반드시 함께 검증.
+
+---
+
+## 다음 모듈
+
+→ [Module 03 — Memory Interface / PHY](03_memory_interface_phy.md): MC 의 명령이 _전기 신호_ 가 되는 layer. DLL/PLL, ODT, equalization, training. ns-단위 timing margin 의 영역.
+
+[퀴즈 풀어보기 →](quiz/02_memory_controller_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_dram_fundamentals_ddr/">

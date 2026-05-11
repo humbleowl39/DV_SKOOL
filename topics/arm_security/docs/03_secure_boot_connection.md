@@ -15,50 +15,148 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#boot-stage별-보안-레벨-상세">Boot Stage별 보안 레벨 상세</a>
-  <a class="page-toc-link" href="#anti-rollback-버전-다운그레이드-방어">Anti-Rollback — 버전 다운그레이드 방어</a>
-  <a class="page-toc-link" href="#measured-boot-remote-attestation">Measured Boot & Remote Attestation</a>
-  <a class="page-toc-link" href="#보안-레벨과-공격-방어의-연결">보안 레벨과 공격 방어의 연결</a>
-  <a class="page-toc-link" href="#dv-관점-보안-레벨-검증">DV 관점 — 보안 레벨 검증</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#확인-문제">확인 문제</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-부팅-중-bl31-에서-bl33-으로-넘어갈-때-단-한-cycle-동안-일어나는-일">3. 작은 예 — BL31 → BL33 의 NS=0→1 한 cycle</a>
+  <a class="page-toc-link" href="#4-일반화-boot-stage-별-el-ns-매트릭스-와-2-개의-검증-축">4. 일반화 — Boot stage 매트릭스 + 2 축</a>
+  <a class="page-toc-link" href="#5-디테일-bl1-2-31-33-anti-rollback-measured-boot-dv-시나리오">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Trace** Secure Boot 단계와 ARM EL의 매핑 (BL1=EL3, BL2=EL3, BL31=EL3 secure monitor, BL33=EL2/EL1 non-secure)
-    - **Apply** Secure World 자원이 어느 boot 단계에서 활성화되는지
-    - **Identify** Boot 시 TZASC, TZPC, GIC 보안 설정 단계
-    - **Distinguish** Verified Boot (서명) + Architecture Enforcement (EL/TrustZone)의 보완 관계
+    - **Trace** Secure Boot 단계와 ARM EL 의 매핑 (BL1=EL3, BL2=S-EL1, BL31=EL3 secure monitor 상주, BL33=NS-EL1/EL2) 을 추적할 수 있다.
+    - **Apply** Secure World 자원 (TZPC/TZASC/GIC/SMMU 보안 설정) 이 어느 boot 단계에서 활성화되는지 적용할 수 있다.
+    - **Identify** Boot 시 TZASC, TZPC, GIC 보안 설정의 책임 단계와 lock-down 시점을 식별할 수 있다.
+    - **Distinguish** Verified Boot (서명 검증) 와 Architecture Enforcement (EL/TrustZone) 의 보완 관계를 구분할 수 있다.
+    - **Justify** Anti-Rollback OTP counter 가 EL3 + TZPC 와 어떻게 결합돼야 의미 있는지 설명할 수 있다.
 
 !!! info "사전 지식"
-    - [Module 01-02A](01_exception_level_trustzone.md)
-    - [Secure Boot 코스](../../soc_secure_boot/)
-
-!!! tip "💡 이해를 위한 비유"
-    **Secure Boot ↔ ARM Security** ≈ **건물 입주 검수(Secure Boot) + 입주 후 보안실(TrustZone)**
-
-    Boot 시 chain of trust 가 "건물 입주 자격" 을 확정, runtime 의 TrustZone 이 그 위 보안 자산 격리. 둘이 짝.
+    - [Module 01 — Exception Level & TrustZone](01_exception_level_trustzone.md)
+    - [Module 02 — World Switch & SoC Security Infra](02_world_switch_soc_infra.md)
+    - [Module 02A — Secure Enclave & TEE Hierarchy](02a_secure_enclave_and_tee_hierarchy.md)
+    - 일반 부팅 흐름 (BootROM → 1st-stage → kernel)
 
 ---
 
-## 핵심 개념
-**Secure Boot = Chain of Trust(서명 검증) + Security Architecture(EL/TrustZone)의 결합. 서명 검증이 "무엇을 실행해도 되는가"를 결정하고, 보안 레벨이 "어떤 권한으로 실행하는가"를 결정. 둘이 함께 동작해야 완전한 보안.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: Secure Boot 와 TrustZone 은 별개
+Module 01-02A 에서 말한 _"NS bit 격리, EL3 단일 게이트, TZASC/TZPC/GIC/SMMU 의 5 축"_ 이 **언제부터 작동하는가?** 에 답이 없습니다. 답은 _부팅 시점_ — BL1 (BootROM, EL3) 이 모든 보안 인프라를 _초기화_ 하고, BL31 → BL33 전환 시점에 _NS=1_ 로 toggle 한 후부터입니다.
 
-    **실제**: Secure Boot 의 ROTPK 가 TrustZone 의 root key derivation 의 source. Boot 단계의 실패는 runtime TrustZone 무력화.
+이 모듈을 건너뛰면 디버그 시 _"NS world 에서 secure 자원이 access 되는데 분명 TZASC 는 잠갔는데 왜?"_ 같은 상황을 만납니다 — 답은 보통 **lock-down 이 BL31 ERET 직전에 끝나지 않았기 때문**. 부팅 단계와 lock-down 시점을 정확히 알면, 첫 secure access 의 timing 만 보고도 어느 BL 단계에 문제가 있는지 좁힐 수 있습니다.
 
-    **왜 헷갈리는가**: "이름 다른 기능 = 독립" 이라는 직관. 실제는 같은 trust chain 의 다른 단계.
 ---
 
-## Boot Stage별 보안 레벨 상세
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **Secure Boot ↔ ARM Security** ≈ _건물 입주 검수 (Secure Boot) + 입주 후 보안실 (TrustZone)_.<br>
+    Boot 시 Chain of Trust 가 _"누가 입주해도 되는가"_ 를 확정하고 (서명 검증), runtime 의 TrustZone 이 _"입주민이 어떤 방을 쓸 수 있는가"_ 를 격리. 둘이 짝 — 검수 없이 입주만 막아도 공허하고, 검수만 통과시키고 격리 안 하면 한 입주민이 다른 방까지 다 봅니다.
+
+### 한 장 그림 — Boot stage 의 EL × NS 진행
+
+```
+   시간 ─────────────────────────────────────────────────────────────────►
+
+   Stage:   BL1            BL2            BL31              BL32           BL33           Linux
+            (BootROM)      (FSBL)         (Monitor)         (TEE)          (U-Boot)
+   EL:      EL3            S-EL1          EL3 상주           S-EL1          NS-EL1/EL2     NS-EL1
+   NS:      Secure         Secure         Secure             Secure         Non-Secure ⭐  Non-Secure
+   하는 일:  HW init        BL3x load      runtime monitor    TEE OS         정상 OS load   사용자
+            서명 검증      서명 검증      SMC handler        TA 관리        kernel 진입
+            TZPC/TZASC      DRAM init                       ↑
+            /GIC/SMMU                                       │
+            초기 설정                                        │
+            ↓                                                │
+            Lock-down 시작 ─────────────────────────────────┘
+                                                            ▲
+                                          ⭐ 핵심 전환점: SCR_EL3.NS = 0 → 1
+                                            이 시점부터 5 축의 보안 인프라가
+                                            _실제로 차단_ 동작
+```
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+세 가지 요구가 동시에 풀려야 했습니다.
+
+1. **첫 명령어부터 신뢰의 root 가 있어야 한다** → BootROM (mask-ROM, 위변조 불가) 이 EL3 (최고 권한) 에서 시작 → 이후 단계의 _누구를_ 실행할지 결정.
+2. **각 단계가 다음 단계를 검증해야 한다 (Chain of Trust)** → BL1 이 BL2 서명 검증, BL2 가 BL31/BL32/BL33 서명 검증, 한 단계라도 실패면 abort.
+3. **검증된 image 라도 _최신_ 이어야 한다 (Anti-Rollback)** → 서명만 보면 v1.0 의 취약점도 다시 booting 가능 → OTP monotonic counter 가 _"version 이 충분히 높은가"_ 를 추가 검증.
+
+이 세 요구의 교집합이 곧 **Verified Boot (서명) + Architecture Enforcement (EL/NS) + Anti-Rollback (OTP counter)** 의 3 메커니즘 결합입니다.
+
+---
+
+## 3. 작은 예 — 부팅 중 BL31 에서 BL33 으로 넘어갈 때, 단 한 cycle 동안 일어나는 일
+
+가장 critical 한 시나리오. BL31 (EL3, Secure) 에서 BL33 (NS-EL1) 으로 ERET 하는 _그 한 cycle_ 에 무엇이 일어나는지. 이 한 cycle 직전까지 모든 secure 인프라가 lock-down 돼 있어야 하고, 한 cycle 후부터는 모든 NS access 가 차단돼야 합니다.
+
+```
+   Cycle:   t-3        t-2        t-1        t         t+1        t+2
+   ─────────────────────────────────────────────────────────────────────►
+
+   BL31 코드:
+   t-3:  TZPC slave 분류 완료 (OTP=Secure, UART=NS, ...)
+   t-2:  TZASC region 0 = Secure DRAM lock, region 1 = NS DRAM
+   t-1:  GIC group 0/1S/1NS 분류 완료, GICD_CTLR enable
+         SPSR_EL3 ← NS-EL1h, ELR_EL3 ← BL33 entry
+         x0 = device tree blob ptr
+   t:    SCR_EL3.NS = 1 set
+         ┌─ 이 cycle 부터:
+         │  - 모든 outgoing AxPROT[1] = 1
+         │  - TZASC 가 secure region 의 NS access 차단 시작
+         │  - TZPC 가 secure-only slave 의 NS access 차단 시작
+         │  - GIC group 0/1S 가 NS write 무시 (RAZ/WI)
+         └─ ERET 명령 (SPSR_EL3 → PSTATE, ELR_EL3 → PC, EL3→NS-EL1)
+   t+1:  PC = BL33 entry, PSTATE.EL = 1, NS = 1
+         BL33 첫 instruction 실행 (보통 zeroization 또는 console init)
+   t+2:  BL33 가 secure DRAM read 시도 시 → TZASC DECERR
+```
+
+| Cycle | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| t-3 | BL31 | TZPC 의 secure-only slave list 완성 | NS access 차단의 구체화 |
+| t-2 | BL31 | TZASC region register set + lock | 이후 변경 금지 (SoC 마다 register 가 LOCK bit 또는 OTP 기반) |
+| t-1 | BL31 | GIC group 분류 + SPSR/ELR 설정 | ERET 직전 준비 |
+| **t** | EL3 HW | **SCR_EL3.NS ← 1**, ERET | _이 cycle_ 이 architecture 전체의 turning point |
+| t+1 | BL33 | NS world 첫 instruction | 보안 인프라가 모두 작동 중 |
+| t+2 | BL33 (오류 시도) | secure DRAM read → DECERR | TZASC 가 정확히 차단 |
+
+```c
+// BL31 의 마지막 부분 (개념 코드)
+void bl31_to_bl33_transition(void) {
+    /* t-3..t-2: 보안 인프라 final lock-down */
+    tzpc_lockdown();        // OTP, Crypto = Secure-only
+    tzasc_lockdown();       // Secure DRAM region locked
+    gic_secure_lockdown();  // Group 0/1S configured
+
+    /* t-1: ERET 준비 */
+    write_spsr_el3(NS_EL1H_AARCH64);  // SPSR_EL3.M, .RW, .DAIF
+    write_elr_el3(bl33_entrypoint);
+    set_gpr(0, dtb_pa);
+
+    /* t: NS=1 toggle + ERET (한 instruction sequence) */
+    asm volatile(
+        "msr scr_el3, %0  \n"   // SCR_EL3.NS = 1
+        "isb              \n"   // 새 NS attribute propagation
+        "eret             \n"   // ERET to BL33 (NS-EL1)
+        :: "r"(scr_el3_with_ns_set)
+    );
+}
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) Lock-down 은 ERET 이전에 _완료_ 돼야 한다.** ERET 후 BL33 은 NS world 인 채로 first instruction 을 실행하므로, 그 전에 모든 secure 인프라가 차단 모드여야 합니다. _한 cycle_ 의 misorder 가 곧 race window. <br>
+    **(2) `MSR SCR_EL3, ...` 직후 `ISB` 가 필수** — instruction barrier 없이는 outgoing transaction 의 NS attribute 가 새 값으로 보장되지 않습니다.
+
+---
+
+## 4. 일반화 — Boot stage 별 EL/NS 매트릭스 와 2 개의 검증 축
+
+### 4.1 Boot Stage 별 EL/NS 매트릭스
 
 ```
 +------------------------------------------------------------------+
@@ -83,7 +181,50 @@
 +-------+-----+------+---------------------------------------------+
 ```
 
-### BL1 → BL2 전환 상세
+### 4.2 두 개의 검증 축
+
+```
+   축 1. Verified Boot (Chain of Trust, 서명)
+   ──────────────────────────────────────────
+   BL1 ──verifies──► BL2 ──verifies──► BL31 / BL32 / BL33
+   (BootROM = mask-ROM, immutable trust root)
+
+   축 2. Architecture Enforcement (EL × NS)
+   ──────────────────────────────────────────
+   BL1 (EL3/S) → BL2 (S-EL1) → BL31 (EL3/S 상주) → BL32 (S-EL1) → BL33 (NS-EL1)
+   (각 단계의 EL/NS 가 권한 범위를 결정)
+
+   ┌────────────────────────────────────────────────┐
+   │  두 축은 _직교_ — 한 축만 있으면 결함:          │
+   │  - 서명만: 검증된 BL32 가 NS world 에 안 가둠   │
+   │     → S-EL1 코드의 의도치 않은 키 노출 가능     │
+   │  - EL/NS 만: 악성 BL32 가 S-EL1 에 그대로 진입  │
+   │     → Secure 자원 자유롭게 접근                  │
+   │  → 둘 다 있어야 완전                             │
+   └────────────────────────────────────────────────┘
+```
+
+이 두 축의 결합이 ARM 보안 부팅의 본질 — _"무엇을 실행하는가" (서명) × "어떤 권한으로" (EL/NS)_.
+
+### 4.3 Anti-Rollback 의 자리
+
+```
+       Verified Boot (서명)              Anti-Rollback (OTP counter)
+       ────────────────────              ─────────────────────────────
+       "누가 만든 image 인가?"            "충분히 최신 version 인가?"
+
+   서명 통과 + version 통과 → 부팅 OK
+   서명 통과 + version 미달 → 부팅 ABORT (rollback 차단)
+   서명 실패              → 부팅 ABORT (위변조 차단)
+
+   둘이 같이 있어야 _과거의 정상 서명된 취약 version_ 으로 다운그레이드 불가.
+```
+
+---
+
+## 5. 디테일 — BL1/2/31/33, Anti-Rollback, Measured Boot, DV 시나리오
+
+### 5.1 BL1 → BL2 전환 상세
 
 ```
 BL1 (BootROM, EL3):
@@ -106,7 +247,7 @@ BL1 (BootROM, EL3):
      BL2의 실행 EL과 보안 상태를 결정한다.
 ```
 
-### BL31 → BL33 전환 (핵심 보안 경계)
+### 5.2 BL31 → BL33 전환 (핵심 보안 경계)
 
 ```
 BL31 (Secure Monitor, EL3):
@@ -125,11 +266,9 @@ BL31 (Secure Monitor, EL3):
     → SMC로 EL3에 "요청"만 가능
 ```
 
----
+### 5.3 Anti-Rollback — 버전 다운그레이드 방어
 
-## Anti-Rollback — 버전 다운그레이드 방어
-
-### 롤백 공격이란?
+#### 롤백 공격이란?
 
 ```
 시나리오:
@@ -143,7 +282,7 @@ BL31 (Secure Monitor, EL3):
   → 서명 = "누가 만들었는가" 검증이지, "언제 만들었는가"는 아님
 ```
 
-### Monotonic Counter (Anti-Rollback Counter)
+#### Monotonic Counter (Anti-Rollback Counter)
 
 ```
 OTP (One-Time Programmable) 퓨즈에 단조 증가 카운터 저장:
@@ -172,11 +311,9 @@ OTP (One-Time Programmable) 퓨즈에 단조 증가 카운터 저장:
     → 공격자가 NS에서 OTP 카운터를 리셋하는 것은 물리적으로 불가능
 ```
 
----
+### 5.4 Measured Boot & Remote Attestation
 
-## Measured Boot & Remote Attestation
-
-### Secure Boot vs Measured Boot
+#### Secure Boot vs Measured Boot
 
 ```
 Secure Boot:
@@ -193,7 +330,7 @@ Measured Boot:
     Secure Boot로 기본 검증 + Measured Boot로 증명 기록
 ```
 
-### 측정 과정 (ARM PSA 관점)
+#### 측정 과정 (ARM PSA 관점)
 
 ```
 Boot Stage별 측정:
@@ -218,7 +355,7 @@ Boot Stage별 측정:
     → fTPM: Firmware TPM (TEE 내에서 SW로 구현)
 ```
 
-### Remote Attestation
+#### Remote Attestation
 
 ```
 서버가 디바이스의 무결성을 원격으로 검증:
@@ -249,9 +386,7 @@ Boot Stage별 측정:
     → Token 생성은 TEE 내부에서 수행
 ```
 
----
-
-## 보안 레벨과 공격 방어의 연결
+### 5.5 보안 레벨과 공격 방어의 연결
 
 | 공격 | 보안 레벨 방어 | 메커니즘 |
 |------|-------------|---------|
@@ -265,7 +400,7 @@ Boot Stage별 측정:
 | FW 롤백 | OTP Counter + EL3 | Monotonic Counter를 EL3에서 관리, 이전 버전 차단 |
 | 위장 디바이스 | Measured Boot + TEE | Remote Attestation으로 무결성 증명 |
 
-### 실제 공격 사례
+#### 실제 공격 사례
 
 ```
 (1) Nintendo Switch BootROM 취약점 (2018, "Fusée Gelée")
@@ -296,11 +431,9 @@ Boot Stage별 측정:
     → DV 시사점: 실행 시간 일정성 (timing-invariant) 검증
 ```
 
----
+### 5.6 DV 관점 — 보안 레벨 검증
 
-## DV 관점 — 보안 레벨 검증
-
-### 검증 시나리오 총괄
+#### 검증 시나리오 총괄
 
 | # | 시나리오 | 검증 포인트 | 유형 |
 |---|---------|-----------|------|
@@ -314,7 +447,7 @@ Boot Stage별 측정:
 | 8 | 전환 중간 상태 공격 | NS 전환 전 Secure 자원 접근 | Corner Case |
 | 9 | 동시 SMC 멀티코어 | 다수 코어가 동시 SMC 호출 | Corner Case |
 
-### 검증 방법론 상세 — Stimulus → Check → Coverage
+#### 검증 방법론 상세 — Stimulus → Check → Coverage
 
 ```
 시나리오 4: BL31 → BL33 NS 전환 (핵심 보안 경계)
@@ -370,7 +503,7 @@ Boot Stage별 측정:
     - cp_boot_result: {abort, success}
 ```
 
-### SVA Assertion 예시
+#### SVA Assertion 예시
 
 ```systemverilog
 // SCR_EL3.NS 전환 타이밍 검증
@@ -419,133 +552,45 @@ c_anti_rollback: cover property (p_anti_rollback);
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: Secure Boot와 TrustZone의 관계는?**
-> "상호 보완적이다. Secure Boot는 '무엇을 실행해도 되는가'를 서명으로 결정한다 — 악성 코드 실행을 방지. TrustZone은 '어떤 권한으로 실행하는가'를 보안 상태로 결정한다 — 실행 중인 코드가 접근할 수 있는 범위를 제한. 둘 다 필요하다: Secure Boot 없이 TrustZone만 있으면 악성 BL32가 Secure World에서 실행될 수 있고, TrustZone 없이 Secure Boot만 있으면 검증된 코드라도 OS 해킹 시 키가 노출된다."
+### 흔한 오해
 
-**Q: BL33이 Non-Secure에서 실행되는 이유는?**
-> "최소 권한 원칙이다. BL33(U-Boot)과 Linux는 Secure 자원(암호 키, OTP, TEE)에 직접 접근할 필요가 없다. 필요 시 SMC로 EL3에 요청하면 된다. Non-Secure에서 실행하면 (1) OS 해킹 시 Secure 자원이 보호되고, (2) DMA/디바이스의 Secure 영역 접근이 HW적으로 차단되며, (3) 공격 표면이 최소화된다."
+!!! danger "❓ 오해 1 — 'Secure Boot 와 TrustZone 은 별개'"
+    **실제**: Secure Boot 의 ROTPK (Root-Of-Trust Public Key) 가 TrustZone 의 root key derivation 의 source 입니다. Boot 단계의 실패 (e.g., BootROM 취약점) 는 곧 runtime TrustZone 의 무력화. 둘은 _같은 trust chain 의 다른 단계_.<br>
+    **왜 헷갈리는가**: 이름이 다르니 독립 기능이라는 직관.
 
-**Q: Anti-Rollback은 어떻게 보안 레벨과 연결되는가?**
-> "OTP Monotonic Counter에 최소 허용 FW 버전을 기록한다. 이 카운터는 OTP에 저장되므로 물리적으로 되돌릴 수 없고, TZPC에 의해 Secure Only이므로 NS에서 변경이 불가능하다. BootROM(EL3)이 이미지 버전과 OTP 카운터를 비교하여 이전 버전이면 부팅을 거부한다. Secure Boot(서명 검증)가 '누가 만들었는가'를 보장하고, Anti-Rollback(버전 검증)이 '최신인가'를 보장하여 상호 보완한다."
+!!! danger "❓ 오해 2 — '서명만 통과하면 안전'"
+    **실제**: 서명은 _누가 만든 image 인가_ 만 보장합니다. _언제 만들어진 (= 충분히 최신 인) image 인가_ 는 Anti-Rollback OTP counter 가 별도 검증. 둘 다 통과해야 안전.<br>
+    **왜 헷갈리는가**: "서명 = 신뢰" 라는 단순화.
 
-**Q: Measured Boot와 Secure Boot의 차이는?**
-> "역할이 다르다. Secure Boot는 Gate — 서명 검증 실패 시 실행을 차단한다. Measured Boot는 Observer — 각 단계의 해시를 측정하여 PCR에 누적 기록하고, 나중에 외부 서버가 이 값으로 무결성을 판단한다(Remote Attestation). Secure Boot는 로컬에서 즉시 판단하고, Measured Boot는 원격에서 사후 판단한다. 실무에서는 둘 다 적용: Secure Boot로 기본 검증 + Measured Boot로 증명 기록을 생성한다."
+!!! danger "❓ 오해 3 — 'BL31 이 종료되면 EL3 도 사라진다'"
+    **실제**: BL31 은 _상주_ 합니다. boot 가 완료된 후 (Linux 가 NS-EL1 에서 돌아가는 동안) 도 BL31 은 EL3 메모리에 살아 있고, SMC 가 발생할 때마다 깨어납니다. _런타임 SMC handler_ 가 본업.<br>
+    **왜 헷갈리는가**: BL1/BL2 처럼 stage-bootloader 라는 이름 패턴 때문에.
 
-**Q: DV에서 보안 레벨 전환을 어떻게 검증하는가?**
-> "Positive와 Negative 테스트를 모두 수행한다. Positive: BL1→BL2(S-EL1) 전환 시 SPSR_EL3, SCR_EL3 설정이 올바른지 확인. BL31→BL33 전환 시 SCR_EL3.NS=1 설정 확인. Negative: NS 전환 후 Secure 메모리/디바이스 접근 시 버스 에러 발생 확인. SVA로 '보안 초기화 완료 전 NS 전환 금지', 'NS 상태에서 Secure 접근 차단' 같은 프로토콜 규칙을 상시 모니터링한다. Corner case로 멀티코어 동시 SMC, 전환 중간 인터럽트 등을 검증한다."
+!!! danger "❓ 오해 4 — 'BL33 가 부팅되면 더 이상 secure 자원 접근 시도 안 함'"
+    **실제**: BL33 / Linux / Linux user app 모두 secure 자원에 access 시도할 수 있습니다 (의도적 시험, 취약점 exploit). DV 의 **negative test** 는 정확히 이 시나리오 — _NS 에서 secure 자원 접근 시 차단되는가_ 를 검증.<br>
+    **왜 헷갈리는가**: "정상 코드는 시도 안 함" 이라는 가정.
 
----
+!!! danger "❓ 오해 5 — 'OTP fuse 영역은 자동으로 secure'"
+    **실제**: OTP 도 SoC 의 한 peripheral 이며, _TZPC slave 분류_ 에서 Secure-only 로 명시해야 안전. mirror register (OTP 의 shadow copy) 도 별도 region 으로 잠가야 합니다. 누락 시 NS world 에서 fuse 값 (root key 포함) 을 read 가능.<br>
+    **왜 헷갈리는가**: "OTP = 보안 fuse = 자동 보호" 라는 인상.
 
-## 확인 문제
+### DV 디버그 체크리스트 (Boot 검증에서 자주 보는 실패)
 
-**문제 1: Anti-Rollback 시나리오 분석**
-> OTP Counter 값이 5인 디바이스에 대해, 다음 각 경우의 부팅 결과와 OTP 상태 변화를 설명하라.
-> - (A) version=4 이미지로 부팅 시도
-> - (B) version=5 이미지로 부팅 시도
-> - (C) version=7 이미지로 부팅 시도 후 성공, 다시 version=5로 부팅 시도
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-Anti-Rollback 규칙: image_version < otp_counter → 거부, >= → 허용, > → 카운터 업데이트
-
-**(A) version=4, OTP=5:**
-- 4 < 5 → **부팅 거부** (BOOT_ABORT)
-- OTP 변경 없음 (여전히 5)
-- 이유: 취약한 이전 버전 실행 방지
-
-**(B) version=5, OTP=5:**
-- 5 == 5 → 서명 검증 진행 → 서명 유효하면 **부팅 성공**
-- OTP 변경 없음 (동일 버전이므로 카운터 증가 불필요)
-
-**(C) version=7, OTP=5 → 성공 후 version=5 재시도:**
-- 7 > 5 → 부팅 성공, OTP 카운터 5 → 7로 업데이트
-- 이후 version=5로 부팅 시도: 5 < 7 → **부팅 거부**
-- 핵심: 한번 올라간 OTP 카운터는 되돌릴 수 없음 (OTP = One-Time Programmable)
-
-**DV 검증 포인트:**
-- 경계값 테스트: version == counter (정확히 같은 경우)
-- OTP 업데이트 시 정확한 값 기록 확인
-- 업데이트 중 전원 차단 → OTP 상태 일관성 (power-fail safety)
-</details>
-
-**문제 2: Secure Boot + TrustZone 결합 시나리오**
-> 다음 두 공격 시나리오 각각에서, Secure Boot만 있고 TrustZone이 없는 경우와, TrustZone만 있고 Secure Boot가 없는 경우의 결과를 비교하라.
-> - (A) 공격자가 서명되지 않은 악성 BL32(TEE) 이미지를 플래시에 기록
-> - (B) 정상 부팅 후, Linux 커널 취약점을 통해 Secure DRAM의 암호 키를 탈취 시도
-
-<details>
-<summary>풀이 과정</summary>
-
-**(A) 악성 BL32 이미지:**
-
-| 방어 | 결과 |
-|------|------|
-| Secure Boot만 | 서명 검증 실패 → 실행 차단 (**방어 성공**) |
-| TrustZone만 | 서명 검증 없음 → 악성 BL32가 S-EL1에서 실행! → Secure World 내부에서 동작하므로 **모든 Secure 자원 접근 가능** (**방어 실패**) |
-| 둘 다 | 서명 실패로 실행 차단 (**방어 성공**) |
-
-**(B) Linux 해킹 후 Secure DRAM 접근:**
-
-| 방어 | 결과 |
-|------|------|
-| Secure Boot만 | 부팅 시 검증은 통과 (정상 이미지), 런타임에 커널 해킹 → Secure DRAM 직접 접근 가능 (격리 없음) (**방어 실패**) |
-| TrustZone만 | NS에서 Secure DRAM 접근 → TZASC 차단 → 버스 에러 (**방어 성공**) |
-| 둘 다 | TZASC 차단 (**방어 성공**) |
-
-**핵심 결론:**
-- Secure Boot = 부팅 시점 보호 (무엇을 실행하는가)
-- TrustZone = 런타임 보호 (실행 중 접근 권한)
-- 둘 다 있어야 완전한 보안: 부팅 시 + 런타임 모두 방어
-</details>
-
-**문제 3: DV 검증 설계 — SVA 작성**
-> "NS 전환(SCR_EL3.NS rising) 후 10 사이클 이내에 NS Master가 Secure DRAM에 접근하면, 반드시 버스 에러가 발생해야 한다"는 요구사항에 대한 SVA assertion을 작성하라.
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-1. 트리거: SCR_EL3.NS가 0→1로 전환 ($rose)
-2. 조건: 이후 NS Master가 Secure 주소에 접근
-3. 체크: 접근이 있으면 에러 응답이 나와야 함
-4. 시간 범위: NS 전환 후 전체 기간 (10 사이클만이 아니라 영구적)
-
-**주의:** 문제의 "10 사이클 이내"는 트리거가 아니라 응답 지연을 의미할 수 있음. 두 가지 해석 모두 작성:
-
-```systemverilog
-// 해석 1: NS 전환 후 Secure 접근이 발생하면 반드시 에러
-property p_ns_secure_access_always_blocked;
-  @(posedge clk) disable iff (!rst_n)
-  (scr_el3_ns && bus_req_valid && !bus_req_ns &&
-   is_secure_region(bus_req_addr))
-  |-> ##[1:10] bus_resp_error;
-endproperty
-
-// 해석 2: NS 전환 직후 10사이클 window에서 특히 검증
-//          (전환 직후 race condition 검출 목적)
-property p_ns_switch_immediate_protection;
-  @(posedge clk) disable iff (!rst_n)
-  $rose(scr_el3_ns) |->
-    ##[1:10] (!bus_req_valid || !is_secure_region(bus_req_addr)
-              || bus_resp_error)[*1:$];
-endproperty
-
-// Cover: 실제로 이 시나리오가 시뮬레이션에서 발생하는지
-c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
-```
-
-**핵심 포인트:**
-- `is_secure_region()` 함수가 TZASC 설정을 반영해야 함
-- `bus_req_ns` 신호로 Master의 NS 상태 확인
-- 응답 지연(##[1:10])은 버스 파이프라인 딜레이 고려
-- Cover property로 assertion이 vacuously true가 아닌지 확인
-</details>
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| BL31→BL33 직후 NS world 가 secure DRAM read 성공 | TZASC lock-down 이 ERET 직전에 미완료 | BL31 의 lockdown sequence 와 ERET 의 cycle-level 순서 |
+| 부팅은 성공하는데 SMC 가 안 됨 | SCR_EL3.SMD 가 잘못 set (SMC disable) | SCR_EL3 dump |
+| version=v1 정상 부팅, v3 후 다시 v1 도 부팅 됨 | OTP counter update 누락 (퓨즈 blow 안 함) | OTP write 코드 + 실제 fuse register dump |
+| OTP fuse 의 root key 가 NS 에서 read 됨 | mirror register secure 분류 누락 | TZPC slave 표 + mirror address range |
+| BL2 서명 실패해도 BL3 가 진행됨 | BL2 의 verify 결과 처리 (`if (!verify) abort`) 누락 | BL2 verify 코드 |
+| ERET 후 EL 이 잘못됨 (EL3 그대로) | SPSR_EL3.M 잘못 (EL3h 로 set) | SPSR.M 디코드 + 의도된 target EL |
+| Measured Boot PCR 이 매번 다름 | non-deterministic 데이터가 hash 입력에 포함 (e.g., 시간) | hash 입력 영역 + image header 의 measured area |
+| Recovery / EDL 모드 진입 시 Secure Boot 우회 | 복구 모드의 별도 trust chain 미구현 | recovery entry point 의 verify 코드 |
 
 ---
+
 !!! warning "실무 주의점 — ROM/HSM 키 fuse 가 NS world 에서 read 가능"
     **현상**: NS world 에서 OTP/eFuse mirror 레지스터를 읽었더니 root key 또는 HUK 가 그대로 노출된다.
 
@@ -553,18 +598,26 @@ c_ns_access_blocked: cover property (p_ns_secure_access_always_blocked);
 
     **점검 포인트**: BL1/BL2 가 키 fuse 영역을 secure-only 로 잠그는지, 그리고 NS world 에서 해당 주소 read 시 BusError/zero 반환되는지 boot 직후 부정 시나리오로 검증.
 
-## 핵심 정리
+## 7. 핵심 정리 (Key Takeaways)
 
-- **두 메커니즘의 결합**: Verified Boot = "무엇을 실행하는가" (서명 검증), Architecture = "어떤 권한으로" (EL + TrustZone).
-- **Boot ↔ EL 매핑**: BootROM (EL3 Secure) → BL1/BL2 (EL3 Secure) → BL31 (EL3 Secure Monitor 영구 거주) → BL33 (EL2 hypervisor 또는 EL1 non-secure kernel).
-- **보안 인프라 활성화 시점**: BL1/BL2가 TZASC/TZPC/GIC 설정. BL31 도달 시점에는 secure infra 완료.
-- **EL3 = 영구 secure monitor**: BL31이 boot 완료 후에도 EL3에 영구 거주, world switch 처리.
-- **공격 표면 축소**: Verified Boot 없으면 EL3에 공격 코드 실행 가능 (모든 보안 무용). Architecture만 있으면 권한 정확하지만 image 위변조.
+- **두 메커니즘의 결합**: Verified Boot = "무엇을 실행하는가" (서명 검증), Architecture Enforcement = "어떤 권한으로" (EL + TrustZone). 둘 다 있어야 완전.
+- **Boot ↔ EL 매핑**: BL1 (EL3/S, BootROM) → BL2 (S-EL1/S) → BL31 (EL3/S, _상주_) → BL32 (S-EL1/S) → BL33 (NS-EL1 또는 EL2/NS). 핵심 전환점은 BL31→BL33 의 NS=1 set.
+- **보안 인프라 활성화 시점**: BL1/BL2 가 TZASC/TZPC/GIC/SMMU 설정. BL31 도달 시점에는 secure infra 가 모두 lock-down. ERET 직전에 lock-down 완료가 critical invariant.
+- **EL3 = 영구 secure monitor**: BL31 이 boot 완료 후에도 EL3 에 영구 거주, runtime 의 SMC handler / world switch 처리.
+- **Anti-Rollback + Measured Boot**: Verified Boot 만으로는 _과거의 정상 서명 취약 version_ 을 막을 수 없음 → OTP counter (롤백 차단) + PCR (원격 증명) 으로 보강.
 
-## 다음 단계
+!!! warning "실무 주의점"
+    - BL31 의 lock-down 시퀀스 (TZPC → TZASC → GIC → SMMU 순서) 는 _ERET 직전에 모두 완료_ 돼야 합니다. SVA 로 `$rose(scr_el3_ns) |-> all_init_done` 강제.
+    - OTP fuse 의 _mirror register_ 도 secure-only 로 잠가야 합니다 — 사내 실무 주의점 참조.
+    - 복구 / EDL / JTAG 같은 _alternate boot path_ 도 동일한 trust chain 에 포함돼야 — 정상 path 만 검증하는 건 미완.
 
-- 📝 [**Module 03 퀴즈**](quiz/03_secure_boot_connection_quiz.md)
-- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
+---
+
+## 다음 모듈
+
+→ [Module 04 — Quick Reference Card](04_quick_reference_card.md): 지금까지의 모든 모듈을 면접/디버그용 1 페이지 치트시트로 정리. EL × NS 매트릭스, world switch, 5 축 인프라, boot stage, anti-rollback 의 빠른 참조.
+
+[퀴즈 풀어보기 →](quiz/03_secure_boot_connection_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02a_secure_enclave_and_tee_hierarchy/">

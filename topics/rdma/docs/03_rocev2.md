@@ -15,17 +15,13 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#1-rocev1-vs-rocev2-한-장-비교">1. RoCEv1 vs RoCEv2 한 장 비교</a>
-  <a class="page-toc-link" href="#2-rocev2-패킷-구조">2. RoCEv2 패킷 구조</a>
-  <a class="page-toc-link" href="#3-icrc-rocev2-의-미묘한-차이">3. ICRC — RoCEv2 의 미묘한 차이</a>
-  <a class="page-toc-link" href="#4-ib-rocev2-헤더-매핑-표">4. IB ↔ RoCEv2 헤더 매핑 표</a>
-  <a class="page-toc-link" href="#5-rocev2-에서-ib-의-어떤-부분이-사라지는가">5. RoCEv2 에서 IB 의 어떤 부분이 사라지는가</a>
-  <a class="page-toc-link" href="#6-rocev2-의-신뢰성-lossless-ethernet-가정">6. RoCEv2 의 신뢰성 — Lossless Ethernet 가정</a>
-  <a class="page-toc-link" href="#7-rdma-tb-에서-rocev2-검증-시-자주-보는-항목">7. RDMA-TB 에서 RoCEv2 검증 시 자주 보는 항목</a>
-  <a class="page-toc-link" href="#핵심-정리-key-takeaways">핵심 정리 (Key Takeaways)</a>
-  <a class="page-toc-link" href="#다음-모듈">다음 모듈</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-rocev2-패킷-한-개를-끝까지-따라가기">3. 작은 예 — 패킷 따라가기</a>
+  <a class="page-toc-link" href="#4-일반화-매핑-applicable-vs-not-applicable">4. 일반화 — 매핑 + APPLICABLE 영역</a>
+  <a class="page-toc-link" href="#5-디테일-패킷-구조-icrc-신뢰성-confluence-보강">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
@@ -34,43 +30,172 @@
 
     - **Diagram** RoCEv1 / RoCEv2 의 패킷 구조 차이를 그릴 수 있다.
     - **Map** IB 의 LRH/GRH 가 RoCEv2 의 Ethernet/IP 헤더로 어떻게 매핑되는지 표로 정리한다.
-    - **Identify** IB 만 적용되는 영역과 RoCEv2 에 그대로 적용되는 영역을 구분한다.
+    - **Trace** RoCEv2 패킷 한 개가 sender → switch → receiver 로 갈 때 어떤 필드가 변경/보존되는지 추적할 수 있다.
+    - **Identify** IB 만 적용되는 영역과 RoCEv2 에 그대로 적용되는 영역 (NOT-APPLICABLE / APPLICABLE / MODIFIED) 을 구분한다.
     - **Compute** RoCEv2 의 ICRC 가 IB 와 어떻게 다르게 계산되는지 (IP/UDP placeholder 사용) 설명한다.
 
 !!! info "사전 지식"
     - Module 02 (IB 패킷 헤더와 ICRC/VCRC)
     - Ethernet / IPv4(or IPv6) / UDP 헤더
 
-## 왜 이 모듈이 중요한가
+---
 
-**오늘날 거의 모든 데이터센터 RDMA 트래픽은 RoCEv2** 입니다. RDMA-TB 의 대부분 시나리오도 RoCEv2 가정. IB Spec 의 1079 must-rule 중 ROCEV2_RULE_APPLICABILITY.md 가 분류한 비율을 보면:
+## 1. Why care? — 이 모듈이 왜 필요한가
+
+오늘날 거의 모든 데이터센터 RDMA 트래픽은 **RoCEv2** 입니다. RDMA-TB 의 대부분 시나리오도 RoCEv2 가정. IB Spec 의 1079 must-rule 중 ROCEV2_RULE_APPLICABILITY.md 가 분류한 비율을 보면:
 
 - **Link Layer (R-011 ~ R-085)**: 거의 전부 NOT-APPLICABLE
 - **Network Layer GRH (R-086 ~ R-103)**: 대부분 MODIFIED (IP header 로 매핑)
-- **Transport Layer (BTH, xTH)**: **거의 전부 APPLICABLE** ← 이게 RoCEv2 의 핵심
-- **CM / SMP / SA**: 전부 NOT-APPLICABLE (RoCEv2 는 RDMA-CM over IP 사용)
+- **Transport Layer (BTH, xTH)**: **거의 전부 APPLICABLE** ← RoCEv2 의 본진
+- **CM / SMP / SA**: 전부 NOT-APPLICABLE (RDMA-CM over IP 로 대체)
 
-→ **RoCEv2 검증의 무게중심은 BTH 와 그 이후 (transport) 에 있다.**
-
-!!! tip "💡 이해를 위한 비유"
-    **RoCEv2** ≈ **IB transport 가 Ethernet 봉투에 들어간 것**
-
-    "택배 회사 (IB) 의 송장 시스템 (BTH) 은 그대로 두고, 운송수단만 회사 전용 트럭(IB link) 에서 일반 도로 + 우체국(Ethernet/IP/UDP) 으로 바꾼 것" 이라고 보면 됩니다. 송장 (PSN, ACK, opcode) 의 의미는 그대로, 단지 봉투(L1-L2-L3-L4 wrapper) 만 일반화.
-
-## 핵심 개념
-
-**RoCEv2 = Ethernet (L2) | IPv4 or IPv6 (L3) | UDP dest port 4791 (L4) | BTH | xTH | Payload | ICRC. IB 의 transport 위 (BTH 이후) 는 그대로, 아래 (LRH/GRH) 만 표준 IP/UDP 로 대체. Ethernet FCS 가 IB VCRC 를, ICRC 는 보존되되 계산 시 IP/UDP 영역을 mock 값으로 채워 계산한다.**
-
-!!! danger "❓ 흔한 오해"
-    **오해**: "RoCEv2 는 그냥 IP UDP 위에 RDMA 를 올린 것뿐, 보안과 관리는 표준 IP 인프라가 처리".
-
-    **실제**: RoCEv2 자체는 "RDMA over UDP" 로 트래픽이 표준 IP 라우팅을 따라가지만, **Connection Management 는 별도 (RDMA-CM over TCP)** 이고, **partition / P_Key 는 spec 상 BTH 에 남아있되 실제 enforcement 는 구현마다 다름**. 또한 RoCEv2 자체에는 인증/암호화가 없어 IPSec/MACsec 같은 별도 보안이 필요.
-
-    **왜 헷갈리는가**: "표준 IP 인프라를 쓴다" 가 "표준 IP 보안도 자동으로 적용된다" 처럼 들리기 때문.
+→ **RoCEv2 검증의 무게중심은 BTH 와 그 이후 (transport) 에 있다.** 이 모듈은 "어떤 IB 규칙이 살아남고 어떤 게 사라지는가" 의 경계선을 명확히 잡는 것이 목표입니다.
 
 ---
 
-## 1. RoCEv1 vs RoCEv2 한 장 비교
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유 — RoCEv2 ≈ IB transport 가 Ethernet 봉투에 들어간 것"
+    IB 의 송장 시스템 (BTH/xTH/PSN/ACK/opcode/QP) 은 그대로 두고, **운송수단만** 회사 전용 트럭(IB link) 에서 일반 도로 + 우체국 (Ethernet/IP/UDP) 으로 바꾼 것. 송장의 의미는 그대로, 단지 봉투(L1-L4 wrapper) 만 일반화.
+
+### 한 장 그림 — IB vs RoCEv2 패킷 구조
+
+```
+                IB 패킷                      RoCEv2 패킷
+              ──────────────────         ─────────────────────────────────
+              ┌─────┐                    ┌─────────┐
+              │ LRH │ ← link 라우팅     │ Eth Hdr │ ← link 라우팅 (MAC)
+              ├─────┤                    ├─────────┤
+              │ GRH?│ ← global 라우팅   │ IP  Hdr │ ← global 라우팅
+              ├─────┤                    ├─────────┤
+              │     │                    │ UDP Hdr │ ← dest port = 4791
+              │ BTH │  ▶▶ 그.대.로 ▶▶   ├─────────┤
+              ├─────┤                    │  BTH    │  ◀── 동일
+              │ xTH │  ▶▶ 그.대.로 ▶▶   ├─────────┤
+              ├─────┤                    │  xTH    │  ◀── 동일
+              │Pyld │                    ├─────────┤
+              ├─────┤                    │ Payload │  ◀── 동일
+              │ICRC │  ▶▶ 거의 동일 ▶▶  ├─────────┤
+              ├─────┤                    │  ICRC   │  ◀── 거의 동일 (mask 차이)
+              │VCRC │ ← hop FCS         ├─────────┤
+              └─────┘                    │  Eth FCS│ ← hop FCS
+                                         └─────────┘
+```
+
+### 왜 이렇게 설계했는가 — Design rationale
+
+데이터센터는 이미 **수십 년의 Ethernet/IP 인프라** (스위치, 라우터, ACL, 모니터링) 를 가지고 있습니다. RDMA 가 그 인프라를 그대로 쓰지 못하면 도입 비용이 너무 큽니다. 그래서 IBTA 가 선택한 설계는: "**transport (BTH 부터) 는 IB 그대로 두고, 그 아래만 표준화한다**". 이 결정 덕분에:
+
+- HCA 칩은 IB 와 RoCEv2 를 같은 transport block 으로 처리 가능 (개발 비용↓)
+- Switch/router 는 RDMA 모르고도 작동 (인프라 재사용↑)
+- 단점: lossless Ethernet 가정 필요 → PFC/ECN/DCQCN 같은 별도 메커니즘이 등장
+
+이 trade-off 가 §6 의 흔한 오해와 §5 의 lossless 논의에서 다시 나옵니다.
+
+---
+
+## 3. 작은 예 — RoCEv2 패킷 한 개를 끝까지 따라가기
+
+노드 A (IP=10.1.0.5, MAC=...:01) 가 노드 B (IP=10.2.0.7, MAC=...:02) 에게 같은 데이터센터 내 1 KB RDMA WRITE. 중간에 L3 router 1대.
+
+```
+   sender HCA_A                router (L3)              receiver HCA_B
+   ─────────────            ─────────────             ─────────────
+   Eth.DST_MAC = R1                MAC rewrite                Eth.DST_MAC = HCA_B
+   Eth.SRC_MAC = HCA_A             ────────▶                  Eth.SRC_MAC = R1
+   Eth.Type    = 0x0800 (IPv4)
+   ────
+   IP.SRC      = 10.1.0.5          그대로                     10.1.0.5
+   IP.DST      = 10.2.0.7          그대로                     10.2.0.7
+   IP.Proto    = 17 (UDP)          그대로                     17
+   IP.TTL      = 64                63 (감소)                  63
+   IP.DSCP/ECN = (TC1)             ECN may be marked          (TC1, ECN-CE 가능)
+   IP.Checksum = 재계산
+   ────
+   UDP.SrcPort = 49152 (hash, ECMP) 그대로                    49152
+   UDP.DstPort = 4791 (RoCEv2)     그대로                     4791
+   UDP.Len     = ...               그대로
+   UDP.Checksum= 0 또는 valid       (변경 안 됨)
+   ────
+   BTH.OpCode  = 0x0A (RC WRITE_ONLY) ▶▶▶ 그대로 ▶▶▶          0x0A
+   BTH.PSN     = N                 ▶▶▶ 그대로 ▶▶▶            N
+   BTH.DestQP  = 0x000123          ▶▶▶ 그대로 ▶▶▶            0x000123
+   ────
+   RETH.VirtAddr = remote_va       ▶▶▶ 그대로 ▶▶▶            remote_va
+   RETH.RKey     = remote_rkey     ▶▶▶ 그대로 ▶▶▶            remote_rkey
+   RETH.DMALen   = 1024            ▶▶▶ 그대로 ▶▶▶            1024
+   ────
+   Payload (1024 B)                ▶▶▶ 그대로 ▶▶▶            ✓
+   ICRC                            ▶▶▶ 그대로 ▶▶▶            ✓ (placeholder + IP/UDP mask 로 검증)
+   Eth FCS                         재계산                     ✓
+```
+
+### 단계별 의미
+
+| Step | 누가 | 무엇을 | 왜 |
+|---|---|---|---|
+| ① | Sender HCA_A | UDP.DstPort = 4791 로 송신 | RoCEv2 표지 (IANA 공식 등록 포트) |
+| ② | Sender | UDP.SrcPort = hash(QP/PSN…) | switch ECMP 분산을 위한 entropy |
+| ③ | Sender | ICRC 계산 — placeholder(8B 0xFF) + IP/UDP의 mutable mask + BTH 이후 그대로 | hop 마다 변하는 영역 빼야 end-to-end 보존 |
+| ④ | Sender | Eth FCS 계산 | 첫 link 의 hop-by-hop 무결성 |
+| ⑤ | **Router** | DST_MAC 으로 forwarding port 결정 후 L2 rewrite | L3 hop |
+| ⑥ | Router | IP.TTL -= 1, IP.Checksum 재계산 | IP 표준 |
+| ⑦ | Router | (혼잡 시) IP.ECN-CE 마킹 가능 | DCQCN 메커니즘 |
+| ⑧ | Router | BTH 이후 손대지 않음 | transport 영역, 라우터의 관할이 아님 |
+| ⑨ | Router | Eth FCS 재계산 | hop-by-hop 무결성 |
+| ⑩ | Receiver HCA_B | UDP.DstPort = 4791 인지 확인 → RDMA path 로 분기 | non-RDMA 트래픽 분리 |
+| ⑪ | Receiver | ICRC 검증 — 같은 mask 규칙으로 재계산 | TTL/ECN 변경에도 통과해야 함 |
+| ⑫ | Receiver | BTH.DestQP=0x123, RETH 의 (rkey, va) 로 메모리 주소 결정, payload DMA write | RDMA WRITE 의 본 작업 |
+| ⑬ | Receiver | (BTH.AckReq=1) BTH.OpCode = RC ACK 패킷 송신 | reliability |
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) 라우터/스위치는 BTH 이후를 절대 못 건드림** — IB 의 ICRC 가 보존하는 영역 = RoCEv2 의 ICRC 가 보존하는 영역. 이게 transport-level 무결성의 핵심.<br>
+    **(2) ICRC 의 "mask" 가 IB 와 다른 점** — IB 는 LRH 의 SLID/DLID 만 빼면 됐지만, RoCEv2 는 IP TTL/ECN/Checksum 과 UDP Checksum 도 추가로 mask. mask 누락 = ICRC false-fail.
+
+---
+
+## 4. 일반화 — 매핑 + APPLICABLE vs NOT-APPLICABLE
+
+### 4.1 IB 컴포넌트 → RoCEv2 의 운명
+
+```
+   IB 컴포넌트                        RoCEv2
+   ────────────────────────         ──────────────────────
+   LRH                              ✗ NOT-APPLICABLE  (Eth header 가 대체)
+   VCRC                             ✗ NOT-APPLICABLE  (Eth FCS 가 대체)
+   GRH                              ↻ MODIFIED        (IP header 로 변형)
+   BTH                              ✓ APPLICABLE
+   xTH (RETH/DETH/AETH/...)         ✓ APPLICABLE
+   Payload                          ✓ APPLICABLE
+   ICRC                             ↻ MODIFIED        (mask 규칙 차이)
+   VL / SL                          ↻ MODIFIED        (PFC priority + DSCP)
+   IB Flow Control (FCTBS/FCCL)     ✗ NOT-APPLICABLE  (PFC + ECN)
+   IB Link State Machine            ✗ NOT-APPLICABLE  (Ethernet PHY)
+   SM / SMA / SA                    ✗ NOT-APPLICABLE  (Subnet Manager 없음)
+   CM (over MAD)                    ↻ MODIFIED        (RDMA-CM over IP/TCP)
+   Verbs API                        ✓ APPLICABLE      (그대로)
+   QP State Machine                 ✓ APPLICABLE
+   PSN/ACK/NAK/Retry                ✓ APPLICABLE
+   MR / PD / R_Key / L_Key          ✓ APPLICABLE
+```
+
+### 4.2 ICRC 계산의 일반화
+
+ICRC 의 핵심 아이디어는 한 문장: **"hop 마다 변하는 부분은 빼고 계산"**.
+
+| Spec | "변하는 부분" | ICRC 입력 처리 |
+|------|-------------|---------------|
+| IB | LRH 의 SLID/DLID, GRH 의 HopLmt | 해당 영역만 제외 |
+| RoCEv2 (IPv4) | IP의 TTL, DSCP/ECN, Checksum + UDP Checksum + (placeholder for missing LRH) | mutable 영역을 모두 0xFF mask + 8B placeholder |
+| RoCEv2 (IPv6) | HopLimit, Traffic Class, Flow Label + UDP Checksum + placeholder | 동일하게 mask + placeholder |
+
+이 mask 규칙은 implementation 마다 흔한 버그 소스 — §6 디버그 체크리스트의 첫 항목.
+
+---
+
+## 5. 디테일 — 패킷 구조, ICRC, 신뢰성, Confluence 보강
+
+### 5.1 RoCEv1 vs RoCEv2 한 장 비교
 
 ```
               ┌──────────────────────────┬──────────────────────────────────────┐
@@ -94,9 +219,7 @@
 
 → **RoCEv1 은 사실상 사장**. 데이터센터의 모든 RDMA 는 RoCEv2.
 
----
-
-## 2. RoCEv2 패킷 구조
+### 5.2 RoCEv2 패킷 구조 상세
 
 ```
  0                                                          MTU
@@ -121,13 +244,7 @@
 !!! quote "Spec 인용"
     "RoCEv2 packets shall use UDP destination port 4791 (assigned by IANA)." — IBTA *Annex A17*, §A17.5
 
----
-
-## 3. ICRC — RoCEv2 의 미묘한 차이
-
-ICRC 의 핵심 아이디어는 **"hop 마다 변하는 부분은 빼고 계산"** 입니다. IB 에서는 LRH 의 SLID/DLID 만 빼면 됐지만, RoCEv2 에서는 IP/UDP 도 hop 마다 변합니다 (TTL 감소, ECN 마킹, MAC rewrite).
-
-→ **해결**: ICRC 계산 시 IP/UDP 의 변경 가능 영역을 **mask (전부 1)** 로 채워 계산.
+### 5.3 ICRC 계산 — RoCEv2 의 미묘한 차이
 
 ```
  ICRC 계산 입력:
@@ -156,9 +273,7 @@ ICRC 의 핵심 아이디어는 **"hop 마다 변하는 부분은 빼고 계산"
 
 → **RDMA-TB 검증 관점**: ICRC 검증 모듈이 packet 캡처 시 마스크 처리를 정확히 해야 함. 실제 RDMA-TB 에 `vrdma_cqe_validation_checker` 등 ICRC 검증 path 가 들어있음.
 
----
-
-## 4. IB ↔ RoCEv2 헤더 매핑 표
+### 5.4 IB ↔ RoCEv2 헤더 매핑 표
 
 | IB 필드 | RoCEv2 대응 | 비고 |
 |---------|-------------|------|
@@ -182,11 +297,9 @@ ICRC 의 핵심 아이디어는 **"hop 마다 변하는 부분은 빼고 계산"
 
 (이 표는 ROCEV2_RULE_APPLICABILITY.md 의 매핑을 확장한 것)
 
----
+### 5.5 사라지는 것 / 그대로 / 변형되는 것
 
-## 5. RoCEv2 에서 IB 의 어떤 부분이 사라지는가
-
-### 사라지는 것 (NOT-APPLICABLE)
+#### 사라지는 것 (NOT-APPLICABLE)
 
 | IB 컴포넌트 | RoCEv2 에 없는 이유 |
 |------------|--------------------|
@@ -201,7 +314,7 @@ ICRC 의 핵심 아이디어는 **"hop 마다 변하는 부분은 빼고 계산"
 | IB Switch / Router forwarding rule | 표준 L2/L3 device 사용 |
 | CM (over MAD) | RDMA-CM over IP (TCP) 가 대체 |
 
-### 그대로 남는 것 (APPLICABLE)
+#### 그대로 남는 것 (APPLICABLE)
 
 - **BTH** 모든 필드 (OpCode, P_Key, DestQP, PSN, …)
 - **xTH 들 전부**
@@ -213,19 +326,15 @@ ICRC 의 핵심 아이디어는 **"hop 마다 변하는 부분은 빼고 계산"
 - **ICRC** (계산법만 다름)
 - **Verbs API**
 
-### 변형되는 것 (MODIFIED)
+#### 변형되는 것 (MODIFIED)
 
 - GID → IPv6 address (또는 IPv4-mapped IPv6)
 - Multicast: IB MGID → IP multicast group
 - P_Key: BTH 에 남아있지만 enforcement 는 implementation-defined
 
----
+### 5.6 신뢰성 — Lossless Ethernet 가정
 
-## 6. RoCEv2 의 신뢰성 — Lossless Ethernet 가정
-
-RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합니다 (PSN/retry 메커니즘이 있으므로). **하지만 실무에서는 retry 가 시작되면 throughput 이 급격히 떨어지므로** "packet drop 이 거의 없는 lossless Ethernet" 을 가정하는 deployment 가 일반적.
-
-이를 위한 메커니즘:
+RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용** 합니다 (PSN/retry 메커니즘이 있으므로). **하지만 실무에서는 retry 가 시작되면 throughput 이 급격히 떨어지므로** "packet drop 이 거의 없는 lossless Ethernet" 을 가정하는 deployment 가 일반적.
 
 | 메커니즘 | 역할 |
 |---------|------|
@@ -239,11 +348,7 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
 !!! warning "PFC dead-lock"
     PFC 는 lossless 를 만들지만, cyclic 한 의존이 생기면 dead-lock 의 위험이 있습니다 (PFC storm). 검증/운영의 핵심 risk.
 
----
-
-## 7. RDMA-TB 에서 RoCEv2 검증 시 자주 보는 항목
-
-검증 환경 관점:
+### 5.7 RDMA-TB 에서 RoCEv2 검증 시 자주 보는 항목
 
 | 검증 영역 | 핵심 체크 | RDMA-TB 에서의 위치 (개념) |
 |-----------|----------|---------------------------|
@@ -256,9 +361,7 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
 | ECN/PFC 동작 | 임의 패킷 마킹 후 sender rate 변화 관찰 | network env error injector |
 | QP state transition | bring-up 시 Reset→...→RTS 시퀀스 | RAL + sequence library |
 
----
-
-## 8. Confluence 보강 — IB Spec v1.7 vs v1.4 변경의 RoCEv2 영향
+### 5.8 Confluence 보강 — IB Spec v1.7 vs v1.4 변경의 RoCEv2 영향
 
 !!! note "Internal (Confluence: Infiniband Spec Comparison v1.7 w v1.4, id=77758684)"
     - **MPE / Atomic Write / FLUSH** 가 v1.7 에서 새로 추가 (Annex A19/A20). RoCEv2 에서도 사용 가능.
@@ -266,7 +369,7 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
     - **PSN sequence error** 의 invalid-PSN 정의가 더 명확해져 v1.4 기반 테스트 (특히 "wraparound 미처리") 가 v1.7 기준에서는 false positive 가 됨.
     - **MTU** 옵션 (256/512/1024/2048/4096) 자체는 동일하지만, v1.7 은 **path MTU 협상** 시맨틱을 더 명시. 사내 IP 는 정적 MTU=1024.
 
-## 9. Confluence 보강 — RDMA-CM (Communication Manager)
+### 5.9 Confluence 보강 — RDMA-CM (Communication Manager)
 
 !!! note "Internal (Confluence: RDMA CM (Communication manager), id=113934352)"
     RoCEv2 환경에서 QP 가 RTR/RTS 까지 진입하려면 양 단의 dest_qp_num, sq_psn, rq_psn, rkey 같은 metadata 가 사전에 교환돼야 한다. 표준 사용은 **RDMA-CM** (RFC 5040 의 변형이 아니라 IBTA 의 CM MAD 를 RoCEv2 에서는 TCP/IP 위로 옮긴 것):
@@ -276,14 +379,54 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
     3. `rdma_connect` → REQ/REP/RTU 핸드셰이크 (TCP).
     4. CM 핸드셰이크 안에 **private data** 영역으로 ECE (Enhanced Connection Establishment) 비트맵이 동승 — MPE, AETH variant 같은 확장 기능 협상.
 
-    검증에서는 CM 자체는 host SW 가 처리하므로 sequence 는 **post-handshake state**(QP=RTS, MR=registered, key 교환 완료) 만 모델링하면 된다.
+    검증에서는 CM 자체는 host SW 가 처리하므로 sequence 는 **post-handshake state** (QP=RTS, MR=registered, key 교환 완료) 만 모델링하면 된다.
 
 ---
 
-## 핵심 정리 (Key Takeaways)
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+!!! danger "❓ 오해 1 — 'RoCEv2 는 그냥 IP/UDP 위에 RDMA 를 올린 것뿐, 보안과 관리는 표준 IP 인프라가 처리'"
+    **실제**: RoCEv2 자체는 "RDMA over UDP" 로 트래픽이 표준 IP 라우팅을 따라가지만, **Connection Management 는 별도 (RDMA-CM over TCP)**, **partition / P_Key 는 spec 상 BTH 에 남아있되 실제 enforcement 는 구현마다 다름**. RoCEv2 자체에는 인증/암호화가 없어 IPSec/MACsec 같은 별도 보안이 필요.<br>
+    **왜 헷갈리는가**: "표준 IP 인프라를 쓴다" 가 "표준 IP 보안도 자동으로 적용된다" 처럼 들리기 때문.
+
+!!! danger "❓ 오해 2 — 'RoCEv2 는 lossless 를 spec 으로 보장한다'"
+    **실제**: spec 은 packet drop 시 RC service 의 retry 만 정의. lossless 는 **deployment 가 PFC + ECN + DCQCN 으로 만드는 환경적 가정**. 작은 drop 에도 throughput 이 망가지는 건 retry 의 cost 때문.<br>
+    **왜 헷갈리는가**: "RDMA = high performance" 와 "lossless = 무손실" 이 같은 말처럼 사용됨.
+
+!!! danger "❓ 오해 3 — 'IB 의 모든 PROTOCOL_RULE 이 RoCEv2 에도 적용된다'"
+    **실제**: R-001 ~ R-085 (Architecture, Packet Format, Link Layer) 는 거의 전부 NOT-APPLICABLE. ROCEV2_RULE_APPLICABILITY.md 의 분류를 안 거치면 검증에서 false positive 폭발.<br>
+    **왜 헷갈리는가**: "BTH 는 그대로니까 다 같다" 라는 단순화.
+
+!!! danger "❓ 오해 4 — 'UDP source port 는 4791 의 짝이 정해져 있다'"
+    **실제**: UDP source port 는 hash 기반 가변 — ECMP 분산용 entropy. 검증에서 "특정 값" 을 기대하면 false fail. 범위/엔트로피로 검증.<br>
+    **왜 헷갈리는가**: "destination port 가 4791 이니 source 도 비슷할 것" 이라는 대칭 직관.
+
+!!! danger "❓ 오해 5 — 'ICRC 는 IB 와 RoCEv2 가 동일하다'"
+    **실제**: 위치는 같지만 **mask 규칙이 다름**. RoCEv2 는 8B placeholder + IP TTL/ECN/Checksum + UDP Checksum 까지 mask. mask 누락 시 ICRC false-fail 으로 모든 RC packet 이 NAK.<br>
+    **왜 헷갈리는가**: 같은 ICRC 라는 이름.
+
+### DV 디버그 체크리스트
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| 모든 RC packet 이 receiver 에서 ICRC error | mask 규칙 누락 (IP TTL/ECN, UDP Checksum, placeholder 8B) | ICRC 입력 영역 vs §5.3 표 |
+| 일부 packet 만 ICRC error (TTL 큰 곳에서만) | TTL/HopLimit mask 누락 | router hop 후의 ICRC 결과 |
+| RDMA path 가 전혀 동작 안 함 | UDP DPort != 4791 | sender 의 UDP header dump |
+| 같은 flow 가 ECMP 분산 안 됨 | UDP SrcPort 가 상수 | sender 의 SrcPort hash 함수 |
+| switch 통과 후 BTH 깨짐 | switch 가 BTH 까지 만지는 구현 결함 (희귀) | hop-by-hop packet diff |
+| QP RTR 진입 실패 | RDMA-CM private data 의 metadata 누락 | CM REQ/REP/RTU dump |
+| PFC PAUSE 전송했는데 sender 가 안 멈춤 | priority 매핑 어긋남 (DSCP→PFC) | sender 의 PFC priority 표 |
+| ECN-CE 마킹했는데 rate 변화 없음 | DCQCN reaction 미구현 또는 CNP 미수신 | sender CNP 카운터 |
+| RoCEv2 검증인데 LRH/VCRC 규칙 false-positive | NOT-APPLICABLE 분류 누락 | ROCEV2_RULE_APPLICABILITY.md 의 R-001~085 영역 |
+
+---
+
+## 7. 핵심 정리 (Key Takeaways)
 
 - RoCEv2 = IB transport (BTH 부터) 를 그대로 두고 link/network 를 Ethernet/IP/UDP(4791) 로 교체.
-- ICRC 는 그대로 있으나 계산 입력에서 IP/UDP 의 변경 가능 영역을 mask 로 채움.
+- ICRC 는 그대로 있으나 계산 입력에서 IP/UDP 의 변경 가능 영역을 mask 로 채움 (+ 8B placeholder).
 - IB 의 link/network/management 영역 (LRH/VCRC/VL/CM/SMP/SA) 은 **거의 전부 NOT-APPLICABLE**.
 - BTH/xTH/Verbs/QP/MR/PSN/ACK 은 **그대로 APPLICABLE** — RoCEv2 검증의 본진은 transport 이상.
 - "Lossless Ethernet" 가정은 spec 이 아니라 deployment 패턴 — PFC + ECN + DCQCN.
@@ -297,7 +440,9 @@ RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용**합
 
 ## 다음 모듈
 
-→ [Module 04 — Service Types & QP FSM](04_service_types_qp.md)
+→ [Module 04 — Service Types & QP FSM](04_service_types_qp.md): RC/UC/UD/XRC 서비스의 차이와 QP 의 상태 머신.
+
+[퀴즈 풀어보기 →](quiz/03_rocev2_quiz.md)
 
 
 --8<-- "abbreviations.md"

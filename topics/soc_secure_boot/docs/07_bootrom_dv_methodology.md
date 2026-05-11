@@ -15,88 +15,174 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#legacy-환경의-문제-왜-바꿔야-했는가">Legacy 환경의 문제 — 왜 바꿔야 했는가</a>
-  <a class="page-toc-link" href="#uvm-프레임워크-전환-아키텍처">UVM 프레임워크 전환 — 아키텍처</a>
-  <a class="page-toc-link" href="#otp-abstraction-layer-ral-모델링">OTP Abstraction Layer — RAL 모델링</a>
-  <a class="page-toc-link" href="#active-uvm-driver-결정론적-보안-테스트">Active UVM Driver — 결정론적 보안 테스트</a>
-  <a class="page-toc-link" href="#dpi-c-hwsw-co-verification">DPI-C HW/SW Co-verification</a>
-  <a class="page-toc-link" href="#coverage-driven-검증-전략">Coverage-Driven 검증 전략</a>
-  <a class="page-toc-link" href="#환경-포팅-전략-applemeta-프로젝트">환경 포팅 전략 — Apple/Meta 프로젝트</a>
-  <a class="page-toc-link" href="#post-silicon-연결-pre-silicon-검증이-bring-up을-가속하는-이유">Post-Silicon 연결 — Pre-silicon 검증이 Bring-up을 가속하는 이유</a>
-  <a class="page-toc-link" href="#면접-종합-qa">면접 종합 Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#코스-마무리">코스 마무리</a>
+  <a class="page-toc-link" href="#1-why-care-bootrom-검증이-왜-zero-defect-이어야-하는가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-uvm-환경-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-bootrom-테스트-한-사이클-fuse-rom-bl1">3. 작은 예 — 한 사이클 추적</a>
+  <a class="page-toc-link" href="#4-일반화-otp-active-driver-dpi-c-coverage">4. 일반화</a>
+  <a class="page-toc-link" href="#5-디테일-legacy-uvm-otp-ral-coverage-포팅-post-silicon">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + 디버그</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Design** BootROM DV 환경 (UVM env + virtual sequencer + functional coverage)
-    - **Apply** Boot scenario matrix (boot mode × OTP config × image variant) 닫는 전략
-    - **Implement** Golden image + corrupted/unsigned image error injection
-    - **Plan** Coverage-driven verification으로 Zero-Defect Silicon 달성
+    - **Design** BootROM DV 환경 (UVM env + virtual sequencer + functional coverage) 을 설계할 수 있다.
+    - **Apply** Boot scenario matrix (boot mode × OTP config × image variant) 닫는 전략을 적용할 수 있다.
+    - **Implement** Golden image + corrupted/unsigned image error injection 을 구현할 수 있다.
+    - **Plan** Coverage-driven verification 으로 Zero-Defect Silicon 달성 계획을 수립할 수 있다.
+    - **Trace** 한 부팅 테스트 사이클 (fuse → ROM → BL1 jump) 을 step-by-step 으로 추적할 수 있다.
 
 !!! info "사전 지식"
     - [Module 01-05](01_hardware_root_of_trust.md)
     - [UVM](../../uvm/), [AMBA](../../amba_protocols/)
 
-!!! tip "💡 이해를 위한 비유"
-    **BootROM DV** ≈ **발전소 검수원 — 모든 부팅 path 를 stopwatch 로 검증, 한 path 라도 빠지면 sign-off X**
+---
 
+## 1. Why care? — BootROM 검증이 왜 Zero-Defect 이어야 하는가
+
+BootROM 은 **silicon 에 mask 로 영구 고정** 됩니다. Bug = silicon respin = 수개월 + 수십억. 다른 IP 는 patch / firmware update 가 가능하지만, BootROM 은 첫 부팅의 anchor 라서 _self-patch_ 도 자기 자신을 못 고칩니다.
+
+이 한 가정 — **"BootROM 의 모든 부팅 path 는 _tape-out 전_ 에 검증돼야 한다"** — 를 잡지 않으면 이후의 모든 결정 (UVM 으로 갈 것인가, OTP 를 어떻게 모델링할 것인가, FI/TOCTOU 를 어떻게 재현할 것인가, Coverage 를 어디까지 닫을 것인가) 이 "그냥 외워야 하는 best practice" 가 됩니다. 반대로 이 가정을 잡고 나면, Legacy SV → UVM 전환의 모든 디테일이 _이유_ 로 보입니다.
+
+---
+
+## 2. Intuition — UVM 환경 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **BootROM DV** = **발전소 검수원** — 모든 부팅 path 를 stopwatch 로 검증, 한 path 라도 빠지면 sign-off X.<br>
     ROM 은 변경 불가이므로 검증이 마지막 chance. ROTPK fuse, anti-rollback, fall-back path, ROM patch 등 모든 path 검증.
 
----
-
-## 핵심 개념
-**BootROM 검증 = 이론(Unit 1~5)을 실제 실리콘 품질로 전환하는 엔지니어링. Legacy SV 환경의 한계를 UVM 프레임워크로 극복하고, Coverage-Driven 방법론으로 Zero-Defect Silicon을 달성하는 과정.**
-
-!!! danger "❓ 흔한 오해"
-    **오해**: BootROM 검증 = 정상 boot 만 확인
-
-    **실제**: 추가로 ROM patch 적용 후 chain 재검증, fail-safe boot, error path, JTAG isolation, side-channel 등 광범위.
-
-    **왜 헷갈리는가**: "정상 boot 만 본다" 는 sim mindset. 보안에서는 abnormal path 가 attack surface.
----
-
-## Legacy 환경의 문제 — 왜 바꿔야 했는가
-
-### 기존 환경 (Legacy SystemVerilog TB)
+### 한 장 그림 — Legacy → UVM 의 핵심 차이
 
 ```
-Legacy BootROM TB:
-
-  +--------------------+
-  | Testbench Top      |
-  |                    |
-  |  DUT (BootROM SoC) |
-  |       |            |
-  |  Passive Monitor   |  ← 신호만 관찰, 능동적 제어 불가
-  |       |            |
-  |  Manual force/     |  ← 테스트마다 수동으로 force 문 삽입
-  |  release 삽입      |     (OTP 값, 부팅 설정, 에러 주입 등)
-  |       |            |
-  |  $display 기반     |  ← 체계적 비교/검증 없음
-  |  디버그            |
-  +--------------------+
+   ┌─── Legacy SV TB ───┐              ┌─── UVM Framework ──┐
+   │                    │              │                     │
+   │  Passive Monitor    │              │  Active Driver      │
+   │  (관찰만)            │   ──────▶   │  (force/release)    │
+   │                    │              │                     │
+   │  수동 force 삽입    │              │  Sequence Item 추상화│
+   │  (테스트마다)        │              │  (재사용)            │
+   │                    │              │                     │
+   │  $display 디버그   │              │  Scoreboard +        │
+   │                    │              │  DPI-C C-model      │
+   │                    │              │                     │
+   │  물리주소 OTP       │              │  OTP Abstraction    │
+   │  hardcode          │              │  Layer (RAL 방식)   │
+   │                    │              │                     │
+   │  FW 대기 1-2개월   │              │  C-model 으로 사전  │
+   │                    │              │  검증 시작           │
+   └────────────────────┘              └─────────────────────┘
+         │                                        │
+         ▼                                        ▼
+   "재현 불가 + 수동"                  "결정론적 + 재사용 + 측정"
 ```
 
-### 3가지 근본 문제
+### 왜 이렇게 설계됐는가 — Design rationale
 
-| 문제 | 증상 | 근본 원인 |
-|------|------|----------|
-| **1-2개월 검증 병목** | FW 전달 지연으로 검증 시작 불가 | FW 지연이 아닌, 환경 재사용성 부족이 진짜 원인 |
-| **Passive 모니터링의 한계** | 보안 공격 시나리오 재현 불가 | 능동적 자극(stimulus) 생성 능력 없음 |
-| **수동 force 문 삽입** | 새 테스트마다 force 문 수작업 → 에러 빈발 | OTP/보안 설정의 추상화 부재 |
+세 가지 요구가 동시에 풀려야 합니다.
 
-**핵심 인사이트**: "병목의 진짜 원인은 FW 지연이 아니라 환경의 재사용성과 추상화 부족이었다." — 이 분석 자체가 면접에서 문제 해결 능력을 보여주는 강력한 포인트.
+1. **재현성** — 보안 공격 시나리오 (글리치, TOCTOU) 는 _정확한 시점_ 에 _정확한 신호_ 를 force 해야. Sequence Item 으로 추상화 안 하면 수동 코드가 흩어져 회귀 불가.
+2. **재사용성** — Apple 칩, Meta 칩 등 여러 프로젝트에 _수 주_ 가 아니라 _수 일_ 안에 포팅. DUT 독립적 Agent + Config Object + OTP map 분리가 필수.
+3. **계측 가능성** — Sign-off 는 "엔지니어 주관" 이 아니라 _Coverage 수치_ 로. 5개 covergroup 의 cross 가 닫혀야 sign-off.
+
+이 세 요구의 교집합이 **UVM + OTP Abstraction + Active Driver + DPI-C** 의 4축 구조입니다.
 
 ---
 
-## UVM 프레임워크 전환 — 아키텍처
+## 3. 작은 예 — BootROM 테스트 한 사이클 (fuse → ROM → BL1)
 
-### 전환 후 환경 구조
+가장 단순한 시나리오. **"Secure Boot ON + UFS 부팅 + Golden image"** 한 테스트를 OTP provisioning 부터 BL1 jump 까지 8단계로 추적합니다.
+
+```
+   ┌─── DV TB ───┐                                    ┌─── DUT (BootROM SoC) ───┐
+   │             │                                    │                          │
+   │  test_seq   │  ① reset assert + config           │  POR (Power-On Reset)    │
+   │   │ ─────────│──────────────────────────────────▶│       │                  │
+   │   │         │                                    │       ▼                  │
+   │  otp_agent  │  ② OTP program (RAL 방식)          │  OTP fuse map            │
+   │   │ ─────────│──────────────────────────────────▶│   secure_boot_en = 1     │
+   │   │         │     - secure_boot_en.set(1)        │   boot_device = UFS      │
+   │   │         │     - boot_device.set(UFS)         │   rotpk_hash = H_PK      │
+   │   │         │     - rotpk_hash.set(H_PK)         │       │                  │
+   │   │         │                                    │       ▼                  │
+   │  boot_dev   │  ③ Golden image load 준비          │  UFS controller ready    │
+   │   │ ─────────│──────────────────────────────────▶│       │                  │
+   │   │         │     - image: BL1_signed.bin        │       ▼                  │
+   │   │         │                                    │  ④ reset release         │
+   │   │         │                                    │       │                  │
+   │   │         │                                    │  ⑤ BootROM 실행 시작     │
+   │   │         │                                    │  - reset vector fetch    │
+   │   │         │                                    │  - OTP read (secure_en)  │
+   │   │         │                                    │  - UFS read (BL1 image)  │
+   │   │         │                                    │  - SHA-256 (BL1)         │
+   │   │         │                                    │  - Verify (sig, PK, H)   │
+   │   │         │                                    │  - PK hash vs ROTPK      │
+   │   │         │                                    │       │ PASS             │
+   │  scoreboard │  ⑥ DPI-C C-model 비교              │       ▼                  │
+   │   │ ◀────────│──────────────────────────────────│  ⑦ BL1 entry jump        │
+   │   │         │     expected: jump to 0x...        │       │                  │
+   │   │         │     observed: jump to 0x...        │       ▼                  │
+   │   │         │     ✓ PASS                         │  BL1 실행 (DRAM 초기화)  │
+   │   │         │                                    │                          │
+   │  cov_collect│  ⑧ covergroup sample              │                          │
+   │   │ ─────────│──────────────────────────────────▶│                          │
+   │             │   - CG1.secure_boot = 1, dev = UFS │                          │
+   │             │   - CG2.verify_result = PASS       │                          │
+   └─────────────┘                                    └──────────────────────────┘
+```
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | test_seq | reset assert + virtual sequence 시작 | UVM virtual sequencer 가 모든 agent 를 orchestrate |
+| ② | otp_agent | `otp.secure_boot_en.set(1)` 등 RAL-style 호출 | 물리 주소 0x100 등은 _abstraction layer_ 뒤에 숨김 |
+| ③ | boot_device_agent | Golden BL1 binary 를 UFS model 에 load | UFS/eMMC/USB 중 OTP 설정에 따라 자동 선택 |
+| ④ | tb_top | reset release | BootROM 이 reset vector 에서 실행 시작 |
+| ⑤ | DUT (BootROM) | OTP read → UFS load → SHA-256 → Verify | 5.6 의 3단계 (PK 인증 / 서명 인증 / 무결성) 가 여기에 압축 |
+| ⑥ | scoreboard | DPI-C C-model 의 expected vs DUT observed 비교 | C reference model 이 jump 주소 / hash / verify 결과 예측 |
+| ⑦ | DUT | BL1 entry 로 PC jump | 검증 통과 → chain of trust 의 다음 link |
+| ⑧ | cov_collect | covergroup sample | CG1 (Config), CG2 (Verify) 의 bin 점등 |
+
+```systemverilog
+// Step ② 의 실제 sequence 코드 (단순화)
+class secure_boot_ufs_seq extends uvm_sequence;
+  `uvm_object_utils(secure_boot_ufs_seq)
+
+  task body();
+    // OTP RAL-style 추상화
+    otp_model.secure_boot_en.set(1'b1);
+    otp_model.boot_device_cfg.set(BOOT_DEV_UFS);
+    otp_model.rotpk_hash.set(GOLDEN_ROTPK_HASH);
+    otp_model.update(.kind(UVM_BACKDOOR));  // OTP fuse program
+
+    // Golden image 를 boot device 에 load
+    boot_dev_seq.start(p_sequencer.boot_dev_sqr);
+
+    // Reset release → BootROM 실행
+    `uvm_info("SEQ", "Releasing reset, BootROM starts", UVM_LOW)
+    reset_release_seq.start(p_sequencer.tb_ctrl_sqr);
+
+    // BL1 jump 까지 wait (timeout 보호)
+    fork
+      wait_for_bl1_jump();
+      #(BOOT_TIMEOUT_NS) `uvm_error("SEQ", "Boot timeout")
+    join_any
+  endtask
+endclass
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) OTP provisioning 이 _abstraction layer_ 뒤에 있다** — 테스트는 `secure_boot_en.set(1)` 같이 의미만 기술. 물리 주소 0x100 / bit-position 은 OTP map 파일에서 _자동_ 매핑. OTP 맵 변경에 면역.<br>
+    **(2) DPI-C C-model 이 _expected jump address_ 까지 계산** — RTL 에서 같은 로직을 TB 에 재구현하면 동일 버그 재현 위험. C model = 독립적 golden reference.
+
+---
+
+## 4. 일반화 — OTP / Active Driver / DPI-C / Coverage
+
+§3 의 한 사이클을 일반화하면, **모든** BootROM 테스트가 동일한 4축 구조 (OTP / Active Driver / DPI-C / Coverage) 를 따릅니다.
+
+### 4.1 UVM 환경 구조
 
 ```
 +------------------------------------------------------------------+
@@ -138,22 +224,65 @@ Legacy BootROM TB:
 +------------------------------------------------------------------+
 ```
 
-### Legacy → UVM 전환 효과
+### 4.2 4축의 역할 표
+
+| 축 | 역할 | Legacy 대비 효과 |
+|---|---|---|
+| **OTP Abstraction** | 물리 주소 은닉, 필드 의미 기반 접근 | OTP 맵 변경에 _코드 수정 0_ |
+| **Active Driver** | 공격 vector 의 _결정론적 재현_ | FI/TOCTOU/JTAG 회귀 가능 |
+| **DPI-C C-model** | FW 전 사전 검증 + Golden reference | 1-2 개월 FW 대기 해소 |
+| **Coverage 5 CG** | Sign-off 의 _수치 기반_ 판정 | 주관 → 객관 |
+
+---
+
+## 5. 디테일 — Legacy / UVM / OTP RAL / Coverage / 포팅 / Post-silicon
+
+### 5.1 Legacy 환경의 문제 — 왜 바꿔야 했는가
+
+#### 기존 환경 (Legacy SystemVerilog TB)
+
+```
+Legacy BootROM TB:
+
+  +--------------------+
+  | Testbench Top      |
+  |                    |
+  |  DUT (BootROM SoC) |
+  |       |            |
+  |  Passive Monitor   |  ← 신호만 관찰, 능동적 제어 불가
+  |       |            |
+  |  Manual force/     |  ← 테스트마다 수동으로 force 문 삽입
+  |  release 삽입      |     (OTP 값, 부팅 설정, 에러 주입 등)
+  |       |            |
+  |  $display 기반     |  ← 체계적 비교/검증 없음
+  |  디버그            |
+  +--------------------+
+```
+
+#### 3가지 근본 문제
+
+| 문제 | 증상 | 근본 원인 |
+|------|------|----------|
+| **1-2개월 검증 병목** | FW 전달 지연으로 검증 시작 불가 | FW 지연이 아닌, 환경 재사용성 부족이 진짜 원인 |
+| **Passive 모니터링의 한계** | 보안 공격 시나리오 재현 불가 | 능동적 자극 (stimulus) 생성 능력 없음 |
+| **수동 force 문 삽입** | 새 테스트마다 force 문 수작업 → 에러 빈발 | OTP/보안 설정의 추상화 부재 |
+
+**핵심 인사이트**: "병목의 진짜 원인은 FW 지연이 아니라 환경의 재사용성과 추상화 부족이었다." — 이 분석 자체가 면접에서 문제 해결 능력을 보여주는 강력한 포인트.
+
+### 5.2 Legacy → UVM 전환 효과
 
 | 항목 | Legacy SV | UVM Framework |
 |------|-----------|---------------|
 | 새 테스트 추가 | 전체 force 문 재작성 (수 일) | Sequence 조합만 변경 (수 시간) |
 | OTP 설정 변경 | 물리 주소 하드코딩 수정 | Abstraction Layer 필드명으로 접근 |
-| 보안 공격 시나리오 | 수동 force 삽입, 비결정론적 | Active Driver로 결정론적 재현 |
+| 보안 공격 시나리오 | 수동 force 삽입, 비결정론적 | Active Driver 로 결정론적 재현 |
 | 검증 완료 판정 | 엔지니어 주관적 판단 | Coverage 수치 기반 객관적 판정 |
 | 다른 프로젝트 포팅 | 전면 재작성 (수 주) | Config 변경 + Agent 재사용 (수 일) |
 | 검증 병목 | 1-2개월 | **1개월 이상 단축** |
 
----
+### 5.3 OTP Abstraction Layer — RAL 모델링
 
-## OTP Abstraction Layer — RAL 모델링
-
-### 왜 필요한가?
+#### 왜 필요한가?
 
 ```
 문제: OTP 물리 주소 직접 참조
@@ -169,7 +298,7 @@ Legacy BootROM TB:
   → 주소 오타 하나면? 잘못된 필드에 값 설정 → 디버그 지옥
 ```
 
-### 해결: OTP Abstraction Layer
+#### 해결: OTP Abstraction Layer
 
 ```
 +----------------------------------------------+
@@ -198,40 +327,36 @@ Legacy BootROM TB:
 +----------------------------------------------+
 ```
 
-### OTP Abstraction의 핵심 가치
+#### OTP Abstraction 의 핵심 가치
 
 | 가치 | 설명 |
 |------|------|
 | 물리 주소 은닉 | 테스트가 주소를 몰라도 됨 → OTP 맵 변경에 면역 |
-| 필드 레벨 접근 | `secure_boot_en`처럼 의미 있는 이름으로 접근 |
+| 필드 레벨 접근 | `secure_boot_en` 처럼 의미 있는 이름으로 접근 |
 | 자동 sweep | Boot Mode × Boot Device × Secure Boot 조합 자동 생성 |
-| 재사용성 | OTP 맵만 교체하면 다른 SoC에 즉시 적용 (Apple/Meta 포팅의 핵심) |
+| 재사용성 | OTP 맵만 교체하면 다른 SoC 에 즉시 적용 (Apple/Meta 포팅의 핵심) |
 | 실수 방지 | 잘못된 주소 접근을 컴파일 타임에 검출 가능 |
 
-### 면접 답변 준비
+**Q: OTP Abstraction Layer 를 왜 RAL 방식으로 설계했나?**
+> "UVM RAL 이 레지스터 주소를 추상화하듯, OTP 의 물리적 비트 위치를 추상화했다. OTP 는 레지스터와 달리 read/write 가 아닌 program-once 특성이 있고, 필드 간 의존성 (예: Secure Boot Enable 이 OFF 면 ROTPK Hash 가 무의미) 이 복잡하다. Abstraction Layer 가 이 의존성을 모델링하여, 유효한 OTP 설정 조합만 자동으로 생성하게 했다. 이로 인해 OTP 맵이 변경되어도 테스트 코드 수정 없이 맵 파서만 업데이트하면 된다."
 
-**Q: OTP Abstraction Layer를 왜 RAL 방식으로 설계했나?**
-> "UVM RAL이 레지스터 주소를 추상화하듯, OTP의 물리적 비트 위치를 추상화했다. OTP는 레지스터와 달리 read/write가 아닌 program-once 특성이 있고, 필드 간 의존성(예: Secure Boot Enable이 OFF면 ROTPK Hash가 무의미)이 복잡하다. Abstraction Layer가 이 의존성을 모델링하여, 유효한 OTP 설정 조합만 자동으로 생성하게 했다. 이로 인해 OTP 맵이 변경되어도 테스트 코드 수정 없이 맵 파서만 업데이트하면 된다."
+### 5.4 Active UVM Driver — 결정론적 보안 테스트
 
----
-
-## Active UVM Driver — 결정론적 보안 테스트
-
-### Passive vs Active 비교
+#### Passive vs Active 비교
 
 ```
 Passive (Legacy):
   Monitor ← DUT 신호 관찰만
-  "무엇이 일어났는지"만 확인 가능
-  보안 공격을 "재현"할 수 없음
+  "무엇이 일어났는지" 만 확인 가능
+  보안 공격을 "재현" 할 수 없음
 
 Active (UVM):
-  Driver → DUT에 능동적으로 자극 주입
+  Driver → DUT 에 능동적으로 자극 주입
   "특정 공격 벡터를 정확히 재현" 가능
   결정론적 → 같은 시나리오를 반복 재현 가능
 ```
 
-### Active Driver의 force/release 메커니즘
+#### Active Driver 의 force/release 메커니즘
 
 ```
 +--------------------------------------------------+
@@ -248,43 +373,41 @@ Active (UVM):
 |                                                   |
 |  Driver 동작:                                     |
 |    1. 시퀀스에서 공격 아이템 수신                  |
-|    2. target_time까지 대기                        |
+|    2. target_time 까지 대기                       |
 |    3. force(target_path, force_value) 실행        |
 |    4. 지정된 사이클 후 release                     |
 |    5. DUT 반응 관찰 (abort? lockdown? 정상?)      |
 +--------------------------------------------------+
 ```
 
-### 재현 가능한 보안 시나리오 예시
+#### 재현 가능한 보안 시나리오 예시
 
 | 시나리오 | Active Driver 동작 | 예상 결과 |
 |---------|-------------------|----------|
-| Fault Injection (verify 우회) | verify 결과 레지스터를 force로 PASS 강제 | 이중 검증이 불일치 감지 → abort |
-| TOCTOU 시뮬레이션 | 검증 완료 후 SRAM 내용 force로 변경 | SRAM Lock이 쓰기 차단 |
+| Fault Injection (verify 우회) | verify 결과 레지스터를 force 로 PASS 강제 | 이중 검증이 불일치 감지 → abort |
+| TOCTOU 시뮬레이션 | 검증 완료 후 SRAM 내용 force 로 변경 | SRAM Lock 이 쓰기 차단 |
 | JTAG 공격 | JTAG disable 상태에서 JTAG 신호 force | 접근 차단 확인 |
-| Crypto 결과 변조 | HW Crypto 출력을 force로 오류값 주입 | 검증 실패 → boot abort |
-| Anti-Rollback 우회 시도 | OTP 카운터 값을 force로 리셋 | OTP 특성상 불가, 또는 검증 실패 |
+| Crypto 결과 변조 | HW Crypto 출력을 force 로 오류값 주입 | 검증 실패 → boot abort |
+| Anti-Rollback 우회 시도 | OTP 카운터 값을 force 로 리셋 | OTP 특성상 불가, 또는 검증 실패 |
 
-**면접 키포인트**: "Legacy 환경에서는 보안 공격 시나리오를 수동 force 문으로 하나하나 작성해야 했고, 비결정론적이어서 재현이 어려웠다. Active UVM Driver를 통해 공격 벡터를 Sequence Item으로 추상화하여, 결정론적으로 복잡한 보안 시나리오를 체계적으로 재현할 수 있게 되었다."
+**면접 키포인트**: "Legacy 환경에서는 보안 공격 시나리오를 수동 force 문으로 하나하나 작성해야 했고, 비결정론적이어서 재현이 어려웠다. Active UVM Driver 를 통해 공격 벡터를 Sequence Item 으로 추상화하여, 결정론적으로 복잡한 보안 시나리오를 체계적으로 재현할 수 있게 되었다."
 
----
+### 5.5 DPI-C HW/SW Co-verification
 
-## DPI-C HW/SW Co-verification
-
-### 왜 필요한가?
+#### 왜 필요한가?
 
 ```
 BootROM 검증의 특수성:
-  - BootROM 코드는 C로 작성된 FW → Mask ROM에 구움
+  - BootROM 코드는 C 로 작성된 FW → Mask ROM 에 구움
   - 보안 핸드셰이크는 HW + FW 협력으로 동작
   - FW 로직을 RTL 시뮬레이션만으로 검증하기 어려움
 
 문제:
   - FW 전달 지연 → 검증 시작 불가 (기존 병목의 또 다른 원인)
-  - 복잡한 보안 프로토콜의 Expected Value 계산이 TB에서 어려움
+  - 복잡한 보안 프로토콜의 Expected Value 계산이 TB 에서 어려움
 ```
 
-### DPI-C 통합 구조
+#### DPI-C 통합 구조
 
 ```
 +----------------------------------------------+
@@ -318,7 +441,7 @@ BootROM 검증의 특수성:
               +-------------------------+
 ```
 
-### 인터칩 키 교환 프로토콜 검증 (Meta/Apple)
+#### 인터칩 키 교환 프로토콜 검증 (Meta/Apple)
 
 ```
 칩 간 보안 통신 시나리오:
@@ -334,32 +457,28 @@ BootROM 검증의 특수성:
        |  3. 키 도출 + 검증         |
        |                           |
 
-DPI-C로 검증하는 이유:
-  - Challenge/Response 계산은 C 코드로 이미 존재 (FW에서 가져옴)
-  - RTL에서 같은 로직을 재구현 → 동일 버그 재현 위험
+DPI-C 로 검증하는 이유:
+  - Challenge/Response 계산은 C 코드로 이미 존재 (FW 에서 가져옴)
+  - RTL 에서 같은 로직을 재구현 → 동일 버그 재현 위험
   - C Reference Model = 독립적 Golden Model
-  - Pre-silicon에서 FW 수준 보안 핸드셰이크를 완전히 검증 가능
+  - Pre-silicon 에서 FW 수준 보안 핸드셰이크를 완전히 검증 가능
 ```
 
-### DPI-C 적용 영역
+#### DPI-C 적용 영역
 
 | 영역 | C Model 역할 | 검증 대상 |
 |------|-------------|----------|
-| 키 교환 프로토콜 | Challenge/Response 기대값 계산 | HW가 올바른 키를 도출하는지 |
+| 키 교환 프로토콜 | Challenge/Response 기대값 계산 | HW 가 올바른 키를 도출하는지 |
 | 해시 계산 | SHA-256 Golden Reference | HW Crypto Engine 출력 정확성 |
-| 인증서 파싱 | Certificate 구조 해석 기대값 | BootROM의 Certificate 처리 로직 |
+| 인증서 파싱 | Certificate 구조 해석 기대값 | BootROM 의 Certificate 처리 로직 |
 | Boot Flow 상태 | 상태 전이 기대값 | 각 단계의 전이 조건 만족 여부 |
 
-**면접 답변 준비**:
+**Q: DPI-C 로 HW/SW Co-verification 을 어떻게 수행했나?**
+> "BootROM FW 의 C 코드를 DPI-C 로 UVM Scoreboard 에 연동하여 Golden Reference Model 로 사용했다. 특히 인터칩 키 교환 프로토콜 (Meta/Apple 협업) 에서 Challenge-Response 기대값을 C 모델이 계산하고, DUT 의 HW 출력과 비트 단위로 비교했다. 이를 통해 FW 전달 전에도 보안 핸드셰이크의 Pre-silicon 검증이 가능했고, 기존 1-2개월의 FW 대기 병목을 해소했다."
 
-**Q: DPI-C로 HW/SW Co-verification을 어떻게 수행했나?**
-> "BootROM FW의 C 코드를 DPI-C로 UVM Scoreboard에 연동하여 Golden Reference Model로 사용했다. 특히 인터칩 키 교환 프로토콜(Meta/Apple 협업)에서 Challenge-Response 기대값을 C 모델이 계산하고, DUT의 HW 출력과 비트 단위로 비교했다. 이를 통해 FW 전달 전에도 보안 핸드셰이크의 Pre-silicon 검증이 가능했고, 기존 1-2개월의 FW 대기 병목을 해소했다."
+### 5.6 Coverage-Driven 검증 전략
 
----
-
-## Coverage-Driven 검증 전략
-
-### BootROM Coverage Model 구조
+#### BootROM Coverage Model 구조
 
 ```
 +----------------------------------------------------------+
@@ -404,61 +523,55 @@ DPI-C로 검증하는 이유:
 +----------------------------------------------------------+
 ```
 
-### Coverage Closure 전략
+#### Coverage Closure 전략
 
 | 단계 | 방법 | 목표 |
 |------|------|------|
 | 1. Directed Smoke (seed=0) | 기본 부팅 경로 확인 | 데이터 경로 정상 동작 |
-| 2. Configuration Sweep | OTP Abstraction Layer로 설정 조합 자동 생성 | CG1 교차 커버리지 100% |
-| 3. Negative Scenario | Active Driver로 공격 시나리오 주입 | CG2, CG3 커버리지 |
+| 2. Configuration Sweep | OTP Abstraction Layer 로 설정 조합 자동 생성 | CG1 교차 커버리지 100% |
+| 3. Negative Scenario | Active Driver 로 공격 시나리오 주입 | CG2, CG3 커버리지 |
 | 4. Constrained Random (100+ seeds) | 랜덤 OTP/이미지/공격 조합 | 코너 케이스 발견 |
 | 5. Fallback Path | 에러 주입으로 Fallback 강제 | CG4 커버리지 |
 | 6. Edge Case | Anti-Rollback 경계값, 이미지 크기 극단값 | CG5 + 경계 조건 |
 
----
+### 5.7 환경 포팅 전략 — Apple/Meta 프로젝트
 
-## 환경 포팅 전략 — Apple/Meta 프로젝트
-
-### 왜 빠른 포팅이 가능했는가?
+#### 왜 빠른 포팅이 가능했는가?
 
 ```
 모듈형 UVM 아키텍처의 3가지 분리 원칙:
 
 1. DUT 독립적 Agent 설계
    - OTP Agent: OTP 인터페이스 프로토콜만 처리
-   - Boot Device Agent: 표준 프로토콜(UFS/eMMC) 준수
-   → DUT가 바뀌어도 Agent 재작성 불필요
+   - Boot Device Agent: 표준 프로토콜 (UFS/eMMC) 준수
+   → DUT 가 바뀌어도 Agent 재작성 불필요
 
 2. Config Object 기반 동작 변경
    - boot_device_type, otp_map_file, secure_boot_mode
-   → 파라미터만 변경하면 다른 SoC에 적용
+   → 파라미터만 변경하면 다른 SoC 에 적용
 
-3. OTP Abstraction Layer의 맵 교체
-   - 새 SoC의 OTP 맵 파일만 교체
+3. OTP Abstraction Layer 의 맵 교체
+   - 새 SoC 의 OTP 맵 파일만 교체
    → 물리 주소 의존성 없으므로 테스트 코드 변경 없음
 ```
 
-### 포팅 체크리스트
+#### 포팅 체크리스트
 
 | 항목 | 작업 | 소요 시간 |
 |------|------|----------|
-| OTP 맵 파일 교체 | 새 SoC의 OTP 맵 CSV/JSON 적용 | 수 시간 |
+| OTP 맵 파일 교체 | 새 SoC 의 OTP 맵 CSV/JSON 적용 | 수 시간 |
 | 인터페이스 어댑터 | DUT 포트 매핑 업데이트 | 1-2일 |
-| Boot Device 설정 | 지원 장치 목록 Config Object에 반영 | 수 시간 |
+| Boot Device 설정 | 지원 장치 목록 Config Object 에 반영 | 수 시간 |
 | 보안 프로토콜 차이 | DPI-C C-model 교체 (칩별 키 교환 프로토콜) | 1-2일 |
-| Coverage Model 업데이트 | 새 SoC의 설정 조합에 맞게 bin 조정 | 1일 |
+| Coverage Model 업데이트 | 새 SoC 의 설정 조합에 맞게 bin 조정 | 1일 |
 | **총 포팅 소요** | | **3-5일** (Legacy: 수 주) |
 
-**면접 답변 준비**:
-
 **Q: Apple/Meta 프로젝트에 환경을 어떻게 포팅했나?**
-> "UVM 프레임워크를 모듈형으로 설계했기 때문에 가능했다. 핵심은 세 가지 분리: (1) DUT 독립적 Agent — 프로토콜만 처리하므로 DUT가 바뀌어도 재사용. (2) Config Object — SoC별 차이를 파라미터로 흡수. (3) OTP Abstraction Layer — 맵 파일만 교체하면 물리 주소 변경에 면역. 결과적으로 수 주 걸리던 포팅을 3-5일로 단축하여 촉박한 일정 내에서 즉시 검증 지원을 제공했다."
+> "UVM 프레임워크를 모듈형으로 설계했기 때문에 가능했다. 핵심은 세 가지 분리: (1) DUT 독립적 Agent — 프로토콜만 처리하므로 DUT 가 바뀌어도 재사용. (2) Config Object — SoC 별 차이를 파라미터로 흡수. (3) OTP Abstraction Layer — 맵 파일만 교체하면 물리 주소 변경에 면역. 결과적으로 수 주 걸리던 포팅을 3-5일로 단축하여 촉박한 일정 내에서 즉시 검증 지원을 제공했다."
 
----
+### 5.8 Post-Silicon 연결 — Pre-silicon 검증이 Bring-up 을 가속하는 이유
 
-## Post-Silicon 연결 — Pre-silicon 검증이 Bring-up을 가속하는 이유
-
-### Pre-silicon에서 100% 기능 무결성 확보의 의미
+#### Pre-silicon 에서 100% 기능 무결성 확보의 의미
 
 ```
 Post-silicon Bring-up 시나리오:
@@ -471,37 +584,77 @@ Post-silicon Bring-up 시나리오:
     → 각각 디버그 → 수 주 소요
 
   Case 2: Pre-silicon 검증 완전 (100% 기능 무결성)
-    → 부팅 실패 시 BootROM을 원인에서 즉시 배제
-    → "BootROM은 검증 완료 → 문제는 비-ROM 영역"
+    → 부팅 실패 시 BootROM 을 원인에서 즉시 배제
+    → "BootROM 은 검증 완료 → 문제는 비-ROM 영역"
     → 디버그 범위 대폭 축소 → 수 일로 단축
 ```
 
-### 검증 완전성 → Post-silicon 디버그 가속
+#### 검증 완전성 → Post-silicon 디버그 가속
 
 | Pre-silicon 검증 항목 | Post-silicon 디버그 기여 |
 |---------------------|------------------------|
 | 모든 Boot Mode × Device 조합 검증 | 특정 조합 실패 시 HW 문제로 즉시 분류 |
 | 모든 Negative 시나리오 검증 | 보안 기능 정상 동작 확인 → 공격 방어 검증 불필요 |
-| DPI-C로 FW 로직 사전 검증 | FW 버그 vs HW 버그 분리 용이 |
+| DPI-C 로 FW 로직 사전 검증 | FW 버그 vs HW 버그 분리 용이 |
 | Fallback 경로 전수 검증 | Fallback 실패 시 HW 연결 문제로 분류 |
 
----
-
-## 면접 종합 Q&A
+### 5.9 면접 종합 Q&A
 
 **Q: BootROM 검증 환경을 어떻게 설계했는가?**
-> "Legacy SV 환경을 UVM 프레임워크로 전면 전환했다. 핵심 3가지: (1) OTP Abstraction Layer — RAL 방식으로 OTP 물리 주소를 추상화하여 테스트에서 의미 기반으로 접근하게 함. (2) Active UVM Driver — force/release 시퀀스를 체계적으로 관리하여 보안 공격 벡터를 결정론적으로 재현. (3) DPI-C C-model — 보안 핸드셰이크의 Golden Reference를 FW C 코드에서 직접 가져와 Scoreboard에 연동. 이로 인해 검증 TAT를 1개월 이상 단축하고, 여러 프로젝트에 빠르게 포팅할 수 있는 재사용 가능한 환경을 만들었다."
+> "Legacy SV 환경을 UVM 프레임워크로 전면 전환했다. 핵심 3가지: (1) OTP Abstraction Layer — RAL 방식으로 OTP 물리 주소를 추상화하여 테스트에서 의미 기반으로 접근하게 함. (2) Active UVM Driver — force/release 시퀀스를 체계적으로 관리하여 보안 공격 벡터를 결정론적으로 재현. (3) DPI-C C-model — 보안 핸드셰이크의 Golden Reference 를 FW C 코드에서 직접 가져와 Scoreboard 에 연동. 이로 인해 검증 TAT 를 1개월 이상 단축하고, 여러 프로젝트에 빠르게 포팅할 수 있는 재사용 가능한 환경을 만들었다."
 
 **Q: Coverage-Driven 검증 전략을 구체적으로 설명하라.**
-> "5개 Covergroup으로 구성했다: (1) Boot Config — OTP 설정 조합 교차 커버리지 (Secure Boot × Boot Device × Boot Mode). (2) Verify Result — 서명 검증 결과 × 실패 사유. (3) Attack Scenario — 공격 유형 × 방어 응답. (4) Fallback Path — Primary 실패 원인 × Fallback 장치 × Fallback 결과. (5) Anti-Rollback — 이미지 버전 × 카운터 상태. Directed → Sweep → Negative → Random → Edge Case 순으로 점진적으로 Coverage를 높여 Closure를 달성했다."
+> "5개 Covergroup 으로 구성했다: (1) Boot Config — OTP 설정 조합 교차 커버리지 (Secure Boot × Boot Device × Boot Mode). (2) Verify Result — 서명 검증 결과 × 실패 사유. (3) Attack Scenario — 공격 유형 × 방어 응답. (4) Fallback Path — Primary 실패 원인 × Fallback 장치 × Fallback 결과. (5) Anti-Rollback — 이미지 버전 × 카운터 상태. Directed → Sweep → Negative → Random → Edge Case 순으로 점진적으로 Coverage 를 높여 Closure 를 달성했다."
 
 **Q: 1-2개월 검증 병목을 어떻게 해결했는가?**
-> "먼저 근본 원인을 분석했다 — 병목은 FW 전달 지연으로 여겨졌지만, 실제로는 환경의 재사용성 부족이 진짜 원인이었다. 해결: (1) UVM 전환으로 테스트 추가 시간을 수 일 → 수 시간으로 단축. (2) OTP Abstraction Layer로 OTP 맵 변경에 면역. (3) DPI-C로 FW 전달 전에도 검증 시작 가능. 결과적으로 TAT 1개월 이상 단축, SoC Tape-out 일정을 직접 가속했다."
+> "먼저 근본 원인을 분석했다 — 병목은 FW 전달 지연으로 여겨졌지만, 실제로는 환경의 재사용성 부족이 진짜 원인이었다. 해결: (1) UVM 전환으로 테스트 추가 시간을 수 일 → 수 시간으로 단축. (2) OTP Abstraction Layer 로 OTP 맵 변경에 면역. (3) DPI-C 로 FW 전달 전에도 검증 시작 가능. 결과적으로 TAT 1개월 이상 단축, SoC Tape-out 일정을 직접 가속했다."
 
-**Q: Zero-Defect Silicon을 어떻게 달성했는가?**
-> "Coverage-Driven 방법론과 구조적 Negative Test 전략의 조합이다. Positive(정상 부팅) 100%는 기본이고, 5개 공격 카테고리(Crypto, Rollback, Fault, Input, Config)별 Negative 시나리오를 체계적으로 커버했다. 결과적으로 Post-silicon Bring-up에서 BootROM 관련 이슈 제로를 달성하여, 비-ROM 이슈의 빠른 Root Cause 분리를 가능하게 했다."
+**Q: Zero-Defect Silicon 을 어떻게 달성했는가?**
+> "Coverage-Driven 방법론과 구조적 Negative Test 전략의 조합이다. Positive (정상 부팅) 100% 는 기본이고, 5개 공격 카테고리 (Crypto, Rollback, Fault, Input, Config) 별 Negative 시나리오를 체계적으로 커버했다. 결과적으로 Post-silicon Bring-up 에서 BootROM 관련 이슈 제로를 달성하여, 비-ROM 이슈의 빠른 Root Cause 분리를 가능하게 했다."
 
 ---
+
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+!!! danger "❓ 오해 1 — 'BootROM 검증 = 정상 boot 만 확인'"
+    **실제**: 추가로 ROM patch 적용 후 chain 재검증, fail-safe boot, error path, JTAG isolation, side-channel 등 광범위. Negative path 가 곧 attack surface 이고, BootROM 에서는 그 attack surface 가 silicon 에 박혀 영구.<br>
+    **왜 헷갈리는가**: "정상 boot 만 본다" 는 sim mindset. 보안에서는 abnormal path 가 중요.
+
+!!! danger "❓ 오해 2 — 'FW 전달 받기 전엔 검증 시작 불가'"
+    **실제**: DPI-C C-model 을 _FW C 코드_ 에서 직접 가져와 Golden reference 로 사용하면 RTL 만으로 검증 가능. FW 가 _개발 중_ 인 상태에서도 fork 한 C-model 로 사전 검증 시작.<br>
+    **왜 헷갈리는가**: "FW 가 곧 reference" 라는 직관. 실제로는 _C 코드_ 만 있으면 충분.
+
+!!! danger "❓ 오해 3 — 'OTP 검증 = 물리 주소 정확히 write'"
+    **실제**: OTP 의 본질은 _필드 간 의존성_ (Secure Boot OFF → ROTPK Hash 무의미) 과 _program-once_ 특성. Abstraction Layer 가 이 의존성을 모델링하지 않으면 잘못된 _조합_ 으로 테스트가 통과해 버립니다.<br>
+    **왜 헷갈리는가**: 레지스터처럼 단순 write/read 로 보임.
+
+!!! danger "❓ 오해 4 — 'Coverage 100% = sign-off'"
+    **실제**: Functional coverage 가 100% 라도 _Negative path_ 가 누락되면 attack surface 가 남아 있을 수 있습니다. 5 CG 중 CG3 (Attack) 의 cross 가 _모두_ 닫혔는지 확인이 추가로 필요.<br>
+    **왜 헷갈리는가**: "Coverage = 완전성" 의 short-cut.
+
+!!! danger "❓ 오해 5 — 'ROM patch 적용해도 ROTPK 는 자동 재로드된다'"
+    **실제**: ROM-RAM remap / hot-fix 적용 후 ROTPK 핸들 / hash 캐시가 patch-pre 값으로 남아 있을 수 있어, 회귀에서 cross (patch on/off) × (ROTPK 변형) 을 명시적으로 cover 해야 합니다.<br>
+    **왜 헷갈리는가**: patch 가 "코드만 바뀐다" 라는 추정.
+
+### DV 디버그 체크리스트 (BootROM TB 운용 시 자주 보는 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Secure boot ON 인데 verify 가 PASS | ROTPK hash 가 OTP 에 미설정 또는 0 | `otp_model.rotpk_hash` 값과 OTP backdoor write 확인 |
+| reset 직후 BL1 jump 안 함 | boot_device 가 OTP 에 미설정 → BootROM default 로 빠짐 | OTP `boot_device_cfg` field + boot mode pinstrap 확인 |
+| Coverage CG1 의 특정 cross 가 점등 안 됨 | OTP Abstraction 의 random constraint 가 invalid 조합 제외 | `otp_model.randomize()` 의 constraint 와 valid combo 정의 |
+| DPI-C 결과가 실제 RTL 과 mismatch | C-model 의 endianness 또는 align 가정 다름 | DPI-C wrapper 의 byte order, padding 확인 |
+| Active Driver 의 force 가 안 먹힘 | hierarchical path 가 RTL 변경 후 무효 | UVM HDL path 와 RTL signal 명 grep |
+| Anti-rollback 시나리오가 통과해버림 | counter 가 OTP 가 아닌 register 에 모델링 | counter backing storage 가 `otp_ctrl` 인지 확인 |
+| ROM patch 후 ROTPK 검증 fail | patch 이후 cache invalidate 안 됨 | patch entry 시점에 ROTPK 재로드 sequence 추가 |
+| Boot timeout 만 떨어짐 (구체적 fail 안 보임) | scoreboard 에서 fail reason 분류 안 됨 | DPI-C C-model 의 expected fail reason 비교 추가 |
+
+이 체크리스트는 §3 의 한 사이클을 운용할 때 가장 먼저 마주치는 실패들입니다.
+
+---
+
 !!! warning "실무 주의점 — ROM patch 적용 후 ROTPK 체인 재검증 누락"
     **현상**: BootROM patch (ROM-RAM remap / hot-fix) 를 적용한 다음, 후속 stage 의 서명 검증이 patch 이전 버전의 ROTPK 로 통과해 버린다. 결과적으로 patch 가 의도한 키 교체가 우회된다.
 
@@ -509,13 +662,15 @@ Post-silicon Bring-up 시나리오:
 
     **점검 포인트**: patch 적용 직후 ROTPK 가 재로드되어 image signature 검증에 사용되는가, 그리고 reference model 이 patch 경로의 expected ROTPK 와 검증 결과를 정확히 예측하는지 scoreboard 에서 확인하는가.
 
-## 핵심 정리
+---
 
-- **BootROM DV의 특수성**: BootROM은 silicon에 mask로 fixed → bug = silicon revision (수억 원). Defect Zero가 절대 목표.
+## 7. 핵심 정리 (Key Takeaways)
+
+- **BootROM DV 의 특수성**: silicon 에 mask 로 영구 고정 → bug = silicon respin (수억 원). Zero-Defect 이 절대 목표.
+- **4축 구조**: OTP Abstraction + Active Driver + DPI-C C-model + Coverage 5 CG — 셋 중 하나라도 빠지면 sign-off 불완전.
 - **Scenario matrix**: Boot mode (eMMC/UFS/QSPI/USB) × OTP config (security on/off, ROTPK 변형) × Image (golden/corrupted/unsigned/version mismatch).
-- **Reference model**: Golden image의 expected boot path를 SystemVerilog/Python으로 모델링.
-- **Error injection**: 서명 corrupted, version old, ROTPK mismatch, image truncated, fail-over trigger.
-- **Coverage-driven**: 모든 시나리오가 covered + 모든 fail path가 expected behavior. Sign-off의 핵심.
+- **Coverage-driven**: 모든 시나리오가 covered + 모든 fail path 가 expected behavior. Sign-off 의 핵심.
+- **Pre-silicon 의 보상은 post-silicon**: 100% 검증 → bring-up 에서 BootROM 즉시 배제 → 비-ROM 이슈 빠른 root cause 분리.
 
 ## 코스 마무리
 

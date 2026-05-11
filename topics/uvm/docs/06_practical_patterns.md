@@ -15,60 +15,207 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#설계-패턴">설계 패턴</a>
-  <a class="page-toc-link" href="#안티패턴-피해야-할-것">안티패턴 — 피해야 할 것</a>
-  <a class="page-toc-link" href="#from-scratch-환경-구축-체크리스트-이력서-연결">From Scratch 환경 구축 체크리스트 (이력서 연결)</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#연습문제">연습문제</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-처음엔-동작하지만-환경이-커지면-깨지는-패턴들">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-onboarding-매뉴얼-과-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-god-env-안티-패턴-을-agent-구조-로-리팩터링하는-한-사이클">3. 작은 예 — God Env 리팩터링 한 사이클</a>
+  <a class="page-toc-link" href="#4-일반화-4-가지-주요-패턴-과-5-가지-안티패턴">4. 일반화 — 패턴/안티패턴 분류</a>
+  <a class="page-toc-link" href="#5-디테일-각-패턴의-코드-와-from-scratch-체크리스트">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Recognize** 자주 쓰이는 UVM 설계 패턴(Config Object, Sequencer Hierarchy, Layered Sequence)을 구분할 수 있다.
-    - **Identify** 흔한 안티패턴(God Env, Monitor가 sequence 시작, 하드코딩된 경로)을 코드에서 찾아낼 수 있다.
-    - **Plan** 새 검증 프로젝트의 from-scratch 환경 구축 체크리스트를 따라 디렉토리/파일 구조와 1주 차 작업을 계획할 수 있다.
+    - **Recognize** 자주 쓰이는 UVM 설계 패턴 (Config Object, Sequencer Hierarchy, Layered Sequence) 을 구분할 수 있다.
+    - **Identify** 흔한 안티패턴 (God Env, Monitor 가 sequence 시작, 하드코딩된 경로) 을 코드에서 찾아낼 수 있다.
+    - **Plan** 새 검증 프로젝트의 from-scratch 환경 구축 체크리스트를 따라 디렉토리 / 파일 구조와 1주 차 작업을 계획할 수 있다.
     - **Critique** 동료의 UVM 코드 리뷰에서 근거를 들어 안티패턴을 지적하고 리팩터링을 제안할 수 있다.
+    - **Apply** Base Test + Factory Override 패턴으로 같은 env 위에서 시나리오만 다른 N 개의 derived test 를 작성할 수 있다.
 
 !!! info "사전 지식"
     - [Module 01-05](01_architecture_and_phase.md) 전체
     - 한 번 이상 from-scratch 환경 구축 경험이 있으면 본문이 더 와닿음
 
-## 왜 이 모듈이 중요한가
+---
 
-UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading failure**를 만듭니다. 6년+ 경력자도 새 프로젝트에서 자주 반복하는 실수가 있고, 코드 리뷰에서 근거 없이 "이건 좀..." 같은 피드백은 무력합니다. 이 모듈은 **재현 가능한 좋은 설계 결정**을 내리는 어휘를 제공합니다.
+## 1. Why care? — 처음엔 동작하지만 환경이 커지면 깨지는 패턴들
 
-!!! tip "💡 이해를 위한 비유"
-    **Base Test ↔ Derived Test** ≈ **회사 표준 onboarding 절차(base) ↔ 부서별 onboarding(derived)**
+UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading failure** 를 만듭니다. 6 년+ 경력자도 새 프로젝트에서 자주 반복하는 실수가 있고, 코드 리뷰에서 근거 없이 "이건 좀..." 같은 피드백은 무력합니다.
 
-    base_test 가 env 만들고 config_db 채우는 것이 회사 공통 절차, derived_test 가 부서 특화. derived 가 super 호출 안 하면 회사 표준이 적용 안 된 채 시작된다.
+이 모듈은 **재현 가능한 좋은 설계 결정** 을 내리는 어휘를 제공합니다 — Config Object, Base Test 상속, Layered Sequence, Parameterized Agent 의 4 패턴과, God Env / Driver 안 DUT 로직 / Sequence 의 #delay / 다중 곳 Objection / 경로 하드코딩의 5 안티패턴. 이 어휘 위에서 코드 리뷰는 **"이 부분은 God Env 안티패턴 — Agent 로 캡슐화하자"** 처럼 _근거 있는_ 피드백이 됩니다.
 
 ---
 
-## 핵심 개념
-**실무에서 반복되는 설계 패턴을 익히면 환경 구축 속도와 품질이 동시에 향상. 안티패턴을 알면 디버그 시간을 대폭 줄일 수 있다. 이 Unit은 6년 실무에서 축적된 패턴/안티패턴을 정리.**
+## 2. Intuition — Onboarding 매뉴얼, 과 한 장 그림
 
-!!! danger "❓ 흔한 오해"
-    **오해**: Sequence library 를 한 폴더에 모아 두기만 하면 재사용 가능하다
+!!! tip "💡 한 줄 비유"
+    **Base Test ↔ Derived Test** ≈ **회사 표준 onboarding 절차 (base) ↔ 부서별 onboarding (derived)**.<br>
+    `base_test` 가 env 만들고 config_db 채우는 것이 _회사 공통 절차_, `derived_test` 가 _부서 특화_. derived 가 `super.build_phase(phase)` 호출 안 하면 회사 표준이 적용 안 된 채 시작.
 
-    **실제**: Sequence 재사용 = 같은 sequencer/agent 인터페이스를 가정함. 다른 프로젝트에서 재사용하려면 sequencer type, item type 이 호환되어야 한다.
-
-    **왜 헷갈리는가**: "코드를 분리해 둠 = 재사용 가능" 이라는 단순 가정 — 실제 재사용성은 type 호환과 config object 의존성에 달려 있음.
----
-
-## 설계 패턴
-
-### 패턴 1: Config Object 패턴
+### 한 장 그림 — 좋은 환경 vs 나쁜 환경
 
 ```
-문제: config_db set/get가 수십 개 → 관리 불가, 오타 위험
+   ── 좋은 환경 ──                        ── 나쁜 환경 (God Env) ──
 
-해결: 관련 설정을 Config Object로 묶기
+   Test (시나리오 선택만)                 Test
+     └── Env                              └── Env
+         ├── Agent_A                          ├── Driver       ◀─ 직접 보유
+         │    ├── Driver                      ├── Monitor
+         │    ├── Monitor                     ├── Driver_B     ◀─ 다른 인터페이스 도
+         │    └── Sequencer                   ├── Monitor_B
+         ├── Agent_B (Passive)                ├── Scoreboard
+         │    └── Monitor                     └── ... (모두 평면)
+         ├── Scoreboard
+         └── Coverage
+                                              문제:
+   장점:                                       - Agent 단위 재사용 불가
+   - Agent 단위로 재사용 (다른 프로젝트로)     - Active/Passive 분리 안 됨
+   - Active/Passive 모드 분기                 - Driver/Monitor 책임 분산
+   - Config Object 1 개로 SoC 차이 흡수        - 한 신호 추가 = env 수정
+```
+
+### 왜 이 디자인인가 — Design rationale
+
+좋은 환경의 모든 패턴은 **세 가지 _분리_** 로 환원됩니다.
+
+1. **DUT 독립적 Agent** — 프로토콜만 구현, DUT 로직 배제. 그래서 Agent 1 개로 여러 DUT 검증.
+2. **Config Object** — SoC 별 차이를 _설정 객체_ 로 흡수. Test 가 의미 (`secure_boot_en=1`) 로 설정, Agent 가 물리 주소로 변환.
+3. **Base Test 상속** — 공통 환경 + 시나리오별 차이만. derived test 는 `set_type_override` 한 줄로 동작 변형.
+
+이 세 분리가 곧 **포팅 비용을 _수 주 → 3-5 일_** 로 줄이는 비결.
+
+---
+
+## 3. 작은 예 — God Env 안티 패턴 을 Agent 구조 로 리팩터링하는 한 사이클
+
+가장 흔한 실수 시나리오. Junior 엔지니어가 첫 환경을 빠르게 만들기 위해 Env 가 driver 를 _직접 보유_ 한 코드를 가져왔습니다. 한 사이클의 리팩터링.
+
+### 단계별 다이어그램
+
+```
+   Step 1 — 안티패턴 코드를 발견
+   ┌──────────────────────────────────────────┐
+   │ class my_env extends uvm_env;             │
+   │   apb_driver  drv;     // ◀ Agent 없이    │
+   │   virtual apb_if vif;                      │
+   │   function void connect_phase(...);       │
+   │     drv.vif = vif;     // ◀ config_db 우회 │
+   │   endfunction                              │
+   │   task run_phase(...);                    │
+   │     my_seq seq = new();                    │
+   │     seq.start(drv);   // ◀ sequencer 없이  │
+   │   endtask                                  │
+   │ endclass                                   │
+   └──────────────────────────────────────────┘
+                       │
+                       │  ① 안티패턴 3 개 식별
+                       ▼
+   Step 2 — Agent 추출
+   ┌──────────────────────────────────────────┐
+   │ class apb_agent extends uvm_agent;        │
+   │   apb_driver    drv;                       │
+   │   apb_monitor   mon;                       │
+   │   apb_sequencer sqr;                       │
+   │   function void build_phase(...);          │
+   │     mon = apb_monitor::type_id::create(... │
+   │     if (get_is_active() == UVM_ACTIVE)    │
+   │       drv = apb_driver::type_id::create(. │
+   │       sqr = apb_sequencer::type_id::create│
+   │   endfunction                              │
+   │   function void connect_phase(...);       │
+   │     drv.seq_item_port.connect(             │
+   │           sqr.seq_item_export);            │
+   │   endfunction                              │
+   │ endclass                                   │
+   └──────────────────────────────────────────┘
+                       │
+                       │  ② vif 전달 → config_db 경로
+                       ▼
+   Step 3 — top.set 수정
+   ┌──────────────────────────────────────────┐
+   │ initial begin                             │
+   │   uvm_config_db#(virtual apb_if)::set(    │
+   │     null, "uvm_test_top.env.agent.*",     │
+   │     "vif", intf);                          │
+   │   run_test();                              │
+   │ end                                        │
+   └──────────────────────────────────────────┘
+                       │
+                       │  ③ Test → sequencer 로 start
+                       ▼
+   Step 4 — Test 시나리오 정정
+   ┌──────────────────────────────────────────┐
+   │ class my_test extends uvm_test;           │
+   │   ...                                      │
+   │   task run_phase(uvm_phase phase);        │
+   │     phase.raise_objection(this);          │
+   │     my_seq seq = my_seq::type_id::create( │
+   │                    "seq");                 │
+   │     seq.start(env.agent.sqr);  // sqr      │
+   │     phase.drop_objection(this);           │
+   │   endtask                                  │
+   │ endclass                                   │
+   └──────────────────────────────────────────┘
+```
+
+### 단계별 의미
+
+| Step | 누가 | 무엇을 | 왜 |
+|---|---|---|---|
+| ① | reviewer | 안티패턴 식별 — (a) Agent 없이 driver 직접, (b) connect_phase 에서 vif 직접 대입, (c) sequencer 없이 driver 에 start | 셋 다 _재사용성_ 을 깨는 패턴 |
+| ② | refactor | Agent 클래스 신설 — driver/monitor/sequencer 캡슐화 | Active/Passive 분기 가능, 다른 프로젝트로 Agent 째 이전 |
+| ③ | refactor | top.set 의 inst 경로를 `uvm_test_top.env.agent.*` 로 | config_db 표준 경로 — 하드코딩 제거 |
+| ④ | refactor | Test 의 `seq.start` 인자를 `env.agent.sqr` 로 | sequencer 가 driver 와 sequence 의 표준 중개 |
+
+### 비교 표 — Before vs After
+
+| 측면 | Before (God Env) | After (Agent 구조) |
+|---|---|---|
+| 재사용성 | env 째 가져가야 함 | apb_agent 만 가져가도 됨 |
+| Active / Passive | 분리 불가 (driver 항상 존재) | `get_is_active()` 분기로 자동 |
+| vif 전달 | 직접 대입 (하드코딩) | config_db (경로 일치만) |
+| 시나리오 시작 | `seq.start(drv)` (잘못) | `seq.start(env.agent.sqr)` (표준) |
+| Factory override | 적용 어려움 (new 직접) | type_id::create 로 자동 적용 |
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) "동작하면 OK" 가 아니다.** God Env 도 시뮬은 PASS 가능. 그러나 _재사용성_ 이 깨져 있어서 다음 프로젝트에서 비용이 폭발. 안티패턴은 _스케일에서 깨진다_.<br>
+    **(2) 리팩터링은 _분리_ 가 핵심.** Agent 추출 → 책임 분리, config_db 경로 → vif 전달 분리, sequencer → sequence/driver 분리. 셋이 한 묶음의 결정.
+
+---
+
+## 4. 일반화 — 4 가지 주요 패턴 과 5 가지 안티패턴
+
+### 4.1 4 가지 주요 패턴
+
+| 패턴 | 핵심 아이디어 | 어디에 쓰나 |
+|---|---|---|
+| **Config Object** | 관련 설정을 1 개 object 로 묶어 set/get 1 회 | SoC 별 차이 흡수 |
+| **Base Test + 상속** | 공통 환경은 base, 시나리오별 차이만 derived | 새 시나리오 추가 시 short class |
+| **Layered Sequence** | 추상 레벨 별 sequence (system → protocol → transport) | UFS / SCSI 같은 다층 프로토콜 |
+| **Parameterized Agent** | data/addr 폭만 다른 인터페이스에 같은 Agent 재사용 | DCMAC 512-bit, register 32-bit |
+
+### 4.2 5 가지 안티패턴
+
+| 안티패턴 | 무엇이 잘못 | 결과 |
+|---|---|---|
+| **God Env** | env 가 driver/monitor 직접 보유 (Agent 없이) | 재사용 불가, Active/Passive 분리 안 됨 |
+| **Driver 안 DUT 로직** | Driver 가 기대값 계산 / 비교 | 같은 버그를 양쪽에 구현해 검출 불가 |
+| **Sequence 의 #delay** | `body()` 안에서 `#100ns` 같은 하드코딩 지연 | DUT 타이밍 변경 시 일제히 깨짐 |
+| **다중 곳 Objection** | Driver / Monitor / SB 모두 raise/drop | 종료 시점 분산 → 디버그 어려움 |
+| **config_db 경로 하드코딩** | `"env.axi_agent.driver"` 를 코드 전체에 흩어 set/get | 컴포넌트 이름 변경 시 silent miss |
+
+---
+
+## 5. 디테일 — 각 패턴의 코드 와 From-Scratch 체크리스트
+
+### 5.1 패턴 1: Config Object 패턴
+
+```
+문제: config_db set/get 가 수십 개 → 관리 불가, 오타 위험
+
+해결: 관련 설정을 Config Object 로 묶기
 
   class agent_config extends uvm_object;
     virtual my_if vif;
@@ -77,12 +224,12 @@ UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading
     bit enable_coverage = 1;
   endclass
 
-→ set/get 1회로 모든 설정 전달
-→ 새 설정 추가 시 Config Object에만 필드 추가
-→ 포팅 시 Config Object만 교체 (Apple/Meta 사례)
+→ set/get 1 회로 모든 설정 전달
+→ 새 설정 추가 시 Config Object 에만 필드 추가
+→ 포팅 시 Config Object 만 교체 (Apple/Meta 사례)
 ```
 
-### 패턴 2: Base Test + 상속 패턴
+### 5.2 패턴 2: Base Test + 상속 패턴
 
 ```systemverilog
 class base_test extends uvm_test;
@@ -111,18 +258,18 @@ endclass
 
 class stress_test extends base_test;
   function void build_phase(uvm_phase phase);
-    super.build_phase(phase);
-    // Factory Override로 Stress용 Sequence 교체
+    super.build_phase(phase);   // ★ 누락 시 base 의 env 가 사라짐
+    // Factory Override 로 Stress 용 Sequence 교체
     set_type_override_by_type(
       normal_seq::get_type(), stress_seq::get_type());
   endfunction
 endclass
 
-→ 공통 환경은 base_test에, 시나리오별 차이만 하위 Test에
+→ 공통 환경은 base_test 에, 시나리오별 차이만 하위 Test 에
 → 새 테스트 추가 시 base_test 상속 + 시나리오만 작성
 ```
 
-### 패턴 3: Layered Sequence 패턴
+### 5.3 패턴 3: Layered Sequence 패턴
 
 ```
 높은 추상 레벨 → 낮은 추상 레벨로 변환:
@@ -133,40 +280,36 @@ endclass
        ↓
   Transport Sequence: "Command UPIU + Data-In UPIU" (UFS 레벨)
        ↓
-  Pin-level: Driver가 신호 구동
+  Pin-level: Driver 가 신호 구동
 
-각 레벨의 Sequence가 독립적으로 재사용 가능
+각 레벨의 Sequence 가 독립적으로 재사용 가능
 → UFS HCI 검증에서 이 계층 활용
 ```
 
-### 패턴 4: Parameterized Agent
+### 5.4 패턴 4: Parameterized Agent
 
 ```systemverilog
 class generic_axi_agent #(int DATA_W = 32, int ADDR_W = 32)
   extends uvm_agent;
 
-  typedef generic_axi_item #(DATA_W, ADDR_W) item_t;
+  typedef generic_axi_item   #(DATA_W, ADDR_W) item_t;
   typedef generic_axi_driver #(DATA_W, ADDR_W) driver_t;
-  ...
+  // ...
 endclass
 
 // 사용
 generic_axi_agent #(512, 40) wide_agent;   // 512-bit 데이터
 generic_axi_agent #(32, 32)  narrow_agent; // 32-bit 데이터
 
-→ 데이터/주소 폭만 다른 인터페이스에 같은 Agent 재사용
+→ 데이터 / 주소 폭만 다른 인터페이스에 같은 Agent 재사용
 → DCMAC (512-bit), 레지스터 (32-bit) 모두 커버
 ```
 
----
-
-## 안티패턴 — 피해야 할 것
-
-### 안티패턴 1: config_db 경로 하드코딩
+### 5.5 안티패턴 1: config_db 경로 하드코딩
 
 ```systemverilog
 // BAD: 경로 문자열이 코드 전체에 분산
-uvm_config_db #(int)::set(this, "env.axi_agent.driver", "timeout", 100);
+uvm_config_db #(int)::set(this, "env.axi_agent.driver",  "timeout", 100);
 uvm_config_db #(int)::set(this, "env.axi_agent.monitor", "timeout", 100);
 // → 컴포넌트 이름 변경 시 모든 경로 수동 수정
 
@@ -174,10 +317,10 @@ uvm_config_db #(int)::set(this, "env.axi_agent.monitor", "timeout", 100);
 uvm_config_db #(agent_cfg)::set(this, "env.axi_agent*", "cfg", cfg);
 ```
 
-### 안티패턴 2: Driver에 DUT 로직 삽입
+### 5.6 안티패턴 2: Driver 에 DUT 로직 삽입
 
 ```systemverilog
-// BAD: Driver가 기대값을 계산
+// BAD: Driver 가 기대값을 계산
 task drive_and_check(my_item item);
   vif.data <= item.data;
   @(posedge vif.clk);
@@ -185,22 +328,22 @@ task drive_and_check(my_item item);
     `uvm_error(...)
 endtask
 
-// GOOD: Driver는 구동만, 비교는 Scoreboard
-// Driver: vif.data <= item.data;
+// GOOD: Driver 는 구동만, 비교는 Scoreboard
+// Driver:     vif.data <= item.data;
 // Scoreboard: ref_model.predict(item) vs monitor.actual
 ```
 
-### 안티패턴 3: Sequence에서 시간 대기
+### 5.7 안티패턴 3: Sequence 에서 시간 대기
 
 ```systemverilog
-// BAD: Sequence가 DUT 타이밍에 의존
+// BAD: Sequence 가 DUT 타이밍에 의존
 task body();
   start_item(item); finish_item(item);
   #100ns;  // ← 하드코딩 지연!
   start_item(next_item); finish_item(next_item);
 endtask
 
-// GOOD: 이벤트/핸드셰이크 기반
+// GOOD: 이벤트 / 핸드셰이크 기반
 task body();
   start_item(item); finish_item(item);
   wait(env.monitor.transaction_complete);  // 이벤트 기반
@@ -208,7 +351,7 @@ task body();
 endtask
 ```
 
-### 안티패턴 4: $display / $finish 사용
+### 5.8 안티패턴 4: $display / $finish 사용
 
 ```systemverilog
 // BAD: UVM 외부 출력
@@ -220,10 +363,10 @@ $finish;
 `uvm_fatal("DRV", "Critical failure — cannot continue")
 
 // 이유: UVM 리포팅은 컴포넌트 경로, 시간, 심각도를 자동 포함
-//       필터링/카운팅/파일 출력 등 제어 가능
+//       필터링 / 카운팅 / 파일 출력 등 제어 가능
 ```
 
-### 안티패턴 5: 모든 곳에서 Objection
+### 5.9 안티패턴 5: 모든 곳에서 Objection
 
 ```systemverilog
 // BAD: 여러 컴포넌트에서 raise/drop → 종료 시점 예측 불가
@@ -231,7 +374,7 @@ $finish;
 // Monitor: phase.raise_objection(this);
 // Scoreboard: phase.raise_objection(this);
 
-// GOOD: Test에서만 raise/drop
+// GOOD: Test 에서만 raise/drop
 class my_test extends uvm_test;
   task run_phase(uvm_phase phase);
     phase.raise_objection(this);
@@ -243,12 +386,10 @@ class my_test extends uvm_test;
 endclass
 ```
 
----
-
-## From Scratch 환경 구축 체크리스트 (이력서 연결)
+### 5.10 From Scratch 환경 구축 체크리스트
 
 ```
-MangoBoost / Samsung에서 반복한 환경 구축 순서:
+사내 / 사외 프로젝트에서 반복한 환경 구축 순서:
 
 1. [ ] Interface 정의 (.sv)
 2. [ ] Sequence Item 정의 (필드 + Constraint)
@@ -267,97 +408,79 @@ MangoBoost / Samsung에서 반복한 환경 구축 순서:
 15. [ ] Coverage 분석 + 추가 시나리오
 ```
 
----
+### 5.11 Legacy → UVM 전환 4 단계
 
-## Q&A
+| Step | 작업 | 검증 포인트 |
+|---|---|---|
+| 1 | Wrapper UVM env (기존 task 자극은 그대로, 위에 빈 env) | 기존 시뮬 결과와 동일 sanity |
+| 2 | Monitor 만 UVM 화 (자극은 여전히 legacy) | Scoreboard 에 actual 도달 + legacy 결과 일치 |
+| 3 | Driver 도입 (기존 task 자극을 Sequence + Driver 로) | 같은 시드에서 같은 자극 인가 (signal-level diff) |
+| 4 | Sequence Library 정비 + Virtual Sequence | 기존 테스트 리스트와 1:1 매핑 + coverage 유지 |
 
-**Q: UVM 환경을 from scratch로 구축한 경험을 설명하라.**
-> "MangoBoost에서 MMU IP와 DCMAC 서브시스템의 UVM 환경을 from scratch로 구축했다. 핵심 설계 원칙: (1) Config Object 패턴 — 포팅 시 Config만 교체. (2) Parameterized Agent — 데이터 폭만 다른 인터페이스에 재사용. (3) Base Test 상속 — 공통 환경 + 시나리오별 Test. (4) Virtual Sequence — 멀티 Agent 조합. 이 원칙들로 환경을 여러 프로젝트에 빠르게 포팅할 수 있었다."
-
-**Q: UVM에서 가장 흔한 실수는?**
-> "세 가지: (1) config_db 경로 오타 — 컴파일 타임에 안 잡히고 런타임에 get 실패. Config Object로 완화. (2) Driver에 DUT 로직 삽입 — 같은 버그를 양쪽에 구현하여 검출 불가. Scoreboard 분리 필수. (3) Objection 관리 — 여러 곳에서 raise/drop하면 종료 시점을 예측할 수 없음. Test에서만 관리."
-
-**Q: 환경 포팅을 빠르게 하는 핵심은?**
-> "세 가지 분리: (1) DUT 독립적 Agent — 프로토콜만 구현, DUT 로직 배제. (2) Config Object — SoC별 차이를 설정 객체로 흡수. (3) OTP/메모리 맵 추상화 — 물리 주소가 아닌 의미 기반 접근. Samsung에서 Apple/Meta 프로젝트 포팅 시 수 주 → 3-5일로 단축한 것이 이 원칙 덕분이다."
+핵심: 한 번에 다 갈아엎지 않기. 각 단계에서 _기능 동등성_ 을 sanity 로 확인.
 
 ---
 
-## 연습문제
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-!!! question "Exercise 1 (Evaluate, ★★)"
-    다음 코드 스니펫에서 안티패턴 3개를 찾고, 각각 어떻게 수정해야 하는지 답하세요.
+### 흔한 오해
 
-    ```systemverilog
-    class my_env extends uvm_env;
-      apb_driver  drv;     // (a) Agent 없이 driver 직접 보유
-      virtual apb_if vif;
-      function void connect_phase(uvm_phase phase);
-        drv.vif = vif;     // (b) config_db 안 쓰고 직접 대입
-      endfunction
-      task run_phase(uvm_phase phase);
-        my_seq seq = new();
-        seq.start(drv);    // (c) sequencer 없이 driver에 start
-      endtask
-    endclass
-    ```
+!!! danger "❓ 오해 1 — 'Sequence library 를 한 폴더에 모아 두기만 하면 재사용 가능하다'"
+    **실제**: Sequence 재사용 = **같은 sequencer / agent 인터페이스를 가정함**. 다른 프로젝트에서 재사용하려면 sequencer type, item type 이 호환되어야 합니다. 폴더 분리만 하고 sequencer/item 이 프로젝트마다 다르면 그대로 재사용 못 함.<br>
+    **왜 헷갈리는가**: "코드를 분리해 둠 = 재사용 가능" 이라는 단순 가정 — 실제 재사용성은 _type 호환과 config object 의존성_ 에 달려 있음.
 
-    ??? answer "모범 답안"
-        - **(a) Agent 누락**: env가 driver를 직접 보유 → 재사용 불가, Active/Passive 분리 안 됨. 수정: `apb_agent`를 만들고 driver/monitor/sequencer를 그 안에 두기.
-        - **(b) Direct VIF 전달**: connect_phase에서 핸들 직접 대입 — config_db를 우회. 수정: top에서 `uvm_config_db#(virtual apb_if)::set(null, "uvm_test_top.env.agent.*", "vif", vif);`.
-        - **(c) Sequencer 누락**: `seq.start(drv)`는 잘못. Sequence는 Sequencer에 start해야 함. 수정: `seq.start(env.agent.sqr);`.
+!!! danger "❓ 오해 2 — '`super.build_phase(phase)` 는 의례적인 첫 줄'"
+    **실제**: derived test 의 build_phase 첫 줄에 `super.build_phase(phase)` 가 빠지면 base 가 만든 _env / config_db / factory override 가 모두 사라집니다_. UVM_FATAL 도 안 뜨고 시뮬은 통과하는데 _결과가 이상한_ silent 버그. 모든 `*_phase` 함수의 첫 줄에 super 호출은 _의무_.<br>
+    **왜 헷갈리는가**: 일반 OOP 에서 super 호출이 선택적인 경우가 많아서 — UVM 은 phase chain 을 자동 안 해 줌.
 
-!!! question "Exercise 2 (Create, ★★★)"
-    새 SoC IP의 검증을 from scratch로 시작합니다. 첫 1주차에 끝낼 작업 5개를 의존 순서로 나열하세요.
+!!! danger "❓ 오해 3 — 'Pattern 을 다 외우면 좋은 환경을 짤 수 있다'"
+    **실제**: 패턴은 _도구 인덱스_ 일 뿐. _언제 어느 패턴을 꺼낼지_ 의 직관이 중요. 예를 들어 "SoC 별 차이가 작다" 면 Config Object 가 과도할 수 있고, "다중 agent 동기화 없음" 이면 Virtual Sequence 도 과도. **컨텍스트 → 패턴 매핑** 이 마스터의 핵심.<br>
+    **왜 헷갈리는가**: 학습 단계에서는 _카탈로그식_ 학습이 주가 되어서.
 
-    ??? answer "예시 답안"
-        1. **인터페이스 sv 작성** (DUT 포트 매핑 + clocking block + modport)
-        2. **Sequence Item 정의** (트랜잭션 필드 + 기본 constraint)
-        3. **최소 Agent** (Driver 시그널 인가만 + Monitor sample만)
-        4. **Top + Test 1개** (build → connect → reset → 1 transaction → smoke)
-        5. **Smoke test 통과** (1 트랜잭션이 인가되고 Monitor가 캡처 + log 확인)
-        의존성: 1→2 (item이 interface 신호 폭에 맞춰야), 2→3 (driver가 item 형식 알아야), 3→4 (env에 agent 인스턴스화), 4→5 (시뮬 실행).
+!!! danger "❓ 오해 4 — '안티패턴은 절대 쓰면 안 된다'"
+    **실제**: 안티패턴이라도 _작은 prototype_ 또는 _illustration code_ 에서는 적절할 수 있습니다 (예: `$display` 가 매우 빠른 디버그용). 안티패턴의 본질은 _scale 에서 깨진다_ 는 점 — 일회용 코드에서는 cost 가 안 드러남. 다만 _실제 환경 코드_ 에 들어가는 순간 cascading.<br>
+    **왜 헷갈리는가**: "BAD" 라는 단순 라벨 때문에.
 
-!!! question "Exercise 3 (Analyze, ★★★)"
-    Legacy SystemVerilog testbench(uvm 미사용, task 기반 자극)를 UVM으로 전환할 때의 단계 4개를 설계하고, 각 단계에서 무엇을 검증해 위험을 줄일지 답하세요.
+!!! danger "❓ 오해 5 — 'Driver 가 vif 응답을 _보고_ 만 있는데 왜 검증하면 안 되나'"
+    **실제**: Driver 가 vif 를 통해 DUT 응답을 _볼 수 있는 것_ 과 _검증해도 되는 것_ 은 다릅니다. Driver 는 transaction → pin 변환만 — 검증은 _scoreboard 와 reference model_ 의 책임. 분리가 깨지면 (1) 같은 버그를 양쪽에 구현, (2) DUT 변경 시 Driver 도 수정, (3) 다른 DUT 에 재사용 불가. _기술적으로_ 가능해도 _구조적으로_ 금지.<br>
+    **왜 헷갈리는가**: vif 핸들이 양방향 정보 (driving + sampling) 를 가져서.
 
-    ??? answer "예시 답안"
-        1. **Wrapper UVM env**: 기존 task 기반 자극은 그대로 두고 그 위에 빈 UVM env. 검증: 기존 시뮬 결과와 동일한지 sanity.
-        2. **Monitor만 UVM화**: 신호 관찰을 UVM Monitor로 옮김. 자극은 여전히 legacy. 검증: Scoreboard에 actual이 잘 도착하는지 + legacy 결과와 일치.
-        3. **Driver 도입**: 기존 task 자극을 Sequence + Driver로 재구성. 검증: 같은 시드에서 같은 자극 인가 패턴 (signal-level diff).
-        4. **Sequence Library 정비**: 시나리오를 sequence 단위로 모듈화 + Virtual Sequence. 검증: 기존 테스트 리스트와 1:1 매핑 확인 + coverage가 떨어지지 않았는지.
-        **위험 감소 포인트**: 각 단계에서 *기능 동등성*을 sanity로 확인하는 게 핵심. 한 번에 다 갈아엎지 않기.
-!!! warning "실무 주의점 — derived test 의 super.build_phase 누락"
-    **현상**: 파생 테스트에서 env 인스턴스가 안 만들어지거나, `set_type_override` 가 안 먹힌 채 시뮬레이션이 시작된다. UVM_FATAL 없이 통과하는데 결과가 이상함.
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
 
-    **원인**: `extends base_test` 한 클래스의 `build_phase` 첫 줄에 `super.build_phase(phase);` 를 잊으면 base_test 가 만든 env / config_db / factory override 가 모두 사라진다. UVM 은 phase 함수를 자동으로 chain 하지 않는다.
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Derived test 가 시작은 되는데 env 인스턴스가 안 만들어짐 | `super.build_phase(phase)` 누락 | derived test 의 build_phase 첫 줄 |
+| `set_type_override` 가 안 먹힘 | 컴포넌트가 `new()` 로 직접 생성 | `grep "= new(" *_pkg.sv` |
+| Sequence 가 다른 시드에서 재현 안 됨 | sequence body 에 `#100ns` 같은 하드코딩 지연 | sequence body 내 `#`/`@` |
+| Test 에서 `seq.start(drv)` 호출 컴파일 에러 / 동작 안 함 | sequencer 없이 driver 에 start | sequencer 만들고 `seq.start(env.agent.sqr)` |
+| 한 vif 변경했는데 여러 곳 수정 필요 | config_db 경로 하드코딩 분산 | config_db set/get 의 inst 경로 grep |
+| `$display` 출력이 실제 레퍼런스와 안 맞음 | UVM reporting 과 다른 채널 — 동기화 안 됨 | `$display` → `uvm_info`/`uvm_error` 변환 |
+| Multiple component raise/drop → 종료 시점 예측 불가 | objection 분산 | grep `raise_objection` — Test 외에 있는지 |
+| Layered sequence 에서 lower seq 의 sequencer 못 찾음 | `start(sequencer)` 의 인자 누락 / 잘못된 sub_sqr 핸들 | virtual sequence 의 sub_sqr 대입 줄 |
 
-    **점검 포인트**: 모든 derived 클래스의 `build_phase`/`connect_phase`/`run_phase` 첫 줄에 `super.<phase>` 호출이 있는지. `+UVM_VERBOSITY=UVM_HIGH` 로 hierarchy print 의 env 가 base_test 결과를 포함하는지 확인.
+---
 
-## 핵심 정리
+## 7. 핵심 정리 (Key Takeaways)
 
-- **Config Object 패턴**: 환경 설정을 한 객체에 모아 config_db로 전달 — 흩어진 set/get 폭발 방지.
-- **Sequencer Hierarchy**: virtual sequencer가 sub-sequencer 핸들을 보유 → multi-agent 시나리오의 표준.
-- **Layered Sequence**: 상위 sequence가 하위 sequence를 호출 → 시나리오 재사용성 + 의도 명확화.
-- **Anti: God Env** — env가 driver/monitor를 직접 보유하면 재사용 불가. Agent로 캡슐화.
-- **Anti: Monitor에서 sequence 시작** — 책임 분리 위반. Monitor는 관찰만, sequence는 test 또는 vseq에서 시작.
-- **Anti: 하드코딩된 config_db 경로** — 컴포넌트 이름 변경 시 silent failure. wildcard 또는 utility 함수.
-- **From-scratch 체크리스트**: 인터페이스 → sequence item → 최소 agent → top + test → smoke 통과. 이 순서를 어기면 디버그 어려움.
+- **4 패턴**: Config Object (설정 묶음) / Base Test 상속 (시나리오 차이만) / Layered Sequence (추상 레벨 분리) / Parameterized Agent (폭만 다른 인터페이스 재사용).
+- **5 안티패턴**: God Env / Driver 안 DUT 로직 / Sequence 의 #delay / 다중 곳 Objection / config_db 경로 하드코딩.
+- **From-scratch 15 단계 체크리스트**: Interface → Item → Driver → Monitor → Sequencer → Agent → Scoreboard → Coverage → Env → Test → Sequence → VSeq → Package → Sanity → Coverage 분석.
+- **Legacy → UVM 4 단계**: Wrapper env → Monitor 만 UVM 화 → Driver 도입 → Sequence library 정비. 한 번에 다 갈아엎지 않고 각 단계 _기능 동등성_ sanity.
+- **포팅 비결의 3 분리**: DUT 독립적 Agent + Config Object + OTP/메모리 맵 추상화 → 수 주 → 3-5 일.
 
-## 다음 단계
+!!! warning "실무 주의점"
+    - **모든 `*_phase` 함수의 첫 줄에 `super.<phase>(phase)`** — 빠지면 base 의 모든 작업 무효.
+    - **`new()` 직접 호출 금지** — type_id::create 만 사용해야 factory override 가 적용.
+    - **Sequence 의 `#delay` 는 코드 리뷰의 1 차 reject 사유** — 이벤트 / 핸드셰이크로 대체.
+    - **Test 외에서 raise/drop 하지 말 것** — 종료 시점이 _분산_ 되면 디버그 어려움.
 
-- 📝 [**Module 06 퀴즈**](quiz/06_practical_patterns_quiz.md)
-- ➡️ [**Module 07 — Quick Reference Card**](07_quick_reference_card.md) (인터뷰/리뷰 시 빠르게 참조)
+---
 
-<div class="chapter-nav">
-  <a class="nav-prev" href="../05_tlm_scoreboard_coverage/">
-    <div class="nav-label">◀ 이전</div>
-    <div class="nav-title">TLM, Scoreboard, Coverage</div>
-  </a>
-  <a class="nav-next" href="../07_quick_reference_card/">
-    <div class="nav-label">다음 ▶</div>
-    <div class="nav-title">UVM — Quick Reference Card</div>
-  </a>
-</div>
+## 다음 모듈
+
+→ [Module 07 — Quick Reference Card](07_quick_reference_card.md): 인터뷰 / 코드 리뷰 / 디버그 중에 빠르게 펴보는 _치트시트_. 정독은 Module 01-06 으로 끝내고, 마지막에 한 장으로 정리.
+
+[퀴즈 풀어보기 →](quiz/06_practical_patterns_quiz.md)
 
 
 --8<-- "abbreviations.md"

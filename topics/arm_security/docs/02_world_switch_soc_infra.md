@@ -15,50 +15,197 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#smc-secure-monitor-call-월드-전환">SMC (Secure Monitor Call) — 월드 전환</a>
-  <a class="page-toc-link" href="#soc-보안-인프라-버스메모리인터럽트-분할">SoC 보안 인프라 — 버스/메모리/인터럽트 분할</a>
-  <a class="page-toc-link" href="#secure-boot에서-보안-레벨-변화-요약">Secure Boot에서 보안 레벨 변화 (요약)</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#확인-문제">확인 문제</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-ns-el1-에서-smc-한-번이-bl31-에서-월드를-바꾸는-한-사이클">3. 작은 예 — SMC 한 번의 월드 전환</a>
+  <a class="page-toc-link" href="#4-일반화-월드-전환의-3-단계-와-soc-보안-인프라-5-축">4. 일반화 — 3 단계 + 5 축</a>
+  <a class="page-toc-link" href="#5-디테일-tzpc-tzasc-gic-smmu-cache-shared-memory">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Trace** SMC instruction → EL3 secure monitor → world switch 흐름
-    - **Apply** TZPC, TZASC, GIC의 secure/non-secure 분할 설정
-    - **Implement** Context save/restore 흐름 (world 전환 시 register 격리)
-    - **Identify** SoC peripheral의 보안 인프라 적용 위치
+    - **Trace** SMC instruction → EL3 secure monitor → world switch 흐름을 GPR/SPSR/SCR 단위로 추적할 수 있다.
+    - **Apply** TZPC, TZASC, GIC 의 secure / non-secure 분할 설정을 부팅 시점에 적용할 수 있다.
+    - **Implement** BL31 의 context save/restore 흐름 (world 전환 시 register 격리) 을 구현 관점에서 분해할 수 있다.
+    - **Identify** SoC peripheral 의 보안 인프라 적용 위치 (DRAM = TZASC, APB = TZPC, DMA = SMMU, IRQ = GIC) 를 식별할 수 있다.
+    - **Distinguish** TZASC (영역 단위) 와 SMMU (디바이스 단위) 의 다층 방어 역할을 구분할 수 있다.
 
 !!! info "사전 지식"
-    - [Module 01](01_exception_level_trustzone.md)
-    - GIC (Generic Interrupt Controller) 기본
-
-!!! tip "💡 이해를 위한 비유"
-    **World Switch** ≈ **보안 출입 절차 — 신청서(SMC) + 신원 확인 + 개인 소지품 보관(register save)**
-
-    Normal World ↔ Secure World 전환 시 EL3 monitor 가 register / state 보관 후 다른 world 로 jump. 비싼 operation.
+    - [Module 01 — Exception Level & TrustZone](01_exception_level_trustzone.md)
+    - GIC (Generic Interrupt Controller) 기본 구조
+    - AXI 의 `AxPROT[1]` (NS attribute) 개념
 
 ---
 
-## 핵심 개념
-**월드 전환은 반드시 EL3(Secure Monitor)을 경유해야 하며, SMC 명령으로만 가능. SoC 레벨에서는 TZPC, TZASC, GIC 보안 설정으로 버스/메모리/인터럽트를 Secure/Non-Secure로 분할하여 HW 격리를 완성.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: World switch 는 단순 instruction 한 번
+Module 01 에서 _"NS bit 가 모든 transaction 에 함께 흐른다"_ 라고 했지만, **누가 그 bit 를 set 하고, 어느 컴포넌트가 그 bit 를 보고 차단하는지** 는 아직 안 봤습니다. 이 모듈이 그 답입니다 — BL31 의 SMC handler 가 SCR_EL3.NS 를 toggle 하면, downstream 에서 TZPC (peripheral), TZASC (DRAM), GIC (interrupt), SMMU (DMA), cache (NS tag) 가 각자 다른 단위로 같은 NS bit 를 _존중_ 합니다.
 
-    **실제**: SMC instruction 한 번이지만 monitor 가 GPR / FP / vector / system register 모두 save/restore 필요. 잘못하면 secure state 누설.
+이 모듈을 건너뛰면 디버그 시 _"NS world 에서 secure 자원이 노출되는데 어디서 새는지 모르겠다"_ 가 됩니다. 반대로 5 축 (TZPC/TZASC/GIC/SMMU/cache) 을 정확히 잡으면, 첫 실패 신호만 보고도 어느 컴포넌트가 누락됐는지 즉시 좁힐 수 있습니다.
 
-    **왜 헷갈리는가**: "call = 단순" 이라는 직관. 실제는 context save 의 정확성이 critical.
 ---
 
-## SMC (Secure Monitor Call) — 월드 전환
+## 2. Intuition — 비유와 한 장 그림
 
-### 전환 흐름
+!!! tip "💡 한 줄 비유"
+    **World switch + SoC 보안 인프라** ≈ _공항의 입국 게이트 + 다층 보안 검색대_.<br>
+    **SMC** = 입국 신청서 제출. **BL31** = 출입국 심사관 (소지품 = register 를 압수보관/돌려주고 NS bit = 출입증 색깔을 바꿈). **TZPC/TZASC/GIC/SMMU/cache** = 면세점·게이트·수하물·짐꾼·라운지 별로 따로 있는 X-ray 기기들 — 각자 NS bit 를 다른 단위 (peripheral, DRAM region, IRQ, DMA stream, cache line) 로 검사.
+
+### 한 장 그림 — SCR_EL3.NS 가 5 축으로 전파되는 모습
+
+```
+                           ┌──────────────────────────┐
+                           │  EL3 / BL31 (단일 게이트)  │
+              SMC ────────►│   SCR_EL3.NS  (1 bit)     │◄──── ERET
+                           │   ▲ 여기서만 toggle        │
+                           └────────────┬─────────────┘
+                                        │  AxPROT[1] / AxNSE
+                                        │  (모든 outgoing transaction 에 부착)
+            ┌───────────────────────────┼──────────────────────────┐
+            ▼              ▼            ▼            ▼             ▼
+    ┌──────────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐
+    │   TZPC       │ │  TZASC   │ │   GIC    │ │  SMMU    │ │ Cache /TLB │
+    │  (APB Slave) │ │ (DRAM    │ │ (IRQ     │ │ (DMA     │ │ (line tag) │
+    │   per-slave  │ │  region) │ │  group)  │ │  stream) │ │  per-line  │
+    └──────────────┘ └──────────┘ └──────────┘ └──────────┘ └────────────┘
+       OTP/Crypto      Secure       Group 0     GPU/DSP       NS=0 vs NS=1
+       =Secure         DRAM         /1S/1NS     stream id     별도 entry
+       Timer/UART      vs NS DRAM
+       =NS
+```
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+세 가지 요구가 동시에 풀려야 했습니다.
+
+1. **NS bit 의 source 는 단 하나여야 한다** — 여러 곳에서 set 가능하면 일관성이 깨짐 → SCR_EL3.NS 가 유일한 source-of-truth, EL3 만 write.
+2. **그러나 보호의 _세밀도_ 는 자원 종류마다 다르다** — DRAM 은 GB 단위, peripheral 은 slave 1 개 단위, IRQ 는 1 개 단위, DMA 는 stream id 단위, cache 는 line 단위 → 각자 다른 controller 가 같은 NS bit 를 _자기 단위로 해석_.
+3. **월드 전환은 비싸지만 정확해야 한다** — register 한 개라도 누락되면 secure state 누설 → BL31 의 context save/restore 가 GPR/FP/SVE/sysreg 까지 빠짐없이 처리.
+
+이 세 요구의 교집합이 "EL3 single-source NS bit + 5 축의 SoC 인프라 + BL31 의 정확한 context handling" 입니다.
+
+---
+
+## 3. 작은 예 — NS-EL1 에서 SMC 한 번이 BL31 에서 월드를 바꾸는 한 사이클
+
+가장 단순한 시나리오. NS-EL1 Linux kernel 의 OP-TEE driver 가 `SMC #0` 을 발행해 S-EL1 OP-TEE 에 진입했다가 돌아옵니다. 사이에 BL31 이 두 번 (NS→S, S→NS) 호출되며, 각 호출마다 GPR + sysreg 컨텍스트를 정확히 swap 합니다.
+
+```
+   t0 ─────────────────────────────────────────────────────────────────► t
+                                  ┌── BL31 (EL3) ──┐
+                                  │  ④ ns_save     │
+                                  │  ⑤ NS=0        │
+                                  │  ⑥ s_restore   │
+                                  │  ⑦ ERET → S-EL1│
+                                  └────┬───────────┘
+                                       │
+   ┌── NS-EL1 ──────┐                  │                  ┌── S-EL1 ──────────┐
+   │ Linux kernel   │                  │                  │  OP-TEE           │
+   │  ① SCR.NS=1    │                  │                  │   ⑧ TA dispatch   │
+   │  ② post req    │ SMC #0           │                  │   ⑨ result 준비    │
+   │  ③ smc instr ──┼─────────────────►│                  │   ⑩ smc 반환 ──────┼──┐
+   │                │                  │                  └───────────────────┘  │
+   │                │                  │                                         │
+   │                │                  │   ┌── BL31 (EL3) ──┐                    │
+   │                │                  │   │  ⑪ s_save      │◄───── SMC ─────────┘
+   │                │                  │   │  ⑫ NS=1        │
+   │                │                  │   │  ⑬ ns_restore  │
+   │                │                  │   │  ⑭ ERET → NS-EL1│
+   │  ⑮ result 회수 ◄──────────────────┼───┴────────────────┘
+   └────────────────┘                  │
+```
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | NS-EL1 | 현재 SCR_EL3.NS=1 인 상태 (BL31 이 이전에 NS 로 set) | 정상 NS world 실행 중 |
+| ② | NS-EL1 | OP-TEE message buffer 작성, X0 = function id | SMCCC 규약 |
+| ③ | NS-EL1 | `smc #0` 실행 | HW 가 즉시 trap to EL3 |
+| ④ | EL3 (BL31) | NS context save: x0~x30, SP_EL1, ELR_EL1, SPSR_EL1, **NEON/FP/SVE**, TPIDR_EL*, sysreg | 누락 시 secure state 누설 |
+| ⑤ | EL3 | `MSR SCR_EL3, x?` 로 NS bit 0 set | 이 cycle 부터 outgoing AxPROT[1]=0 |
+| ⑥ | EL3 | 이전에 보관한 S context (있으면) restore — 첫 진입이면 OP-TEE entry 로 set | 양방향 swap |
+| ⑦ | EL3 | SPSR_EL3 ← S-EL1h, ELR_EL3 ← OP-TEE entry → `ERET` | S-EL1 진입 |
+| ⑧ | S-EL1 | TA function id 디코드 → 결제 TA 호출 | TEE OS 동작 |
+| ⑨ | S-EL1 | TA 결과 반환 → message buffer 업데이트 | |
+| ⑩ | S-EL1 | `smc` 로 BL31 재진입 (이번엔 S→NS 요청) | 양방향 게이트 |
+| ⑪ | EL3 | S context save | secure register 보호 |
+| ⑫ | EL3 | `SCR_EL3.NS = 1` set | 이 cycle 부터 다시 NS attribute |
+| ⑬ | EL3 | NS context restore (Step ④ 의 역작업) | |
+| ⑭ | EL3 | `ERET` → NS-EL1 | smc 다음 instruction 으로 |
+| ⑮ | NS-EL1 | x0 ~ X3 의 반환 코드 회수, message buffer 읽기 | application path |
+
+```c
+// Step ③ 의 NS-EL1 측. 이 한 줄의 SMC 가 ④~⑭ 를 모두 트리거.
+register uint64_t x0 asm("x0") = OPTEE_SMC_CALL_WITH_ARG;
+register uint64_t x1 asm("x1") = (uintptr_t)&msg_arg;
+asm volatile("smc #0"
+             : "+r"(x0), "+r"(x1)
+             :
+             : "x2","x3","x4","x5","x6","x7", "memory");
+/* x0 ← OPTEE_SMC_RETURN_OK / RPC code */
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) BL31 이 GPR 만 save 하면 부족** — NEON/FP/SVE/TPIDR_EL*/PMU 등 _모든_ 휘발 레지스터가 secure state 일 수 있고, NS world 가 ERET 후 그 잔여 값을 읽어낼 수 있습니다. 사내 실무 주의점 (이 모듈 §6 참조).<br>
+    **(2) SCR_EL3.NS 를 set 하는 cycle 과 outgoing transaction 이 새 NS 로 보이는 cycle 이 정확히 일치해야** — 한 cycle 어긋나면 _찰나의 secure transaction 이 NS attribute 로 나가는 race_ 가 생깁니다.
+
+---
+
+## 4. 일반화 — 월드 전환의 3 단계 와 SoC 보안 인프라 5 축
+
+### 4.1 월드 전환의 3 단계
+
+```
+   Stage A: Trap                    Stage B: Switch                  Stage C: Resume
+   ──────────────                   ───────────────                  ────────────────
+   SMC instruction                  SCR_EL3.NS toggle                ERET to target EL
+   PSTATE → SPSR_EL3                Context save (current world)     SPSR_EL3 → PSTATE
+   PC → ELR_EL3                     Context restore (target world)   ELR_EL3 → PC
+   PC ← VBAR_EL3 + 0x400           모든 GPR/FP/sysreg               outgoing transaction
+                                                                       NS attribute 갱신
+```
+
+| Stage | 핵심 register | 누락 시 결과 |
+|---|---|---|
+| A. Trap | VBAR_EL3, SPSR_EL3, ELR_EL3 | 잘못된 handler 진입 → 시스템 hang |
+| B. Switch | SCR_EL3.NS, x0~x30, NEON/FP/SVE, TPIDR_*, sysreg context | secure state 누설 / 잔여 값 노출 |
+| C. Resume | SPSR_EL3.M, ELR_EL3, AxPROT 전파 | 잘못된 EL 복귀 / NS attribute race |
+
+### 4.2 SoC 보안 인프라 5 축
+
+```
+   축 1. TZPC   — APB peripheral 단위    (slave 별 secure/NS)
+   축 2. TZASC  — DRAM region 단위       (address range 별 secure/NS)
+   축 3. GIC    — interrupt 단위         (Group 0 / 1S / 1NS 별 라우팅)
+   축 4. SMMU   — DMA stream 단위        (stream id 별 page table + secure)
+   축 5. Cache  — cache line 단위        (NS tag 로 같은 PA 도 별도 line)
+```
+
+각 축은 **같은 NS bit 를 자기 단위로 해석** 합니다. 보호 단위가 다른 5 축이 동시에 작동해야 완전한 격리가 되며, 한 축의 누락이 곧 보안 구멍입니다.
+
+### 4.3 TZASC vs SMMU — 다층 방어
+
+```
+   ┌───────────────────────────────────────────────────────┐
+   │  TZASC = "어느 PA 가 secure 인가?"  (모든 master 공통)  │
+   │  SMMU  = "어느 master 가 어느 PA 에 가도 되는가?"        │
+   └───────────────────────────────────────────────────────┘
+   GPU → SMMU (stream id check + Stage1/2 translation)
+              → TZASC (region check)
+              → DRAM
+   둘 다 통과해야 access 성공. 한쪽만 잘못 설정돼도 다른 쪽이 차단.
+```
+
+이 다층 모델이 _"한 컴포넌트 misconfig 가 곧 탈취" 가 되지 않게_ 하는 핵심 디자인입니다.
+
+---
+
+## 5. 디테일 — TZPC, TZASC, GIC, SMMU, Cache, Shared Memory
+
+### 5.1 SMC (Secure Monitor Call) — 월드 전환 흐름
 
 ```
 Normal World (NS-EL1)                    Secure World (S-EL1)
@@ -86,7 +233,7 @@ Normal World (NS-EL1)                    Secure World (S-EL1)
 +-------------------+                   +-------------------+
 ```
 
-### SMC 호출 규약 (SMCCC)
+#### SMC 호출 규약 (SMCCC)
 
 ```
 ARM SMC Calling Convention:
@@ -113,11 +260,7 @@ ARM SMC Calling Convention:
     SMC #0, X0=0xC4000003 (CPU_ON) → EL3가 코어 전원 관리
 ```
 
----
-
-## SoC 보안 인프라 — 버스/메모리/인터럽트 분할
-
-### TZPC (TrustZone Protection Controller)
+### 5.2 TZPC (TrustZone Protection Controller)
 
 ```
 APB 주변장치를 Secure/Non-Secure로 분류:
@@ -137,7 +280,7 @@ APB 주변장치를 Secure/Non-Secure로 분류:
   → Normal World에서 OTP 접근 시도 → 버스 에러
 ```
 
-### TZASC (TrustZone Address Space Controller)
+### 5.3 TZASC (TrustZone Address Space Controller)
 
 ```
 DRAM 영역을 Secure/Non-Secure로 분할:
@@ -158,7 +301,7 @@ DRAM 영역을 Secure/Non-Secure로 분할:
   → NS Master(DMA, GPU)가 Secure DRAM 접근 → TZASC가 차단
 ```
 
-### GIC (Generic Interrupt Controller) 보안
+### 5.4 GIC (Generic Interrupt Controller) 보안
 
 ```
 인터럽트도 Secure/Non-Secure 분류:
@@ -175,12 +318,12 @@ DRAM 영역을 Secure/Non-Secure로 분할:
   보안 의미:
     Crypto Engine 완료 인터럽트 → Group 0 (Secure)
     → Normal World에서 이 인터럽트를 가로채거나 마스킹 불가
-    
+
     Timer 인터럽트 → Group 1 NS
     → 일반 OS가 처리
 ```
 
-### GICv3 구조 상세 (ARMv8 표준)
+#### GICv3 구조 상세 (ARMv8 표준)
 
 ```
 GICv3 = Distributor + Redistributor + CPU Interface
@@ -226,7 +369,7 @@ GICv3 = Distributor + Redistributor + CPU Interface
     → Secure 인터럽트는 Normal World 실행 중에도 선점(preempt) 가능
 ```
 
-### SMMU (System MMU) — DMA 접근 제어
+### 5.5 SMMU (System MMU) — DMA 접근 제어
 
 ```
 문제: TZASC는 물리 주소 기반으로 DRAM을 보호하지만,
@@ -272,7 +415,7 @@ SMMU 해결:
     → 둘 다 필요: TZASC가 큰 영역 보호, SMMU가 디바이스별 세밀 제어
 ```
 
-### Cache / TLB의 NS-bit 태깅
+### 5.6 Cache / TLB 의 NS-bit 태깅
 
 ```
 문제: CPU 캐시와 TLB는 Secure/Non-Secure 접근을 모두 캐싱.
@@ -316,7 +459,7 @@ SMMU 해결:
     → 추가 HW 완화 필요 (speculation barrier 등)
 ```
 
-### 월드 간 통신 메커니즘
+### 5.7 월드 간 통신 메커니즘
 
 ```
 Secure World와 Normal World는 격리되어 있지만 통신이 필요.
@@ -357,15 +500,13 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
   → 표준화된 메시지 + 메모리 공유 프로토콜
   → SPM(S-EL2)이 라우팅 관리
   → 기존 SMC+Shared Memory의 표준화 버전
-  (상세: Unit 1 Secure EL2 / FF-A 섹션 참조)
+  (상세: Module 01 Secure EL2 / FF-A 섹션 참조)
 ```
 
----
-
-## Secure Boot에서 보안 레벨 변화 (요약)
+### 5.8 Secure Boot 에서 보안 레벨 변화 (요약)
 
 ```
-(상세: Unit 3 참조)
+(상세: Module 03 참조)
 
   BL1(EL3/S) → BL2(S-EL1/S) → BL31(EL3/S, 상주) → BL33(NS-EL1/NS) → Linux(NS-EL1/NS)
                                                       ^^^^^^^^
@@ -383,136 +524,46 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: Secure에서 Non-Secure로의 전환은 어떻게 이루어지는가?**
-> "반드시 EL3(Secure Monitor)를 경유한다. (1) Normal World에서 SMC 명령으로 EL3 진입. (2) EL3가 Normal World 컨텍스트를 저장하고 SCR_EL3.NS를 0으로 설정. (3) Secure World 컨텍스트를 복원하고 ERET으로 S-EL1에 진입. 반대 방향도 동일하게 EL3를 경유한다. 이 단일 게이트 구조가 TrustZone 보안의 핵심이다."
+### 흔한 오해
 
-**Q: TZASC와 TZPC의 차이는?**
-> "보호 대상이 다르다. TZPC는 APB 주변장치(OTP, Crypto, 타이머)를 Secure/Non-Secure로 분류한다. TZASC는 DRAM 주소 영역을 분할하여 특정 메모리 범위를 Secure 전용으로 설정한다. 둘 다 BootROM(EL3)이 초기화하며, 설정 후에는 Non-Secure에서 변경 불가능하다."
+!!! danger "❓ 오해 1 — 'World switch 는 단순 instruction 한 번'"
+    **실제**: SMC instruction 은 한 번이지만 BL31 monitor 가 GPR (x0~x30) + FP/NEON/SVE + system register (TPIDR_EL*, vector base, debug regs 등) 까지 모두 save/restore 해야 합니다. 잘못하면 secure state 의 잔여 값이 NS world 로 흘러갑니다.<br>
+    **왜 헷갈리는가**: "SMC = call 1번 = 단순" 이라는 직관. 실제로는 context save 의 _완전성_ 이 critical.
 
-**Q: SMMU와 TZASC의 차이는?**
-> "보호 세밀도와 방식이 다르다. TZASC는 물리 주소 영역(Region) 단위로 DRAM을 Secure/Non-Secure로 분할한다 — 모든 Master에 공통 적용. SMMU는 디바이스(Stream ID)별로 독립된 페이지 테이블을 할당하여, 각 DMA Master가 접근할 수 있는 메모리를 페이지(4KB) 단위로 제어한다. 예: TZASC는 '0~1GB는 Secure'라고 전체 차단하고, SMMU는 'GPU는 이 페이지들만 접근 가능'이라고 디바이스별 제어한다. 둘 다 필요하다."
+!!! danger "❓ 오해 2 — 'TZASC 만 있으면 충분'"
+    **실제**: TZASC 는 PA 기반의 region 보호이고, 모든 master 에게 _공통_ 으로 적용됩니다. 그러나 GPU/DSP 같은 DMA master 는 자기만의 IOVA → PA 매핑이 있고, 디바이스별 격리가 필요할 수 있습니다 → SMMU 가 stream id 단위로 따로 통제. TZASC + SMMU 가 다층 방어.<br>
+    **왜 헷갈리는가**: "DRAM 보호 = TZASC" 라는 한 줄 요약 때문에.
 
-**Q: 캐시에서 NS-bit 태깅이 필요한 이유는?**
-> "같은 물리 주소에 대해 Secure와 Non-Secure가 다른 데이터를 가질 수 있기 때문이다. 캐시 라인에 NS 비트를 태깅하여 PA가 같아도 별도의 캐시 엔트리로 관리한다. 이것이 없으면 NS 접근이 Secure 데이터의 캐시 라인을 히트하여 암호 키 같은 민감 정보가 노출될 수 있다. 부가 효과로 월드 전환 시 캐시/TLB flush가 불필요해져 SMC 성능이 향상된다."
+!!! danger "❓ 오해 3 — 'NS world 의 SMC 로 SCR_EL3.NS 를 직접 set 가능'"
+    **실제**: SCR_EL3 는 EL3 에서만 read/write 가능. NS world 에서 SMC 를 호출해도 BL31 의 _코드_ 가 NS bit 를 결정합니다. NS world 가 BL31 코드를 우회해 직접 SCR_EL3 를 쓸 수 없습니다.<br>
+    **왜 헷갈리는가**: "내가 SMC 부른 건데 내가 결정 못 해?" 라는 직관.
 
-**Q: 부팅 중 보안 레벨이 어떻게 변하는가?**
-> "BL1(EL3/Secure) → BL2(S-EL1/Secure) → BL31(EL3/Secure, 상주) → BL33(NS-EL1/Non-Secure)으로 전환된다. 핵심 전환점은 BL31이 BL33에게 제어를 넘길 때 SCR_EL3.NS를 1로 설정하는 순간이다. 이후 Normal World에서는 Secure 자원 접근이 HW적으로 차단된다."
+!!! danger "❓ 오해 4 — 'Shared Memory 면 안전한 통신'"
+    **실제**: Shared Memory 는 TOCTOU (Time-of-Check-Time-of-Use) 공격에 취약합니다. Secure 가 데이터를 검증한 _직후_ NS 가 그 데이터를 변조하면, secure code 가 의도하지 않은 값으로 동작합니다. 방어: copy-then-validate, bounce buffer, FF-A memory lending.<br>
+    **왜 헷갈리는가**: "공유 메모리 = 단순 buffer" 라는 인상.
 
----
+!!! danger "❓ 오해 5 — 'Cache NS tag 가 Spectre 도 막아준다'"
+    **실제**: NS tag 는 _직접_ 캐시 hit 를 차단합니다. 그러나 Spectre 처럼 _투기적 실행_ 으로 secure cache line 이 임시로 채워지고 그 _타이밍_ 을 NS 에서 관측하는 공격은 별도의 mitigation (CSV2, speculation barrier, constant-time code) 이 필요.<br>
+    **왜 헷갈리는가**: "캐시 격리 = 사이드 채널 차단" 이라는 단순화.
 
-## 확인 문제
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
 
-**문제 1: SoC 보안 인프라 역할 매칭**
-> 다음 공격 시나리오 각각에 대해, 어떤 SoC 보안 인프라(TZPC, TZASC, SMMU, GIC 중)가 1차 방어를 담당하는지 매칭하고, 그 이유를 설명하라.
-> - (A) 악성 GPU 드라이버가 DMA로 Secure DRAM의 암호 키를 읽으려 함
-> - (B) Linux 커널이 OTP 퓨즈 레지스터를 읽으려 함
-> - (C) 해킹된 OS가 Crypto Engine 완료 인터럽트를 마스킹하려 함
-> - (D) Normal World 코드가 TEE OS 메모리를 직접 접근하려 함
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-각 공격의 특성을 파악 → 보호 대상(주변장치? 메모리? 인터럽트? DMA?)으로 분류
-
-**(A) GPU DMA → Secure DRAM:** **SMMU** (+ TZASC)
-- GPU는 DMA Master → SMMU가 Stream ID로 GPU 식별
-- SMMU의 페이지 테이블에 Secure DRAM 매핑이 없음 → Translation Fault
-- TZASC도 물리 주소 레벨에서 추가 차단 (다층 방어)
-
-**(B) Linux → OTP 퓨즈:** **TZPC**
-- OTP는 APB 주변장치 → TZPC가 Secure Only로 설정
-- NS Master의 OTP 접근 → 버스 에러 반환
-
-**(C) OS → Secure 인터럽트 마스킹:** **GIC**
-- Crypto 완료 IRQ는 Group 0 (Secure)으로 설정
-- NS에서 Group 0 인터럽트의 Priority/Enable 변경 불가
-- GICD 레지스터의 해당 비트가 NS 접근에 대해 RAZ/WI (Read-As-Zero/Write-Ignored)
-
-**(D) NS 코드 → TEE 메모리:** **TZASC**
-- TEE OS 메모리는 Secure DRAM 영역에 위치
-- TZASC Region 설정에 의해 NS 접근 차단
-- 버스 에러(DECERR) 반환
-
-**핵심 포인트:**
-- TZPC = APB 주변장치, TZASC = DRAM 영역, SMMU = DMA 디바이스별, GIC = 인터럽트
-- 실제 SoC에서는 다층 방어: 하나가 뚫려도 다른 레벨에서 차단
-</details>
-
-**문제 2: SMC 월드 전환 시퀀스**
-> Linux(NS-EL1)에서 OP-TEE(S-EL1)로 월드 전환이 일어날 때, EL3(Secure Monitor)가 수행하는 작업을 올바른 순서로 나열하라:
-> (a) ERET 실행 (b) SCR_EL3.NS = 0 설정 (c) NS 레지스터 컨텍스트 저장 (d) Secure 레지스터 컨텍스트 복원 (e) SPSR_EL3에 S-EL1 복귀 정보 설정
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-1. 먼저 현재 상태(NS)의 컨텍스트를 잃지 않도록 저장해야 함
-2. 보안 상태를 Secure로 전환해야 함
-3. Secure World의 이전 컨텍스트를 복원해야 함
-4. ERET으로 S-EL1으로 점프해야 함
-
-**정답:** **(c) → (b) → (d) → (e) → (a)**
-
-```
-1. (c) NS 레지스터 컨텍스트 저장
-   → X0~X30, SP_EL1, ELR_EL1, SPSR_EL1 등을 NS 컨텍스트 구조체에 저장
-   → 이걸 먼저 안 하면 Secure 복원 시 NS 상태를 덮어씀
-
-2. (b) SCR_EL3.NS = 0 설정
-   → 이 시점부터 하위 EL은 Secure 상태
-   → NS 비트 변경은 EL3에서만 가능
-
-3. (d) Secure 레지스터 컨텍스트 복원
-   → 이전에 저장해둔 S-EL1 컨텍스트(X0~X30, SP_EL1 등) 복원
-
-4. (e) SPSR_EL3에 S-EL1 복귀 정보 설정
-   → SPSR_EL3.M = EL1h, ELR_EL3 = OP-TEE 복귀 주소
-
-5. (a) ERET 실행
-   → SPSR_EL3 → PSTATE, ELR_EL3 → PC
-   → S-EL1(OP-TEE)에서 실행 재개
-```
-</details>
-
-**문제 3: Shared Memory 보안 위험**
-> Secure World와 Normal World 간 Shared Memory 통신에서 TOCTOU (Time-of-Check-Time-of-Use) 공격이 어떻게 발생하는지 시나리오를 작성하고, 방어 방법을 제시하라.
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-1. Shared Memory는 양쪽에서 접근 가능 → NS가 데이터를 변조할 수 있음
-2. Secure World가 데이터를 "검증"한 후 "사용"하기까지 시간 차이가 있음
-3. 그 사이에 NS가 데이터를 바꾸면?
-
-**TOCTOU 공격 시나리오:**
-```
-  Shared Buffer: [cmd=ENCRYPT, key_id=3, data_ptr=0x1000, len=256]
-
-  시간 →
-  Secure World:  검증(cmd 유효?)  ←OK→  사용(data_ptr에서 읽기)
-                      ↑                       ↑
-  Normal World:       │      data_ptr 변조!    │
-                      │   0x1000 → 0xDEAD_0000 │
-                      │  (Secure 내부 주소로!)  │
-
-  결과: Secure World가 의도하지 않은 Secure 메모리를 읽어서
-       Normal World에 반환 → 키 유출!
-```
-
-**방어 방법:**
-1. **Copy-then-Validate**: Shared Buffer를 Secure 전용 메모리에 복사한 후 검증+사용
-   → NS가 복사 후 원본을 변조해도 영향 없음
-2. **Bounce Buffer**: NS가 쓴 데이터를 Secure 측이 한 번에 복사 (memcpy) 후 원본 무시
-3. **Input Sanitization**: 포인터/주소 파라미터는 Secure World가 무조건 재검증
-   → data_ptr이 NS 메모리 범위인지 확인 (Secure 메모리 참조 차단)
-4. **FF-A Memory Lending**: 메모리를 빌려주면(FFA_MEM_LEND) 빌려준 쪽의 접근 권한 제거 → TOCTOU 원천 차단
-</details>
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| 악성 GPU DMA 가 secure DRAM 까지 도달 | SMMU stream id → context table 매핑 누락 | SMMU TLB dump + stream id 분류 |
+| NS world 가 OTP fuse 를 read 가능 | TZPC slave 분류 누락 또는 mirror register 가 secure-only 미설정 | BL1 boot trace + TZPC slave register |
+| 해킹된 OS 가 crypto IRQ 를 mask | GIC group 설정 (Group 0 should be EL3 only) | GICD_IGROUPRn + secure write protection |
+| NS world 가 secure DRAM 부분 접근 가능 | TZASC region 경계 (Base/Size) misconfig | TZASC region register 와 access map 비교 |
+| SMC 후 secure GPR 값이 NS 에 노출 | BL31 의 NEON/FP/SVE 누락 | BL31 context save list + post-ERET register dump |
+| 같은 PA 가 S/NS 에서 같은 cache line | cache controller NS tag 비활성 | cache line tag dump + NS bit 위치 |
+| Shared buffer 의 ptr 변조로 secure 메모리 read | secure 측 input sanitization 누락 | TA 의 pointer validation 코드 |
+| SCR_EL3.NS toggle 후 한 cycle 동안 attribute mismatch | NS bit 의 outgoing AxPROT 전파 latency | master IF NS attribute SVA — set cycle 과 propagation cycle 일치 |
+| 멀티코어 동시 SMC 시 일부 core 만 전환 | per-CPU context buffer 공유 race | BL31 의 spinlock + per-CPU context array |
 
 ---
+
 !!! warning "실무 주의점 — SMC 후 register save/restore 부족으로 secure state 누설"
     **현상**: NS world 가 secure key/credential 의 일부를 GPR/SIMD 레지스터에서 읽어낸다.
 
@@ -520,19 +571,26 @@ Secure World와 Normal World는 격리되어 있지만 통신이 필요.
 
     **점검 포인트**: world switch 진입/탈출 시 SIMD/FP, TPIDR_EL*, vector regs 까지 모두 zeroize 또는 save/restore 하는지 BL31 context 코드와 register dump 로 확인.
 
-## 핵심 정리
+## 7. 핵심 정리 (Key Takeaways)
 
-- **World switch는 EL3 강제**: SMC instruction → EL3 trap → secure monitor (BL31)이 context save → world switch → 새 world로 ERET.
-- **Context isolation**: 각 world는 독립 register set. SMC 시 secure monitor가 모든 register save/restore.
-- **TZPC (TrustZone Protection Controller)**: peripheral마다 secure/non-secure 설정.
-- **TZASC (TrustZone Address Space Controller)**: DRAM 영역을 secure/non-secure 분할.
-- **GIC v3**: 인터럽트마다 group (Group 0 secure, Group 1 non-secure), 우선순위.
-- **sysMMU StreamID + Stage 2**: device 마스터가 secure 메모리 access 시도하면 차단.
+- **World switch = EL3 강제**: SMC instruction → EL3 trap → BL31 이 context save → SCR_EL3.NS toggle → context restore → ERET. 양방향 모두 EL3 경유.
+- **Context 의 완전성**: GPR + FP/NEON/SVE + sysreg + per-EL register 까지 모두 save/restore. 누락은 곧 secure state 누설.
+- **5 축의 SoC 인프라**: TZPC (peripheral) / TZASC (DRAM) / GIC (IRQ) / SMMU (DMA) / cache (NS tag). 각자 다른 단위로 같은 NS bit 를 해석.
+- **TZASC + SMMU = 다층 방어**: TZASC 는 region 단위, SMMU 는 stream + page 단위. 둘 다 통과해야 access 성공.
+- **검증의 핵심 invariant**: (1) NS=1 master 의 secure 자원 access 는 모두 차단 (2) NS bit 의 set cycle 과 outgoing attribute cycle 이 정확히 일치 (3) BL31 의 context save list 가 전체 register set 을 cover.
 
-## 다음 단계
+!!! warning "실무 주의점"
+    - BL31 의 context list 가 ARM revision 마다 (NEON, SVE, MTE, MPAM 등 추가) 늘어납니다 — 새 ISA extension 추가 시 _BL31 context 코드 업데이트_ 가 필수 체크 항목.
+    - 멀티코어 SMC 동시성: per-CPU context buffer 와 spinlock 정확성이 검증 대상.
+    - Shared Memory 통신은 항상 _copy-then-validate_ — NS 측 buffer 를 secure 측에서 한 번에 복사한 후 검증/사용.
 
-- 📝 [**Module 02 퀴즈**](quiz/02_world_switch_soc_infra_quiz.md)
-- ➡️ [**Module 02A — Secure Enclave & TEE**](02a_secure_enclave_and_tee_hierarchy.md)
+---
+
+## 다음 모듈
+
+→ [Module 02A — Secure Enclave & TEE Hierarchy](02a_secure_enclave_and_tee_hierarchy.md): TrustZone 의 한계 (cache 부채널, Trusted OS 취약점) 를 어떻게 별도 processor + 전용 RAM 으로 보완하는가, 그리고 둘이 _상호 불신_ 관계로 공존하는 모델.
+
+[퀴즈 풀어보기 →](quiz/02_world_switch_soc_infra_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_exception_level_trustzone/">

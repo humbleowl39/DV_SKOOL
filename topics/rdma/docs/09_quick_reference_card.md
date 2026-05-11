@@ -15,22 +15,13 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#1-rdma-family-at-a-glance">1. RDMA family at a glance</a>
-  <a class="page-toc-link" href="#2-ib-packet-layout-ib-rocev2-비교">2. IB Packet Layout (IB / RoCEv2 비교)</a>
-  <a class="page-toc-link" href="#3-bth-12-byte-field">3. BTH (12 byte) Field</a>
-  <a class="page-toc-link" href="#4-rc-opcode-빠른-참조">4. RC OpCode 빠른 참조</a>
-  <a class="page-toc-link" href="#5-xth-카탈로그">5. xTH 카탈로그</a>
-  <a class="page-toc-link" href="#6-aeth-syndrome">6. AETH Syndrome</a>
-  <a class="page-toc-link" href="#7-qp-fsm">7. QP FSM</a>
-  <a class="page-toc-link" href="#8-service-type-비교">8. Service Type 비교</a>
-  <a class="page-toc-link" href="#9-psn">9. PSN</a>
-  <a class="page-toc-link" href="#10-memory-model">10. Memory Model</a>
-  <a class="page-toc-link" href="#11-error-wc-status">11. Error & WC Status</a>
-  <a class="page-toc-link" href="#12-congestion-control-rocev2">12. Congestion Control (RoCEv2)</a>
-  <a class="page-toc-link" href="#13-rdma-tb-빠른-참조">13. RDMA-TB 빠른 참조</a>
-  <a class="page-toc-link" href="#14-spec-인용을-빨리-찾는-법">14. Spec 인용을 빨리 찾는 법</a>
-  <a class="page-toc-link" href="#15-30-second-mental-checklist-코드-리뷰-시">15. 30-second mental checklist (코드 리뷰 시)</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-카드를-언제-펴는가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-카드-의-구성-원리">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-자주-펼치는-3-시나리오">3. 작은 예 — 자주 펼치는 3 시나리오</a>
+  <a class="page-toc-link" href="#4-일반화-카드-15-영역의-목차">4. 일반화 — 카드 영역 목차</a>
+  <a class="page-toc-link" href="#5-디테일-reference-표-전체">5. 디테일 — Reference 표 전체</a>
+  <a class="page-toc-link" href="#6-30-second-mental-checklist-와-자주-틀리는-항목">6. 30-sec checklist + 자주 틀리는 항목</a>
+  <a class="page-toc-link" href="#7-핵심-정리-다음-단계">7. 핵심 정리 + 다음 단계</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
@@ -38,7 +29,62 @@
 
 ---
 
-## 1. RDMA family at a glance
+## 1. Why care? — 이 카드를 언제 펴는가
+
+코드 리뷰 도중, 디버그 도중, 시뮬레이션 fail 직후 — _기억나야 할 그 표_ 를 빨리 찾는 게 목적입니다. 모듈 01~08 의 정보 중 **자주 인용되는 표/공식/명령어** 만 한 곳에 모았습니다. 처음 학습 용도가 아니라 _이미 아는 사람의 즉시 조회용_.
+
+---
+
+## 2. Intuition — 카드의 구성 원리
+
+기억 nav 의 순서로 배치: **패킷 (1~6) → 객체 (7~10) → 에러 (11~12) → TB (13) → spec (14)**. 위에서 아래로 "wire → host → recovery → 검증" 의 흐름. 검증 중에는 보통 한 번에 1~2 영역만 펴므로 § anchor 가 곧 책갈피.
+
+---
+
+## 3. 작은 예 — 자주 펼치는 3 시나리오
+
+### 시나리오 A. "이 BTH 가 어떤 op 인가?"
+1. §3 (BTH field) 와 §4 (RC OpCode) 펴기.
+2. OpCode 상위 3-bit → service. 하위 5-bit → operation.
+3. 예: `0x06` = `000_00110` = RC `WRITE_FIRST` → RETH 가 따라옴 (§5 xTH).
+
+### 시나리오 B. "WC error 의 root cause 가 뭐지?"
+1. §11 (Error & WC Status) 펴기.
+2. WC status 로 1차 분류. `WC_REM_ACCESS_ERR` 이면 responder debug flag 도 함께 (§11 의 Debug Flag 표).
+3. S5~S9 매핑 (§13) 으로 inject 위치까지 1줄에 찾기.
+
+### 시나리오 C. "QP 가 RTR 진입 안 된다"
+1. §7 (QP FSM) 의 진입 attribute 표 펴기.
+2. `path_mtu / dest_qp_num / rq_psn / max_dest_rd_atomic / min_rnr_timer / ah_attr` 중 누락 확인.
+3. (RoCEv2) §14b 의 사내 default 와 일치하는지 cross check.
+
+---
+
+## 4. 일반화 — 카드 15 영역의 목차
+
+| § | 영역 | 트리거 (이걸 보고 싶을 때) |
+|---|------|---------------------------|
+| §5.1 | RDMA family | "RoCEv2 vs IB 빠른 결정" |
+| §5.2 | Packet layout | "wire 캡처를 보면서 IB ↔ RoCEv2 매핑" |
+| §5.3 | BTH | "한 BTH 의 필드 의미" |
+| §5.4 | RC OpCode | "OpCode 값을 보고 op 종류" |
+| §5.5 | xTH | "이 op 에 xTH 가 와야 하나?" |
+| §5.6 | AETH syndrome | "NAK syndrome 값 디코드" |
+| §5.7 | QP FSM | "Modify(...) 진입 안 됨" |
+| §5.8 | Service type | "RC vs UC vs UD vs XRC 결정" |
+| §5.9 | PSN | "PSN 비교 / wrap 처리" |
+| §5.10 | Memory Model | "MR access flag, MW, ODP" |
+| §5.11 | WC Status | "WC status 트리거 분류" |
+| §5.12 | CC (RoCEv2) | "PFC / ECN / DCQCN" |
+| §5.13 | RDMA-TB ref | "mrun 명령, lib 분류, env 목록, S1~S9" |
+| §5.14 | Spec 인용 | "어디 spec 절을 찾을지" |
+| §5.15 | 사내 default | "MTU / P_Key / retry_cnt …" |
+
+---
+
+## 5. 디테일 — Reference 표 전체
+
+### 5.1 RDMA family at a glance
 
 | 항목 | InfiniBand | iWARP | RoCEv1 | **RoCEv2** |
 |------|-----------|-------|--------|-----------|
@@ -49,9 +95,7 @@
 
 → 데이터센터 표준 = **RoCEv2**.
 
----
-
-## 2. IB Packet Layout (IB / RoCEv2 비교)
+### 5.2 IB Packet Layout (IB / RoCEv2 비교)
 
 ```
    IB :    LRH | GRH? | BTH | xTH? | Payload | ICRC | VCRC
@@ -62,9 +106,7 @@
 - BTH 부터 ICRC 직전까지 IB ↔ RoCEv2 동일.
 - VCRC 는 RoCEv2 에서 사라지고 Eth FCS 가 대체.
 
----
-
-## 3. BTH (12 byte) Field
+### 5.3 BTH (12 byte) Field
 
 | Field | bits | 용도 |
 |-------|------|------|
@@ -79,9 +121,7 @@
 | AckReq | 1 | A bit |
 | PSN | 24 | seq number |
 
----
-
-## 4. RC OpCode 빠른 참조
+### 5.4 RC OpCode 빠른 참조
 
 | OpCode | Hex | xTH | 용도 |
 |--------|-----|-----|------|
@@ -100,9 +140,7 @@
 
 상위 3-bit: RC=000 / UC=001 / RD=010 / UD=011 / XRC=101.
 
----
-
-## 5. xTH 카탈로그
+### 5.5 xTH 카탈로그
 
 | xTH | Length | When |
 |-----|--------|------|
@@ -114,9 +152,7 @@
 | ImmDt | 4B | *_w_IMM |
 | IETH | 4B | *_w_INV |
 
----
-
-## 6. AETH Syndrome
+### 5.6 AETH Syndrome
 
 | Code | 의미 |
 |------|------|
@@ -128,9 +164,7 @@
 | `0x83` | NAK Remote Operational Error |
 | `0x84` | NAK Invalid R-Key |
 
----
-
-## 7. QP FSM
+### 5.7 QP FSM
 
 ```
   Reset → Init → RTR → RTS ←→ SQD
@@ -144,9 +178,7 @@
 | Init → RTR: path_mtu, dest_qp_num, rq_psn, max_dest_rd_atomic, min_rnr_timer, ah_attr |
 | RTR → RTS: sq_psn, timeout, retry_cnt, rnr_retry, max_rd_atomic |
 
----
-
-## 8. Service Type 비교
+### 5.8 Service Type 비교
 
 | | RC | UC | UD | XRC |
 |--|----|----|----|-----|
@@ -156,17 +188,13 @@
 | Max msg | 2GB | 2GB | MTU | 2GB |
 | Opcodes | SEND/WRITE/READ/ATOMIC | SEND/WRITE | SEND only | SEND/WRITE/READ/ATOMIC |
 
----
-
-## 9. PSN
+### 5.9 PSN
 
 - **24-bit**, modulo 2^24.
 - **Window = 2^23** (절반).
 - Receiver: `PSN == ePSN` → 정상 / `[ePSN-W, ePSN-1]` → 중복 / `[ePSN+1, ePSN+W-1]` → 미래 (drop or NAK).
 
----
-
-## 10. Memory Model
+### 5.10 Memory Model
 
 | 객체 | 발급 | 사용 |
 |------|------|------|
@@ -177,7 +205,7 @@
 | **MW (Type1/2)** | `ibv_alloc_mw` + bind | 짧은 lifetime 의 R_Key 위임 |
 | **ODP** | access flag | page-fault 기반, pin 없음 |
 
-### Access Flag 매트릭스
+#### Access Flag 매트릭스
 
 | Op | sender 측 (lkey) | responder 측 (rkey) |
 |----|-----------------|--------------------|
@@ -186,9 +214,7 @@
 | READ 발신 | LOCAL_WRITE | REMOTE_READ |
 | ATOMIC | LOCAL_WRITE | REMOTE_ATOMIC |
 
----
-
-## 11. Error & WC Status
+### 5.11 Error & WC Status
 
 | WC Status | 트리거 |
 |-----------|-------|
@@ -202,7 +228,7 @@
 | `WC_REM_OP_ERR` | Remote operational error |
 | `WC_FATAL_ERR` | QP fatal |
 
-### Responder Debug Flag (RDMA-TB)
+#### Responder Debug Flag (RDMA-TB)
 
 | Flag | 의미 |
 |------|------|
@@ -212,9 +238,7 @@
 | `WC_FLAG_RESP_RKEY` | R-Key invalid |
 | `WC_FLAG_RESP_OP` | OpCode/Outstanding read |
 
----
-
-## 12. Congestion Control (RoCEv2)
+### 5.12 Congestion Control (RoCEv2)
 
 | 메커니즘 | 시간축 | 역할 |
 |---------|-------|------|
@@ -225,11 +249,9 @@
 
 → PFC만 사용 시 deadlock/storm 위험 → ECN+DCQCN 와 병용.
 
----
+### 5.13 RDMA-TB 빠른 참조
 
-## 13. RDMA-TB 빠른 참조
-
-### mrun
+#### mrun
 
 ```bash
 source set_env.sh
@@ -242,7 +264,7 @@ mrun regr --test_suite <suite>
 mrun clean
 ```
 
-### Lib 분류
+#### Lib 분류
 
 | Dir | 들어가는 것 |
 |-----|-----------|
@@ -251,11 +273,11 @@ mrun clean
 | `external/` | 3rd-party VIP wrapper (e.g. VPFC) |
 | `submodule/` | Sub-IP 전용 (design hierarchy 따라) |
 
-### `vrdmatb_top_env` 의 env 들
+#### `vrdmatb_top_env` 의 env 들
 
 `host / node / ntw / ntw_model / memory / data / dma / ral / ipshell / lp / elc`
 
-### Error 시나리오 S1~S9 매핑
+#### Error 시나리오 S1~S9 매핑
 
 | ID | 트리거 | Expected |
 |----|--------|----------|
@@ -269,9 +291,7 @@ mrun clean
 | S8 | TX rkey corrupt | `WC_REM_ACCESS_ERR` + `RESP_RKEY` |
 | S9 | Read duplicate | `WC_REM_INV_RD_REQ_ERR` + `RESP_OP` |
 
----
-
-## 14. Spec 인용을 빨리 찾는 법
+### 5.14 Spec 인용을 빨리 찾는 법
 
 | 영역 | IB Spec 1.7 chapter | PROTOCOL_RULES.md range |
 |------|---------------------|-------------------------|
@@ -290,9 +310,7 @@ mrun clean
 
 → RoCEv2 검증에서는 `ROCEV2_RULE_APPLICABILITY.md` 의 분류를 거친 후 사용.
 
----
-
-## 14b. Confluence 보강 — 사내 RDMA-IP Default 한 장
+### 5.15 Confluence 보강 — 사내 RDMA-IP Default 한 장
 
 !!! note "Internal — 자주 묻는 사내 default 한 장 요약"
 
@@ -309,7 +327,7 @@ mrun clean
     | CC | DCQCN (default) + RTTCC option | DCQCN in detail / Zero-touch RoCE |
     | UEC fallback | (향후) PDS / Semantic | Ultraethernet |
 
-## 14c. UEC vs IB / RoCEv2 한 장 비교
+### 5.16 UEC vs IB / RoCEv2 한 장 비교
 
 !!! note "Internal (Confluence: Ultraethernet 트리)"
 
@@ -327,7 +345,9 @@ mrun clean
 
 ---
 
-## 15. 30-second mental checklist (코드 리뷰 시)
+## 6. 30-second mental checklist 와 자주 틀리는 항목
+
+### 코드 리뷰 시 30-second checklist
 
 ```
   ✅ OpCode 의 상위 3-bit 가 QP service type 과 일치?
@@ -340,9 +360,26 @@ mrun clean
   ✅ Error 후 QP recovery 경로 (Err → Reset → Init → ...) 검증?
 ```
 
+### 자주 틀리는 카드 사용 (흔한 오해)
+
+!!! danger "❓ 오해 — '카드의 OpCode 표 만 보면 시나리오 디버그 끝'"
+    **실제**: OpCode 는 _어떤 op_ 일 뿐. xTH 의 존재/위치, PSN 정합성, AETH syndrome, access flag, debug flag 까지 함께 봐야 root cause 결정. 표 하나만 보면 흔히 false root cause.
+
+!!! danger "❓ 오해 — 'IB OpCode 표가 RoCEv2 에도 그대로 통한다'"
+    **실제**: BTH/OpCode 는 그대로지만 LRH/VCRC/VL 관련 spec rule 은 NOT-APPLICABLE. 카드 §14 의 spec range 표에서 R-001~085 영역을 RoCEv2 에 그대로 옮기면 false positive.
+
+!!! danger "❓ 오해 — '사내 default (§5.15) 가 spec 가정'"
+    **실제**: 사내 default 는 _배포 결정_. 다른 vendor 와의 interop 검증에서는 그쪽 default 와 비교해야 함.
+
 ---
 
-## 다음 단계
+## 7. 핵심 정리 + 다음 단계
+
+- 이 카드는 _이미 아는 사람의 즉시 조회용_. 처음 학습은 모듈 01~08 본문으로.
+- 한 fail 디버그 시 보통 **2~3 영역만** 보면 됨 (§3 시나리오 A/B/C 참고).
+- 사내 default + RoCEv2 NOT-APPLICABLE 영역은 spec 가정이 아니라는 점 항상 의식.
+
+### 다음 단계
 
 - [용어집](glossary.md) — 핵심 용어 ISO 11179 형식
 - [퀴즈](quiz/index.md) — 모듈별 이해도 체크

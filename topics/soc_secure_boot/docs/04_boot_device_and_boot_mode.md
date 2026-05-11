@@ -15,52 +15,182 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#boot-mode-결정">Boot Mode 결정</a>
-  <a class="page-toc-link" href="#부팅-장치-비교">부팅 장치 비교</a>
-  <a class="page-toc-link" href="#부팅-장치별-초기화-상세">부팅 장치별 초기화 상세</a>
-  <a class="page-toc-link" href="#boot-image-format-fip-firmware-image-package">Boot Image Format — FIP (Firmware Image Package)</a>
-  <a class="page-toc-link" href="#boot-fallback-메커니즘">Boot Fallback 메커니즘</a>
-  <a class="page-toc-link" href="#secure-boot-상태에서의-usb-dl-mode">Secure Boot 상태에서의 USB DL Mode</a>
-  <a class="page-toc-link" href="#rpmb-replay-protected-memory-block">RPMB (Replay Protected Memory Block)</a>
-  <a class="page-toc-link" href="#dv-관점-부팅-장치-검증">DV 관점 — 부팅 장치 검증</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-spi-nor-boot-한-건-fip-파싱-에서-bl2-jump-까지">3. 작은 예 — SPI NOR boot 한 건</a>
+  <a class="page-toc-link" href="#4-일반화-boot-mode-우선순위와-fallback-그래프">4. 일반화 — Boot Mode 우선순위와 Fallback</a>
+  <a class="page-toc-link" href="#5-디테일-디바이스별-초기화-fip-rpmb-usb-dl">5. 디테일 — 디바이스별 초기화 / FIP / RPMB / USB DL</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Identify** 주요 boot device (eMMC, UFS, QSPI NOR, NAND) 특성 비교
-    - **Apply** Boot mode strap (pinstrap) + OTP override 우선순위
-    - **Plan** Fallback boot 경로 설계 (primary fail → secondary)
-    - **Distinguish** Cold boot, warm boot, recovery boot 흐름 차이
+    - **Identify** 주요 boot device (eMMC, UFS, QSPI NOR, NAND, USB DL) 의 특성을 비교할 수 있다.
+    - **Apply** Boot mode 결정의 OTP > Pinstrap > Default 우선순위를 적용할 수 있다.
+    - **Plan** Fallback boot 경로 (primary fail → secondary → tertiary) 를 OTP 사전 설계 관점에서 계획할 수 있다.
+    - **Distinguish** Cold boot, warm boot, recovery boot 의 흐름과 초기화 범위를 구별할 수 있다.
+    - **Trace** SPI NOR / UFS / eMMC 부팅 시 한 cert + image 가 SRAM 까지 도달하는 경로를 추적할 수 있다.
 
 !!! info "사전 지식"
-    - [Module 01-03](01_hardware_root_of_trust.md)
-    - 스토리지 인터페이스 일반
-
-!!! tip "💡 이해를 위한 비유"
-    **Boot Device / Mode** ≈ **발전소 — 평상시(NOR) / 비상(eMMC) / 점검(JTAG) 으로 부팅 source 다중화**
-
-    Production boot, fail-safe boot, debug boot 등 mode pin 으로 다른 source 부팅. 각 path 가 독립 검증 필요.
+    - [Module 01-03](01_hardware_root_of_trust.md) — RoT, chain, crypto
+    - 스토리지 인터페이스 일반 (SPI, MMC bus, UFS UniPro/M-PHY, USB)
 
 ---
 
-## 핵심 개념
-**Boot Mode는 OTP > Pinstrap > Default 우선순위로 결정된다. 각 부팅 장치는 프로토콜 복잡도와 초기화 시간이 다르다. OTP는 양산 후 변경 불가이므로, Fallback 경로는 사전에 설계되어야 한다.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: Production mode 만 검증하면 충분
+Module 02-03 에서는 _cert + image 가 SRAM 에 와 있다고 가정_ 하고 검증 흐름을 봤습니다. 이번 모듈은 그 가정의 _뒷면_ — **누가 어디서 어떻게 cert + image 를 가져오는가**, 그리고 **그 가져오는 path 자체가 공격 surface 가 될 수 있는가**.
 
-    **실제**: Test/Debug mode 가 production 에서도 활성화되어 있으면 (mode pin 미고정) 공격자가 그 path 로 우회 가능. Secondary path 검증이 critical.
+이 모듈을 건너뛰면 _서명 검증_ 만 검증하고 _이미지 도달 경로_ 검증을 빠뜨려 — Secure Boot 가 켜진 양산 칩에서 test/debug pin 조합으로 인증 우회되는 사고가 생깁니다 (실제 사례 다수). Boot mode × Boot device × OTP fuse 의 cross matrix 가 Module 07 의 DV coverage 핵심이고, 그 매트릭스의 모양을 이 모듈에서 잡습니다.
 
-    **왜 헷갈리는가**: "제품 = production path" 만 보는 mindset. 공격자는 secondary 노린다.
 ---
 
-## Boot Mode 결정
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **Boot Device / Mode** ≈ **발전소의 다중 전원 입력**.<br>
+    평상시 (NOR/UFS), 비상시 (eMMC/SD), 점검시 (USB DL) — 각 source 가 다른 path 로 연결돼 있고, 어떤 source 를 선택하느냐는 정문 (OTP, 양산 후 변경 불가) > 게이트 (Pinstrap, PCB 변경 가능) > default 의 우선순위로 결정.
+
+### 한 장 그림 — Boot mode 결정 + boot device 선택
+
+```
+   Power-On Reset
+        │
+        ▼
+   ┌─── Boot Mode 결정 (BootROM 초기 단계) ──────────────────────────┐
+   │                                                                  │
+   │   ① OTP[BOOT_MODE] != UNSET ?  ── YES ──▶  OTP 모드 선택        │
+   │                              ── NO  ──▶  ②                       │
+   │   ② Pinstrap GPIO 읽기                                           │
+   │      pin == 11 → eMMC primary                                    │
+   │      pin == 10 → UFS primary                                     │
+   │      pin == 01 → USB DL                                          │
+   │      pin == 00 → ③ Default                                       │
+   │   ③ BootROM 하드코딩 default                                      │
+   │                                                                  │
+   └────────────────┬─────────────────────────────────────────────────┘
+                    ▼
+   ┌─── Primary Boot Device 시도 ───────────────────────────────┐
+   │                                                              │
+   │   UFS / eMMC / SPI NOR / USB DL 중 선택된 path 로            │
+   │   1) Device init (PHY → link → transport)                    │
+   │   2) Boot Header / FIP ToC parsing                           │
+   │   3) BL2 image + cert 를 SRAM 으로 DMA                       │
+   │   4) Module 02-03 의 서명 검증 흐름으로 진입                  │
+   │                                                              │
+   │   하나라도 실패 → ▼  Secondary 로 fallback                    │
+   └──────────────────┬───────────────────────────────────────────┘
+                      ▼
+   ┌─── Secondary / Tertiary fallback (OTP 사전 설계된 list) ─────┐
+   │   eMMC 실패 → USB DL Mode → 무한 대기 또는 timeout          │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+### 왜 이 디자인인가 — Design rationale
+
+세 가지 압력이 동시에 풀려야 했습니다.
+
+1. **양산 후에도 부팅이 가능해야** — primary device 고장 시 brick 방지 → fallback 필수.
+2. **그러나 fallback 자체가 attack surface 가 되면 안 됨** — pinstrap 만으로 fallback 강제하면 공격자가 핀 조작으로 USB DL 강제 가능. 따라서 _OTP > pinstrap_ 우선순위.
+3. **부팅 source 마다 protocol 복잡도/속도/보안 기능이 다름** — SPI NOR 단순 / UFS 빠르지만 3계층 / RPMB 는 UFS-eMMC 만 — 한 size fits all 안 됨.
+
+이 셋의 교집합이 (OTP 사전 설계된 fallback list) + (verify 는 모든 source 에서 동일하게 강제) 패턴.
+
+---
+
+## 3. 작은 예 — SPI NOR boot 한 건, FIP 파싱에서 BL2 jump 까지
+
+가장 단순한 시나리오. OTP[BOOT_DEV_CFG] = SPI_NOR, primary 부팅 성공의 1 cycle.
+
+```
+   SPI NOR Flash (외부)                Internal SRAM            BootROM (BL1)
+   ────────────────                    ─────────────            ──────────────
+                                                                ① POR
+                                                                ② OTP read:
+                                                                     BOOT_MODE = NORMAL
+                                                                     BOOT_DEV  = SPI_NOR
+                                                                ③ SPI ctrl init
+   ┌──────────────┐  RDID (0x9F)                                ④ JEDEC ID 확인
+   │  JEDEC ID    │ ◀─────────────                              ⑤ READ (0x03) + addr 0x0
+   │  Boot Header │ ─────────────▶ ┌─────────┐                 ⑥ Boot Header parse
+   │   - Magic    │                │ Header  │                    Magic == 0xAA640001 ?
+   │   - FIP off  │                │ (4 KB)  │                    YES → FIP 위치 확보
+   ├──────────────┤                └─────────┘
+   │  FIP ToC     │ ─────────────▶ ┌─────────┐                 ⑦ FIP ToC read
+   │   - Entry 0  │                │ ToC     │                    UUID = BL2 ?
+   │   - Entry 1  │                │ (1 KB)  │                    YES → entry.offset / size
+   │   - ...      │                └─────────┘
+   ├──────────────┤
+   │ BL2 binary   │ ─────────────▶ ┌─────────┐                 ⑧ BL2 image DMA → SRAM
+   │  (2 MB)      │                │ BL2     │                    (Boot LU / partition)
+   │              │                │ image   │
+   ├──────────────┤                ├─────────┤
+   │ BL2 cert     │ ─────────────▶ │ BL2     │                 ⑨ BL2 cert DMA → SRAM
+   │  (~1 KB)     │                │ cert    │
+   └──────────────┘                └─────────┘
+                                                                ⑩ Module 02-03 검증
+                                                                   PK / sig / image hash
+                                                                ⑪ jump BL2_entry  ★
+```
+
+| Step | 누가 | 무엇을 | 왜 |
+|---|---|---|---|
+| ① | SoC HW | POR → reset vector → BL1 | mask ROM 안 |
+| ② | BL1 | OTP read 2 회 | OTP 가 boot mode + device 양쪽을 결정 |
+| ③ | BL1 | SPI 컨트롤러 reg init (CPOL/CPHA, freq) | 초기는 저속 → 안정 후 고속 |
+| ④ | BL1 | RDID (0x9F) 명령 | Manufacturer/Device ID 확보 → 용량/cap 인식 |
+| ⑤ | BL1 | READ (0x03) + 24-bit addr 0x0 | 표준 read 명령. Quad SPI 면 QIOR (0xEB) |
+| ⑥ | BL1 | Boot Header parse | Magic 비교 → 유효한 부팅 image 인지 |
+| ⑦ | BL1 | FIP ToC entry 순회 | UUID 로 BL2 / BL2-cert 위치 확보 |
+| ⑧ | BL1 + DMA | BL2 binary 를 internal SRAM 으로 | Flash 가 source, SRAM 이 destination |
+| ⑨ | BL1 + DMA | BL2 cert 도 SRAM 으로 | image 와 cert 는 한 쌍 |
+| ⑩ | BL1 + HW Crypto | Module 03 §3 의 검증 흐름 | PK + sig + image hash 모두 PASS |
+| ⑪ | BL1 | branch BL2_entry | _이 시점부터 BL2 = trusted_ |
+
+```c
+// ②~⑨ 의 BootROM 측 의사코드. 검증 (⑩) 은 Module 03 verify_bl2_rsa2048 호출.
+status_t bl1_load_bl2_from_spi_nor(void) {
+    // ② boot mode/device 결정
+    boot_cfg_t cfg = otp_read_boot_config();
+    if (cfg.dev != BOOT_DEV_SPI_NOR) return FAIL_DEV_MISMATCH;
+
+    // ③④ SPI init + JEDEC
+    spi_init_low_speed();
+    uint32_t jedec = spi_send_rdid();
+    if (!is_known_flash(jedec)) return FAIL_UNKNOWN_FLASH;
+    spi_switch_to_high_speed();
+
+    // ⑤⑥ Boot Header
+    boot_header_t hdr;
+    spi_read(SPI_OFFSET_HEADER, &hdr, sizeof(hdr));
+    if (hdr.magic != BOOT_HEADER_MAGIC) return FAIL_BAD_HEADER;
+
+    // ⑦ FIP ToC + UUID 검색
+    uint32_t bl2_off, bl2_len, cert_off, cert_len;
+    if (fip_locate(hdr.fip_offset, UUID_BL2,      &bl2_off, &bl2_len) != OK) return FAIL_NO_BL2;
+    if (fip_locate(hdr.fip_offset, UUID_BL2_CERT, &cert_off, &cert_len) != OK) return FAIL_NO_CERT;
+
+    // ⑧⑨ DMA → SRAM
+    spi_dma_read(bl2_off,  sram_bl2_buf,   bl2_len);
+    spi_dma_read(cert_off, sram_cert_buf,  cert_len);
+
+    // ⑩ → caller 가 verify_bl2_rsa2048() 호출
+    return SUCCESS;
+}
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) Boot device 별로 ②③④ 의 _초기화 절차_ 가 다르다** — SPI NOR 는 RDID 한 번이지만 UFS 는 PHY → UniPro → SCSI 의 3 계층. 그러나 ⑩ 검증 단계는 device 무관 _완전히 동일_. 그래서 verify 는 device-agnostic, init 는 device-specific.<br>
+    **(2) FIP 의 ToC 가 손상되면 ⑦ 단계에서 _negative path_ 진입** — Magic mismatch / 잘못된 offset / 초과 size / 중복 UUID 가 모두 검증 _이전_ 실패 surface. Module 07 의 negative scenario 의 절반이 여기.
+
+---
+
+## 4. 일반화 — Boot Mode 우선순위와 Fallback 그래프
+
+### 4.1 Boot Mode 결정 우선순위
 
 ```
 Power-On Reset
@@ -82,12 +212,54 @@ Boot Mode 결정 (BootROM 초기 단계)
   우선순위: OTP > Pinstrap > Default
 ```
 
-**왜 OTP가 최우선인가?**
-> Pinstrap은 보드 위의 GPIO → 물리적으로 조작 가능. 공격자가 핀을 변경하여 USB DL 모드를 강제하고 Secure Boot를 우회할 수 있다. OTP 고정 Boot Mode는 이 공격 벡터를 차단한다.
+**왜 OTP 가 최우선인가?**
+
+> Pinstrap 은 보드 위의 GPIO → 물리적으로 조작 가능. 공격자가 핀을 변경하여 USB DL 모드를 강제하고 Secure Boot 를 우회할 수 있음. OTP 고정 Boot Mode 는 이 공격 벡터를 차단.
+
+### 4.2 Fallback 그래프
+
+```
+Primary: UFS
+  |
+  +-- UFS 초기화 성공?
+  |     +- YES → BL2 로드
+  |     |         +- 검증 PASS → Boot
+  |     |         +- 검증 FAIL --+
+  |     +- NO (장치 없음/에러) -+  |
+  |                             |  |
+  v                             v  v
+Secondary: eMMC
+  |
+  +-- eMMC 초기화 성공?
+  |     +- YES → BL2 로드 → 검증
+  |     +- NO --+
+  |             |
+  v             v
+Tertiary: USB DL Mode
+  +-- USB Enumeration 대기
+      (무한 대기 또는 타임아웃)
+
+주의: Fallback 순서/허용 여부는 OTP에 설정됨
+      Secure Boot는 USB DL 자체를 차단할 수도 있음
+```
+
+**치명적 OTP 설계 포인트**: OTP 는 양산 후 변경 불가. Fallback 경로가 OTP 에 사전 프로그래밍되지 않은 상태에서 Primary 부팅 장치가 실패하면 → 죽은 장치 (brick). 모든 실패 시나리오가 OTP 프로그래밍 _이전에_ 고려되어야 함.
+
+### 4.3 Cold / Warm / Recovery boot
+
+| 종류 | 트리거 | 초기화 범위 | DRAM 상태 |
+|---|---|---|---|
+| **Cold boot** | POR (Power-On Reset) | 전체 (PHY init, DRAM training, OTP load) | uninitialized |
+| **Warm boot** | software/wdt reset (전원 유지) | 일부 (DRAM training skip 가능) | content 유지 가능 |
+| **Recovery boot** | OTP/pinstrap = recovery | USB/SD 등에서 복구 image | DRAM training 필요 |
+
+Warm boot 는 DRAM training 을 skip 할 수 있어 부팅 속도 큰 이득이지만, training 결과의 _신뢰_ 가 깨지지 않았는지 (전압/온도 변동) 검증 필요.
 
 ---
 
-## 부팅 장치 비교
+## 5. 디테일 — 디바이스별 초기화 / FIP / RPMB / USB DL
+
+### 5.1 부팅 장치 비교
 
 | | UFS | eMMC | SD/MMC | USB DL | SPI NOR |
 |--|-----|------|--------|--------|---------|
@@ -99,11 +271,10 @@ Boot Mode 결정 (BootROM 초기 단계)
 | Boot 파티션 | Boot LU (LUN) | Boot Area (1/2) | User 영역 | N/A (스트림) | 전체 |
 | 보안 기능 | RPMB | RPMB | 없음 | 없음 | 없음 |
 
----
+### 5.2 부팅 장치별 초기화 상세
 
-## 부팅 장치별 초기화 상세
+#### UFS Boot (가장 복잡)
 
-### UFS Boot (가장 복잡)
 ```
 1. PHY 초기화 (M-PHY 캘리브레이션)
 2. UniPro Link Startup
@@ -117,7 +288,8 @@ Boot Mode 결정 (BootROM 초기 단계)
 5. 서명 검증 → BL2 실행
 ```
 
-### eMMC Boot
+#### eMMC Boot
+
 ```
 1. CMD0 (GO_IDLE)
 2. CMD1 (SEND_OP_COND) - 전압 협상
@@ -131,7 +303,8 @@ Boot Mode 결정 (BootROM 초기 단계)
 대안: eMMC Boot Mode (CMD 없이 자동 부팅 데이터 전송)
 ```
 
-### USB Download Mode (복구/개발)
+#### USB Download Mode (복구/개발)
+
 ```
 1. USB PHY 초기화
 2. USB Device Enumeration
@@ -146,7 +319,8 @@ Boot Mode 결정 (BootROM 초기 단계)
       단, 서명 검증은 항상 수행됨
 ```
 
-### SPI NOR Boot (가장 단순)
+#### SPI NOR Boot (가장 단순)
+
 ```
 1. SPI 컨트롤러 초기화
    - Clock Polarity/Phase 설정 (CPOL, CPHA)
@@ -177,7 +351,7 @@ SPI NOR 단점:
   - 쓰기 속도 매우 느림 (Erase + Program)
 ```
 
-### 왜 UFS 초기화가 eMMC보다 복잡한가? (프로토콜 관점)
+#### 왜 UFS 초기화가 eMMC 보다 복잡한가? (프로토콜 관점)
 
 ```
 eMMC:   App ---- eMMC Bus ---- Card
@@ -189,20 +363,19 @@ UFS:    UTP ---- UniPro ---- M-PHY
         ^ 3개 레이어 모두 초기화 필요 = 복잡
 ```
 
-UFS는 3계층 프로토콜 스택을 가진다:
+UFS 는 3계층 프로토콜 스택을 가집니다:
+
 - **M-PHY** (물리 계층): 캘리브레이션과 CDR Lock 필요
 - **UniPro** (링크 계층): 핸드셰이크와 Gear 협상 필요
 - **UFS Transport** (전송 계층): SCSI 명령어 세트
 
-M-PHY 캘리브레이션만으로도 PVT 변동에 대한 아날로그 튜닝으로 수 ms가 소요된다.
+M-PHY 캘리브레이션만으로도 PVT 변동에 대한 아날로그 튜닝으로 수 ms 가 소요됩니다.
 
----
+### 5.3 Boot Image Format — FIP (Firmware Image Package)
 
-## Boot Image Format — FIP (Firmware Image Package)
+BootROM 이 Flash 에서 BL2 를 로드할 때, 이미지가 **어떤 구조**로 저장되어 있는지 알아야 합니다. ARM TF-A 의 표준 포맷이 FIP.
 
-BootROM이 Flash에서 BL2를 로드할 때, 이미지가 **어떤 구조**로 저장되어 있는지 알아야 한다. ARM TF-A의 표준 포맷은 FIP이다.
-
-### FIP 구조
+#### FIP 구조
 
 ```
 Flash/UFS 내 부팅 이미지 레이아웃:
@@ -243,7 +416,7 @@ Flash/UFS 내 부팅 이미지 레이아웃:
 +--------------------------------------------------+
 ```
 
-### BootROM의 FIP 파싱 흐름
+#### BootROM 의 FIP 파싱 흐름
 
 ```
 1. Boot Device에서 Boot Header 읽기 (고정 오프셋)
@@ -255,66 +428,31 @@ Flash/UFS 내 부팅 이미지 레이아웃:
 7. 서명 검증 → BL2 실행
 ```
 
-### 왜 FIP 구조인가?
+#### 왜 FIP 구조인가?
 
 | 이점 | 설명 |
 |------|------|
 | **단일 이미지** | BL2, BL31, BL32, BL33 + 인증서를 하나의 파일로 패키징 |
 | **UUID 기반 검색** | 오프셋 하드코딩 불필요 → 이미지 순서 변경에 유연 |
 | **버전 관리** | 개별 이미지별 버전 + 전체 FIP 버전 이중 관리 가능 |
-| **벤더 확장** | 벤더 고유 이미지를 UUID로 추가 가능 |
+| **벤더 확장** | 벤더 고유 이미지를 UUID 로 추가 가능 |
 
-**DV 관점**: FIP 파싱 검증이 중요 — 손상된 ToC (잘못된 오프셋, 초과 크기, 중복 UUID), Magic Number 불일치, 잘린 이미지 등의 Negative 시나리오를 반드시 검증해야 한다.
+**DV 관점**: FIP 파싱 검증이 중요 — 손상된 ToC (잘못된 오프셋, 초과 크기, 중복 UUID), Magic Number 불일치, 잘린 이미지 등의 Negative 시나리오를 반드시 검증.
 
----
-
-## Boot Fallback 메커니즘
-
-```
-Primary: UFS
-  |
-  +-- UFS 초기화 성공?
-  |     +- YES → BL2 로드
-  |     |         +- 검증 PASS → Boot
-  |     |         +- 검증 FAIL --+
-  |     +- NO (장치 없음/에러) -+  |
-  |                             |  |
-  v                             v  v
-Secondary: eMMC
-  |
-  +-- eMMC 초기화 성공?
-  |     +- YES → BL2 로드 → 검증
-  |     +- NO --+
-  |             |
-  v             v
-Tertiary: USB DL Mode
-  +-- USB Enumeration 대기
-      (무한 대기 또는 타임아웃)
-
-주의: Fallback 순서/허용 여부는 OTP에 설정됨
-      Secure Boot는 USB DL 자체를 차단할 수도 있음
-```
-
-**치명적 OTP 설계 포인트**: OTP는 양산 후 변경 불가. Fallback 경로가 OTP에 사전 프로그래밍되지 않은 상태에서 Primary 부팅 장치가 실패하면 → 죽은 장치(brick). 모든 실패 시나리오가 OTP 프로그래밍 **이전에** 고려되어야 한다.
-
----
-
-## Secure Boot 상태에서의 USB DL Mode
+### 5.4 Secure Boot 상태에서의 USB DL Mode
 
 두 가지 설계 철학:
 
-1. **USB DL 완전 차단**: OTP가 USB 부팅을 비활성화. 최대 보안이지만 현장 FW 복구 불가 → 벽돌 위험
-2. **USB DL 허용 + 검증 강제**: USB로 수신한 이미지도 서명 검증 필수. 복구 가능, 변조된 FW는 차단.
+1. **USB DL 완전 차단**: OTP 가 USB 부팅을 비활성화. 최대 보안이지만 현장 FW 복구 불가 → 벽돌 위험
+2. **USB DL 허용 + 검증 강제**: USB 로 수신한 이미지도 서명 검증 필수. 복구 가능, 변조된 FW 는 차단
 
-대부분의 상용 SoC는 **#2를 선택** — 현장 FW 업데이트가 때때로 필요하기 때문.
+대부분의 상용 SoC 는 **#2 를 선택** — 현장 FW 업데이트가 때때로 필요하기 때문.
 
----
-
-## RPMB (Replay Protected Memory Block)
+### 5.5 RPMB (Replay Protected Memory Block)
 
 UFS/eMMC 내의 특수 보안 파티션. OTP 비트 소진 없이 보안 데이터를 저장할 수 있는 핵심 메커니즘.
 
-### RPMB 인증 프로토콜
+#### RPMB 인증 프로토콜
 
 ```
 SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
@@ -338,7 +476,7 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
       |  ←──────────────────────────────────  |
 ```
 
-### RPMB 키 프로비저닝
+#### RPMB 키 프로비저닝
 
 ```
 양산 과정 (1회만 수행):
@@ -357,7 +495,7 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
       → Key는 반드시 HW 보안 영역에서만 접근
 ```
 
-### Write Counter의 리플레이 방지 원리
+#### Write Counter 의 리플레이 방지 원리
 
 ```
 정상 시퀀스:
@@ -372,7 +510,7 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
   → 단조증가 카운터가 과거 요청의 재사용을 원천 차단
 ```
 
-### RPMB 활용 사례
+#### RPMB 활용 사례
 
 | 용도 | 설명 | OTP 대비 장점 |
 |------|------|-------------|
@@ -381,22 +519,20 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 | **TEE 보안 저장소** | 키/인증서/토큰 저장 | 대용량 저장 가능 (수 MB) |
 | **Device Provisioning** | 양산 시 고유 데이터 기록 | 현장 업데이트 가능 |
 
-### RPMB vs OTP 비교
+#### RPMB vs OTP 비교
 
 | | OTP (eFuse) | RPMB |
 |--|-------------|------|
 | **변경 가능성** | 불가 (물리적 영구) | 인증된 쓰기 가능 |
 | **용량** | 수 KB (비트당 비쌈) | 수 MB (저장장치 내) |
-| **리플레이 방지** | 물리적으로 보장 | Write Counter로 보장 |
+| **리플레이 방지** | 물리적으로 보장 | Write Counter 로 보장 |
 | **물리 공격 저항** | 높음 (온칩) | 중간 (외부 저장장치) |
 | **가용성** | 칩 전원만 있으면 OK | Boot Device 초기화 필요 |
 | **신뢰 수준** | 최고 (HW 불변) | 높음 (HMAC 의존) |
 
-**면접 핵심**: "OTP는 불변성이 최고이지만 용량이 유한하다. RPMB는 HMAC 인증 + Write Counter로 리플레이를 방지하면서 용량 제한을 해소한다. Anti-Rollback에서 OTP가 메이저 버전을, RPMB가 마이너 버전을 관리하는 이중 구조가 일반적이다."
+**면접 핵심**: "OTP 는 불변성이 최고이지만 용량이 유한하다. RPMB 는 HMAC 인증 + Write Counter 로 리플레이를 방지하면서 용량 제한을 해소한다. Anti-Rollback 에서 OTP 가 메이저 버전을, RPMB 가 마이너 버전을 관리하는 이중 구조가 일반적이다."
 
----
-
-## DV 관점 — 부팅 장치 검증
+### 5.6 DV 관점 — 부팅 장치 검증 항목
 
 | 검증 항목 | 설명 | 방법 |
 |----------|------|------|
@@ -410,24 +546,43 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: UFS 부팅 초기화가 eMMC보다 복잡한 이유는?**
-> "근본적 차이는 프로토콜 스택 깊이이다. eMMC는 병렬 버스 + 단순 명령-응답으로 CMD0→CMD1이면 PHY 레벨 협상 없이 즉시 통신이 시작된다. UFS는 3계층 스택이다: M-PHY(물리, 캘리브레이션과 CDR Lock 필요), UniPro(링크, DME_LINKSTARTUP 핸드셰이크와 Gear 협상 필요), UFS Transport(SCSI 명령어). 3개 레이어가 순차적으로 초기화되어야 하므로 BootROM 코드 크기와 부팅 시간이 증가한다."
+### 흔한 오해
 
-**Q: 양산 칩의 부팅 장치가 고장나면?**
-> "OTP가 이미 고정되어 있으므로 양산 후 부팅 설정을 변경할 수 없다. 대응책은 사전 설계되어야 한다: (1) BootROM Fallback 목록 — 양산 전 OTP에 Primary + Secondary 장치를 프로그래밍 (예: 'UFS 실패 → USB DL 모드'). (2) Boot 재시도 + Watchdog — Primary에서 N번 재시도 후 Watchdog Reset으로 Secondary 전환. (3) 서명 검증이 포함된 USB DL — 보안을 유지하면서 PC를 통한 현장 복구."
+!!! danger "❓ 오해 1 — 'Production mode 만 검증하면 충분'"
+    **실제**: Test/Debug mode 가 production 에서도 활성화되어 있으면 (mode pin 미고정) 공격자가 그 path 로 우회 가능. Secondary path 의 _인증 단계까지 동일하게 도달하는가_ 가 critical. boot mode × OTP × pinstrap 의 cross matrix 전수가 검증 대상.<br>
+    **왜 헷갈리는가**: "제품 = production path" 만 보는 mindset. 공격자는 secondary 노립니다.
 
-**Q: 부팅 장치와 BootROM 코드 크기의 관계는?**
-> "지원하는 부팅 장치 수가 많을수록 = BootROM 코드가 커짐 = 더 많은 ROM 면적 + 검증 복잡도. 양산 SoC는 OTP를 통해 불필요한 부팅 장치 지원을 비활성화하여 공격 표면을 최소화한다."
+!!! danger "❓ 오해 2 — 'Fallback 만 있으면 brick 안 된다'"
+    **실제**: Fallback 자체가 OTP 에 사전 프로그래밍 _되어야_ 동작. OTP 가 비어 있는 상태에서 primary 가 실패하면 default 만 시도 후 brick. 모든 fallback 시나리오는 _provisioning 시점에_ 결정.<br>
+    **왜 헷갈리는가**: BootROM 코드만 보고 "fallback 함수가 있다 = OK" 의 직관. 실제로는 OTP 의 fallback list 가 함수의 입력.
 
-**Q: RPMB는 어떻게 리플레이 공격을 방지하는가?**
-> "RPMB는 두 가지 메커니즘을 결합한다: (1) HMAC 인증 — 양산 시 1회 프로비저닝된 Authentication Key로 모든 Read/Write 요청에 HMAC을 생성하여 데이터 위변조를 방지. (2) 단조증가 Write Counter — 매 Write 성공 시 카운터 증가, 요청에 포함된 카운터가 현재 값과 일치해야만 Write 허용. 과거 요청의 재전송은 카운터 불일치로 자동 거부된다."
+!!! danger "❓ 오해 3 — 'USB DL 은 무조건 차단해야 안전'"
+    **실제**: 대부분의 상용 SoC 는 USB DL 허용 + 서명 검증 강제. 완전 차단 시 현장 brick 시 복구 불가능 → 차라리 검증 강제로 안전을 _경로 안에서_ 확보. Secure Boot ON + USB DL ON + verify 강제가 표준.<br>
+    **왜 헷갈리는가**: "어떤 path 가 적을수록 안전" 의 단순화.
 
-**Q: Boot Image의 FIP 포맷이 왜 중요한가?**
-> "FIP(Firmware Image Package)는 BL2, BL31, BL32, BL33과 각각의 인증서를 하나의 패키지로 묶는 ARM TF-A 표준이다. UUID 기반 검색으로 이미지 오프셋 하드코딩 없이 유연하게 이미지를 찾을 수 있고, 벤더 확장도 가능하다. DV 관점에서는 FIP 파싱의 Negative 시나리오 — 손상된 ToC, 잘린 이미지, 잘못된 UUID — 가 중요한 검증 항목이다."
+!!! danger "❓ 오해 4 — 'RPMB 가 OTP 를 대체한다'"
+    **실제**: RPMB 는 OTP 의 _보조_. RPMB key 자체는 HW unique key 에서 KDF 또는 OTP 의 RPMB key field — 즉 RPMB 의 root 는 여전히 HW. OTP 가 메이저 버전, RPMB 가 마이너 카운터의 _이중 구조_ 가 일반적.<br>
+    **왜 헷갈리는가**: RPMB 가 "Replay Protected" 라는 이름 때문에 OTP 와 동급으로 보임.
 
----
+!!! danger "❓ 오해 5 — 'Anti-rollback 만 있으면 downgrade 차단'"
+    **실제**: ARC 가 OTP 가 아닌 OTP-emulated (rewriteable EEPROM/flash 영역) 에 있으면 우회 가능. counter 의 _진짜 immutable_ 여부가 critical. RPMB 도 attacker 가 storage 자체를 갈아끼우면 monotonicity 가 깨질 수 있어서 OTP 가 메이저 버전을 책임져야 함.<br>
+    **왜 헷갈리는가**: "기능 이름 = 동작 보장" 의 직관. 실제 구현 storage 가 더 중요.
+
+### DV 디버그 체크리스트 (Boot device / mode 검증에서 자주 보는 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Production silicon 에서 test pin 으로 인증 우회 부팅 | Secondary path 의 ROTPK 검증 hook 누락 | (boot mode × OTP secure flag × pinstrap) 매트릭스 — 모든 path 가 verify 단계까지 도달하나 |
+| UFS bring-up 만 실패, eMMC 는 OK | M-PHY 캘리브레이션 또는 UniPro DME_LINKSTARTUP | UFS init log 의 stage 별 done flag, gear/lane 협상 결과 |
+| FIP 로드 시 random offset 에서 hang | ToC entry 의 offset/size 가 device 용량 초과 | FIP ToC dump → entry size sum vs device capacity |
+| Magic 일치 안 함 | endian 또는 vendor-specific header byte order | 빌드 시 byte order vs ROM 의 read byte order |
+| Anti-RB counter rollback 성공 | counter 가 RPMB 단독 — RPMB 영역 백업/복원 공격 | counter backing storage = OTP fuse 인지 확인 |
+| Cold boot OK, warm boot fail | warm path 가 DRAM training skip 했는데 voltage 변동 | warm boot 의 retraining policy + temperature sensor |
+| USB DL 강제 시 cert 검증 skip 됨 | USB path 가 boot device path 와 다른 verify hook | USB DL 의 verify 함수 = primary path 의 verify 함수 인지 |
+| Recovery boot 후 lifecycle 가 dev 로 | recovery image 가 dev key 로 서명 + production OTP 가 dev key 도 허용 | OTP[ROTPK_HASH_LIST] 가 dev 키 hash 를 포함하는지 |
+
 !!! warning "실무 주의점 — Secondary boot 경로의 검증 누락 (test mode pin 우회)"
     **현상**: Production silicon 에서 정상 boot 는 깨끗한데, test/debug 용 strap pin 을 특정 조합으로 묶으면 인증 검사를 건너뛰는 secondary boot 경로가 살아있어 임의 image 가 부팅된다.
 
@@ -435,21 +590,25 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 
     **점검 포인트**: (boot mode × OTP secure flag × pinstrap override) 모든 조합에서 인증 단계까지 동일하게 도달하는가, 그리고 production fuse blow 후 test 경로가 닫히는지 silicon 등가의 시나리오로 확인했는가.
 
-## 핵심 정리
+---
 
-- **Boot mode 우선순위**: OTP > Pinstrap > Default. OTP는 양산 후 변경 불가 → 신중히 설계.
-- **Boot device**:
-  - **QSPI NOR**: 가장 단순, 빠른 boot, 작은 capacity
-  - **eMMC**: 모바일 표준, embedded
-  - **UFS**: 고속 모바일/서버, 복잡한 protocol
-  - **NAND raw**: 큰 capacity, ECC 필수
-- **Fallback**: primary boot fail (서명 fail, device fail) → secondary 시도. 양산 후 recovery 가능.
-- **Boot 종류**: Cold (POR + 전체 init), Warm (reset, DRAM 유지), Recovery (USB/SD에서 복구 image).
+## 7. 핵심 정리 (Key Takeaways)
+
+- **Boot mode 우선순위**: OTP > Pinstrap > Default. OTP 양산 후 변경 불가 → 신중히 설계.
+- **Boot device 4 형태**: SPI NOR (단순/소형) / eMMC (모바일 표준) / UFS (고속 3계층) / NAND (대용량 + ECC).
+- **Fallback 은 OTP 사전 설계** — primary fail → secondary list 가 OTP 에 박혀 있어야 brick 회피.
+- **Boot 종류 3 가지** — Cold (POR + 전체 init), Warm (reset, DRAM 유지), Recovery (USB/SD 에서 복구 image).
+- **RPMB 는 OTP 의 _보조_** — HMAC + Write Counter 로 replay 방지하면서 OTP 비트 소진 없이 카운터 확장. Root 는 HW key.
+
+!!! warning "실무 주의점 (요약)"
+    - Secondary boot 의 verify hook 이 primary 와 _문자 그대로 동일_ 한가 — 같은 함수를 호출하는가, 분기마다 별도 사본인가.
+    - USB DL 도 verify 강제 — completely closed 보다 verified-allowed 가 양산 brick 회피에 안전.
+    - ARC counter 의 backing storage 가 OTP 인지 RPMB 인지 OTP-emulated 인지 — 이름이 같아도 immutability 가 다름.
 
 ## 다음 단계
 
 - 📝 [**Module 04 퀴즈**](quiz/04_boot_device_and_boot_mode_quiz.md)
-- ➡️ [**Module 05 — Attack Surface & Defense**](05_attack_surface_and_defense.md)
+- ➡️ [**Module 05 — Attack Surface & Defense**](05_attack_surface_and_defense.md): 위에서 본 모든 path 를 _공격자 관점_ 으로 다시 — FI, side-channel, TOCTOU, JTAG.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../03_crypto_in_boot/">

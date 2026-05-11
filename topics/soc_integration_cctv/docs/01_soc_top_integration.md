@@ -15,67 +15,187 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#ip-검증-vs-soc-top-검증">IP 검증 vs SoC Top 검증</a>
-  <a class="page-toc-link" href="#soc-top-검증-항목">SoC Top 검증 항목</a>
-  <a class="page-toc-link" href="#soc-top-tb-아키텍처-이력서-연결">SoC Top TB 아키텍처 (이력서 연결)</a>
-  <a class="page-toc-link" href="#코드-예시-connectivity-검증-sva">코드 예시: Connectivity 검증 SVA</a>
-  <a class="page-toc-link" href="#코드-예시-memory-map-검증-uvm-sequence">코드 예시: Memory Map 검증 UVM Sequence</a>
-  <a class="page-toc-link" href="#실전-디버그-시나리오-interrupt-라우팅-오류">실전 디버그 시나리오: Interrupt 라우팅 오류</a>
-  <a class="page-toc-link" href="#soc-top-tb의-uvm-env-구조">SoC Top TB의 UVM Env 구조</a>
-  <a class="page-toc-link" href="#연습-문제">연습 문제</a>
-  <a class="page-toc-link" href="#퀴즈">퀴즈</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-도시-준공-검사-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-camera-frame-한-장이-soc-를-가로지르는-과정">3. 작은 예 — Camera frame 한 장</a>
+  <a class="page-toc-link" href="#4-일반화-soc-top-검증의-5축">4. 일반화 — SoC Top 검증의 5축</a>
+  <a class="page-toc-link" href="#5-디테일-검증-항목-tb-구조-코드-패턴">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Distinguish** IP-level DV vs SoC-level DV의 검증 책임 차이를 설명
-    - **Identify** Top-level만 catch되는 결함 (connectivity, clock domain, interrupt routing, memory map, power)
-    - **Design** Multi-IP UVM env에 multiple agent + virtual sequencer 통합 구조
-    - **Plan** Multi-clock / multi-power domain SoC의 reset / handshake 시나리오
+    - **Distinguish** IP-level DV 와 SoC-level DV 의 검증 책임을 데이터 흐름 관점에서 구분할 수 있다.
+    - **Identify** Top-only 결함 5종 (connectivity / clock-reset / interrupt routing / memory map / power domain) 을 식별한다.
+    - **Trace** 한 camera frame 이 sensor → ISP → codec → DDR → display 까지 흐를 때 어떤 IP 간 연결을 지나가는지 추적한다.
+    - **Design** Multi-IP UVM env 에 multiple agent + virtual sequencer 와 Common Task Checker Layer 를 통합하는 구조를 설계한다.
+    - **Apply** Connectivity SVA 와 Memory Map UVM sequence 를 작성해 통합 결함을 catch 한다.
 
 !!! info "사전 지식"
-    - [UVM](../../uvm/) Module 01-06
-    - SoC architecture 일반
+    - [UVM](../../uvm/) Module 01-06 — agent / sequencer / scoreboard 기본
+    - SoC architecture 일반 — bus fabric (AXI/AHB/APB), GIC, MC, sysMMU 의 위치
 
-## 왜 이 모듈이 중요한가
-
-**SoC integration bug는 가장 비싸게 잡힙니다**. IP-level은 모두 PASS인데 통합 후 connectivity 한 줄 누락 → silicon revision 또는 software workaround. Top-level DV는 IP DV가 catch 못 하는 issue category 전체를 책임집니다.
-
-## 핵심 개념
-**SoC Top 검증 = IP 단위에서 검증할 수 없는 "IP 간 상호작용"을 확인하는 단계. Connectivity, Clock/Reset, Interrupt, Memory Map, Power Domain 등 통합에서만 드러나는 문제를 검증. IP DV가 "각 부품이 정상"이라면, Top DV는 "부품을 조립한 완제품이 정상"인지 확인.**
-
-!!! tip "💡 이해를 위한 비유"
-    **SoC Top** ≈ **도시 전체 설계 검증**
-
-    각 건물(IP)이 개별적으로 완공되었어도, 도로망(interconnect)이 잘못 연결되거나 지번 매핑(connectivity)이 틀리면 도시 전체가 작동하지 않는다. SoC Top 검증은 완공된 건물들을 도시로 연결하는 단계의 오류를 잡는 작업이다.
-
-!!! danger "❓ 흔한 오해"
-    **오해**: SoC Top 시뮬레이션을 통과하면 IP 단독 검증 없이도 충분하다.
-
-    **실제**: SoC Top 검증은 IP 간 연결 오류를 잡지만, IP 내부 기능 버그는 IP-level DV에서만 발견된다.
-
-    **왜 헷갈리는가**: "통합 테스트가 단위 테스트를 포함한다"는 소프트웨어 직관을 하드웨어 검증에 잘못 적용하기 때문이다.
 ---
 
-## IP 검증 vs SoC Top 검증
+## 1. Why care? — 이 모듈이 왜 필요한가
+
+**SoC integration bug 는 가장 비싸게 잡힙니다.** IP-level 은 모두 PASS 인데 통합 후 connectivity 한 줄 누락 → silicon revision 또는 software workaround. 이 단계에서 못 잡으면 **post-silicon debug 수 주 + 다음 tape-out 까지 1~3 개월** 의 비용이 따라옵니다.
+
+이 모듈을 건너뛰면 이후의 Common Task / CCTV / TB Top 자동화 (Module 02–03) 가 "그냥 매트릭스를 채우는 작업" 으로 보입니다. 반대로 **"IP 검증으로는 절대 못 잡는 결함의 종류"** 를 구체적으로 알면, 매트릭스의 각 칸이 _어떤 silicon 버그를 막는지_ 가 보이기 시작합니다. 이후 모든 Common Task 정의의 출발점이 이 한 챕터입니다.
+
+---
+
+## 2. Intuition — 도시 준공 검사 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **IP-level DV** = 건물 한 채 한 채의 _자체 검사_ — 전기, 배관, 구조가 그 건물 안에서 정상인지.<br>
+    **SoC Top-level DV** = 건물들이 _도시로 조립된 뒤_ 의 준공 검사 — 도로(interconnect)가 끊기지 않았는지, 지번(memory map)이 맞는지, 119 신고망(interrupt)이 올바른 소방서로 가는지, 정전(power domain off) 시 옆 건물에 X 전류가 흘러들어가지 않는지.
+
+### 한 장 그림 — IP 검증 vs Top 검증의 결함 영역
+
+```
+   IP-level DV 가 catch 하는 영역                Top-level DV 가 catch 하는 영역
+   ───────────────────────────────              ─────────────────────────────────
+        ┌─ IP_A ─┐                                ┌─ IP_A ─┐ ⇄ ┌─ IP_B ─┐ ⇄ ┌─ IP_C ─┐
+        │ FSM    │                                │        │   │        │   │        │
+        │ FIFO   │                                └───┬────┘   └───┬────┘   └───┬────┘
+        │ Reg    │                                    │            │            │
+        │ Proto  │                                  ╔═╧════════════╧════════════╧═╗
+        └────────┘                                  ║  Bus Fabric (AXI/AHB/APB)   ║
+                                                    ╚═╤════════════╤════════════╤═╝
+   - 단일 IP 기능                                    │            │            │
+   - Register / FIFO / FSM                          ⚡ ───────────⚡            │
+   - Protocol compliance                            (irq → GIC SPI[?])         │
+                                                                          🔥 Power off
+   ●  IP 단독 TB 만으로 충분                         ●  연결 / 라우팅 / 도메인
+                                                       경계는 _Top 에만 존재_
+```
+
+### 왜 두 단계가 모두 필요한가 — Design rationale
+
+세 가지 요구가 동시에 만족돼야 합니다.
+
+1. **Sim 속도**: SoC full RTL 한 번 컴파일 + 부팅 = 수 시간. IP 단독 TB = 분 단위. → 기능 회귀는 **IP 단계** 에서 끝내야 한다.
+2. **연결의 존재 자체**: IP_A.irq_out 이 GIC.spi[47] 에 연결됐는지는 _IP_A 의 testbench 안에 존재하지 않는 정보_ 다. → **Top 단계에서만** 검증 가능.
+3. **상호작용 결함**: Reset 해제 순서, power domain 격리, multi-master 의 bus 경합은 IP 들이 _함께_ 있어야만 발생. → 역시 **Top 단계** 의 책임.
+
+이 셋이 합쳐져 "IP DV = 부품 정상성, Top DV = 조립 정상성" 이라는 분업이 됩니다.
+
+---
+
+## 3. 작은 예 — Camera frame 한 장이 SoC 를 가로지르는 과정
+
+CCTV / 영상 SoC 의 가장 단순한 시나리오. **CMOS image sensor** 가 한 장의 **1920 × 1080 RAW10** frame 을 찍어 → ISP 가 RGB 로 변환 → Video codec (H.264 encoder) 이 압축 → DDR 에 bitstream 적재 → Display IP 가 preview 로 다시 읽어 LCD 로 출력. 이 한 frame 의 여행에서 **IP 간 연결 / 라우팅 / 도메인 경계가 어떻게 동시에 검증되는지** 따라가 봅니다.
+
+```
+   ┌───────────┐  MIPI CSI-2   ┌─────┐  AXI-S    ┌────────┐  AXI-MM   ╔═══════╗
+   │ CMOS      │ ───────────▶ │ ISP │ ────────▶ │ H.264  │ ────────▶ ║       ║
+   │ Sensor    │  pixel bus    │     │  RGB888   │ Encoder│  bitstm   ║  DDR  ║
+   └────┬──────┘               └──┬──┘           └────┬───┘           ║  via  ║
+        │ ① VSYNC irq              │ ② frame_done irq │ ③ bs_ready    ║  MC   ║
+        ▼                          ▼                  ▼               ╚═══╤═══╝
+   ┌───────────────────  GIC (SPI) ─────────────────────────┐               │
+   │   spi[12]            spi[13]               spi[14]      │               │
+   └───┬─────────────────────────────────────────┬──────────┘               │
+       │ ④ to CPU0                                │                          │
+       ▼                                          │                  ⑤ AXI-MM read
+   ┌────────┐                                     │              ┌───────────┴─┐
+   │ CPU    │ ──── reg-config (APB) ─────────────▶│              │ Display IP  │
+   │ (FW)   │ ◀─── ISR ack ────                                  └──────┬──────┘
+   └────────┘                                                            │ ⑥ MIPI DSI
+                                                                         ▼
+                                                                      LCD panel
+   PD_VIDEO  ━━━━━━━━━━━━━━━━━━━━━━ ON ━━━━━━━━━━━━━━━━━━━━━ (ISP+codec+display)
+   PD_CORE   ━━━━━━━━━━━━━━━━━━━━━━ ON ━━━━━━━━━━━━━━━━━━━━━ (CPU+GIC+MC)
+   PIXCLK    ──── 297 MHz (sensor) ──→ ISP
+   AXICLK    ──── 533 MHz (PD_CORE) ──→ codec, display, MC
+```
+
+### 단계별 추적
+
+| Step | 누가 | 무엇을 | Top 에서만 검증되는 _연결_ |
+|---|---|---|---|
+| ① | Sensor | VSYNC 발생 → `sensor_irq_out` assert | `sensor_irq_out` 이 GIC SPI[12] 에 1:1 연결 |
+| ② | ISP | RAW10→RGB888 변환 후 frame_done | ISP 의 PIXCLK (297 MHz) 가 sensor 와 동일 source 인지 |
+| ③ | H.264 codec | bitstream ready, AXI-MM master 로 DDR write | codec 의 AXI master 가 MC 의 slave port 4 에 연결, sysMMU 경유 |
+| ④ | GIC | SPI[12/13/14] → CPU0 IRQ line | SPI index 가 CSV 와 RTL 에서 일치 |
+| ⑤ | Display IP | DDR 에서 frame buffer read | display 의 read 경로가 codec write 경로와 _coherent_ 한 view |
+| ⑥ | Display IP | MIPI DSI 로 panel 송출 | DSI clock domain 과 PD_VIDEO power 도메인 정렬 |
+
+```c
+// Step ④ 시점에 CPU 가 보는 ISR 의 단순화 예 (Top TB 에서 CPU model 이 실행)
+void isp_isr(void) {
+    uint32_t status = mmio_read(ISP_BASE + 0x40); // INT_STATUS
+    if (status & FRAME_DONE) {
+        mmio_write(ISP_BASE + 0x44, FRAME_DONE);  // INT_CLEAR
+        codec_kick(/* frame_id */);                // chain: ISP → codec
+    }
+}
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) 한 frame 의 path 는 _연결의 사슬_** — sensor → ISP → codec → MC → DDR → display. 이 사슬 중 _한 wire 라도 잘못 연결되면_ frame 한 장이 통째로 사라지고, IP 단독 TB 는 자기 부분만 PASS 라고 보고합니다.<br>
+    **(2) 같은 frame path 가 5 개 검증 카테고리를 _동시에_ 친다** — connectivity (sensor↔ISP↔GIC), clock (PIXCLK vs AXICLK CDC), reset (codec 가 MC 보다 먼저 풀리면 첫 frame 손실), memory map (codec 의 ring buffer base addr), power (PD_VIDEO 가 OFF 일 때 display 가 codec 의 last write 를 못 봄). 이게 SoC Top TB 가 _하나의 대형 시나리오로 다섯 카테고리를 묶어 쳐야 하는 이유_ 입니다.
+
+---
+
+## 4. 일반화 — SoC Top 검증의 5축
+
+§3 의 frame path 시나리오에서 등장한 _연결 / 클럭 / 리셋 / 인터럽트 / 메모리맵 / 전원_ 을 일반화하면 SoC Top 검증의 **5 축** 이 됩니다.
+
+```
+                       ┌─────────────────── SoC Top 결함 ───────────────────┐
+                       │                                                     │
+              ┌────────┴────────┐                              ┌─────────────┴─────────────┐
+              │                 │                              │                           │
+        Connectivity       Memory Map                     Clock / Reset              Interrupt Routing
+        (signal mis-route) (decoder mismatch)             (CDC, deassert order)      (wrong SPI / type)
+                                                                                            │
+                                                                                  ┌─────────┴────┐
+                                                                                  │ Power Domain │
+                                                                                  │ (isolation,  │
+                                                                                  │  sequence)   │
+                                                                                  └──────────────┘
+```
+
+| 축 | 결함 형태 | IP 검증으로 못 잡는 이유 |
+|---|---|---|
+| **Connectivity** | irq_out → spi[wrong_idx], data bus mis-route | 연결 정보가 IP TB 에 존재하지 않음 |
+| **Memory Map** | base 중첩 / DECERR 미동작 / IP-XACT vs RTL 불일치 | decoder 가 SoC top 에만 존재 |
+| **Clock / Reset** | 잘못된 freq, deassert 순서 위반, CDC 누락 | reset 트리 + PLL 위계가 통합에만 존재 |
+| **Interrupt Routing** | SPI 인덱스 어긋남, edge/level type 불일치, 보안 그룹 오설정 | GIC ↔ IP 매핑은 통합 시 결정 |
+| **Power Domain** | iso cell 미동작, ON/OFF 순서, retention reg 손상 | PD 경계는 단일 IP TB 안에 없음 |
+
+### 4.1 IP 검증 vs SoC Top 검증
 
 | 항목 | IP-Level DV | SoC Top-Level DV |
 |------|------------|-------------------|
-| 범위 | 단일 IP (MMU, UFS HCI 등) | 전체 SoC (수십~수백 IP 통합) |
+| 범위 | 단일 IP (MMU, UFS HCI, ISP 등) | 전체 SoC (수십~수백 IP 통합) |
 | 초점 | IP 기능 완전성 | IP 간 **연결/상호작용** 정확성 |
 | 환경 | VIP + UVM Agent | **실제 IP RTL** + 최소 자극 |
 | 시뮬레이션 속도 | 빠름 (블록 단위) | 느림 (전체 SoC RTL) |
 | 버그 유형 | 기능 버그 | **통합 버그** (연결 오류, 매핑 오류) |
 | TB 복잡도 | 중간 | 높음 (다수 인터페이스) |
 
-### IP 검증에서 잡을 수 없는 버그
+### 4.2 검증 책임의 분기 — 한 frame path 로 보는 분담
+
+§3 의 sensor → display 사슬을 예로:
+
+- **sensor IP DV**: VSYNC 출력 타이밍, MIPI CSI-2 protocol compliance.
+- **ISP IP DV**: RAW10→RGB 변환 알고리즘, frame_done 발생 조건.
+- **codec IP DV**: H.264 압축률, AXI master burst 패턴.
+- **SoC Top DV**: _이 셋 사이의 연결 + GIC 매핑 + PIXCLK↔AXICLK CDC + PD_VIDEO 격리_ — IP 어느 쪽도 책임 못 지는 영역.
+
+이 분담이 깨지면 (Top DV 가 IP 기능까지 검증하려 하면) sim 시간이 폭발하고, 반대로 (IP DV 가 통합 결함을 잡으려 하면) 정보 부족.
+
+---
+
+## 5. 디테일 — 검증 항목, TB 구조, 코드 패턴
+
+### 5.1 IP 검증에서 잡을 수 없는 5 대 결함 카테고리
 
 ```
 1. Connectivity 오류
@@ -99,11 +219,9 @@
    - Power 순서 위반
 ```
 
----
+### 5.2 SoC Top 검증 항목 상세
 
-## SoC Top 검증 항목
-
-### 1. Connectivity Verification
+#### 1. Connectivity Verification
 
 ```
 모든 IP 간 신호 연결이 설계 의도와 일치하는가?
@@ -127,7 +245,7 @@
   - Power 스위치 제어
 ```
 
-### 2. Memory Map Verification
+#### 2. Memory Map Verification
 
 ```
 모든 IP가 올바른 주소에 배치되어 있는가?
@@ -149,7 +267,7 @@
   - IP-XACT 메타데이터와 실제 RTL 비교
 ```
 
-### 3. Clock/Reset Verification
+#### 3. Clock/Reset Verification
 
 ```
 검증 항목:
@@ -166,7 +284,7 @@ Reset 순서 예시:
   → 순서 위반 시 IP가 초기화되지 않은 버스에 접근 → 행(hang)
 ```
 
-### 4. Interrupt Routing Verification
+#### 4. Interrupt Routing Verification
 
 ```
 검증 항목:
@@ -181,7 +299,7 @@ Reset 순서 예시:
   ISR 실행 → 인터럽트 클리어 → GIC 상태 복귀
 ```
 
-### 5. Power Domain Verification
+#### 5. Power Domain Verification
 
 ```
 검증 항목:
@@ -192,9 +310,7 @@ Reset 순서 예시:
   - DVFS (Dynamic Voltage Frequency Scaling) 동작
 ```
 
----
-
-## SoC Top TB 아키텍처 (이력서 연결)
+### 5.3 SoC Top TB 아키텍처 (이력서 연결)
 
 ```
 +------------------------------------------------------------------+
@@ -229,11 +345,7 @@ Reset 순서 예시:
   - 외부 메모리/디바이스는 BFM(Bus Functional Model)으로 대체
 ```
 
----
-
-## 코드 예시: Connectivity 검증 SVA
-
-### Formal Connectivity Property
+### 5.4 코드 예시 — Connectivity 검증 SVA
 
 ```systemverilog
 // Connectivity Spec (CSV 등)에서 자동 생성되는 SVA
@@ -288,9 +400,7 @@ endmodule
 - Formal 도구(JasperGold)는 모든 입력 조합을 exhaustive하게 증명 → 시뮬레이션보다 확실
 - CSV/JSON 스펙에서 이런 property를 **자동 생성**하는 것이 실무 핵심
 
----
-
-## 코드 예시: Memory Map 검증 UVM Sequence
+### 5.5 코드 예시 — Memory Map 검증 UVM Sequence
 
 ```systemverilog
 class soc_memory_map_test_seq extends uvm_sequence #(axi_txn);
@@ -377,25 +487,22 @@ endclass
 2. **Negative**: 미할당 주소 → DECERR 응답
 3. **Boundary**: 영역 경계에서 정확히 잘리는지 확인
 
----
+### 5.6 실전 디버그 시나리오 — Interrupt 라우팅 오류
 
-## 실전 디버그 시나리오: Interrupt 라우팅 오류
-
-### 증상
 ```
 [UVM_ERROR] @ 125000ns: ISR not triggered within timeout.
   Expected: GIC SPI[47] → CPU0 IRQ
   Actual:   CPU0 IRQ never asserted after IP_A interrupt
 ```
 
-### 디버그 트레이싱 (사고과정)
+**디버그 트레이싱 (사고과정)**:
 
 ```
 Step 1: IP_A에서 인터럽트 발생 확인
-  → 로그: "IP_A irq_out asserted at 124500ns" ✅ 정상
+  → 로그: "IP_A irq_out asserted at 124500ns" 정상
 
 Step 2: GIC 입력 확인
-  → 로그에 GIC SPI[47] 관련 메시지 없음 ❌
+  → 로그에 GIC SPI[47] 관련 메시지 없음
   → 의심: IP_A.irq_out → GIC.spi[47] 연결 문제
 
 Step 3: 실제 연결 추적 (RTL)
@@ -417,7 +524,8 @@ Step 6: 검증
   assert property (ip_a_irq_out == gic_spi[47]);
 ```
 
-### 교훈
+**교훈**:
+
 | 항목 | 내용 |
 |------|------|
 | **버그 분류** | 통합 버그 (Connectivity) |
@@ -426,9 +534,7 @@ Step 6: 검증
 | **예방책** | Connectivity SVA 자동 생성 + Formal 검증 |
 | **IP 검증 한계** | IP_A TB에서 irq_out은 정상 → 연결 대상은 IP TB 범위 밖 |
 
----
-
-## SoC Top TB의 UVM Env 구조
+### 5.7 SoC Top TB 의 UVM Env 구조
 
 ```systemverilog
 class soc_top_env extends uvm_env;
@@ -501,17 +607,15 @@ endclass
 ```
 
 **구조 핵심**:
-- `soc_top_config`에 IP 목록/메모리맵/인터럽트맵 → 모든 Checker가 Config 기반 동작
-- Common Task Checker Layer가 Agent와 별도 계층으로 분리
-- CCTV Coverage Collector가 모든 트랜잭션을 수집하여 매트릭스 자동 갱신
+- `soc_top_config` 에 IP 목록/메모리맵/인터럽트맵 → 모든 Checker 가 Config 기반 동작
+- Common Task Checker Layer 가 Agent 와 별도 계층으로 분리
+- CCTV Coverage Collector 가 모든 트랜잭션을 수집하여 매트릭스 자동 갱신
 
----
+### 5.8 연습 — 한 번 더 손으로 풀어보기
 
-## 연습 문제
+#### 문제 1: Memory Map 충돌 진단
 
-### 문제 1: Memory Map 충돌 진단
-
-**문제**: 다음 SoC Memory Map 설정에서 문제를 찾고, 어떤 증상이 나타날지 설명하라.
+다음 SoC Memory Map 설정에서 문제를 찾고, 어떤 증상이 나타날지 설명하라.
 
 ```
 IP_A (UFS HCI):  Base=0x1200_0000, Size=0x0010_0000
@@ -542,9 +646,9 @@ IP_C (DMA):      Base=0x1300_0000, Size=0x0001_0000
    또는 IP_A Size를 줄여 IP_B 영역을 분리
 ```
 
-### 문제 2: Reset 순서 위반 디버그
+#### 문제 2: Reset 순서 위반 디버그
 
-**문제**: 다음 로그에서 근본 원인을 찾아라.
+다음 로그에서 근본 원인을 찾아라.
 
 ```
 [  0ns] Reset de-asserted
@@ -582,9 +686,9 @@ IP_C (DMA):      Base=0x1300_0000, Size=0x0001_0000
      $rose(mc_rst_n) |-> !cpu_rst_n until mc_init_done);
 ```
 
-### 문제 3: Connectivity 검증 전략 선택
+#### 문제 3: Connectivity 검증 전략 선택
 
-**문제**: 200개 IP가 있는 SoC에서 Connectivity 검증을 Simulation으로만 수행하려 한다. 왜 이것이 불충분한지 설명하고, 최적의 검증 전략을 제시하라.
+200 개 IP 가 있는 SoC 에서 Connectivity 검증을 Simulation 으로만 수행하려 한다. 왜 이것이 불충분한지 설명하고, 최적의 검증 전략을 제시하라.
 
 **사고과정**:
 ```
@@ -620,79 +724,67 @@ IP_C (DMA):      Base=0x1300_0000, Size=0x0001_0000
 
 ---
 
-## 퀴즈
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q1**: SoC Top 검증에서 발견되는 5대 통합 버그 유형을 나열하라.
+### 흔한 오해
 
-<details>
-<summary>정답</summary>
+!!! danger "❓ 오해 1 — 'SoC Top 시뮬레이션을 통과하면 IP 단독 검증은 불필요'"
+    **실제**: SoC Top 검증은 IP 간 연결 오류를 잡지만, IP 내부 기능 버그는 IP-level DV 에서만 발견됩니다. SoC Top 환경은 sim 속도 제약으로 모든 corner case 를 커버할 수 없고, 한 IP 의 randomize seed 100 회 같은 깊은 회귀를 돌릴 수 없습니다.<br>
+    **왜 헷갈리는가**: "통합 테스트가 단위 테스트를 포함한다" 는 소프트웨어 직관을 하드웨어에 잘못 적용하기 때문.
 
-1. Connectivity 오류 (신호 연결 오류)
-2. Memory Map 오류 (주소 매핑/중첩)
-3. Clock/Reset 오류 (주파수 불일치, 해제 순서)
-4. Interrupt Routing 오류 (잘못된 GIC 매핑)
-5. Power Domain 오류 (격리 실패, 순서 위반)
-</details>
+!!! danger "❓ 오해 2 — 'Connectivity 는 Formal 만으로 충분'"
+    **실제**: Formal 은 _구조적_ 연결 완전성 (wire 가 닿아 있나) 을 증명할 뿐, 실제 데이터가 _의도한 timing_ 에 _의도한 값_ 으로 전달되는지는 simulation 이 필요합니다. 특히 CDC, hand-shake, AXI ordering 은 dynamic 검증.<br>
+    **왜 헷갈리는가**: Formal 의 "exhaustive" 라는 단어가 모든 종류의 결함을 잡는다는 인상을 주기 때문.
 
-**Q2**: Reset 해제의 올바른 순서는? (PLL, CPU, Bus Fabric, Memory Controller)
+!!! danger "❓ 오해 3 — 'Reset 한 번 인가하면 모든 IP 가 안전하게 초기화'"
+    **실제**: Reset 도메인이 다른 IP 들은 서로 다른 시점에 해제되며, 잘못된 순서로 해제되면 초기화되지 않은 상태로 동작을 시작합니다. CPU 가 MC 보다 먼저 풀리면 첫 boot 에서 SLVERR.<br>
+    **왜 헷갈리는가**: 단일 IP 검증 환경에서는 reset 타이밍이 단순하지만, SoC Top 에서는 여러 reset 도메인이 복잡하게 얽혀 있다는 사실을 과소평가하기 때문.
 
-<details>
-<summary>정답</summary>
+!!! danger "❓ 오해 4 — 'Memory map 중첩 = 즉시 DECERR'"
+    **실제**: 두 IP 의 주소 범위가 겹치면 decoder 구현에 따라 _임의로 한 쪽이 응답_ 합니다 — DECERR 가 안 떨어지고 OKAY 로 wrong-IP 에 write. silicon 에서야 발견되는 silent corruption.<br>
+    **왜 헷갈리는가**: "에러는 에러 응답으로 표시된다" 는 직관 + AXI spec 의 DECERR 정의가 unmapped 영역에만 명시돼 있어서.
 
-PLL Lock → Bus Fabric → Memory Controller (+ DRAM Init 완료 대기) → CPU + 나머지 IP
+!!! danger "❓ 오해 5 — 'Power off 된 IP 의 출력은 0'"
+    **실제**: Isolation cell 이 활성화돼야 0 (또는 latch 된 값) 으로 clamp 됩니다. iso cell 이 misconfigured 면 X 가 bus 로 전파 → downstream IP 의 X-propagation → 시스템 전체가 알 수 없는 상태.<br>
+    **왜 헷갈리는가**: power gating 이 "그냥 전원 OFF" 처럼 들리지만 실제로는 isolation + retention + sequence 의 _세 가지 메커니즘_ 의 조합.
 
-이유: CPU가 부팅 시 DRAM에 접근하므로, MC가 먼저 초기화 완료되어야 함. Bus Fabric은 모든 IP 간 통신 경로이므로 가장 먼저 활성화.
-</details>
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
 
-**Q3**: Formal Connectivity 검증이 시뮬레이션보다 우수한 점 2가지와, 시뮬레이션이 여전히 필요한 이유 1가지를 설명하라.
-
-<details>
-<summary>정답</summary>
-
-**Formal 우위**:
-1. Exhaustive 증명 — 모든 입력 조합에서 연결 정확성을 완전히 증명 (시뮬레이션은 실행한 경로만)
-2. Negative 증명 — "잘못된 연결이 없다"를 증명 가능 (시뮬레이션으로는 부재를 증명 불가)
-
-**시뮬레이션 필요**:
-- 동적 동작 검증 — 데이터가 연결을 통해 실제로 올바르게 전달되는지, 타이밍이 맞는지는 Formal만으로 부족. End-to-end 기능 시나리오(부팅, DMA 전송 등)는 시뮬레이션이 필수.
-</details>
-
----
-
-## Q&A
-
-**Q: IP 검증을 완벽히 했는데 왜 SoC Top 검증이 필요한가?**
-> "IP 검증은 각 IP가 독립적으로 정상인지 확인한다. 그러나 통합 시 발생하는 문제 — 연결 오류, 주소 매핑 오류, 인터럽트 라우팅 오류, 클럭/리셋 순서 오류, 전력 도메인 격리 — 는 IP 단독으로는 발견할 수 없다. 실제로 post-silicon 버그의 상당수가 통합 문제에서 발생한다."
-
-**Q: SoC Top TB를 어떻게 설계했나?**
-> "CPU Model(또는 AXI Master VIP) + DRAM BFM + 외부 디바이스 모델로 전체 SoC를 감싸는 구조다. Checker Layer에서 버스 프로토콜, 인터럽트 라우팅, 메모리 맵, 전력 상태를 상시 모니터링한다. 실제 FW(BootROM)를 CPU Model에서 실행하여 부팅 시뮬레이션까지 수행했다. 이 환경을 여러 SoC 프로젝트에 재사용 가능하도록 설계했다."
-
-**Q: Connectivity 검증을 어떻게 수행했나?**
-> "Formal과 Simulation의 Hybrid 전략이다. 연결 스펙(CSV)에서 SVA property를 자동 생성하여 JasperGold로 exhaustive 증명을 수행하고, 구조적 연결 완전성을 보장했다. 시뮬레이션에서는 실제 데이터 전달의 end-to-end 정확성과 타이밍을 검증했다. Positive check(올바른 연결)과 Negative check(잘못된 연결 배제)을 모두 수행하는 것이 핵심이다."
-
-**Q: Memory Map 검증에서 어떤 시나리오를 포함했나?**
-> "3단계로 진행했다. (1) 각 IP의 Base Address에 R/W 접근하여 OKAY 응답 확인, (2) 미할당 주소 접근 시 DECERR 응답 확인, (3) 주소 경계에서 정확히 잘리는지 boundary test. 특히 주소 중첩은 두 slave가 동시 응답하여 버스 프로토콜 위반으로 이어지므로, IP-XACT 메타데이터와 실제 RTL의 주소 디코더를 크로스 체크했다."
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| `ISR not triggered within timeout` | IRQ 라우팅 오류 (SPI 인덱스 어긋남) | `soc_top.sv` 의 GIC SPI 포트 매핑 vs IP-XACT interrupt_map |
+| `AXI DECERR` on IP base address | Memory map mismatch (IP 위치 변경) | Config JSON 의 `base_addr` vs `addr_decoder.sv` |
+| `Bus error exception` 직후 boot 실패 | Reset deassert 순서 위반 | Reset controller 의 `mc_init_done` 대기 여부 |
+| Frame buffer 에 stale data | Display 가 codec last write 못 봄 | Cache coherency / `*_done` IRQ → display kick 경로 |
+| 같은 frame burst 가 가끔 truncate | PIXCLK ↔ AXICLK CDC FIFO underrun | CDC FIFO 의 depth + back-pressure 신호 |
+| ISR 이 잘못된 handler 로 dispatch | SPI 인덱스 1 차이 (off-by-one) | `gic_spi[N]` vs spec CSV 의 SPI ID |
+| IP 가 power-up 후 X 출력 | Isolation cell 미동작 또는 retention 손상 | UPF/CPF 의 iso strategy + reset 후 첫 read |
+| 두 IP 가 같은 주소에 응답 (silent) | Memory map 영역 중첩 | Config JSON 의 `base + size` 인접성 자동 검사 |
 
 ---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **IP DV vs Top DV**: IP 는 부품 정확성, Top 은 조립 정확성 — 둘 중 하나만 하면 다른 카테고리의 결함을 통째로 놓침.
+- **Top-only 결함 5종**: connectivity / memory map / clock-reset / interrupt routing / power domain. 모두 _연결 정보가 IP TB 안에 존재하지 않기_ 때문에 발생.
+- **검증 전략**: Formal (구조적 연결 완전성) + Simulation (동적 데이터/타이밍) 의 hybrid. 둘 중 하나만으로는 부족.
+- **Multi-IP UVM env**: Config JSON → Agent / Checker / CCTV Coverage 자동 구성. Common Task Checker Layer 가 Agent 와 별도.
+- **Frame path 시각**: 한 시나리오 (camera → display) 가 5 카테고리를 동시에 친다 — Top 시나리오를 _연결 사슬 단위로_ 설계하면 회귀 효율이 극대화.
+
 !!! warning "실무 주의점 — 인터럽트 SPI 번호 1씩 오프셋 뒤바뀜"
-    **현상**: IP는 단독 테스트에서 인터럽트를 정상 발생시키지만, SoC 통합 후 ISR이 전혀 실행되지 않거나 엉뚱한 핸들러가 호출된다.
+    **현상**: IP 는 단독 테스트에서 인터럽트를 정상 발생시키지만, SoC 통합 후 ISR 이 전혀 실행되지 않거나 엉뚱한 핸들러가 호출된다.
 
-    **원인**: soc_top.sv의 포트 매핑에서 GIC SPI 인덱스가 스펙 대비 1 차이나게 연결된 경우, IP-level DV는 GIC 없이 인터럽트 신호만 확인하므로 통과된다. SoC 통합 시점에서야 드러나는 전형적인 connectivity 버그.
+    **원인**: `soc_top.sv` 의 포트 매핑에서 GIC SPI 인덱스가 스펙 대비 1 차이나게 연결된 경우, IP-level DV 는 GIC 없이 인터럽트 신호만 확인하므로 통과된다. SoC 통합 시점에서야 드러나는 전형적인 connectivity 버그.
 
-    **점검 포인트**: SVA `assert property (@(posedge clk) ip_a_irq_out == gic_spi[47])` 구문에서 GIC SPI 인덱스를 IP-XACT interrupt_map과 1:1 대조. `soc_top.sv` 포트 매핑에서 `irq_out` 연결 라인을 grep하여 스펙 CSV와 직접 비교.
+    **점검 포인트**: SVA `assert property (@(posedge clk) ip_a_irq_out == gic_spi[47])` 구문에서 GIC SPI 인덱스를 IP-XACT interrupt_map 과 1:1 대조. `soc_top.sv` 포트 매핑에서 `irq_out` 연결 라인을 grep 하여 스펙 CSV 와 직접 비교.
 
-## 핵심 정리
+---
 
-- **IP DV vs Top DV**: IP는 부품 정확성, Top은 조립 정확성 (IP 간 상호작용).
-- **Top-only 결함**: connectivity (signal mis-route), clock domain (CDC), interrupt routing, memory map decoding, power domain isolation.
-- **Multi-IP UVM env**: env에 여러 agent + virtual sequencer가 sub-sequencer 핸들 보유.
-- **Multi-clock**: 각 clock domain마다 별도 agent + clocking block. Reset sequence가 모든 domain에서 정상 deassert.
-- **Power domain**: ON/OFF 시퀀스, isolation cell 동작, retention register.
+## 다음 모듈
 
-## 다음 단계
+→ [Module 02 — Common Task & CCTV](02_common_task_cctv.md): SoC Top 검증 항목 중 _모든 IP 에 공통 적용되는 것_ 을 매트릭스로 추적. DVCon 2025 의 Gap 자동화.
 
-- 📝 [**Module 01 퀴즈**](quiz/01_soc_top_integration_quiz.md)
-- ➡️ [**Module 02 — Common Task & CCTV**](02_common_task_cctv.md)
+[퀴즈 풀어보기 →](quiz/01_soc_top_integration_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

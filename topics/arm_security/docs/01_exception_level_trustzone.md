@@ -15,51 +15,192 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#exception-level-el0-el3">Exception Level (EL0 ~ EL3)</a>
-  <a class="page-toc-link" href="#trustzone-secure-non-secure-분리">TrustZone — Secure / Non-Secure 분리</a>
-  <a class="page-toc-link" href="#el-전환-메커니즘-어떻게-el을-오르내리는가">EL 전환 메커니즘 — 어떻게 EL을 오르내리는가?</a>
-  <a class="page-toc-link" href="#el별-메모리-번역-체계-translation-regime">EL별 메모리 번역 체계 (Translation Regime)</a>
-  <a class="page-toc-link" href="#el3가-항상-secure인-이유">EL3가 항상 Secure인 이유</a>
-  <a class="page-toc-link" href="#secure-el2-armv84-secure-가상화">Secure EL2 (ARMv8.4+) — Secure 가상화</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#확인-문제">확인 문제</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-결제-앱이-tee-에-진입할-때-el-월드가-바뀌는-한-사이클">3. 작은 예 — NS-EL0 결제 → S-EL0 TA</a>
+  <a class="page-toc-link" href="#4-일반화-두-축-수직-el-수평-ns-과-8-mode-매트릭스">4. 일반화 — 두 축 + 8 mode</a>
+  <a class="page-toc-link" href="#5-디테일-el-별-책임-scr_el3-vbar-stage-2-secure-el2">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Diagram** ARMv8 4-level Exception Level (EL0/EL1/EL2/EL3)와 각 level 책임
-    - **Distinguish** TrustZone Secure/Non-Secure World의 수평적 분리와 EL의 수직적 계층
-    - **Apply** NS (Non-Secure) bit가 메모리/레지스터 access에 미치는 영향
-    - **Identify** Secure World만 access 가능한 자원과 그 보호 메커니즘
+    - **Diagram** ARMv8 의 4-level Exception Level (EL0/EL1/EL2/EL3) 과 각 level 의 책임을 그림으로 그릴 수 있다.
+    - **Distinguish** TrustZone 의 Secure/Non-Secure World (수평 분리) 와 EL 의 권한 계층 (수직 분리) 을 구분할 수 있다.
+    - **Apply** NS (Non-Secure) bit 가 메모리/레지스터 access 에 미치는 영향을 적용할 수 있다.
+    - **Identify** Secure World 만 access 가능한 자원 (OTP, Secure DRAM, Secure GIC) 과 그 차단 메커니즘을 식별할 수 있다.
+    - **Trace** NS-EL0 결제 앱이 S-EL0 Trusted App 까지 진입하는 6 단계 EL 전환 경로를 추적할 수 있다.
 
 !!! info "사전 지식"
-    - ARMv8 ISA 기본
-    - 권한 / 가상 메모리 / 인터럽트
-
-!!! tip "💡 이해를 위한 비유"
-    **ARM Exception Level + TrustZone** ≈ **건물의 권한 등급(EL) + 보안/일반 출입증(NS)**
-
-    EL0 (user) ~ EL3 (firmware) 의 4-level + NS bit (Secure / Non-Secure) 가 2축으로 권한을 표현. EL3 는 항상 Secure.
+    - ARMv8 ISA 기본 (PSTATE, system register, ERET)
+    - 권한 / 가상 메모리 / 인터럽트의 일반 개념
+    - (선행 권장) 어떤 OS kernel 의 syscall 진입/탈출 흐름
 
 ---
 
-## 핵심 개념
-**ARM의 보안은 두 축으로 구성: (1) Exception Level (EL0~EL3) — 권한의 수직적 계층. (2) TrustZone (Secure/Non-Secure) — 월드의 수평적 분리. 이 두 축의 조합이 ARM SoC의 전체 보안 모델을 형성.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: TrustZone 켜면 자동으로 안전
+이후 모든 ARM Security 모듈은 한 가정에서 출발합니다 — **"같은 SoC 안에서 두 종류의 SW 가, 서로 메모리·레지스터·인터럽트를 보지 못한 채 공존한다"**. SCR_EL3.NS 가 왜 EL3 에서만 바뀌는지, BootROM 이 왜 EL3 에서 시작하는지, TZASC/TZPC/SMMU/GIC 가 왜 NS bit 를 따라가는지 — 전부 이 한 가정의 파생입니다.
 
-    **실제**: TrustZone 은 "분리된 실행 환경" 인프라일 뿐, 그 위 SW (TEE) 와 정책이 정확해야 안전. 단순 enable 만으로는 misconfiguration 가능.
+이 모듈을 건너뛰면 이후의 모든 spec/레지스터/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 EL × NS 라는 **두 축의 매트릭스** 를 정확히 잡고 나면, 새 register 를 만날 때마다 _"이건 어느 칸의 보호 자원인가"_ 처럼 위치가 보입니다.
 
-    **왜 헷갈리는가**: "기능 켜짐 = 안전" 의 직관. 실제 보안은 SW 정책 정확성.
 ---
 
-## Exception Level (EL0 ~ EL3)
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **Exception Level + TrustZone** ≈ _건물의 권한 등급 (EL) × 보안/일반 출입증 (NS bit)_.<br>
+    EL 은 **층** (B1 lobby = EL0, 1F = EL1, ... 옥상 = EL3), NS bit 는 **출입증 색깔** (파란색 = Non-Secure, 빨간색 = Secure). 같은 층이라도 출입증 색이 다르면 다른 방. 옥상 (EL3) 은 항상 빨간 출입증 전용 — 거기서만 NS bit 를 다른 색으로 바꿔주는 게이트가 열립니다.
+
+### 한 장 그림 — EL × NS 매트릭스 + 단일 게이트 EL3
+
+```
+            Non-Secure World                    Secure World
+          ┌───────────────────┐              ┌───────────────────┐
+   EL0    │ NS-EL0 일반 앱     │              │ S-EL0 Trusted App │
+          │  (브라우저, 게임)   │              │  (결제 / DRM / 생체)│
+          ├───────────────────┤              ├───────────────────┤
+   EL1    │ NS-EL1 Linux/An.   │              │ S-EL1 OP-TEE       │
+          ├───────────────────┤              ├───────────────────┤
+   EL2    │ NS-EL2 KVM / Xen   │              │ S-EL2 SPM (v8.4+)  │
+          ├───────────────────┴──────────────┴───────────────────┤
+   EL3    │              Secure Monitor (ATF / BL31)              │   ⭐ 항상 Secure
+          │              유일한 월드 전환 게이트                    │
+          └──────────────────────────────────────────────────────┘
+                       ▲                                ▲
+                       │ SMC                            │ SMC
+                       └──── NS world 에서 진입 ───────┘
+                            (직접 NS-EL1 → S-EL1 전환은 불가)
+```
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+세 가지 요구가 동시에 풀려야 했습니다.
+
+1. **OS 가 해킹돼도 결제 키/생체 데이터는 살아 있어야 한다** → 두 개의 격리된 실행 환경 (S/NS World).
+2. **격리가 SW 신뢰 (위변조된 OS 가 자기 권한을 정직하게 보고하길 기대) 가 아니라 HW 강제여야 한다** → 모든 버스 transaction 에 **NS bit** 가 함께 흐르고, downstream filter 가 거부.
+3. **그러나 둘이 가끔은 통신해야 한다** (앱이 결제 요청 → TEE 응답) → **단일 게이트 (EL3)** 만 NS bit 를 바꿀 수 있게 하고, 그 게이트의 코드 (BL31) 를 가장 작게 검증.
+
+이 세 요구의 교집합이 곧 EL × NS 매트릭스 + EL3 단일 게이트 + NS bit 의 HW 전파입니다. 이 디자인은 이후 SCR_EL3, VBAR_ELn, TZPC/TZASC, GIC group, cache NS tag — 즉 ARM Security 의 거의 모든 어휘를 결정합니다.
+
+---
+
+## 3. 작은 예 — 결제 앱이 TEE 에 진입할 때 EL/월드가 바뀌는 한 사이클
+
+가장 단순한 시나리오. 사용자가 결제 버튼을 누르면, 앱 (NS-EL0) 이 OS (NS-EL1) 의 syscall 을 거쳐 EL3 monitor 를 경유해 OP-TEE (S-EL1) 의 결제 TA (S-EL0) 까지 도달하고, 결과가 역순으로 반환됩니다.
+
+```
+                                     ┌───── EL3 (Secure Monitor / BL31) ─────┐
+                                     │  ④ NS context save → SCR.NS=0          │
+                                     │     → S context restore → ERET         │
+                                     │                                         │
+                                     │  ⑨ S context save → SCR.NS=1            │
+                                     │     → NS context restore → ERET         │
+                                     └────────────────────────────────────────┘
+                                              ▲                 │
+                                              │ SMC #0          │ ERET
+                                              │ ③               │ ⑤
+       ┌── Non-Secure World ──┐               │                 ▼               ┌── Secure World ──┐
+       │                      │               │                                 │                   │
+   ① NS-EL0 결제 앱           │               │                                 │ ⑤→⑥ S-EL1 OP-TEE  │
+       │      │  SVC #0 ② ──→ │               │                                 │      │             │
+       ▼      ▼               │               │                                 │      ▼  ⑥ TA call  │
+   ② NS-EL1 Linux             │               │                                 │ ⑥→⑦ S-EL0 결제 TA │
+   ───kernel───→ SMC #0 ──────┘               │                                 │      │ 결제 처리   │
+                                              │                                 │      ▼  ⑧ SMC ret  │
+   결과 ← NS-EL1 ← ERET ──────┐               │                                 │ ⑧ S-EL1 OP-TEE     │
+       ▲   ⑩ ERET (NS-EL1)    │               │                                 └───────────────────┘
+       │                      │               │
+   ⑪ NS-EL0 (결제 결과 표시) ◀┘
+```
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | NS-EL0 앱 | 결제 SDK 호출 | EL0 에서는 SMC 사용 불가 — 반드시 syscall 경유 |
+| ② | NS-EL1 kernel | `SVC` → kernel 진입 → optee_driver 가 `SMC #0` 발행 | 일반 syscall 과 SMC 의 분업 |
+| ③ | HW | SMC trap → `VBAR_EL3 + 0x400` (Lower EL, AArch64, Sync) 점프 | Lower EL exception entry |
+| ④ | EL3 (BL31) | NS GPR/FP/sysreg context save → `SCR_EL3.NS = 0` → S context restore → `ERET` | 월드 전환의 **유일한 지점** |
+| ⑤ | S-EL1 OP-TEE | TA dispatcher 가 결제 TA 를 찾아 호출 | TEE OS 의 책임 |
+| ⑥ | S-EL0 결제 TA | 결제 키 사용 → 처리 결과 생성 | EL0 격리 — TA 끼리도 메모리 분리 |
+| ⑦ | S-EL0 → S-EL1 | 결과 반환, OP-TEE 가 정리 | TA 종료 |
+| ⑧ | S-EL1 | 다시 `SMC` 로 BL31 진입 (S→NS 복귀 요청) | EL3 가 양방향 게이트 |
+| ⑨ | EL3 | S context save → `SCR_EL3.NS = 1` → NS context restore → `ERET` | NS 복귀 |
+| ⑩ | NS-EL1 | optee_driver 가 결과를 user buffer 로 복사 → `ERET` | syscall 응답 |
+| ⑪ | NS-EL0 | 결제 성공 UI 표시 | 사용자 관점은 함수 호출 1번 |
+
+```c
+// Step ② 의 NS-EL1 kernel 측 핵심 — 이 한 번의 SMC 가 ③~⑨ 를 트리거
+register uint64_t x0 asm("x0") = SMC_FID_OPTEE_CALL_WITH_ARG;
+register uint64_t x1 asm("x1") = (uintptr_t)&optee_msg_arg;
+asm volatile("smc #0" : "+r"(x0), "+r"(x1));
+/* x0 returns: OPTEE_SMC_RETURN_OK / RPC / etc. */
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) 월드 전환은 EL3 강제 — NS-EL1 → S-EL1 직행 경로는 아키텍처적으로 존재하지 않습니다.** SMC trap → BL31 → ERET 이 유일한 통로. <br>
+    **(2) 권한 상승 (EL0 → EL1 → EL3) 은 항상 Exception 으로만 발생** — SW 가 임의로 PSTATE.EL 을 올려 쓸 수 없습니다. 이게 보안 모델의 뼈대.
+
+---
+
+## 4. 일반화 — 두 축 (수직 EL, 수평 NS) 과 8 mode 매트릭스
+
+### 4.1 두 축의 정의
+
+!!! note "정의 (ISO 11179)"
+    - **Exception Level (EL)**: ARMv8 PE (Processing Element) 의 권한 계층 (`EL0` < `EL1` < `EL2` < `EL3`) 으로, 각 level 이 system register / 메모리 매핑 / 명령어 사용 권한 범위를 결정한다.
+    - **Security State (NS bit)**: PE 의 1-bit 상태로, 현재 instruction 이 Secure World 에서 실행되는지 (`NS=0`) Non-Secure World 에서 실행되는지 (`NS=1`) 를 표시하며, 모든 outgoing bus transaction 의 보안 attribute 로 전파된다.
+
+```
+    EL (수직, 권한)               NS (수평, 월드)
+   ─────────────────             ───────────────────────────
+   EL3 ─ Secure Monitor          NS=0 ─ Secure   (TEE)
+   EL2 ─ Hypervisor              NS=1 ─ Non-Secure (Rich OS)
+   EL1 ─ OS kernel
+   EL0 ─ Application
+```
+
+핵심: 두 축은 **독립** 입니다. EL3 만 항상 NS=0 으로 고정되고 (전환 게이트), 나머지 EL 은 (S, NS) 둘 다 가능. 그래서 표면상 4 × 2 = 8 mode 가 존재합니다.
+
+### 4.2 8 mode 매트릭스와 사용 시점
+
+```
+        ┌───────────────────────────────┬────────────────────────────────┐
+        │  Non-Secure (NS=1)            │  Secure (NS=0)                  │
+   ─────┼───────────────────────────────┼────────────────────────────────┤
+   EL0  │ NS-EL0  일반 앱                │ S-EL0  Trusted App (TA)         │
+   EL1  │ NS-EL1  Linux / Android       │ S-EL1  OP-TEE / Trusty / Knox    │
+   EL2  │ NS-EL2  KVM / Xen / Hyper-V    │ S-EL2  SPM (Hafnium, ARMv8.4+)   │
+   EL3  │ ──────── 존재하지 않음 ────── │ EL3   Secure Monitor (BL31)     │
+        └───────────────────────────────┴────────────────────────────────┘
+```
+
+- **EL3 는 항상 Secure** — NS=1 EL3 라는 mode 는 아키텍처적으로 정의되지 않습니다 (그래서 8 - 1 = 7 mode 가 실용적으로 존재).
+- **NS-EL2 ↔ S-EL2 의 비대칭** — Secure EL2 는 ARMv8.4-A 이전에는 없었고, 추가된 후에도 SPM (Secure Partition Manager) 의 자리만 차지합니다.
+
+### 4.3 EL 전환의 일반 규칙
+
+```
+   상향 (낮은 EL → 높은 EL)            하향 (높은 EL → 낮은 EL)
+   ───────────────────────              ────────────────────────
+   ▶ Exception 으로만 가능               ▶ ERET 으로만 가능
+     - SVC: EL0 → EL1                    ▶ SPSR_ELn 의 M field 가
+     - HVC: EL1 → EL2                       복귀할 EL 을 결정
+     - SMC: any → EL3                    ▶ ELR_ELn 이 복귀 PC
+     - IRQ/FIQ/Abort: 설정에 따라        ▶ 항상 같은 EL 또는 더 낮은 EL
+   ▶ HW 가 자동: PSTATE→SPSR_ELn,         로만 복귀 (상승 ERET 금지)
+       PC→ELR_ELn, PC = VBAR_ELn+offset
+```
+
+이 규칙이 **"권한 상승은 HW 가 통제, SW 가 임의로 올릴 수 없다"** 라는 모델의 본질입니다. 이후 모든 모듈에서 이 규칙은 변하지 않고 반복됩니다.
+
+---
+
+## 5. 디테일 — EL 별 책임, SCR_EL3, VBAR, Stage 2, Secure EL2
+
+### 5.1 Exception Level (EL0 ~ EL3)
 
 ```
 권한 높음
@@ -84,22 +225,20 @@ EL0 ─── Application
          - Non-Secure EL0: 일반 앱
 ```
 
-### 각 EL의 핵심 역할
+#### 각 EL 의 핵심 역할
 
 | EL | 대표 SW | 핵심 권한 | Secure Boot 연결 |
 |---|---------|----------|-----------------|
-| **EL3** | ATF (BL31), **BootROM (BL1)** | 모든 시스템 레지스터 접근, 보안 상태 전환 | BL1이 EL3에서 실행 — 최초 신뢰점 |
-| **EL2** | Hypervisor (KVM) | Stage 2 Translation, VM 격리 | BL33(U-Boot)이 EL2로 진입 가능 |
-| **S-EL1** | OP-TEE, Trusty | Secure 메모리/디바이스 접근 | BL32가 S-EL1에서 실행 |
-| **NS-EL1** | Linux, Android | 일반 커널 | OS가 NS-EL1에서 실행 |
+| **EL3** | ATF (BL31), **BootROM (BL1)** | 모든 시스템 레지스터 접근, 보안 상태 전환 | BL1 이 EL3 에서 실행 — 최초 신뢰점 |
+| **EL2** | Hypervisor (KVM) | Stage 2 Translation, VM 격리 | BL33 (U-Boot) 이 EL2 로 진입 가능 |
+| **S-EL1** | OP-TEE, Trusty | Secure 메모리/디바이스 접근 | BL32 가 S-EL1 에서 실행 |
+| **NS-EL1** | Linux, Android | 일반 커널 | OS 가 NS-EL1 에서 실행 |
 | **S-EL0** | Trusted App | TEE 내 앱 격리 | 결제, DRM, 생체인증 |
 | **NS-EL0** | 일반 앱 | 최소 권한 | 사용자 앱 |
 
----
+### 5.2 TrustZone — Secure / Non-Secure 분리
 
-## TrustZone — Secure / Non-Secure 분리
-
-### 왜 두 개의 "월드"가 필요한가?
+#### 왜 두 개의 "월드" 가 필요한가?
 
 ```
 문제: 일반 OS가 해킹되면?
@@ -120,7 +259,7 @@ TrustZone 해결:
   → OS가 해킹되어도 Secure World의 키/데이터는 안전
 ```
 
-### TrustZone의 HW 격리 메커니즘
+#### TrustZone 의 HW 격리 메커니즘
 
 ```
 모든 버스 트랜잭션에 NS (Non-Secure) 비트 추가:
@@ -138,7 +277,7 @@ TrustZone 해결:
   → EL3 (Secure Monitor)만 NS 비트를 변경할 수 있음
 ```
 
-### SCR_EL3 (Secure Configuration Register)
+### 5.3 SCR_EL3 (Secure Configuration Register)
 
 ```
 EL3에서 제어하는 핵심 보안 레지스터:
@@ -157,11 +296,7 @@ EL3에서 제어하는 핵심 보안 레지스터:
   → BL33으로 점프할 때 NS=1 (Non-Secure) 전환
 ```
 
----
-
-## EL 전환 메커니즘 — 어떻게 EL을 오르내리는가?
-
-### 전환 명령어
+### 5.4 EL 전환 명령어 요약
 
 ```
 상향 전환 (Lower EL → Higher EL): Exception 발생
@@ -184,7 +319,7 @@ EL3에서 제어하는 핵심 보안 레지스터:
       → 이것이 보안의 핵심: 권한 상승은 HW가 통제
 ```
 
-### Exception 발생 시 HW가 자동으로 하는 일
+### 5.5 Exception 발생 시 HW 가 자동으로 하는 일
 
 ```
 Exception 발생 (예: SMC 실행):
@@ -210,7 +345,7 @@ ERET 실행 (복귀):
   → 하위 EL이 상위 EL의 복귀 상태를 조작할 수 없음
 ```
 
-### Exception Vector Table (VBAR_ELn)
+### 5.6 Exception Vector Table (VBAR_ELn)
 
 ```
 각 EL은 자신만의 벡터 테이블을 가짐:
@@ -246,51 +381,7 @@ ERET 실행 (복귀):
   BootROM은 VBAR_EL3을 설정하여 EL3 벡터를 등록
 ```
 
-### 전환 흐름 종합 예시
-
-```
-사용자 앱이 결제 요청하는 전체 경로:
-
-  NS-EL0 (앱)
-    │  SVC #0 (시스템 콜)
-    ▼
-  NS-EL1 (Linux Kernel)
-    │  optee_driver: SMC #0 실행
-    ▼
-  EL3 (ATF/BL31)  ← VBAR_EL3 + 0x400
-    │  1. NS 컨텍스트 저장
-    │  2. SCR_EL3.NS = 0
-    │  3. S 컨텍스트 복원
-    │  4. ERET → S-EL1
-    ▼
-  S-EL1 (OP-TEE)
-    │  결제 TA 호출
-    ▼
-  S-EL0 (결제 Trusted App)
-    │  결제 처리 완료
-    ▼
-  S-EL1 → EL3 → NS-EL1 → NS-EL0 (역순 복귀)
-
-  총 EL 전환: 6회 (상향 3 + 하향 3)
-```
-
----
-
-## EL별 메모리 번역 체계 (Translation Regime)
-
-### 왜 EL마다 별도의 페이지 테이블이 필요한가?
-
-```
-문제: 모든 EL이 같은 페이지 테이블을 쓴다면?
-  → EL0(앱)이 EL1(OS)의 페이지 테이블 매핑을 볼 수 있음
-  → 악의적 EL1이 EL2의 메모리를 매핑할 수 있음
-
-해결: 각 EL이 독립된 Translation Regime을 가짐
-  → 상위 EL이 하위 EL의 주소 공간을 통제
-  → 하위 EL은 자신의 번역 결과만 볼 수 있음
-```
-
-### EL별 Translation Regime
+### 5.7 EL 별 메모리 번역 체계 (Translation Regime)
 
 ```
 +-------+-------------------+--------------------------------------+
@@ -309,7 +400,7 @@ ERET 실행 (복귀):
 +-------+-------------------+--------------------------------------+
 ```
 
-### Stage 1 vs Stage 2 Translation (EL2의 핵심)
+#### Stage 1 vs Stage 2 Translation (EL2 의 핵심)
 
 ```
 EL2가 없을 때 (베어메탈):
@@ -335,9 +426,7 @@ EL2가 있을 때 (가상화):
     → EL2도 NS 상태이면 Secure PA 매핑 불가
 ```
 
----
-
-## EL3가 항상 Secure인 이유
+### 5.8 EL3 가 항상 Secure 인 이유
 
 ```
 EL3 = Secure Monitor = 보안 월드 전환의 유일한 게이트
@@ -358,9 +447,7 @@ EL3 = Secure Monitor = 보안 월드 전환의 유일한 게이트
   따라서 EL3는 항상 Secure — ARM 아키텍처 수준에서 강제
 ```
 
----
-
-## Secure EL2 (ARMv8.4+) — Secure 가상화
+### 5.9 Secure EL2 (ARMv8.4+) — Secure 가상화
 
 ```
 ARMv8.4 이전:
@@ -391,7 +478,7 @@ ARMv8.4+:
   +-------------------------------------+
 ```
 
-### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준
+#### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준
 
 ```
 문제: SP끼리, 또는 Normal World↔SP 간 통신 방법이 필요
@@ -425,136 +512,104 @@ SPM (Secure Partition Manager):
     - SP 스케줄링
 ```
 
+### 5.10 전환 흐름 종합 예시 — 실제 결제 경로
+
+```
+사용자 앱이 결제 요청하는 전체 경로:
+
+  NS-EL0 (앱)
+    │  SVC #0 (시스템 콜)
+    ▼
+  NS-EL1 (Linux Kernel)
+    │  optee_driver: SMC #0 실행
+    ▼
+  EL3 (ATF/BL31)  ← VBAR_EL3 + 0x400
+    │  1. NS 컨텍스트 저장
+    │  2. SCR_EL3.NS = 0
+    │  3. S 컨텍스트 복원
+    │  4. ERET → S-EL1
+    ▼
+  S-EL1 (OP-TEE)
+    │  결제 TA 호출
+    ▼
+  S-EL0 (결제 Trusted App)
+    │  결제 처리 완료
+    ▼
+  S-EL1 → EL3 → NS-EL1 → NS-EL0 (역순 복귀)
+
+  총 EL 전환: 6회 (상향 3 + 하향 3)
+```
+
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: Exception Level이 4개인 이유는?**
-> "각 레벨이 다른 보안/격리 요구를 충족한다: EL0(앱 격리 — 앱끼리 접근 불가), EL1(OS 커널 — 하드웨어 직접 관리), EL2(Hypervisor — VM 격리), EL3(Secure Monitor — 보안 월드 전환). 레벨이 적으면 격리가 부족하고, 많으면 HW 복잡도가 불필요하게 증가한다. 4개가 실용적 균형이다."
+### 흔한 오해
 
-**Q: TrustZone의 HW 격리는 어떻게 동작하는가?**
-> "모든 버스 트랜잭션에 NS(Non-Secure) 비트가 HW적으로 추가된다. NS=1인 트랜잭션은 Secure 영역 접근 시 버스 에러로 차단된다. 이 NS 비트는 EL3만 변경할 수 있으며, SW로는 조작이 불가능하다. 따라서 일반 OS가 해킹되어도 Secure World의 메모리/디바이스에 접근할 수 없다."
+!!! danger "❓ 오해 1 — 'TrustZone 켜면 자동으로 안전'"
+    **실제**: TrustZone 은 _분리된 실행 환경_ 인프라일 뿐, 그 위 SW (TEE OS, BL31, TA) 와 정책 (TZASC region 설정, TZPC slave 분류, GIC group 할당) 이 정확해야 안전합니다. 단순 enable 만으로는 misconfiguration 가능 — 한 region 의 NS bit 가 잘못 설정되면 곧장 탈취 경로가 열립니다.<br>
+    **왜 헷갈리는가**: "기능 켜짐 = 안전" 이라는 직관. 실제 보안은 boot 단계에서 secure-only 자원의 lock-down 정확성에 의존.
 
-**Q: BootROM이 EL3에서 동작하는 이유는?**
-> "BootROM은 시스템의 최초 신뢰점(Root of Trust)이므로, 가장 높은 권한(EL3)에서 실행되어야 한다. EL3에서만 (1) 보안 상태(Secure/Non-Secure)를 설정할 수 있고, (2) 보안 레지스터(SCR_EL3 등)를 초기화할 수 있으며, (3) 이후 단계(BL2)의 보안 레벨을 결정할 수 있다. 더 낮은 EL에서는 이러한 보안 초기화가 불가능하다."
+!!! danger "❓ 오해 2 — 'EL 은 SW 가 자유롭게 올릴 수 있다'"
+    **실제**: 권한 상승은 **반드시 Exception 으로만** 가능합니다. SW 가 PSTATE.EL 을 직접 쓰려고 하면 UNDEFINED 또는 무시. SVC/HVC/SMC/IRQ/FIQ/Abort 만이 상향 트리거이고, 하향은 ERET 만이 가능. 이 비대칭이 보안 모델의 본질입니다.<br>
+    **왜 헷갈리는가**: 일반 ISA 의 "mode bit 를 set" 같은 직관 때문에.
 
-**Q: EL 전환 시 HW가 자동으로 하는 일은?**
-> "상향 전환(Exception) 시 HW가 자동으로 (1) 현재 PSTATE를 SPSR_ELn에 저장, (2) 복귀 주소를 ELR_ELn에 저장, (3) PSTATE를 변경(EL 상승, 인터럽트 마스킹), (4) PC를 VBAR_ELn + offset으로 설정하여 벡터 핸들러로 점프한다. 하향 전환(ERET) 시에는 SPSR_ELn에서 PSTATE를 복원하고 ELR_ELn에서 PC를 복원한다. 핵심은 SPSR/ELR이 해당 EL에서만 접근 가능하므로, 하위 EL이 상위 EL의 복귀 상태를 조작할 수 없다는 점이다."
+!!! danger "❓ 오해 3 — 'NS-EL1 → S-EL1 직행 가능'"
+    **실제**: 두 EL 사이에 직접 전이 명령은 없습니다. 반드시 EL3 (SMC → BL31 → ERET) 경유. 이게 단일 게이트 디자인의 핵심.<br>
+    **왜 헷갈리는가**: "같은 EL 레벨이니 옆으로만 가면 될 것 같다" 는 추론.
 
-**Q: Stage 2 Translation이 왜 필요한가?**
-> "VM 격리를 위해서다. Guest OS(EL1)는 Stage 1으로 VA→IPA 번역을 자체 관리하지만, IPA가 실제 물리 주소가 아니다. Hypervisor(EL2)가 Stage 2로 IPA→PA 번역을 관리하여, 각 VM이 다른 VM의 물리 메모리에 접근하지 못하도록 격리한다. Guest OS는 자신이 물리 메모리를 직접 관리한다고 '착각'하지만, 실제로는 Hypervisor가 Stage 2 테이블로 모든 메모리 접근을 통제한다. 이것이 VM Escape 공격을 HW 수준에서 막는 메커니즘이다."
+!!! danger "❓ 오해 4 — 'EL3 가 항상 활성화되어 있다'"
+    **실제**: 일부 SoC (저가형 Cortex-A 또는 R-class) 는 EL3 를 implement 하지 않습니다 (`ID_AA64PFR0_EL1.EL3 = 0`). 그 경우 secure ↔ non-secure 전환 자체가 없거나 EL2 가 monitor 역할을 대신합니다. 검증 시 우리 SoC 의 EL3 implementation 여부를 먼저 확인.<br>
+    **왜 헷갈리는가**: 표준 spec 의 "EL3 가 monitor" 표현 때문에.
 
----
+!!! danger "❓ 오해 5 — 'NS bit 는 SW 가 임의로 set 가능'"
+    **실제**: NS bit 는 SCR_EL3.NS 가 source-of-truth 이고, 오직 EL3 에서만 write 가능합니다. NS-EL1 이나 EL2 에서 SCR_EL3 에 write 시도 → trap (또는 silently ignored). 그래서 이 bit 가 HW 격리의 출발점.<br>
+    **왜 헷갈리는가**: "그냥 register 1 bit" 라는 인상.
 
-## 확인 문제
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
 
-**문제 1: EL 전환 경로 추적**
-> 사용자 앱(NS-EL0)이 Secure World의 암호화 서비스를 호출하려 한다. 이때 거치는 EL 전환 경로를 순서대로 나열하고, 각 단계에서 사용되는 명령어(SVC/HVC/SMC/ERET)를 명시하라.
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| NS world 가 secure DRAM read 했는데 BusError 가 안 나옴 | SCR_EL3.NS bit 가 outgoing transaction attribute (`AxPROT[1]`/`AxNSE`) 로 전파 안 됨 | master IF 의 NS attribute 와 SCR_EL3.NS 의 cycle-by-cycle 일치 SVA |
+| SMC 후 secure GPR 잔여 값이 NS world 에 보임 | BL31 의 context save/restore 가 NEON/FP/SVE 누락 | BL31 context 코드 + post-ERET register dump |
+| `SVC` 가 EL3 까지 올라감 | trap routing (`HCR_EL2.IMO/AMO`, `SCR_EL3.IRQ/FIQ`) 잘못 | exception entry 의 VBAR base 와 offset 0x000 vs 0x400 |
+| EL2 에서 ERET 했는데 EL3 로 점프 | SPSR_EL2.M 잘못 (EL3h 로 set 됨) | SPSR.M 디코드 + ERET 직전 dump |
+| Stage2 가 비활성인데 VM 격리 실패 | VTTBR_EL2/VTCR_EL2 미설정 → identity mapping | VTCR_EL2.T0SZ/SL0 와 VTTBR_EL2 가 valid S2 table 가리키는지 |
+| OTP register 가 NS world 에서 읽힘 | TZPC slave 분류 누락 | BL1 boot trace + TZPC region 설정 |
+| 같은 PA 인데 S/NS 가 같은 캐시 라인 | cache NS tag 가 비활성 또는 line invalidate 누락 | cache controller 의 NS tag bit + write-back 정책 |
+| ERET 후 IRQ mask 풀림 | SPSR.DAIF 잘못 복원 | ERET 직전 SPSR 의 DAIF field |
 
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-1. NS-EL0(앱)은 직접 SMC를 호출할 수 없다 — EL0에서는 SVC만 가능
-2. SVC로 NS-EL1(OS 커널)에 진입 → 커널의 TEE 드라이버가 SMC 호출
-3. SMC로 EL3(Secure Monitor) 진입 → 컨텍스트 전환
-4. ERET으로 S-EL1(OP-TEE) 진입 → TA 호출
-5. 반환은 역순
-
-**정답:**
-```
-NS-EL0 ──SVC──→ NS-EL1 ──SMC──→ EL3 ──ERET──→ S-EL1 ──(TA 처리)
-S-EL1 ──SMC──→ EL3 ──ERET──→ NS-EL1 ──ERET──→ NS-EL0
-```
-
-**핵심 포인트:**
-- EL0에서는 SVC만 사용 가능 (SMC는 EL1 이상에서만)
-- 월드 전환은 반드시 EL3 경유 — 직접 NS-EL1→S-EL1 전환 불가
-- 각 ERET 시 HW가 SPSR에서 복귀할 EL을 결정
-</details>
-
-**문제 2: VBAR 오프셋 계산**
-> Linux 커널(NS-EL1, AArch64)에서 SMC #0을 실행했을 때, CPU가 점프하는 벡터 테이블 주소는 VBAR_EL3 + 얼마인가? 이유도 설명하라.
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-1. SMC는 Synchronous Exception이다
-2. NS-EL1은 EL3 입장에서 "Lower EL"이다
-3. NS-EL1이 AArch64 모드이다
-4. 벡터 테이블에서 해당 위치를 찾는다:
-   - Lower EL, AArch64, Synchronous = +0x400
-
-**정답:** `VBAR_EL3 + 0x400`
-
-**벡터 테이블에서의 위치:**
-```
-Lower EL (AArch64) 행:
-  Sync: +0x400  ← SMC는 여기
-  IRQ:  +0x480
-  FIQ:  +0x500
-  SError: +0x580
-```
-
-**핵심 포인트:**
-- "Lower EL"은 Exception을 발생시킨 EL이 타겟 EL보다 낮다는 의미
-- AArch64/AArch32 구분이 있는 이유: 호출자의 실행 모드에 따라 컨텍스트 저장 방식이 다름
-</details>
-
-**문제 3: Stage 2 Translation 시나리오**
-> VM-A(Guest Linux)가 물리 주소 0x8000_0000에 쓰기를 시도한다. 이 주소는 실제로 VM-B에 할당된 물리 메모리다. (1) 이 접근이 차단되는 과정을 Stage 1/Stage 2 번역 흐름으로 설명하고, (2) 만약 Stage 2가 없다면 어떤 보안 문제가 발생하는지 설명하라.
-
-<details>
-<summary>풀이 과정</summary>
-
-**사고 과정:**
-1. VM-A의 Guest OS는 VA를 관리하고 Stage 1 번역으로 IPA를 생성한다
-2. VM-A가 "물리 주소 0x8000_0000"이라고 생각하는 것은 실제로 IPA이다
-3. Hypervisor의 Stage 2 테이블이 이 IPA를 실제 PA로 번역한다
-4. VM-A의 Stage 2 테이블에 0x8000_0000 매핑이 없으면 → Abort
-
-**(1) 차단 과정:**
-```
-VM-A 내부:
-  VA (0xFFFF_0000) ──Stage 1──→ IPA (0x8000_0000)
-    Stage 1은 VM-A의 Guest OS가 관리 — 여기까지는 성공
-
-Hypervisor Stage 2:
-  IPA (0x8000_0000) ──Stage 2──→ ???
-    VM-A의 Stage 2 테이블에 IPA 0x8000_0000 매핑이 없음!
-    → Stage 2 Translation Fault 발생
-    → Hypervisor(EL2)로 Exception 전달
-    → Hypervisor가 잘못된 접근으로 판단, VM-A에 에러 주입
-```
-
-**(2) Stage 2 없으면:**
-- Guest OS가 물리 주소를 직접 지정 가능
-- VM-A가 VM-B의 메모리를 읽고/쓸 수 있음
-- VM Escape: 악성 Guest가 호스트 메모리까지 접근 가능
-- Hypervisor의 격리 보장이 SW 수준에 의존 → 취약점 하나로 전체 무력화
-</details>
+이 체크리스트는 이후 모듈에서 더 정교한 형태로 다시 나옵니다. 지금 단계에서는 "ARM Security 실패 = (SCR_EL3 | SPSR | VBAR | TZPC | TZASC | NS attribute) 중 하나" 만 기억하세요.
 
 ---
+
 !!! warning "실무 주의점 — SCR_EL3.NS 비트 전파 누락"
     **현상**: NS world 에서 secure-only 메모리/레지스터를 read 했는데 BusError 없이 정상 데이터가 반환된다.
 
-    **원인**: EL3 진입/탈출 시 SCR_EL3.NS 비트가 트랜잭션 어트리뷰트로 버스에 정확히 전파되지 않아, downstream filter(TZASC/TZPC) 가 NS 트랜잭션을 secure 로 오인한다.
+    **원인**: EL3 진입/탈출 시 SCR_EL3.NS 비트가 트랜잭션 어트리뷰트로 버스에 정확히 전파되지 않아, downstream filter (TZASC/TZPC) 가 NS 트랜잭션을 secure 로 오인한다.
 
     **점검 포인트**: AxPROT[1]/AxNSE 등 NS 어트리뷰트가 모든 master IF 에서 SCR_EL3.NS 와 일치하는지 SVA 로 강제하고, NS world coverage 시 secure resource read 가 차단되는지 확인.
 
-## 핵심 정리
+## 7. 핵심 정리 (Key Takeaways)
 
 - **두 축의 보안**: 수직 (Exception Level: EL0 user → EL1 kernel → EL2 hypervisor → EL3 secure monitor) + 수평 (Secure World vs Non-Secure World).
-- **EL3 (Secure Monitor)**: 가장 privileged, secure/non-secure world 전환 관리. ARM Trusted Firmware BL31이 여기서 동작.
-- **NS bit**: PSTATE의 1-bit field, 현재 instruction이 secure/non-secure world에서 발급되었는지 표시. 메모리 access마다 propagate.
-- **Secure-only resources**: TrustZone-aware 메모리 영역, secure 레지스터, secure debug. NS=1이면 access 차단 (BusError).
-- **2D matrix**: 4 EL × 2 World = 8 mode. 모든 mode가 의미 있지는 않음 (예: EL3는 항상 Secure).
+- **EL3 = 단일 게이트**: 가장 privileged + 항상 Secure + 월드 전환의 유일한 통로. ARM Trusted Firmware BL31 이 여기서 동작.
+- **NS bit**: PSTATE 의 1-bit 상태이자 모든 outgoing bus transaction 의 attribute. EL3 만 변경 가능, HW 가 모든 downstream 에 강제 전파.
+- **권한 상승은 Exception 으로만**: SVC/HVC/SMC/IRQ — SW 가 PSTATE.EL 을 임의로 set 불가. 하향은 ERET 으로만.
+- **8 mode 매트릭스 (실용 7 mode)**: EL0~3 × S/NS, 단 EL3 는 항상 Secure. 검증 시 각 mode 에서 어떤 자원이 visible/accessible 한지 그림으로 그려두면 분석이 빠릅니다.
 
-## 다음 단계
+!!! warning "실무 주의점"
+    - "TrustZone 켜짐 = 안전" 이 아니라 _TZASC/TZPC/GIC/SMMU 의 boot-time 설정 정확성_ 이 곧 안전입니다.
+    - SCR_EL3.NS 변경은 EL3 의 _명시적 write_ 시점만 일어나야 합니다 — write 직후 한 cycle 안에 모든 master IF 가 새 NS 를 반영하는지 SVA 로 강제하세요.
+    - EL3 미구현 SoC 에서는 여기 모듈의 모든 "EL3" 자리를 EL2 또는 monitor-less 모델로 재해석해야 합니다.
 
-- 📝 [**Module 01 퀴즈**](quiz/01_exception_level_trustzone_quiz.md)
-- ➡️ [**Module 02 — World Switch**](02_world_switch_soc_infra.md)
+---
+
+## 다음 모듈
+
+→ [Module 02 — 월드 전환 & SoC 보안 인프라](02_world_switch_soc_infra.md): SCR_EL3.NS 가 실제로 어떻게 모든 SoC 컴포넌트 (TZPC, TZASC, GIC, SMMU, cache) 에 전파되는지, BL31 이 SMC handler 에서 무엇을 하는지.
+
+[퀴즈 풀어보기 →](quiz/01_exception_level_trustzone_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

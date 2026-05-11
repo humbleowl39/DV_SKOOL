@@ -15,58 +15,46 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#hci-블록-다이어그램">HCI 블록 다이어그램</a>
-  <a class="page-toc-link" href="#명령-처리-흐름-read-명령-예시">명령 처리 흐름 (READ 명령 예시)</a>
-  <a class="page-toc-link" href="#utrd-상세-필드-레이아웃">UTRD 상세 필드 레이아웃</a>
-  <a class="page-toc-link" href="#hce-enabledisable-시퀀스">HCE Enable/Disable 시퀀스</a>
-  <a class="page-toc-link" href="#interrupt-종류별-분류">Interrupt 종류별 분류</a>
-  <a class="page-toc-link" href="#uic-command-상세">UIC Command 상세</a>
-  <a class="page-toc-link" href="#핵심-레지스터">핵심 레지스터</a>
-  <a class="page-toc-link" href="#mcq-multi-circular-queue-ufs-40">MCQ (Multi-Circular Queue) — UFS 4.0+</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-utp-transfer-cycle-한-건">3. 작은 예 — UTP transfer cycle 한 건</a>
+  <a class="page-toc-link" href="#4-일반화-utrd-doorbell-irq-의-한-주기-모델">4. 일반화 — UTRD/Doorbell/IRQ 모델</a>
+  <a class="page-toc-link" href="#5-디테일-utrd-prdt-utmrd-uic-mcq">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Diagram** UFS HCI의 핵심 요소(UTRD, UTMRD, doorbell register, interrupt aggregator)를 그릴 수 있다.
-    - **Trace** SW driver의 명령 제출 → UTRD 작성 → doorbell ring → HCI 처리 흐름을 추적.
-    - **Apply** Interrupt aggregation, multi-queue 활용으로 throughput 최적화 시나리오를 설계.
-    - **Identify** UFS HCI register map의 핵심 영역(HCS/IS/UTRLBA/UTMRLBA 등).
+    - **Diagram** UFS HCI 의 핵심 요소 (UTRD, UTMRD, doorbell register, interrupt aggregator) 를 그릴 수 있다.
+    - **Trace** SW driver 의 명령 제출 → UTRD 작성 → doorbell ring → HCI 처리 흐름을 추적한다.
+    - **Apply** Interrupt aggregation, multi-queue 활용으로 throughput 최적화 시나리오를 설계한다.
+    - **Identify** UFS HCI register map 의 핵심 영역 (HCS / IS / UTRLBA / UTMRLBA 등).
+    - **Justify** HCE / UTRLRSR / Doorbell 의 분리가 왜 필요한지 (race / ordering 관점).
 
 !!! info "사전 지식"
     - [Module 01](01_ufs_protocol_stack.md)
     - DMA / queue-based command 모델
-    - register-based HW interface (PCIe/AHB 비슷)
-
-## 왜 이 모듈이 중요한가
-
-**HCI는 SW와 UFS HW 사이의 표준 contract** (JEDEC JESD223). HCI 검증은 driver-side와 device-side의 인터페이스 정확성 + queue 관리 + interrupt 효율을 모두 보장. **UTRD parsing 오류 = silent corruption** — driver가 보낸 명령을 HCI가 잘못 해석하면 storage write/read에 직접 영향.
-
-!!! tip "💡 이해를 위한 비유"
-    **UFS HCI** ≈ **음식점의 주방 호출 시스템 — 주문서(UTRD) + 호출벨(doorbell) + 응답(completion)**
-
-    Host 가 UTRD 를 메모리에 적고 doorbell ring → device(주방) 가 처리 → completion. 호출벨이 핵심 sync point.
+    - register-based HW interface (PCIe / AHB 비슷)
 
 ---
 
-## 핵심 개념
-**UFS HCI = SW Driver(UFSHCD)와 UFS 프로토콜 사이의 HW 인터페이스. SW가 레지스터/메모리를 통해 SCSI 명령을 제출하면, HCI가 UPIU로 변환하여 UniPro/M-PHY를 통해 UFS Device에 전달. JEDEC JESD223 표준.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: Doorbell ring 즉시 처리된다
+**HCI 는 SW 와 UFS HW 사이의 _표준 contract_** (JEDEC JESD223) 입니다. 어떤 OS, 어떤 driver 를 쓰더라도 이 contract 만 지키면 명령이 통합니다. 그래서 HCI 를 검증한다는 것은 곧 **driver-side (register / UTRD) ↔ device-side (UPIU)** 양방향 contract 를 검증한다는 뜻입니다.
 
-    **실제**: Doorbell ring 후 device 가 UTRD 를 fetch 하고 처리하는 데 latency 존재. ring 과 처리 시작은 다른 시점.
+UTRD parsing 한 비트만 잘못 해석되면 storage 의 read/write 데이터가 silently 망가집니다. 그래서 register layout, UTRD field, doorbell 동작, interrupt 의미를 정확히 잡지 못하면 이후의 어떤 시나리오 / coverage / SVA 도 안전망이 못 됩니다. 이 모듈이 그 contract 의 어휘를 정착시키는 자리.
 
-    **왜 헷갈리는가**: "링 = 즉시 시작" 이라는 직관. 실제로는 device 의 UTRL fetch + arbitration latency 있음.
 ---
 
-## HCI 블록 다이어그램
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **UFS HCI** = 음식점 주방 호출 시스템. 주문서(**UTRD**) 를 카운터(**system memory**) 위에 올려두고 호출벨(**doorbell register**) 을 한 번 누르면, 주방(**HCI engine**) 이 알아서 주문서를 읽고 요리 후 응답(**Response UPIU + IRQ**) 을 다시 카운터에 올림. 주문서 작성과 호출벨이 _분리_ 돼 있어 손님은 주문서 32 장을 먼저 다 적어두고 한 번에 누를 수도 있음 (= command queueing).
+
+### 한 장 그림 — HCI 의 SW/HW 인터페이스
 
 ```
 +------------------------------------------------------------------+
@@ -106,65 +94,178 @@
 +------------------------------------------------------------------+
 ```
 
----
+### 왜 이 디자인인가 — Design rationale
 
-## 명령 처리 흐름 (READ 명령 예시)
+**SW/HW 분리의 비대칭성** 때문입니다. SW (driver) 는 명령 32 개를 빠르게 작성할 수 있지만, HW 가 명령을 처리하는 속도는 NAND latency / link gear 에 따라 변동이 큽니다. 그래서 두 가지를 분리해야 합니다.
 
-```
-1. SW: UTRD 작성 (시스템 메모리)
-   +------------------------------------------+
-   | UTP Transfer Request Descriptor (UTRD)    |
-   |                                           |
-   | - Command Type: SCSI Command              |
-   | - Data Direction: Device → Host (READ)    |
-   | - Overall Command Status: Invalid (초기)  |
-   | - Command UPIU Offset/Length              |
-   | - Response UPIU Offset/Length             |
-   | - PRDT Offset/Length                      |
-   +------------------------------------------+
-   | Command UPIU (메모리에 배치)               |
-   |  - Task Tag, LUN, CDB(READ_10)           |
-   |  - Expected Data Transfer Length          |
-   +------------------------------------------+
-   | PRDT (Physical Region Description Table)  |
-   |  - DMA 대상 버퍼 주소 + 크기 목록         |
-   +------------------------------------------+
+1. **명령 작성 (메모리 write)** = SW 가 자유롭게 쌓아 두는 작업.
+2. **처리 시작 (doorbell ring)** = SW 가 한 번 알리면 HW 가 알아서 fetch.
+3. **완료 통지 (IRQ + UTRLDBR clear)** = HW 가 비동기로 SW 에 알림.
 
-2. SW: Doorbell Register에 해당 슬롯 비트 셋
-   UTRLDBR |= (1 << slot_number);
-   → HCI에게 "이 슬롯의 UTRD를 처리하라" 신호
-
-3. HCI: UTRD를 메모리에서 DMA로 읽기
-4. HCI: Command UPIU 생성 → UniPro → M-PHY → Device
-5. Device: READ 수행 → Data-In UPIU + Response UPIU 반환
-6. HCI: Data-In을 PRDT 주소에 DMA 쓰기
-7. HCI: Response UPIU를 UTRD의 Response 영역에 쓰기
-8. HCI: UTRD의 Overall Command Status 업데이트
-9. HCI: Interrupt 발생 (IS 레지스터)
-10. SW: ISR에서 완료 처리
-```
-
-```
-시간 흐름:
-
-  SW              HCI              UniPro/Device
-  |                |                |
-  |--UTRD 작성---->|                |
-  |--Doorbell 셋-->|                |
-  |                |--UTRD DMA 읽기->|
-  |                |--Cmd UPIU----->|
-  |                |                |--READ 수행-->
-  |                |<--Data-In UPIU-|
-  |                |--DMA 쓰기------>|
-  |                |<--Resp UPIU----|
-  |                |--Status 업데이트|
-  |<--Interrupt----|                |
-  |--ISR 처리----->|                |
-```
+이 셋이 _별도 register_ (UTRLBA / UTRLDBR / IS) 로 나뉘어 있어 SW 가 명령을 batched 로 쌓고, HW 가 own pace 로 처리하고, 둘 사이의 race 를 register-level 로 검증할 수 있습니다.
 
 ---
 
-## UTRD 상세 필드 레이아웃
+## 3. 작은 예 — UTP transfer cycle 한 건
+
+가장 단순한 시나리오. SW 가 slot=5 에 READ 명령을 발행 → HCI 가 처리 → ISR 에서 회수. 한 cycle 의 모든 register / memory transition 을 추적합니다.
+
+```
+   ┌─── SW Driver (CPU) ───┐               ┌─── HCI engine (HW) ───┐
+   │                        │               │                        │
+   │  ① UTRD@slot=5 작성   │               │                        │
+   │     in system memory   │               │                        │
+   │     (OCS=INVALID 0x0F)│               │                        │
+   │       │                │               │                        │
+   │       ▼                │               │                        │
+   │  ② mb()  + UCD/PRDT  │               │                        │
+   │     fully visible      │               │                        │
+   │       │                │               │                        │
+   │       ▼                │               │                        │
+   │  ③ UTRLDBR |= (1<<5) ─┼──── ring ─────┼─▶ ④ doorbell sense    │
+   │       │                │               │      │                 │
+   │       │                │               │      ▼                 │
+   │       │                │               │  ⑤ UTRD DMA fetch     │
+   │       │                │               │     (UTRLBA + 5*32B)   │
+   │       │                │               │      │                 │
+   │       │                │               │      ▼                 │
+   │       │                │               │  ⑥ UCD/PRDT fetch     │
+   │       │                │               │      │                 │
+   │       │                │               │      ▼                 │
+   │       │                │               │  ⑦ Cmd UPIU 조립      │
+   │       │                │               │     → UniPro TX        │
+   │       │                │               │      │                 │
+   │       ▼ (busy: idle wait OR other tags)│      ▼                 │
+   │                        │               │  ⑧ Data-In UPIU ×N    │
+   │                        │               │     → DMA write to     │
+   │                        │               │       PRDT addr        │
+   │                        │               │      │                 │
+   │                        │               │      ▼                 │
+   │                        │               │  ⑨ Response UPIU      │
+   │                        │               │     → UTRD.OCS 갱신    │
+   │                        │               │      │                 │
+   │                        │               │      ▼                 │
+   │                        │               │  ⑩ UTRLDBR[5]=0        │
+   │  ⑪ ◀─────────── IRQ ──┼───── irq ─────┼── + IS[UTRCS]=1       │
+   │       │                │               │                        │
+   │       ▼                │               │                        │
+   │  ⑫ ISR: read IS       │               │                        │
+   │     → check UTRLDBR     │               │                        │
+   │     → read UTRD.OCS     │               │                        │
+   │     → IS 에 W1C        │               │                        │
+   │     → buffer 반환       │               │                        │
+   └────────────────────────┘               └────────────────────────┘
+```
+
+### 단계별 추적 표
+
+| Step | 누가 | 무엇을 | 의미 / 검증 포인트 |
+|---|---|---|---|
+| ① | SW | UTRD slot 5 에 32 B 작성 (Cmd Type, Direction, OCS=0x0F, UCD ptr) | OCS 초기값이 INVALID 여야 — HCI 가 처리 후 갱신 |
+| ② | SW | Memory barrier — UCD / PRDT 가 HCI 에서 보일 것 | TB 에서도 ordering monitor 필요 |
+| ③ | SW | `UTRLDBR[5] = 1` (W1S — write-1-to-set) | 다른 비트 영향 없는지 확인 |
+| ④ | HCI | Doorbell rising edge 감지 | $rose(UTRLDBR[5]) SVA |
+| ⑤ | HCI | UTRD DMA fetch — `UTRLBA + 5×32` | 64-bit 모드면 UTRLBAU 도 사용 |
+| ⑥ | HCI | UCD base + PRDT offset 으로 fetch | UCD 안의 layout 정합성 |
+| ⑦ | HCI | Cmd UPIU 조립 → UniPro 로 hand-off | Task Tag = slot 5 |
+| ⑧ | HCI | Data-In UPIU 받아 PRDT 주소로 DMA write | Scatter/gather 정확성 |
+| ⑨ | HCI | Response UPIU 의 Status → UTRD.OCS 갱신 | OCS = 0x00 (SUCCESS) 또는 에러 코드 |
+| ⑩ | HCI | UTRLDBR[5] auto clear + IS[UTRCS] set | atomicity 가 ⑪ 직전이어야 |
+| ⑪ | HCI | IRQ 출력 (IE[UTRCS] 가 1 일 때만) | mask 동작 확인 |
+| ⑫ | SW | ISR 에서 IS / UTRLDBR / UTRD.OCS 순서 read + IS W1C | race 시나리오의 핵심 |
+
+```c
+// SW 측 ① ~ ③ 의 골격
+struct utp_transfer_req_desc *utrd = &utrl[slot];
+build_utrd(utrd, /*cmd_type=*/SCSI, /*dir=*/D2H,
+           /*ucd_paddr=*/ucd_phys, /*prdt_offset=*/..., /*prdt_len=*/1);
+utrd->ocs = OCS_INVALID;                   // ①
+wmb();                                      // ② memory barrier
+hci_writel(BIT(slot), UTRLDBR);             // ③ doorbell
+// ⑫ ISR
+u32 is = hci_readl(IS);
+if (is & IS_UTRCS) {
+    u32 done = ~hci_readl(UTRLDBR) & active_mask;
+    for_each_set_bit(s, &done, 32) handle_ocs(&utrl[s]);
+    hci_writel(IS_UTRCS, IS);               // W1C
+}
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) UTRD 작성과 doorbell 사이의 _memory barrier_ 가 핵심 invariant** 다. HCI 가 UTRD 를 fetch 했을 때 UCD / PRDT 가 모두 visible 해야 함. TB 의 host agent 도 이 ordering 을 모델링해야 silent corruption 시나리오를 catch. <br>
+    **(2) 완료 통지는 _두 곳_ 에서 동시에** 일어난다. (a) UTRLDBR slot bit clear, (b) IS[UTRCS] set + IRQ. ISR 은 _(b) 만 보고_ 동작하지 말고 (a) 도 함께 확인해야 어떤 슬롯이 완료됐는지 알 수 있다.
+
+---
+
+## 4. 일반화 — UTRD / Doorbell / IRQ 의 한 주기 모델
+
+### 4.1 한 transfer 의 7 phase
+
+| Phase | SW 측 register/memory | HCI 측 동작 |
+|-------|----------------------|------------|
+| **P1: Prepare** | UTRD 작성, OCS=INVALID | (idle) |
+| **P2: Submit** | wmb() + UTRLDBR[s] = 1 | doorbell 감지 |
+| **P3: Fetch** | (대기) | UTRD / UCD / PRDT DMA fetch |
+| **P4: Transport** | (대기) | UPIU ↔ UniPro 송수신 |
+| **P5: DMA** | (대기) | Data-In/Out 을 PRDT addr 로 DMA |
+| **P6: Complete** | (대기) | OCS write, UTRLDBR[s] = 0, IS[UTRCS] = 1 |
+| **P7: ISR** | IS read → UTRLDBR poll → OCS read → IS W1C | (idle) |
+
+이 7 phase 가 **모든 transfer 명령** (READ/WRITE/QUERY/NOP) 의 공통 골격입니다. WRITE 만 P4 에 RTT → Data-Out 의 sub-step 이 추가되고, NOP 은 P5 가 생략됩니다 — 차이는 _UPIU 종류_ 뿐 phase 자체는 동일.
+
+### 4.2 명령 큐잉 — 32 슬롯의 의미
+
+```
+UTRLDBR (32-bit): 각 비트가 하나의 Transfer Request 슬롯
+
+  bit[0] = slot 0
+  bit[1] = slot 1
+  ...
+  bit[31] = slot 31
+
+  SW가 bit[N] = 1 셋 → HCI가 slot N의 UTRD를 처리 시작
+  HCI가 완료 → bit[N] = 0 클리어 + Interrupt
+
+  명령 큐잉: 여러 비트를 동시에 셋 → 최대 32개 동시 처리
+```
+
+큐잉의 의미 = **여러 transfer 가 P3 ~ P5 에서 시간적으로 _겹친다_**. 그래서 같은 slot 이 두 번 사용되지 않도록 SW 가 책임지며, 완료 순서는 HCI 가 결정 (out-of-order completion 가능).
+
+### 4.3 HCE Enable / Disable 시퀀스
+
+```
+HCI 활성화 (Power-on → Ready):
+
+  1. SW: HCE = 1 쓰기
+  2. HCI: 내부 리셋 수행 + UniPro/M-PHY 초기화
+  3. SW: HCS 폴링 — UCRDY=1 대기 (UIC Command Ready)
+     └ 타임아웃 (600ms) 시 에러 처리
+  4. SW: UIC Command — DME_LINKSTARTUP 발행
+     └ UICCMD 레지스터에 명령 코드 쓰기
+     └ IS[UCCS] 대기 (UIC Command Completion)
+  5. SW: HCS.DP=1 확인 (Device Present)
+  6. SW: UTRLBA/UTRLBAU 설정 (Transfer Request List 주소)
+  7. SW: UTMRLBA/UTMRLBAU 설정 (Task Mgmt List 주소)
+  8. SW: UTRLRSR = 1 (Transfer Request 수락 시작)
+  9. SW: IE 레지스터 설정 (필요한 인터럽트 활성화)
+  10. Ready — Doorbell 가능
+
+HCI 비활성화 (Reset):
+
+  1. SW: 진행 중인 모든 명령 완료 대기 (또는 Abort)
+  2. SW: UTRLRSR = 0 (새 명령 수락 중지)
+  3. SW: HCE = 0 쓰기
+  4. HCI: 내부 리셋 → 모든 Doorbell 클리어, 레지스터 초기값
+  5. SW: HCE = 1 (필요 시 재활성화) → 위 시퀀스 반복
+```
+
+**HCE / UTRLRSR / Doorbell 이 분리된 이유** = 각자 다른 timing 에 작용. HCE 는 chip-wide reset, UTRLRSR 은 transfer accept 게이트, Doorbell 은 per-slot 트리거. 이 분리가 보장되지 않으면 Gear 변경/Hibernate/Reset 도중 명령이 실종됩니다.
+
+---
+
+## 5. 디테일 — UTRD / PRDT / UTMRD / UIC / MCQ
+
+### 5.1 UTRD 상세 필드 레이아웃
 
 ```
 UTP Transfer Request Descriptor (UTRD) — 32 bytes
@@ -200,7 +301,7 @@ UCD (UTP Command Descriptor) 메모리 레이아웃:
   +---------------------------------------------+
 ```
 
-### PRDT Entry 형식
+### 5.2 PRDT Entry 형식
 
 ```
 Physical Region Description Table Entry — 16 bytes
@@ -223,39 +324,7 @@ PRDT 사용 예시:
     → 비연속 물리 메모리에 Scatter/Gather 가능
 ```
 
----
-
-## HCE Enable/Disable 시퀀스
-
-```
-HCI 활성화 (Power-on → Ready):
-
-  1. SW: HCE = 1 쓰기
-  2. HCI: 내부 리셋 수행 + UniPro/M-PHY 초기화
-  3. SW: HCS 폴링 — UCRDY=1 대기 (UIC Command Ready)
-     └ 타임아웃 (600ms) 시 에러 처리
-  4. SW: UIC Command — DME_LINKSTARTUP 발행
-     └ UICCMD 레지스터에 명령 코드 쓰기
-     └ IS[UCCS] 대기 (UIC Command Completion)
-  5. SW: HCS.DP=1 확인 (Device Present)
-  6. SW: UTRLBA/UTRLBAU 설정 (Transfer Request List 주소)
-  7. SW: UTMRLBA/UTMRLBAU 설정 (Task Mgmt List 주소)
-  8. SW: UTRLRSR = 1 (Transfer Request 수락 시작)
-  9. SW: IE 레지스터 설정 (필요한 인터럽트 활성화)
-  10. Ready — Doorbell 가능
-
-HCI 비활성화 (Reset):
-
-  1. SW: 진행 중인 모든 명령 완료 대기 (또는 Abort)
-  2. SW: UTRLRSR = 0 (새 명령 수락 중지)
-  3. SW: HCE = 0 쓰기
-  4. HCI: 내부 리셋 → 모든 Doorbell 클리어, 레지스터 초기값
-  5. SW: HCE = 1 (필요 시 재활성화) → 위 시퀀스 반복
-```
-
----
-
-## Interrupt 종류별 분류
+### 5.3 Interrupt 종류별 분류
 
 ```
 IS (Interrupt Status) 레지스터 — 비트별 의미:
@@ -293,9 +362,7 @@ IS (Interrupt Status) 레지스터 — 비트별 의미:
     → SW가 관심 있는 인터럽트만 선택적 활성화
 ```
 
----
-
-## UIC Command 상세
+### 5.4 UIC Command 상세
 
 ```
 UIC (UFS Interconnect) Command = UniPro DME 레이어 제어
@@ -336,9 +403,7 @@ Gear 변경 예시 (HS-G1 → HS-G3):
   → IS[UPMS] 대기 (Power Mode Change 완료)
 ```
 
----
-
-## 핵심 레지스터
+### 5.5 핵심 레지스터 맵
 
 | 레지스터 | 오프셋 | 역할 |
 |---------|--------|------|
@@ -357,25 +422,7 @@ Gear 변경 예시 (HS-G1 → HS-G3):
 | **UICCMD** | 0x90 | UIC Command Register (UniPro DME 명령) |
 | **UICCMDARG** | 0x94-9C | UIC Command Arguments |
 
-### Doorbell 동작 원리
-
-```
-UTRLDBR (32-bit): 각 비트가 하나의 Transfer Request 슬롯
-
-  bit[0] = slot 0
-  bit[1] = slot 1
-  ...
-  bit[31] = slot 31
-
-  SW가 bit[N] = 1 셋 → HCI가 slot N의 UTRD를 처리 시작
-  HCI가 완료 → bit[N] = 0 클리어 + Interrupt
-
-  명령 큐잉: 여러 비트를 동시에 셋 → 최대 32개 동시 처리
-```
-
----
-
-## MCQ (Multi-Circular Queue) — UFS 4.0+
+### 5.6 MCQ (Multi-Circular Queue) — UFS 4.0+
 
 ```
 기존 (SDB — Single Doorbell):
@@ -398,8 +445,6 @@ MCQ (UFS 4.0):
   | ...              |     | ...              |
   +------------------+     +------------------+
 ```
-
-### SQ/CQ Entry 형식과 Head/Tail Pointer
 
 ```
 Submission Queue (SQ) Entry = UTRD와 동일한 구조 (32 bytes)
@@ -450,24 +495,56 @@ SDB vs MCQ 비교:
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: UFS HCI의 역할을 한마디로?**
-> "SW Driver와 UFS 프로토콜 사이의 하드웨어 브릿지다. SW가 메모리에 UTRD(명령 디스크립터)를 작성하고 Doorbell을 누르면, HCI가 이를 DMA로 읽어 UPIU 패킷으로 변환하여 UniPro를 통해 디바이스에 전달하고, 응답을 받아 메모리에 DMA로 쓰고 Interrupt로 SW에 알린다."
+### 흔한 오해
 
-**Q: Doorbell 메커니즘이 왜 중요한가?**
-> "Doorbell은 SW→HW 명령 제출의 핵심 인터페이스다. SW가 UTRD를 메모리에 미리 작성해두고 Doorbell 비트만 셋하면 HCI가 처리를 시작한다. 이 분리(디스크립터 작성 ↔ 처리 시작 통지)가 명령 큐잉(최대 32개 동시)을 가능하게 한다. MCQ(UFS 4.0)는 이를 복수 큐로 확장하여 멀티코어 병렬성을 더욱 높인다."
+!!! danger "❓ 오해 1 — 'Doorbell ring 즉시 처리된다'"
+    **실제**: Doorbell ring 후 HCI 가 해당 슬롯의 UTRD 를 fetch 하고 처리하기까지 **arbitration latency** 가 존재합니다. 다른 슬롯이 진행 중이면 그만큼 지연. ring 시점과 처리 시작 시점은 다른 transaction. SVA 의 timing 도 `##[1:N]` 으로 윈도우를 줘야지 `##1` 로 잡으면 false fail.<br>
+    **왜 헷갈리는가**: "링 = 즉시 시작" 이라는 직관.
 
-**Q: UTRD, UCD, PRDT의 관계는?**
-> "3계층 메모리 구조다. UTRD(32B)가 명령의 메타데이터(Command Type, Direction, OCS)를 담고, UCD(UTP Command Descriptor)의 Base Address를 가리킨다. UCD 안에 Command UPIU(SCSI CDB 포함), Response UPIU 공간, PRDT가 순서대로 배치된다. PRDT는 DMA 대상 버퍼의 주소+크기 목록으로, 비연속 물리 메모리에 Scatter/Gather 전송을 가능하게 한다. HCI는 Doorbell을 받으면 UTRD→UCD→PRDT 순으로 메모리를 DMA 읽기한다."
+!!! danger "❓ 오해 2 — 'UTRD 작성하고 doorbell 만 누르면 끝'"
+    **실제**: UTRD ↔ UCD ↔ PRDT 의 **3 단 메모리 구조** 가 모두 visible 해야 합니다. CPU 의 store 가 HCI 의 fetch path 에서 완전히 보이려면 _memory barrier_ 또는 _coherent dma alloc_ 이 필요. write-back cache + non-coherent DMA 환경에서는 cache flush 까지.<br>
+    **왜 헷갈리는가**: register write 의 instantaneous 한 인상이 메모리 ordering 까지 같은 것처럼 보이게 함.
 
-**Q: SDB에서 MCQ로 전환된 이유와 핵심 차이는?**
-> "멀티코어 환경에서의 Lock 경합 해소가 핵심이다. SDB는 하나의 Doorbell 레지스터를 모든 코어가 공유하므로 Lock이 필요하고, 완료 확인도 IS+UTRLDBR 폴링으로 비효율적이다. MCQ는 NVMe처럼 큐별 독립 Submission/Completion Queue를 두어 코어별 큐 바인딩이 가능하고 Lock-free로 동작한다. 완료 정보도 CQ Entry에 직접 담겨 UTRD 재읽기가 불필요하다."
+!!! danger "❓ 오해 3 — 'IS[UTRCS] 만 보면 어떤 슬롯이 완료됐는지 안다'"
+    **실제**: IS[UTRCS] 는 _하나 이상의_ transfer 가 완료됐다는 _aggregated bit_ 입니다. 어떤 슬롯이 완료됐는지는 **UTRLDBR 의 어떤 비트가 0 으로 떨어졌는가** 로 알아야 합니다. ISR 은 둘 다 봐야 정확.<br>
+    **왜 헷갈리는가**: NVMe 의 CQ entry 처럼 1:1 매핑된 통지 모델을 가정.
 
-**Q: UIC Command로 Gear를 변경하는 과정을 설명하라.**
-> "UIC Command는 HCI가 UniPro DME 레이어를 제어하는 인터페이스다. Gear 변경 과정: (1) DME_SET으로 PA_TxGear, PA_RxGear를 원하는 Gear 값으로 설정. (2) DME_SET으로 PA_PWRMode를 FAST로 설정하면 UniPro가 M-PHY Gear 전환을 시작. (3) IS[UPMS] (Power Mode Status) 인터럽트 대기. (4) HCS에서 새로운 Power Mode 확인. 각 DME_SET마다 IS[UCCS]로 완료를 확인해야 하며, Gear 전환 중에는 명령 발행을 자제해야 한다."
+!!! danger "❓ 오해 4 — 'HCE = 0 → 1 한 번이면 깨끗한 상태'"
+    **실제**: HCE 는 _internal reset 트리거_ 일 뿐, UniPro / M-PHY 까지 다시 link startup 하려면 DME_LINKSTARTUP 시퀀스가 필요합니다. UTRLBA / UTMRLBA / IE 도 0 으로 돌아가므로 모두 다시 program. 이 순서 (HCE → UCRDY 폴링 → DME_LINKSTARTUP → UTRLBA 등) 를 어기면 Doorbell 이 무시됩니다.<br>
+    **왜 헷갈리는가**: "reset 한 번 = 모든 게 새로" 라는 직관.
+
+!!! danger "❓ 오해 5 — 'MCQ 는 SDB 의 단순 확장'"
+    **실제**: MCQ 는 doorbell register 자체가 사라지고 **SQ Tail Pointer** 가 doorbell 역할을 합니다. 완료 통지도 CQ entry write + interrupt 로 바뀌어 UTRLDBR poll 이 불필요. 완전히 다른 contract — driver 와 TB 모두 별도 path 가 필요.<br>
+    **왜 헷갈리는가**: 이름은 같아도 register / 메모리 구조 / 완료 통지가 모두 다름.
+
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Doorbell 이 무시됨 (HCI 가 처리 안 함) | UTRLRSR = 0, HCE 미활성, UTRLBA 미설정 | HCS.UTRLRDY, UTRLRSR, UTRLBA |
+| UTRD.OCS = 0x0F 로 영원히 남음 | HCI 가 UTRD fetch 했는데 UCD ptr 잘못 | UTRD DW4/DW5 (UCD Base Addr) |
+| 완료 IRQ 가 안 옴 | IE[UTRCS] = 0 (mask 닫힘) | IE 와 IS 비트 비교 |
+| ISR 진입 후 어떤 슬롯인지 모름 | IS 만 읽고 UTRLDBR 안 읽음 | UTRLDBR 의 active vs cleared 비트 |
+| 같은 slot 에 두 명령 발행 | SW 의 free-slot tracker 버그 | pending bitmap 과 UTRLDBR 비교 |
+| HCE 토글 후 명령이 실종 | UTRLBA 재설정 안 함 | HCE rising edge 이후 UTRLBA write 시퀀스 |
+| MCQ 모드인데 UTRLDBR poll | SDB 코드가 그대로 남음 | CAP.MCQS, 사용 중 path 확인 |
+| Crypto Engine 활성 시 fatal 발생 | UTRD 의 Crypto Config Index 가 미할당 | CEFES bit, Crypto Config 영역 |
+
+이 체크리스트의 모든 항목은 **register write 와 memory write 의 ordering** 또는 **mask/enable 비트의 닫힘** 두 가지로 분류됩니다.
 
 ---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **HCI register map**: HCE / HCS / IS / IE / UTRLBA / UTRLDBR / UTMRLBA / UICCMD — _SW/HW contract_ 의 어휘.
+- **UTRD (32 B)** = 명령 + UCD pointer + PRDT pointer + OCS. HCI 가 fetch → 처리 → OCS writeback.
+- **Doorbell + UTRLDBR + IRQ** 의 분리 — 명령 작성, 처리 시작, 완료 통지가 별도 register 로 분리돼 race-aware 검증 가능.
+- **PRDT** 는 scatter/gather DMA 의 entry list — 비연속 물리 메모리에 256 KB 단위로 분할 가능.
+- **UIC Command** 가 HCI 에서 UniPro DME 로 가는 유일한 통로 — Gear / Hibernate / Link 관리 모두 여기.
+- **MCQ (4.0+)** 는 NVMe-style SQ/CQ 분리. doorbell 이 사라지고 Tail Pointer 가 그 역할 — driver / TB 구조가 통째로 바뀜.
+
 !!! warning "실무 주의점 — UTRLDBR 와 UTRLRSR race"
     **현상**: 명령을 doorbell 로 발행했는데 HCI 가 해당 슬롯을 무시해 명령이 실종된다.
 
@@ -475,19 +552,13 @@ SDB vs MCQ 비교:
 
     **점검 포인트**: UTRLDBR write 전 UTRLRSR == 1 인지, UTRD 가 메모리에 fully visible 한지(memory barrier) 드라이버 시퀀스에서 확인.
 
-## 핵심 정리
+---
 
-- **HCI register map**: HCS (status), IS (interrupt), UTRLBA (UTRD list base), UTMRLBA (Task Management list base), CAP (capabilities).
-- **UTRD (UTP Transfer Request Descriptor)**: SW가 작성하는 32-byte 구조 — 명령 + UPIU pointer + response pointer.
-- **UTMRD**: Task Management 명령용 (abort, reset 등).
-- **Doorbell**: SW가 UTRD 작성 후 doorbell register write로 HCI에 알림.
-- **Interrupt aggregation**: 여러 명령 완료를 모아서 한 인터럽트로 → CPU overhead 감소. Counter / timer 기반 trigger.
-- **Multi-queue**: UFS는 queue depth 32. HCI가 동시에 32 명령 처리 가능.
+## 다음 모듈
 
-## 다음 단계
+→ [Module 03 — UPIU & Command Flow](03_upiu_command_flow.md): UTRD 가 만들어내는 UPIU 들의 종류 (Command / Response / Data-In/Out / Query / Task Mgmt / NOP) 와 각 명령의 multi-UPIU sequence 전개.
 
-- 📝 [**Module 02 퀴즈**](quiz/02_hci_architecture_quiz.md)
-- ➡️ [**Module 03 — UPIU & Command Flow**](03_upiu_command_flow.md)
+[퀴즈 풀어보기 →](quiz/02_hci_architecture_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../01_ufs_protocol_stack/">

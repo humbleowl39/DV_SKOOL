@@ -15,229 +15,159 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#왜-하드웨어-기반인가">왜 하드웨어 기반인가?</a>
-  <a class="page-toc-link" href="#bootrom의-역할">BootROM의 역할</a>
-  <a class="page-toc-link" href="#otp-구현-기술-efuse-vs-antifuse">OTP 구현 기술 — eFuse vs Antifuse</a>
-  <a class="page-toc-link" href="#otpefuse-변경-불가능한-보안-저장소">OTP/eFuse — 변경 불가능한 보안 저장소</a>
-  <a class="page-toc-link" href="#bootrom-버그-rom-patch-메커니즘">BootROM 버그 — ROM Patch 메커니즘</a>
-  <a class="page-toc-link" href="#secure-boot-lifecycle-states">Secure Boot Lifecycle States</a>
-  <a class="page-toc-link" href="#puf-physically-unclonable-function-efuseotp의-대안">PUF (Physically Unclonable Function) — eFuse/OTP의 대안</a>
-  <a class="page-toc-link" href="#흔한-오해">흔한 오해</a>
-  <a class="page-toc-link" href="#dv-관점-otp-검증-전략">DV 관점 — OTP 검증 전략</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-rotpk-hash-한-슬롯의-제조-부팅-검증-여정">3. 작은 예 — ROTPK 한 슬롯 추적</a>
+  <a class="page-toc-link" href="#4-일반화-rot-구성-요소와-lifecycle">4. 일반화 — RoT 구성 요소와 Lifecycle</a>
+  <a class="page-toc-link" href="#5-디테일-구현-기술-패치-puf-검증-전략">5. 디테일 — 구현 기술/패치/PUF/검증 전략</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Define** Hardware Root of Trust (HW RoT)와 그 구성 요소 (BootROM, OTP, eFuse, secure key storage)를 설명
-    - **Trace** ROTPK (Root of Trust Public Key) hash가 OTP에 어떻게 저장되고 boot 시 verification에 쓰이는지
-    - **Distinguish** OTP / eFuse / Mask ROM의 차이와 각각의 immutability 속성
-    - **Identify** HW RoT의 trust anchor가 깨지면 어떤 보안 영향이 발생하는지
+    - **Define** Hardware Root of Trust (HW RoT) 와 그 구성 요소 (BootROM, OTP, eFuse, secure key storage) 를 정의할 수 있다.
+    - **Trace** ROTPK (Root of Trust Public Key) hash 가 OTP 에 어떻게 저장되고 boot 시 verification 에 어떻게 쓰이는지 추적할 수 있다.
+    - **Distinguish** OTP / eFuse / Antifuse / Mask ROM 을 immutability 와 보안 속성 관점에서 구별할 수 있다.
+    - **Identify** HW RoT 의 trust anchor 가 깨졌을 때 발생하는 보안 영향 (chain 무효화, 공격 surface 확대) 을 식별할 수 있다.
+    - **Justify** 왜 Root of Trust 가 SW 가 아닌 HW 기반이어야 하는지 — 순환 신뢰 (chicken-and-egg) 문제를 들어 설명할 수 있다.
 
 !!! info "사전 지식"
-    - 암호 해시 (SHA-256) 기본
-    - 비대칭 키 (public/private)
-    - 부팅 sequence 일반
+    - 암호 해시 (SHA-256) 의 입출력 크기와 collision resistance 의 직관
+    - 비대칭 키 (public/private) — 누가 무엇을 가지고 무엇을 검증하는가
+    - SoC 의 power-on reset → boot fetch 흐름 (general)
 
-## 핵심 개념
-**HW RoT = BootROM (변경 불가능한 코드) + OTP (ROTPK 해시 + 보안 설정)**
-
-"누가 검증자를 검증하는가?" — 이 닭과 달걀 문제를 깨뜨리는 신뢰의 닻(Trust Anchor).
-
-!!! tip "💡 이해를 위한 비유"
-    **HW RoT** ≈ **황실 옥새 + 공인 인장 규정집**
-
-    황실 옥새(BootROM)는 제조 시점에 주조되어 누구도 모양을 바꿀 수 없다. 인장 규정집(OTP)은 발행 후 변경 불가한 도장으로, 어떤 문서(이미지)에 어떤 옥새가 유효한지를 영구 기록한다. 이 둘이 결합할 때 비로소 위조 불가능한 신뢰의 출발점이 된다.
-
-!!! danger "❓ 흔한 오해"
-    **오해**: Secure Boot 가 켜지면 안전하다
-
-    **실제**: Secure Boot 는 boot chain 무결성만 보장. runtime 보호 (ASLR, kernel hardening, IO 보안) 는 별도. boot 만으로 끝나지 않음.
-
-    **왜 헷갈리는가**: "secure boot = full security" 의 marketing 단순화. 실제는 startup 만 보장.
 ---
 
-## 왜 하드웨어 기반인가?
+## 1. Why care? — 이 모듈이 왜 필요한가
+
+이후 모든 secure boot 모듈은 **"제조 시점에 한 번 박아 둔 anchor 가 변하지 않는다"** 라는 한 가정에서 출발합니다. ROTPK hash, anti-rollback counter, JTAG lock, secure boot enable bit — 이 모든 것이 _immutable_ 이라는 약속이 깨지면 chain of trust, 서명 검증, 공격 방어가 차례로 무너집니다.
+
+이 모듈을 건너뛰면 이후의 모든 spec/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 RoT = BootROM + OTP 결합과 그 immutability 의 _근거_ 를 잡고 나면, 이후 단계에서 만나는 디테일 (왜 ROTPK 는 OTP 에 hash 만 저장하는가, 왜 fallback 경로가 OTP 에 미리 박혀야 하는가) 이 _이유_ 로 보입니다.
+
+---
+
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **HW RoT** ≈ **황실 옥새 + 공인 인장 규정집**.<br>
+    옥새 (BootROM) 는 제조 시점에 주조되어 누구도 모양을 바꿀 수 없다. 인장 규정집 (OTP) 은 발행 후 변경 불가한 도장으로 — "어떤 문서 (image) 에 어떤 옥새 (key) 가 유효한가" 를 영구 기록한다. 이 둘이 결합할 때 비로소 위조 불가능한 신뢰의 출발점이 된다.
+
+### 한 장 그림 — Power-on 직후 trust 가 시작되는 자리
+
+```
+   Power-On Reset
+        │
+        ▼
+   ┌───────────────────────── HW RoT (변경 불가 영역) ─────────────────────────┐
+   │                                                                            │
+   │   ┌──────────── BootROM ────────────┐      ┌──────────── OTP / eFuse ─┐   │
+   │   │  Mask ROM (제조 layout 고정)     │◀────▶│  ROTPK Hash (32 B)        │   │
+   │   │  - reset vector                  │read  │  Secure Boot Enable       │   │
+   │   │  - HW init / crypto enable       │      │  JTAG Lock                │   │
+   │   │  - boot mode 결정                │      │  Anti-Rollback Counter    │   │
+   │   │  - BL2 image load + verify       │      │  Boot Device Config       │   │
+   │   │  - sign-fail → halt / fallback  │      │  AES Root Key (선택)      │   │
+   │   └──────────────────────────────────┘      └────────────────────────────┘  │
+   │                       │                                                       │
+   └───────────────────────┼───────────────────────────────────────────────────────┘
+                           ▼
+                       BL2 jump (검증 통과 시) ─────▶ chain of trust 의 다음 link
+```
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+세 가지 요구가 동시에 풀려야 했습니다.
+
+1. **누가 검증자를 검증하는가?** — SW 만으로 출발하면 무한 순환 (chicken-and-egg). 제조 시점 고정 = 순환을 끊는 유일한 방법.
+2. **runtime 변조에 노출되면 안 된다** — Flash 는 덮어쓰기 가능, RAM 은 휘발. ROM 은 물리적으로 쓰기 불가, OTP 는 1회 쓰기 후 비가역.
+3. **그래도 약간의 정책은 칩마다 달라야 한다** — ROTPK, JTAG lock, boot device 등은 silicon 별로 다름. 그래서 BootROM (전 칩 공통 코드) 와 OTP (칩별 설정) 가 _분리_.
+
+이 세 요구의 교집합이 BootROM + OTP 이중 구조입니다.
+
+---
+
+## 3. 작은 예 — ROTPK hash 한 슬롯의 제조-부팅 검증 여정
+
+가장 단순한 시나리오. ROTPK 한 슬롯이 (1) 제조 라인에서 OTP 에 박히고, (2) 첫 부팅 시 BootROM 이 그 슬롯을 읽어 BL2 인증서 검증에 사용하는 1 cycle 을 따라갑니다.
+
+```
+   ┌────── Provisioning (양산 라인, 1회) ──────┐    ┌────── 매 부팅 (현장) ──────┐
+   │                                            │    │                              │
+   │  ① 빌드 서버: ROTPK_pub 생성               │    │  ⑤ POR → BootROM 진입       │
+   │  ② SHA-256(ROTPK_pub) = h_rotpk (32 B)    │    │  ⑥ Flash 에서 BL2 + cert    │
+   │  ③ OTP write tool                          │    │     를 SRAM 으로 로드        │
+   │     blow(OTP[ROTPK_HASH], h_rotpk)         │    │  ⑦ cert 안의 PK 추출         │
+   │     blow(OTP[SECURE_BOOT_EN], 1)          │    │  ⑧ SHA-256(PK) 계산          │
+   │  ④ ROTPK_HASH 영역 → READ-ONLY 잠금        │    │  ⑨ OTP[ROTPK_HASH] 읽기      │
+   │     (이후 OTP write block)                 │    │  ⑩ 두 값 == 비교            │
+   │                                            │    │  ⑪ 일치 → cert.sig 검증      │
+   │                                            │    │     불일치 → halt / abort    │
+   └────────────────────────────────────────────┘    └──────────────────────────────┘
+```
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| ① | Build server | RSA/ECDSA key pair 생성 | private key 는 HSM, public key (ROTPK) 만 양산 라인으로 전달 |
+| ② | Provisioning tool | `h_rotpk = SHA-256(ROTPK_pub)` | 256 B (RSA) 또는 64 B (ECDSA) 키를 32 B hash 로 압축 — OTP 공간 절약 |
+| ③ | OTP burner HW | eFuse blow (높은 전류 또는 전압) | 물리적으로 비가역. 한 비트 blow 면 다시 못 돌림 |
+| ④ | Provisioning tool | OTP write protection 잠금 | 이후 OTP 영역 자체를 freeze — 양산 칩이 받는 마지막 OTP 명령 |
+| ⑤ | SoC HW | Power-on reset → BootROM fetch | reset vector 는 mask ROM 안 — 변경 불가 |
+| ⑥ | BootROM | DMA / SPI / UFS 로 BL2 + cert 로드 | 정확한 device 는 OTP[BOOT_DEV_CFG] 가 결정 |
+| ⑦ | BootROM | cert parse → PK 필드 추출 | cert format 은 ARM TF-A 의 X.509 변형 등 |
+| ⑧ | HW Crypto | SHA-256 (PK) | constant-time, side-channel 방어된 HW |
+| ⑨ | BootROM | `read OTP[ROTPK_HASH]` | OTP read 는 단순 mem-mapped read |
+| ⑩ | BootROM | 32 B 비교 — _byte-wise constant-time_ | timing leak 방어. 한 byte 라도 다르면 fail |
+| ⑪ | BootROM | match → 다음 검증 단계, mismatch → halt | mismatch 시 fallback 도 OTP 정책에 따라 결정 |
+
+```c
+// ⑥~⑪ 의 BootROM 측 의사코드. 실제 production 코드는 constant-time 비교 + glitch 이중 검증.
+status_t verify_rotpk(const uint8_t *cert_pk, size_t pk_len) {
+    uint8_t h_calc[32];
+    uint8_t h_otp[32];
+    crypto_hw_sha256(cert_pk, pk_len, h_calc);   // ⑧
+    otp_read(OTP_ROTPK_HASH_OFFSET, h_otp, 32);  // ⑨
+    if (constant_time_memcmp(h_calc, h_otp, 32) != 0) {  // ⑩
+        log_event(ROTPK_MISMATCH_ERR);
+        return FAIL;                                       // ⑪ → halt
+    }
+    return SUCCESS;
+}
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) OTP 에는 PK 자체가 아니라 PK 의 _hash_ 가 들어간다** — 32 B 고정 = OTP 공간 효율 + 알고리즘 (RSA/ECDSA) 변경에도 OTP 폭이 안 늘어남.<br>
+    **(2) 비교는 한 번이 아니라 _두 번_ 한다** (production 코드) — glitch attack 으로 한 번의 == 분기를 건너뛰는 것을 막기 위해. 단일 글리치로 두 번의 독립 검증을 동시에 무력화하기는 매우 어렵다.
+
+---
+
+## 4. 일반화 — RoT 구성 요소와 Lifecycle
+
+### 4.1 HW RoT 의 핵심 등식
+
+> **HW RoT = BootROM (변경 불가능한 코드) + OTP (변경 불가능한 키/설정)**
+
+하나라도 빠지면 trust anchor 성립 불가:
+
+- BootROM 만 있고 OTP 가 비어 있으면 → 검증할 기준 (ROTPK hash) 이 없음.
+- OTP 만 있고 BootROM 이 변경 가능하면 → 공격자가 검증 함수를 nop 으로 패치 가능.
+
+### 4.2 SW vs HW RoT — 왜 HW 가 필수인가
 
 | 속성 | SW RoT | HW RoT |
 |------|--------|--------|
-| 변조 저항성 | Flash 덮어쓰기 가능 | ROM은 물리적으로 쓰기 불가 |
-| 공격 표면 | OS/부트로더 취약점 | HW 레벨 공격(FIB) 필요 |
-| 신뢰 근거 | 순환: "이 SW를 누가 검증?" | 제조 시점 고정, 순환 없음 |
+| 변조 저항성 | Flash 덮어쓰기 가능 | ROM 은 물리적으로 쓰기 불가 |
+| 공격 표면 | OS / 부트로더 취약점 | HW 레벨 공격 (FIB) 필요 |
+| 신뢰 근거 | 순환: "이 SW 를 누가 검증?" | 제조 시점 고정, 순환 없음 |
 | Reset 후 상태 | 메모리 내용 보장 불가 | ROM/OTP 항상 동일 |
 
-**핵심 논리**: "SW는 순환 신뢰 문제를 만든다 — 검증자를 누가 검증하나? HW RoT는 제조 시점에 고정되고 런타임에 변경 불가능하므로 이 순환을 끊는다."
+**핵심 논리**: SW 는 순환 신뢰 문제를 만든다 — _검증자를 누가 검증하나?_ HW RoT 는 제조 시점에 고정되고 runtime 변경 불가능하므로 이 순환을 끊는다.
 
----
+### 4.3 Secure Boot Lifecycle 4 상태
 
-## BootROM의 역할
-
-```
-Power-On Reset
-     |
-     v
-+-------------------------------+
-|          BootROM               |
-|                                |
-|  1. CPU/보안 HW 초기화          |
-|     - Crypto Engine 활성화     |
-|     - Security Perimeter 설정  |
-|     - Watchdog 타이머 시작     |
-|                                |
-|  2. Boot Mode 결정             |
-|     - Boot Pinstrap 읽기      |
-|     - OTP Boot Config 읽기    |
-|                                |
-|  3. BL2 이미지 로드             |
-|     - Boot Device에서 읽기     |
-|     - Internal SRAM에 적재     |
-|                                |
-|  4. BL2 서명 검증               |
-|     - OTP에서 ROTPK 해시 읽기  |
-|     - 인증서의 공개키 검증      |
-|     - BL2 이미지 해시 검증      |
-|     - 실패 → 차순위 Boot Mode  |
-|                                |
-|  5. BL2로 Jump                 |
-+-------------------------------+
-```
-
-### BootROM 코드의 제약
-
-| 제약 | 이유 |
-|------|------|
-| 동적 메모리 할당 불가 | SRAM 크기 고정, heap 관리 복잡성 배제 |
-| 외부 라이브러리 의존 불가 | ROM에 모든 코드가 자체 포함되어야 함 |
-| 코드 크기 엄격 제한 (수십~수백 KB) | Mask ROM 면적 = 실리콘 비용 |
-| 버그 수정 불가 | 포토마스크 고정 후 변경 불가능 |
-
----
-
-## OTP 구현 기술 — eFuse vs Antifuse
-
-OTP는 "개념"이고, eFuse와 Antifuse는 그것을 구현하는 "물리적 기술"이다.
-
-| | eFuse | Antifuse |
-|--|-------|---------|
-| **동작 원리** | 전류로 퓨즈 **끊음** (blow) → 도통→차단 | 전압으로 절연층 **파괴** → 차단→도통 |
-| **초기 상태** | 도통 (연결됨, 읽으면 0) | 차단 (끊어짐, 읽으면 0) |
-| **프로그래밍** | 높은 전류 → 금속 라인 용융 | 높은 전압 → 산화막 절연 파괴 |
-| **면적** | 상대적으로 큼 (두꺼운 금속 필요) | 작음 (게이트 산화막 활용) |
-| **보안성** | 낮음 — FIB로 재연결 가능 (물리 공격) | 높음 — 파괴된 절연층 복원 불가 |
-| **신뢰성** | 높음 — 성숙한 기술 | 중간 — 읽기 마진 관리 필요 |
-| **비용** | 저렴 (표준 CMOS 공정) | 비쌈 (추가 공정 단계) |
-| **주요 용도** | 범용 SoC, 모바일 AP | 고보안 칩, 스마트카드, 군용 |
-
-```
-eFuse (blow 전):    ────[==]────  (도통)
-eFuse (blow 후):    ────[✕✕]────  (차단) ← 전류로 금속 용융
-
-Antifuse (프로그램 전): ────| |────  (차단, 절연층)
-Antifuse (프로그램 후): ────[==]────  (도통) ← 전압으로 절연 파괴
-```
-
-**면접 팁**: "OTP"라고 말할 때 eFuse인지 Antifuse인지 구분할 수 있으면 물리적 보안에 대한 깊은 이해를 보여줄 수 있다. 보안이 최우선이면 Antifuse(FIB 복원 불가), 비용/면적이 우선이면 eFuse.
-
----
-
-## OTP/eFuse — 변경 불가능한 보안 저장소
-
-| 필드 | 역할 | 비고 |
-|------|------|------|
-| ROTPK Hash | 최상위 공개키 해시 | 전체 Chain of Trust의 신뢰 기반 |
-| Secure Boot Enable | 서명 검증 활성화 비트 | 한번 설정하면 비활성화 불가 |
-| JTAG Disable | 디버그 포트 차단 | 양산 시 Blow |
-| Anti-Rollback Counter | FW 다운그레이드 방지 카운터 | 버전별 증가 |
-| Boot Device Config | 기본 부팅 장치 설정 | Pinstrap과 조합 |
-| AES Root Key | 이미지 복호화 키 (선택) | Secure Storage |
-| Chip Unique ID | 칩 고유 식별자 | Device Attestation 용 |
-
----
-
-## BootROM 버그 — ROM Patch 메커니즘
-
-Mask ROM은 제조 후 수정이 불가능하므로, 버그 발견 시 대응 수단이 반드시 사전 설계되어야 한다.
-
-### ROM Patch 테이블 구조
-
-```
-OTP/Secure SRAM 내 패치 영역:
-
-+------------------------------------------+
-| Patch Table Header                        |
-|  - Magic Number (유효성 검사)             |
-|  - Patch Count (활성 패치 수)             |
-|  - Signature (패치 테이블 전체 서명)       |
-+------------------------------------------+
-| Patch Entry #0                            |
-|  - Match Address: 0x0000_1234 (원본 주소) |
-|  - Redirect Address: 0x2000_0100 (패치)   |
-|  - Enable Bit: 1                          |
-+------------------------------------------+
-| Patch Entry #1                            |
-|  - Match Address: 0x0000_5678             |
-|  - Redirect Address: 0x2000_0200          |
-|  - Enable Bit: 1                          |
-+------------------------------------------+
-| ...                                       |
-| Patch Entry #N-1  (보통 8~16개 슬롯)      |
-+------------------------------------------+
-| Patch Code Area                           |
-|  - 실제 수정된 함수 코드가 저장됨          |
-+------------------------------------------+
-```
-
-### 동작 원리: HW Comparator 방식
-
-```
-BootROM 실행 중:
-
-  CPU가 PC = 0x0000_1234 를 fetch하려 할 때
-       │
-       v
-  +------------------+
-  | HW Address       |  ← 패치 테이블의 Match Address와
-  | Comparator       |     PC를 HW적으로 비교 (매 fetch마다)
-  +--------+---------+
-           │
-     Match?│
-     ┌─────┴──────┐
-     │ YES        │ NO
-     v             v
-  Redirect →    정상 ROM
-  Patch Code    코드 실행
-  (0x2000_0100)
-```
-
-**HW Comparator의 장점**: SW 분기문이 아닌 HW 레벨 리다이렉션이므로, ROM 코드 자체를 수정하지 않고도 특정 함수 진입점을 가로챌 수 있다.
-
-### ROM Patch의 3가지 전략
-
-| 전략 | 설명 | 용도 |
-|------|------|------|
-| **함수 리다이렉션** | 특정 함수 진입점을 통째로 교체 | 로직 버그 수정 |
-| **Early BL2 탈출** | BootROM 최소 기능만 사용 후 BL2로 빠르게 점프 | 심각한 버그 회피 |
-| **기능 비활성화** | 문제 있는 Boot Device/기능을 비활성화 | 특정 경로 차단 |
-
-### ROM Patch 보안 요구사항
-
-1. **패치 테이블 서명 필수**: 패치 자체도 ROTPK 체인으로 서명 검증 → 미검증 패치 = 공격 벡터
-2. **패치 슬롯 유한**: 일반적으로 8~16개 → 슬롯 소진 시 더 이상 패치 불가
-3. **패치 코드 크기 제한**: Secure SRAM의 예약 영역 크기에 의존 (보통 수 KB)
-4. **Anti-Rollback**: 패치도 버전 관리 → 이전 버전 패치로 롤백 방지
-
-**면접 킬러 포인트**: "ROM Patch는 BootROM의 보험 정책이다. 그러나 슬롯 수와 코드 크기가 유한하므로, Pre-silicon 검증의 완전성이 ROM Patch에 의존하지 않기 위한 최선의 전략이다. 이것이 BootROM DV에 Zero-Defect 목표가 설정되는 근본 이유이다."
-
----
-
-## Secure Boot Lifecycle States
-
-칩은 제조부터 폐기까지 보안 상태가 단계적으로 변화한다. **각 전환은 비가역적(OTP blow)이므로 되돌릴 수 없다.**
+칩은 제조부터 폐기까지 보안 상태가 단계적으로 변화. **각 전환은 비가역적 (OTP blow)** 이므로 되돌릴 수 없습니다.
 
 ```
 +------------------+     OTP Blow      +-------------------+
@@ -269,15 +199,167 @@ BootROM 실행 중:
 | **Production** | ON (양산 키) | Disabled/Locked | OTP 고정 | 전체 보안 설정 완료 |
 | **End-of-Life** | N/A | Permanently Off | N/A | 키 폐기 비트 Blown |
 
-**DV 관점**: Lifecycle 전환 검증이 필수 — Development→Production 전환 시 모든 보안 기능이 올바르게 활성화되는지, Production 상태에서 JTAG/USB DL이 정확히 차단되는지 검증해야 한다. OTP Abstraction Layer로 각 Lifecycle 상태를 자동 sweep할 수 있다.
+이 4 상태 + 전환 비가역성이 곧 OTP 검증의 핵심 invariant — provisioning 중간 상태에서 칩이 양산 라인을 빠져나가면 절대 회복 불가.
 
 ---
 
-## PUF (Physically Unclonable Function) — eFuse/OTP의 대안
+## 5. 디테일 — 구현 기술 / 패치 / PUF / 검증 전략
 
-### 개념
+### 5.1 BootROM 의 책임과 제약
 
-PUF는 반도체 제조 과정의 **미세한 물리적 편차**(공정 변동, process variation)를 이용하여 칩마다 고유한 "디지털 지문"을 생성하는 기술이다. 키를 **저장**하는 eFuse/OTP와 달리, PUF는 키를 **생성**한다.
+```
+Power-On Reset
+     |
+     v
++-------------------------------+
+|          BootROM               |
+|                                |
+|  1. CPU/보안 HW 초기화          |
+|     - Crypto Engine 활성화     |
+|     - Security Perimeter 설정  |
+|     - Watchdog 타이머 시작     |
+|                                |
+|  2. Boot Mode 결정             |
+|     - Boot Pinstrap 읽기      |
+|     - OTP Boot Config 읽기    |
+|                                |
+|  3. BL2 이미지 로드             |
+|     - Boot Device에서 읽기     |
+|     - Internal SRAM에 적재     |
+|                                |
+|  4. BL2 서명 검증               |
+|     - OTP에서 ROTPK 해시 읽기  |
+|     - 인증서의 공개키 검증      |
+|     - BL2 이미지 해시 검증      |
+|     - 실패 → 차순위 Boot Mode  |
+|                                |
+|  5. BL2로 Jump                 |
++-------------------------------+
+```
+
+#### BootROM 코드의 제약
+
+| 제약 | 이유 |
+|------|------|
+| 동적 메모리 할당 불가 | SRAM 크기 고정, heap 관리 복잡성 배제 |
+| 외부 라이브러리 의존 불가 | ROM 에 모든 코드가 자체 포함되어야 함 |
+| 코드 크기 엄격 제한 (수십~수백 KB) | Mask ROM 면적 = 실리콘 비용 |
+| 버그 수정 불가 | 포토마스크 고정 후 변경 불가능 |
+
+### 5.2 OTP 구현 기술 — eFuse vs Antifuse
+
+OTP 는 "개념" 이고, eFuse 와 Antifuse 는 그것을 구현하는 "물리적 기술" 입니다.
+
+| | eFuse | Antifuse |
+|--|-------|---------|
+| **동작 원리** | 전류로 퓨즈 **끊음** (blow) → 도통→차단 | 전압으로 절연층 **파괴** → 차단→도통 |
+| **초기 상태** | 도통 (연결됨, 읽으면 0) | 차단 (끊어짐, 읽으면 0) |
+| **프로그래밍** | 높은 전류 → 금속 라인 용융 | 높은 전압 → 산화막 절연 파괴 |
+| **면적** | 상대적으로 큼 (두꺼운 금속 필요) | 작음 (게이트 산화막 활용) |
+| **보안성** | 낮음 — FIB 로 재연결 가능 (물리 공격) | 높음 — 파괴된 절연층 복원 불가 |
+| **신뢰성** | 높음 — 성숙한 기술 | 중간 — 읽기 마진 관리 필요 |
+| **비용** | 저렴 (표준 CMOS 공정) | 비쌈 (추가 공정 단계) |
+| **주요 용도** | 범용 SoC, 모바일 AP | 고보안 칩, 스마트카드, 군용 |
+
+```
+eFuse (blow 전):    ────[==]────  (도통)
+eFuse (blow 후):    ────[✕✕]────  (차단) ← 전류로 금속 용융
+
+Antifuse (프로그램 전): ────| |────  (차단, 절연층)
+Antifuse (프로그램 후): ────[==]────  (도통) ← 전압으로 절연 파괴
+```
+
+**면접 팁**: "OTP" 라고 말할 때 eFuse 인지 Antifuse 인지 구분하면 물리적 보안에 대한 깊은 이해를 보여줄 수 있습니다. 보안이 최우선이면 Antifuse (FIB 복원 불가), 비용/면적이 우선이면 eFuse.
+
+### 5.3 OTP/eFuse 의 표준 필드
+
+| 필드 | 역할 | 비고 |
+|------|------|------|
+| ROTPK Hash | 최상위 공개키 해시 | 전체 Chain of Trust 의 신뢰 기반 |
+| Secure Boot Enable | 서명 검증 활성화 비트 | 한번 설정하면 비활성화 불가 |
+| JTAG Disable | 디버그 포트 차단 | 양산 시 Blow |
+| Anti-Rollback Counter | FW 다운그레이드 방지 카운터 | 버전별 증가 |
+| Boot Device Config | 기본 부팅 장치 설정 | Pinstrap 과 조합 |
+| AES Root Key | 이미지 복호화 키 (선택) | Secure Storage |
+| Chip Unique ID | 칩 고유 식별자 | Device Attestation 용 |
+
+### 5.4 BootROM 버그 — ROM Patch 메커니즘
+
+Mask ROM 은 제조 후 수정이 불가능하므로, 버그 발견 시 대응 수단이 반드시 _사전 설계_ 되어야 합니다.
+
+#### ROM Patch 테이블 구조
+
+```
+OTP/Secure SRAM 내 패치 영역:
+
++------------------------------------------+
+| Patch Table Header                        |
+|  - Magic Number (유효성 검사)             |
+|  - Patch Count (활성 패치 수)             |
+|  - Signature (패치 테이블 전체 서명)       |
++------------------------------------------+
+| Patch Entry #0                            |
+|  - Match Address: 0x0000_1234 (원본 주소) |
+|  - Redirect Address: 0x2000_0100 (패치)   |
+|  - Enable Bit: 1                          |
++------------------------------------------+
+| Patch Entry #1                            |
+|  - Match Address: 0x0000_5678             |
+|  - Redirect Address: 0x2000_0200          |
+|  - Enable Bit: 1                          |
++------------------------------------------+
+| ...                                       |
+| Patch Entry #N-1  (보통 8~16개 슬롯)      |
++------------------------------------------+
+| Patch Code Area                           |
+|  - 실제 수정된 함수 코드가 저장됨          |
++------------------------------------------+
+```
+
+#### 동작 원리: HW Comparator 방식
+
+```
+BootROM 실행 중:
+
+  CPU가 PC = 0x0000_1234 를 fetch하려 할 때
+       │
+       v
+  +------------------+
+  | HW Address       |  ← 패치 테이블의 Match Address와
+  | Comparator       |     PC를 HW적으로 비교 (매 fetch마다)
+  +--------+---------+
+           │
+     Match?│
+     ┌─────┴──────┐
+     │ YES        │ NO
+     v             v
+  Redirect →    정상 ROM
+  Patch Code    코드 실행
+  (0x2000_0100)
+```
+
+**HW Comparator 의 장점**: SW 분기문이 아닌 HW 레벨 리다이렉션이므로, ROM 코드 자체를 수정하지 않고도 특정 함수 진입점을 가로챌 수 있습니다.
+
+#### ROM Patch 의 3가지 전략
+
+| 전략 | 설명 | 용도 |
+|------|------|------|
+| **함수 리다이렉션** | 특정 함수 진입점을 통째로 교체 | 로직 버그 수정 |
+| **Early BL2 탈출** | BootROM 최소 기능만 사용 후 BL2 로 빠르게 점프 | 심각한 버그 회피 |
+| **기능 비활성화** | 문제 있는 Boot Device/기능을 비활성화 | 특정 경로 차단 |
+
+#### ROM Patch 보안 요구사항
+
+1. **패치 테이블 서명 필수**: 패치 자체도 ROTPK 체인으로 서명 검증 → 미검증 패치 = 공격 벡터
+2. **패치 슬롯 유한**: 일반적으로 8~16개 → 슬롯 소진 시 더 이상 패치 불가
+3. **패치 코드 크기 제한**: Secure SRAM 의 예약 영역 크기에 의존 (보통 수 KB)
+4. **Anti-Rollback**: 패치도 버전 관리 → 이전 버전 패치로 롤백 방지
+
+**면접 킬러 포인트**: "ROM Patch 는 BootROM 의 보험 정책이다. 그러나 슬롯 수와 코드 크기가 유한하므로, Pre-silicon 검증의 완전성이 ROM Patch 에 의존하지 않기 위한 최선의 전략이다. 이것이 BootROM DV 에 Zero-Defect 목표가 설정되는 근본 이유다."
+
+### 5.5 PUF (Physically Unclonable Function) — eFuse/OTP 의 대안
+
+PUF 는 반도체 제조 과정의 **미세한 물리적 편차** (process variation) 를 이용하여 칩마다 고유한 "디지털 지문" 을 생성하는 기술입니다. 키를 **저장** 하는 eFuse/OTP 와 달리, PUF 는 키를 **생성** 합니다.
 
 ```
 eFuse/OTP 방식: 키를 "저장"
@@ -297,15 +379,15 @@ PUF 방식: 키를 "생성"
   강점: 물리 공격으로 eFuse를 읽어도 키가 없음
 ```
 
-### PUF의 유형
+#### PUF 의 유형
 
 | 유형 | 원리 | 특징 |
 |------|------|------|
 | **SRAM PUF** | 전원 인가 시 SRAM 셀의 초기값이 칩마다 다름 | 추가 회로 불필요, 가장 보편적 |
 | **Arbiter PUF** | 두 경로의 전파 지연 차이 | 경량, 모델링 공격에 취약 |
-| **Ring Oscillator PUF** | 링 오실레이터 주파수 차이 | 안정적, FPGA에서도 구현 가능 |
+| **Ring Oscillator PUF** | 링 오실레이터 주파수 차이 | 안정적, FPGA 에서도 구현 가능 |
 
-### eFuse/OTP vs PUF 비교
+#### eFuse/OTP vs PUF 비교
 
 | | eFuse/OTP | PUF |
 |--|----------|-----|
@@ -314,9 +396,9 @@ PUF 방식: 키를 "생성"
 | **키 복제** | eFuse 값을 다른 칩에 프로그래밍 가능 | 물리 편차 복제 불가 (Unclonable) |
 | **공급망 공격** | 제조 시 키 주입 과정에서 유출 위험 | 키 주입 과정 자체가 불필요 |
 | **환경 안정성** | eFuse 안정적, Antifuse 매우 안정적 | 온도/전압/노화에 의한 변동 → ECC 필요 |
-| **추가 비용** | eFuse 저렴, Antifuse 비쌈 | SRAM PUF는 기존 SRAM 활용 → 저렴 |
+| **추가 비용** | eFuse 저렴, Antifuse 비쌈 | SRAM PUF 는 기존 SRAM 활용 → 저렴 |
 
-### PUF의 한계
+#### PUF 의 한계 — 노이즈와 Fuzzy Extractor
 
 ```
 문제: PUF 응답은 매번 미세하게 다름 (노이즈)
@@ -336,10 +418,10 @@ PUF 방식: 키를 "생성"
                    (키 자체는 노출되지 않음)
 ```
 
-### HW RoT에서의 PUF 적용
+#### HW RoT 에서의 PUF 적용
 
 ```
-[Unit 1의 HW RoT 구조]             [PUF 결합 시]
+[일반 SoC 의 HW RoT 구조]            [PUF 결합 시]
 
   BootROM + OTP(eFuse)               BootROM + PUF + OTP(보안 설정만)
      │                                  │
@@ -350,7 +432,7 @@ PUF 방식: 키를 "생성"
   → 물리 공격으로 추출 가능           → 물리 공격으로 추출 불가
 ```
 
-### 업계 적용 사례
+#### 업계 적용 사례
 
 | 벤더 | 제품 | PUF 적용 |
 |------|------|---------|
@@ -359,32 +441,18 @@ PUF 방식: 키를 "생성"
 | **Fungible** | F1 DPU | PUF + Secure Enclave 키 생성 |
 | **Intrinsic ID** | QuiddiKey IP | 다수 SoC 벤더에 SRAM PUF IP 라이선스 |
 
----
+### 5.6 DV 관점 — OTP 검증 전략
 
-## 흔한 오해
-
-### 1. "BootROM이 Root of Trust이다"
-- **틀림**: BootROM만으로는 RoT가 아님. BootROM(코드) + OTP(키/설정)가 **함께** HW RoT를 형성함.
-- 왜? BootROM 코드만 있고 OTP에 ROTPK 해시가 없으면 서명 검증 자체가 불가능.
-
-### 2. "OTP는 완벽하게 안전하다"
-- **틀림**: OTP는 SW 변조에는 안전하지만, 물리적 공격(FIB, 레이저 Fault Injection)에 취약.
-- 대응: OTP 주변에 금속 차폐(Metal Shielding) + Active Tamper Detection 회로 추가.
-
----
-
-## DV 관점 — OTP 검증 전략
-
-### OTP 검증이 어려운 이유
+#### OTP 검증이 어려운 이유
 
 | 난점 | 설명 |
 |------|------|
-| 물리 주소 의존성 | OTP 필드의 물리 위치가 SoC마다 다름 |
-| 필드 간 의존성 | Secure Boot OFF면 ROTPK 검증이 무의미 → 유효 조합 관리 필요 |
+| 물리 주소 의존성 | OTP 필드의 물리 위치가 SoC 마다 다름 |
+| 필드 간 의존성 | Secure Boot OFF 면 ROTPK 검증이 무의미 → 유효 조합 관리 필요 |
 | Program-once 특성 | 레지스터와 달리 write-back 불가 → 시뮬레이션에서 force 필요 |
 | 조합 폭발 | Boot Mode × Boot Device × Secure Boot × JTAG × ... → 수백 조합 |
 
-### OTP Abstraction Layer로 해결
+#### OTP Abstraction Layer 로 해결
 
 ```
 // Legacy: 물리 주소 하드코딩
@@ -398,44 +466,82 @@ otp_model.rotpk_hash.set(expected_hash);
 // → 유효하지 않은 조합은 자동 필터링
 ```
 
-자세한 내용은 **Unit 7 (DV 방법론)**에서 다룸.
+자세한 내용은 [Module 07 (DV 방법론)](07_bootrom_dv_methodology.md) 에서 다룹니다.
+
+#### Lifecycle 전환 검증의 우선순위
+
+DV 관점에서 lifecycle 전환은 모두 비가역이므로, 다음을 직접 검증해야 합니다.
+
+- Development → Production 전환 후 모든 보안 기능이 강제 활성화되는가
+- Production 상태에서 JTAG / USB DL 우회가 닫혀 있는가
+- ROTPK 가 테스트 키 → 양산 키로 정확히 전환되는가
+- 전환 _중간_ 상태 (예: Secure Boot ON 인데 ROTPK 미기록) 가 안전하게 처리되는가
+
+마지막 항목이 §6 의 "ROTPK 미기록 + Secure Boot 활성" 디버그 케이스로 이어집니다.
 
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: Root of Trust가 왜 하드웨어 기반이어야 하는가?**
-> "Secure Boot는 각 단계가 다음 단계를 검증하는 Chain of Trust이다. 최초 검증자가 SW면 '그 SW를 누가 검증했나?'라는 무한 순환에 빠진다. HW RoT는 제조 시점에 고정되고 런타임에 변경 불가능하므로 이 순환을 끊는다. 구체적으로 BootROM(변경 불가 코드) + OTP(ROTPK 해시, 보안 설정)가 결합되어 HW RoT를 형성한다."
+### 흔한 오해
 
-**Q: BootROM 버그는 어떻게 처리하는가?**
-> "OTP/Secure SRAM의 ROM Patch 테이블을 사용한다. HW Address Comparator가 매 instruction fetch마다 패치 테이블의 Match Address와 PC를 비교하여, 일치하면 Patch Code 영역으로 리다이렉션한다. 패치 자체도 ROTPK 체인으로 서명 검증을 거쳐야 한다 — 그렇지 않으면 패치 메커니즘이 공격 벡터가 된다. 치명적 버그는 검증된 BL2로 Early Escape하여 워크어라운드를 적용한다. 단, 패치 슬롯은 8~16개로 유한하므로 Pre-silicon 검증의 Zero-Defect가 근본적으로 중요하다."
+!!! danger "❓ 오해 1 — 'BootROM 이 Root of Trust 다'"
+    **실제**: BootROM 만으로는 RoT 가 아닙니다. BootROM (코드) + OTP (키/설정) 가 **함께** HW RoT 를 형성. BootROM 코드만 있고 OTP 에 ROTPK hash 가 없으면 서명 검증 자체가 불가능합니다.<br>
+    **왜 헷갈리는가**: 화이트보드에 그릴 때 BootROM 한 박스만 그리는 관행 + "ROM = root" 라는 단어 연상 때문.
 
-**Q: eFuse와 Antifuse의 차이는? 보안 관점에서 어떤 것이 유리한가?**
-> "eFuse는 전류로 금속 퓨즈를 끊어서 프로그래밍한다 — 비용이 저렴하고 표준 CMOS 공정에서 구현 가능하다. Antifuse는 전압으로 절연층을 파괴하여 도통시킨다 — 면적이 작고, 파괴된 절연층은 복원 불가능하므로 FIB(Focused Ion Beam) 공격에 강하다. 보안 최우선이면 Antifuse, 비용/양산성이 우선이면 eFuse. 대부분의 모바일 AP는 eFuse + Metal Shielding 조합을 사용한다."
+!!! danger "❓ 오해 2 — 'OTP 는 완벽하게 안전하다'"
+    **실제**: OTP 는 SW 변조에는 안전하지만, 물리적 공격 (FIB, 레이저 fault injection, decapping + 전자현미경) 에 취약. 대응: OTP 주변에 metal shielding + active tamper detection 회로 추가, eFuse 보다 antifuse 채택.<br>
+    **왜 헷갈리는가**: "한번 쓰면 못 바꾼다 = 못 읽는다" 의 혼동. immutability 와 confidentiality 는 다른 속성.
 
-**Q: Secure Boot Lifecycle 전환 시 검증해야 할 핵심 포인트는?**
-> "비가역적 전환이므로 세 가지를 검증한다: (1) Development→Production 전환 후 Secure Boot가 강제 활성화되는지. (2) Production 상태에서 JTAG Open/USB DL 우회가 불가능한지. (3) ROTPK가 테스트 키에서 양산 키로 올바르게 전환되었는지. 특히 전환 중간 상태 — 예를 들어 Secure Boot은 ON인데 ROTPK가 미기록인 상태 — 가 안전하게 처리되는지가 DV의 핵심 Negative 시나리오다."
+!!! danger "❓ 오해 3 — 'Secure Boot 가 켜지면 안전하다'"
+    **실제**: Secure Boot 는 boot chain 무결성만 보장. runtime 보호 (ASLR, kernel hardening, IO 보안), Side-channel 방어, fault injection 방어는 별도. boot 만으로 끝나지 않습니다.<br>
+    **왜 헷갈리는가**: marketing 의 "secure boot = full security" 단순화.
 
----
+!!! danger "❓ 오해 4 — 'PUF 가 있으면 OTP 는 필요 없다'"
+    **실제**: PUF 는 _키 생성_ 만 대체합니다. Secure Boot Enable, JTAG Lock, Anti-Rollback Counter 같은 _설정 비트_ 는 여전히 OTP 가 필요합니다. PUF 응답은 부팅마다 동일해야 하지만 응답 자체에 정책 비트를 인코딩할 수 없음.<br>
+    **왜 헷갈리는가**: PUF 마케팅이 "키리스 SoC" 로 단순화.
+
+### DV 디버그 체크리스트 (HW RoT 검증에서 자주 보는 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| `ROTPK_MISMATCH` 인데 cert 의 PK 는 정상 | OTP[ROTPK_HASH] 가 0 또는 미프로그래밍 | OTP dump → 32 B 가 all-zero 인지 / hash 가 build server 의 expected 와 일치하는지 |
+| OTP write 직후 read 값 불일치 | program-once 특성 — write 안 됨 또는 voltage margin | OTP IP 의 program-pulse log + read margin register |
+| BL2 verify FAIL 인데 image 는 골든 | ROTPK 가 _다른 슬롯_ 의 hash 를 가리킴 (multi-slot) | OTP[ROTPK_SLOT_INDEX] vs cert.slot_id |
+| Provisioning 중간 상태로 양산 출하 | Secure Boot EN=1 + ROTPK=0 (양산 사고) | 라인 OTP profile log → blow 순서 검증 |
+| ROM patch 적용 후 cert 검증 PASS 인데 사실 mismatch | patch 가 ROTPK 캐시를 갱신 안 함 | patch entry vs ROTPK reload 시점 (Module 07 §5 ROM patch 참조) |
+| JTAG 가 살아 있어 OTP write 가능 | JTAG disable fuse 가 안 blown | OTP[JTAG_DISABLE] dump + TAP IDCODE response |
+| Lifecycle 전환 후 fall-back 으로 dev mode 진입 | dev path 가 Production fuse 검사 누락 | (boot mode × OTP secure flag × pinstrap) 매트릭스 — Module 04 §6 참조 |
+| PUF 응답이 부팅마다 다름 | helper data 손상 / Fuzzy Extractor margin | helper-data CRC, ECC syndrome, temperature log |
+
+이 체크리스트는 이후 모듈 (특히 Module 04 boot device, Module 07 DV 방법론) 에서 더 정교한 형태로 다시 나옵니다.
+
 !!! warning "실무 주의점 — ROTPK 미기록 상태에서 Secure Boot 활성화"
-    **현상**: OTP에서 Secure Boot Enable 비트는 blown됐지만 ROTPK hash가 기록되지 않은 상태로 칩이 출고된다. 부팅 시 BootROM이 ROTPK를 읽어 all-zero와 비교하여 임의 서명이 통과되거나 즉시 halt된다.
+    **현상**: OTP 에서 Secure Boot Enable 비트는 blown 됐지만 ROTPK hash 가 기록되지 않은 상태로 칩이 출고된다. 부팅 시 BootROM 이 ROTPK 를 읽어 all-zero 와 비교하여 임의 서명이 통과되거나 즉시 halt 된다.
 
-    **원인**: Lifecycle 전환 스크립트에서 Secure Boot Enable eFuse와 ROTPK blow 순서가 분리되어 있고, 중간 단계 검증 없이 진행 시 ROTPK 미기록 상태가 양산 칩에 고착된다. OTP는 재시도 불가이므로 해당 칩은 폐기 대상.
+    **원인**: Lifecycle 전환 스크립트에서 Secure Boot Enable eFuse 와 ROTPK blow 순서가 분리되어 있고, 중간 단계 검증 없이 진행 시 ROTPK 미기록 상태가 양산 칩에 고착된다. OTP 는 재시도 불가이므로 해당 칩은 폐기 대상.
 
     **점검 포인트**: DV Negative 시나리오에 ROTPK=0 + Secure Boot EN=1 조합을 명시적으로 추가. BootROM 로그에서 `ROTPK_READ` 이후 `ROTPK_ZERO_ERR` 코드 확인. Lifecycle 전환 스크립트의 blow 순서를 ROTPK → Secure Boot Enable 순으로 고정하고 중간 읽기 검증 단계를 삽입.
 
-## 핵심 정리
+---
 
-- **HW RoT = BootROM + OTP/eFuse**. BootROM은 mask ROM (제조 시 결정 + 변경 불가), OTP는 1회 쓰기만 가능.
-- **ROTPK hash** OTP에 저장. Boot 시 BootROM이 BL1 image의 서명을 검증할 때 ROTPK hash와 비교.
-- **Mask ROM**: 제조 layout으로 결정, 변경 불가. **OTP (One-Time Programmable)**: e-fuse blow로 1회 쓰기. 둘 다 immutable.
-- **Trust anchor 손상**: ROTPK hash 변경 가능하면 공격자 키로 서명 우회 가능 → 모든 chain 무용.
-- **물리적 보안**: OTP는 die에 분산 배치, fault injection 저항 setup.
+## 7. 핵심 정리 (Key Takeaways)
+
+- **HW RoT = BootROM + OTP** — 둘 중 하나라도 빠지면 trust anchor 성립 불가.
+- **OTP 에는 PK 자체가 아니라 hash (32 B)** — 알고리즘/키 크기에 무관한 고정 폭, OTP 공간 절약.
+- **eFuse vs Antifuse** — 비용 우선이면 eFuse, FIB 저항 우선이면 antifuse. 둘 다 immutable 이지만 _물리 보안 강도_ 가 다름.
+- **PUF 는 키 _생성_, OTP 는 키/설정 _저장_** — PUF 가 와도 OTP 는 정책 비트로 남음.
+- **Lifecycle 4 상태의 전환은 모두 비가역** — provisioning 중간 상태가 양산 라인을 빠져나가면 회복 불가, 그래서 lifecycle 검증은 DV 의 1순위.
+
+!!! warning "실무 주의점 (요약)"
+    - "ROM Patch 슬롯 8~16 개 = 검증 마지막 보험" — pre-silicon 검증이 ROM Patch 에 의존하지 않게 zero-defect 목표.
+    - OTP read protection (lock) 자체도 OTP fuse 로 거는 경우가 많음 — lock fuse 가 안 blown 이면 production 칩에서 OTP 재기록 시도 가능.
+    - DV 환경에서 OTP 를 force 로 매번 다른 값을 박는 시나리오는 OTP Abstraction Layer 가 program-once 위반을 자동 차단해야 안전.
 
 ## 다음 단계
 
 - 📝 [**Module 01 퀴즈**](quiz/01_hardware_root_of_trust_quiz.md)
-- ➡️ [**Module 02 — Chain of Trust**](02_chain_of_trust_boot_stages.md)
+- ➡️ [**Module 02 — Chain of Trust**](02_chain_of_trust_boot_stages.md): trust anchor 위에서 BL1 → BL2 → BL3x → OS 가 신뢰를 어떻게 _전파_ 하는가.
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

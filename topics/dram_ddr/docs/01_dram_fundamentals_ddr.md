@@ -15,58 +15,232 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#dram-셀-동작">DRAM 셀 동작</a>
-  <a class="page-toc-link" href="#dram-주소-체계">DRAM 주소 체계</a>
-  <a class="page-toc-link" href="#ddr-세대별-비교">DDR 세대별 비교</a>
-  <a class="page-toc-link" href="#prefetch-아키텍처-ddr-대역폭의-핵심">Prefetch 아키텍처 — DDR 대역폭의 핵심</a>
-  <a class="page-toc-link" href="#bank-group-왜-존재하는가">Bank Group — 왜 존재하는가?</a>
-  <a class="page-toc-link" href="#dram-타이밍-파라미터-핵심">DRAM 타이밍 파라미터 핵심</a>
-  <a class="page-toc-link" href="#lpddr5-특징-모바일soc">LPDDR5 특징 (모바일/SoC)</a>
-  <a class="page-toc-link" href="#dbi-data-bus-inversion-전력-절감-기법">DBI (Data Bus Inversion) — 전력 절감 기법</a>
-  <a class="page-toc-link" href="#mode-register-dram-설정의-핵심">Mode Register — DRAM 설정의 핵심</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-row-conflict-한-번을-사이클-단위로-따라가기">3. 작은 예 — Row Conflict 사이클 추적</a>
+  <a class="page-toc-link" href="#4-일반화-주소-계층-명령-시퀀스-세대간-진화">4. 일반화 — 주소 계층 + 명령 + 세대</a>
+  <a class="page-toc-link" href="#5-디테일-셀-prefetch-bank-group-mode-register-confluence">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Diagram** DRAM cell의 capacitor 동작 + Bank/Row/Column 계층 + sense amplifier 흐름을 설명할 수 있다.
-    - **Trace** ACT → RD/WR → PRE → REF의 전체 명령 시퀀스와 각 단계의 timing parameter를 그릴 수 있다.
-    - **Distinguish** DDR4와 DDR5의 핵심 차이(2-channel split, on-die ECC, refresh 모드)를 식별할 수 있다.
+    - **Diagram** DRAM cell의 capacitor 동작 + Bank/Row/Column 계층 + sense amplifier 흐름을 그릴 수 있다.
+    - **Trace** ACT → RD/WR → PRE → REF의 전체 명령 시퀀스와 각 단계의 timing parameter를 추적할 수 있다.
+    - **Distinguish** DDR4와 DDR5의 핵심 차이(2-channel split, on-die ECC, refresh 모드, prefetch)를 식별할 수 있다.
     - **Apply** Burst length, prefetch, bank group 개념을 throughput 계산에 적용할 수 있다.
+    - **Justify** Open-page 와 Close-page 정책의 trade-off 를 workload 패턴으로 설명할 수 있다.
 
 !!! info "사전 지식"
     - 디지털 회로 기본 (synchronous logic, FIFO)
     - 캐시 / 메모리 계층 일반 지식
-
-## 왜 이 모듈이 중요한가
-
-**DRAM은 시스템 성능의 가장 큰 병목**이고 가장 오해 많은 영역. Cell이 capacitor라는 것, refresh 필요한 이유, ACT-RD-PRE의 timing 의존성을 이해하지 못하면 Memory Controller도 PHY도 검증 못 합니다. **DDR4 → DDR5 전환은 서버/HPC에 가장 큰 변화** — 2-channel split이 BW 시장을 재정의했습니다.
-
-!!! tip "💡 이해를 위한 비유"
-    **DRAM Bank** ≈ **은행 창구 (한 번에 한 손님만)**
-
-    한 bank 에 access 중이면 다른 access 는 대기. 여러 bank 가 있으면 동시에 진행 가능 → 병렬성. row buffer 는 창구 책상 위에 펼쳐 둔 서류.
+    - PVT (Process / Voltage / Temperature) 변동 개념
 
 ---
 
-## 핵심 개념
-**DRAM = 커패시터에 전하를 저장하여 1비트를 기억하는 휘발성 메모리. 구조적으로 Bank → Row → Column 계층으로 접근하며, 주기적 Refresh가 필수. DDR은 클럭의 상승/하강 엣지 모두에서 데이터를 전송하여 대역폭을 2배로 활용.**
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-!!! danger "❓ 흔한 오해"
-    **오해**: DDR = Double Data Rate 만 의미
+이후 모든 DRAM/DDR 모듈은 한 가정에서 출발합니다 — **"DRAM cell 은 capacitor 이므로 데이터가 시간에 따라 누설되고, 외부에서 한 번 읽으면 파괴되며, 따라서 모든 access 는 row open → column access → row close 라는 stateful 시퀀스를 거친다"**. Memory Controller (MC) 가 왜 그렇게 복잡한 스케줄러를 갖는지, PHY 가 왜 nano-second margin 을 보정해야 하는지, DV TB 가 왜 timing SVA 수십 개를 동시에 보는지 — 전부 이 한 가정의 파생입니다.
 
-    **실제**: DDR 의 D 는 Double-rate 이지만, 세대별로 prefetch (DDR3 8n, DDR4 8n, DDR5 16n), bank group, on-die ECC 등 큰 변화. 이름은 같아도 다른 동물.
+이 모듈을 건너뛰면 이후의 모든 timing parameter / refresh 정책 / training 시퀀스 결정이 "그냥 외워야 하는 숫자" 로 보입니다. 반대로 capacitor → destructive read → restore → refresh 의 인과를 정확히 잡고 나면, tRCD / tRP / tRAS / tFAW 가 만나는 모든 디테일에서 _이유_ 가 보입니다.
 
-    **왜 헷갈리는가**: 약자 의미만 보고 "세대 = 속도만 ↑" 로 단순화. 실제로는 아키텍처 진화.
 ---
 
-## DRAM 셀 동작
+## 2. Intuition — 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **DRAM Bank** ≈ **은행 창구 (한 번에 한 손님만)**.<br>
+    한 bank 에 access 중이면 다른 access 는 대기. 여러 bank 가 있으면 동시에 진행 가능 → **Bank-level parallelism**. **Row buffer** 는 창구 책상 위에 펼쳐 둔 서류 — 펴는 데(`ACT`) 시간이 걸리고, 다른 서류를 보려면 먼저 치워야(`PRE`) 한다. 책상 위 서류와 같은 손님(같은 row)이 또 오면 즉시 응대(Row Hit) — 가장 빠름.
+
+### 한 장 그림 — DRAM access 의 세 가지 결말
+
+```
+                ┌──────────────────────────────────────────────────┐
+                │              DRAM Bank N                         │
+                │                                                  │
+                │   Row Buffer (= 책상 위에 편 서류)               │
+                │   ┌────────────────────────────────────┐         │
+                │   │  현재 open 된 Row  (예: Row 5)     │         │
+                │   └────────────────────────────────────┘         │
+                │                                                  │
+   요청 도착 ──▶│   요청한 row 가 …                                │
+   (Bank N,    │                                                  │
+    Row R)     │   ① R == open Row    →  Row HIT                  │
+                │       └─ tCL 만 기다리면 데이터 나감 ★ 가장 빠름 │
+                │                                                  │
+                │   ② open Row 없음    →  Row MISS                 │
+                │       └─ ACT(tRCD) → RD(tCL)                     │
+                │                                                  │
+                │   ③ 다른 R 이 open  →  Row CONFLICT              │
+                │       └─ PRE(tRP) → ACT(tRCD) → RD(tCL) ★ 가장 느림│
+                └──────────────────────────────────────────────────┘
+```
+
+### 왜 이렇게 설계됐는가 — Design rationale
+
+DRAM cell 은 1T1C — 트랜지스터 하나 + capacitor 하나. 이 단순함이 면적당 bit 밀도를 SRAM 의 ~10× 로 만들어 GB 급 메모리를 가능케 했습니다. 그러나 capacitor 는 **누설** 됩니다. 그래서 (1) **주기적 refresh** 가 필수이고, (2) read 가 capacitor 전하를 sense amplifier 로 끌어내는 순간 **파괴(destructive)** 되므로 즉시 재기록(restore) 이 일어나야 합니다.
+
+이 두 제약에서 **"row 단위로 한 번에 sense → 같은 row 안에서 column 만 옮기며 access → 다른 row 가 필요하면 닫고(precharge) 다시 연다"** 는 stateful access 패턴이 도출됩니다. timing parameter (tRCD/tRP/tRAS/tRFC/tFAW) 는 모두 이 capacitor 물리에서 나오는 최소 보장 시간이고, MC 의 모든 최적화는 결국 "Row Hit 비율을 높이고, capacitor 충전 시간 동안 다른 bank 를 일하게 하는" 두 축으로 수렴합니다.
+
+---
+
+## 3. 작은 예 — Row Conflict 한 번을 사이클 단위로 따라가기
+
+가장 단순한 시나리오. 같은 Bank 에 **현재 Row 5 가 열려 있는 상태** 에서, MC 가 **Row 9 의 Column 0** 을 Read 하려 합니다 (DDR4-3200 기준).
+
+```
+        T0 ─── T22 ─── T44 ─── T66 ── T88
+   CMD: PRE     ACT     RD      ─       (data out @ T66)
+        │       │       │       │
+        ▼       ▼       ▼       ▼
+   Bank │←tRP=22→│←tRCD=22→│←tCL=22→│
+   상태 │ closing │ Row 9   │ R col=0│  → 데이터 → DQ
+        │         │ 로딩    │ access │
+        │         │ (sense) │        │
+        ▼         ▼         ▼        ▼
+   Row5 (open) → Idle → Row9 row-buf → 데이터 transfer
+   ─ 누가 ─    ─ 무엇을 ─                      ─ 왜 ─
+```
+
+| Step | 사이클 | 누가 | 무엇을 | 왜 |
+|---|---|---|---|---|
+| ① | `T0`        | MC | `PRE` 명령 (Bank N) 발행 | 현재 열린 Row 5 의 sense amp 데이터를 cell 에 restore + bit-line precharge |
+| ② | `T0..T22`   | DRAM | sense amp → cell write-back, bit-line 을 VDD/2 로 |  capacitor 가 "써지고" 다음 sense 를 위한 중립 전압 준비 — `tRP` 동안 다른 명령 금지 |
+| ③ | `T22`       | MC | `ACT` (Bank N, Row 9) 발행 | Row 9 의 word-line 활성화 → cell 의 작은 전하가 bit-line 으로 |
+| ④ | `T22..T44`  | DRAM | sense amplifier 가 mV-level 차이를 0/1 로 증폭 | sense 결과가 Row Buffer 에 자리잡기까지 — `tRCD` |
+| ⑤ | `T44`       | MC | `RD` (col=0, BL=8) 발행 | Row Buffer 에서 Column 선택 → DQ 로 보낼 준비 |
+| ⑥ | `T44..T66`  | DRAM | column mux → I/O gating → DQ pad | column 선택부터 DQ 가 valid 까지 — `tCL` (CAS Latency) |
+| ⑦ | `T66..T70`  | DQ pin | 8-beat (BL8) burst 출력 | prefetch 8n 이라 1번 column access 로 8 비트가 나옴 — DDR 클럭 4 사이클 |
+| ⑧ | `T22..T74`  | DRAM | Row 9 는 `tRAS` (≥52 cycle) 동안 open 유지 | Row 가 stable 해질 때까지 PRE 금지 |
+
+```c
+// MC scheduler 의 의사 코드 — 이 1 사이클이 어떻게 만들어지는가
+if (req.bank.open_row != req.row) {
+    if (req.bank.open_row != INVALID) {
+        issue(PRE, req.bank);                   // ① Row Conflict
+        wait(tRP);                               // ②
+    }
+    issue(ACT, req.bank, req.row);              // ③ Row open
+    wait(tRCD);                                  // ④
+}
+issue(RD, req.bank, req.col);                   // ⑤ Column access
+wait(tCL);                                       // ⑥
+return BL_data;                                  // ⑦
+// (tRAS 보장은 PRE 발행 시점 검사로 처리)
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) 한 read 는 단일 cycle 이 아니라 PRE→ACT→RD 의 직렬 sequence 다.** Row Conflict 라면 `tRP+tRCD+tCL` (DDR4-3200 기준 66 cycle ≈ 41 ns) 가 _그 한 read_ 에 직렬로 누적됨. 이게 MC 가 Row Hit 를 그토록 추구하는 이유.<br>
+    **(2) 같은 bank 에서는 직렬, 다른 bank 끼리는 병렬.** Row Conflict 동안 Bank N 은 묶여 있지만 Bank N+1 은 완전히 독립적으로 ACT/RD 를 진행 가능 — 이것이 **Bank-level Parallelism** 이고 MC scheduler 가 다음 모듈에서 본격적으로 활용할 자원입니다.
+
+---
+
+## 4. 일반화 — 주소 계층, 명령 시퀀스, 세대간 진화
+
+### 4.1 DRAM 주소 계층
+
+```
+DRAM 주소 계층:
+
+  Rank → Bank Group → Bank → Row → Column
+
+  +-----+  +-----+  +-----+     DDR4 예시 (8Gb):
+  |Rank0|  |Rank1|  |     |     - 2 Rank
+  +--+--+  +--+--+  |     |     - 4 Bank Group
+     |        |     |     |     - 4 Bank/Group (총 16 Bank)
+  +--+--------+-----+-----+     - 65536 Row/Bank
+  | BG0 | BG1 | BG2 | BG3 |     - 1024 Column/Row
+  | B0  | B0  | B0  | B0  |
+  | B1  | B1  | B1  | B1  |
+  +-----+-----+-----+-----+
+
+접근 시퀀스:
+  1. ACTIVATE (ACT): Row를 Row Buffer에 로드 (Row Open)
+  2. READ/WRITE (RD/WR): Column 주소로 데이터 접근
+  3. PRECHARGE (PRE): Row Buffer 닫기 (다른 Row 접근 전)
+```
+
+### 4.2 Row Hit / Miss / Conflict — 일반화
+
+§3 의 Row Conflict 는 세 가능한 결말 중 하나입니다.
+
+```
+Row Hit:    같은 Row가 이미 열려 있음 → ACT 불필요 → tCL 만   ← 가장 빠름
+Row Miss:   Row Buffer 비어있음        → ACT 필요   → tRCD + tCL
+Row Conflict: 다른 Row가 열려 있음     → PRE + ACT  → tRP + tRCD + tCL  ← 가장 느림
+
+→ Memory Controller의 핵심 목표: Row Hit 비율 극대화
+→ 이를 위해 Module 02 의 FR-FCFS, Open/Close page, Address Mapping 이 등장
+```
+
+### 4.3 명령 FSM — Bank 별 상태 머신
+
+```
+                    ┌─────────────┐
+                    │   POWER-UP  │
+                    └──────┬──────┘
+                           │ MRS / ZQ / Init
+                           ▼
+                    ┌─────────────┐
+            ┌──────▶│    IDLE     │◀──────── PRE (tRP)
+            │       │ (precharged)│
+            │       └──────┬──────┘
+            │              │ ACT (tRCD)
+            │              ▼
+            │       ┌─────────────┐
+            │       │    ACTIVE   │
+       PRE  │       │ (row open)  │
+       (tRAS│       └──────┬──────┘
+        만족│              │ RD / WR (tCL / tCWL)
+         후)│              │ (반복 가능, tCCD 간격)
+            └──────────────┘
+                           │
+                           │ REF (tRFC) → 모든 bank IDLE 로
+                           ▼
+```
+
+### 4.4 DDR4 vs DDR5 — 무엇이 바뀌었나
+
+| 측면 | DDR4 (`3200`) | DDR5 (`4800`) | 핵심 변경 동기 |
+|------|------|------|------|
+| 채널 | 1 × 64-bit | **2 × 32-bit** sub-channel | 명령 병렬성 2× |
+| Bank Group | 4 | **8** | tCCD_S 활용 기회 증가 |
+| Bank/BG | 4 | 4 (총 32 Bank) | Bank-level parallelism 2× |
+| Prefetch | 8n | **16n** | I/O 속도 ↑ 흡수 |
+| Burst Length | BL8 | **BL16** (BC8 옵션) | prefetch 비례 |
+| ECC | 외부 (72-bit DIMM) | **On-die ECC** 내장 | 셀 미세화로 1-bit 에러 ↑ |
+| Refresh | All-bank | **Same-bank Refresh** 옵션 | refresh-induced stall ↓ |
+| CMD bus | RAS#/CAS#/WE# 개별 | **CA[13:0]** 멀티플렉싱 | 핀 수 절감, 확장성 |
+| 전압 (VDD) | 1.2V | 1.1V | 전력 ↓ |
+
+### 4.5 Prefetch + Bank Group 의 결합 — 대역폭의 두 축
+
+```
+              내부 cell 어레이 (느림, ~수백 MHz)
+                       │
+                       │  ① Prefetch n bit (BL = n)
+                       ▼
+              Row Buffer / I/O sense
+                       │
+                       │  ② Bank Group 별 독립 I/O
+                       │     같은 BG : tCCD_L (느림)
+                       │     다른 BG : tCCD_S (빠름)
+                       ▼
+              DQ pin (빠름, 수 GHz)
+
+  → 한 번의 column access 가 BL beat 의 데이터 전송으로 변환되고,
+  → MC scheduler 가 연속 access 를 다른 BG 로 분산하면 tCCD_S 로 이어붙임.
+  → 두 layer 의 곱 = peak bandwidth 효율.
+```
+
+---
+
+## 5. 디테일 — 셀, Prefetch, Bank Group, Mode Register, Confluence
+
+### 5.1 DRAM 셀 동작
 
 ```
 1T1C (1 Transistor, 1 Capacitor):
@@ -96,48 +270,7 @@
     DDR5: 32ms 주기 (온도에 따라 변동)
 ```
 
----
-
-## DRAM 주소 체계
-
-```
-DRAM 주소 계층:
-
-  Rank → Bank Group → Bank → Row → Column
-
-  +-----+  +-----+  +-----+     DDR4 예시 (8Gb):
-  |Rank0|  |Rank1|  |     |     - 2 Rank
-  +--+--+  +--+--+  |     |     - 4 Bank Group
-     |        |      |     |     - 4 Bank/Group (총 16 Bank)
-  +--+--------+------+-----+    - 65536 Row/Bank
-  | BG0 | BG1 | BG2 | BG3 |    - 1024 Column/Row
-  | B0  | B0  | B0  | B0  |
-  | B1  | B1  | B1  | B1  |
-  +-----+-----+-----+-----+
-
-접근 시퀀스:
-  1. ACTIVATE (ACT): Row를 Row Buffer에 로드 (Row Open)
-  2. READ/WRITE (RD/WR): Column 주소로 데이터 접근
-  3. PRECHARGE (PRE): Row Buffer 닫기 (다른 Row 접근 전)
-```
-
-### Row Hit / Miss / Conflict
-
-```
-Row Hit:    같은 Row가 이미 열려 있음 → ACT 불필요 → 빠름
-Row Miss:   Row Buffer 비어있음 → ACT 필요 → 중간
-Row Conflict: 다른 Row가 열려 있음 → PRE + ACT 필요 → 느림
-
-  Row Hit:      RD (tCL만)           ← 가장 빠름
-  Row Miss:     ACT + RD (tRCD + tCL)
-  Row Conflict: PRE + ACT + RD (tRP + tRCD + tCL) ← 가장 느림
-
-→ Memory Controller의 핵심 목표: Row Hit 비율 극대화
-```
-
----
-
-## DDR 세대별 비교
+### 5.2 DDR 세대별 비교 — full table
 
 | 항목 | DDR4 | DDR5 | LPDDR5 |
 |------|------|------|--------|
@@ -153,7 +286,7 @@ Row Conflict: 다른 Row가 열려 있음 → PRE + ACT 필요 → 느림
 | 전력 관리 | CKE | CKE + **LPDDR 스타일 PD** | 다양한 저전력 모드 |
 | 용도 | 서버, PC | 차세대 서버/PC | 모바일, 차량 |
 
-### DDR5의 핵심 변경점
+### 5.3 DDR5 의 핵심 변경점 — 상세
 
 ```
 1. 듀얼 Sub-Channel (2 × 32-bit)
@@ -191,9 +324,7 @@ Row Conflict: 다른 Row가 열려 있음 → PRE + ACT 필요 → 느림
    DDR5: CA[13:0] (멀티플렉싱) → 핀 수 절감, 미래 확장 용이
 ```
 
----
-
-## Prefetch 아키텍처 — DDR 대역폭의 핵심
+### 5.4 Prefetch 아키텍처 — DDR 대역폭의 핵심
 
 ```
 Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
@@ -228,9 +359,7 @@ Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
      → DDR5는 BL16 외에 BL8도 지원 (Burst Chop)
 ```
 
----
-
-## Bank Group — 왜 존재하는가?
+### 5.5 Bank Group — 왜 존재하는가?
 
 ```
 핵심 질문: Bank만 있으면 되지, 왜 Bank Group이라는 계층이 필요한가?
@@ -255,9 +384,7 @@ Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
     → 이것이 "Bank Group Interleaving"의 핵심 원리
 ```
 
----
-
-## DRAM 타이밍 파라미터 핵심
+### 5.6 DRAM 타이밍 파라미터 핵심
 
 | 파라미터 | 의미 | DDR4 (3200) | DDR5 (4800) |
 |---------|------|------------|------------|
@@ -274,9 +401,7 @@ Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
 
 **면접 포인트**: tCL, tRCD, tRP가 "CAS Latency 22-22-22"처럼 스펙에 표기되는 세 수치이다. 이 값이 클수록 느리지만, 클럭이 빠르면 절대 시간(ns)은 유사하다.
 
----
-
-## LPDDR5 특징 (모바일/SoC)
+### 5.7 LPDDR5 특징 (모바일/SoC)
 
 ```
 LPDDR5 vs DDR5 차이:
@@ -292,7 +417,7 @@ LPDDR5 vs DDR5 차이:
   | 용도     | 서버, PC   | 모바일 SoC      | 플래그십 모바일 |
 ```
 
-### LPDDR5 고유 핵심 기능
+#### LPDDR5 고유 핵심 기능
 
 ```
 1. WCK (Write Clock) — LPDDR5의 가장 큰 구조적 차이
@@ -338,7 +463,7 @@ LPDDR5 vs DDR5 차이:
    - Per-bank Refresh: Bank 단위 Refresh (DDR5의 Same-bank과 유사)
 ```
 
-### Samsung SoC에서의 LPDDR5
+#### Samsung SoC 에서의 LPDDR5
 
 ```
 Samsung SoC에서의 LPDDR5:
@@ -355,9 +480,7 @@ Samsung SoC에서의 LPDDR5:
     - DVFSC 전환 시 재Training 또는 저장된 값 복원 필요
 ```
 
----
-
-## DBI (Data Bus Inversion) — 전력 절감 기법
+### 5.8 DBI (Data Bus Inversion) — 전력 절감 기법
 
 ```
 문제: 고속 데이터 전송 시 DQ 핀의 전환(0→1, 1→0)이 많으면
@@ -383,9 +506,7 @@ DBI 원리:
 핵심: DBI는 "공짜" 전력 절감 — 추가 핀 1개(DBI#)로 ~15% 전력 감소
 ```
 
----
-
-## Mode Register — DRAM 설정의 핵심
+### 5.9 Mode Register — DRAM 설정의 핵심
 
 ```
 Mode Register = DRAM 디바이스의 동작 모드를 설정하는 내부 레지스터
@@ -421,9 +542,7 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
   - "Training 결과(VREF 값 등)도 MRS로 DRAM에 반영"
 ```
 
----
-
-## Q&A
+### 5.10 Q&A — 자주 묻는 질문
 
 **Q: DDR5가 DDR4보다 빠른 핵심 이유는?**
 > "세 가지: (1) 듀얼 Sub-Channel — 64-bit 단일 채널 대신 2×32-bit 독립 채널로 명령 병렬성 향상. (2) Bank Group 증가(4→8) — 인터리빙 효율이 높아져 대역폭 활용도 증가. (3) Prefetch 16n — Burst Length가 8→16으로 증가하여 한 번의 접근으로 더 많은 데이터 전송. 다만 CAS Latency(절대 ns)는 유사하므로 랜덤 접근 지연은 크게 개선되지 않는다."
@@ -444,26 +563,70 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
 > "LPDDR5는 명령 버스(CK)와 데이터 버스(WCK)의 클럭을 분리했다. 명령은 상대적으로 저속으로 충분하므로 CK는 낮은 주파수, WCK는 CK의 2배 또는 4배 주파수로 데이터만 고속 전송한다. 이를 통해 불필요한 고속 토글을 줄여 전력을 절감하면서도 데이터 대역폭을 확보한다. DVFSC와 결합하면 부하에 따라 WCK 주파수를 동적으로 변경하여 추가 절전이 가능하다."
 
 ---
+
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+!!! danger "❓ 오해 1 — 'DDR = 그냥 빠른 SDR. 세대 = 속도만 ↑'"
+    **실제**: DDR 의 D 는 Double-rate (rising + falling edge 양쪽 사용) 이지만, 세대 별 변화는 prefetch (DDR3 8n / DDR4 8n / DDR5 16n), bank group 도입, on-die ECC, sub-channel split 등 _아키텍처_ 변화입니다. 같은 이름의 다른 동물.<br>
+    **왜 헷갈리는가**: 약자 의미만 보고 "double rate" 하나로 단순화하기 쉬움.
+
+!!! danger "❓ 오해 2 — 'Open-page 정책이 항상 좋다'"
+    **실제**: Open-page 는 row hit 시 빠르지만 row conflict 시 `tRP+tRCD` 가 직렬로 들어가 페널티가 큽니다. workload 가 random 이거나 working set 이 row buffer 보다 훨씬 크면 close-page 가 더 좋을 수 있습니다.<br>
+    **왜 헷갈리는가**: "row 열어 두면 다음에 빠름" 만 직관에 강하게 남고, conflict 페널티는 평균 BW 통계에 가려짐.
+
+!!! danger "❓ 오해 3 — 'Refresh 는 그냥 주기적인 housekeeping. 큰 영향 없음'"
+    **실제**: tREFI 마다 tRFC (DDR4 ~350 ns) 동안 _전체_ bank 가 묶이는 게 DDR4 의 기본 동작. 이는 BW 의 ~5% + worst-case latency tail 의 주된 원인이며, 그래서 DDR5 가 same-bank refresh 를 도입했습니다.
+
+!!! danger "❓ 오해 4 — 'On-die ECC 가 있으니 외부 ECC 는 불필요'"
+    **실제**: DDR5 의 on-die ECC 는 _128-bit word 안에서 1-bit_ 만 수정합니다. multi-bit 에러나 칩 단위 fail (chipkill) 은 여전히 외부 SECDED 가 필요하고, 데이터센터/서버는 둘 다 사용합니다.
+
+!!! danger "❓ 오해 5 — 'tCL 이 작은 DRAM 이 무조건 빠르다'"
+    **실제**: tCL 은 _cycle_ 단위입니다. 절대 시간 = `tCL × tCK`. 빠른 클럭의 DDR5 는 tCL=34 cycle 이지만 ns 로 환산하면 DDR4 tCL=22 (3200 MT/s) 와 비슷합니다. 비교는 항상 절대 ns 로.
+
+### DV 디버그 체크리스트 (DRAM 셀/타이밍 레이어에서 자주 보는 실패)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Random read 시 silent data corruption (특정 row 만) | Refresh 누락 / tREFI 위반 / Row Hammer | `tREFI` SVA, deferred refresh 카운터 (≤8), refresh 발행 timestamp |
+| Throughput 정상 같다가 특정 패턴에서 급락 | tFAW window 4-ACT 한도 초과 직전 stall | sliding tFAW window 안 ACT 카운트, bank 분포 |
+| Read 데이터 왔는데 값이 깨짐 (1-bit 패턴) | DDR5 on-die ECC 미커버 비트 | 같은 word 안 1-bit 인지, ECC syndrome 로그 |
+| 같은 row 재접근인데 RD latency 가 spec 보다 큼 | Open Row 가 다른 conflict 로 PRE 됨 (open-page 정책) | bank state tracker, open-row 변경 timestamp |
+| MRS 후 ACT/RD 동작 이상 | tMRD/tMOD 경과 전 명령 발행 | MRS 직후 tMRD 사이클 SVA |
+| LPDDR5 만 fail (DDR5 OK) | WCK2CK alignment / DVFSC 전환 시 retraining 누락 | WCK phase, DVFSC FSM 상태 |
+| BL16 인데 BL8 만 받음 | Burst Chop (BC8) 의도/미의도 | MR0 BL field, RD with BC8 modifier |
+| 특정 bank group 에서만 throughput 저하 | tCCD_L vs tCCD_S 매핑 misalignment | address mapper 의 bank-group bit, scheduler 내 BG 추적 |
+
 !!! warning "실무 주의점 — tREFI 초과 시 Row Hammer 취약점 노출"
     **현상**: Refresh 간격(tREFI = 7.8μs @ 85°C 이하) 내에 같은 Row를 반복 ACT/PRE하면 인접 Row의 전하가 누설되어 비트 플립 발생. 보안 공격 및 데이터 손상으로 이어짐.
-    
+
     **원인**: MC가 트래픽 집중 구간에서 Refresh를 지연시키거나, Deferred Refresh 횟수가 JEDEC 허용 한도(최대 8개)를 초과할 때 발생. DDR5의 RFM(Refresh Management) 미구현 시 Row Hammer 방어가 무력화됨.
-    
+
     **점검 포인트**: Timing SVA에서 `tREFI` 위반 assertion 동작 여부 확인. 로그에서 Deferred Refresh 누적 카운터가 8을 초과하는 시점 탐색. DDR5 시뮬 모델에서 `RAAIMT` 레지스터(Row Activation Threshold) 설정값 검증.
 
-## 핵심 정리
+---
 
-- **Cell = capacitor + access transistor**: 전하가 누설되므로 주기적 refresh 필수.
-- **계층 구조**: Bank Group → Bank → Row → Column. Bank는 동시에 여러 개 active 가능 → parallelism의 원천.
-- **명령 시퀀스**: ACT(row open) → RD/WR (col access, 가능한 여러 번) → PRE(close) → REF(주기적). 각 단계 timing 종속.
-- **Timing parameter 핵심**: tRCD(ACT→RD), tCAS/CL(RD→data), tRP(PRE→ACT), tRAS(ACT→PRE 최소), tRC(ACT→ACT 같은 row), tREFI(refresh 주기).
-- **DDR4 → DDR5 변화**: 2-channel split (32-bit channel 2개로 분리), on-die ECC, BG 4→8 (interleaving), VDD 1.2V→1.1V.
-- **LPDDR5 WCK**: 명령(CK)과 데이터(WCK) 클럭 분리로 불필요한 고속 토글 회피 → 전력 절감.
+## 7. 핵심 정리 (Key Takeaways)
 
-## 다음 단계
+- **Cell = capacitor + access transistor** — 누설되므로 refresh 필수, 읽으면 파괴되므로 restore 필수.
+- **계층 구조**: Rank → Bank Group → Bank → Row → Column. Bank 는 동시에 여러 개 active 가능 → parallelism 의 원천.
+- **명령 시퀀스**: ACT(row open) → RD/WR (col access) → PRE(close) → REF(주기). 각 단계 timing 종속 (`tRCD`, `tCL`, `tRP`, `tRAS`, `tRC`, `tRFC`, `tREFI`).
+- **Row Hit / Miss / Conflict** = MC 의 가장 큰 성능 lever — Hit 비율 ≈ effective BW.
+- **DDR4 → DDR5**: 2-channel split + BG 4→8 + Prefetch 8n→16n + On-die ECC + Same-Bank REF + CA 멀티플렉싱.
 
-- 📝 [**Module 01 퀴즈**](quiz/01_dram_fundamentals_ddr_quiz.md)
-- ➡️ [**Module 02 — Memory Controller**](02_memory_controller.md)
+!!! warning "실무 주의점"
+    - "DDR 빠르다" 는 **prefetch + DDR + bank parallelism** 의 곱. 하나라도 빠지면 nominal BW 미달.
+    - **Open-page 가 항상 좋지 않다** — workload 의 row reuse rate 가 낮으면 close-page 가 더 좋을 수 있음.
+    - **On-die ECC ≠ 시스템 ECC** — 1-bit / 128-bit 한정. multi-bit 보호는 외부 SECDED 가 책임.
+
+---
+
+## 다음 모듈
+
+→ [Module 02 — Memory Controller](02_memory_controller.md): 이 모듈의 ACT/RD/WR/PRE/REF 명령들이 _어떻게_ 스케줄되는가. FR-FCFS, Bank Parallelism, Write Batching, QoS, Refresh 최적화.
+
+[퀴즈 풀어보기 →](quiz/01_dram_fundamentals_ddr_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../">

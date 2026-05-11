@@ -15,54 +15,245 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#tb-top-환경-설계-이력서-직결">TB Top 환경 설계 (이력서 직결)</a>
-  <a class="page-toc-link" href="#ai-기반-cctv-자동화-파이프라인">AI 기반 CCTV 자동화 파이프라인</a>
-  <a class="page-toc-link" href="#성과-정량적-데이터">성과 — 정량적 데이터</a>
-  <a class="page-toc-link" href="#면접-종합-qa">면접 종합 Q&A</a>
-  <a class="page-toc-link" href="#코드-예시-구체적-json-config">코드 예시: 구체적 JSON Config</a>
-  <a class="page-toc-link" href="#코드-예시-config-기반-uvm-env-자동-구성">코드 예시: Config 기반 UVM Env 자동 구성</a>
-  <a class="page-toc-link" href="#ai-파이프라인-상세-실무-구현">AI 파이프라인 상세: 실무 구현</a>
-  <a class="page-toc-link" href="#gap-report-v-plan-반영-실무-워크플로우">Gap Report → V-Plan 반영 실무 워크플로우</a>
-  <a class="page-toc-link" href="#tb-top-release-프로세스-상세">TB Top Release 프로세스 상세</a>
-  <a class="page-toc-link" href="#연습-문제">연습 문제</a>
-  <a class="page-toc-link" href="#퀴즈">퀴즈</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-이-모듈이-왜-필요한가">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-재사용-가능한-도시-검사-장비-비유와-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-새-npu-ip-한-개를-tb-top-에-통합하는-1-cycle">3. 작은 예 — 새 NPU IP 통합 1 cycle</a>
+  <a class="page-toc-link" href="#4-일반화-tb-top-3-층-과-ai-3-phase">4. 일반화 — TB Top 3층 + AI 3 Phase</a>
+  <a class="page-toc-link" href="#5-디테일-config-uvm-env-ai-파이프라인-release">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Plan** TB Top 환경의 재사용성을 위한 layered architecture 설계
-    - **Apply** AI (LLM) 자동화로 sequence/coverage gap/디버그를 보조하는 workflow 도입
-    - **Identify** AI 자동화의 한계와 인간 검토 필수 영역 (silent corruption, race condition)
-    - **Implement** RAL + multi-clock domain + 다양한 IP를 통합한 TB Top 구조
+    - **Plan** TB Top 환경의 layered architecture 를 Config (JSON) → Generator → UVM Env 3 층으로 설계한다.
+    - **Apply** AI (LLM + RAG/FAISS) 자동화로 sequence / coverage gap / 디버그를 보조하는 workflow 를 도입한다.
+    - **Identify** AI 자동화의 한계와 인간 검토 필수 영역 (silent corruption, race condition, CDC, 비결정적 타이밍) 을 식별한다.
+    - **Implement** Config 기반 동적 Agent / Checker 인스턴스화와 RAL + multi-clock 도메인을 통합한 TB Top 구조를 구현한다.
+    - **Justify** 소규모 프로젝트의 Gap Rate 가 더 높은 이유를 정량 데이터 (Project A 2.75% vs Project B 4.99%) 로 설명한다.
 
 !!! info "사전 지식"
-    - [Module 01-02](01_soc_top_integration.md)
+    - [Module 01-02](01_soc_top_integration.md) — SoC Top 검증의 5 축 + CCTV 매트릭스
     - LLM 사용 경험 ([AI Engineering 코스](../../ai_engineering/) 참고)
 
-## 핵심 개념
-**TB Top = SoC 전체를 감싸는 검증 환경으로 여러 프로젝트에 재사용 가능하도록 설계. AI 자동화 = CCTV 매트릭스의 Gap을 자동 발견하고 테스트 생성까지 수행. 이 둘의 조합이 SoC 통합 검증의 효율을 극대화.**
-
-!!! tip "💡 이해를 위한 비유"
-    **TB Top** ≈ **재사용 가능한 도시 검사 장비 세트**
-
-    도시마다 건물 종류는 달라도 전기·수도·소방 검사 절차는 동일하다. TB Top은 프로젝트가 바뀌어도 공통 검사 장비(VIP, Scoreboard)는 그대로 쓰고, IP별 어댑터(Config JSON)만 교체하는 방식으로 검증 효율을 높인다.
-
-!!! danger "❓ 흔한 오해"
-    **오해**: AI가 커버리지 갭을 자동으로 발견하고 테스트까지 생성하면 DV 엔지니어 없이도 검증이 완료된다.
-
-    **실제**: AI는 구조 정보(IP-XACT, 스펙 문서)에서 패턴을 생성하지만, Clock Domain 경계·비결정적 타이밍·하드웨어 특화 제약은 DV 엔지니어가 검토하고 보완해야 한다.
-
-    **왜 헷갈리는가**: 소프트웨어 테스트 자동화와 달리 하드웨어 검증은 타이밍·물리적 제약이 존재하는데, AI 도구의 마케팅이 이 차이를 과소 설명하기 때문이다.
 ---
 
-## TB Top 환경 설계 (이력서 직결)
+## 1. Why care? — 이 모듈이 왜 필요한가
 
-### 재사용 가능한 TB Top 구조
+Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap 을 _누가 어떤 테스트로 메우는지_ 는 여전히 수동입니다. 새 IP 가 들어오거나 base address 가 바뀌면 TB 의 agent / checker / monitor / coverage 가 _전부 손으로 갱신_ 돼야 하고, 이 과정에서 "TB 작업 4 주 → 검증 시작" 의 병목이 다시 발생합니다.
+
+이 모듈을 건너뛰면 CCTV 가 그저 "한 번 만든 매트릭스" 로 끝나고, _다음 SoC_ 에서는 다시 처음부터 시작하게 됩니다. 반대로 **Config (JSON) 한 파일만 교체하면 모든 layer 가 자동 재구성** 되는 패턴을 잡으면, 8 개월에 한 번 짓던 TB 가 _1 주일_ 만에 release 가능한 상태가 됩니다 — 이게 DVCon 2025 가 정량적으로 보여준 가치입니다.
+
+---
+
+## 2. Intuition — 재사용 가능한 도시 검사 장비 비유와 한 장 그림
+
+!!! tip "💡 한 줄 비유"
+    **TB Top** = _도시별로 다시 만들지 않는_ 검사 장비 세트. 도로/전기/배수 검사 절차는 도시가 바뀌어도 동일 — _도시 지도 (Config)_ 만 갈아 끼우면 같은 장비가 다른 도시도 검사할 수 있어야 한다.<br>
+    **AI 자동화** = 도시 지도가 바뀔 때마다 _새 점검 항목 (Gap)_ 을 자동으로 찾아주는 보조원. 보조원이 만든 목록은 _경험 있는 검사관 (DV 엔지니어)_ 이 최종 리뷰.
+
+### 한 장 그림 — Config → Generator → UVM Env → AI Gap loop
+
+```
+   ┌──────────────┐                              ┌────────────────────────┐
+   │  Project A   │                              │     Project B          │
+   │  Config_A    │                              │     Config_B           │
+   │  (JSON)      │                              │     (JSON)             │
+   └──────┬───────┘                              └──────────┬─────────────┘
+          │  ip_list, mmap, irq_map, pd, reset_seq          │
+          │  + common_tasks per IP                          │
+          ▼                                                 ▼
+   ┌─────────────────────────────────────────────────────────────────────┐
+   │                  TB Top Generator (공통 코드)                         │
+   │     - parse Config                                                    │
+   │     - foreach ip in ip_list:                                         │
+   │         · spawn agent (APB/AXI 자동 판별)                              │
+   │         · register region in mmap_checker                            │
+   │         · bind interrupt monitor to irq_map                          │
+   │         · update CCTV ignore_bins from common_tasks                 │
+   │     - generate reset_seq SVA, power monitor, RAL                    │
+   └─────────────────────────────────────────┬─────────────────────────────┘
+                                             ▼
+   ┌─────────────────────────────────────────────────────────────────────┐
+   │           UVM Env (자동 구성됨, 프로젝트별로 동일 구조)                  │
+   │   Agents · Checkers · Monitors · CCTV Coverage · Scoreboard          │
+   └────────────────────────┬────────────────────────────────────────────┘
+                            │ regression 결과 + V-Plan
+                            ▼
+   ┌─────────────────────────────────────────────────────────────────────┐
+   │               AI Gap Detection Pipeline (DVCon 2025)                 │
+   │   IP-XACT(구조) + Spec(시맨틱) → IP profile → FAISS 유사 IP 검색      │
+   │   → LLM Gap detection → mrun 명령 + V-Plan bin 자동 생성              │
+   └─────────────────────────────────────────────────────────────────────┘
+```
+
+### 왜 이 구조인가 — Design rationale
+
+세 가지 변화가 동시에 흡수돼야 합니다.
+
+1. **프로젝트 간 IP 차이**: A 는 UFS / DMA / GPU, B 는 NPU / 영상 codec / DSP. _IP 종류_ 는 다르지만 _통합 패턴_ (bus, irq, pd) 은 동일.
+2. **프로젝트 내 변경**: 첫 release 후 base address 시프트, IRQ 재배치, 새 IP 추가 — TB 코드 손대기 시작하면 회귀 사이클이 깨짐.
+3. **새 IP 의 Common Task 누락**: V-Plan 갱신은 인간 작업. 자동화 없이는 96.30% Human Oversight (Module 02).
+
+이 셋의 교집합이 **Config 기반 layered TB + AI 보조 Gap detection** 이라는 패턴입니다.
+
+---
+
+## 3. 작은 예 — 새 NPU IP 한 개를 TB Top 에 통합하는 1 cycle
+
+가장 단순한 시나리오. 영상 SoC 에 _새로운 NPU (Neural Processing Unit) IP_ 가 추가됨 — AXI master, DMA, sysMMU 사용, irq_out, PD_AI 도메인. 이 한 IP 가 TB Top 에 _자동 통합되는_ 1 cycle 을 추적합니다.
+
+```
+   T0   ┌─ NPU IP 의 IP-XACT + Spec 도착 ─┐
+        │  · regs (control, status)         │
+        │  · AXI Master, irq_out             │
+        │  · "uses sysMMU for weights"       │  ← Spec 키워드
+        │  · "DVFS supported, 2 OPP"         │
+        └────────────┬───────────────────────┘
+                     │
+   T1   Config_v2.json 갱신:                       (1 line edit per field)
+        + ip_list[].name="NPU"
+        + base_addr="0x15000000", size="0x10000"
+        + bus_if="AXI", has_dma=true, has_sysmmu=true
+        + irq_spi=70, power_domain="PD_AI"
+        + common_tasks=[SYSMMU,SECURITY,DVFS,CLK_GATE,POWER,RESET,IRQ]
+                     │
+                     ▼
+   T2   TB Top Generator 재실행
+        - axi_agent::create("axi_NPU", env)              ← Agent 자동
+        - mmap_checker.add_region(NPU, 0x15000000, 64K)  ← MMAP 자동
+        - irq_monitor.bind(NPU, spi=70)                  ← IRQ 자동
+        - cctv_cov add row IP_NPU                        ← CCTV 자동
+                     │
+                     ▼
+   T3   AI Gap Pipeline:
+        IP profile(NPU) ───► FAISS 검색 ──► 유사 IP = GPU
+                                          │
+                                          ▼
+        LLM("NPU 에 sysMMU bypass→enable 검증 필요"
+             "GPU 와 동일 패턴으로 추론, priority=HIGH")
+                     │
+                     ▼
+   T4   Gap Report:
+        NPU × SYSMMU_bypass_enable = NOT_TESTED → mrun test --test_name npu_sysmmu_test
+        NPU × DVFS_transition       = NOT_TESTED → mrun test --test_name npu_dvfs_test
+                     │
+                     ▼
+   T5   엔지니어 리뷰 (15 분):
+        - NPU 는 weight 캐시 때문에 DVFS race 가 심함 → priority HIGH 확인
+        - sysMMU 는 GPU 와 동일 패턴 적용 가능 → True Positive
+                     │
+                     ▼
+   T6   mrun 실행 → PASS → cctv.record_result(IP_NPU, TASK_*, RESULT_PASS)
+        매트릭스 NPU row 의 cell 들이 ✅ 로 채워짐
+```
+
+### 단계별 추적
+
+| Step | 누가 | 무엇을 | 의미 |
+|---|---|---|---|
+| T0 | 설계팀 | IP-XACT + Spec 전달 | 구조 + 시맨틱의 이중 입력 |
+| T1 | TB Top Lead | `Config.json` 의 `ip_list` 에 NPU 추가 (단일 파일 edit) | 모든 layer 에 변경 전파 시작 |
+| T2 | Generator | Agent / MMAP / IRQ / CCTV 자동 갱신 | 사람 손 필요 0 |
+| T3 | AI 파이프라인 | IP profile 만들고 FAISS 로 유사 IP (GPU) 의 검증 이력 참조 | 새 IP 의 누락 가능성 _예측_ |
+| T4 | LLM | Gap 별 mrun 명령 + V-Plan bin 자동 생성 | 명령어까지 그대로 실행 가능 |
+| T5 | DV 엔지니어 | 15 분 리뷰: False Positive 걸러내고 priority 확인 | 인간 검토는 _quality gate_ 만 |
+| T6 | regression | 실행 → PASS → matrix 갱신 | 1 cycle 끝 |
+
+```python
+# T2 의 Generator 핵심 — 단순화
+def generate_tb_top(config):
+    env = UvmEnv("soc_top_env")
+    for ip in config["ip_list"]:
+        if ip["bus_if"] == "AXI":
+            env.add_agent(AxiAgent(name=f"axi_{ip['name']}", base=ip["base_addr"]))
+        env.mmap_checker.add_region(ip["name"], ip["base_addr"], ip["size"])
+        env.irq_monitor.bind(ip["name"], ip["irq_spi"])
+        env.cctv_cov.add_row(ip["name"], applicable_tasks=ip["common_tasks"])
+    env.generate_reset_seq_sva(config["reset_sequence"])
+    return env
+```
+
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) Config 한 파일이 모든 layer 의 single source of truth** — 사람이 두 곳을 동시에 갱신하다 어긋날 위험이 사라집니다. NPU base address 가 바뀌면 _Config 만_ 갱신, agent / mmap / SVA / RAL 이 자동 재생성.<br>
+    **(2) AI 는 _제안기_ 이지 _결정기_ 가 아니다** — T3 → T4 까지는 AI 가 list 를 만들지만, T5 의 _15 분 인간 리뷰_ 가 quality gate. False Positive 는 자연스러운 비용이고, _Recall (실제 Gap 의 발견율)_ 이 더 중요한 지표입니다.
+
+---
+
+## 4. 일반화 — TB Top 3 층 과 AI 3 Phase
+
+### 4.1 TB Top 의 3 층 구조
+
+```
+   ┌──── Layer 1 : Config (project-specific) ─────┐
+   │   JSON — ip_list, mmap, irq_map, pd, reset    │
+   │   common_tasks per IP                          │
+   └──────────────────────┬─────────────────────────┘
+                          │
+   ┌──── Layer 2 : Generator (project-agnostic) ──┐
+   │   parse Config → spawn Agents/Checkers/RAL    │
+   │   emit reset_seq SVA, power monitor           │
+   │   propagate config_db                          │
+   └──────────────────────┬─────────────────────────┘
+                          │
+   ┌──── Layer 3 : UVM Env (runtime) ──────────────┐
+   │   Agents · Common Task Checker Layer · CCTV    │
+   │   Scoreboard · Coverage · Virtual Sequencer    │
+   └────────────────────────────────────────────────┘
+
+   프로젝트 교체 ⇔ Layer 1 만 교체 (Layer 2, 3 는 불변)
+```
+
+### 4.2 AI 파이프라인의 3 Phase (DVCon 2025)
+
+```
+Phase 1: Hybrid Data Extraction
+  IP-XACT (구조)  ─┐
+  IP Spec (시맨틱) ─┴─► IP Profile { needs_sysmmu, needs_security, ... }
+
+Phase 2: FAISS Similarity Search
+  IP profile ──► embedding ──► nearest-neighbor 검색
+                              ──► 유사 IP 의 검증 이력 참조
+
+Phase 3: LLM Gap Detection + Test Generation
+  IP profile + 유사 IP 이력 + 기존 V-Plan
+                              ──► Gap list (priority 분류)
+                              ──► mrun 명령 + V-Plan bin 자동 생성
+```
+
+### 4.3 정량 결과 (DVCon 2025)
+
+| 지표 | Project A (대규모) | Project B (소규모) |
+|------|-------------------|-------------------|
+| SoC 내 IP 수 | ~200 | ~50 |
+| 발견 Gap 수 | **293** | **216** |
+| Gap Rate | **2.75%** | **4.99%** |
+| Human Oversight 비율 | - | **96.30%** |
+| New IP/Feature 누락 감소 | **~40%** | - |
+
+**인사이트**:
+
+```
+1. 소규모 프로젝트의 Gap Rate가 더 높음 (4.99% > 2.75%)
+   → 엔지니어 수가 적어 교차 검증 부족
+   → 자동화의 필요성이 오히려 소규모에서 더 큼
+
+2. Human Oversight가 96.30%
+   → 기술적 어려움이 아닌 "단순 누락"이 대부분
+   → 자동 체크리스트/매트릭스 관리로 해결 가능
+
+3. New IP/Feature 누락이 40% 감소
+   → 새 IP 추가 시 자동으로 Common Task 목록 갱신
+   → "이전 칩에서 했으니까" 가정을 제거
+```
+
+---
+
+## 5. 디테일 — Config, UVM Env, AI 파이프라인, Release
+
+### 5.1 TB Top 환경 설계 (이력서 직결)
 
 ```
 +------------------------------------------------------------------+
@@ -105,133 +296,7 @@
   → "8개월 동안 구축한 환경을 여러 SoC에 배포" (이력서)
 ```
 
-### TB Top Release 프로세스
-
-```
-1. SoC 설계 팀에서 RTL + IP-XACT 전달
-2. Config 생성 (IP 목록, 메모리 맵, 인터럽트 맵)
-3. TB Top Generator로 환경 자동 구성
-4. Sanity Test 실행 (부팅, 기본 R/W)
-5. Common Task 시나리오 배포
-6. 각 IP 담당 엔지니어에게 환경 + 시나리오 릴리즈
-
-→ TB Top Lead의 역할: 이 프로세스 전체를 설계하고 운영
-```
-
----
-
-## AI 기반 CCTV 자동화 파이프라인
-
-### 전체 흐름
-
-```
-+------------------------------------------------------------------+
-|  CCTV Automation Pipeline (DVCon 2025)                            |
-|                                                                   |
-|  입력:                                                            |
-|  +--------+  +---------+  +--------+                              |
-|  | IP-XACT|  | IP Spec |  | 기존   |                              |
-|  | (구조) |  | (시맨틱)|  | V-Plan |                              |
-|  +---+----+  +----+----+  +---+----+                              |
-|      |            |            |                                   |
-|      v            v            v                                   |
-|  +--------------------------------------------------+            |
-|  | Phase 1: IP 프로파일 생성                         |            |
-|  |  IP-XACT → 레지스터, 버스, 메모리맵               |            |
-|  |  IP Spec → 기능, 보안, 동작 모드                  |            |
-|  |  결합 → IP별 "필요 Common Task 목록"              |            |
-|  +--------------------------------------------------+            |
-|      |                                                            |
-|      v                                                            |
-|  +--------------------------------------------------+            |
-|  | Phase 2: Gap Detection                            |            |
-|  |  IP별 필요 Task 목록 vs 기존 V-Plan 항목          |            |
-|  |  차이 = Gap (누락)                                |            |
-|  |  FAISS 검색: 유사 IP의 검증 이력 참조             |            |
-|  +--------------------------------------------------+            |
-|      |                                                            |
-|      v                                                            |
-|  +--------------------------------------------------+            |
-|  | Phase 3: Test Generation                          |            |
-|  |  Gap별 테스트 명령어 자동 생성 (mrun 형식)        |            |
-|  |  V-Plan bin 자동 생성                             |            |
-|  |  우선순위 분류 (보안 > 기능 > 성능)               |            |
-|  +--------------------------------------------------+            |
-|      |                                                            |
-|      v                                                            |
-|  출력:                                                            |
-|  +--------------------------------------------------+            |
-|  | CCTV Gap Report                                   |            |
-|  |  - IP별 누락 항목 목록                            |            |
-|  |  - 테스트 실행 명령어                             |            |
-|  |  - V-Plan 추가 항목                               |            |
-|  |  - 우선순위별 정렬                                |            |
-|  +--------------------------------------------------+            |
-+------------------------------------------------------------------+
-```
-
-### Gap Report 예시
-
-```json
-{
-  "ip": "DMA_Controller",
-  "gap_task": "sysMMU",
-  "gap_detail": "sysMMU Bypass→Enable 전환 시 DMA 동작 검증 누락",
-  "source": "IP_Spec_Section_4.3 + IP-XACT_sysMMU_connection",
-  "priority": "HIGH",
-  "test_cmd": "mrun test --test_name dma_sysmmu_bypass_to_enable --sys_name soc_top",
-  "vplan_bin": "DMA.common_task.sysMMU.bypass_enable_transition"
-}
-```
-
----
-
-## 성과 — 정량적 데이터
-
-### DVCon 2025 결과
-
-| 지표 | Project A (대규모) | Project B (소규모) |
-|------|-------------------|-------------------|
-| SoC 내 IP 수 | ~200 | ~50 |
-| 발견 Gap 수 | **293** | **216** |
-| Gap Rate | **2.75%** | **4.99%** |
-| Human Oversight 비율 | - | **96.30%** |
-| New IP/Feature 누락 감소 | **~40%** | - |
-
-### 인사이트
-
-```
-1. 소규모 프로젝트의 Gap Rate가 더 높음 (4.99% > 2.75%)
-   → 엔지니어 수가 적어 교차 검증 부족
-   → 자동화의 필요성이 오히려 소규모에서 더 큼
-
-2. Human Oversight가 96.30%
-   → 기술적 어려움이 아닌 "단순 누락"이 대부분
-   → 자동 체크리스트/매트릭스 관리로 해결 가능
-
-3. New IP/Feature 누락이 40% 감소
-   → 새 IP 추가 시 자동으로 Common Task 목록 갱신
-   → "이전 칩에서 했으니까" 가정을 제거
-```
-
----
-
-## 면접 종합 Q&A
-
-**Q: TB Top 환경을 어떻게 설계했고, 어떤 가치가 있었나?**
-> "프로젝트 공통 프레임워크로 설계했다. IP 목록, 메모리 맵, 인터럽트 맵을 Config(JSON)으로 정의하면 TB Top Generator가 자동으로 환경을 구성한다. Common Task Checker Layer를 내장하여 Connectivity, Memory Map, Interrupt, Power 검증을 자동 수행한다. 이 환경을 여러 SoC 프로젝트에 배포하여 프로젝트마다 TB를 처음부터 만드는 비용을 제거했다."
-
-**Q: DVCon 논문의 CCTV 방법론을 설명하라.**
-> "SoC 내 모든 IP에 공통적으로 필요한 검증 항목(sysMMU, Security, DVFS 등)이 빠짐없이 수행되었는지 자동 추적하는 방법론이다. IP-XACT(구조) + IP Spec(시맨틱)의 Hybrid Extraction으로 IP별 필요 Common Task를 판단하고, 기존 V-Plan과 비교하여 Gap을 자동 발견한다. LLM이 테스트 명령어까지 생성한다. Project A에서 293개(2.75%), Project B에서 216개(4.99%)의 Gap을 발견했고, Human Oversight가 96.30%임을 정량적으로 증명했다."
-
-**Q: 소규모 프로젝트의 Gap Rate가 더 높은 이유는?**
-> "엔지니어 수가 적어 교차 검증이 부족하기 때문이다. 대규모에서는 IP별 전담 인력이 있어 상호 검토가 자연스럽지만, 소규모에서는 한 사람이 여러 IP를 담당하여 누락 가능성이 높아진다. 이것이 '자동화가 소규모에서 오히려 더 필요하다'는 논문의 핵심 인사이트이다."
-
----
-
-## 코드 예시: 구체적 JSON Config
-
-### SoC Top Config (프로젝트별 교체되는 유일한 파일)
+### 5.2 코드 예시 — 구체적 JSON Config
 
 ```json
 {
@@ -308,6 +373,7 @@
 ```
 
 **Config 설계 핵심**:
+
 | 필드 | 용도 |
 |------|------|
 | `ip_list[].common_tasks` | CCTV 매트릭스의 N/A 자동 결정 — 목록에 없는 Task = ignore_bins |
@@ -315,13 +381,9 @@
 | `power_domains[].depends_on` | Power 시퀀스 순서 자동 검증 |
 | `reset_sequence` | Reset 해제 순서 SVA 자동 생성 |
 
-→ **프로젝트 A → Config_A.json, 프로젝트 B → Config_B.json만 교체하면 동일 TB 프레임워크 재사용**
+→ **프로젝트 A → Config_A.json, 프로젝트 B → Config_B.json 만 교체하면 동일 TB 프레임워크 재사용**
 
----
-
-## 코드 예시: Config 기반 UVM Env 자동 구성
-
-### Config 파싱 및 동적 Checker 생성
+### 5.3 코드 예시 — Config 기반 UVM Env 자동 구성
 
 ```systemverilog
 class soc_top_env extends uvm_env;
@@ -420,11 +482,71 @@ JSON Config
 → 새 프로젝트: JSON만 교체하면 모든 Checker가 자동 재설정
 ```
 
----
+### 5.4 AI 기반 CCTV 자동화 파이프라인
 
-## AI 파이프라인 상세: 실무 구현
+```
++------------------------------------------------------------------+
+|  CCTV Automation Pipeline (DVCon 2025)                            |
+|                                                                   |
+|  입력:                                                            |
+|  +--------+  +---------+  +--------+                              |
+|  | IP-XACT|  | IP Spec |  | 기존   |                              |
+|  | (구조) |  | (시맨틱)|  | V-Plan |                              |
+|  +---+----+  +----+----+  +---+----+                              |
+|      |            |            |                                   |
+|      v            v            v                                   |
+|  +--------------------------------------------------+            |
+|  | Phase 1: IP 프로파일 생성                         |            |
+|  |  IP-XACT → 레지스터, 버스, 메모리맵               |            |
+|  |  IP Spec → 기능, 보안, 동작 모드                  |            |
+|  |  결합 → IP별 "필요 Common Task 목록"              |            |
+|  +--------------------------------------------------+            |
+|      |                                                            |
+|      v                                                            |
+|  +--------------------------------------------------+            |
+|  | Phase 2: Gap Detection                            |            |
+|  |  IP별 필요 Task 목록 vs 기존 V-Plan 항목          |            |
+|  |  차이 = Gap (누락)                                |            |
+|  |  FAISS 검색: 유사 IP의 검증 이력 참조             |            |
+|  +--------------------------------------------------+            |
+|      |                                                            |
+|      v                                                            |
+|  +--------------------------------------------------+            |
+|  | Phase 3: Test Generation                          |            |
+|  |  Gap별 테스트 명령어 자동 생성 (mrun 형식)        |            |
+|  |  V-Plan bin 자동 생성                             |            |
+|  |  우선순위 분류 (보안 > 기능 > 성능)               |            |
+|  +--------------------------------------------------+            |
+|      |                                                            |
+|      v                                                            |
+|  출력:                                                            |
+|  +--------------------------------------------------+            |
+|  | CCTV Gap Report                                   |            |
+|  |  - IP별 누락 항목 목록                            |            |
+|  |  - 테스트 실행 명령어                             |            |
+|  |  - V-Plan 추가 항목                               |            |
+|  |  - 우선순위별 정렬                                |            |
+|  +--------------------------------------------------+            |
++------------------------------------------------------------------+
+```
 
-### Phase 1: IP 프로파일 Embedding
+#### Gap Report 예시
+
+```json
+{
+  "ip": "DMA_Controller",
+  "gap_task": "sysMMU",
+  "gap_detail": "sysMMU Bypass→Enable 전환 시 DMA 동작 검증 누락",
+  "source": "IP_Spec_Section_4.3 + IP-XACT_sysMMU_connection",
+  "priority": "HIGH",
+  "test_cmd": "mrun test --test_name dma_sysmmu_bypass_to_enable --sys_name soc_top",
+  "vplan_bin": "DMA.common_task.sysMMU.bypass_enable_transition"
+}
+```
+
+### 5.5 AI 파이프라인 상세 — 실무 구현
+
+#### Phase 1: IP 프로파일 Embedding
 
 ```python
 # IP Spec + IP-XACT에서 IP 프로파일 생성
@@ -468,7 +590,7 @@ def create_ip_profile(ip_xact_path, ip_spec_path):
     return profile
 ```
 
-### Phase 2: FAISS 기반 유사 IP 검색
+#### Phase 2: FAISS 기반 유사 IP 검색
 
 ```python
 import faiss
@@ -507,7 +629,7 @@ class IPProfileIndex:
 # → GPU에 적용된 Common Task가 NPU에도 필요할 가능성 높음
 ```
 
-### Phase 3: LLM 기반 Gap Detection 프롬프트
+#### Phase 3: LLM 기반 Gap Detection 프롬프트
 
 ```python
 def detect_gaps(ip_profile, existing_vplan, similar_ips):
@@ -556,9 +678,7 @@ Hybrid (IP-XACT + Spec + FAISS + LLM):
   LLM: 종합 판단 → "sysMMU 검증 필요, 특히 Bypass→Enable 전환 중요"
 ```
 
----
-
-## Gap Report → V-Plan 반영 실무 워크플로우
+### 5.6 Gap Report → V-Plan 반영 실무 워크플로우
 
 ```
 Step 1: CCTV Gap Report 생성 (AI 파이프라인)
@@ -609,11 +729,7 @@ Step 6: 실행 후 CCTV 매트릭스 갱신
   → Coverage 재집계 → Gap 감소 확인
 ```
 
----
-
-## TB Top Release 프로세스 상세
-
-### Phase별 체크리스트
+### 5.7 TB Top Release 프로세스 상세
 
 ```
 Phase 1: RTL 수령 및 Config 생성 (1-2일)
@@ -655,13 +771,22 @@ Phase 5: Release (1일)
 → TB Top Lead 역할: 이 프로세스 전체를 설계하고 운영 + CCTV 추적
 ```
 
----
+### 5.8 면접 종합 Q&A
 
-## 연습 문제
+**Q: TB Top 환경을 어떻게 설계했고, 어떤 가치가 있었나?**
+> "프로젝트 공통 프레임워크로 설계했다. IP 목록, 메모리 맵, 인터럽트 맵을 Config(JSON)으로 정의하면 TB Top Generator 가 자동으로 환경을 구성한다. Common Task Checker Layer 를 내장하여 Connectivity, Memory Map, Interrupt, Power 검증을 자동 수행한다. 이 환경을 여러 SoC 프로젝트에 배포하여 프로젝트마다 TB 를 처음부터 만드는 비용을 제거했다."
 
-### 문제 1: Config에서 CCTV ignore_bins 자동 도출
+**Q: DVCon 논문의 CCTV 방법론을 설명하라.**
+> "SoC 내 모든 IP 에 공통적으로 필요한 검증 항목 (sysMMU, Security, DVFS 등) 이 빠짐없이 수행되었는지 자동 추적하는 방법론이다. IP-XACT (구조) + IP Spec (시맨틱) 의 Hybrid Extraction 으로 IP 별 필요 Common Task 를 판단하고, 기존 V-Plan 과 비교하여 Gap 을 자동 발견한다. LLM 이 테스트 명령어까지 생성한다. Project A 에서 293 개 (2.75%), Project B 에서 216 개 (4.99%) 의 Gap 을 발견했고, Human Oversight 가 96.30% 임을 정량적으로 증명했다."
 
-**문제**: 아래 JSON Config의 IP 3개에 대해 CCTV 매트릭스를 그리고, ignore_bins가 되어야 할 셀을 표시하라.
+**Q: 소규모 프로젝트의 Gap Rate 가 더 높은 이유는?**
+> "엔지니어 수가 적어 교차 검증이 부족하기 때문이다. 대규모에서는 IP 별 전담 인력이 있어 상호 검토가 자연스럽지만, 소규모에서는 한 사람이 여러 IP 를 담당하여 누락 가능성이 높아진다. 이것이 '자동화가 소규모에서 오히려 더 필요하다' 는 논문의 핵심 인사이트이다."
+
+### 5.9 연습 — 한 번 더 손으로 풀어보기
+
+#### 문제 1: Config 에서 CCTV ignore_bins 자동 도출
+
+다음 JSON Config 의 IP 3 개에 대해 CCTV 매트릭스를 그리고, ignore_bins 가 되어야 할 셀을 표시하라.
 
 ```json
 {
@@ -678,43 +803,27 @@ Phase 5: Release (1일)
 
 **사고과정**:
 ```
-1. 각 IP의 common_tasks 목록 확인:
-   GPU: 7개 모두 해당
-   I2C: SECURITY, CLK_GATE, RESET, IRQ (4개)
-   Temp_Sensor: RESET만 (1개)
-
-2. 매트릭스 그리기 (✅ = 검증 필요, ⬜ = ignore_bins):
+1. 매트릭스 (✅ = 검증 필요, ⬜ = ignore_bins):
 
               | SYSMMU | SECURITY | DVFS | CLK_GATE | POWER | RESET | IRQ |
    GPU        |   ✅   |    ✅    |  ✅  |    ✅    |  ✅   |  ✅   | ✅  |
    I2C        |   ⬜   |    ✅    |  ⬜  |    ✅    |  ⬜   |  ✅   | ✅  |
    Temp_Sensor|   ⬜   |    ⬜    |  ⬜  |    ⬜    |  ⬜   |  ✅   | ⬜  |
 
-3. ignore_bins 수:
-   GPU: 0개
-   I2C: 3개 (SYSMMU, DVFS, POWER)
-   Temp_Sensor: 6개 (SYSMMU, SECURITY, DVFS, CLK_GATE, POWER, IRQ)
-   총 ignore_bins = 9개
-
-4. 유효 조합 수:
-   전체 조합: 3 IP × 7 Tasks = 21
-   ignore_bins: 9
-   유효 조합: 12 → 이 12개가 모두 PASS여야 CCTV Closure
-
-5. 코드 변환:
+2. ignore_bins 수: GPU 0, I2C 3, Temp_Sensor 6 → 총 9
+3. 유효 조합: 21 - 9 = 12 → 이 12개가 모두 PASS여야 closure
+4. 코드:
    ignore_bins i2c_no_mmu = binsof(cp_ip) intersect {IP_I2C}
                            && binsof(cp_task) intersect {TASK_SYSMMU};
-   ignore_bins i2c_no_dvfs = binsof(cp_ip) intersect {IP_I2C}
-                            && binsof(cp_task) intersect {TASK_DVFS};
    // ... (총 9개)
 
 → Config의 common_tasks 필드에서 자동으로 도출 가능
 → 새 프로젝트에서 Config만 교체하면 ignore_bins도 자동 갱신
 ```
 
-### 문제 2: AI Gap Detection 정확도 분석
+#### 문제 2: AI Gap Detection 정확도 분석
 
-**문제**: AI 파이프라인이 다음 결과를 냈다. False Positive와 True Positive를 분류하고, 정밀도(Precision)를 계산하라.
+AI 파이프라인이 다음 결과를 냈다. False Positive 와 True Positive 를 분류하고, 정밀도 (Precision) 를 계산하라.
 
 ```
 AI가 발견한 Gap 목록 (10개):
@@ -732,37 +841,26 @@ AI가 발견한 Gap 목록 (10개):
 
 **사고과정**:
 ```
-1. 분류:
-   True Positive (TP): #1, #2, #4, #7, #8, #10 = 6개
-   False Positive (FP): #3, #5, #6, #9 = 4개
+1. TP: #1, #2, #4, #7, #8, #10 = 6개
+   FP: #3, #5, #6, #9 = 4개
 
 2. Precision = TP / (TP + FP) = 6 / 10 = 60%
 
-3. False Positive 원인 분석:
-   #3 (UART × sysMMU): IP-XACT에서 UART의 "DMA 없음"을 파악 못함
-     → IP-XACT 파싱 개선 필요 (bus_if 필드 확인)
-   #5 (I2C × Power): Power Domain 정보가 IP-XACT에 없음
-     → Config의 power_domains 정보 활용 필요
-   #6 (Crypto × sysMMU): 내부 메모리 사용 = Spec의 시맨틱
-     → IP Spec에서 "internal memory only" 키워드 추출 필요
-   #9 (SPI × DVFS): 고정 클럭 정보가 Spec에만 있음
-     → 시맨틱 추출 정밀도 개선 필요
+3. False Positive 원인:
+   #3, #5: IP-XACT 정보 부족 (DMA / Power 정보)
+   #6, #9: Spec 시맨틱 추출 부족 ("internal memory", "fixed clock")
+   → 개선: IP-XACT 파싱 정밀도 + Spec keyword 확장 + FAISS cross-validation
 
-4. 개선 방향:
-   - IP-XACT 파싱 정밀도 향상 (DMA 유무, 버스 타입)
-   - Spec 키워드 확장 ("fixed clock", "internal memory", "always-on")
-   - FAISS 유사 IP 검색으로 Cross-validation
-
-5. 실무 관점:
-   Precision 60%는 낮아 보이지만, 10개 Gap 중 6개가 실제 Critical Gap
-   → 자동화 없이는 이 6개를 모두 놓칠 수 있었음
-   → False Positive는 엔지니어가 리뷰에서 빠르게 걸러낼 수 있음
-   → Recall(실제 Gap 중 발견 비율)이 더 중요한 지표
+4. 실무 관점:
+   Precision 60% 는 낮아 보이지만, 10 개 중 6 개가 실제 Critical Gap
+   → 자동화 없이는 이 6 개를 모두 놓칠 수 있었음
+   → False Positive 는 엔지니어 리뷰에서 빠르게 제거 가능
+   → Recall (실제 Gap 발견율) 이 더 중요한 지표
 ```
 
-### 문제 3: TB Top Release 시 Config 변경 영향 분석
+#### 문제 3: TB Top Release 시 Config 변경 영향 분석
 
-**문제**: 이전 프로젝트에서 새 프로젝트로 Config를 갱신할 때, 다음 변경사항이 TB Top에 미치는 영향을 분석하라.
+이전 프로젝트에서 새 프로젝트로 Config 를 갱신할 때, 다음 변경사항이 TB Top 에 미치는 영향을 분석하라.
 
 ```
 변경사항:
@@ -774,109 +872,93 @@ AI가 발견한 Gap 목록 (10개):
 
 **사고과정**:
 ```
-1. 새 IP 추가 (NPU):
-   영향 범위:
-   - Agent: AXI agent 새로 인스턴스화 필요
-   - Memory Map Checker: NPU base addr 추가
-   - Interrupt Monitor: NPU SPI 번호 등록
-   - Connectivity Checker: NPU 포트 연결 property 추가
-   - CCTV: NPU에 대한 Common Task 행 추가
-     (DMA 지원 → sysMMU, Security, DVFS, ClkGate, Power, Reset, IRQ)
-   - FAISS: 유사 IP(GPU) 검색 → GPU의 검증 이력 참조하여 NPU Gap 예측
+1. NPU 추가:
+   Agent (AXI), MMAP, IRQ Monitor, Connectivity, CCTV row 추가
+   FAISS: 유사 IP(GPU) 검색 → 검증 이력 전이
+   자동: Config 변경만으로 모든 layer 자동 갱신
+   수동: NPU 전용 시나리오 (AI 추론 정확도 등)
 
-   자동 처리: Config에 NPU 추가 → TB Top Generator가 위 항목 자동 생성
-   수동 처리: NPU 전용 시나리오 (AI 추론 정확도 등) 추가 필요
+2. I2C_1 제거:
+   Agent / MMAP / CCTV row 자동 제거
+   주의: 해당 주소에 새 IP 가 배치됐는지 확인
 
-2. 기존 IP 제거 (I2C_1):
-   영향 범위:
-   - Agent: I2C_1 agent 제거 (인스턴스화 skip)
-   - Memory Map Checker: I2C_1 주소 영역 제거
-     → 해당 주소 접근 시 DECERR 반환으로 변경
-   - CCTV: I2C_1 행 제거
+3. UFS Base 변경:
+   MMAP Checker 자동 갱신 (Config 기반이라면)
+   하드코딩된 0x1200_0000 사용 테스트는 갱신 필요
 
-   자동 처리: Config에서 삭제 → 자동 제거
-   주의: I2C_1 주소에 새 IP가 배치되었는지 확인 필요
-
-3. UFS Base Address 변경:
-   영향 범위:
-   - Memory Map Checker: 주소 갱신
-   - 기존 테스트에서 하드코딩된 0x1200_0000 → 실패
-   - Config 기반이면: 자동 갱신 → 테스트 수정 불필요
-
-   교훈: 이것이 Config 기반 TB의 가치 — 주소가 변해도 Config만 갱신
-
-4. DMA Interrupt 변경:
-   영향 범위:
-   - Interrupt Monitor: SPI 52 → 55 갱신
-   - Connectivity SVA: DMA IRQ → GIC SPI[55]로 변경
-   - 기존 테스트에서 SPI[52] 확인 → 실패
-
-   자동 처리: interrupt_map 갱신 → Monitor/SVA 자동 재생성
-   리스크: 테스트에 SPI 번호가 하드코딩되어 있으면 수동 수정 필요
+4. DMA SPI 변경:
+   IRQ Monitor + Connectivity SVA 자동 재생성
+   하드코딩된 SPI[52] 테스트는 갱신 필요
 
 총 영향:
-  Config 기반: JSON 갱신 → TB Top Generator 재실행 → 대부분 자동 처리
+  Config 기반: JSON 갱신 → Generator 재실행 → 대부분 자동
   수동 필요: NPU 전용 시나리오, 하드코딩된 주소/SPI 수정
-  CCTV: NPU 행 추가 + I2C_1 행 제거 → Gap Report 재생성
+  CCTV: NPU row 추가, I2C_1 row 제거 → Gap Report 재생성
 ```
 
 ---
 
-## 퀴즈
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q1**: TB Top을 "Config 기반"으로 설계하면, 새 프로젝트에 적용할 때 최소한 무엇을 교체해야 하는가?
+### 흔한 오해
 
-<details>
-<summary>정답</summary>
+!!! danger "❓ 오해 1 — 'AI 가 커버리지 갭과 테스트를 자동 생성하면 DV 엔지니어 불필요'"
+    **실제**: AI 는 구조 정보 (IP-XACT, 스펙 문서) 에서 패턴을 생성하지만, Clock Domain 경계·비결정적 타이밍·하드웨어 특화 제약은 DV 엔지니어가 검토하고 보완해야 합니다. AI 는 _제안기_, 사람은 _quality gate_.<br>
+    **왜 헷갈리는가**: 소프트웨어 테스트 자동화와 달리 하드웨어 검증은 타이밍·물리적 제약이 존재하는데, AI 도구의 마케팅이 이 차이를 과소 설명.
 
-JSON Config 파일 1개만 교체하면 된다. Config에 IP 목록, Memory Map, Interrupt Map, Power Domain, Reset Sequence, Common Task 적용 목록이 모두 포함되어 있으므로, TB Top Generator가 이를 기반으로 Agent, Checker, Monitor, CCTV Coverage를 자동 재구성한다.
-</details>
+!!! danger "❓ 오해 2 — 'Config 기반 TB 는 처음 만들 때만 어렵다'"
+    **실제**: Layer 2 (Generator) 의 _초기 추상화 비용_ 이 크지만, _다음 프로젝트부터_ ROI 가 폭발적으로 좋아집니다. 8 개월 → 1 주일. DVCon 의 핵심 메시지.<br>
+    **왜 헷갈리는가**: 단일 프로젝트만 보면 "그냥 만든 게 빠르다" 가 맞지만, 멀티 프로젝트에서는 정반대.
 
-**Q2**: AI 파이프라인에서 IP-XACT만으로 판단할 수 없고 IP Spec이 필요한 Common Task 항목 2가지와 그 이유는?
+!!! danger "❓ 오해 3 — 'AI 가 만든 시퀀스는 multi-clock 환경에서도 그대로 동작'"
+    **실제**: LLM 은 IP-XACT 구조 정보에서 clock domain 경계를 추론하지 못합니다. AI 가 생성한 시퀀스 초안은 단일 클럭 가정 하에 fork/join 패턴을 사용하는 경우가 많아, 리뷰 없이 적용하면 CDC 무검증 상태가 됩니다.<br>
+    **왜 헷갈리는가**: 코드가 컴파일되고 동작하는 것처럼 보이기 때문.
 
-<details>
-<summary>정답</summary>
+!!! danger "❓ 오해 4 — 'AI Precision 60% 는 못 쓸 수준'"
+    **실제**: Recall (실제 Gap 의 발견율) 이 더 중요합니다. False Positive 는 _15 분 인간 리뷰_ 로 제거되지만, 발견 못한 Gap 은 _silicon 에서_ 만나게 됩니다. 60% Precision + 90% Recall 이면 자동화의 가치가 큼.<br>
+    **왜 헷갈리는가**: 분류 모델 평가에서 Precision 만 강조되는 일반 ML 직관.
 
-1. **Security**: IP-XACT에는 레지스터 맵만 있고, 어떤 레지스터가 Secure-only인지는 IP Spec에만 기술됨. "이 IP에 보안 접근 제어가 필요한가?"는 시맨틱 판단.
-2. **DVFS**: IP-XACT에는 클럭 포트 정보만 있고, "이 IP가 동적 주파수 변경을 지원하는가?"는 IP Spec의 동작 모드 설명에서만 파악 가능.
+!!! danger "❓ 오해 5 — 'IP-XACT 만 잘 정리하면 자동화 끝'"
+    **실제**: IP-XACT 는 _구조_ 만 담습니다. "이 IP 에 보안 검증이 필요한가?", "DVFS 를 지원하는가?" 같은 시맨틱 판단은 _IP Spec_ 의 텍스트에서만 추출 가능. 그래서 Hybrid extraction.<br>
+    **왜 헷갈리는가**: IP-XACT 가 _machine readable_ 이라 모든 정보를 담고 있을 것 같은 인상.
 
-공통 이유: IP-XACT는 구조(structure)만, Spec은 의미(semantics)를 담고 있음.
-</details>
+### DV 디버그 체크리스트
 
-**Q3**: CCTV Gap Report를 받은 IP 담당 엔지니어가 수행하는 5단계 워크플로우를 순서대로 나열하라.
-
-<details>
-<summary>정답</summary>
-
-1. Gap 목록 리뷰 → False Positive 걸러내기 (N/A 확인)
-2. True Gap에 대한 테스트 시나리오 확인/보완
-3. 제공된 mrun 명령어로 테스트 실행
-4. PASS/FAIL 결과 확인 및 디버그
-5. CCTV Coverage에 결과 기록 → 매트릭스 갱신
-
-→ 1에서 걸러지지 않은 Gap = 실제 누락이므로 반드시 검증 수행
-</details>
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| `soc_config not found` UVM_FATAL | Config 파일 로드 실패 | `uvm_config_db::set` 의 호출 위치 / JSON 경로 |
+| 새 IP 추가 후 agent 가 안 만들어짐 | Generator 가 `bus_if` 분기 못 처리 | Generator 의 APB/AXI dispatch + Config 의 `bus_if` 값 |
+| MMAP checker 가 새 IP 무시 | `build_memmap_from_config` 미호출 | `build_phase` 의 config_db propagation |
+| CCTV ignore_bins 가 자동 갱신 안 됨 | covergroup 이 build 시점에 freeze | covergroup 인스턴스화를 Config 로드 _이후로_ 이동 |
+| IRQ SPI 변경했는데 옛날 인덱스가 SVA 에 남음 | reset_seq SVA 가 코드 내장 | Generator 의 SVA emit 단계 / 컴파일 캐시 |
+| AI Gap Report 의 50%+ 가 False Positive | Phase 1 IP profile 정확도 | IP-XACT 파싱 + Spec keyword 추출 + FAISS top-k |
+| AI 생성 시퀀스가 multi-clock 환경에서 race | clock_domain 정보 누락 | Config 의 `clock_domain` 필드 + virtual sequencer fork/join |
+| Project A → Project B 이전 시 컴파일 실패 | Layer 2 (Generator) 가 project-specific 누설 | Layer 분리 위반 — IP 이름 hardcoding 검색 |
 
 ---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **TB Top 3 층**: Config (project-specific) / Generator (project-agnostic) / UVM Env (runtime). 프로젝트 교체 = Config 만 교체.
+- **AI 3 Phase**: Hybrid Extraction (IP-XACT + Spec) → FAISS 유사 IP 검색 → LLM Gap detection + 명령 생성. Recall 중심으로 평가.
+- **AI 한계**: silent corruption / race / CDC / 비결정적 타이밍은 _인간 검토 필수_. AI 는 _제안기_, 사람은 _quality gate_.
+- **정량 결과**: Project A 293 gaps (2.75%), Project B 216 gaps (4.99%), Human Oversight 96.30%, New IP/Feature 누락 -40%.
+- **Workflow**: spec change → Config 갱신 → Generator → AI Gap report → 인간 리뷰 → mrun → CCTV 매트릭스 갱신.
+
 !!! warning "실무 주의점 — AI 생성 시퀀스의 Clock Domain 무시"
-    **현상**: AI가 생성한 시퀀스가 단일 클럭 기준으로 작성되어, 멀티 클럭 도메인 TB에서 적용 시 서로 다른 도메인 에이전트에 동기화 없이 동시 구동되어 데이터 레이스가 발생한다.
+    **현상**: AI 가 생성한 시퀀스가 단일 클럭 기준으로 작성되어, 멀티 클럭 도메인 TB 에서 적용 시 서로 다른 도메인 에이전트에 동기화 없이 동시 구동되어 데이터 레이스가 발생한다.
 
-    **원인**: LLM은 IP-XACT 구조 정보에서 clock domain 경계를 추론하지 못한다. AI가 생성한 시퀀스 초안은 단일 클럭 가정하에 fork/join 패턴을 사용하는 경우가 많아, 리뷰 없이 그대로 적용하면 CDC 무검증 상태가 된다.
+    **원인**: LLM 은 IP-XACT 구조 정보에서 clock domain 경계를 추론하지 못한다. AI 가 생성한 시퀀스 초안은 단일 클럭 가정 하에 fork/join 패턴을 사용하는 경우가 많아, 리뷰 없이 그대로 적용하면 CDC 무검증 상태가 된다.
 
-    **점검 포인트**: AI 생성 시퀀스에서 각 에이전트 `start_item`/`finish_item` 앞에 해당 에이전트의 클럭 도메인을 명시했는지 확인. TB Top Config JSON의 `clock_domain` 필드가 에이전트 연결과 일치하는지 대조.
+    **점검 포인트**: AI 생성 시퀀스에서 각 에이전트 `start_item` / `finish_item` 앞에 해당 에이전트의 클럭 도메인을 명시했는지 확인. TB Top Config JSON 의 `clock_domain` 필드가 에이전트 연결과 일치하는지 대조.
 
-## 핵심 정리
+---
 
-- **TB Top 재사용성**: 프로젝트마다 IP 종류는 다르지만 통합 패턴은 비슷 → layered TB (Common 부분 + 프로젝트별 customization).
-- **AI 자동화 활용 영역**: (1) coverage gap → targeted sequence 생성, (2) 디버그 시 log/wave 분석, (3) RAL 자동 생성, (4) spec → constraint 자동 변환.
-- **AI 한계**: silent corruption, race condition, timing-sensitive bug는 human inspection 필수. AI는 hypothesis 제안, 검증은 사람.
-- **RAL 통합**: 모든 IP의 register map을 단일 RAL block으로 통합 → CPU SW 모델과 동등한 access pattern.
-- **Workflow**: spec change → AI가 sequence 초안 생성 → reviewer → 시뮬 → 회귀 자동화.
+## 다음 모듈
 
-## 다음 단계
+→ [Module 04 — Quick Reference Card](04_quick_reference_card.md): 5 축, CCTV 매트릭스, 정량 데이터, 디버그 체크리스트를 한 장에 정리.
 
-- 📝 [**Module 03 퀴즈**](quiz/03_tb_top_and_ai_quiz.md)
-- ➡️ [**Module 04 — Quick Reference Card**](04_quick_reference_card.md)
+[퀴즈 풀어보기 →](quiz/03_tb_top_and_ai_quiz.md)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../02_common_task_cctv/">

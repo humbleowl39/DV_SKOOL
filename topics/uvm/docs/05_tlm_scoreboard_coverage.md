@@ -15,106 +15,294 @@
 <!-- DV-SKOOL-CH-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
-  <a class="page-toc-link" href="#왜-이-모듈이-중요한가">왜 이 모듈이 중요한가</a>
-  <a class="page-toc-link" href="#핵심-개념">핵심 개념</a>
-  <a class="page-toc-link" href="#tlm-transaction-level-modeling">TLM (Transaction Level Modeling)</a>
-  <a class="page-toc-link" href="#scoreboard-결과-비교">Scoreboard — 결과 비교</a>
-  <a class="page-toc-link" href="#functional-coverage">Functional Coverage</a>
-  <a class="page-toc-link" href="#qa">Q&A</a>
-  <a class="page-toc-link" href="#연습문제">연습문제</a>
-  <a class="page-toc-link" href="#핵심-정리">핵심 정리</a>
-  <a class="page-toc-link" href="#다음-단계">다음 단계</a>
+  <a class="page-toc-link" href="#1-why-care-tb-의-검증-가치는-비교와-커버리지-에서-나온다">1. Why care?</a>
+  <a class="page-toc-link" href="#2-intuition-방송국-과-한-장-그림">2. Intuition</a>
+  <a class="page-toc-link" href="#3-작은-예-monitor-한-write-가-scoreboard-와-coverage-로-fan-out-되는-과정">3. 작은 예 — fan-out 한 사이클</a>
+  <a class="page-toc-link" href="#4-일반화-tlm-포트-종류-와-scoreboard-2-가지-매칭-전략">4. 일반화 — TLM 포트 + 매칭 전략</a>
+  <a class="page-toc-link" href="#5-디테일-analysis_fifo-ooo-scoreboard-covergroup-bins-closure">5. 디테일</a>
+  <a class="page-toc-link" href="#6-흔한-오해-와-dv-디버그-체크리스트">6. 흔한 오해 + DV 디버그 체크리스트</a>
+  <a class="page-toc-link" href="#7-핵심-정리-key-takeaways">7. 핵심 정리</a>
 </div>
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
     이 모듈을 마치면:
 
-    - **Connect** Monitor의 `analysis_port`를 Scoreboard와 Coverage 양쪽에 1:N broadcast로 연결할 수 있다.
+    - **Connect** Monitor 의 `analysis_port` 를 Scoreboard 와 Coverage 양쪽에 1:N broadcast 로 연결할 수 있다.
     - **Implement** in-order / out-of-order 트래픽에 맞는 Scoreboard 비교 로직을 작성할 수 있다.
-    - **Define** covergroup with coverpoints, bins, cross로 의미 있는 functional coverage를 정의할 수 있다.
-    - **Trigger** Monitor의 write 콜백에서 covergroup `sample()`을 호출해 sampling 시점을 명확히 할 수 있다.
-    - **Plan** Coverage closure 전략 (시드 다양성 + 타겟 시퀀스 + cross 분석)을 설계할 수 있다.
+    - **Define** covergroup 을 coverpoint, bins, cross 로 의미 있는 functional coverage 가 되도록 정의할 수 있다.
+    - **Trigger** Monitor 의 write 콜백에서 covergroup `sample()` 을 호출해 sampling 시점을 명확히 할 수 있다.
+    - **Plan** Coverage closure 전략 (시드 다양성 + 타겟 시퀀스 + cross 분석) 을 설계할 수 있다.
+    - **Trace** 한 write transaction 이 monitor.ap → scoreboard / coverage 로 fan-out 되는 경로를 단계별로 추적할 수 있다.
 
 !!! info "사전 지식"
     - [Module 01-04](01_architecture_and_phase.md)
     - SystemVerilog covergroup, coverpoint, cross 문법 (IEEE 1800 §19)
 
-## 왜 이 모듈이 중요한가
+---
 
-TB의 **검증 가치**는 두 곳에서 생성됩니다: **비교(Scoreboard)** 로 결함을 발견하고, **커버리지(Coverage)** 로 검증 완전성을 측정합니다. 둘 다 TLM 위에서 동작하므로 Analysis Port 연결이 잘못되면 두 기능 모두 무력해집니다. 특히 OoO 응답을 가진 프로토콜(AXI ID, PCIe TLP tag)에서는 Scoreboard 매칭 로직 설계가 검증 신뢰성의 핵심입니다.
+## 1. Why care? — TB 의 검증 가치는 _비교_ 와 _커버리지_ 에서 나온다
 
-!!! tip "💡 이해를 위한 비유"
-    **TLM Analysis Port** ≈ **방송국의 출력 포트 (broadcast)**
+TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard)** 로 결함을 발견하고, **커버리지 (Coverage)** 로 검증 완전성을 측정합니다. 둘 다 TLM 위에서 동작하므로 Analysis Port 연결이 잘못되면 두 기능 _모두_ 무력해집니다.
 
-    한 방송 신호가 여러 수신자(scoreboard, coverage, logger) 에 동시에 도달. publisher 는 누가 듣는지 신경 쓸 필요 없다.
+이 모듈을 건너뛰면 검증 환경은 _자극은 인가하지만 결과를 못 잡는_ 상태로 빠집니다. 특히 OoO 응답을 가진 프로토콜 (AXI ID, PCIe TLP tag) 에서는 Scoreboard 매칭 로직 설계가 검증 신뢰성의 핵심 — 단순 큐 pop_front 비교를 그대로 쓰면 spurious mismatch 가 폭발합니다.
 
 ---
 
-## 핵심 개념
-**TLM = 컴포넌트 간 트랜잭션 레벨 통신. Analysis Port로 Monitor→Scoreboard/Coverage에 broadcast. Scoreboard는 DUT 출력과 기대값을 비교하여 Pass/Fail 판정. Coverage는 검증 완전성을 정량적으로 측정.**
+## 2. Intuition — 방송국, 과 한 장 그림
 
-!!! danger "❓ 흔한 오해"
-    **오해**: scoreboard 가 hang 했다는 건 transaction 이 안 들어왔다는 뜻이다
+!!! tip "💡 한 줄 비유"
+    **TLM Analysis Port** ≈ **방송국의 출력 포트 (broadcast)**.<br>
+    한 방송 신호 (`ap.write(item)`) 가 여러 수신자 (scoreboard, coverage, logger) 에 동시 도달. publisher (monitor) 는 누가 듣는지 신경 쓸 필요 없음. 새 수신자 추가는 _수신자 측_ 만 connect 하면 끝 — publisher 코드는 변경 없음.
 
-    **실제**: scoreboard 가 hang 하는 이유의 다수는 expected/actual 큐 size 가 영원히 0 이 안 되어 check_phase 가 무한 대기. 수신은 됐는데 비교가 안 끝난 것.
+### 한 장 그림 — Monitor 한 곳에서 N 곳으로 fan-out
 
-    **왜 헷갈리는가**: "hang = no-input" 이라는 단순화된 mental model 때문에 — 실제로는 input 은 있지만 expected 계산이 잘못돼 큐가 비지 않는 경우 다수.
+```
+            DUT
+             │ (vif sampling)
+             ▼
+        ┌──────────┐
+        │ Monitor  │
+        │ run_phase│
+        │  ap.write│ ───┐  (1:N broadcast)
+        └──────────┘    │
+                        ├──▶ Scoreboard.write   (analysis_imp)
+                        │      └─ expected_queue 와 비교
+                        │
+                        ├──▶ Scoreboard.actual_fifo (analysis_fifo)
+                        │      └─ run_phase task 에서 get → 시간 소비 가능 비교
+                        │
+                        ├──▶ Coverage.write     (uvm_subscriber)
+                        │      └─ cg.sample()
+                        │
+                        └──▶ Logger / Protocol Checker (선택)
+```
+
+### 왜 이 디자인인가 — Design rationale
+
+세 가지 요구의 교집합:
+
+1. **새 검증 컴포넌트를 추가해도 monitor 코드는 변경 없어야** → publisher / subscriber 분리 (analysis_port).
+2. **Scoreboard 가 _시간을 소비하며_ 비교해야 하는 경우가 있어야** → analysis_fifo (큐) + run_phase task get.
+3. **검증 완전성 (coverage) 과 결함 발견 (scoreboard) 이 _같은 transaction stream_ 에서 동시 작동해야** → 같은 ap 가 둘 다에 fan-out.
+
+이 세 요구가 곧 **Analysis Port (1:N) + analysis_imp (function 즉시 처리) / analysis_fifo (task 비동기 처리) 의 두 receiver 패턴** 의 디자인 결정.
+
 ---
 
-## TLM (Transaction Level Modeling)
+## 3. 작은 예 — Monitor 한 write 가 Scoreboard 와 Coverage 로 fan-out 되는 과정
 
-### Analysis Port (1:N Broadcast)
+가장 단순한 시나리오. Monitor 가 Write transaction 1 개를 sample, ap.write 호출 → Scoreboard 가 expected 와 비교 + Coverage 가 covergroup sample.
+
+### 단계별 다이어그램
 
 ```
-Monitor에서 수집한 Transaction을 여러 구독자에게 동시 전달:
-
-  Monitor
-    |
-    | ap.write(item)
-    |
-    +──→ Scoreboard (비교)
-    |
-    +──→ Coverage Collector (커버리지 수집)
-    |
-    +──→ Protocol Checker (프로토콜 검증)
-
-1:N 관계 — 구독자 추가/제거가 Monitor에 영향 없음
+   t=T  (vif.valid && vif.ready 의 posedge clk)
+   │
+   ▼
+ ┌──────────────────┐
+ │ Monitor          │
+ │  @posedge vif.clk │
+ │  if (valid&&ready)│
+ │    item.addr=...  │
+ │    item.data=...  │
+ │  ① ap.write(item) │ ───────┐
+ └──────────────────┘         │
+                              │  fan-out (1:N broadcast)
+                              │
+              ┌───────────────┼─────────────────────┐
+              │               │                     │
+              ▼               ▼                     ▼
+   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+   │ Scoreboard       │  │ Scoreboard       │  │ Coverage         │
+   │ analysis_imp.    │  │ actual_fifo.     │  │ subscriber.      │
+   │   write(item)    │  │   write(item)    │  │   write(item)    │
+   │                  │  │   (큐에 push)     │  │                  │
+   │ ② queue pop      │  │                  │  │ ③ cg.sample()    │
+   │   compare(exp,   │  │ run_phase task:  │  │   covergroup     │
+   │           act)   │  │   ④ get(actual)  │  │   bin 카운트 ↑   │
+   │                  │  │     get(expected)│  │                  │
+   │ mismatch →       │  │     compare      │  │ ⑤ cross-bin       │
+   │   `uvm_error     │  │                  │  │   카운트 ↑       │
+   └──────────────────┘  └──────────────────┘  └──────────────────┘
 ```
 
-### TLM 포트 연결 (connect_phase)
+### 단계별 의미
+
+| Step | 누가 | 무엇을 | 왜 |
+|---|---|---|---|
+| ① | Monitor.run_phase | `ap.write(item)` — analysis_port 의 모든 subscriber 에 broadcast | publisher 는 누가 듣는지 모름 |
+| ② | Scoreboard.write (function) | `expected = expected_queue.pop_front(); actual.compare(expected)` | 즉시 비교 (function — 시간 소비 불가) |
+| ③ | Coverage.write | `cg.sample()` — covergroup 의 coverpoint 들이 현재 item 값을 sample | bin / cross-bin 카운트 증가 |
+| ④ | Scoreboard.run_phase (task) | (별도 fan-out) `actual_fifo.get(actual); expected_fifo.get(expected); compare` | 시간 소비 가능 — 두 fifo 가 다른 시점에 도착해도 매칭 가능 |
+| ⑤ | Coverage | cross 의 (addr, opcode) 조합 카운트 | cross coverage closure |
+
+### 실제 코드 (전부 합쳐서)
 
 ```systemverilog
-// Env의 connect_phase
-function void connect_phase(uvm_phase phase);
-  // Monitor → Scoreboard
-  agent.monitor.ap.connect(scoreboard.expected_export);
+// Monitor (publisher)
+class my_monitor extends uvm_monitor;
+  `uvm_component_utils(my_monitor)
+  uvm_analysis_port #(my_item) ap;
+  virtual my_if vif;
 
-  // Monitor → Coverage
-  agent.monitor.ap.connect(coverage.analysis_export);
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    ap = new("ap", this);
+    if (!uvm_config_db#(virtual my_if)::get(this, "", "vif", vif))
+      `uvm_fatal("NOVIF", "vif missing")
+  endfunction
+
+  task run_phase(uvm_phase phase);
+    forever begin
+      my_item item = my_item::type_id::create("item");
+      @(posedge vif.clk);
+      if (vif.valid && vif.ready) begin
+        item.addr = vif.addr;
+        item.data = vif.data;
+        ap.write(item);                                    // ①
+      end
+    end
+  endtask
+endclass
+
+// Scoreboard (subscriber A)
+class my_scoreboard extends uvm_scoreboard;
+  `uvm_component_utils(my_scoreboard)
+  uvm_analysis_imp #(my_item, my_scoreboard) actual_imp;
+  my_item expected_queue[$];
+
+  function void build_phase(uvm_phase phase);
+    actual_imp = new("actual_imp", this);
+  endfunction
+
+  function void write(my_item actual);                     // ②
+    my_item expected;
+    if (expected_queue.size() == 0) begin
+      `uvm_error("SB", "Unexpected actual")
+      return;
+    end
+    expected = expected_queue.pop_front();
+    if (!actual.compare(expected))
+      `uvm_error("SB", $sformatf("Mismatch! Exp:%s Act:%s",
+                                 expected.convert2string(), actual.convert2string()))
+  endfunction
+endclass
+
+// Coverage (subscriber B)
+class my_cov extends uvm_subscriber #(my_item);
+  `uvm_component_utils(my_cov)
+  my_item item;
+
+  covergroup cg;
+    cp_addr: coverpoint item.addr[31:28] {
+      bins low  = {[4'h0:4'h3]};
+      bins mid  = {[4'h4:4'h7]};
+      bins high = {[4'h8:4'hF]};
+    }
+    cp_op: coverpoint item.wr_rd { bins wr={1}; bins rd={0}; }
+    cx_addr_op: cross cp_addr, cp_op;
+  endgroup
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+    cg = new();
+  endfunction
+
+  function void write(my_item t);                          // ③
+    item = t;
+    cg.sample();
+  endfunction
+endclass
+
+// env.connect_phase
+function void connect_phase(uvm_phase phase);
+  agent.monitor.ap.connect(sb.actual_imp);                 // 1:N
+  agent.monitor.ap.connect(cov.analysis_export);
 endfunction
 ```
 
-### 주요 TLM 포트 타입
+!!! note "여기서 잡아야 할 두 가지"
+    **(1) Monitor 한 곳의 `ap.write` 가 Scoreboard 와 Coverage 양쪽으로 _동시에_ 도달한다.** 새 subscriber 를 추가해도 Monitor 코드는 _변경 없음_. 1:N 의 핵심 가치.<br>
+    **(2) Scoreboard 의 write 는 _function_ 이므로 시간 소비 불가**. 만약 두 monitor 의 데이터를 매칭해야 한다 (입력 + 출력) 면 analysis_imp 한 개로는 부족 — analysis_fifo + run_phase task 에서 둘 다 get.
+
+---
+
+## 4. 일반화 — TLM 포트 종류 와 Scoreboard 2 가지 매칭 전략
+
+### 4.1 주요 TLM 포트 타입
 
 | 포트 | 방향 | 용도 |
 |------|------|------|
-| `uvm_analysis_port` | 송신 (write) | Monitor가 Transaction broadcast |
-| `uvm_analysis_imp` | 수신 (write 구현) | Scoreboard/Coverage가 수신 |
+| `uvm_analysis_port` | 송신 (write) | Monitor 가 Transaction broadcast |
+| `uvm_analysis_imp` | 수신 (write 구현, function) | Scoreboard / Coverage 가 즉시 수신 |
 | `uvm_analysis_export` | 중간 전달 | 계층 경유 시 사용 |
+| `uvm_tlm_analysis_fifo` | 수신 (큐 + get task) | 시간 소비 / 매칭 / 비동기 처리 |
 | `uvm_seq_item_port` | 양방향 | Sequencer ↔ Driver |
 
-### uvm_tlm_analysis_fifo — 비동기 수신의 핵심
+### 4.2 analysis_imp vs analysis_fifo
+
+```
+uvm_analysis_imp:
+  ┌──────────┐     write()      ┌──────────┐
+  │ Monitor  │ ───────────────→ │Scoreboard│
+  └──────────┘   (function)     └──────────┘
+  - write() 는 function → 시간 소비(#, @) 불가
+  - Monitor 의 run_phase 안에서 직접 호출됨
+  - 단순한 비교에 적합
+
+uvm_tlm_analysis_fifo:
+  ┌──────────┐     write()      ┌──────┐   get()   ┌──────────┐
+  │ Monitor  │ ───────────────→ │ FIFO │ ────────→ │Scoreboard│
+  └──────────┘   (function)     └──────┘  (task)    └──────────┘
+  - FIFO 가 중간에서 버퍼링
+  - Scoreboard 의 run_phase 에서 get() (task) → 시간 제어 가능
+  - Monitor 와 Scoreboard 가 완전 비동기 (디커플링)
+  - ★ 실무에서 가장 많이 사용하는 패턴
+
+사용 지침:
+  - 단순 카운터 / 플래그 업데이트 → analysis_imp
+  - 비교 로직, 순서 대기, 복잡한 처리 → analysis_fifo
+  - 다중 포트 수신 후 매칭 → analysis_fifo (필수)
+```
+
+### 4.3 In-Order vs Out-of-Order 비교 전략
+
+```
+In-Order Scoreboard:
+  expected_queue[$] 에 push_back → pop_front 로 순서대로 비교
+  → DUT 가 입력 순서 = 출력 순서를 보장할 때 (FIFO, 단순 파이프라인)
+
+Out-of-Order Scoreboard:
+  expected 를 Associative Array 에 저장 → 키 (ID/addr) 로 매칭
+  → DUT 가 순서를 보장하지 않을 때 (AXI reordering, 캐시, 멀티포트)
+```
+
+### 4.4 Scoreboard 전략 선택 가이드
+
+| DUT 특성 | Scoreboard 전략 | 키 |
+|----------|----------------|-----|
+| FIFO, 단순 파이프라인 | In-Order (Queue) | 순서 자체 |
+| AXI (OOO 허용) | Out-of-Order (Map) | AXI ID |
+| 캐시 | Out-of-Order (Map) | Address |
+| DMA (채널별 순서 보장) | Per-Channel In-Order | Channel ID + Queue |
+| 패킷 프로세서 | Out-of-Order (Map) | Packet ID / Hash |
+
+---
+
+## 5. 디테일 — analysis_fifo / OoO Scoreboard / Covergroup / Bins / Closure
+
+### 5.1 uvm_tlm_analysis_fifo — 비동기 수신의 핵심
 
 ```systemverilog
-// 문제: uvm_analysis_imp의 write()는 function → 시간 소비 불가
-//       Scoreboard에서 비교 로직이 복잡하거나 시간이 필요한 경우?
+// 문제: uvm_analysis_imp 의 write() 는 function → 시간 소비 불가
+//       Scoreboard 에서 비교 로직이 복잡하거나 시간이 필요한 경우?
 
-// 해결: uvm_tlm_analysis_fifo로 버퍼링 후 task에서 처리
+// 해결: uvm_tlm_analysis_fifo 로 버퍼링 후 task 에서 처리
 class my_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(my_scoreboard)
 
-  // FIFO: Analysis Port로부터 수신 → 내부 큐에 버퍼링
+  // FIFO: Analysis Port 로부터 수신 → 내부 큐에 버퍼링
   uvm_tlm_analysis_fifo #(my_item) expected_fifo;
   uvm_tlm_analysis_fifo #(my_item) actual_fifo;
 
@@ -124,14 +312,14 @@ class my_scoreboard extends uvm_scoreboard;
     actual_fifo   = new("actual_fifo", this);
   endfunction
 
-  // Env에서 연결:
+  // Env 에서 연결:
   //   input_monitor.ap.connect(scoreboard.expected_fifo.analysis_export);
   //   output_monitor.ap.connect(scoreboard.actual_fifo.analysis_export);
 
   task run_phase(uvm_phase phase);
     my_item expected, actual;
     forever begin
-      // blocking get — 데이터가 올 때까지 대기 (task이므로 가능)
+      // blocking get — 데이터가 올 때까지 대기 (task 이므로 가능)
       expected_fifo.get(expected);
       actual_fifo.get(actual);
 
@@ -144,91 +332,11 @@ class my_scoreboard extends uvm_scoreboard;
 endclass
 ```
 
-### analysis_imp vs analysis_fifo 비교
-
-```
-uvm_analysis_imp:
-  ┌──────────┐     write()      ┌──────────┐
-  │ Monitor  │ ───────────────→ │Scoreboard│
-  └──────────┘   (function)     └──────────┘
-  - write()는 function → 시간 소비(#, @) 불가
-  - Monitor의 run_phase 안에서 직접 호출됨
-  - 단순한 비교에 적합
-
-uvm_tlm_analysis_fifo:
-  ┌──────────┐     write()      ┌──────┐   get()   ┌──────────┐
-  │ Monitor  │ ───────────────→ │ FIFO │ ────────→ │Scoreboard│
-  └──────────┘   (function)     └──────┘  (task)    └──────────┘
-  - FIFO가 중간에서 버퍼링
-  - Scoreboard의 run_phase에서 get() (task) → 시간 제어 가능
-  - Monitor와 Scoreboard가 완전 비동기 (디커플링)
-  - ★ 실무에서 가장 많이 사용하는 패턴
-
-사용 지침:
-  - 단순 카운터/플래그 업데이트 → analysis_imp
-  - 비교 로직, 순서 대기, 복잡한 처리 → analysis_fifo
-  - 다중 포트 수신 후 매칭 → analysis_fifo (필수)
-```
-
----
-
-## Scoreboard — 결과 비교
-
-### 기본 Scoreboard 구조
+### 5.2 Dual-Port Scoreboard (입출력 비교)
 
 ```systemverilog
-class my_scoreboard extends uvm_scoreboard;
-  `uvm_component_utils(my_scoreboard)
-
-  // TLM 수신 포트
-  uvm_analysis_imp #(my_item, my_scoreboard) actual_export;
-
-  // 기대값 큐
-  my_item expected_queue[$];
-
-  function void build_phase(uvm_phase phase);
-    actual_export = new("actual_export", this);
-  endfunction
-
-  // Reference Model로 기대값 추가
-  function void add_expected(my_item item);
-    expected_queue.push_back(item);
-  endfunction
-
-  // DUT 출력 수신 시 비교
-  function void write(my_item actual);
-    my_item expected;
-
-    if (expected_queue.size() == 0) begin
-      `uvm_error("SB", "Unexpected transaction received")
-      return;
-    end
-
-    expected = expected_queue.pop_front();
-
-    if (!actual.compare(expected)) begin
-      `uvm_error("SB", $sformatf(
-        "Mismatch!\n  Expected: %s\n  Actual:   %s",
-        expected.sprint(), actual.sprint()))
-    end else begin
-      `uvm_info("SB", "Match!", UVM_HIGH)
-    end
-  endfunction
-
-  // check_phase: 잔여 항목 확인
-  function void check_phase(uvm_phase phase);
-    if (expected_queue.size() > 0)
-      `uvm_error("SB", $sformatf("%0d expected items remaining",
-                                  expected_queue.size()))
-  endfunction
-endclass
-```
-
-### Dual-Port Scoreboard (입출력 비교)
-
-```
-Input Monitor → Scoreboard (기대값 생성)
-Output Monitor → Scoreboard (실제값 수신)
+// Input Monitor → Scoreboard (기대값 생성)
+// Output Monitor → Scoreboard (실제값 수신)
 
 class dual_scoreboard extends uvm_scoreboard;
   `uvm_analysis_imp_decl(_input)
@@ -238,32 +346,21 @@ class dual_scoreboard extends uvm_scoreboard;
   uvm_analysis_imp_output #(out_item, dual_scoreboard) out_export;
 
   function void write_input(in_item item);
-    // Reference Model로 기대 출력 계산
+    // Reference Model 로 기대 출력 계산
     out_item expected = ref_model.predict(item);
     expected_queue.push_back(expected);
   endfunction
 
   function void write_output(out_item actual);
     // 기대값과 비교
-    ...
+    // ...
   endfunction
 endclass
 ```
 
-### In-Order vs Out-of-Order 비교 전략
-
-```
-In-Order Scoreboard:
-  expected_queue[$]에 push_back → pop_front로 순서대로 비교
-  → DUT가 입력 순서 = 출력 순서를 보장할 때 (FIFO, 단순 파이프라인)
-
-Out-of-Order Scoreboard:
-  expected를 Associative Array에 저장 → 키(ID/addr)로 매칭
-  → DUT가 순서를 보장하지 않을 때 (AXI reordering, 캐시, 멀티포트)
-```
+### 5.3 Out-of-Order Scoreboard 구현
 
 ```systemverilog
-// --- Out-of-Order Scoreboard 구현 ---
 class ooo_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(ooo_scoreboard)
 
@@ -291,7 +388,7 @@ class ooo_scoreboard extends uvm_scoreboard;
     my_item exp;
     forever begin
       exp_fifo.get(exp);
-      expected_map[exp.id] = exp;  // ID를 키로 저장
+      expected_map[exp.id] = exp;  // ID 를 키로 저장
     end
   endtask
 
@@ -326,21 +423,7 @@ class ooo_scoreboard extends uvm_scoreboard;
 endclass
 ```
 
-### Scoreboard 전략 선택 가이드
-
-| DUT 특성 | Scoreboard 전략 | 키 |
-|----------|----------------|-----|
-| FIFO, 단순 파이프라인 | In-Order (Queue) | 순서 자체 |
-| AXI (OOO 허용) | Out-of-Order (Map) | AXI ID |
-| 캐시 | Out-of-Order (Map) | Address |
-| DMA (채널별 순서 보장) | Per-Channel In-Order | Channel ID + Queue |
-| 패킷 프로세서 | Out-of-Order (Map) | Packet ID / Hash |
-
----
-
-## Functional Coverage
-
-### Covergroup 기본
+### 5.4 Covergroup 기본 + Cross
 
 ```systemverilog
 class my_coverage extends uvm_subscriber #(my_item);
@@ -385,7 +468,7 @@ class my_coverage extends uvm_subscriber #(my_item);
 endclass
 ```
 
-### Covergroup Option — 세밀한 제어
+### 5.5 Covergroup Option — 세밀한 제어
 
 ```systemverilog
 covergroup cg with function sample(my_item item);
@@ -405,7 +488,7 @@ covergroup cg with function sample(my_item item);
   }
 
   cp_size: coverpoint item.size {
-    option.weight = 2;         // 이 coverpoint의 가중치 2배
+    option.weight = 2;         // 이 coverpoint 의 가중치 2배
     bins small  = {[1:64]};
     bins medium = {[65:512]};
     bins large  = {[513:4096]};
@@ -413,18 +496,18 @@ covergroup cg with function sample(my_item item);
 endgroup
 ```
 
-### 주요 Covergroup/Coverpoint Option
+#### 주요 Covergroup / Coverpoint Option
 
 | Option | Level | 기본값 | 설명 |
 |--------|-------|--------|------|
-| `at_least` | CG/CP | 1 | bin이 "hit"으로 인정되는 최소 샘플 수 |
+| `at_least` | CG/CP | 1 | bin 이 "hit" 으로 인정되는 최소 샘플 수 |
 | `auto_bin_max` | CG/CP | 64 | 명시적 bin 없을 때 자동 생성되는 최대 bin 수 |
 | `goal` | CG/CP | 100 | 목표 커버리지 % (보고용) |
 | `weight` | CG/CP | 1 | 전체 커버리지 계산 시 가중치 |
-| `per_instance` | CG | 0 | 1이면 인스턴스별 독립 추적 |
-| `cross_auto_bin_max` | CG | — | Cross의 자동 bin 수 제한 (폭발 방지) |
+| `per_instance` | CG | 0 | 1 이면 인스턴스별 독립 추적 |
+| `cross_auto_bin_max` | CG | — | Cross 의 자동 bin 수 제한 (폭발 방지) |
 
-### Transition Coverage — 상태 전이 추적
+### 5.6 Transition Coverage — 상태 전이 추적
 
 ```systemverilog
 covergroup fsm_cg with function sample(state_e cur_state);
@@ -449,7 +532,7 @@ covergroup fsm_cg with function sample(state_e cur_state);
     bins full_burst = (IDLE => ACTIVE => BURST);
 
     // 반복 전이: A → A (연속 N회)
-    bins active_held = (ACTIVE [*3:5]);  // 3~5회 연속 ACTIVE
+    bins active_held = (ACTIVE [*3:5]);  // 3~5 회 연속 ACTIVE
 
     // Wildcard 전이: 임의 → 특정
     bins any_to_error = (default => ERROR);
@@ -465,7 +548,7 @@ always @(posedge clk) begin
 end
 ```
 
-### Wildcard, Illegal, Ignore Bins 실전 예제
+### 5.7 Wildcard / Illegal / Ignore Bins 실전
 
 ```systemverilog
 covergroup protocol_cg;
@@ -489,41 +572,41 @@ covergroup protocol_cg;
     bins slverr = {RESP_SLVERR};
     bins decerr = {RESP_DECERR};
 
-    // illegal_bins로 DUT 에러 자동 검출
+    // illegal_bins 로 DUT 에러 자동 검출
     illegal_bins undefined = default;
-    // → 정의된 4개 이외의 값이 나오면 에러
+    // → 정의된 4 개 이외의 값이 나오면 에러
   }
 
-  // Cross에서 특정 조합 제외
+  // Cross 에서 특정 조합 제외
   cx_cmd_resp: cross cp_cmd, cp_resp {
     ignore_bins write_exokay = binsof(cp_cmd.write_any) &&
                                binsof(cp_resp.exokay);
-    // → exclusive access가 아닌 write에서 EXOKAY는 불가
+    // → exclusive access 가 아닌 write 에서 EXOKAY 는 불가
   }
 endgroup
 ```
 
-### Coverage 설계 원칙
+### 5.8 Coverage 설계 원칙
 
 | 원칙 | 설명 |
 |------|------|
-| 의미 있는 Bin | 프로토콜/기능 관점에서 의미 있는 분류 |
-| Cross 필수 | 단일 변수보다 **조합**이 버그를 찾음 |
-| Illegal Bin | `illegal_bins`로 불법 값/전이 자동 검출 (assertion 대용) |
-| Ignore Bin | `ignore_bins`로 불필요한 조합 제외 (커버리지 목표 현실화) |
+| 의미 있는 Bin | 프로토콜 / 기능 관점에서 의미 있는 분류 |
+| Cross 필수 | 단일 변수보다 **조합** 이 버그를 찾음 |
+| Illegal Bin | `illegal_bins` 로 불법 값 / 전이 자동 검출 (assertion 대용) |
+| Ignore Bin | `ignore_bins` 로 불필요한 조합 제외 (커버리지 목표 현실화) |
 | 경계값 포함 | min, max, 경계 ±1 |
 | Transition 필수 | FSM 상태 전이, 프로토콜 시퀀스 검증 |
-| at_least 조정 | 중요 시나리오는 `at_least > 1`로 반복 검증 |
-| Cross 폭발 방지 | `cross_auto_bin_max`, `ignore_bins`로 불필요 조합 제거 |
+| at_least 조정 | 중요 시나리오는 `at_least > 1` 로 반복 검증 |
+| Cross 폭발 방지 | `cross_auto_bin_max`, `ignore_bins` 로 불필요 조합 제거 |
 
-### Coverage Closure 전략
+### 5.9 Coverage Closure 전략
 
 ```
-1. Directed Smoke (seed=0) → 기본 경로 확인 → ~30%
-2. Configuration Sweep → 설정 조합 자동 생성 → ~60%
+1. Directed Smoke (seed=0)        → 기본 경로 확인 → ~30%
+2. Configuration Sweep             → 설정 조합 자동 생성 → ~60%
 3. Constrained Random (100+ seeds) → 코너 케이스 → ~85%
-4. Coverage Hole 분석 → 미커버 bin 확인 → Directed 추가 → ~95%
-5. Edge Case Directed → 경계값, 에러 → ~100%
+4. Coverage Hole 분석              → 미커버 bin 확인 → Directed 추가 → ~95%
+5. Edge Case Directed              → 경계값, 에러 → ~100%
 
 미도달 Coverage 분석:
   - Unreachable: 설계상 불가능 → waive
@@ -531,131 +614,106 @@ endgroup
   - Constraint 과다: Constraint 완화
 ```
 
+### 5.10 기본 Scoreboard + check_phase
+
+```systemverilog
+class my_scoreboard extends uvm_scoreboard;
+  `uvm_component_utils(my_scoreboard)
+  uvm_analysis_imp #(my_item, my_scoreboard) actual_export;
+  my_item expected_queue[$];
+
+  function void build_phase(uvm_phase phase);
+    actual_export = new("actual_export", this);
+  endfunction
+
+  function void add_expected(my_item item);
+    expected_queue.push_back(item);
+  endfunction
+
+  function void write(my_item actual);
+    my_item expected;
+    if (expected_queue.size() == 0) begin
+      `uvm_error("SB", "Unexpected transaction received")
+      return;
+    end
+    expected = expected_queue.pop_front();
+    if (!actual.compare(expected)) begin
+      `uvm_error("SB", $sformatf("Mismatch!\n  Exp: %s\n  Act: %s",
+                                  expected.sprint(), actual.sprint()))
+    end
+  endfunction
+
+  // ★ check_phase: 잔여 항목 확인 (DUT 가 응답을 안 준 경우 검출)
+  function void check_phase(uvm_phase phase);
+    if (expected_queue.size() > 0)
+      `uvm_error("SB", $sformatf("%0d expected items remaining",
+                                  expected_queue.size()))
+  endfunction
+endclass
+```
+
 ---
 
-## Q&A
+## 6. 흔한 오해 와 DV 디버그 체크리스트
 
-**Q: Analysis Port를 왜 사용하는가?**
-> "1:N broadcast가 핵심이다. Monitor가 한 번 write하면 Scoreboard, Coverage, Protocol Checker 등 모든 구독자가 동시에 수신한다. 구독자 추가/제거가 Monitor 코드에 영향을 주지 않으므로 독립적으로 확장 가능하다. 또한 TLM은 Pin-level이 아닌 Transaction-level 통신이므로 시뮬레이션 속도도 빠르다."
+### 흔한 오해
 
-**Q: Coverage Cross가 왜 중요한가?**
-> "단일 변수의 Coverage 100%는 조합의 Coverage를 보장하지 않는다. 예를 들어 opcode={READ,WRITE} × size={SMALL,LARGE} 각각 100%여도, READ+LARGE 조합이 한 번도 테스트되지 않았을 수 있다. Cross가 이 조합을 추적하여 미커버 조합을 식별한다. 실제 버그는 대부분 특정 조합에서 발생하므로 Cross가 필수적이다."
+!!! danger "❓ 오해 1 — 'Scoreboard 가 hang 했다는 건 transaction 이 안 들어왔다는 뜻이다'"
+    **실제**: Scoreboard 가 hang 하는 이유의 다수는 **expected / actual 큐 size 가 영원히 0 이 안 되어** check_phase 또는 run_phase 의 forever fifo.get 이 무한 대기. 수신은 됐는데 _비교가 안 끝난_ 것.<br>
+    **왜 헷갈리는가**: "hang = no-input" 이라는 단순화된 mental model 때문에 — 실제로는 input 은 있지만 expected 계산이 잘못돼 큐가 비지 않는 경우 다수.
 
-**Q: Scoreboard에서 check_phase가 필요한 이유는?**
-> "시뮬레이션 종료 시 expected_queue에 남아있는 항목이 있으면, DUT가 응답을 생성하지 않았다는 의미이다. run_phase에서는 이를 감지할 수 없고(아직 올 수 있으므로), 모든 시뮬레이션이 끝난 check_phase에서 잔여 항목을 검사해야 한다."
+!!! danger "❓ 오해 2 — 'OoO 트래픽인데 큐 1 개로도 운 좋게 동작하면 OK'"
+    **실제**: 단순 시나리오에서는 우연히 in-order 일 수 있어도, AXI 의 ID 별 reorder 가 발생하는 순간 _첫 비교부터_ spurious mismatch 가 폭발. **DUT 의 protocol 이 OoO 를 _허용_ 하면 즉시 per-key 큐 (associative array) 로 가야** 합니다.<br>
+    **왜 헷갈리는가**: 초기 시나리오의 PASS 가 마치 "큐 1 개로 충분" 의 증거처럼 보여서.
 
-**Q: uvm_analysis_imp 대신 uvm_tlm_analysis_fifo를 쓰는 이유는?**
-> "analysis_imp의 write()는 function이므로 시간을 소비할 수 없다. 실무에서 Scoreboard가 두 개 이상의 포트(입력/출력)로부터 데이터를 받아 매칭해야 하는 경우, 한쪽이 먼저 도착하면 다른 쪽을 기다려야 한다. 이 '기다림'은 task에서만 가능하다. analysis_fifo가 중간에서 버퍼링하면 Scoreboard의 run_phase(task)에서 get()으로 blocking 대기할 수 있다. Monitor와 Scoreboard가 완전히 디커플링되는 것도 장점이다."
+!!! danger "❓ 오해 3 — '단일 변수 coverage 100% 면 검증 끝'"
+    **실제**: 단일 변수 100% ≠ _조합_ 100%. opcode={READ,WRITE} 와 size={SMALL,LARGE} 가 각각 100% 여도 READ+LARGE 조합이 한 번도 테스트되지 않을 수 있습니다. **Cross 가 이 조합을 추적**. 실제 버그는 대부분 특정 조합에서.<br>
+    **왜 헷갈리는가**: "100%" 라는 숫자가 _완전히 끝_ 같은 인상을 줘서.
 
-**Q: In-Order와 Out-of-Order Scoreboard를 어떻게 선택하는가?**
-> "DUT의 출력 순서 보장 여부로 결정한다. FIFO나 단순 파이프라인처럼 입력 순서 = 출력 순서이면 In-Order(Queue 기반). AXI처럼 ID별 reordering이 허용되거나 캐시처럼 hit/miss에 따라 출력 순서가 달라지면 Out-of-Order(Associative Array 기반)가 필수이다. 키 선택이 핵심 — AXI는 ID, 캐시는 Address, DMA는 Channel ID가 매칭 키가 된다."
+!!! danger "❓ 오해 4 — 'check_phase 는 선택이다'"
+    **실제**: `run_phase` 에서 actual 만 받아 비교하는 scoreboard 는 _DUT 가 응답을 누락_ 한 경우 (drop / miss) 를 검출 못 합니다. 시뮬은 PASS 로 종료되지만 expected 큐에 항목이 쌓인 채 끝남. **`check_phase` 에서 큐 잔여 size 를 반드시 확인**.<br>
+    **왜 헷갈리는가**: "비교 = run_phase 의 책임" 이라는 단순 모델 때문에.
 
-**Q: Transition Coverage가 왜 필요한가?**
-> "단순 상태 커버리지는 '모든 상태를 방문했는가'만 확인한다. 하지만 버그는 특정 전이 경로에서 발생한다. 예를 들어 IDLE과 ERROR 상태 모두 커버되더라도, IDLE→ERROR 직접 전이가 한 번도 테스트되지 않았을 수 있다. Transition coverage가 이 경로를 추적하며, illegal transition bins로 FSM 프로토콜 위반도 자동 검출할 수 있다."
+!!! danger "❓ 오해 5 — 'covergroup 만 정의하면 자동으로 sample 된다'"
+    **실제**: `cg.sample()` 호출이 _없으면_ covergroup 은 trigger 되지 않아 **coverage 0** 으로 남습니다. Monitor 의 write 콜백 안에서 호출하는 것이 표준. covergroup 정의만으로는 _bins_ 만 선언될 뿐 실제 샘플링은 일어나지 않음.<br>
+    **왜 헷갈리는가**: covergroup 이 자동 sampling 메커니즘 (`@(posedge clk)`) 을 가질 _수 있어서_ — 그러나 trigger 명시 없이는 안 함.
 
-**Q: illegal_bins의 실무 활용은?**
-> "두 가지 용도가 있다. (1) 프로토콜 위반 검출 — reserved 명령 코드, 정의되지 않은 응답 값 등이 DUT에서 나오면 즉시 에러를 발생시킨다. SVA를 별도로 작성하지 않아도 coverage model 안에서 자동 검증이 된다. (2) illegal transition으로 FSM의 불법 전이를 검출한다. 예를 들어 IDLE에서 ERROR로 직접 전이하면 안 되는 스펙이면, `illegal_bins idle_to_error = (IDLE => ERROR)`로 잡는다."
+### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패들)
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| Scoreboard hang (run_phase 무한 대기) | actual 또는 expected 가 안 옴 (특히 OoO 에서 ID mismatch 로 영원히 wait) | run.log 에서 `[SB]` 로그 카운트, expected_map size 추적 |
+| 시뮬 PASS, coverage 0 | `cg.sample()` 호출 누락 또는 covergroup 인스턴스 (`new()`) 누락 | `grep cg.sample *.sv` + Coverage subscriber 의 new |
+| 시뮬 PASS, 그런데 DUT bug 가 누락됨 | check_phase 가 잔여 expected 확인 안 함 | scoreboard 의 check_phase 함수 존재 여부 |
+| In-order scoreboard 의 첫 비교부터 mismatch | DUT 가 OoO (예: AXI ID 다른 채널) 인데 큐 1 개 사용 | DUT spec 의 ordering rule 확인 → per-key 큐로 |
+| Coverage cross bin 폭발 (cross_auto_bin_max 초과) | cross 의 두 coverpoint 가 너무 많은 bin × bin | `cross_auto_bin_max` 또는 ignore_bins 추가 |
+| analysis_imp 안에서 `#10ns` 컴파일 에러 | analysis_imp.write 는 function — 시간 소비 불가 | analysis_fifo + run_phase task 로 변경 |
+| Multiple monitor 간 매칭이 안 됨 | analysis_imp 한 개로 두 source 받는데 동시 도착 가정 | analysis_fifo 두 개 + run_phase 에서 둘 get |
+| illegal_bins 가 발생했는데 시뮬이 PASS | illegal_bins 가 정의돼도 시뮬 자체는 fatal 안 함 (보통 UVM_ERROR 또는 reporting) | report_phase 의 coverage report 확인, illegal hit count |
 
 ---
 
-## 연습문제
+## 7. 핵심 정리 (Key Takeaways)
 
-!!! question "Exercise 1 (Apply, ★)"
-    Monitor 1개를 Scoreboard와 Coverage 양쪽에 broadcast 연결하는 코드를 작성하세요.
-
-    ??? answer "모범 답안"
-        ```systemverilog
-        // monitor
-        uvm_analysis_port#(my_item) ap;
-        function void build_phase(uvm_phase phase);
-          super.build_phase(phase);
-          ap = new("ap", this);
-        endfunction
-
-        // scoreboard
-        uvm_analysis_imp#(my_item, my_sb) actual_imp;
-        function void build_phase(uvm_phase phase);
-          super.build_phase(phase);
-          actual_imp = new("actual_imp", this);
-        endfunction
-        function void write(my_item it);
-          // 비교 로직
-        endfunction
-
-        // coverage subscriber
-        class my_cov extends uvm_subscriber#(my_item);
-          covergroup cg;
-            cp_addr: coverpoint item.addr { bins low={[0:'h3FF]}; bins high={['hC00:'hFFF]}; }
-          endgroup
-          function void write(my_item t);
-            this.item = t; cg.sample();
-          endfunction
-        endclass
-
-        // env connect_phase
-        agent.mon.ap.connect(sb.actual_imp);
-        agent.mon.ap.connect(cov.analysis_export);
-        ```
-
-!!! question "Exercise 2 (Analyze, ★★)"
-    in-order Scoreboard(큐 pop_front 비교)를 OoO 트래픽(AXI ID 기반)에 그대로 적용하면 어떤 증상이 나타나는지, 어떻게 수정해야 하는지 답하세요.
-
-    ??? answer "모범 답안"
-        - **증상**: Master는 ID=0,1,2 순으로 보냈지만 Slave가 ID=2,0,1 순으로 응답하면 첫 비교부터 mismatch → spurious UVM_ERROR.
-        - **수정**: 큐 1개가 아니라 **ID별 큐**(associative array `expected[id][$]`)를 두고, 응답이 오면 `expected[id].pop_front()`와 비교. AXI는 ID 단위 in-order, ID 간 OoO이므로 이 모델이 정합.
-        - 일반화: ID/tag/seq_no 같은 매칭 키가 있으면 **per-key 큐**, 없으면 모델로 비교(reference model이 모든 가능 출력 시뮬).
-
-!!! question "Exercise 3 (Create, ★★★)"
-    AXI write 트랜잭션에 대해 `addr_region` × `burst_len` cross coverage를 정의하세요. 4 region, burst_len bins {1, [2:4], [5:16]}.
-
-    ??? answer "예시 답안"
-        ```systemverilog
-        covergroup cg_axi_write;
-          cp_region: coverpoint item.addr {
-            bins r0 = {[32'h0000_0000:32'h3FFF_FFFF]};
-            bins r1 = {[32'h4000_0000:32'h7FFF_FFFF]};
-            bins r2 = {[32'h8000_0000:32'hBFFF_FFFF]};
-            bins r3 = {[32'hC000_0000:32'hFFFF_FFFF]};
-          }
-          cp_burst: coverpoint item.burst_len {
-            bins single = {1};
-            bins short  = {[2:4]};
-            bins long   = {[5:16]};
-          }
-          cross_region_burst: cross cp_region, cp_burst;  // 4 × 3 = 12 bins
-        endgroup
-        ```
-!!! warning "실무 주의점 — `check_phase`에서 잔여 expected 미확인으로 miss 버그 방치"
-    **현상**: 시뮬이 PASS로 종료되지만 DUT가 일부 응답을 아예 보내지 않은 경우(drop/miss)가 있어도 탐지되지 않는다. Scoreboard가 actual을 받을 때만 비교하므로, actual 자체가 오지 않으면 expected 큐에 항목이 쌓인 채로 검사 없이 종료된다.
-
-    **원인**: `run_phase`에서 `expected_fifo.get(expected)`와 `actual_fifo.get(actual)`를 쌍으로 비교하는 로직만 있고, `check_phase`에서 `expected_fifo`에 남은 항목이 없는지 확인하지 않는 설계 때문이다. DUT가 응답을 누락하면 scoreboard는 영원히 대기하지 않고 objection drop 시점에 그냥 종료된다.
-
-    **점검 포인트**: Scoreboard `check_phase`에서 `expected_fifo.size() != 0` 조건을 확인하고 남은 항목이 있으면 `` `uvm_error `` 발생시키는 코드가 있는지 점검. `check_phase`의 `` `uvm_error `` 메시지가 로그에 있는지 grep: `grep "SCOREBOARD" run.log`.
-
-## 핵심 정리
-
-- **Analysis Port = 1:N broadcast**. Monitor 한 곳에서 send → 여러 구독자(SB, Coverage)가 각자 처리.
-- **Scoreboard 비교 모델**: in-order는 단일 큐, OoO는 per-key 큐(또는 ID별), 복잡 DUT는 reference model + 출력 비교.
-- **Covergroup sampling 시점**: Monitor의 write 콜백에서 `cg.sample()` 호출이 표준. trigger source 명시 안 하면 의도와 다른 시점에 샘플링.
-- **Cross coverage**는 단순 합집합이 아니라 곱집합(N × M bins) — 의미 있는 조합만 정의해야 폭발 방지.
+- **Analysis Port = 1:N broadcast**. Monitor 한 곳에서 send → 여러 구독자 (SB, Coverage) 가 각자 처리. 새 subscriber 추가는 publisher 코드 변경 없이.
+- **Scoreboard 비교 모델**: in-order 는 단일 큐, OoO 는 per-key 큐 (또는 ID 별 associative array), 복잡 DUT 는 reference model + 출력 비교.
+- **analysis_imp (function, 즉시) vs analysis_fifo (task, 비동기)** 의 선택. 다중 source 매칭 / 시간 소비 비교는 analysis_fifo 필수.
+- **Covergroup sampling 시점**: Monitor 의 write 콜백에서 `cg.sample()` 호출이 표준. trigger source 명시 안 하면 의도와 다른 시점에 샘플링.
+- **Cross coverage** 는 단순 합집합이 아니라 곱집합 (N × M bins) — 의미 있는 조합만 정의해야 폭발 방지.
 - **Coverage closure 전략**: (1) 시드 다양화로 baseline, (2) 타겟 시퀀스로 hole 채움, (3) cross 분석으로 미커버 조합 식별.
-- **Pitfall**: Scoreboard는 잡지만 covergroup이 trigger 안 되면 coverage가 0으로 남음 — 둘은 독립이지만 같은 ap에서 fan-out.
 
-## 다음 단계
+!!! warning "실무 주의점"
+    - Scoreboard 의 `check_phase` 에서 _잔여 expected 큐 size_ 검사 — 빠지면 DUT miss 가 silent.
+    - covergroup 인스턴스화 (`cg = new()`) 는 _new 함수 안에서_ — covergroup 만 선언하고 new 호출 안 하면 sample 무시.
+    - `illegal_bins` 는 assertion 의 _대체_ 가 아니라 _보완_. 핵심 protocol 위반은 SVA 도 같이.
 
-- 📝 [**Module 05 퀴즈**](quiz/05_tlm_scoreboard_coverage_quiz.md)
-- ➡️ [**Module 06 — 실무 패턴 & 안티패턴**](06_practical_patterns.md)
+---
 
-<div class="chapter-nav">
-  <a class="nav-prev" href="../04_config_db_factory/">
-    <div class="nav-label">◀ 이전</div>
-    <div class="nav-title">config_db & Factory</div>
-  </a>
-  <a class="nav-next" href="../06_practical_patterns/">
-    <div class="nav-label">다음 ▶</div>
-    <div class="nav-title">UVM 실무 패턴 & 안티패턴</div>
-  </a>
-</div>
+## 다음 모듈
+
+→ [Module 06 — 실무 패턴 & 안티패턴](06_practical_patterns.md): 지금까지 배운 컴포넌트 / 메커니즘들을 _실제 환경 구축_ 에 어떻게 조립하는가, 그리고 _하면 안 되는_ 패턴들.
+
+[퀴즈 풀어보기 →](quiz/05_tlm_scoreboard_coverage_quiz.md)
 
 
 --8<-- "abbreviations.md"
