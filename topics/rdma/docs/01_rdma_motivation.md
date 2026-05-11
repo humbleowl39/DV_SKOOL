@@ -86,7 +86,7 @@ flowchart LR
         R3 -- "DMA → wire" --> R4
         R4 -- "rkey 검증 후<br/>직접 DMA write<br/>(peer CPU 안 깨움)" --> R5
     end
-    classDef cost fill:#ffe5e5,stroke:#c0392b
+    classDef cost stroke:#c0392b,stroke-width:3px
     class T2,T3,T5,T6 cost
 ```
 
@@ -105,20 +105,20 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     autonumber
-    participant AppA as Node A · app+lbuf
+    participant AppA as Node A<br/>app + lbuf
     participant HA as HCA_A
     participant HB as HCA_B
-    participant AppB as Node B · app+rbuf
+    participant AppB as Node B<br/>app + rbuf
 
-    Note over AppB,HB: ① ibv_reg_mr(rbuf) — pinning + rkey 발급
-    AppB->>AppA: ② (remote_va, rkey) 전달<br/>out-of-band (RDMA-CM / TCP)
+    Note over HB,AppB: ① ibv_reg_mr(rbuf)<br/>pinning + rkey 발급
+    AppB->>AppA: ② (remote_va, rkey) 전달<br/>out-of-band<br/>(RDMA-CM / TCP)
     AppA->>HA: ③ post_send WQE
     HA->>HA: ④ DMA read lbuf
-    HA->>HB: BTH + RETH + payload (over wire)
+    HA->>HB: BTH + RETH + payload<br/>(over wire)
     HB->>HB: ⑤ rkey verify<br/>⑥ DMA write → rbuf
     HB-->>HA: ⑦ ACK packet
-    HA-->>AppA: ⑧ CQE 생성 (poll_cq)
-    Note over AppB,HB: B 의 CPU 한 번도 안 깨움 ⭐
+    HA-->>AppA: ⑧ CQE 생성<br/>(poll_cq)
+    Note over HB,AppB: B 의 CPU 한 번도<br/>안 깨움 ⭐
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -221,8 +221,8 @@ flowchart TB
     QP -. 완료 통지 .-> CQ
     CQ -- "poll_cq" --> WC
 
-    classDef obj fill:#e8f0fe,stroke:#1a73e8,color:#0b3a86
-    classDef inner fill:#f1f3f4,stroke:#5f6368
+    classDef obj stroke:#1a73e8,stroke-width:2px
+    classDef inner stroke:#5f6368,stroke-dasharray:4 2
     class PD,MR,QP,CQ obj
     class SQ,RQ inner
 ```
@@ -285,7 +285,7 @@ flowchart TB
     NICR -- "Interrupt → ksoftirqd" --> SBR
     SBR -- "<b>(3)</b> copy_to_user<br/><i>CPU cycle</i>" --> AppR
 
-    classDef cost fill:#fff3cd,stroke:#b8860b
+    classDef cost stroke:#b8860b,stroke-width:3px
     class SBS,SBR,NICR cost
 ```
 
@@ -309,10 +309,10 @@ flowchart TB
     ROOT --> IW
     ROOT --> ROCE
 
-    classDef root fill:#1a73e8,color:#fff,stroke:#0b3a86,font-weight:bold
-    classDef ib fill:#e8f0fe,stroke:#1a73e8
-    classDef iw fill:#fef7e0,stroke:#b8860b
-    classDef rc fill:#e6f4ea,stroke:#137333
+    classDef root stroke:#1a73e8,stroke-width:3px
+    classDef ib stroke:#1a73e8,stroke-width:2px
+    classDef iw stroke:#b8860b,stroke-width:2px
+    classDef rc stroke:#137333,stroke-width:2px
     class ROOT root
     class IB ib
     class IW iw
@@ -347,9 +347,9 @@ flowchart TB
     KER -- "MMIO + DMA" --> HW
     LIB -. "data path: MMIO doorbell<br/>(kernel bypass)" .-> HW
 
-    classDef user fill:#e8f0fe,stroke:#1a73e8
-    classDef kernel fill:#fce8e6,stroke:#c5221f
-    classDef hw fill:#e6f4ea,stroke:#137333
+    classDef user stroke:#1a73e8,stroke-width:2px
+    classDef kernel stroke:#c5221f,stroke-width:2px
+    classDef hw stroke:#137333,stroke-width:2px
     class APP,LIB user
     class KER kernel
     class HW hw
