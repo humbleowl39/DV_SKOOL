@@ -57,25 +57,19 @@
 
 ### 한 장 그림 — assert / assume / cover 의 역할 분담
 
-```
-   ┌──────────────────────────────────────────────────────────┐
-   │                       Property P                          │
-   │           (어떤 시간 관계의 명제: req |-> ##[1:3] ack)    │
-   └─────────┬─────────────────────┬──────────────────┬───────┘
-             │                     │                  │
-       ┌─────▼──────┐       ┌──────▼─────┐    ┌──────▼─────┐
-       │  assert P  │       │  assume P  │    │  cover P   │
-       └─────┬──────┘       └──────┬─────┘    └──────┬─────┘
-             │                     │                  │
-   "P 가 항상 참인지            "P 를 '입력에서        "P 가 실제로
-    검증하라"                   참이라고 가정' 하라"   도달 가능한가"
-             │                     │                  │
-   ┌─────────▼─────────┐  ┌────────▼────────┐ ┌──────▼─────────┐
-   │ Sim: 위반 시 error│  │ Sim: 검사 안 함 │ │ Sim: 도달 카운트│
-   │ FV : 증명 대상     │  │ FV : 입력 제약  │ │ FV : 도달성 확인│
-   └───────────────────┘  └─────────────────┘ └────────────────┘
-                            ⚠ 과도하면                ⭐ assert 의
-                             False PROVEN            Vacuous 방지
+```mermaid
+flowchart TB
+    P["Property P<br/>(어떤 시간 관계의 명제:<br/>req |-> ##[1:3] ack)"]
+    P --> AS["assert P<br/>'P 가 항상 참인지 검증하라'"]
+    P --> AM["assume P<br/>'P 를 입력에서 참이라고 가정하라'"]
+    P --> CV["cover P<br/>'P 가 실제로 도달 가능한가'"]
+    AS --> AS_R["Sim: 위반 시 error<br/>FV: 증명 대상"]
+    AM --> AM_R["Sim: 검사 안 함<br/>FV: 입력 제약<br/>⚠ 과도하면 False PROVEN"]
+    CV --> CV_R["Sim: 도달 카운트<br/>FV: 도달성 확인<br/>⭐ assert 의 Vacuous 방지"]
+    classDef warn stroke:#c0392b,stroke-width:2px
+    classDef good stroke:#27ae60,stroke-width:2px
+    class AM_R warn
+    class CV_R good
 ```
 
 세 directive 의 역할이 서로 다르므로, **한 property 는 보통 (assert + cover) 짝**, 또는 **(assume + cover) 짝** 으로 쓰입니다. assume 단독은 위험합니다.
@@ -90,43 +84,20 @@
 
 가장 단순한 시나리오. AXI valid/ready handshake 의 _stability rule_ — "valid 가 1 이고 ready 가 0 이면, valid 와 data 는 다음 cycle 에 그대로 유지" — 를 SVA 로 작성 → bind → JasperGold 로 PROVEN 시키는 한 사이클을 따라가 봅시다.
 
-```
-                     SVA property 의 life cycle
-   ┌──────────────┐
-   │ ① Spec 읽기 │  "valid==1 && ready==0 → 다음 cycle 도 valid==1 + data 동일"
-   └──────┬───────┘
-          ▼
-   ┌──────────────┐
-   │ ② SVA 작성   │  ap_axi_stable: assert property (
-   │              │      @(posedge clk) disable iff (rst)
-   │              │      (valid && !ready) |=> (valid && $stable(data))
-   │              │  );
-   └──────┬───────┘
-          ▼
-   ┌──────────────┐
-   │ ③ Cover 짝   │  cp_stall: cover property (valid && !ready);
-   │              │  cp_stall_chain: cover property (
-   │              │      (valid && !ready) [*3]);
-   └──────┬───────┘
-          ▼
-   ┌──────────────┐
-   │ ④ Bind       │  bind axi_master axi_sva u_sva (.*);
-   │              │  (DUT RTL 무수정)
-   └──────┬───────┘
-          ▼
-   ┌──────────────┐
-   │ ⑤ JG 실행    │  analyze → elaborate → clock/reset → prove -all
-   └──────┬───────┘
-          ▼
-   ┌──────────────┐
-   │ ⑥ 결과 분류  │  ap_axi_stable: PROVEN / BOUNDED / CEX
-   │              │  cp_stall:      covered (trace 1)
-   │              │  cp_stall_chain: covered (trace 1)
-   └──────┬───────┘
-          ▼
-   ┌──────────────┐
-   │ ⑦ Sign-off   │  PROVEN + 모든 cover covered → 의미 있는 증명
-   └──────────────┘
+SVA property 의 life cycle:
+
+```mermaid
+flowchart TB
+    S1["① Spec 읽기<br/>'valid==1 && ready==0<br/>→ 다음 cycle 도 valid==1 + data 동일'"]
+    S2["② SVA 작성<br/>ap_axi_stable: assert property (...)<br/>(valid && !ready) |=> (valid && $stable(data))"]
+    S3["③ Cover 짝<br/>cp_stall: cover (valid && !ready)<br/>cp_stall_chain: cover ((valid && !ready)[*3])"]
+    S4["④ Bind<br/>bind axi_master axi_sva u_sva (.*)<br/>(DUT RTL 무수정)"]
+    S5["⑤ JG 실행<br/>analyze → elaborate → clock/reset → prove -all"]
+    S6["⑥ 결과 분류<br/>ap_axi_stable: PROVEN / BOUNDED / CEX<br/>cp_stall: covered (trace 1)<br/>cp_stall_chain: covered (trace 1)"]
+    S7["⑦ Sign-off<br/>PROVEN + 모든 cover covered<br/>→ 의미 있는 증명"]
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
+    classDef goal stroke:#27ae60,stroke-width:3px
+    class S7 goal
 ```
 
 | Step | 누가 | 무엇을 | 왜 |

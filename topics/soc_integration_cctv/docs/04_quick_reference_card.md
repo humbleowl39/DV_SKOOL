@@ -53,27 +53,21 @@
 
 ### 한 장 그림 — 본문 → 이 카드 → 사용 시점
 
-```
-   ┌────────── 본문 (Module 01-03) ──────────┐
-   │  Module 01: Top vs IP, 5 축              │
-   │  Module 02: Common Task, CCTV 매트릭스    │
-   │  Module 03: TB Top 자동화, AI 파이프라인  │
-   └────────────────────┬──────────────────────┘
-                        │
-                        ▼  추출 / 압축
-   ┌────────── 이 카드 (Module 04) ──────────┐
-   │   ① 한 줄 요약 + 5 축 + 7 task           │
-   │   ② 코드 패턴 (SVA / MMAP / CCTV)         │
-   │   ③ 매트릭스 / 정량 / 디버그 / 면접      │
-   └────────────────────┬──────────────────────┘
-                        │
-                        ▼  사용 시점
-       ┌─────────────────────────────────────────┐
-       │  · 디버그 회의 중 "이 증상 어디 보지?"    │
-       │  · 면접 / 인터뷰 답변                      │
-       │  · 코드 리뷰 — 빠진 카테고리 검토         │
-       │  · 새 IP release 시 ignore_bins 결정      │
-       └─────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    BODY["<b>본문 (Module 01–03)</b><br/>Module 01 : Top vs IP, 5 축<br/>Module 02 : Common Task, CCTV 매트릭스<br/>Module 03 : TB Top 자동화, AI 파이프라인"]
+    CARD["<b>이 카드 (Module 04)</b><br/>① 한 줄 요약 + 5 축 + 7 task<br/>② 코드 패턴 (SVA / MMAP / CCTV)<br/>③ 매트릭스 / 정량 / 디버그 / 면접"]
+    USE["<b>사용 시점</b><br/>· 디버그 회의 중 '이 증상 어디 보지?'<br/>· 면접 / 인터뷰 답변<br/>· 코드 리뷰 — 빠진 카테고리 검토<br/>· 새 IP release 시 ignore_bins 결정"]
+
+    BODY -- "추출 / 압축" --> CARD
+    CARD -- "사용 시점" --> USE
+
+    classDef body stroke:#1a73e8,stroke-width:2px
+    classDef card stroke:#137333,stroke-width:3px
+    classDef use stroke:#b8860b,stroke-width:2px
+    class BODY body
+    class CARD card
+    class USE use
 ```
 
 ### 왜 카드가 분리돼야 하는가 — Design rationale
@@ -134,18 +128,21 @@ Step 5 (regression): PASS
 
 ## 4. 일반화 — 한 장에 담는 3 카테고리
 
-```
-                        ┌────────── Quick Reference 의 3 카테고리 ──────────┐
-                        │                                                   │
-                  ┌─────┴─────┐                ┌────────┐              ┌────┴─────┐
-                  │  요약      │                │ 코드   │              │ 디버그/  │
-                  │  매트릭스  │                │ 패턴   │              │ 면접     │
-                  │  정량      │                │        │              │          │
-                  └────────────┘                └────────┘              └──────────┘
+```mermaid
+flowchart TB
+    ROOT["Quick Reference 의 3 카테고리"]
+    C1["요약 / 매트릭스 / 정량<br/><i>'무엇을' 안다 / 외운다</i>"]
+    C2["코드 패턴<br/><i>'어떻게' 즉시 쓴다</i>"]
+    C3["디버그 / 면접<br/><i>'언제' 꺼내 쓴다</i>"]
 
-  요약 / 매트릭스 / 정량 = "_무엇을_ 안다 / 외운다"
-  코드 패턴               = "_어떻게_ 즉시 쓴다"
-  디버그 / 면접            = "_언제_ 꺼내 쓴다"
+    ROOT --> C1
+    ROOT --> C2
+    ROOT --> C3
+
+    classDef root stroke:#1a73e8,stroke-width:3px
+    classDef cat stroke:#5f6368,stroke-width:2px
+    class ROOT root
+    class C1,C2,C3 cat
 ```
 
 | 카테고리 | 본문 대응 | 카드에서의 형식 | 사용 시점 |

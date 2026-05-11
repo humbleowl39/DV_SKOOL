@@ -71,40 +71,24 @@
 
 ## 컨셉 맵
 
-```
-              +--------------------+
-              |  Virtual Address   |
-              |  (CPU / Device)    |
-              +---------+----------+
-                        |
-          +-------------+-------------+
-          |           MMU             |
-          |                           |
-          |  +-------+  +---------+  |
-          |  |  TLB  |  |Page Walk|  |
-          |  |(Cache) |  | Engine  |  |
-          |  +---+---+  +----+----+  |
-          |      |            |       |
-          |   Hit?         Miss →     |
-          |      |       Page Table   |
-          |      |       Traversal    |
-          +------+-------+----+------+
-                 |             |
-          +------+------+     |
-          |   결과 합류  |<----+
-          +------+------+
-                 |
-          +------+------+
-          | Physical Addr|
-          | + 권한 체크   |
-          +------+------+
-                 |
-      +----------+----------+
-      |                     |
-  +---+---+            +----+----+
-  | Memory |            | Fault   |
-  | Access |            | Handler |
-  +--------+            +---------+
+```mermaid
+flowchart TB
+    VA["Virtual Address<br/>(CPU / Device)"]
+    subgraph MMU["MMU"]
+        TLB["TLB (Cache)"]
+        PWE["Page Walk Engine<br/>(Page Table Traversal)"]
+        MERGE["결과 합류"]
+        TLB -- "Hit" --> MERGE
+        TLB -- "Miss" --> PWE --> MERGE
+    end
+    PA["Physical Addr<br/>+ 권한 체크"]
+    MEM["Memory Access"]
+    FH["Fault Handler"]
+
+    VA --> TLB
+    MERGE --> PA
+    PA --> MEM
+    PA --> FH
 ```
 
 ## 학습 단위 (Units)

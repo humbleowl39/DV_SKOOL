@@ -61,26 +61,36 @@
 
 ### 한 장 그림 — 패킷 포맷과 라우터의 작용
 
-```
-   sender 가 만든 패킷
-   ┌─────┬──────┬─────┬──────┬─────────┬──────┬──────┐
-   │ LRH │ GRH? │ BTH │ xTH? │ Payload │ ICRC │ VCRC │
-   └──┬──┴───┬──┴──┬──┴──┬───┴────┬────┴───┬──┴───┬──┘
-      │      │     │     │        │        │      │
-      │      │     │     │        │        │      │
-   ┌──▼──────▼─────▼─────▼────────▼────────▼──────▼──┐
-   │                Switch / Router                   │
-   │   ─ LRH.DLID/VL 변경 가능 (rewrite)              │
-   │   ─ GRH.HopLmt 감소                              │
-   │   ─ BTH/xTH/Payload  ▶  손대지 않음              │
-   │   ─ VCRC 재계산                                  │
-   │   ─ ICRC 그대로 보존 ⭐ (변경 가능 영역 빼고 계산) │
-   └──┬──────┬─────┬─────┬────────┬────────┬──────┬──┘
-      │      │     │     │        │        │      │
-   ┌──▼──────▼─────▼─────▼────────▼────────▼──────▼──┐
-   │ LRH'│ GRH' │ BTH │ xTH? │ Payload │ ICRC │VCRC'│
-   └─────┴──────┴─────┴──────┴─────────┴──────┴──────┘
-   receiver 가 받는 패킷  (BTH 이후는 sender 가 보낸 그대로)
+```mermaid
+flowchart TB
+    subgraph SEND["Sender 가 만든 패킷"]
+        direction LR
+        S_LRH["LRH"]
+        S_GRH["GRH?"]
+        S_BTH["BTH"]
+        S_XTH["xTH?"]
+        S_PAY["Payload"]
+        S_ICRC["ICRC"]
+        S_VCRC["VCRC"]
+        S_LRH --- S_GRH --- S_BTH --- S_XTH --- S_PAY --- S_ICRC --- S_VCRC
+    end
+    SW["<b>Switch / Router</b><br/>━━━━━━━━━━━━━━━━━━<br/>LRH.DLID / VL rewrite 가능<br/>GRH.HopLmt 감소<br/>BTH / xTH / Payload 손대지 않음<br/>VCRC 재계산<br/>ICRC 그대로 보존 ⭐"]
+    subgraph RECV["Receiver 가 받는 패킷 (BTH 이후는 sender 가 보낸 그대로)"]
+        direction LR
+        R_LRH["LRH'"]
+        R_GRH["GRH'"]
+        R_BTH["BTH"]
+        R_XTH["xTH?"]
+        R_PAY["Payload"]
+        R_ICRC["ICRC"]
+        R_VCRC["VCRC'"]
+        R_LRH --- R_GRH --- R_BTH --- R_XTH --- R_PAY --- R_ICRC --- R_VCRC
+    end
+    SEND --> SW --> RECV
+    classDef hop stroke:#c0392b,stroke-width:3px
+    classDef e2e stroke:#137333,stroke-width:3px
+    class S_LRH,S_GRH,S_VCRC,R_LRH,R_GRH,R_VCRC hop
+    class S_BTH,S_XTH,S_PAY,S_ICRC,R_BTH,R_XTH,R_PAY,R_ICRC e2e
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -148,27 +158,16 @@
 
 ### 4.1 IB 5 계층 모델
 
-```
-+----------------------------------------------------------+
-|  Upper Layer (User application + Verbs API)              |
-|    SDP, IPoIB, SRP, NFS-RDMA, MPI, ...                   |
-+----------------------------------------------------------+
-|  Transport Layer  (BTH + xTH)                            |
-|    Service: RC / UC / UD / RD / XRC                      |
-|    Functions: PSN, ACK/NAK, retry, RDMA semantics        |
-+----------------------------------------------------------+
-|  Network Layer  (GRH — optional)                         |
-|    GID-based routing across subnets (IPv6-format)        |
-+----------------------------------------------------------+
-|  Link Layer  (LRH + VCRC + Flow Control)                 |
-|    LID-based routing within subnet                       |
-|    VL (Virtual Lanes) + Credit-based flow control        |
-|    SL (Service Level) → VL mapping                       |
-+----------------------------------------------------------+
-|  Physical Layer                                           |
-|    1x / 4x / 12x SerDes (e.g. SDR 2.5 → HDR 50 → NDR 100 |
-|    Gbps per lane)                                        |
-+----------------------------------------------------------+
+```mermaid
+flowchart TB
+    UP["<b>Upper Layer</b> · User application + Verbs API<br/>SDP, IPoIB, SRP, NFS-RDMA, MPI, ..."]
+    TR["<b>Transport Layer</b> · BTH + xTH<br/>Service: RC / UC / UD / RD / XRC<br/>PSN, ACK/NAK, retry, RDMA semantics"]
+    NET["<b>Network Layer</b> · GRH (optional)<br/>GID-based routing across subnets (IPv6-format)"]
+    LNK["<b>Link Layer</b> · LRH + VCRC + Flow Control<br/>LID-based routing within subnet<br/>VL + credit-based flow control<br/>SL → VL mapping"]
+    PHY["<b>Physical Layer</b><br/>1x / 4x / 12x SerDes<br/>SDR 2.5 → HDR 50 → NDR 100 Gbps per lane"]
+    UP --> TR --> NET --> LNK --> PHY
+    classDef layer stroke:#1a73e8,stroke-width:2px
+    class UP,TR,NET,LNK,PHY layer
 ```
 
 !!! quote "Spec 인용"
@@ -176,19 +175,30 @@
 
 ### 4.2 패킷 포맷 한 장 뷰
 
+```mermaid
+flowchart LR
+    LRH["LRH<br/>8B"]
+    GRH["GRH?<br/>40B"]
+    BTH["BTH<br/>12B"]
+    XTH["xTH?<br/>variable"]
+    PAY["Payload<br/>0..MTU"]
+    ICRC["ICRC<br/>4B"]
+    VCRC["VCRC<br/>2B"]
+    LRH --- GRH --- BTH --- XTH --- PAY --- ICRC --- VCRC
+    classDef must stroke:#1a73e8,stroke-width:2px
+    classDef opt stroke:#5f6368,stroke-dasharray:4 2
+    classDef crc stroke:#137333,stroke-width:2px
+    class LRH,BTH must
+    class GRH,XTH opt
+    class ICRC,VCRC crc
 ```
-┌─────┬─────┬─────┬───────┬──────────┬──────┬──────┐
-│ LRH │ GRH?│ BTH │ xTH?  │  Payload │ ICRC │ VCRC │
-└─────┴─────┴─────┴───────┴──────────┴──────┴──────┘
-  8B    40B?  12B   variable  0..MTU    4B     2B
 
-LRH  : Local Route Header        (필수)
-GRH  : Global Route Header       (subnet 간 또는 multicast 시 필수)
-BTH  : Base Transport Header     (필수, 모든 IBA transport packet)
-xTH  : Extended Transport Header (opcode 별로 0개 ~ 여러 개)
-ICRC : Invariant CRC             (header + payload 의 라우팅-불변 부분)
-VCRC : Variant CRC               (전체 패킷, hop 마다 재계산)
-```
+- **LRH** — Local Route Header (필수)
+- **GRH** — Global Route Header (subnet 간 또는 multicast 시 필수)
+- **BTH** — Base Transport Header (필수, 모든 IBA transport packet)
+- **xTH** — Extended Transport Header (opcode 별로 0개 ~ 여러 개)
+- **ICRC** — Invariant CRC (header + payload 의 라우팅-불변 부분)
+- **VCRC** — Variant CRC (전체 패킷, hop 마다 재계산)
 
 ### 4.3 xTH 가 7 종류인 이유
 
@@ -306,14 +316,21 @@ GRH 가 들어가는 조건 (C8-1):
 
 ### 5.4 ICRC vs VCRC — 두 CRC 가 분리된 이유
 
-```
-                ┌─────── Switch / Router ────────┐
-   sender →     │  ┌─ LRH 의 SLID/DLID 변경 가능 ─┐ │     → receiver
-                │  │ VL field 도 매핑 가능        │ │
-                │  └──────────────────────────────┘ │
-                │  ↓ VCRC 재계산                    │
-                │  ✓ ICRC 는 그대로                 │
-                └─────────────────────────────────┘
+```mermaid
+flowchart LR
+    SND["sender"]
+    subgraph SW["Switch / Router"]
+        direction TB
+        MUT["LRH 의 SLID / DLID 변경 가능<br/>VL field 도 매핑 가능"]
+        VR["↓ VCRC 재계산<br/>✓ ICRC 는 그대로"]
+        MUT --> VR
+    end
+    RCV["receiver"]
+    SND --> SW --> RCV
+    classDef hop stroke:#c0392b,stroke-width:2px
+    classDef e2e stroke:#137333,stroke-width:2px
+    class MUT hop
+    class VR e2e
 ```
 
 | CRC | 범위 | 변경 시점 |
@@ -346,14 +363,17 @@ GRH 가 들어가는 조건 (C8-1):
 - SL → VL 매핑은 port 별 SL2VLMappingTable 로 설정 (subnet manager 가 분배).
 - SL 은 subnet 내 절대 변경되지 않음 (C7-33 / R-043) — receiver 가 SL 을 보고 QoS 결정 가능.
 
-```
-  Sender 가 SL=3 으로 전송
-        ↓
-  Port 의 SL2VL 표 → VL=2 사용
-        ↓
-  Switch 가 라우팅, VL 매핑 (또 다를 수 있음)
-        ↓
-  Receiver 가 LRH.SL=3 그대로 봄
+```mermaid
+flowchart TB
+    A["Sender 가 SL=3 으로 전송"]
+    B["Port 의 SL2VL 표 → VL=2 사용"]
+    C["Switch 가 라우팅, VL 매핑 (또 다를 수 있음)"]
+    D["Receiver 가 LRH.SL=3 그대로 봄"]
+    A --> B --> C --> D
+    classDef sl stroke:#1a73e8,stroke-width:2px
+    classDef vl stroke:#b8860b,stroke-width:2px
+    class A,D sl
+    class B,C vl
 ```
 
 ### 5.6 패킷 길이 제약 — MTU 와 PktLen
@@ -387,13 +407,15 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
 
 ### 5.8 Link 상태 머신
 
-```
- Down ─── PortInfo:NoStateChange ───────────┐
-   │                                          │
-   ▼                                          ▼
- Initialize ──FC packet exchange──▶ Arm ──Mgmt cmd──▶ Active
-   │                                          │
-   └─────── PortInfo: Down ◀──────error/┘
+```mermaid
+stateDiagram-v2
+    [*] --> Down
+    Down --> Initialize: PortInfo<br/>NoStateChange
+    Initialize --> Arm: FC packet exchange
+    Arm --> Active: Mgmt cmd
+    Active --> Down: error / PortInfo Down
+    Initialize --> Down: error
+    Arm --> Down: error
 ```
 
 - **Down** → 물리 링크 없음

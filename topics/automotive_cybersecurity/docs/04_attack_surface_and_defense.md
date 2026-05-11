@@ -56,35 +56,29 @@
 
 ### 한 장 그림 — 차량 공격 표면 전체 맵
 
-```
-                        +------------------+
-                        |   Cloud / OTA    |
-                        |  (OEM Server)    |
-                        +--------+---------+
-                                 │
-                            [Cellular/WiFi]
-                                 │
-+--------+              +--------v---------+              +---------+
-| V2X    |---[DSRC]---->|   Telematics     |<---[BT]-----| Mobile  |
-| (RSU)  |              |   Control Unit   |              | App     |
-+--------+              +--------+---------+              +---------+
-                                 │
-                        +--------v---------+
-                        | Central Gateway  |
-                        +--+----+----+-----+
-                           │    │    │
-              +------------+    │    +------------+
-              │                 │                 │
-     +--------v----+   +-------v------+   +------v-------+
-     | Powertrain  |   |   Chassis    |   | Infotainment |
-     | Domain      |   |   /ADAS      |   | Domain       |
-     +------+------+   +------+-------+   +------+-------+
-            │                  │                  │
-        [엔진 ECU]        [ADAS SoC]         [디스플레이]
-        [변속기 ECU]       [브레이크]         [USB / BT]
-                           [조향]             [OBD-II]
-                                                 │
-                                         ◀── 물리 접근 ──▶
+```mermaid
+flowchart TB
+    CLOUD["Cloud / OTA<br/>(OEM Server)"]
+    V2X["V2X (RSU)"]
+    TCU["Telematics<br/>Control Unit"]
+    APP["Mobile App"]
+    GW["Central Gateway"]
+    PT["Powertrain Domain<br/>엔진 ECU · 변속기 ECU"]
+    CH["Chassis / ADAS<br/>ADAS SoC · 브레이크 · 조향"]
+    IN["Infotainment Domain<br/>디스플레이 · USB / BT · OBD-II"]
+    PHY["물리 접근<br/>(OBD-II / USB / BT)"]
+
+    CLOUD -- "Cellular / WiFi" --> TCU
+    V2X -- DSRC --> TCU
+    APP -- BT --> TCU
+    TCU --> GW
+    GW --> PT
+    GW --> CH
+    GW --> IN
+    PHY -.-> IN
+
+    classDef attack stroke-width:2px,stroke-dasharray:6 3
+    class PHY attack
 ```
 
 3 축 진입: (1) Cloud / 무선 (Cellular, V2X, BT), (2) 물리 (OBD, JTAG, USB), (3) 공급망 (FW 빌드 시스템, OTA 서버).
@@ -105,53 +99,52 @@
 
 가장 단순한 시나리오. ISO 21434 의 6 step TARA 를 _자기 ECU 한 종류 (FSD SoC)_ 에 적용해 한 사이클 끝까지 가봅니다.
 
-```
-   Step 1 — Asset 식별
-   ──────────────────────────────────────────
-   FSD SoC 가 보호해야 할 자산:
-     A1. FSD 소프트웨어 무결성
-     A2. GPS 좌표 데이터
-     A3. Region Code / Feature Flag
-     A4. Tesla Cloud 인증서
-     A5. 카메라 / 센서 raw data
-   
-   Step 2 — Threat 시나리오 (STRIDE 적용)
-   ──────────────────────────────────────────
-   T1 (Spoofing):    OBD-II 동글이 GPS frame 위조 주입
-   T2 (Tampering):   Region Code NVM 변조
-   T3 (Repudiation): 진단 로그 삭제
-   T4 (Info disc):   카메라 데이터 sniff
-   T5 (DoS):         CAN bus flood / Bus-Off attack
-   T6 (Elev priv):   Feature Flag 변조로 미구매 기능 활성화
-   
-   Step 3 — Impact 평가 (4 dimension)
-   ──────────────────────────────────────────
-                    Safety   Financial  Op  Privacy
-   T1 GPS 위조        High     Medium   Low    Low
-   T2 Region 변조     Med      High     Med    Low
-   T6 Feature 변조    Low      High     Low    Low
-   
-   Step 4 — Attack Feasibility (CVSS-like)
-   ──────────────────────────────────────────
-   T1 — 장비 €500 동글, 지식 중간, 시간 분
-        Tools: easy (online 판매)
-        Knowledge: medium (CAN 기본 + RE)
-        Window of opportunity: high (OBD 항상 열림)
-        → Feasibility: HIGH
-   
-   Step 5 — Risk Level (Impact × Feasibility)
-   ──────────────────────────────────────────
-   T1 = High × HIGH = ★★★★★ Very High
-   T2 = Med  × HIGH = ★★★★  High
-   T6 = High × HIGH = ★★★★★ Very High
-   
-   Step 6 — 보안 목표 + 대책 매핑
-   ──────────────────────────────────────────
-   T1 → SecOC (L2) + TEE GPS fusion (L1)
-   T2 → Secure Boot Measurement 에 Region Code 포함 (L1)
-   T6 → Server-side feature license + Heartbeat (L5)
-        + Feature Flag 를 HSM 봉인 (L1)
-```
+**Step 1 — Asset 식별** (FSD SoC 가 보호해야 할 자산):
+
+- **A1** FSD 소프트웨어 무결성
+- **A2** GPS 좌표 데이터
+- **A3** Region Code / Feature Flag
+- **A4** Tesla Cloud 인증서
+- **A5** 카메라 / 센서 raw data
+
+**Step 2 — Threat 시나리오 (STRIDE 적용)**:
+
+| Threat | STRIDE | 설명 |
+|---|---|---|
+| T1 | Spoofing | OBD-II 동글이 GPS frame 위조 주입 |
+| T2 | Tampering | Region Code NVM 변조 |
+| T3 | Repudiation | 진단 로그 삭제 |
+| T4 | Info disclosure | 카메라 데이터 sniff |
+| T5 | DoS | CAN bus flood / Bus-Off attack |
+| T6 | Elev. privilege | Feature Flag 변조로 미구매 기능 활성화 |
+
+**Step 3 — Impact 평가 (4 dimension)**:
+
+| Threat | Safety | Financial | Operational | Privacy |
+|---|---|---|---|---|
+| T1 GPS 위조 | High | Medium | Low | Low |
+| T2 Region 변조 | Med | High | Med | Low |
+| T6 Feature 변조 | Low | High | Low | Low |
+
+**Step 4 — Attack Feasibility (CVSS-like)** — T1:
+
+- Tools: easy (online 판매되는 €500 동글)
+- Knowledge: medium (CAN 기본 + RE)
+- Time: 수 분
+- Window of opportunity: high (OBD 항상 열림)
+- → Feasibility: **HIGH**
+
+**Step 5 — Risk Level (Impact × Feasibility)**:
+
+- T1 = High × HIGH = ★★★★★ Very High
+- T2 = Med × HIGH = ★★★★ High
+- T6 = High × HIGH = ★★★★★ Very High
+
+**Step 6 — 보안 목표 + 대책 매핑**:
+
+- T1 → SecOC (L2) + TEE GPS fusion (L1)
+- T2 → Secure Boot Measurement 에 Region Code 포함 (L1)
+- T6 → Server-side feature license + Heartbeat (L5) + Feature Flag 를 HSM 봉인 (L1)
 
 | Step | 산출물 | 다음 단계 입력 |
 |---|---|---|

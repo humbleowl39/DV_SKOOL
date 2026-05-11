@@ -56,25 +56,73 @@ UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading
 
 ### 한 장 그림 — 좋은 환경 vs 나쁜 환경
 
-```
-   ── 좋은 환경 ──                        ── 나쁜 환경 (God Env) ──
+```mermaid
+flowchart TB
+    subgraph GOOD["좋은 환경"]
+        direction TB
+        GT["Test<br/>(시나리오 선택만)"]
+        GE["Env"]
+        GA["Agent_A"]
+        GAD["Driver"]
+        GAM["Monitor"]
+        GAS["Sequencer"]
+        GB["Agent_B (Passive)"]
+        GBM["Monitor"]
+        GSB["Scoreboard"]
+        GCOV["Coverage"]
+        GT --> GE
+        GE --> GA
+        GA --> GAD
+        GA --> GAM
+        GA --> GAS
+        GE --> GB
+        GB --> GBM
+        GE --> GSB
+        GE --> GCOV
+    end
 
-   Test (시나리오 선택만)                 Test
-     └── Env                              └── Env
-         ├── Agent_A                          ├── Driver       ◀─ 직접 보유
-         │    ├── Driver                      ├── Monitor
-         │    ├── Monitor                     ├── Driver_B     ◀─ 다른 인터페이스 도
-         │    └── Sequencer                   ├── Monitor_B
-         ├── Agent_B (Passive)                ├── Scoreboard
-         │    └── Monitor                     └── ... (모두 평면)
-         ├── Scoreboard
-         └── Coverage
-                                              문제:
-   장점:                                       - Agent 단위 재사용 불가
-   - Agent 단위로 재사용 (다른 프로젝트로)     - Active/Passive 분리 안 됨
-   - Active/Passive 모드 분기                 - Driver/Monitor 책임 분산
-   - Config Object 1 개로 SoC 차이 흡수        - 한 신호 추가 = env 수정
+    subgraph BAD["나쁜 환경 (God Env)"]
+        direction TB
+        BT["Test"]
+        BE["Env"]
+        BD["Driver (직접 보유)"]
+        BM["Monitor"]
+        BD2["Driver_B (다른 인터페이스도)"]
+        BM2["Monitor_B"]
+        BSB["Scoreboard"]
+        BT --> BE
+        BE --> BD
+        BE --> BM
+        BE --> BD2
+        BE --> BM2
+        BE --> BSB
+    end
+
+    classDef good stroke:#137333,stroke-width:2px
+    classDef bad stroke:#c5221f,stroke-width:2px
+    class GT,GE,GA,GAD,GAM,GAS,GB,GBM,GSB,GCOV good
+    class BT,BE,BD,BM,BD2,BM2,BSB bad
 ```
+
+<div class="parallel-grid">
+<div>
+
+**좋은 환경 — 장점**
+
+- Agent 단위로 재사용 (다른 프로젝트로)
+- Active/Passive 모드 분기
+- Config Object 1 개로 SoC 차이 흡수
+</div>
+<div>
+
+**나쁜 환경 — 문제**
+
+- Agent 단위 재사용 불가
+- Active/Passive 분리 안 됨
+- Driver/Monitor 책임 분산
+- 한 신호 추가 = env 수정
+</div>
+</div>
 
 ### 왜 이 디자인인가 — Design rationale
 

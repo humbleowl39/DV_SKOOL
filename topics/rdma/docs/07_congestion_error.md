@@ -60,26 +60,43 @@
 
 ### 한 장 그림 — Time scale × 메커니즘 분담
 
-```
-   Time scale  →   Fast (ns)               Slow (µs ~ ms)
-   ───────────────────────────────────────────────────
-   PFC         : ████████  link-level PAUSE, hop 단위
-   ECN         :         ████████  packet 마킹 (CE bit)
-   DCQCN       :                 ████████████  sender rate 점진 감속/회복
+**Time scale × 메커니즘 분담**:
 
-   ───── error handling 측면 ─────
-   Transport retry class (4)        Remote access class (6)
-   ┌──────────────────────────┐     ┌────────────────────────────┐
-   │ Local ACK timeout        │     │ Access flag violation      │
-   │ Packet Sequence Error    │     │ MR bound violation          │
-   │ Implied NAK              │     │ PD violation                │
-   │ RNR (Receiver Not Ready) │     │ R-Key violation             │
-   └──────────────────────────┘     │ Invalid Op (illegal opcode) │
-            │                       │ Max read outstanding        │
-   retry_cnt 초과 ↓                  └────────────────────────────┘
-   QP → Err state                              │
-   WC status (sender)                  responder NAK + WC + Error CQ + IRQ
-                                       └─ debug flag 가 정확한 root cause 1줄로 보고
+| 메커니즘 | Time scale | 역할 |
+|---|---|---|
+| **PFC** | Fast (ns) | link-level PAUSE, hop 단위 |
+| **ECN** | µs | packet 마킹 (CE bit) |
+| **DCQCN** | µs ~ ms | sender rate 점진 감속/회복 |
+
+**Error handling 측면 — 2 클래스**:
+
+```mermaid
+flowchart TB
+    subgraph RETRY["Transport retry class (4)"]
+        direction TB
+        T1["Local ACK timeout"]
+        T2["Packet Sequence Error"]
+        T3["Implied NAK"]
+        T4["RNR (Receiver Not Ready)"]
+    end
+    subgraph ACCESS["Remote access class (6)"]
+        direction TB
+        A1["Access flag violation"]
+        A2["MR bound violation"]
+        A3["PD violation"]
+        A4["R-Key violation"]
+        A5["Invalid Op (illegal opcode)"]
+        A6["Max read outstanding"]
+    end
+    RX["retry_cnt 초과"]
+    QPE["QP → Err state<br/>WC status (sender)"]
+    NAKE["responder NAK + WC<br/>+ Error CQ + IRQ<br/>debug flag 가 정확한<br/>root cause 1줄로 보고"]
+    RETRY --> RX --> QPE
+    ACCESS --> NAKE
+    classDef retry stroke:#b8860b,stroke-width:2px
+    classDef access stroke:#c0392b,stroke-width:2px
+    class T1,T2,T3,T4 retry
+    class A1,A2,A3,A4,A5,A6 access
 ```
 
 ### 왜 이렇게 설계했는가 — Design rationale
@@ -195,28 +212,39 @@ QP_A (NODE0) 가 QP_B (NODE1) 의 MR_X 에 RDMA WRITE. 그러나 sender 의 pack
 
 ### 4.2 실무 에러 디버그 트리
 
-```
-   WC error 발견
-        │
-        ├─ status?
-        │
-        ├─ WC_RETRY_EXC_ERR?
-        │     ├─ ACK 못 받음 (Local ACK timeout)?
-        │     ├─ PSN hole (PSE)?
-        │     └─ ACK 의 PSN > ePSN (Implied NAK)?
-        │           → 모두 retry_cnt 초과
-        │
-        ├─ WC_RNR_RETRY_EXC_ERR?
-        │     └─ Receiver 가 RECV WR 부족 → rnr_retry_cnt 초과
-        │
-        ├─ WC_REM_ACCESS_ERR?
-        │     ├─ debug_flag = WC_FLAG_RESP_ACCESS    (access flag)
-        │     ├─ debug_flag = WC_FLAG_RESP_RANGE     (MR bound)
-        │     ├─ debug_flag = WC_FLAG_RESP_PD        (PD mismatch)
-        │     └─ debug_flag = WC_FLAG_RESP_RKEY      (R-Key invalid)
-        │
-        └─ WC_REM_INV_RD_REQ_ERR?
-              └─ debug_flag = WC_FLAG_RESP_OP       (max read outstanding)
+```mermaid
+flowchart TB
+    ROOT["WC error 발견<br/>(status?)"]
+    R1["WC_RETRY_EXC_ERR"]
+    R2["WC_RNR_RETRY_EXC_ERR"]
+    R3["WC_REM_ACCESS_ERR"]
+    R4["WC_REM_INV_RD_REQ_ERR"]
+    R1a["ACK 못 받음<br/>(Local ACK timeout)"]
+    R1b["PSN hole (PSE)"]
+    R1c["ACK 의 PSN &gt; ePSN<br/>(Implied NAK)"]
+    R1note["모두 retry_cnt 초과"]
+    R2a["Receiver 가 RECV WR 부족<br/>→ rnr_retry_cnt 초과"]
+    R3a["debug_flag = WC_FLAG_RESP_ACCESS<br/>(access flag)"]
+    R3b["debug_flag = WC_FLAG_RESP_RANGE<br/>(MR bound)"]
+    R3c["debug_flag = WC_FLAG_RESP_PD<br/>(PD mismatch)"]
+    R3d["debug_flag = WC_FLAG_RESP_RKEY<br/>(R-Key invalid)"]
+    R4a["debug_flag = WC_FLAG_RESP_OP<br/>(max read outstanding)"]
+    ROOT --> R1 --> R1a
+    R1 --> R1b
+    R1 --> R1c
+    R1a --> R1note
+    R1b --> R1note
+    R1c --> R1note
+    ROOT --> R2 --> R2a
+    ROOT --> R3 --> R3a
+    R3 --> R3b
+    R3 --> R3c
+    R3 --> R3d
+    ROOT --> R4 --> R4a
+    classDef retry stroke:#b8860b,stroke-width:2px
+    classDef access stroke:#c0392b,stroke-width:2px
+    class R1,R2,R1a,R1b,R1c,R2a retry
+    class R3,R4,R3a,R3b,R3c,R3d,R4a access
 ```
 
 → **Debug flag 만 보면 root cause 가 결정** — 검증이 잘 되면 사용자도 single-glance 디버그 가능.
@@ -335,22 +363,19 @@ CNP/ECN 신호에 따른 **sender 의 rate 조절 알고리즘**:
 
 ### 5.6 QP Recovery 흐름
 
-```
-   에러 발생
-        │
-        ▼
-   QP → Err state (in-flight WR 모두 flush, WC error)
-        │
-   ◀── 사용자가 Error CQ poll, status 확인
-        │
-        ▼
-   Modify(QP, Reset)   ── QP 를 리셋
-        │
-        ▼
-   Modify(Init / RTR / RTS) 단계 재진입
-        │
-        ▼
-   다시 정상 IO
+```mermaid
+flowchart TB
+    E["에러 발생"]
+    ERR["QP → Err state<br/>(in-flight WR 모두 flush, WC error)"]
+    POLL["사용자가 Error CQ poll, status 확인"]
+    RST["Modify(QP, Reset)<br/>QP 를 리셋"]
+    BRINGUP["Modify(Init / RTR / RTS)<br/>단계 재진입"]
+    IO["다시 정상 IO"]
+    E --> ERR --> POLL --> RST --> BRINGUP --> IO
+    classDef bad stroke:#c0392b,stroke-width:2px
+    classDef good stroke:#137333,stroke-width:2px
+    class ERR bad
+    class IO good
 ```
 
 `min_rnr_timer`, `retry_cnt`, `timeout` 등 attribute 도 새로 set 가능 — recovery 시 parameter 튜닝의 기회.

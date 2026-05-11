@@ -56,30 +56,23 @@
 
 ### 한 장 그림 — Property 한 개의 운명 흐름
 
-```
-                        ┌──────────────┐
-                        │  property P  │
-                        └──────┬───────┘
-                               │ prove -all
-                  ┌────────────┼────────────┐
-                  ▼            ▼            ▼
-            ┌────────┐   ┌──────────┐ ┌──────────┐
-            │ PROVEN │   │ BOUNDED  │ │   CEX    │
-            └───┬────┘   └─────┬────┘ └─────┬────┘
-                │              │            │
-        cover 짝 covered?    Convergence    실제 버그?
-                │              │            │
-        ┌───────┴───┐    ┌────┴─────┐  ┌────┴─────┐
-   YES  │           │ NO │          │  │          │
-   sign-off       Vacuous │  ① BB    │  │ Yes:     │
-   후보            (Mod02) │  ② Abs   │  │  RTL 수정│
-                          │  ③ Helper│  │ No:      │
-                          │  ④ Assume│  │  assume  │
-                          │  ⑤ Split │  │  추가    │
-                          │  ⑥ accept│  └──────────┘
-                          │   bounded│
-                          └──────────┘
-                          (Module 03 의 핵심)
+```mermaid
+flowchart TB
+    P["property P"] -- "prove -all" --> R{"결과"}
+    R --> PV["PROVEN"]
+    R --> BD["BOUNDED"]
+    R --> CX["CEX"]
+    PV --> Q1{"cover 짝 covered?"}
+    Q1 -- "YES" --> SO["sign-off 후보"]
+    Q1 -- "NO" --> VC["Vacuous<br/>(Module 02)"]
+    BD --> CONV["Convergence 6 종<br/>① Blackbox<br/>② Abstraction<br/>③ Helper<br/>④ Assume<br/>⑤ Split<br/>⑥ accept bounded<br/>(Module 03 핵심)"]
+    CX --> Q2{"실제 버그?"}
+    Q2 -- "Yes" --> RTL["RTL 수정"]
+    Q2 -- "No" --> ASM["assume 추가"]
+    classDef good stroke:#27ae60,stroke-width:3px
+    classDef warn stroke:#c0392b,stroke-width:2px
+    class SO good
+    class VC warn
 ```
 
 §3 에서는 BOUNDED → Helper invariant → PROVEN 의 한 사이클을, §5 에서는 6 가지 Convergence 기법과 5 가지 Sign-off 기준을 다룹니다.
@@ -321,20 +314,24 @@ JasperGold 에서 모듈을 블랙박스로 처리:
 
 #### Cut Point
 
-```
 신호를 "자유 입력" 으로 교체하여 종속성 끊기:
 
-  # 파이프라인의 중간 단계를 자유 입력으로 교체
-  # → 앞단과 뒷단을 독립적으로 검증 가능
+파이프라인의 중간 단계를 자유 입력으로 교체 → 앞단과 뒷단을 독립적으로 검증 가능.
 
-  Stage1 ──→ [Cut Point] ──→ Stage2
-             (자유 입력)
-
-  Stage1 검증: 입력 → Stage1 출력이 스펙과 일치?
-  Stage2 검증: (자유 입력 + assume) → Stage2 출력이 스펙과 일치?
-
-  주의: Cut Point 의 assume 이 Stage1 의 실제 출력 범위를 포함해야 함
+```mermaid
+flowchart LR
+    IN["입력"] --> S1["Stage 1"]
+    S1 --> CP["[Cut Point]<br/>자유 입력"]
+    CP --> S2["Stage 2"]
+    S2 --> OUT["출력"]
+    classDef cut stroke:#c0392b,stroke-width:3px,stroke-dasharray:4 4
+    class CP cut
 ```
+
+- **Stage1 검증**: 입력 → Stage1 출력이 스펙과 일치?
+- **Stage2 검증**: (자유 입력 + assume) → Stage2 출력이 스펙과 일치?
+
+주의: Cut Point 의 assume 이 Stage1 의 실제 출력 범위를 포함해야 함.
 
 ### 5.3 Formal 디버깅 기법
 

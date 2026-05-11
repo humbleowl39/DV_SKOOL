@@ -232,27 +232,25 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
 
 #### 모델 구조
 
-```
-+----------------------------------------------------------+
-|  Translation Request (VA, size, type)                     |
-|          |              |              |                  |
-|          v              v              v                  |
-|  +-------------+ +-------------+ +-----------+           |
-|  |     DUT     | | Functional  | |   Ideal   |           |
-|  |   (RTL)     | |   Model     | | Perf Model|           |
-|  +------+------+ +------+------+ +-----+-----+           |
-|         |               |              |                  |
-|         v               v              v                  |
-|     PA + Latency    PA (Golden)   PA + Min Latency       |
-|         |               |              |                  |
-|  +------+---------------+--------------+------+          |
-|  |              Scoreboard                     |          |
-|  |                                             |          |
-|  |  Check 1: DUT.PA == Functional.PA?          |  정확성  |
-|  |  Check 2: DUT.Latency <= Ideal.Latency * K? |  성능   |
-|  |  Check 3: DUT.MissRatio vs Ideal.MissRatio  |  효율   |
-|  +---------------------------------------------+          |
-+----------------------------------------------------------+
+```mermaid
+flowchart TB
+    REQ["Translation Request<br/>(VA, size, type)"]
+    DUT["DUT (RTL)"]
+    FUNC["Functional Model"]
+    IDEAL["Ideal Perf Model"]
+    OUT_D["PA + Latency"]
+    OUT_F["PA (Golden)"]
+    OUT_I["PA + Min Latency"]
+    SB["Scoreboard<br/>① DUT.PA == Functional.PA? (정확성)<br/>② DUT.Latency ≤ Ideal.Latency × K? (성능)<br/>③ DUT.MissRatio vs Ideal.MissRatio (효율)"]
+
+    REQ --> DUT --> OUT_D --> SB
+    REQ --> FUNC --> OUT_F --> SB
+    REQ --> IDEAL --> OUT_I --> SB
+
+    classDef golden stroke:#27ae60,stroke-width:3px
+    classDef bound stroke:#2980b9,stroke-width:2px,stroke-dasharray: 4 2
+    class FUNC golden
+    class IDEAL bound
 ```
 
 #### Functional Model vs Ideal Performance Model
@@ -440,24 +438,33 @@ Scoreboard에서 자동 성능 비교:
 
 ### 5.5 성능 병목 진단 프로세스
 
-```
-1. TLB Miss Ratio 측정
-   → 높으면 → 3C 분석 (Compulsory? Capacity? Conflict?)
-       → Capacity → Huge Page 적용, TLB 크기 확인
-       → Conflict → Associativity 확인
+```mermaid
+flowchart TB
+    M1["① TLB Miss Ratio 측정"]
+    M1H["3C 분석<br/>(Compulsory? Capacity? Conflict?)"]
+    M1C["Capacity<br/>→ Huge Page, TLB 크기"]
+    M1F["Conflict<br/>→ Associativity 확인"]
 
-2. Page Walk Latency 측정
-   → 높으면 → 메모리 대역폭 경쟁? Walk Engine 파이프라인 깊이?
-       → 대역폭 → Page Walk Cache 확인 (중간 레벨 캐싱)
-       → 파이프라인 → Walk Engine 병렬도 확인
+    M2["② Page Walk Latency 측정"]
+    M2H["메모리 대역폭 경쟁?<br/>Walk Engine 파이프라인 깊이?"]
+    M2B["대역폭<br/>→ PWC 확인"]
+    M2P["파이프라인<br/>→ Walk Engine 병렬도"]
 
-3. Throughput 측정
-   → 이론치 대비 낮으면 → 입력 큐 백프레셔? 출력 대기?
-       → 백프레셔 → 요청 큐 깊이 + 메모리 대역폭
-       → 출력 대기 → 다운스트림 병목
+    M3["③ Throughput 측정"]
+    M3H["이론치 대비 낮음<br/>입력 큐 백프레셔?<br/>출력 대기?"]
+    M3I["백프레셔<br/>→ 요청 큐 깊이<br/>+ 메모리 대역폭"]
+    M3O["출력 대기<br/>→ 다운스트림 병목"]
 
-4. Latency P99 / 최악 측정
-   → 평균 대비 P99가 크게 높으면 → TLB Miss 집중 구간? Lock 경쟁?
+    M4["④ Latency P99 / 최악 측정"]
+    M4H["평균 대비 P99 ↑<br/>TLB Miss 집중? Lock 경쟁?"]
+
+    M1 -- "높음" --> M1H --> M1C
+    M1H --> M1F
+    M2 -- "높음" --> M2H --> M2B
+    M2H --> M2P
+    M3 -- "낮음" --> M3H --> M3I
+    M3H --> M3O
+    M4 -- "P99 ≫ avg" --> M4H
 ```
 
 ### 5.6 서버급 HW 가속기의 성능 요구사항 (이력서 연결)

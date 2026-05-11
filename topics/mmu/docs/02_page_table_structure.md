@@ -57,36 +57,31 @@
 
 ### 한 장 그림 — 4-level walk 와 Block 의 분기
 
-```
-   VA[63:48] sign-ext  (TTBR0 vs TTBR1 결정)
-   VA[47:39] = L0 idx                    VA[20:12] = L3 idx
-   VA[38:30] = L1 idx                    VA[11:0]  = page offset (변환 X)
-   VA[29:21] = L2 idx
+VA[63:48] sign-ext (TTBR0 vs TTBR1 결정), VA[47:39] = L0 idx, VA[38:30] = L1 idx, VA[29:21] = L2 idx, VA[20:12] = L3 idx, VA[11:0] = page offset (변환 X).
 
-           TTBR0_EL1
-              │
-              ▼
-        ┌── L0 Table (4 KB, 512×8B PTE) ──┐
-        │ idx → L0 PTE                     │
-        └────┬─────────────────────────────┘
-             │ Table descriptor (next-level addr)
-             ▼
-        ┌── L1 Table ─────────────────────┐
-        │ idx → L1 PTE                     │ ────┐
-        └────┬─────────────────────────────┘     │ Block descriptor (1 GB)
-             │ Table desc                        ▼
-             ▼                                 PA[47:30] || VA[29:0]   ◀ 1 GB block 종료
-        ┌── L2 Table ─────────────────────┐
-        │ idx → L2 PTE                     │ ────┐
-        └────┬─────────────────────────────┘     │ Block descriptor (2 MB)
-             │ Table desc                        ▼
-             ▼                                 PA[47:21] || VA[20:0]   ◀ 2 MB block 종료
-        ┌── L3 Table ─────────────────────┐
-        │ idx → L3 PTE = Page descriptor   │
-        └────┬─────────────────────────────┘
-             │
-             ▼
-          PA[47:12] || VA[11:0]                                        ◀ 4 KB page (정상 종료)
+```mermaid
+flowchart TB
+    TTBR["TTBR0_EL1"]
+    L0["L0 Table<br/>(4 KB, 512×8B PTE)<br/>idx → L0 PTE"]
+    L1["L1 Table<br/>idx → L1 PTE"]
+    L2["L2 Table<br/>idx → L2 PTE"]
+    L3["L3 Table<br/>idx → L3 PTE<br/>= Page descriptor"]
+    GB["1 GB block 종료<br/>PA[47:30] || VA[29:0]"]
+    MB["2 MB block 종료<br/>PA[47:21] || VA[20:0]"]
+    KB["4 KB page (정상 종료)<br/>PA[47:12] || VA[11:0]"]
+
+    TTBR --> L0
+    L0 -- "Table desc" --> L1
+    L1 -- "Table desc" --> L2
+    L1 -- "Block desc (1 GB)" --> GB
+    L2 -- "Table desc" --> L3
+    L2 -- "Block desc (2 MB)" --> MB
+    L3 --> KB
+
+    classDef ok stroke:#27ae60,stroke-width:2px
+    classDef shortcut stroke:#e67e22,stroke-width:2px,stroke-dasharray: 4 2
+    class KB ok
+    class GB,MB shortcut
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -221,32 +216,30 @@ L2 PTE 가 Table descriptor 였다면 L3 까지 한 번 더 read → 총 4 mem a
 
 ### 4.4 Walk 흐름 (4단계)
 
-```
-TTBR (Translation Table Base Register)
-  |  Level 0 테이블의 물리 주소
-  v
-+--Level 0 Table--+
-| Entry[L0 Index] |--→ Level 1 테이블의 물리 주소
-+-----------------+
-  |
-  v
-+--Level 1 Table--+
-| Entry[L1 Index] |--→ Level 2 테이블의 물리 주소
-+-----------------+    또는 1GB Block (Block Descriptor)
-  |
-  v
-+--Level 2 Table--+
-| Entry[L2 Index] |--→ Level 3 테이블의 물리 주소
-+-----------------+    또는 2MB Block (Block Descriptor)
-  |
-  v
-+--Level 3 Table--+
-| Entry[L3 Index] |--→ 4KB Page의 물리 주소 (PPN)
-+-----------------+
+```mermaid
+flowchart TB
+    TTBR["TTBR<br/>(Translation Table Base Register)<br/>= Level 0 테이블의 물리 주소"]
+    L0E["Level 0 Table<br/>Entry[L0 Index]"]
+    L1E["Level 1 Table<br/>Entry[L1 Index]"]
+    L2E["Level 2 Table<br/>Entry[L2 Index]"]
+    L3E["Level 3 Table<br/>Entry[L3 Index]"]
+    GB1["1 GB Block<br/>(Block Descriptor)"]
+    MB2["2 MB Block<br/>(Block Descriptor)"]
+    PPN["4 KB Page 의<br/>물리 주소 (PPN)"]
 
-총 4번의 메모리 접근 필요!
-→ 이것이 TLB가 필수적인 이유
+    TTBR --> L0E
+    L0E -- "Level 1 테이블 주소" --> L1E
+    L1E -- "Level 2 테이블 주소" --> L2E
+    L1E -. "Block desc" .-> GB1
+    L2E -- "Level 3 테이블 주소" --> L3E
+    L2E -. "Block desc" .-> MB2
+    L3E --> PPN
+
+    classDef shortcut stroke:#e67e22,stroke-width:2px,stroke-dasharray: 4 2
+    class GB1,MB2 shortcut
 ```
+
+> 총 **4번** 의 메모리 접근 필요 → 이것이 TLB 가 필수적인 이유.
 
 ### 4.5 Block Descriptor — 중간 레벨 종료
 
@@ -360,33 +353,30 @@ DV 검증:
 
 ### 5.5 Copy-on-Write (COW) 메커니즘
 
+COW = `fork()` 시 물리 메모리 복사를 지연하는 최적화. `fork()` 전후와 Write 시 흐름:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Parent
+    participant MMU
+    participant OS as OS COW Handler
+    Note over Parent,MMU: fork() 전<br/>Parent: VA 0x1000 → PA 0x8000 (RW)
+    Note over Parent,MMU: fork() 직후<br/>Parent/Child: VA 0x1000 → PA 0x8000 (RO 공유)
+    Parent->>MMU: Write VA 0x1000
+    MMU-->>Parent: Permission Fault (PTE = RO)
+    Parent->>OS: Fault handler 호출
+    OS->>OS: 1. 새 물리 페이지 할당 (PA 0xC000)<br/>2. PA 0x8000 → PA 0xC000 복사<br/>3. Parent PTE 업데이트<br/>   VA 0x1000 → PA 0xC000 (RW)<br/>4. TLB Invalidation (stale RO 제거)
+    OS-->>Parent: 복귀 → Write 재실행
+    Parent->>MMU: Write VA 0x1000 (재실행)
+    MMU-->>Parent: 성공 (PA 0xC000, RW)
 ```
-COW = fork() 시 물리 메모리 복사를 지연하는 최적화
 
-fork() 전:
-  Parent: VA 0x1000 → PA 0x8000 (RW)
+**MMU/TLB 관점**:
 
-fork() 직후:
-  Parent: VA 0x1000 → PA 0x8000 (RO로 변경!)
-  Child:  VA 0x1000 → PA 0x8000 (RO — 같은 물리 페이지 공유)
-
-  → 물리 메모리 복사 없음! 읽기만 하면 공유 유지
-
-Write 시:
-  Parent가 VA 0x1000에 Write 시도
-  → PTE가 RO → Permission Fault 발생
-  → OS COW Handler:
-    1. 새 물리 페이지 할당 (PA 0xC000)
-    2. PA 0x8000의 내용을 PA 0xC000에 복사
-    3. Parent PTE 업데이트: VA 0x1000 → PA 0xC000 (RW)
-    4. TLB Invalidation (stale RO 엔트리 제거)
-    5. Write 재실행 → 성공
-
-MMU/TLB 관점:
-  - COW = Permission Fault를 의도적으로 활용하는 메커니즘
-  - TLB에 RO 엔트리 → Write 시도 → Fault → TLB Invalidation → RW로 재채움
-  - DV에서 Permission Fault → 복구 → TLB 상태 변화의 전체 흐름 검증 필요
-```
+- COW = Permission Fault 를 의도적으로 활용하는 메커니즘
+- TLB 에 RO 엔트리 → Write 시도 → Fault → TLB Invalidation → RW 로 재채움
+- DV 에서 Permission Fault → 복구 → TLB 상태 변화의 전체 흐름 검증 필요
 
 ### 5.6 RISC-V Page Table 비교 — Sv39 / Sv48
 

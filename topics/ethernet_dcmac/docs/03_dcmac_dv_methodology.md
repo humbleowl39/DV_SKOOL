@@ -57,34 +57,31 @@ DCMAC 검증의 핵심 어려움은 두 가지가 **동시에** 일어난다는 
 
 ### 한 장 그림 — Env 구조 + 신호 흐름
 
-```
-   +------------------------ DCMAC UVM ENV ---------------------------+
-   |                                                                   |
-   |   +-- AXI-S TX agent --+                +-- Line agent ----+      |
-   |   | sequencer + driver |                | line driver/mon  |      |
-   |   |  + monitor         |                |  (Segmented IF)  |      |
-   |   +---------+----------+                +---------+--------+      |
-   |             │ (host side)                          │              |
-   |             ▼                                      ▼              |
-   |   +================================================+              |
-   |   |                  DUT (DCMAC)                   |              |
-   |   +================================================+              |
-   |             ▲                                      ▲              |
-   |             │ (host side)                          │              |
-   |   +-- AXI-S RX agent --+                +-- Line agent ----+      |
-   |   | (RX monitor)       |                | (TX line monitor)|      |
-   |   +---------+----------+                +---------+--------+      |
-   |             │                                      │              |
-   |             ▼                                      ▼              |
-   |   +-------------------- Scoreboard --------------------+          |
-   |   |  TX path : AXI-S in  →  Line out (Preamble/FCS 추가) │         |
-   |   |  RX path : Line in   →  AXI-S out (Preamble/FCS 검증)│         |
-   |   |  통계    : RAL 카운터 == 실제 frame 개수             │         |
-   |   +------------------------------------------------------+        |
-   |             │                                                     |
-   |             ▼                                                     |
-   |   +---- Functional Coverage + SVA bind + RAL ----+                |
-   +-------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph ENV["DCMAC UVM ENV"]
+        direction TB
+        AXIS_TX["AXI-S TX agent<br/>sequencer + driver + monitor"]
+        LINE_RX_AGT["Line agent<br/>line driver / mon (Segmented IF)"]
+        DUT["DUT (DCMAC)"]
+        AXIS_RX["AXI-S RX agent<br/>(RX monitor)"]
+        LINE_TX_AGT["Line agent<br/>(TX line monitor)"]
+        SB["Scoreboard<br/>TX path : AXI-S in → Line out (Preamble/FCS 추가)<br/>RX path : Line in → AXI-S out (Preamble/FCS 검증)<br/>통계    : RAL 카운터 == 실제 frame 개수"]
+        AUX["Functional Coverage + SVA bind + RAL"]
+
+        AXIS_TX -- "host side" --> DUT
+        LINE_RX_AGT --> DUT
+        DUT -- "host side" --> AXIS_RX
+        DUT --> LINE_TX_AGT
+        AXIS_RX --> SB
+        LINE_TX_AGT --> SB
+        AXIS_TX -. analysis .-> SB
+        LINE_RX_AGT -. analysis .-> SB
+        SB --> AUX
+    end
+
+    classDef dut stroke:#1a73e8,stroke-width:3px
+    class DUT dut
 ```
 
 ### 왜 이 구조 — Design rationale
@@ -105,34 +102,23 @@ DCMAC 은 **양방향 + 프로토콜 + 통계 + 흐름제어 + reg** 가 모두 
 
 가장 단순한 시나리오. **smoke test**: TOE 모델이 single 64-byte frame 을 TX 에 넣고, line-loopback 으로 다시 RX 로 들어오게 해서 scoreboard 가 byte-level 동일성과 FCS good 을 확인. (line-loopback 은 Segmented IF 두 끝을 wire connect.)
 
-```
-   tx_seq                 tx_drv           DUT (TX)        DUT (RX)         rx_mon          sb
-   ───┐                    ──┐             ───┐            ───┐              ───┐           ──
-   │  │  ① post item       │ │             │  │            │  │              │  │           │ 
-   │  │  (64-byte frame)   │ │             │  │            │  │              │  │           │
-   │  ├───────────────────►│ │             │  │            │  │              │  │           │
-   │  │                     │ │ ② AXI-S    │  │            │  │              │  │           │
-   │  │                     │ ├───────────►│  │            │  │              │  │           │
-   │  │                     │ │  beats     │  │            │  │              │  │           │
-   │  │                     │ │            │  │ ③ Preamble │  │              │  │           │
-   │  │                     │ │            │  │  +FCS+IFG  │  │              │  │           │
-   │  │                     │ │            │  ├──Line──────►│  │              │  │           │
-   │  │                     │ │            │  │  loopback  │  │              │  │           │
-   │  │                     │ │            │  │            │  │ ④ Preamble   │  │           │
-   │  │                     │ │            │  │            │  │  strip+      │  │           │
-   │  │                     │ │            │  │            │  │  FCS check   │  │           │
-   │  │                     │ │            │  │            │  ├──AXI-S──────►│  │           │
-   │  │                     │ │            │  │            │  │   tuser=good │  │           │
-   │  │                     │ │            │  │            │  │              │  │ ⑤ analysis│
-   │  │                     │ │ analysis   │  │            │  │              │  ├──port────►│
-   │  │                     │ ├ ───────────┼──┼────────────┼──┼──────────────┤  │           │
-   │  │                     │ │ tx in port │  │            │  │              │  │ rx in port│
-   │  │                     │ │            │  │            │  │              │  │           │ 
-   │  │                     │ │            │  │            │  │              │  │ ⑥ compare │
-   │  │                     │ │            │  │            │  │              │  │  byte-eq  │
-   │  │                     │ │            │  │            │  │              │  │  + tuser  │
-   │  │                     │ │            │  │            │  │              │  │  good     │
-   └──┘                    ──┘             ───┘            ───┘              ───┘           ──
+```mermaid
+sequenceDiagram
+    autonumber
+    participant TXSEQ as tx_seq
+    participant TXDRV as tx_drv
+    participant DUTTX as DUT (TX)
+    participant DUTRX as DUT (RX)
+    participant RXMON as rx_mon
+    participant SB as scoreboard
+
+    TXSEQ->>TXDRV: ① post item<br/>(64-byte frame)
+    TXDRV->>DUTTX: ② AXI-S beats
+    TXDRV-->>SB: analysis (tx in port)
+    DUTTX->>DUTRX: ③ Preamble + FCS + IFG<br/>(line loopback)
+    DUTRX->>RXMON: ④ Preamble strip + FCS check<br/>AXI-S, tuser=good
+    RXMON-->>SB: ⑤ analysis port (rx in port)
+    Note over SB: ⑥ compare<br/>byte-eq + tuser good
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -175,43 +161,29 @@ endtask
 
 ### 4.2 환경 구조 — 4 agent + scoreboard + RAL + SVA + coverage
 
-```
-+------------------------------------------------------------------+
-|                 DCMAC Subsystem UVM Env                            |
-|                                                                   |
-|  +------------------+                    +------------------+     |
-|  | TX Traffic Gen   |                    | RX Traffic Gen   |     |
-|  | (Host Side)      |                    | (Line Side)      |     |
-|  |                  |                    |                  |     |
-|  | - 프레임 생성    |                    | - Ethernet Frame |     |
-|  | - 크기 랜덤화    |                    | - FCS 정상/오류  |     |
-|  | - VLAN/PFC 태그  |                    | - Runt/Oversize  |     |
-|  +--------+---------+                    +--------+---------+     |
-|           |                                       |               |
-|           v (AXI-S TX)                  (Line IF) v               |
-|  +------------------------------------------------------------+  |
-|  |                    DUT (DCMAC IP)                           |  |
-|  +------------------------------------------------------------+  |
-|           |                                       |               |
-|  (AXI-S RX) v                           (Line IF) v              |
-|  +------------------+                    +------------------+     |
-|  | RX Monitor       |                    | TX Monitor       |     |
-|  | + Checker         |                    | + Checker         |     |
-|  +--------+---------+                    +--------+---------+     |
-|           |                                       |               |
-|           v                                       v               |
-|  +------------------------------------------------------------+  |
-|  |                    Scoreboard                               |  |
-|  |  - TX: 입력 데이터 == Line 출력 데이터? (FCS 추가 확인)     |  |
-|  |  - RX: Line 입력 데이터 == AXI-S 출력 데이터? (FCS 결과)   |  |
-|  |  - 통계 카운터 일치?                                        |  |
-|  +------------------------------------------------------------+  |
-|           |                                                       |
-|           v                                                       |
-|  +------------------------------------------------------------+  |
-|  |              Functional Coverage                             |  |
-|  +------------------------------------------------------------+  |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph ENV2["DCMAC Subsystem UVM Env"]
+        direction TB
+        TX_GEN["TX Traffic Gen (Host Side)<br/>- 프레임 생성<br/>- 크기 랜덤화<br/>- VLAN / PFC 태그"]
+        RX_GEN["RX Traffic Gen (Line Side)<br/>- Ethernet Frame<br/>- FCS 정상 / 오류<br/>- Runt / Oversize"]
+        DUT2["DUT (DCMAC IP)"]
+        RX_MON2["RX Monitor + Checker"]
+        TX_MON2["TX Monitor + Checker"]
+        SB2["Scoreboard<br/>TX: 입력 데이터 == Line 출력? (FCS 추가 확인)<br/>RX: Line 입력 == AXI-S 출력? (FCS 결과)<br/>통계 카운터 일치?"]
+        COV["Functional Coverage"]
+
+        TX_GEN -- "AXI-S TX" --> DUT2
+        RX_GEN -- "Line IF" --> DUT2
+        DUT2 -- "AXI-S RX" --> RX_MON2
+        DUT2 -- "Line IF" --> TX_MON2
+        RX_MON2 --> SB2
+        TX_MON2 --> SB2
+        SB2 --> COV
+    end
+
+    classDef dut stroke:#1a73e8,stroke-width:3px
+    class DUT2 dut
 ```
 
 ### 4.3 시퀀스 / 시나리오 계층

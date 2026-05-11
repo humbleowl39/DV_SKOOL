@@ -57,24 +57,35 @@
 
 ### 한 장 그림 — AXI 5채널 구조
 
-```
-           Master                          Slave
-     +------+------+              +------+------+
-     |              |              |              |
-AW:  | Write Addr  |──────────→  | Write Addr  |  Write Address Channel
-     |              |              |              |
-W:   | Write Data  |──────────→  | Write Data  |  Write Data Channel
-     |              |              |              |
-B:   | Write Resp  |←──────────  | Write Resp  |  Write Response Channel
-     |              |              |              |
-AR:  | Read Addr   |──────────→  | Read Addr   |  Read Address Channel
-     |              |              |              |
-R:   | Read Data   |←──────────  | Read Data   |  Read Data/Response Channel
-     +------+------+              +------+------+
+```mermaid
+flowchart LR
+    subgraph M["Master"]
+        direction TB
+        M_AW["AW · Write Addr"]
+        M_W["W · Write Data"]
+        M_B["B · Write Resp"]
+        M_AR["AR · Read Addr"]
+        M_R["R · Read Data"]
+    end
+    subgraph S["Slave"]
+        direction TB
+        S_AW["AW · Write Addr"]
+        S_W["W · Write Data"]
+        S_B["B · Write Resp"]
+        S_AR["AR · Read Addr"]
+        S_R["R · Read Data"]
+    end
+    M_AW -- "Write Address Channel" --> S_AW
+    M_W  -- "Write Data Channel"    --> S_W
+    S_B  -- "Write Response Channel"--> M_B
+    M_AR -- "Read Address Channel"  --> S_AR
+    S_R  -- "Read Data Channel"     --> M_R
 
-각 채널이 독립 → Read와 Write 동시 가능 = Full-Duplex
-한 채널의 stall (xVALID && !xREADY) 이 다른 채널을 막지 않음
+    classDef ch stroke:#1a73e8,stroke-width:2px
+    class M_AW,M_W,M_B,M_AR,M_R,S_AW,S_W,S_B,S_AR,S_R ch
 ```
+
+각 채널이 독립 → Read와 Write 동시 가능 = Full-Duplex. 한 채널의 stall (`xVALID && !xREADY`) 이 다른 채널을 막지 않음.
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
@@ -237,15 +248,14 @@ AXI 규칙:
 
 ### 4.4 Burst FSM — 1개 transaction 안에서 multiple beat
 
-```
-  State                Action
-  ────────             ──────────────────────
-  IDLE      → AW handshake 발행
-  W_BEAT    → 매 cycle WVALID=1 + WSTRB + WDATA
-            → 마지막 beat 에 WLAST=1
-            → AxLEN+1 beat 후 W_DONE
-  W_DONE    → BVALID 대기
-  B_RESP    → BVALID && BREADY → 완료 → IDLE
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> W_BEAT: AW handshake 발행
+    W_BEAT --> W_BEAT: WVALID=1 +<br/>WSTRB + WDATA<br/>(beat counter ↑)
+    W_BEAT --> W_DONE: WLAST=1<br/>(AxLEN+1 beats 완료)
+    W_DONE --> B_RESP: BVALID 대기
+    B_RESP --> IDLE: BVALID && BREADY
 ```
 
 ---

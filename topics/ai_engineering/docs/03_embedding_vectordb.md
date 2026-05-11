@@ -58,28 +58,27 @@ LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰
 
 ### 한 장 그림 — Embedding + ANN 검색의 전체 구조
 
-```
-       ┌── Offline (Indexing) ──┐                ┌── Online (Query) ──┐
-       │                        │                │                    │
-       │  IP spec / 코드 / 문서 │                │   사용자 쿼리      │
-       │         │              │                │   "TLB flush"      │
-       │         ▼ Chunking     │                │         │          │
-       │   [chunk₁, chunk₂,...] │                │         ▼ embed    │
-       │         │              │                │   q ∈ ℝᵈ           │
-       │         ▼ Embedding    │                │         │          │
-       │   v₁, v₂, v₃, ... ∈ ℝᵈ │                │         ▼          │
-       │         │              │                │  ┌──────────────┐  │
-       │         ▼              │                │  │ Vector DB    │  │
-       │   ┌──────────────┐     │                │  │ (FAISS / IVF │  │
-       │   │ Vector DB    │ ◀───────────── 적재 ─┼──│  HNSW / PQ)  │  │
-       │   │ (FAISS index)│     │                │  └──────┬───────┘  │
-       │   └──────────────┘     │                │         │ top-k    │
-       │                        │                │         ▼          │
-       └────────────────────────┘                │   chunk₁₂, chunk₃₇ │
-                                                 │         │          │
-                                                 │         ▼ LLM      │
-                                                 │   답변 + 출처      │
-                                                 └────────────────────┘
+```mermaid
+flowchart LR
+    subgraph OFF["Offline — Indexing"]
+        direction TB
+        D1["IP spec / 코드 / 문서"]
+        D2["Chunking<br/>[chunk₁, chunk₂, ...]"]
+        D3["Embedding<br/>v₁, v₂, v₃, ... ∈ ℝᵈ"]
+        D4[("Vector DB<br/>FAISS index")]
+        D1 --> D2 --> D3 --> D4
+    end
+    subgraph ON["Online — Query"]
+        direction TB
+        Q1["사용자 쿼리<br/>'TLB flush'"]
+        Q2["embed<br/>q ∈ ℝᵈ"]
+        Q3[("Vector DB<br/>FAISS / IVF / HNSW / PQ")]
+        Q4["top-k<br/>chunk₁₂, chunk₃₇"]
+        Q5["LLM"]
+        Q6["답변 + 출처"]
+        Q1 --> Q2 --> Q3 --> Q4 --> Q5 --> Q6
+    end
+    D4 -. "적재" .-> Q3
 ```
 
 ### 왜 이 구조인가 — Design rationale
@@ -92,29 +91,20 @@ LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰
 
 가장 단순한 시나리오. 사내 IP 스펙 1000 청크가 이미 인덱싱돼 있고, `"TLB flush"` 라는 쿼리 한 개를 던져 top-3 청크가 나오기까지를 추적합니다.
 
-```
-   ┌─── Online query ───┐                              ┌─── FAISS Index (offline 적재됨) ───┐
-   │                    │                              │                                     │
-   │  query="TLB flush" │                              │  chunk₁  v₁=[0.12,-0.45,...]        │
-   │        │           │  ① embed(query) → q ∈ ℝ⁷⁶⁸  │  chunk₂  v₂=[-0.31, 0.22,...]       │
-   │        ▼           │                              │  ...                                │
-   │   q = [0.11,       │                              │  chunk₂₃ v₂₃=[0.11,-0.43, 0.80,...] │ ← "TLB invalidation" 청크
-   │        -0.43,      │                              │  ...                                │
-   │        0.80,...]   │                              │  chunk₈₇ v₈₇=[0.55, 0.22,...]       │ ← "page fault" 청크
-   │        │           │                              │  ...                                │
-   │        ▼ ② IVF probe│                             │  Cluster 0..99 (K-means)            │
-   │   nprobe=10        │  ─────────────────────────▶  │                                     │
-   │        │           │                              │                                     │
-   │        ▼ ③ cosine sim 비교 (10개 클러스터 안만)   │                                     │
-   │   distances:       │                              │                                     │
-   │     chunk₂₃: 0.95  │ ◀──── ④ top-3 반환 ──────── │                                     │
-   │     chunk₅₆: 0.88  │                              │                                     │
-   │     chunk₈₇: 0.42  │                              │                                     │
-   │        │           │                              │                                     │
-   │        ▼ ⑤ chunk text + metadata 회수            │                                     │
-   │   "TLBI ALL: 전체 TLB 무효화..." (chunk₂₃)        │                                     │
-   │                    │                              │                                     │
-   └────────────────────┘                              └─────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Online Query<br/>query='TLB flush'
+    participant E as Embedding 모델
+    participant F as FAISS Index<br/>(offline 적재)
+
+    U->>E: ① embed(query)
+    E-->>U: q ∈ ℝ⁷⁶⁸<br/>[0.11, -0.43, 0.80, ...]
+    U->>F: ② IVF probe<br/>nprobe=10
+    Note over F: Cluster 0..99 (K-means)<br/>chunk₁ v₁=[0.12, -0.45, ...]<br/>chunk₂₃ v₂₃=[0.11, -0.43, 0.80, ...]<br/>chunk₈₇ v₈₇=[0.55, 0.22, ...]
+    F->>F: ③ cosine sim 비교<br/>(10개 클러스터 안만)
+    F-->>U: ④ top-3 반환<br/>chunk₂₃: 0.95<br/>chunk₅₆: 0.88<br/>chunk₈₇: 0.42
+    U->>U: ⑤ chunk text + metadata 회수<br/>'TLBI ALL: 전체 TLB 무효화...' (chunk₂₃)
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

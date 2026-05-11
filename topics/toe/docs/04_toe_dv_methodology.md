@@ -57,41 +57,24 @@ Module 01~03 가 _DUT 가 무엇을 하는가_ 였다면, 이 모듈은 _그것�
 
 ### 한 장 그림 — UVM 검증 환경
 
-```
-+------------------------------------------------------------------+
-|                    TOE UVM Verification Env                       |
-|                                                                   |
-|  +------------------+  +------------------+                       |
-|  | Host Agent       |  | Network Agent    |                       |
-|  | (TX/RX 요청)     |  | (Peer TCP 역할)  |                       |
-|  |                  |  |                  |                       |
-|  | - 데이터 생성    |  | - 패킷 응답      |                       |
-|  | - 연결 제어      |  | - ACK 생성       |                       |
-|  | - AXI 인터페이스 |  | - 패킷 손실주입  |                       |
-|  +--------+---------+  | - OOO 주입       |                       |
-|           |             | - AXI-S 인터페이스|                      |
-|           |             +--------+---------+                      |
-|           |                      |                                |
-|           v                      v                                |
-|  +------------------------------------------------------------+   |
-|  |                    DUT (TOE Engine)                         |   |
-|  +------------------------------------------------------------+   |
-|           |                      |                                |
-|           v                      v                                |
-|  +------------------------------------------------------------+   |
-|  |              Scoreboard / Protocol Checker                  |   |
-|  |                                                             |   |
-|  |  - 데이터 무결성: TX 데이터 == RX 데이터?                   |   |
-|  |  - TCP 프로토콜: RFC 793/5681/7323 준수?                    |   |
-|  |  - Seq/ACK 정확성: 기대 번호 vs 실제                        |   |
-|  |  - TCP Reference Model (C/Python)                           |   |
-|  +------------------------------------------------------------+   |
-|           |                                                       |
-|           v                                                       |
-|  +------------------------------------------------------------+   |
-|  |              Functional Coverage                            |   |
-|  +------------------------------------------------------------+   |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph ENV["TOE UVM Verification Env"]
+        direction TB
+        HA["<b>Host Agent</b><br/>(TX/RX 요청)<br/>데이터 생성<br/>연결 제어<br/>AXI 인터페이스"]
+        NA["<b>Network Agent</b><br/>(Peer TCP 역할)<br/>패킷 응답<br/>ACK 생성<br/>패킷 손실 주입<br/>OOO 주입<br/>AXI-S 인터페이스"]
+        DUT["<b>DUT (TOE Engine)</b>"]
+        SB["<b>Scoreboard / Protocol Checker</b><br/>데이터 무결성<br/>TCP 프로토콜 (RFC 793/5681/7323) 준수<br/>Seq/ACK 정확성<br/>TCP Reference Model (C/Python)"]
+        COV["<b>Functional Coverage</b>"]
+        HA --> DUT
+        NA --> DUT
+        DUT --> SB
+        SB --> COV
+    end
+    classDef agent stroke:#1a73e8,stroke-width:2px
+    classDef dut stroke:#c0392b,stroke-width:2px
+    class HA,NA agent
+    class DUT dut
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -110,57 +93,36 @@ Module 01~03 가 _DUT 가 무엇을 하는가_ 였다면, 이 모듈은 _그것�
 
 가장 단순한 시나리오. 테스트가 active open (DUT 가 client) 으로 새 TCP 연결을 만듭니다. peer (Network agent) 가 응답.
 
-```
-   Test (UVM Sequence)
-        │
-        ▼ ① start_item: tcp_connect_seq (dst_ip, dst_port)
-   Host Agent ─── descriptor write ──────▶ DUT Host I/F
-                                              │
-                                              ▼ ② DUT TX path: SYN packet build
-                                              │   - Conn Table 에 LISTEN entry 생성
-                                              │   - SYN_SENT 로 전이
-                                              ▼
-                                          DUT MAC I/F ──── AXI-S SYN ────▶ Network Agent Monitor
-                                                                                   │
-                                                                                   ▼ ③ Monitor 가 SYN 캡처
-                                                                                   │   → analysis_port 로 SB 와 Reference 에 전달
-                                                                                   │
-                                                                                   ▼ ④ Reference Model (DPI-C)
-                                                                                   │   - 기대 SYN-ACK 의 seq/ack/win 계산
-                                                                                   │   - peer 측 FSM: LISTEN → SYN_RCVD
-                                                                                   │
-                                                                                   ▼ ⑤ Network Agent Responder
-                                                                                       자동으로 SYN-ACK 생성
-                                                                                       (rand: 정상 or error 주입)
-   Scoreboard                                                                          │
-   ┌──────────────────────────────────────────────┐                                   │
-   │ ⑥ DUT TX SYN ↔ Reference SYN ─ 비교           │                                   │
-   │    seq == ISN(host) ?                          │                                   │
-   │    flags == SYN ?                              │                                   │
-   │    options[MSS] == ? Window Scale ?             │                                   │
-   └──────────────────────────────────────────────┘                                   │
-                                          DUT MAC I/F ◀── AXI-S SYN-ACK ────────────┘
-                                              │
-                                              ▼ ⑦ DUT RX path: SYN-ACK 수신
-                                              │   - Conn Table: SYN_SENT → ESTABLISHED
-                                              │   - rcv_nxt = peer.isn + 1
-                                              ▼
-                                          DUT TX path: ACK packet
-                                              │
-                                              ▼
-                                          DUT MAC I/F ──── AXI-S ACK ────▶ Network Agent Monitor
-                                                                                   │
-                                                                                   ▼ ⑧ Coverage:
-                                                                                       cp_state = ESTABLISHED 'hit
-                                                                                       cp_transition = SYN_SENT→ESTABLISHED 'hit
-   Scoreboard                                                                       │
-   ┌──────────────────────────────────────────────┐                               │
-   │ ⑨ DUT ACK ↔ Reference ACK 비교                 │                               │
-   │    ack == peer.isn + 1 ?                       │                               │
-   └──────────────────────────────────────────────┘
-                                          
-   ⑩ SVA: syn_gets_synack property 'fired & 'passed
-        cover property: 'hit (vacuous 아님)
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Seq as Test (UVM Sequence)
+    participant HA as Host Agent
+    participant DUT as DUT (TOE)
+    participant NA as Network Agent<br/>(Monitor + Responder)
+    participant Ref as Reference Model<br/>(DPI-C)
+    participant SB as Scoreboard
+    participant Cov as Coverage / SVA
+
+    Seq->>HA: ① start_item:<br/>tcp_connect_seq (dst_ip, dst_port)
+    HA->>DUT: descriptor write
+    Note over DUT: ② TX path: SYN packet build<br/>Conn Table 에 LISTEN entry 생성<br/>SYN_SENT 로 전이
+    DUT->>NA: AXI-S SYN
+    Note over NA: ③ Monitor 가 SYN 캡처<br/>→ analysis_port 로<br/>SB 와 Reference 에 전달
+    NA->>Ref: SYN (analysis)
+    Note over Ref: ④ 기대 SYN-ACK 의<br/>seq/ack/win 계산<br/>peer FSM: LISTEN → SYN_RCVD
+    NA->>SB: DUT SYN
+    Ref->>SB: Reference SYN
+    Note over SB: ⑥ field-by-field 비교<br/>seq == ISN(host)?<br/>flags == SYN?<br/>options[MSS], Window Scale?
+    Note over NA: ⑤ Responder<br/>자동으로 SYN-ACK 생성<br/>(rand: 정상 or error 주입)
+    NA->>DUT: AXI-S SYN-ACK
+    Note over DUT: ⑦ RX path: SYN-ACK 수신<br/>Conn Table: SYN_SENT → ESTABLISHED<br/>rcv_nxt = peer.isn + 1
+    DUT->>NA: AXI-S ACK
+    NA->>Cov: ⑧ cp_state=ESTABLISHED hit<br/>cp_transition=SYN_SENT→ESTABLISHED hit
+    NA->>SB: DUT ACK
+    Ref->>SB: Reference ACK
+    Note over SB: ⑨ ack == peer.isn + 1?
+    Note over Cov: ⑩ SVA: syn_gets_synack<br/>fired & passed<br/>cover property hit (non-vacuous)
 ```
 
 | Step | TB 컴포넌트 | 무엇을 | 왜 |

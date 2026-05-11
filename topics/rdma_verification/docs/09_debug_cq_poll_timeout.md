@@ -57,28 +57,35 @@ CQ polling 타임아웃은 "DUT 가 내가 보낸 work 를 처리하긴 했나?"
 
 ### 한 장 그림 — 두 조건 + 디버그 분기
 
-```
-   CQ Polling 진행 중
-   ─────────────────
-        │
-        ├─ try_cnt 가 limit 안 넘었나?
-        │      yes → 기다리기 (10us 마다 한 번 로그)
-        │      no  → 다음 조건
-        │
-        └─ c2h_tracker::active 인가?  ⭐ 두 번째 게이트
-               yes → 무한 지연 (DUT DMA 살아있음)
-               no  → exceptionTimeout()
-                       └─ E-DRV-TBERR-0001/0002
-                       └─ uvm_shutdown_phase (graceful)
+```mermaid
+flowchart TB
+    POLL["CQ Polling 진행 중"]
+    Q1{"try_cnt > limit?"}
+    Q2{"c2h_tracker::active?"}
+    WAIT["기다리기<br/>(10us 마다 로그)"]
+    HOLD["무한 지연<br/>(DUT DMA 살아있음)"]
+    EXC["exceptionTimeout()<br/>E-DRV-TBERR-0001/0002<br/>uvm_shutdown_phase (graceful)"]
 
-   디버그 분기 (4 분기점):
-   ─────────────────────
-        H2C 14–17 fetch 0회       ▶  DUT 가 SQ doorbell 못 받음
-        14–17 OK, H2C 8 0회       ▶  WQE 처리 시작 안 함
-        8 OK, packet 송신 OK,     ▶  Completion engine 미생성
-          C2H 10/11 0회
-        10/11 OK, PHASE 불일치    ▶  Phase bit 동기화 실패
+    POLL --> Q1
+    Q1 -- no --> WAIT
+    Q1 -- yes --> Q2
+    Q2 -- yes --> HOLD
+    Q2 -- no --> EXC
+
+    classDef gate stroke:#b8860b,stroke-width:2px
+    classDef fatal stroke:#c0392b,stroke-width:3px
+    class Q1,Q2 gate
+    class EXC fatal
 ```
+
+디버그 분기 (4 분기점):
+
+| 관찰 | 가설 |
+|------|------|
+| H2C 14–17 fetch 0회 | DUT 가 SQ doorbell 못 받음 |
+| 14–17 OK, H2C 8 0회 | WQE 처리 시작 안 함 |
+| 8 OK, packet 송신 OK, C2H 10/11 0회 | Completion engine 미생성 |
+| 10/11 OK, PHASE 불일치 | Phase bit 동기화 실패 |
 
 ### 왜 이 디자인인가 — Design rationale
 
@@ -280,17 +287,26 @@ grep -E "c2h_tracker.*active" run.log | tail -20
 
 ### 5.7 폴링 동작 한 줄 흐름
 
-```
-RDMACQPoll(cq_num, try_once=0)
- → vrdma_cq_poll_command (timeout_count=10000)
-   → driver.run_phase 의 cq polling 루프
-     → CQ phase bit 주소 read
-       → phase 일치? → CQE 처리 (cq_handler)
-       → 불일치? → try_cnt++; 다음 시도
-     → try_cnt > timeout_count AND !c2h_tracker::active
-       → exceptionTimeout()
-         → E-DRV-TBERR-0001 / 0002
-         → uvm_shutdown_phase
+```mermaid
+flowchart TB
+    A["RDMACQPoll(cq_num, try_once=0)"]
+    B["vrdma_cq_poll_command<br/>(timeout_count=10000)"]
+    C["driver.run_phase 의 cq polling 루프"]
+    D["CQ phase bit 주소 read"]
+    E{"phase 일치?"}
+    F["CQE 처리 (cq_handler)"]
+    G["try_cnt++"]
+    H{"try_cnt > limit<br/>AND<br/>!c2h_tracker::active?"}
+    I["exceptionTimeout()<br/>E-DRV-TBERR-0001/0002<br/>uvm_shutdown_phase"]
+
+    A --> B --> C --> D --> E
+    E -- yes --> F
+    E -- no --> G --> H
+    H -- no --> D
+    H -- yes --> I
+
+    classDef fatal stroke:#c0392b,stroke-width:3px
+    class I fatal
 ```
 
 ---

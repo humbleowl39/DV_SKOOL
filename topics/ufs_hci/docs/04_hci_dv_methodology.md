@@ -55,37 +55,20 @@
 
 ### 한 장 그림 — Env 구조
 
-```
-+------------------------------------------------------------------+
-|                   UFS HCI UVM Env                                  |
-|                                                                   |
-|  +------------------+                    +------------------+     |
-|  | Host Agent       |                    | Device Agent     |     |
-|  | (SW Driver 모델) |                    | (UFS Device 모델)|     |
-|  |                  |                    |                  |     |
-|  | - UTRD 작성      |                    | - UPIU 응답 생성 |     |
-|  | - Doorbell 셋    |                    | - RTT 제어       |     |
-|  | - ISR 처리       |                    | - 에러 주입      |     |
-|  | - Register R/W   |                    | - UniPro IF      |     |
-|  +--------+---------+                    +--------+---------+     |
-|           | AHB/AXI                        UniPro  |              |
-|           v                                        v              |
-|  +------------------------------------------------------------+  |
-|  |                    DUT (UFS HCI IP)                         |  |
-|  +------------------------------------------------------------+  |
-|           |                                        |              |
-|  +--------+----------------------------------------+---------+   |
-|  |                    Scoreboard                              |   |
-|  |  - UTRD → UPIU 변환 정확성                                |   |
-|  |  - DMA 데이터 무결성 (PRDT)                               |   |
-|  |  - 레지스터 상태 정확성                                    |   |
-|  |  - 명령 완료 순서 / 상태                                   |   |
-|  +------------------------------------------------------------+  |
-|                                                                   |
-|  +------------------------------------------------------------+  |
-|  |              Functional Coverage                             |  |
-|  +------------------------------------------------------------+  |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph ENV["UFS HCI UVM Env"]
+        direction TB
+        HA["<b>Host Agent</b><br/>(SW Driver 모델)<br/>· UTRD 작성<br/>· Doorbell 셋<br/>· ISR 처리<br/>· Register R/W"]
+        DA["<b>Device Agent</b><br/>(UFS Device 모델)<br/>· UPIU 응답 생성<br/>· RTT 제어<br/>· 에러 주입<br/>· UniPro IF"]
+        DUT["<b>DUT (UFS HCI IP)</b>"]
+        SCB["<b>Scoreboard</b><br/>· UTRD → UPIU 변환 정확성<br/>· DMA 데이터 무결성 (PRDT)<br/>· 레지스터 상태 정확성<br/>· 명령 완료 순서 / 상태"]
+        COV["<b>Functional Coverage</b>"]
+        HA -- "AHB/AXI" --> DUT
+        DA -- "UniPro" --> DUT
+        DUT --> SCB
+        SCB --> COV
+    end
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -105,34 +88,21 @@
 
 가장 단순한 시나리오 한 개를 _시퀀스 → 모니터 캡처 → scoreboard 비교 → SVA → coverage_ 로 끝까지 끌고 갑니다. 시나리오: **Interrupt Aggregation** (UFS 3.x 의 IACR/IATC 설정으로 N 개 완료를 1 IRQ 로 묶음). 32 슬롯에 READ 를 깔고, IACR=4 일 때 IRQ 가 8 번만 발생해야 함.
 
-```
-   ┌─── Host Agent ───┐                  ┌─── DUT (HCI) ───┐         ┌─── Device Agent ───┐
-   │                   │                  │                  │         │                     │
-   │ ① IACR=4, IATC=10 │                  │                  │         │                     │
-   │   IE[UTRCS]=1     │                  │                  │         │                     │
-   │                   │                  │                  │         │                     │
-   │ ② 32 READ 동시 발행 (slot 0..31)   │                  │         │                     │
-   │   UTRLDBR=0xFFFFFFFF                  │                  │         │                     │
-   │       │           │                  │                  │         │                     │
-   │       ▼ ────────▶│ ③ 32 Cmd UPIU   │────────────────▶ │ 32 read 처리 │              │
-   │                   │                  │                  │         │       │             │
-   │                   │                  │ ④ Data-In ×N    │ ◀──────│       ▼             │
-   │                   │                  │   for each slot   │         │ 응답 생성 (랜덤 순서)│
-   │                   │                  │                  │         │                     │
-   │                   │                  │ ⑤ Resp UPIU      │ ◀──────│                     │
-   │                   │                  │   completion      │         │                     │
-   │                   │                  │   counter += 1   │         │                     │
-   │                   │                  │                  │         │                     │
-   │                   │                  │ counter==4 마다  │         │                     │
-   │ ⑥ ◀── IRQ ──────│ ⑥ IS[UTRCS]=1   │                  │         │                     │
-   │       (총 8회)    │                  │                  │         │                     │
-   │       │           │                  │                  │         │                     │
-   │       ▼           │                  │                  │         │                     │
-   │ ⑦ ISR: UTRLDBR   │                  │                  │         │                     │
-   │     read → done 4│                  │                  │         │                     │
-   │     UTRD.OCS read │                  │                  │         │                     │
-   │     IS W1C        │                  │                  │         │                     │
-   └───────────────────┘                  └──────────────────┘         └─────────────────────┘
+```mermaid
+sequenceDiagram
+    participant HA as Host Agent
+    participant DUT as DUT (HCI)
+    participant DA as Device Agent
+    Note over HA: 1. IACR=4, IATC=10<br/>IE[UTRCS]=1
+    Note over HA: 2. 32 READ 동시 발행 (slot 0..31)<br/>UTRLDBR = 0xFFFFFFFF
+    HA->>DUT: doorbell
+    DUT->>DA: 3. 32 Cmd UPIU
+    Note over DA: 32 read 처리<br/>응답 생성 (랜덤 순서)
+    DA-->>DUT: 4. Data-In × N (for each slot)
+    DA-->>DUT: 5. Resp UPIU<br/>(completion counter += 1)
+    Note over DUT: counter == 4 마다 IS[UTRCS]=1 + IRQ
+    DUT-->>HA: 6. IRQ (총 8회)
+    Note over HA: 7. ISR: UTRLDBR read → done 4<br/>UTRD.OCS read<br/>IS W1C
 ```
 
 ### 검증 인프라 매핑
@@ -334,23 +304,22 @@ HCI 초기화 시퀀스는 엄격한 순서를 요구 — 검증 필수
 
 ```
 계층 구조:
+```
 
-  +----------------------------------------------------------+
-  | Virtual Sequence (vseq)                                   |
-  |   - 여러 Agent의 Sequence를 조율                          |
-  |   - 시나리오 단위: "32개 READ 후 Abort 2개 동시 주입"     |
-  +----------------------------------------------------------+
-       |                              |
-  +----+----+                  +------+------+
-  | Host     |                  | Device      |
-  | Sequence |                  | Sequence    |
-  +----------+                  +-------------+
-       |                              |
-  +----+----+                  +------+------+
-  | Host     |                  | Device      |
-  | Driver   |                  | Driver      |
-  +----------+                  +-------------+
+```mermaid
+flowchart TB
+    VSEQ["<b>Virtual Sequence (vseq)</b><br/>· 여러 Agent의 Sequence를 조율<br/>· 시나리오 단위:<br/>'32개 READ 후 Abort 2개 동시 주입'"]
+    HSEQ["Host Sequence"]
+    DSEQ["Device Sequence"]
+    HDRV["Host Driver"]
+    DDRV["Device Driver"]
+    VSEQ --> HSEQ
+    VSEQ --> DSEQ
+    HSEQ --> HDRV
+    DSEQ --> DDRV
+```
 
+```
 Sequence 계층:
 
   Level 1: Base Sequence (단일 동작)
@@ -417,41 +386,15 @@ endclass
 
 ### 5.5 Scoreboard 알고리즘
 
-```
 Scoreboard의 핵심 역할: Host 측 명령과 Device 측 UPIU의 정합성 검증
 
-  +------------------+                    +------------------+
-  | Host Monitor     |                    | Device Monitor   |
-  | (AHB/AXI 관찰)  |                    | (UniPro IF 관찰) |
-  +--------+---------+                    +--------+---------+
-           |                                       |
-      utrd_ap (analysis port)              upiu_ap (analysis port)
-           |                                       |
-           v                                       v
-  +------------------------------------------------------------+
-  |                    Scoreboard                               |
-  |                                                             |
-  |  1. UTRD→UPIU 변환 검증                                    |
-  |     Host Monitor가 UTRD 캡처 → 예상 UPIU 생성              |
-  |     Device Monitor가 실제 UPIU 캡처                         |
-  |     비교: Task Tag, LUN, CDB, Data Length 일치?             |
-  |                                                             |
-  |  2. DMA 데이터 무결성                                       |
-  |     WRITE: Host 메모리(PRDT 주소)의 데이터                  |
-  |          == Device가 수신한 Data-Out UPIU 데이터?            |
-  |     READ: Device가 송신한 Data-In UPIU 데이터               |
-  |          == Host 메모리(PRDT 주소)에 DMA된 데이터?           |
-  |                                                             |
-  |  3. 완료 상태 정합성                                        |
-  |     Response UPIU의 Status                                  |
-  |       == UTRD의 Overall Command Status?                     |
-  |     Transfer 완료 → Doorbell 비트 클리어?                   |
-  |     IS[UTRCS] 인터럽트 발생?                                |
-  |                                                             |
-  |  4. 순서 검증                                               |
-  |     같은 LUN 내 명령 → 순서 보장?                           |
-  |     다른 LUN 명령 → Out-of-Order 허용?                      |
-  +------------------------------------------------------------+
+```mermaid
+flowchart TB
+    HM["<b>Host Monitor</b><br/>(AHB/AXI 관찰)"]
+    DM["<b>Device Monitor</b><br/>(UniPro IF 관찰)"]
+    SCB["<b>Scoreboard</b><br/>1. UTRD → UPIU 변환 검증<br/>&nbsp;&nbsp;&nbsp;Host UTRD 캡처 → 예상 UPIU 생성<br/>&nbsp;&nbsp;&nbsp;Device 실제 UPIU 캡처 → 비교<br/>&nbsp;&nbsp;&nbsp;(Task Tag, LUN, CDB, Data Length)<br/><br/>2. DMA 데이터 무결성<br/>&nbsp;&nbsp;&nbsp;WRITE: Host PRDT 데이터 ↔ Data-Out UPIU<br/>&nbsp;&nbsp;&nbsp;READ: Data-In UPIU ↔ Host PRDT DMA<br/><br/>3. 완료 상태 정합성<br/>&nbsp;&nbsp;&nbsp;Response Status == UTRD OCS<br/>&nbsp;&nbsp;&nbsp;Doorbell 비트 클리어 / IS[UTRCS] 발생<br/><br/>4. 순서 검증<br/>&nbsp;&nbsp;&nbsp;같은 LUN 순서 보장 / 다른 LUN Out-of-Order"]
+    HM -- "utrd_ap (analysis port)" --> SCB
+    DM -- "upiu_ap (analysis port)" --> SCB
 ```
 
 ```systemverilog

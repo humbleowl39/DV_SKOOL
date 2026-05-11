@@ -56,38 +56,58 @@ DP 는 면접관이 _reasoning depth_ 를 가장 좋아하는 패턴입니다. *
 
 ### 한 장 그림 — Brute force vs Memoization vs Tabulation
 
+**Brute Force (재귀, 중복 계산) — O(2ⁿ)**
+
+```mermaid
+flowchart TB
+    F5["fib(5)"]
+    F4["fib(4)"]
+    F3a["fib(3)"]
+    F3b["fib(3)"]
+    F2a["fib(2)"]
+    F2b["fib(2)"]
+    F2c["fib(2)"]
+    F1a["fib(1)"]
+    F1b["fib(1)"]
+    F1c["fib(1)"]
+    F1d["fib(1)"]
+    F0a["fib(0)"]
+    F5 --> F4
+    F5 --> F3b
+    F4 --> F3a
+    F4 --> F2b
+    F3a --> F2a
+    F3a --> F1b
+    F3b --> F2c
+    F3b --> F1c
+    F2a --> F1a
+    F2a --> F0a
+    classDef dup stroke-width:3px,stroke-dasharray:4 2
+    class F3b,F2b,F2c,F1b,F1c dup
 ```
-                Brute Force (재귀, 중복 계산)
-                ──────────────────────────────────
-                          fib(5)
-                         ╱      ╲
-                     fib(4)    fib(3)
-                    ╱     ╲    ╱    ╲
-                fib(3)  fib(2) fib(2) fib(1)    ← fib(3), fib(2) 가
-                ╱  ╲                              여러 번 _재계산_
-              fib(2) fib(1)                       → 시간 O(2ⁿ)
-              ╱   ╲
-            fib(1) fib(0)
 
-                Top-down DP (memoization)
-                ──────────────────────────────────
-                    cache = {}
-                    fib(5):
-                       cache 에 있나? NO → 계산 → cache 에 저장
-                    fib(4):
-                       cache 에 있나? YES → return
-                    → 각 fib(i) 가 _단 한 번_ 계산
-                    → 시간 O(N)
+→ `fib(3)`, `fib(2)` 가 **여러 번 재계산** (점선 표시) → 시간 O(2ⁿ).
 
-                Bottom-up DP (tabulation)
-                ──────────────────────────────────
-                    dp:  [0]  [1]  [?]  [?]  [?]  [?]
-                          ▲    ▲                       ← base
-                          │    │                         
-                    for i = 2..n:                       
-                       dp[i] = dp[i-1] + dp[i-2]        
-                    → 작은 답부터 큰 답으로                   
-                    → 시간 O(N), 공간 O(N) → O(1) 가능       
+**Top-down DP (memoization) — O(N)**
+
+```
+cache = {}
+fib(5):
+   cache 에 있나? NO → 계산 → cache 에 저장
+fib(4):
+   cache 에 있나? YES → return
+→ 각 fib(i) 가 _단 한 번_ 계산 → 시간 O(N)
+```
+
+**Bottom-up DP (tabulation) — O(N) 시간, 공간 O(N) → O(1) 가능**
+
+```
+dp:  [0]  [1]  [?]  [?]  [?]  [?]
+      ▲    ▲                       ← base
+      │    │
+for i = 2..n:
+   dp[i] = dp[i-1] + dp[i-2]
+→ 작은 답부터 큰 답으로
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale

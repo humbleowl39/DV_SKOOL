@@ -69,29 +69,29 @@
 
 ## 컨셉 맵
 
-```
-                    +-------------------+
-                    |    uvm_test       |
-                    +---------+---------+
-                              |
-                    +---------+---------+
-                    |    uvm_env        |
-                    |                   |
-                    | +-----+ +-------+ |
-                    | |Agent| |Scorebrd| |
-                    | |     | |       | |
-                    | |Drv  | |Checker| |
-                    | |Mon  | |       | |
-                    | |Sqr  | +-------+ |
-                    | +-----+           |
-                    +---------+---------+
-                              |
-              +---------------+---------------+
-              |               |               |
-         +---------+   +----------+   +----------+
-         |Sequence |   | config_db|   | Factory  |
-         |Library  |   | (설정)   |   | (생성)   |
-         +---------+   +----------+   +----------+
+```mermaid
+flowchart TB
+    TST["uvm_test"]
+    ENV["uvm_env"]
+    AG["Agent<br/>(Drv / Mon / Sqr)"]
+    SB["Scoreboard<br/>(Checker)"]
+    SL["Sequence Library"]
+    CDB["config_db<br/>(설정)"]
+    FAC["Factory<br/>(생성)"]
+
+    TST --> ENV
+    ENV --> AG
+    ENV --> SB
+    ENV --> SL
+    ENV --> CDB
+    ENV --> FAC
+
+    classDef top stroke:#1a73e8,stroke-width:2px
+    classDef env stroke:#137333,stroke-width:2px
+    classDef infra stroke:#b8860b,stroke-width:2px
+    class TST top
+    class ENV,AG,SB env
+    class SL,CDB,FAC infra
 ```
 
 ## 학습 단위

@@ -57,26 +57,36 @@ DCMAC 검증 환경의 모든 신호 이름 — `tx_axis_tdata`, `rx_axis_tuser`
 
 ### 한 장 그림 — 5 블록 + 두 인터페이스
 
-```
-        ┌─────────────────── DCMAC IP ─────────────────────────┐
-        │                                                       │
-  Host  │ ┌──── TX MAC ────┐    ┌──────── PCS+FEC ─────────┐   │
-  ──────┼─►│ Preamble/SFD  │    │ 64b/66b + RS-FEC +       │   │  Line
-  AXI-S │ │ FCS gen       ├───►│ Lane distribute + AM     ├──►│  Segmented
-  TX    │ │ Pad / IFG     │    │                          │   │  IF
-        │ └───────────────┘    └──────────────────────────┘   │
-        │                                                       │
-  Host  │ ┌──── RX MAC ────┐    ┌──────── PCS+FEC ─────────┐   │
-  ◄─────┼─┤ Preamble strip │◄───┤ Block lock + Descramble  │◄──┤
-  AXI-S │ │ FCS check     │    │ FEC decode + Lane align  │   │
-  RX    │ │ Filter / Stat │    │                          │   │
-        │ └───────────────┘    └──────────────────────────┘   │
-        │                                                       │
-        │ ┌─ Config (AXI-Lite) ─┐  ┌─ Flow Ctrl ─┐  ┌─ PTP ─┐  │
-        │ │ MAC addr, MTU, mode │  │ Pause / PFC │  │ TS    │  │
-        │ │ FEC en, stat counter│  │             │  │ 1step │  │
-        │ └─────────────────────┘  └─────────────┘  └───────┘  │
-        └───────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    HOST_TX["Host<br/>AXI-S TX"]
+    HOST_RX["Host<br/>AXI-S RX"]
+    LINE_TX(("Line<br/>Segmented IF<br/>(TX out)"))
+    LINE_RX(("Line<br/>Segmented IF<br/>(RX in)"))
+
+    subgraph DCMAC["DCMAC IP"]
+        direction TB
+        subgraph TXP["TX path"]
+            direction LR
+            TXMAC["TX MAC<br/>Preamble/SFD<br/>FCS gen<br/>Pad / IFG"]
+            TXPCS["PCS + FEC<br/>64b/66b + RS-FEC<br/>Lane distribute + AM"]
+            TXMAC --> TXPCS
+        end
+        subgraph RXP["RX path"]
+            direction LR
+            RXPCS["PCS + FEC<br/>Block lock + Descramble<br/>FEC decode + Lane align"]
+            RXMAC["RX MAC<br/>Preamble strip<br/>FCS check<br/>Filter / Stat"]
+            RXPCS --> RXMAC
+        end
+        CFG["Config (AXI-Lite)<br/>MAC addr, MTU, mode<br/>FEC en, stat counter"]
+        FC["Flow Ctrl<br/>Pause / PFC"]
+        PTP["PTP<br/>TS · 1step"]
+    end
+
+    HOST_TX --> TXMAC
+    TXPCS --> LINE_TX
+    LINE_RX --> RXPCS
+    RXMAC --> HOST_RX
 ```
 
 ### 왜 이 구조 — Design rationale
@@ -95,23 +105,30 @@ DCMAC 검증 환경의 모든 신호 이름 — `tx_axis_tdata`, `rx_axis_tuser`
 
 가장 단순한 시나리오. **PFC frame 이 line 에서 들어와 DCMAC 이 TX 의 priority-3 큐만 멈추도록** 하는 1 cycle 추적. (정상 data frame 의 RX path 와 PFC 처리 path 두 가지를 한 번에 보여줌.)
 
-```
-   Network ─► SerDes ─► PCS ─► RX MAC ─► AXI-S RX ─► TOE
-                       │           │
-                       │           │  ① EtherType=0x8808 인식
-                       │           │     → AXI-S RX 안 감 (host 안 올림)
-                       │           ▼
-                       │       Flow Control 블록
-                       │           │  ② opcode=0x0101 (PFC)
-                       │           │     priority_enable_vector[3]=1
-                       │           │     pause_time[3] = 0x0064
-                       │           ▼
-                       │       TX MAC 의 priority-3 queue
-                       │           │  ③ scheduler: priority_3 만 정지
-                       │           ▼  (priority 0..2, 4..7 은 계속 송신)
-                       └─────────► TX MAC ─► PCS ─► SerDes ─► Network
-                                          ④ pause_time tick
-                                             기본 단위 = 512 bit time
+```mermaid
+flowchart LR
+    NETIN(("Network<br/>(in)"))
+    SDIN["SerDes RX"]
+    PCSIN["PCS RX"]
+    RXMAC["RX MAC"]
+    AXISRX["AXI-S RX → TOE<br/>(PFC frame 안 올림)"]
+    FCB["Flow Control 블록<br/>② opcode=0x0101 (PFC)<br/>priority_enable_vector[3]=1<br/>pause_time[3] = 0x0064"]
+    TXQ3["TX MAC priority-3 queue<br/>③ scheduler: priority_3 만 정지<br/>(priority 0..2, 4..7 은 계속 송신)"]
+    TXMAC["TX MAC"]
+    PCSOUT["PCS TX"]
+    SDOUT["SerDes TX"]
+    NETOUT(("Network<br/>(out)"))
+
+    NETIN --> SDIN --> PCSIN --> RXMAC
+    RXMAC -- "일반 data frame" --> AXISRX
+    RXMAC -- "① EtherType=0x8808 인식" --> FCB
+    FCB --> TXQ3
+    TXQ3 --> TXMAC
+    TXMAC --> PCSOUT --> SDOUT --> NETOUT
+    FCB -. "④ pause_time tick<br/>(단위 = 512 bit time)" .-> TXQ3
+
+    classDef pfc stroke:#c0392b,stroke-width:2px
+    class FCB,TXQ3 pfc
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -191,43 +208,35 @@ SerDes lane 8 개 pool:
 
 ### 5.1 DCMAC 블록 다이어그램
 
-```
-+------------------------------------------------------------------+
-|                          DCMAC IP                                 |
-|                                                                   |
-|  User Side (AXI-Stream)              Line Side (Segmented IF)     |
-|                                                                   |
-|  +----------+    +-----------+    +----------+    +----------+    |
-|  | AXI-S    | →  | TX MAC    | →  | TX PCS   | →  | GT/SerDes| → |
-|  | TX IF    |    | Engine    |    | Encoder  |    | TX       |   |
-|  | (tdata,  |    |           |    | 64b/66b  |    |          |   |
-|  |  tvalid, |    | - Preamble|    | Scramble |    |          |   |
-|  |  tready, |    | - FCS Gen |    | RS-FEC   |    |          |   |
-|  |  tlast,  |    | - Pad     |    | Lane Dist|    |          |   |
-|  |  tkeep)  |    | - IFG     |    |          |    |          |   |
-|  +----------+    +-----------+    +----------+    +----------+    |
-|                                                                   |
-|  +----------+    +-----------+    +----------+    +----------+    |
-|  | AXI-S    | ←  | RX MAC    | ←  | RX PCS   | ←  | GT/SerDes| ← |
-|  | RX IF    |    | Engine    |    | Decoder  |    | RX       |   |
-|  |          |    |           |    | Descramb |    |          |   |
-|  |          |    | - FCS Chk |    | RS-FEC   |    |          |   |
-|  |          |    | - Filter  |    | Align    |    |          |   |
-|  |          |    | - Stat    |    | Deskew   |    |          |   |
-|  +----------+    +-----------+    +----------+    +----------+    |
-|                                                                   |
-|  +------------------------------------------------------------+  |
-|  | Configuration / Status Registers (AXI-Lite)                |  |
-|  | - MAC 주소 설정, 모드 설정, 통계 카운터, 에러 상태          |  |
-|  | - RS-FEC 설정, PTP 타임스탬프, Flow Control 설정            |  |
-|  +------------------------------------------------------------+  |
-|                                                                   |
-|  +------------------------------------------------------------+  |
-|  | Flow Control Engine          | PTP/1588 Engine             |  |
-|  | - Pause Frame 생성/처리      | - TX Timestamp Capture      |  |
-|  | - PFC (Priority Flow Ctrl)   | - RX Timestamp Capture      |  |
-|  +------------------------------------------------------------+  |
-+------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph DCMAC["DCMAC IP"]
+        direction TB
+        subgraph TX_ROW["TX data path"]
+            direction LR
+            AXIS_TX["AXI-S TX IF<br/>(tdata, tvalid, tready,<br/>tlast, tkeep)"]
+            TX_MAC["TX MAC Engine<br/>- Preamble<br/>- FCS Gen<br/>- Pad<br/>- IFG"]
+            TX_PCS["TX PCS Encoder<br/>64b/66b<br/>Scramble<br/>RS-FEC<br/>Lane Dist"]
+            GT_TX["GT / SerDes TX"]
+            AXIS_TX --> TX_MAC --> TX_PCS --> GT_TX
+        end
+
+        subgraph RX_ROW["RX data path"]
+            direction LR
+            GT_RX["GT / SerDes RX"]
+            RX_PCS["RX PCS Decoder<br/>Descramble<br/>RS-FEC<br/>Align<br/>Deskew"]
+            RX_MAC["RX MAC Engine<br/>- FCS Chk<br/>- Filter<br/>- Stat"]
+            AXIS_RX["AXI-S RX IF"]
+            GT_RX --> RX_PCS --> RX_MAC --> AXIS_RX
+        end
+
+        CFG["Configuration / Status Registers (AXI-Lite)<br/>MAC 주소·모드·통계 카운터·에러 상태<br/>RS-FEC 설정 · PTP 타임스탬프 · Flow Control 설정"]
+        FC_ENG["Flow Control Engine<br/>Pause Frame 생성/처리<br/>PFC (Priority Flow Ctrl)"]
+        PTP_ENG["PTP / 1588 Engine<br/>TX Timestamp Capture<br/>RX Timestamp Capture"]
+    end
+
+    classDef block stroke:#1a73e8,stroke-width:2px
+    class TX_MAC,RX_MAC,TX_PCS,RX_PCS block
 ```
 
 ### 5.2 Multi-Port 아키텍처 및 속도 모드
@@ -345,83 +354,29 @@ DV 관점:
 
 ### 5.4 TX MAC Engine 상세
 
-```
-사용자 데이터 수신 (AXI-S)
-         |
-         v
-+---------------------------+
-| 1. Preamble + SFD 삽입    |
-|    7B(10101010) + 1B(SFD) |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 2. 패딩 (필요 시)          |
-|    Payload < 46B → 패딩   |
-|    최소 프레임 64B 보장    |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 3. FCS (CRC-32) 계산      |
-|    Dst MAC ~ Payload       |
-|    → 4B CRC 추가          |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 4. IFG 삽입               |
-|    최소 12B 간격 보장      |
-|    (Rate Adaptation 포함)  |
-+---------------------------+
-         |
-         v
-    PCS/SerDes로 전달
+```mermaid
+flowchart TB
+    IN(["사용자 데이터 수신 (AXI-S)"])
+    S1["1. Preamble + SFD 삽입<br/>7B(10101010) + 1B(SFD)"]
+    S2["2. 패딩 (필요 시)<br/>Payload < 46B → 패딩<br/>최소 프레임 64B 보장"]
+    S3["3. FCS (CRC-32) 계산<br/>Dst MAC ~ Payload<br/>→ 4B CRC 추가"]
+    S4["4. IFG 삽입<br/>최소 12B 간격 보장<br/>(Rate Adaptation 포함)"]
+    OUT(["PCS/SerDes 로 전달"])
+    IN --> S1 --> S2 --> S3 --> S4 --> OUT
 ```
 
 ### 5.5 RX MAC Engine 상세
 
-```
-PCS/SerDes에서 수신
-         |
-         v
-+---------------------------+
-| 1. Preamble/SFD 감지+제거  |
-|    프레임 시작 인식         |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 2. FCS 검증               |
-|    CRC-32 재계산 vs FCS    |
-|    불일치 → bad 플래그     |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 3. 주소 필터링             |
-|    Dst MAC == 자신?        |
-|    Broadcast? Multicast?   |
-|    Promiscuous 모드?       |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 4. 길이/타입 검사          |
-|    최소 64B? Jumbo 허용?   |
-|    Runt/Oversize 감지      |
-+---------------------------+
-         |
-         v
-+---------------------------+
-| 5. 통계 카운터 업데이트    |
-|    RX frames, bytes,       |
-|    CRC errors, etc.        |
-+---------------------------+
-         |
-         v
-    사용자에게 전달 (AXI-S)
-    tuser에 FCS good/bad 표시
+```mermaid
+flowchart TB
+    IN(["PCS / SerDes 에서 수신"])
+    R1["1. Preamble / SFD 감지 + 제거<br/>프레임 시작 인식"]
+    R2["2. FCS 검증<br/>CRC-32 재계산 vs FCS<br/>불일치 → bad 플래그"]
+    R3["3. 주소 필터링<br/>Dst MAC == 자신?<br/>Broadcast? Multicast?<br/>Promiscuous 모드?"]
+    R4["4. 길이/타입 검사<br/>최소 64B? Jumbo 허용?<br/>Runt/Oversize 감지"]
+    R5["5. 통계 카운터 업데이트<br/>RX frames, bytes,<br/>CRC errors, etc."]
+    OUT(["사용자에게 전달 (AXI-S)<br/>tuser 에 FCS good/bad 표시"])
+    IN --> R1 --> R2 --> R3 --> R4 --> R5 --> OUT
 ```
 
 ### 5.6 AXI-Lite 레지스터 인터페이스 (Configuration/Status)
@@ -504,29 +459,33 @@ DV 관점:
 
 ### 5.9 TOE ↔ DCMAC 연동 상세 (이력서 직결)
 
+**MangoBoost Data Path:** Host ↔ TOE ↔ DCMAC ↔ PHY ↔ Network
+
+```mermaid
+flowchart LR
+    HOST(("Host"))
+    TOE["TOE"]
+    DCMAC["DCMAC"]
+    PHY["PHY / SerDes"]
+    NET(("Network"))
+
+    HOST <--> TOE
+    TOE <-- "AXI-S (512-bit)<br/>tdata · tvalid · tready<br/>tlast · tkeep · tuser" --> DCMAC
+    DCMAC <--> PHY <--> NET
 ```
-MangoBoost Data Path:
 
-  Host ↔ TOE ↔ DCMAC ↔ PHY ↔ Network
+```
+TOE → DCMAC (TX):
+  TOE 가 TCP 세그먼트를 IP 패킷으로 완성
+  → AXI-S 로 DCMAC 에 전달 (Dst MAC 부터 시작)
+  → DCMAC 이 Preamble + FCS + IFG 추가
+  → Ethernet Frame 으로 PHY 에 전달
 
-  TOE → DCMAC (TX):
-    TOE가 TCP 세그먼트를 IP 패킷으로 완성
-    → AXI-S로 DCMAC에 전달 (Dst MAC부터 시작)
-    → DCMAC이 Preamble + FCS + IFG 추가
-    → Ethernet Frame으로 PHY에 전달
-
-  DCMAC → TOE (RX):
-    PHY에서 Ethernet Frame 수신
-    → DCMAC이 Preamble 제거, FCS 검증
-    → AXI-S로 TOE에 전달 (tuser에 FCS 결과)
-    → TOE가 IP/TCP 헤더 파싱 시작
-
-  검증 핵심 인터페이스:
-    +-------+  AXI-S (512-bit)  +-------+
-    |  TOE  | ←─────────────── | DCMAC |
-    |       | ──────────────→  |       |
-    +-------+                   +-------+
-      tdata, tvalid, tready, tlast, tkeep, tuser
+DCMAC → TOE (RX):
+  PHY 에서 Ethernet Frame 수신
+  → DCMAC 이 Preamble 제거, FCS 검증
+  → AXI-S 로 TOE 에 전달 (tuser 에 FCS 결과)
+  → TOE 가 IP/TCP 헤더 파싱 시작
 ```
 
 #### 연동 검증 포인트

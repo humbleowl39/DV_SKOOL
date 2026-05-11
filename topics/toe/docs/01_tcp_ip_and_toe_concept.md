@@ -57,29 +57,41 @@
 
 ### 한 장 그림 — SW TCP path vs TOE path
 
-```
-            Software TCP (CPU 풀로드)                    TOE (HW offload)
-            ──────────────────────────                   ──────────────────────
-   App ──▶ user buf                              App ──▶ user buf
-            │ copy_from_user      ●                       │ DMA descriptor
-            ▼                                             ▼
-         socket buf (sk_buff)                          TOE TX queue
-            │ TCP header build    ●                       │ HW Segmentation
-            │ Checksum (sw)       ●                       │ HW Checksum
-            │ Segmentation        ●                       │ HW Header build
-            │ Retx timer (sw)     ●                       │ HW RTO timer
-            ▼                                             ▼
-           NIC → wire                                   MAC → wire
-            ▲                                             ▲
-            │ ksoftirqd / IRQ     ●                       │ HW ACK process
-            │ Reassembly (sw)     ●                       │ HW Reassembly
-            │ copy_to_user        ●                       │ DMA
-            ▼                                             ▼
-           App                                          App
-       ● = CPU cycle / cache pollution
+```mermaid
+flowchart LR
+    subgraph SW["Software TCP — CPU 풀로드"]
+        direction TB
+        S1["App"]
+        S2["user buf"]
+        S3["socket buf<br/>(sk_buff)"]
+        S4["NIC → wire"]
+        S5["socket buf"]
+        S6["App"]
+        S1 --> S2
+        S2 -- "copy_from_user · CPU" --> S3
+        S3 -- "header build / chksum<br/>segmentation / retx · CPU" --> S4
+        S4 -- "ksoftirqd / IRQ · CPU" --> S5
+        S5 -- "reassembly / copy_to_user · CPU" --> S6
+    end
+    subgraph TOE["TOE — HW offload"]
+        direction TB
+        T1["App"]
+        T2["user buf"]
+        T3["TOE TX queue"]
+        T4["MAC → wire"]
+        T5["TOE RX queue"]
+        T6["App"]
+        T1 --> T2
+        T2 -- "DMA descriptor" --> T3
+        T3 -- "HW segmentation<br/>HW checksum<br/>HW header build<br/>HW RTO timer" --> T4
+        T4 -- "HW ACK process" --> T5
+        T5 -- "HW reassembly<br/>DMA" --> T6
+    end
+    classDef cost stroke:#c0392b,stroke-width:3px
+    class S2,S3,S5 cost
 ```
 
-빨간 원이 SW TCP 에서는 packet 마다 발생하지만, TOE 에서는 모두 **HW pipeline** 안에서 처리됩니다. CPU 는 `connect()` / `accept()` / `close()` 같은 **연결당 1~2 회** 의 control path 만 담당.
+빨간 박스가 SW TCP 에서는 packet 마다 발생하지만, TOE 에서는 모두 **HW pipeline** 안에서 처리됩니다. CPU 는 `connect()` / `accept()` / `close()` 같은 **연결당 1~2 회** 의 control path 만 담당.
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
@@ -91,31 +103,23 @@
 
 가장 단순한 시나리오. 웹 서버가 클라이언트에게 **1 MB HTTP 응답** 을 보냅니다. 연결은 이미 ESTABLISHED 상태, MSS = 1460 byte 라고 가정.
 
-```
-   ┌─── Server (TOE 장착) ──────────────┐                ┌── Client ──┐
-   │                                     │                │            │
-   │  app: write(fd, buf=1MB, ...)       │                │            │
-   │       │                              │                │            │
-   │       ▼ ① descriptor post (단 1회)  │                │            │
-   │   Host DMA ───── 1 MB ───────▶ TOE TX queue          │            │
-   │                                  │                    │            │
-   │                                  ▼ ② HW Segmentation │            │
-   │                              [seg1, seg2, ..., seg720]              │
-   │                                  │ (1MB / 1460B ≈ 720 segs)        │
-   │                                  ▼ ③ HW header build (TCP/IP)       │
-   │                                  ▼ ④ HW Checksum (TCP+IP)           │
-   │                                  ▼ ⑤ Retx buffer copy + RTO arm     │
-   │                                  ▼                                  │
-   │                                MAC ════════ wire ═══════════════════▶ NIC
-   │                                                                    │ │
-   │                                  ▲                                ◀ │ ⑥ ACK(ack=N×1460)
-   │                                  │ ⑦ HW ACK 처리 → Retx buffer 해제│ │
-   │                                  │ ⑧ Window slide → 다음 seg burst │ │
-   │                                  │                                  │ │
-   │                                  ▼ ⑨ 모든 byte ACK 완료              │
-   │       ◀──── descriptor done IRQ ──┘                                  │
-   │   app: write() return                                                │
-   └─────────────────────────────────────┘                ┌────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as Server App
+    participant TOE as TOE Engine
+    participant MAC as MAC / wire
+    participant Peer as Client NIC
+
+    App->>TOE: ① descriptor post (1 MB, 단 1회)
+    Note over TOE: ② HW Segmentation<br/>1 MB → 720 seg (MSS=1460)<br/>③ HW header build (TCP/IP)<br/>④ HW Checksum<br/>⑤ Retx buffer + RTO arm
+    TOE->>MAC: seg1, seg2, ..., seg720
+    MAC->>Peer: wire
+    Peer-->>MAC: ⑥ ACK(ack=N×1460)
+    MAC-->>TOE: ACK
+    Note over TOE: ⑦ HW ACK 처리<br/>retx buffer 해제<br/>⑧ Window slide<br/>다음 seg burst
+    Note over TOE: ⑨ 모든 byte ACK 완료
+    TOE-->>App: descriptor done IRQ<br/>(write() return)
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -158,38 +162,61 @@ ssize_t n = write(socket_fd, buf, 1024 * 1024);   // 1 MB
 
 ### 4.2 데이터 패스 vs 컨트롤 패스 — 분리의 원칙
 
-```
-   Frequency × Latency-sensitivity 매트릭스
-
-         높은 빈도 (packet/s)          낮은 빈도 (conn/s)
-        ─────────────────────────    ────────────────────
-   ┌── Data Path (HW) ──┐         ┌── Control Path (SW) ──┐
-   │ Checksum            │         │ socket() / bind()      │
-   │ Segmentation        │         │ connect() / accept()   │
-   │ Header build        │         │ close() / shutdown()   │
-   │ ACK process         │         │ setsockopt()           │
-   │ RTO retransmit      │         │ Routing table update   │
-   │ Window slide        │         │ ARP resolution         │
-   │ Cong control update │         │ Statistics polling     │
-   └────────────────────┘         └───────────────────────┘
-   ns~µs latency 요구              ms 단위 허용
+```mermaid
+flowchart LR
+    subgraph DP["Data Path (HW) — 높은 빈도, ns~µs latency"]
+        direction TB
+        D1["Checksum"]
+        D2["Segmentation"]
+        D3["Header build"]
+        D4["ACK process"]
+        D5["RTO retransmit"]
+        D6["Window slide"]
+        D7["Cong control update"]
+    end
+    subgraph CP["Control Path (SW) — 낮은 빈도, ms 단위 허용"]
+        direction TB
+        C1["socket() / bind()"]
+        C2["connect() / accept()"]
+        C3["close() / shutdown()"]
+        C4["setsockopt()"]
+        C5["Routing table update"]
+        C6["ARP resolution"]
+        C7["Statistics polling"]
+    end
+    classDef hot stroke:#c0392b,stroke-width:2px
+    classDef cold stroke:#5f6368,stroke-dasharray:4 2
+    class D1,D2,D3,D4,D5,D6,D7 hot
+    class C1,C2,C3,C4,C5,C6,C7 cold
 ```
 
 **원칙**: "자주 발생하는 Data Path 는 HW 로, 드문 Control Path 는 SW 로." 이 한 줄이 TOE architecture 모든 결정의 근거입니다.
 
 ### 4.3 DMA / TSO / TOE / RDMA — 한 그림
 
-```
-   App 의 buffer 가 wire 까지 가는 경로
-
-   [SW TCP]      App ─copy─▶ sk_buff ─stack─▶ NIC ──▶ wire
-                         CPU         CPU       DMA
-   [TSO]         App ─copy─▶ sk_buff(big) ─NIC TSO─▶ wire
-                         CPU         (HW segment)
-   [TOE]         App ─DMA─▶ TOE buf ─HW seg+chksum+retx─▶ wire
-                         (DMA)        (전부 HW)
-   [RDMA]        App buffer ──MR── HCA ─DMA─▶ wire     (TCP 자체 우회)
-                  (사전 등록)         (kernel bypass)
+```mermaid
+flowchart LR
+    subgraph SW["SW TCP"]
+        direction LR
+        SW1["App"] -- "copy · CPU" --> SW2["sk_buff"]
+        SW2 -- "stack · CPU" --> SW3["NIC"]
+        SW3 -- "DMA" --> SW4["wire"]
+    end
+    subgraph TSO["TSO"]
+        direction LR
+        T1["App"] -- "copy · CPU" --> T2["sk_buff (big)"]
+        T2 -- "NIC TSO<br/>(HW segment)" --> T3["wire"]
+    end
+    subgraph TOE["TOE"]
+        direction LR
+        O1["App"] -- "DMA" --> O2["TOE buf"]
+        O2 -- "HW seg+chksum+retx<br/>(전부 HW)" --> O3["wire"]
+    end
+    subgraph RDMA["RDMA — TCP 자체 우회"]
+        direction LR
+        R1["App buffer"] -- "MR<br/>(사전 등록)" --> R2["HCA"]
+        R2 -- "DMA<br/>(kernel bypass)" --> R3["wire"]
+    end
 ```
 
 오른쪽으로 갈수록 CPU 개입이 줄지만, _기존 socket API 호환성_ 도 같이 줄어듭니다 — RDMA 는 별도 verbs API. TOE 는 **socket API 를 유지하면서 가장 많은 cycle 을 줄이는 지점**.
@@ -200,20 +227,15 @@ ssize_t n = write(socket_fd, buf, 1024 * 1024);   // 1 MB
 
 ### 5.1 TCP/IP 4 계층 모델
 
-```
-+-------------------------------+
-| 4. Application Layer          |  HTTP, FTP, SSH, NVMe-oF
-|    (사용자 데이터)            |
-+-------------------------------+
-| 3. Transport Layer            |  TCP, UDP
-|    (신뢰성, 흐름 제어)        |  ← TOE가 Offload하는 영역
-+-------------------------------+
-| 2. Internet Layer             |  IP, ICMP, ARP
-|    (라우팅, 주소)             |  ← 일부 Offload (checksum, fragment)
-+-------------------------------+
-| 1. Network Access Layer       |  Ethernet (MAC + PHY)
-|    (물리 전송)                |  ← NIC/DCMAC이 처리
-+-------------------------------+
+```mermaid
+flowchart TB
+    L4["<b>4. Application Layer</b><br/>HTTP, FTP, SSH, NVMe-oF<br/><i>(사용자 데이터)</i>"]
+    L3["<b>3. Transport Layer</b><br/>TCP, UDP<br/><i>(신뢰성, 흐름 제어)</i><br/>← TOE 가 Offload 하는 영역"]
+    L2["<b>2. Internet Layer</b><br/>IP, ICMP, ARP<br/><i>(라우팅, 주소)</i><br/>← 일부 Offload (checksum, fragment)"]
+    L1["<b>1. Network Access Layer</b><br/>Ethernet (MAC + PHY)<br/><i>(물리 전송)</i><br/>← NIC / DCMAC 이 처리"]
+    L4 --- L3 --- L2 --- L1
+    classDef toe stroke:#c0392b,stroke-width:3px
+    class L3 toe
 ```
 
 ### 5.2 TCP 의 핵심 기능 (UDP 와의 차이)
@@ -231,22 +253,25 @@ UDP 는 헤더 8 B + 상태 관리 없음 → **CPU 부하가 작아 offload 효
 
 ### 5.3 TCP 연결 수명 주기
 
-```
-연결 수립: 3-Way Handshake
-  Client → SYN →         Server
-  Client ← SYN+ACK ←     Server
-  Client → ACK →         Server
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Server
 
-데이터 전송:
-  Client → DATA(seq=100, len=500) →   Server
-  Client ← ACK(ack=600) ←            Server
-  ...
+    Note over C,S: 연결 수립 — 3-Way Handshake
+    C->>S: SYN
+    S->>C: SYN+ACK
+    C->>S: ACK
 
-연결 해제: 4-Way Handshake (또는 RST)
-  Client → FIN →        Server
-  Client ← ACK ←        Server
-  Client ← FIN ←        Server
-  Client → ACK →        Server
+    Note over C,S: 데이터 전송
+    C->>S: DATA (seq=100, len=500)
+    S->>C: ACK (ack=600)
+
+    Note over C,S: 연결 해제 — 4-Way Handshake (또는 RST)
+    C->>S: FIN
+    S->>C: ACK
+    S->>C: FIN
+    C->>S: ACK
 ```
 
 → **연결 setup/teardown 은 연결당 1 회**. 데이터 전송은 packet 당 발생 → 빈도 격차가 100 만 배 이상. 이 비대칭이 HW/SW 분리의 근거.

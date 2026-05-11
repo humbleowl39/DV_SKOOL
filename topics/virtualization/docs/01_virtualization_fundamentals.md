@@ -56,17 +56,32 @@
 
 ### 한 장 그림 — Bare metal vs Virtualization
 
-```
-        Bare metal                            Virtualization
-        ──────────────                        ──────────────────────────
-        Application                       App A    App B    App C
-            │                              │        │        │
-            │                            Guest A  Guest B  Guest C   (각각 OS)
-            │                              │        │        │
-            OS                            ─┴────────┴────────┴─
-            │                                Hypervisor (VMM)        ⭐ trap, schedule, isolate
-         Hardware                              │
-                                            Hardware
+```mermaid
+flowchart TB
+    subgraph BM["Bare metal"]
+        direction TB
+        BM_APP["Application"]
+        BM_OS["OS"]
+        BM_HW["Hardware"]
+        BM_APP --> BM_OS --> BM_HW
+    end
+    subgraph VT["Virtualization"]
+        direction TB
+        VT_A["App A"]
+        VT_B["App B"]
+        VT_C["App C"]
+        VT_GA["Guest A (OS)"]
+        VT_GB["Guest B (OS)"]
+        VT_GC["Guest C (OS)"]
+        VT_HV["Hypervisor (VMM)<br/>trap · schedule · isolate"]
+        VT_HW["Hardware"]
+        VT_A --> VT_GA --> VT_HV
+        VT_B --> VT_GB --> VT_HV
+        VT_C --> VT_GC --> VT_HV
+        VT_HV --> VT_HW
+    end
+    classDef emph stroke:#1a73e8,stroke-width:3px
+    class VT_HV emph
 ```
 
 세 가지 일이 Hypervisor 에서 동시에 일어납니다.
@@ -85,25 +100,21 @@
 
 가장 단순한 시나리오. Linux Guest 안에서 컨텍스트 스위치가 일어나 **새 page table base 를 CR3 에 쓰는** 단 한 줄이 어떻게 trap → emulate → resume 1 사이클이 되는지 추적합니다.
 
-```
-   ┌──────── VM (Guest) ─────────┐                    ┌─── Hypervisor (Host) ───┐
-   │  Linux 스케줄러             │                    │                          │
-   │  (다음 task 로 switch)      │                    │                          │
-   │     │                        │  ① CR3 ← new_pt   │                          │
-   │     ▼                        │   = 특권 명령      │                          │
-   │   MOV CR3, RAX  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━▶│ ② VM Exit              │
-   │  (VMX non-root, "Ring 0")   │   reason=          │   - Guest state save     │
-   │                              │   CR_ACCESS        │   - VMCS 에 IP/RAX 등   │
-   │                              │                    │   ▼ ③ Exit reason 분기 │
-   │                              │                    │   ▼ ④ shadow / EPT 갱신│
-   │                              │                    │      또는 검증 후 통과  │
-   │                              │                    │   ▼ ⑤ VMCS update       │
-   │     │                        │   ⑥ VMRESUME      │      (Guest CR3 ←       │
-   │     ▼                        │◀━━━━━━━━━━━━━━━━━━│       new_pt)           │
-   │   다음 instruction 실행      │                    │                          │
-   │   (마치 자기가 직접          │                    │                          │
-   │    HW 에 쓴 것처럼 보임)     │                    │                          │
-   └──────────────────────────────┘                    └──────────────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant G as Guest (VMX non-root)<br/>Linux 스케줄러
+    participant HW as HW (VT-x)
+    participant H as Hypervisor (VMX root)
+
+    Note over G: 다음 task 로 switch
+    G->>HW: ① MOV CR3, RAX<br/>(특권 명령)
+    HW->>H: ② VM Exit (reason=CR_ACCESS)<br/>Guest state save · VMCS 에 IP/RAX 등
+    H->>H: ③ Exit reason 분기
+    H->>H: ④ shadow / EPT 갱신<br/>또는 검증 후 통과
+    H->>H: ⑤ VMCS update<br/>(Guest CR3 ← new_pt)
+    H->>HW: ⑥ VMRESUME
+    HW->>G: 다음 instruction 실행<br/>(직접 HW 에 쓴 것처럼 보임)
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -136,18 +147,17 @@ static inline void load_new_mm_cr3(pgd_t *pgdir) {
 
 하드웨어는 크게 3 가지 자원으로 구성되고, 각각 다른 방식으로 가상화됩니다.
 
-```
-┌──────────────────────────────────────────────┐
-│              Virtualization                   │
-├──────────────┬──────────────┬────────────────┤
-│     CPU      │   Memory     │      I/O       │
-│  가상화       │   가상화      │    가상화       │
-├──────────────┼──────────────┼────────────────┤
-│특권 명령어    │주소 공간      │디바이스 접근    │
-│trap/emulate  │2-stage 변환  │emulation /     │
-│HW assist     │shadow PT     │passthrough     │
-│(VT-x, ARM)  │(EPT, NPT)   │(SR-IOV, VFIO)  │
-└──────────────┴──────────────┴────────────────┘
+```mermaid
+flowchart TB
+    V["Virtualization"]
+    CPU["<b>CPU 가상화</b><br/>특권 명령어<br/>trap / emulate<br/>HW assist (VT-x, ARM)"]
+    MEM["<b>Memory 가상화</b><br/>주소 공간<br/>2-stage 변환<br/>shadow PT<br/>(EPT, NPT)"]
+    IO["<b>I/O 가상화</b><br/>디바이스 접근<br/>emulation / passthrough<br/>(SR-IOV, VFIO)"]
+    V --> CPU
+    V --> MEM
+    V --> IO
+    classDef root stroke:#1a73e8,stroke-width:3px
+    class V root
 ```
 
 | 자원 | 가상화 대상 | 핵심 과제 |
@@ -218,73 +228,82 @@ Efficiency   ──── 대부분의 Guest 명령은 HW 직접 실행 — trap
 
 ### 5.2 추상화 계층 — 일반 시스템 vs 가상화 시스템
 
-```
-[ 일반 시스템 ]                  [ 가상화 시스템 ]
-
-  Application                     App A    App B    App C
-      │                            │        │        │
-      │                           OS A     OS B     OS C   (Guest OS)
-      │                            │        │        │
-      OS                          ─┴────────┴────────┴─
-      │                           Hypervisor (VMM)
-      │                                │
-   Hardware                        Hardware
+```mermaid
+flowchart TB
+    subgraph N["일반 시스템"]
+        direction TB
+        N_APP["Application"]
+        N_OS["OS"]
+        N_HW["Hardware"]
+        N_APP --> N_OS --> N_HW
+    end
+    subgraph V["가상화 시스템"]
+        direction TB
+        V_A["App A"]
+        V_B["App B"]
+        V_C["App C"]
+        V_OA["OS A (Guest)"]
+        V_OB["OS B (Guest)"]
+        V_OC["OS C (Guest)"]
+        V_HV["Hypervisor (VMM)"]
+        V_HW["Hardware"]
+        V_A --> V_OA --> V_HV
+        V_B --> V_OB --> V_HV
+        V_C --> V_OC --> V_HV
+        V_HV --> V_HW
+    end
+    classDef emph stroke:#1a73e8,stroke-width:3px
+    class V_HV emph
 ```
 
 **핵심**: Hypervisor 가 HW 와 Guest OS 사이에 위치하여 (1) HW 자원을 분할, (2) Guest OS 의 특권 명령어를 가로채서 처리, (3) VM A 가 VM B 의 메모리에 접근 불가.
 
 ### 5.3 Privileged vs Sensitive Instructions
 
-```
-모든 CPU 명령어
-├── 일반 명령어 (ADD, SUB, MOV, ...)
-│   → 어떤 권한 레벨에서든 실행 가능
-│   → Hypervisor 개입 불필요
-│
-└── Sensitive 명령어 (HW 상태를 변경하거나 읽는 명령어)
-    ├── Privileged (특권) 명령어
-    │   → 비특권 모드에서 실행 시 자동으로 trap (예외 발생)
-    │   → Hypervisor 가 catch 하여 emulation
-    │   예: MSR 쓰기, HLT, ERET
-    │
-    └── Non-privileged Sensitive 명령어 (문제!)
-        → 비특권 모드에서도 trap 없이 실행됨
-        → 하지만 HW 상태에 영향을 줌
-        → 가상화 어려움 (x86 의 역사적 문제)
-        예: x86 의 POPF, SGDT (VT-x 이전)
+```mermaid
+flowchart TB
+    ROOT["모든 CPU 명령어"]
+    PLAIN["<b>일반 명령어</b><br/>(ADD, SUB, MOV, ...)<br/>어떤 권한 레벨이든 실행 가능<br/>Hypervisor 개입 불필요"]
+    SENS["<b>Sensitive 명령어</b><br/>HW 상태를 변경/읽는 명령어"]
+    PRIV["<b>Privileged (특권)</b><br/>비특권 모드에서 실행 시<br/>자동 trap (예외)<br/>예: MSR 쓰기, HLT, ERET"]
+    NONPRIV["<b>Non-privileged Sensitive</b> (문제!)<br/>비특권 모드에서도 trap 없이 실행<br/>HW 상태에 영향<br/>가상화 어려움 (x86 의 역사적 문제)<br/>예: POPF, SGDT (VT-x 이전)"]
+    ROOT --> PLAIN
+    ROOT --> SENS
+    SENS --> PRIV
+    SENS --> NONPRIV
+    classDef issue stroke:#c0392b,stroke-width:3px
+    class NONPRIV issue
 ```
 
 이 마지막 칸의 존재 때문에 VMware 가 1998 년 **Binary Translation** 을 발명했고, Intel 이 2005 년 VT-x 로 **모든 sensitive 명령을 HW trap 대상** 으로 확장했습니다.
 
 ### 5.4 Trap-and-Emulate 메커니즘 (§3 의 형식적 일반화)
 
-```
-Guest OS (EL1)가 특권 명령어 실행
-    │
-    ▼ TRAP (하드웨어가 자동으로 예외 발생)
-    │
-Hypervisor (EL2)가 예외를 받음
-    │
-    ▼ 명령어를 분석하고 에뮬레이션
-    │
-    ▼ VM 상태 업데이트
-    │
-    ▼ ERET (Guest OS 로 복귀)
-    │
-Guest OS 계속 실행 (trap 이 일어난 줄 모름)
+```mermaid
+flowchart TB
+    G1["Guest OS (EL1) 가 특권 명령어 실행"]
+    TRAP["TRAP<br/>(HW 가 자동으로 예외 발생)"]
+    H1["Hypervisor (EL2) 가 예외를 받음"]
+    H2["명령어 분석 + 에뮬레이션"]
+    H3["VM 상태 업데이트"]
+    ERET["ERET (Guest OS 로 복귀)"]
+    G2["Guest OS 계속 실행<br/>(trap 이 일어난 줄 모름)"]
+    G1 --> TRAP --> H1 --> H2 --> H3 --> ERET --> G2
 ```
 
 **핵심**: Guest OS 는 자기가 직접 HW 를 제어한다고 생각하지만, 실제로는 Hypervisor 가 대신 처리하고 결과만 돌려줍니다 — Equivalence 의 구현.
 
 ### 5.5 x86 Protection Ring 과 가상화 충돌
 
-```
-┌─────────────────────────────────────┐
-│           Ring 3 (User)             │  ← 일반 애플리케이션
-│      ┌───────────────────┐          │
-│      │   Ring 0 (Kernel) │          │  ← OS 커널 (최고 권한)
-│      └───────────────────┘          │
-└─────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph R3["Ring 3 (User) — 일반 애플리케이션"]
+        direction TB
+        R0["Ring 0 (Kernel) — OS 커널 (최고 권한)"]
+    end
+    classDef ring0 stroke:#c0392b,stroke-width:2px
+    classDef ring3 stroke:#5f6368,stroke-width:2px,stroke-dasharray:4 2
+    class R0 ring0
 ```
 
 - **Ring 0**: 모든 HW 자원 접근 가능 (특권 명령어 실행 가능).

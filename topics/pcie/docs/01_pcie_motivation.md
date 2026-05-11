@@ -57,26 +57,36 @@
 
 ### 한 장 그림 — PCI 공유 버스 vs PCIe 직렬 fabric
 
+```mermaid
+flowchart LR
+    subgraph PCI["PCI parallel (1992~) — shared bus 33/66 MHz"]
+        direction TB
+        BUS["shared 32 data + addr + clk<br/>half-duplex · multi-drop · arbitration"]
+        DA["Dev A"]
+        DB["Dev B"]
+        DC["Dev C"]
+        DA --- BUS
+        DB --- BUS
+        DC --- BUS
+    end
+    subgraph PCIE["PCIe serial (2003~) — point-to-point"]
+        direction TB
+        RC["Root Complex<br/>(Root Port)"]
+        SW["Switch"]
+        EP1["EP (NVMe)"]
+        EP2["EP (NIC)"]
+        EP3["EP (GPU)"]
+        RC -- "lane × N" --> SW
+        RC -- "lane × N" --> EP1
+        SW --> EP2
+        SW --> EP3
+    end
+    classDef bottleneck stroke:#c0392b,stroke-width:3px
+    class BUS bottleneck
 ```
-       PCI parallel (1992~)                       PCIe serial (2003~)
-       ─────────────────────                      ──────────────────────────
-                                                     ┌─── RC ────┐
-   ┌── shared bus (33/66 MHz) ──┐                    │           │
-   │                              │                  │ Root Port │
-   │  Dev A   Dev B   Dev C       │                  └──┬─────┬──┘
-   │   │        │       │         │                     │     │
-   │   ▼        ▼       ▼         │            ┌──── lane × N ────┐
-   │   shared 32 data + addr + clk│            ▼                   ▼
-   │                              │       ┌──Switch──┐        ┌────EP────┐
-   │  half-duplex, multi-drop     │       │          │        │  (NVMe)  │
-   │  arbitration overhead        │       └──┬───┬───┘        └──────────┘
-   │  parallel skew → 533 MHz max │          ▼   ▼
-   └──────────────────────────────┘        EP   EP
-                                          (NIC)(GPU)
-   ● 한 device 만 송신                    ● 모든 link 가 full-duplex
-   ● 공유 bus 의 부하 ↑ → 속도 ↓          ● Switch 가 fan-out 담당
-   ● 32 라인 skew 가 freq 의 천장          ● Lane 마다 독립 CDR
-```
+
+- **PCI**: 한 device 만 송신, 공유 bus 부하 ↑ → 속도 ↓, 32-line skew 가 freq 상한 (~533 MHz).
+- **PCIe**: 모든 link 가 full-duplex, Switch 가 fan-out 담당, lane 마다 독립 CDR.
 
 세 가지 PCI 의 한계 (공유 bus 부하 / parallel skew / multi-drop arbitration) 가 PCIe 에서 모두 사라지고, 대신 **lane 독립 SerDes + Switch fan-out + packet-switched layered architecture** 가 그 자리를 채웁니다.
 
@@ -96,23 +106,18 @@
 
 가장 단순한 시나리오. CPU 가 NVMe device (x4 Gen3 EP) 에 **64 byte** Memory Write 를 한 번 발행합니다.
 
-```
-   ┌──────────────── Host ────────────────┐         ┌──── NVMe EP ────┐
-   │                                       │         │                 │
-   │  CPU Core ──┐                          │         │                 │
-   │             │ ① store 64B to MMIO      │         │                 │
-   │             ▼                          │         │                 │
-   │   Root Complex ──┐                     │         │                 │
-   │                  │ ② TLP MWr 생성       │         │                 │
-   │                  ▼                     │         │                 │
-   │         Root Port  ──── lane 0 ──────────────────▶                  │
-   │                    ──── lane 1 ──────────────────▶  PHY            │
-   │                    ──── lane 2 ──────────────────▶                  │
-   │                    ──── lane 3 ──────────────────▶                  │
-   │                                       │         │  ⑤ DLL ACK       │
-   │   ⑥ ACK DLLP ◀───────── lane × 4 ────────────────  ◀── ⑤           │
-   │                                       │         │                 │
-   └───────────────────────────────────────┘         └─────────────────┘
+```mermaid
+sequenceDiagram
+    participant CPU as CPU Core
+    participant RC as Root Complex<br/>(Root Port)
+    participant EP as NVMe EP<br/>(PHY + DLL)
+    CPU->>RC: ① store 64B to MMIO
+    RC->>RC: ② TLP MWr 생성 (TL)
+    RC->>RC: ③ Seq# + LCRC + Replay Buf (DLL)
+    RC->>EP: ④ STP framing + 128b/130b + scramble<br/>→ lane 0..3 stripe → SerDes → wire
+    EP->>EP: ⑤ LCRC 검증 OK
+    EP-->>RC: ⑥ ACK DLLP (lane × 4)
+    RC->>RC: ⑦ Replay Buffer entry retire
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -156,23 +161,23 @@
 
 ### 4.2 토폴로지 4 객체
 
+```mermaid
+flowchart TB
+    CPU["CPU"]
+    RC["Root Complex<br/>(CPU ↔ PCIe gateway)"]
+    RP["Root Port<br/>(Type 1)"]
+    SW["Switch<br/>(upstream × 1 + downstream × N)"]
+    EP1["Endpoint<br/>(Type 0)<br/>NVMe / GPU / NIC"]
+    BR["PCI-PCI Bridge<br/>(PCIe ↔ legacy PCI)"]
+    CPU --- RC
+    RC --- RP
+    RP --> SW
+    SW --> EP1
+    SW --> BR
 ```
-                    ┌─── PD (Protection Domain — IOMMU 격리 영역) ─── (8장에서)
-                    │
-                    ▼
-       ┌──── RC (Root Complex) ─── CPU ↔ PCIe 도메인 게이트웨이
-       │           │
-       │           ├── Root Port (Type 1) ── downstream 링크의 시작점
-       │           │
-       │           ▼
-       │      ┌── Switch ─── fan-out (upstream port × 1 + downstream × N)
-       │      │
-       │      ├── Endpoint (Type 0) ─── NVMe / GPU / NIC
-       │      │
-       │      └── PCI-PCI Bridge ── PCIe ↔ legacy PCI
-       │
-       └── enumeration: DFS traversal (§5, Module 06)
-```
+
+- **Enumeration**: DFS traversal (§5, Module 06).
+- **PD (Protection Domain)** — IOMMU 격리 영역 (Module 08).
 
 | 컴포넌트 | 역할 | Configuration Header |
 |---------|------|---------------------|
@@ -199,15 +204,17 @@
 
 ### 5.1 PCI parallel 의 한계 (PCIe 가 해결한 문제)
 
-```
-              ┌─────── PCI 32-bit bus (33/66 MHz) ───────┐
-              │                                            │
-    Device A ─┤                                            ├─ Device B
-              │ ┌── 32 data + addr + control + clock ──┐ │
-              │ │                                       │ │
-    Device C ─┤ │  같은 clock 에 모든 device 가 align │ ├─ Device D
-              │ └───────────────────────────────────────┘ │
-              └────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    DA["Device A"]
+    DB["Device B"]
+    DC["Device C"]
+    DD["Device D"]
+    BUS["PCI 32-bit bus (33/66 MHz)<br/>32 data + addr + control + clock<br/>같은 clock 에 모든 device 가 align"]
+    DA --- BUS
+    DB --- BUS
+    DC --- BUS
+    DD --- BUS
 ```
 
 | 한계 | 설명 |
@@ -245,31 +252,23 @@
 
 ### 5.3 Topology 4 객체 상세
 
-```
-                         ┌─────────────────┐
-                         │     CPU         │
-                         │     ↕           │
-                         │  Root Complex   │
-                         │     (RC)        │
-                         └────┬───┬───┬────┘
-                              │   │   │
-                ┌─────────────┘   │   └─────────────┐
-                │                  │                  │
-            ┌────┴────┐       ┌────┴────┐       ┌────┴─────┐
-            │ Switch  │       │   EP    │       │   EP     │
-            │         │       │ (NVMe)  │       │ (GPU)    │
-            └─┬──┬────┘       └─────────┘       └──────────┘
-              │  │
-       ┌──────┘  └──────┐
-       │                │
-   ┌───┴───┐       ┌────┴────┐
-   │  EP   │       │ PCI-PCI │
-   │ (NIC) │       │ Bridge  │
-   └───────┘       └────┬────┘
-                        │ legacy PCI
-                    ┌───┴────┐
-                    │ PCI dev│
-                    └────────┘
+```mermaid
+flowchart TB
+    CPU["CPU"]
+    RC["Root Complex<br/>(RC)"]
+    SW["Switch"]
+    NVMe["EP<br/>(NVMe)"]
+    GPU["EP<br/>(GPU)"]
+    NIC["EP<br/>(NIC)"]
+    BR["PCI-PCI<br/>Bridge"]
+    PDEV["legacy PCI<br/>device"]
+    CPU --- RC
+    RC --> SW
+    RC --> NVMe
+    RC --> GPU
+    SW --> NIC
+    SW --> BR
+    BR -- "legacy PCI" --> PDEV
 ```
 
 | 컴포넌트 | 역할 |

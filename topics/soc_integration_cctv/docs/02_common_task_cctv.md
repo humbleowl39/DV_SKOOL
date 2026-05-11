@@ -87,30 +87,29 @@ SoC 안의 IP 가 50~200 개로 늘어나면 **각 IP 가 받아야 하는 공�
 
 §3 의 가장 단순한 시나리오 — _하나의 IP_ (CCTV / 영상 SoC 의 **Display Controller**) 가 7 가지 Common Task 검증을 _순서대로_ 통과하는 과정. 이게 매트릭스 한 _행 (row)_ 이 채워지는 모습입니다.
 
-```
-   ┌──────────── Display Controller IP — CCTV row 채우기 ────────────┐
-   │                                                                   │
-   │  ① sysMMU      : DSI master 가 frame_buffer VA 로 read           │
-   │                  → sysMMU 가 PA 로 변환, page-fault 시 graceful   │
-   │                                                                   │
-   │  ② Security    : LCD register 는 NS 접근 OK, golden image RO     │
-   │                  → AxPROT[1]=1 인 NS write 차단 확인              │
-   │                                                                   │
-   │  ③ DVFS        : refresh rate 변경 중 (60→120 Hz) tearing 없음   │
-   │                  → 클럭 전환 중 in-flight burst 보호              │
-   │                                                                   │
-   │  ④ ClkGate     : panel-off 시 idle → display clk gate            │
-   │                  → wake-up 시 즉시 frame restart                  │
-   │                                                                   │
-   │  ⑤ Power       : PD_VIDEO off → on 시 retention reg 복원         │
-   │                  → iso cell 활성/비활성 순서                       │
-   │                                                                   │
-   │  ⑥ Reset       : warm reset 후 default register value 확인       │
-   │                  → reset 해제 → MC ready 사이의 SLVERR 없음       │
-   │                                                                   │
-   │  ⑦ IRQ         : VSYNC / underrun / page-fault SPI 발생 → CPU0   │
-   │                  → SPI index, edge/level type, secure group       │
-   └───────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    DISP["Display Controller IP<br/>— CCTV row 채우기 —"]
+    T1["① sysMMU<br/>DSI master 가 frame_buffer VA → read<br/>sysMMU 가 PA 로 변환, page-fault graceful"]
+    T2["② Security<br/>LCD reg = NS 접근 OK, golden image RO<br/>AxPROT[1]=1 NS write 차단 확인"]
+    T3["③ DVFS<br/>refresh rate (60→120 Hz) tearing 없음<br/>클럭 전환 중 in-flight burst 보호"]
+    T4["④ ClkGate<br/>panel-off → idle → display clk gate<br/>wake-up 시 즉시 frame restart"]
+    T5["⑤ Power<br/>PD_VIDEO off→on 시 retention reg 복원<br/>iso cell 활성 / 비활성 순서"]
+    T6["⑥ Reset<br/>warm reset → default reg value 확인<br/>reset 해제 → MC ready 사이 SLVERR 없음"]
+    T7["⑦ IRQ<br/>VSYNC / underrun / page-fault SPI → CPU0<br/>SPI index, edge/level type, secure group"]
+
+    DISP --> T1
+    DISP --> T2
+    DISP --> T3
+    DISP --> T4
+    DISP --> T5
+    DISP --> T6
+    DISP --> T7
+
+    classDef ip stroke:#1a73e8,stroke-width:3px
+    classDef task stroke:#5f6368,stroke-width:2px
+    class DISP ip
+    class T1,T2,T3,T4,T5,T6,T7 task
 ```
 
 ### 단계별 추적 (한 row 의 7 cell 이 모두 ✅ 가 되기까지)

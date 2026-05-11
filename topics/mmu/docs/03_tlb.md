@@ -55,28 +55,29 @@
 
 ### 한 장 그림 — TLB 의 latency 게임
 
-```
-   request(VA, ASID, EL)
-        │
-        ▼
-  ┌────────────┐                                         L1 cache hit ▶ ~3 cycles
-  │ μTLB (L1)  │ ── hit ▶ PA + perm + attr ── bus ────▶  L1 cache miss ▶ DRAM
-  │ ~32-64 ent │
-  │ fully-assoc│
-  └────────────┘   total: ~1 cycle
-        │ miss
-        ▼
-  ┌────────────┐
-  │ L2 TLB     │ ── hit ▶ PA + perm + attr (재캐싱은 μTLB 에) ▶ bus
-  │ ~512-2048  │
-  │ 4-8 way SA │
-  └────────────┘   total: ~3-5 cycles
-        │ miss
-        ▼
-  ┌────────────┐
-  │ Page Walk  │ ── L0/L1/L2/L3 read (PWC 가 끼면 단축) ▶ TLB fill + bus
-  │ Engine     │
-  └────────────┘   total: ~수십~수백 cycles  (4 mem access)
+```mermaid
+flowchart TB
+    REQ["request(VA, ASID, EL)"]
+    UTLB["μTLB (L1)<br/>~32-64 ent<br/>fully-assoc<br/>total: ~1 cycle"]
+    L2TLB["L2 TLB<br/>~512-2048<br/>4-8 way SA<br/>total: ~3-5 cycles"]
+    PWE["Page Walk Engine<br/>L0/L1/L2/L3 read<br/>(PWC 가 끼면 단축)<br/>total: ~수십~수백 cycles<br/>(4 mem access)"]
+    BUS["bus access<br/>PA + perm + attr"]
+    CHIT["L1 cache hit<br/>~3 cycles"]
+    CMISS["L1 cache miss<br/>→ DRAM"]
+
+    REQ --> UTLB
+    UTLB -- "hit" --> BUS
+    UTLB -- "miss" --> L2TLB
+    L2TLB -- "hit (μTLB 재캐싱)" --> BUS
+    L2TLB -- "miss" --> PWE
+    PWE -- "TLB fill" --> BUS
+    BUS --> CHIT
+    BUS --> CMISS
+
+    classDef fast stroke:#27ae60,stroke-width:3px
+    classDef slow stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
+    class UTLB fast
+    class PWE slow
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -200,78 +201,82 @@ Size = Page 크기 (4KB/2MB/1GB)
 
 ### 4.3 일반적인 2-Level TLB
 
+```mermaid
+flowchart LR
+    L1["L1 TLB (μTLB)"]
+    L2["L2 TLB (Main)"]
+    PWE["Page Walk Engine"]
+    L1 -- "miss" --> L2
+    L2 -- "miss" --> PWE
 ```
-+-------+     +--------+     +-----------+
-| L1 TLB| --> | L2 TLB | --> | Page Walk |
-| (μTLB)|     | (Main) |     | Engine    |
-+-------+     +--------+     +-----------+
 
-L1 TLB (μTLB):
-  - 크기: 32~64 엔트리
-  - 구조: Fully-associative
-  - 속도: 1 cycle
-  - 역할: 가장 빈번한 매핑 캐시
+**L1 TLB (μTLB)**:
 
-L2 TLB (Main TLB):
-  - 크기: 256~2048 엔트리
-  - 구조: Set-associative (4~8 way)
-  - 속도: 2~4 cycle
-  - 역할: L1 Miss 시 백업
+- 크기: 32-64 엔트리
+- 구조: Fully-associative
+- 속도: 1 cycle
+- 역할: 가장 빈번한 매핑 캐시
 
-Page Walk Engine:
-  - L2 Miss 시 메모리에서 Page Table 읽기
-  - 결과를 L1, L2에 모두 캐싱
-```
+**L2 TLB (Main TLB)**:
+
+- 크기: 256-2048 엔트리
+- 구조: Set-associative (4-8 way)
+- 속도: 2-4 cycle
+- 역할: L1 Miss 시 백업
+
+**Page Walk Engine**:
+
+- L2 Miss 시 메모리에서 Page Table 읽기
+- 결과를 L1, L2 에 모두 캐싱
 
 ### 4.4 IOTLB (IOMMU/SMMU 용)
 
-```
-디바이스(GPU, DMA, NIC)의 주소 변환용 TLB:
+디바이스(GPU, DMA, NIC) 의 주소 변환용 TLB:
 
-  +--------+     +--------+     +-----------+
-  | Device | --> | IOTLB  | --> | Page Walk |
-  | Request|     |        |     | (메모리)  |
-  +--------+     +--------+     +-----------+
-
-  특징:
-  - StreamID (Device ID)로 디바이스별 구분
-  - SubstreamID (PASID)로 프로세스별 구분
-  - 디바이스 트래픽 패턴이 CPU와 다름:
-    → DMA: 대용량 순차 접근 → Huge Page가 효과적
-    → GPU: 불규칙 접근 패턴 → TLB 크기가 중요
+```mermaid
+flowchart LR
+    DEV["Device<br/>Request"]
+    IOTLB["IOTLB"]
+    PWE["Page Walk<br/>(메모리)"]
+    DEV --> IOTLB
+    IOTLB -- "miss" --> PWE
 ```
+
+**특징**:
+
+- StreamID (Device ID) 로 디바이스별 구분
+- SubstreamID (PASID) 로 프로세스별 구분
+- 디바이스 트래픽 패턴이 CPU 와 다름:
+    - DMA: 대용량 순차 접근 → Huge Page 가 효과적
+    - GPU: 불규칙 접근 패턴 → TLB 크기가 중요
 
 ### 4.5 TLB 설계 — Split vs Unified
 
+**방식 1: Split TLB (Instruction + Data 분리)**
+
+```mermaid
+flowchart TB
+    ITLB["I-TLB<br/>(48 ent)"]
+    DTLB["D-TLB<br/>(64 ent)"]
+    L2["L2 TLB (Unified)<br/>(1024)"]
+    ITLB --> L2
+    DTLB --> L2
 ```
-방식 1: Split TLB (Instruction + Data 분리)
-  +--------+     +--------+
-  | I-TLB  |     | D-TLB  |     ← L1: 명령어/데이터 독립 접근
-  | (48 ent)|     | (64 ent)|
-  +----+---+     +----+---+
-       |              |
-       +------+-------+
-              |
-         +----+----+
-         | L2 TLB  |              ← L2: 통합 (Unified)
-         | (1024)  |
-         +---------+
 
-  장점: I-Fetch와 D-Access가 동시에 TLB 접근 가능 (병렬성)
-  단점: 한쪽만 사용하면 다른 쪽 엔트리 낭비
+- 장점: I-Fetch 와 D-Access 가 동시에 TLB 접근 가능 (병렬성)
+- 단점: 한쪽만 사용하면 다른 쪽 엔트리 낭비
 
-방식 2: Unified TLB
-  +-------------------+
-  | Unified TLB       |          ← 명령어/데이터 구분 없이 공유
-  | (112 entries)     |
-  +-------------------+
+**방식 2: Unified TLB**
 
-  장점: 엔트리 활용 효율 높음
-  단점: 동시 접근 시 경쟁 (arbitration 필요)
-
-실무: 대부분 L1 = Split, L2 = Unified 조합 사용
-→ DV에서 I-TLB/D-TLB 동시 접근 시나리오 검증 필수
+```mermaid
+flowchart LR
+    UTLB["Unified TLB<br/>(112 entries)<br/>I/D 구분 없이 공유"]
 ```
+
+- 장점: 엔트리 활용 효율 높음
+- 단점: 동시 접근 시 경쟁 (arbitration 필요)
+
+**실무**: 대부분 L1 = Split, L2 = Unified 조합 사용 → DV 에서 I-TLB/D-TLB 동시 접근 시나리오 검증 필수.
 
 ### 4.6 Effective Memory Access Time
 
@@ -429,17 +434,21 @@ ISB                // 파이프라인 플러시
 
 #### 문제: Page Table 변경 시 TLB 불일치
 
-```
-시간 순서:
-
-T1: TLB에 VA=0x1000 → PA=0x8000 캐싱됨
-T2: OS가 Page Table에서 VA=0x1000의 매핑을 PA=0xA000으로 변경
-T3: CPU가 VA=0x1000 접근 → TLB Hit → PA=0x8000 (오래된 값!)
-    → Stale Translation!
-
-해결: T2 후에 반드시 TLB Invalidation 수행
-     TLBI VAE1, 0x1000; DSB ISH; ISB
-     → T3에서 TLB Miss → Page Walk → PA=0xA000 (올바른 값)
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CPU
+    participant TLB
+    participant OS
+    participant PT as Page Table
+    Note over TLB: T1: VA=0x1000 → PA=0x8000 캐싱
+    OS->>PT: T2: VA=0x1000 매핑을<br/>PA=0xA000 으로 변경
+    CPU->>TLB: T3: VA=0x1000 접근
+    TLB-->>CPU: Hit → PA=0x8000 ← Stale!
+    Note over OS,TLB: 해결: T2 후 반드시<br/>TLBI VAE1, 0x1000<br/>DSB ISH; ISB
+    CPU->>TLB: VA=0x1000 재접근
+    TLB->>PT: Miss → Page Walk
+    PT-->>CPU: PA=0xA000 (올바른 값)
 ```
 
 #### 멀티코어 환경에서의 TLB Coherency
@@ -457,29 +466,47 @@ Core 1: OS가 Page Table 변경 후 자신의 TLB만 Invalidation
 
 #### TLB Shootdown 프로토콜 (멀티코어 상세)
 
+TLB Shootdown = 한 코어가 다른 코어들의 TLB 를 원격 무효화하는 프로토콜.
+
+**x86 방식 (SW Shootdown — IPI 기반)**:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C0 as Core 0
+    participant Cn as Core 1..N
+    C0->>C0: Page Table 변경
+    C0->>C0: 자신의 TLB Invalidation
+    C0->>Cn: IPI (Inter-Processor<br/>Interrupt) 전송
+    Cn->>Cn: TLB Invalidation Handler 실행
+    Cn-->>C0: 완료 ACK
+    C0->>C0: 모든 ACK 수신 후 진행
 ```
-TLB Shootdown = 한 코어가 다른 코어들의 TLB를 원격 무효화하는 프로토콜
 
-x86 방식 (SW Shootdown — IPI 기반):
-  1. Core 0: Page Table 변경
-  2. Core 0: 자신의 TLB Invalidation
-  3. Core 0: 다른 코어들에 IPI (Inter-Processor Interrupt) 전송
-  4. Core 1~N: IPI 수신 → TLB Invalidation Handler 실행
-  5. Core 1~N: 완료 ACK → Core 0에 응답
-  6. Core 0: 모든 ACK 수신 후 진행
-  → 코어 수에 비례하여 지연 증가 (scalability 문제)
+> 코어 수에 비례하여 지연 증가 (scalability 문제).
 
-ARM 방식 (HW Broadcast — TLBI + IS):
-  1. Core 0: TLBI VAE1IS, Xt  (HW가 자동으로 모든 코어에 broadcast)
-  2. Core 0: DSB ISH           (모든 코어의 무효화 완료 대기)
-  3. HW 인터커넥트가 broadcast → 각 코어 TLB 자동 무효화
-  → SW 개입 최소 (IPI 불필요), 더 빠름
+**ARM 방식 (HW Broadcast — TLBI + IS)**:
 
-DV 검증 핵심:
-  - Broadcast 후 모든 코어에서 해당 엔트리 무효화 확인
-  - DSB ISH 전에 다른 코어가 stale 엔트리 사용하지 않는지 확인
-  - Race condition: invalidation 진행 중 같은 VA로 walk 시작 시 처리
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C0 as Core 0
+    participant IC as HW Interconnect
+    participant Cn as Core 1..N
+    C0->>IC: TLBI VAE1IS, Xt
+    IC->>Cn: broadcast invalidate
+    Cn-->>Cn: TLB 자동 무효화
+    C0->>IC: DSB ISH (완료 대기)
+    IC-->>C0: 모든 코어 완료
 ```
+
+> SW 개입 최소 (IPI 불필요), 더 빠름.
+
+**DV 검증 핵심**:
+
+- Broadcast 후 모든 코어에서 해당 엔트리 무효화 확인
+- DSB ISH 전에 다른 코어가 stale 엔트리 사용하지 않는지 확인
+- Race condition: invalidation 진행 중 같은 VA 로 walk 시작 시 처리
 
 ### 5.7 DV 관점 — TLB 검증 포인트
 

@@ -61,21 +61,30 @@ QP FSM 은 시스템 검증의 **bring-up 시퀀스의 뼈대** 입니다. RAL �
 
 ### 한 장 그림 — Service type × QP FSM
 
+```mermaid
+stateDiagram-v2
+    [*] --> Reset
+    Reset --> Init: Modify(Init)
+    Init --> RTR: Modify(RTR)
+    RTR --> RTS: Modify(RTS)
+    RTS --> Err: async error<br/>WC error
+    RTR --> Err: error
+    Init --> Err: error
+    Err --> Reset: Modify(Reset)
+    note right of Err
+        모든 in-flight WR
+        flush 됨
+    end note
 ```
-                            QP FSM (모든 service 공통, 단계별 attribute 만 다름)
-            ┌─────┐  Modify(Init)   ┌─────┐  Modify(RTR)   ┌─────┐  Modify(RTS)   ┌─────┐
-            │Reset│ ──────────────▶ │Init │ ──────────────▶│ RTR │ ──────────────▶│ RTS │
-            └──▲──┘                  └─────┘                └─────┘                └──┬──┘
-               │ Modify(Reset)                                                         │
-               └────────── Err ◀────────── async error / WC error ◀────────────────────┘
-                                       (모든 in-flight WR flush 됨)
 
-   ─────── service 별 차이 ────────
-   RC : RTR 에 dest_qp, init PSN, MTU; RTS 에 timeout, retry_cnt   |  ACK + retry hardware
-   UC : RTR/RTS attribute 동일하지만 ACK 미사용                    |  drop = 메시지 loss
-   UD : 1:1 connection 없음, RTR 에 Q_Key (peer 식별 약한 인증)    |  multicast 가능
-   XRC: SRQ 와 함께. 한 RQ 를 여러 sender QP 가 공유              |  hyperscale fan-in
-```
+**Service 별 차이 (단계별 attribute 만 다름)**:
+
+| Service | RTR attribute 핵심 | RTS attribute 핵심 | reliability |
+|---|---|---|---|
+| **RC** | dest_qp, init PSN, MTU | timeout, retry_cnt | ACK + retry hardware |
+| **UC** | (RC 와 유사) | (RC 와 유사) | drop = 메시지 loss |
+| **UD** | Q_Key (peer 약한 인증) | — (connectionless) | multicast 가능 |
+| **XRC** | SRQ 와 함께 | — | 한 RQ 를 여러 sender QP 가 공유 (hyperscale fan-in) |
 
 ### 왜 이렇게 설계했는가 — Design rationale
 
@@ -209,47 +218,49 @@ A 노드의 QPN = `0x0123`, B 노드의 QPN = `0x0456`. RC service 로 양방향
 
 ### 5.2 Service type 선택 가이드
 
-```
-  메시지 < MTU 이고 1:N 멀티캐스트 필요?     → UD
-  Reliable + connection + 4 opcode 다 필요?  → RC
-  Throughput 만 중요, drop OK?               → UC
-  같은 receive queue 를 여러 sender 가 공유? → XRC
-  WAN, 대륙간?                               → RDMA 보다 TCP 권장
+```mermaid
+flowchart TB
+    Q1{"메시지 &lt; MTU<br/>+ 1:N 멀티캐스트?"} -- Yes --> UD["UD"]
+    Q1 -- No --> Q2{"Reliable + connection<br/>+ 4 opcode 다 필요?"}
+    Q2 -- Yes --> RC["RC"]
+    Q2 -- No --> Q3{"Throughput 만 중요,<br/>drop OK?"}
+    Q3 -- Yes --> UC["UC"]
+    Q3 -- No --> Q4{"여러 sender 가<br/>RQ 공유?"}
+    Q4 -- Yes --> XRC["XRC"]
+    Q4 -- No --> Q5{"WAN / 대륙간?"}
+    Q5 -- Yes --> TCP["TCP 권장"]
+    classDef pick stroke:#137333,stroke-width:2px
+    classDef other stroke:#b8860b,stroke-width:2px
+    class UD,RC,UC,XRC pick
+    class TCP other
 ```
 
 ### 5.3 QP State Machine 상세
 
-```
-        ┌──────┐  Modify(Reset)
-        │Reset │ ◀──────────────────────────────────────┐
-        └──┬───┘                                          │
-   Modify(│Init)                                          │
-           ▼                                               │
-        ┌──────┐                                           │
-        │ Init │                                           │
-        └──┬───┘                                           │
-   Modify(│RTR)                                            │
-           ▼                                               │
-        ┌──────┐                                           │
-        │ RTR  │  Ready To Receive — RX 가능, TX 불가      │
-        └──┬───┘                                           │
-   Modify(│RTS)                                            │
-           ▼                                               │
-        ┌──────┐  Modify(SQD) ┌──────┐                     │
-        │ RTS  │ ◀──────────  │  SQD │ Send Queue Drain    │
-        └──┬───┘  ─────────▶  └──────┘                     │
-           │                                               │
-        async error / receive                              │
-        WC Error / Local Work Queue Error                  │
-           │                                               │
-           ▼                                               │
-        ┌──────┐  ┌────────┐                              │
-        │SQErr │  │  Err   │ ────── Modify(Reset) ───────┘
-        │      │  │        │
-        └──┬───┘  └────┬───┘
-           └─────┬─────┘
-                 ▼
-              (Modify(Reset) 으로만 빠져나옴)
+```mermaid
+stateDiagram-v2
+    [*] --> Reset
+    Reset --> Init: Modify(Init)
+    Init --> RTR: Modify(RTR)
+    note right of RTR
+        Ready To Receive
+        RX 가능, TX 불가
+    end note
+    RTR --> RTS: Modify(RTS)
+    RTS --> SQD: Modify(SQD)
+    SQD --> RTS: Modify(RTS)
+    RTS --> SQErr: async error<br/>WC error
+    RTS --> Err: Local Work Queue Error
+    Init --> Err: error
+    RTR --> Err: error
+    SQD --> Err: error
+    SQErr --> Err: fatal
+    Err --> Reset: Modify(Reset)
+    SQErr --> Reset: Modify(Reset)
+    note right of Err
+        Modify(Reset) 으로만
+        빠져나옴
+    end note
 ```
 
 | State | 의미 | RX | TX |
@@ -277,20 +288,18 @@ A 노드의 QPN = `0x0123`, B 노드의 QPN = `0x0456`. RC service 로 양방향
 
 ### 5.5 RC 의 신뢰성 메커니즘 요약
 
-```
-   sender                                      receiver
-   ──────                                      ──────────
-   PSN=N      ─────── data ──────────▶
-   PSN=N+1    ─────── data ──────────▶
-   PSN=N+2    ─────── data (A=1) ────▶
-                                              ACK PSN=N+2 (coalesced)
-              ◀────── ACK ───────────
-   PSN=N+2 까지 SQ 에서 retire
-
-   timeout 안에 ACK 못 받으면:
-   PSN=N      ──── retransmit ───────▶
-                                              ACK PSN=N (다시)
-              ◀────── ACK ───────────
+```mermaid
+sequenceDiagram
+    participant S as sender
+    participant R as receiver
+    S->>R: PSN=N · data
+    S->>R: PSN=N+1 · data
+    S->>R: PSN=N+2 · data (A=1)
+    R-->>S: ACK PSN=N+2<br/>(coalesced)
+    Note over S: PSN=N+2 까지<br/>SQ 에서 retire
+    Note over S,R: timeout 안에 ACK 못 받으면
+    S->>R: PSN=N · retransmit
+    R-->>S: ACK PSN=N (다시)
 ```
 
 | 항목 | 값/의미 |

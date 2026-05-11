@@ -55,24 +55,54 @@
 
 ### 한 장 그림 — 4 가지 명령의 UPIU 전개
 
-```
-   READ                    WRITE                   QUERY                 ABORT
-   (data path)             (data path)             (control path)        (task mgmt)
-   ─────────               ─────────               ─────────             ─────────
-   Cmd  ───▶               Cmd  ───▶               Q-Req ───▶            TM-Req ───▶
-                                                                            (UTMRD,
-                                                                             UTMRLDBR)
-   ◀─── Data-In ×N         ◀─── RTT                ◀── Q-Resp            ◀── TM-Resp
-                           Data-Out ───▶ ×N
-                           ◀─── RTT (next chunk)
-                           Data-Out ───▶ ×N
-   ◀── Response            ◀── Response
-   (single tag)            (single tag, RTT 가 buffer 협상)
+=== "READ (data path)"
 
-   같은 Task Tag 로 묶임          ↑                  Tag 는 Q-Resp 매칭용  Task Tag = abort 대상
-                                  Device 가 buffer
-                                  ready 알림
-```
+    ```mermaid
+    sequenceDiagram
+        participant H as Host
+        participant D as Device
+        H->>D: Command UPIU
+        D-->>H: Data-In UPIU × N
+        D-->>H: Response UPIU
+        Note over H,D: 같은 Task Tag 로 묶임 (single tag)
+    ```
+
+=== "WRITE (data path)"
+
+    ```mermaid
+    sequenceDiagram
+        participant H as Host
+        participant D as Device
+        H->>D: Command UPIU
+        D-->>H: RTT (buffer ready 알림)
+        H->>D: Data-Out UPIU × N1
+        D-->>H: RTT (next chunk)
+        H->>D: Data-Out UPIU × N2
+        D-->>H: Response UPIU
+        Note over H,D: single tag, RTT 가 buffer 협상
+    ```
+
+=== "QUERY (control path)"
+
+    ```mermaid
+    sequenceDiagram
+        participant H as Host
+        participant D as Device
+        H->>D: Query Request UPIU
+        D-->>H: Query Response UPIU
+        Note over H,D: Tag 는 Q-Resp 매칭용
+    ```
+
+=== "ABORT (task mgmt)"
+
+    ```mermaid
+    sequenceDiagram
+        participant H as Host
+        participant D as Device
+        H->>D: TM Request UPIU<br/>(UTMRD, UTMRLDBR)
+        D-->>H: TM Response UPIU
+        Note over H,D: Task Tag = abort 대상
+    ```
 
 ### 왜 이 디자인인가 — Design rationale
 
@@ -90,49 +120,28 @@
 
 가장 단순한 시나리오. slot=5 의 READ 명령이 device 에서 응답 없이 stuck. SW 가 30 ms timeout 후 **Abort Task** 를 발행 → device 가 해당 task 를 취소 → Transfer slot 이 정리. 이 한 사이클의 두 list / 두 doorbell / 두 IRQ 흐름을 추적합니다.
 
-```
-   ┌─── SW (Driver) ───┐                  ┌─── HCI ───┐         ┌─── Device ───┐
-   │                    │                  │            │         │              │
-   │  ① READ@slot=5    │                  │            │         │              │
-   │     UTRLDBR[5]=1  │──────────────────▶│ Cmd UPIU  │────────▶│ NAND read    │
-   │                    │                  │ tag=5     │         │ ... pending..│
-   │       (30 ms 대기, Data-In 안 옴)     │            │         │              │
-   │                    │                  │            │         │              │
-   │  ② SW 가 timeout 결정                  │            │         │              │
-   │     pending_tag[5]=ABORT_PENDING       │            │         │              │
-   │                    │                  │            │         │              │
-   │  ③ UTMRD@slot=0   │                  │            │         │              │
-   │     (TM Function = ABORT TASK,        │            │         │              │
-   │      target Task Tag = 5,             │            │         │              │
-   │      LUN = 0)                          │            │         │              │
-   │       │            │                  │            │         │              │
-   │       ▼            │                  │            │         │              │
-   │  ④ UTMRLDBR[0]=1 ──┼──────────────────▶│ ⑤ TM-Req  │────────▶│ ⑥ Abort tag=5│
-   │                    │                  │ UPIU       │         │   pending list│
-   │                    │                  │            │         │   에서 제거    │
-   │                    │                  │            │         │      │       │
-   │                    │                  │            │         │      ▼       │
-   │                    │                  │            │         │  ⑦ TM-Resp  │
-   │                    │                  │ ⑧ TM-Resp │◀────────│   (Func Cmpl)│
-   │                    │                  │ → UTMRD   │         │              │
-   │                    │                  │   업데이트  │         │              │
-   │                    │                  │            │         │              │
-   │  ⑨ ◀───────────────┼─── IS[UTMRCS] ──│ + doorbell │         │              │
-   │       │            │                  │ clear      │         │              │
-   │       ▼            │                  │            │         │              │
-   │  ⑩ ISR: TM 완료    │                  │            │         │              │
-   │     OCS 확인       │                  │            │         │              │
-   │       │            │                  │            │         │              │
-   │       ▼            │                  │            │         │              │
-   │  ⑪ slot=5 정리     │                  │            │         │              │
-   │     UTRLCLR[5]=1   │──────────────────▶│ slot 5 가  │         │              │
-   │                    │                  │ aborted    │         │              │
-   │                    │                  │ → UTRLDBR[5]=0       │              │
-   │                    │                  │ + OCS=ABORTED        │              │
-   │                    │                  │            │         │              │
-   │  ⑫ ◀── IS[UTRCS]──┼──────────────────│            │         │              │
-   │     pending_tag[5] = FREE              │            │         │              │
-   └────────────────────┘                  └────────────┘         └──────────────┘
+```mermaid
+sequenceDiagram
+    participant SW as SW (Driver)
+    participant HCI as HCI
+    participant Dev as Device
+    SW->>HCI: 1. READ@slot=5  UTRLDBR[5]=1
+    HCI->>Dev: Cmd UPIU (tag=5)
+    Note over Dev: NAND read ... pending
+    Note over SW: 30 ms 대기, Data-In 안 옴
+    Note over SW: 2. timeout 결정<br/>pending_tag[5] = ABORT_PENDING
+    Note over SW: 3. UTMRD@slot=0 작성<br/>(TM Function = ABORT TASK,<br/>target Task Tag = 5, LUN = 0)
+    SW->>HCI: 4. UTMRLDBR[0] = 1
+    HCI->>Dev: 5. TM-Req UPIU
+    Note over Dev: 6. Abort tag=5 — pending list에서 제거
+    Dev-->>HCI: 7. TM-Resp (Func Cmpl)
+    Note over HCI: 8. UTMRD 업데이트
+    HCI-->>SW: 9. IS[UTMRCS] + doorbell clear
+    Note over SW: 10. ISR: TM 완료, OCS 확인
+    SW->>HCI: 11. UTRLCLR[5] = 1 (slot=5 정리)
+    Note over HCI: slot 5 가 aborted<br/>→ UTRLDBR[5] = 0<br/>+ OCS = ABORTED
+    HCI-->>SW: 12. IS[UTRCS]
+    Note over SW: pending_tag[5] = FREE
 ```
 
 ### 단계별 추적
@@ -205,15 +214,17 @@ hci_writel(BIT(5), UTRLCLR);        // transfer slot cleanup
 
 ### 4.3 Task Tag lifecycle
 
-```
-   FREE ──────▶ SUBMITTED ───────▶ IN_FLIGHT ───────▶ COMPLETED ─────▶ FREE
-            ①                ②                  ③                   ④
-   ① UTRD 작성 + UTRLDBR set
-   ② HCI 가 Cmd UPIU 송신
-   ③ Response UPIU 수신 (또는 ABORTED OCS)
-   ④ OCS 읽고 SW 가 free 처리
-
-   재사용 가능 시점 = ④ 이후 (③ 만으로는 부족 — race)
+```mermaid
+stateDiagram-v2
+    [*] --> FREE
+    FREE --> SUBMITTED: 1. UTRD 작성 + UTRLDBR set
+    SUBMITTED --> IN_FLIGHT: 2. HCI 가 Cmd UPIU 송신
+    IN_FLIGHT --> COMPLETED: 3. Response UPIU 수신<br/>(또는 ABORTED OCS)
+    COMPLETED --> FREE: 4. OCS 읽고 SW 가 free 처리
+    note right of COMPLETED
+        재사용 가능 시점 = 4 이후
+        3 만으로는 부족 — race
+    end note
 ```
 
 **핵심 invariant**: 같은 Task Tag 가 동시에 두 명령에 할당되면 안 된다. Response 가 먼저 도착한 명령 / 나중 도착한 명령을 구분 못 함 → silent corruption.

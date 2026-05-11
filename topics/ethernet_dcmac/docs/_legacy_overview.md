@@ -59,31 +59,19 @@
 
 ## 컨셉 맵
 
-```
-        +-----------------+
-        | Upper Layer     |
-        | (TOE / IP)      |
-        +--------+--------+
-                 |  AXI-Stream
-                 v
-        +--------+--------+
-        |     DCMAC       |
-        |  (Ethernet MAC) |
-        |                 |
-        | - Frame 생성    |
-        | - FCS 계산/검증 |
-        | - Flow Control  |
-        | - Rate Adapt    |
-        +--------+--------+
-                 |  PCS/PMA
-                 v
-        +--------+--------+
-        |   Ethernet PHY  |
-        | (SerDes, Optic)  |
-        +-----------------+
-                 |
-            Ethernet Link
-         (100G/200G/400G)
+```mermaid
+flowchart TB
+    UPPER["Upper Layer<br/>(TOE / IP)"]
+    DCMAC["DCMAC<br/>(Ethernet MAC)<br/>- Frame 생성<br/>- FCS 계산/검증<br/>- Flow Control<br/>- Rate Adapt"]
+    PHY["Ethernet PHY<br/>(SerDes, Optic)"]
+    LINK(("Ethernet Link<br/>(100G / 200G / 400G)"))
+
+    UPPER -- "AXI-Stream" --> DCMAC
+    DCMAC -- "PCS / PMA" --> PHY
+    PHY --> LINK
+
+    classDef hl stroke:#1a73e8,stroke-width:2px
+    class DCMAC hl
 ```
 
 ## 학습 단위 (Units)

@@ -56,34 +56,40 @@
 
 ### 한 장 그림 — Sequence 3 계층의 데이터 흐름
 
-```
-   ┌─────── uvm_test ───────┐
-   │                          │
-   │   start vseq             │
-   ▼                          │
- ┌──────────────────┐         │
- │ Virtual Sequence │  연출가  │
- └──┬────────┬──────┘         │
-    │        │                │
-    ▼        ▼                │
-  agentA   agentB             │
-  Sequence Sequence  각본가     │
-    │        │                │
-    │ body() │ body()         │
-    ▼        ▼                │
-  ┌──────┐ ┌──────┐           │
-  │ Item │ │ Item │  대사 한 줄│  ← rand + constraint
-  └──┬───┘ └──┬───┘           │
-     │        │               │
-   start_item / finish_item   │
-     ▼        ▼               │
-   sequencerA sequencerB      │
-     │        │               │
-     ▼        ▼               │
-   driverA  driverB           │
-     │        │               │
-     ▼        ▼               │
-       ─── DUT ───
+```mermaid
+flowchart TB
+    TEST["uvm_test<br/>start vseq"]
+    VSEQ["<b>Virtual Sequence</b><br/>연출가"]
+    SEQA["agentA Sequence<br/>(각본가)"]
+    SEQB["agentB Sequence<br/>(각본가)"]
+    ITA["Item<br/>(대사 한 줄)<br/>rand + constraint"]
+    ITB["Item<br/>(대사 한 줄)<br/>rand + constraint"]
+    SQRA["sequencerA"]
+    SQRB["sequencerB"]
+    DRVA["driverA"]
+    DRVB["driverB"]
+    DUT["DUT"]
+
+    TEST --> VSEQ
+    VSEQ --> SEQA
+    VSEQ --> SEQB
+    SEQA -- "body()" --> ITA
+    SEQB -- "body()" --> ITB
+    ITA -- "start_item / finish_item" --> SQRA
+    ITB -- "start_item / finish_item" --> SQRB
+    SQRA --> DRVA
+    SQRB --> DRVB
+    DRVA --> DUT
+    DRVB --> DUT
+
+    classDef vseq stroke:#1a73e8,stroke-width:3px
+    classDef seq stroke:#1a73e8,stroke-width:2px
+    classDef item stroke:#137333,stroke-width:2px
+    classDef infra stroke:#5f6368,stroke-width:2px
+    class VSEQ vseq
+    class SEQA,SEQB seq
+    class ITA,ITB item
+    class SQRA,SQRB,DRVA,DRVB infra
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -104,36 +110,30 @@
 
 ### 단계별 다이어그램
 
-```
-   t=0
-   │
-   ▼
- ┌────────────┐
- │write_read_ │  ① wr_item = type_id::create("wr_item")
- │  seq.body  │  ② start_item(wr_item)         ─────────┐
- └────────────┘                                          ▼
-                                                   ┌──────────┐
-                                                   │Sequencer │ grant
-                                                   └────┬─────┘
-                                                        │
-                                ▲ randomize ()           │
-   ③ wr_item.randomize() with { wr_rd==1; addr==X; data==D }
-                                                        │
-   ④ finish_item(wr_item)  ──────────────────────────────┤
-                                                        ▼
-                                                  ┌──────────┐
-                                                  │ Driver   │  vif.valid<=1
-                                                  └────┬─────┘  vif.data<=D
-                                                        │       vif.addr<=X
-                                                        ▼
-                                                       DUT       (write 인가)
-   ⑤ rd_item = type_id::create("rd_item")               │
-   ⑥ start_item(rd_item)                                │
-   ⑦ rd_item.randomize() with { wr_rd==0; addr==X; }    │
-   ⑧ finish_item(rd_item)                               ▼
-                                                  ┌──────────┐
-                                                  │ Driver   │  read 인가 →
-                                                  └──────────┘  DUT 응답 받기
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SEQ as write_read_seq.body
+    participant SQR as Sequencer
+    participant DRV as Driver
+    participant DUT as DUT
+
+    Note over SEQ: Write 단계
+    SEQ->>SEQ: ① wr_item = type_id::create("wr_item")
+    SEQ->>SQR: ② start_item(wr_item)
+    SQR-->>SEQ: grant
+    SEQ->>SEQ: ③ wr_item.randomize() with<br/>{ wr_rd==1; addr==X; data==D }
+    SEQ->>SQR: ④ finish_item(wr_item)
+    SQR->>DRV: forward
+    DRV->>DUT: vif.valid<=1<br/>vif.data<=D<br/>vif.addr<=X<br/>(write 인가)
+
+    Note over SEQ: Read 단계
+    SEQ->>SEQ: ⑤ rd_item = type_id::create("rd_item")
+    SEQ->>SQR: ⑥ start_item(rd_item)
+    SEQ->>SEQ: ⑦ rd_item.randomize() with<br/>{ wr_rd==0; addr==X }
+    SEQ->>SQR: ⑧ finish_item(rd_item)
+    SQR->>DRV: forward
+    DRV->>DUT: read 인가 → DUT 응답 받기
 ```
 
 ### 단계별 의미
@@ -226,40 +226,55 @@ endclass
 
 ### 4.3 Virtual Sequence — 멀티 Agent 시나리오
 
-```
-uvm_test
-  └── Virtual Sequence (시나리오 조합)
-        ├── Agent_A Sequence (OTP 설정)
-        │     └── Sequence Item (OTP 필드 값)
-        ├── Agent_B Sequence (UFS 이미지 로드)
-        │     └── Sequence Item (UFS 명령/데이터)
-        └── Agent_C Sequence (보안 공격)
-              └── Sequence Item (공격 유형/타이밍)
+```mermaid
+flowchart TB
+    TEST["uvm_test"]
+    VSEQ["<b>Virtual Sequence</b><br/>(시나리오 조합)"]
+    SA["Agent_A Sequence<br/><i>OTP 설정</i>"]
+    SB["Agent_B Sequence<br/><i>UFS 이미지 로드</i>"]
+    SC["Agent_C Sequence<br/><i>보안 공격</i>"]
+    IA["Sequence Item<br/><i>OTP 필드 값</i>"]
+    IB["Sequence Item<br/><i>UFS 명령/데이터</i>"]
+    IC["Sequence Item<br/><i>공격 유형/타이밍</i>"]
 
-장점:
-  - 개별 Sequence 재사용 가능
-  - Virtual Sequence 에서 조합만 변경하여 새 시나리오 생성
-  - Test 에서는 어떤 VSeq 를 사용할지만 선택
+    TEST --> VSEQ
+    VSEQ --> SA
+    VSEQ --> SB
+    VSEQ --> SC
+    SA --> IA
+    SB --> IB
+    SC --> IC
+
+    classDef vseq stroke:#1a73e8,stroke-width:3px
+    classDef seq stroke:#1a73e8,stroke-width:2px
+    classDef item stroke:#137333,stroke-width:2px
+    class VSEQ vseq
+    class SA,SB,SC seq
+    class IA,IB,IC item
 ```
+
+**장점**:
+
+- 개별 Sequence 재사용 가능
+- Virtual Sequence 에서 조합만 변경하여 새 시나리오 생성
+- Test 에서는 어떤 VSeq 를 사용할지만 선택
 
 ### 4.4 start_item / finish_item 흐름
 
-```
-Sequence                    Sequencer                Driver
-   |                           |                       |
-   |-- start_item(item) ----->|                       |
-   |   (Sequencer 에 요청)      |                       |
-   |                           |-- grant ------------>|
-   |                           |   (Driver 준비됨)     |
-   |<-- (randomize here) -----|                       |
-   |                           |                       |
-   |-- finish_item(item) ---->|                       |
-   |   (item 전달)             |-- get_next_item ---->|
-   |                           |   (item 전달)         |
-   |                           |                       |-- drive(item)
-   |                           |                       |
-   |                           |<-- item_done --------|
-   |<-- (반환) --------------- |                       |
+```mermaid
+sequenceDiagram
+    participant S as Sequence
+    participant Q as Sequencer
+    participant D as Driver
+
+    S->>Q: start_item(item)<br/>Sequencer 에 요청
+    Q->>D: grant<br/>(Driver 준비됨)
+    Note over S: randomize here
+    S->>Q: finish_item(item)<br/>(item 전달)
+    Q->>D: get_next_item<br/>(item 전달)
+    D->>D: drive(item)
+    D-->>Q: item_done
+    Q-->>S: 반환
 ```
 
 ---
@@ -486,24 +501,25 @@ endclass
 
 #### Response 흐름
 
-```
-Sequence                    Sequencer                Driver
-   |                           |                       |
-   |-- start_item(req) ------>|                       |
-   |-- finish_item(req) ----->|-- get_next_item ----->|
-   |                           |                       |-- drive(req)
-   |                           |                       |
-   |                           |<-- put_response(rsp) -|
-   |                           |<-- item_done ---------|
-   |<-- get_response(rsp) ----|                       |
-   |   (rsp.data 사용)         |                       |
+```mermaid
+sequenceDiagram
+    participant S as Sequence
+    participant Q as Sequencer
+    participant D as Driver
 
-핵심:
-  - set_id_info(req): rsp 에 req 의 transaction_id / sequence_id 복사
-    → Sequencer 가 어떤 Sequence 의 응답인지 매칭
-  - get_response 는 blocking — 응답이 올 때까지 대기
-  - item_done() 과 put_response() 순서 주의 (put_response 먼저)
+    S->>Q: start_item(req)
+    S->>Q: finish_item(req)
+    Q->>D: get_next_item
+    D->>D: drive(req)
+    D-->>Q: put_response(rsp)
+    D-->>Q: item_done
+    Q-->>S: get_response(rsp)<br/>rsp.data 사용
 ```
+
+!!! note "핵심"
+    - `set_id_info(req)`: rsp 에 req 의 transaction_id / sequence_id 복사 → Sequencer 가 어떤 Sequence 의 응답인지 매칭
+    - `get_response` 는 blocking — 응답이 올 때까지 대기
+    - `item_done()` 과 `put_response()` 순서 주의 (put_response 먼저)
 
 #### item_done(rsp) 단축 패턴
 

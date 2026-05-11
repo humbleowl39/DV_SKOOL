@@ -56,27 +56,21 @@
 
 ### 한 장 그림 — DLL 의 두 트랙
 
-```
-   Sender DLL                                            Receiver DLL
-   ──────────                                            ────────────
-   [Replay Buffer]                                       [RX TLP buffer]
-   ┌──────────────┐                                      ┌──────────────┐
-   │ Seq=12 TLP   │                                      │  available   │
-   │ Seq=13 TLP   │                                      │  PH/PD/NPH/  │
-   │ Seq=14 TLP   │                                      │  NPD/CplH/   │
-   └──────┬───────┘                                      │  CplD credit │
-          │                                              └──────┬───────┘
-          │ Seq# + LCRC                                         │
-          ├─── TLP (Seq 12) ──────────────────────────────────▶ │ LCRC OK
-          ├─── TLP (Seq 13) ──────────────────────────────────▶ │ LCRC FAIL
-          │                                                     │
-          │                                          ◀── NAK (Seq 13) ──
-          │ Replay 시작 — Seq=13 부터 다시 송신                    │
-          ├─── TLP (Seq 13) re-send ──────────────────────────▶ │ LCRC OK
-          │                                          ◀── ACK (Seq 14) ──
-          │                                          ◀── UpdateFC (P, …) ──
-          │ ACK : Seq ≤ 14 retire from Replay Buffer
-          │ FC  : credit 회수 → 다음 송신 가능 여부 판단
+```mermaid
+sequenceDiagram
+    participant TX as Sender DLL<br/>[Replay Buffer: Seq=12,13,14]
+    participant RX as Receiver DLL<br/>[RX TLP buf · PH/PD/NPH/NPD/CplH/CplD credit]
+    TX->>RX: TLP (Seq 12) + LCRC
+    RX->>RX: LCRC OK
+    TX->>RX: TLP (Seq 13) + LCRC
+    RX->>RX: LCRC FAIL
+    RX-->>TX: NAK (Seq 13)
+    Note over TX: Replay — Seq=13 부터 다시 송신
+    TX->>RX: TLP (Seq 13) re-send
+    RX->>RX: LCRC OK
+    RX-->>TX: ACK (Seq 14)
+    RX-->>TX: UpdateFC (P, …)
+    Note over TX: ACK : Seq ≤ 14 retire from Replay Buffer<br/>FC : credit 회수 → 다음 송신 가능 여부 판단
 ```
 
 **두 트랙이 분리된 layer 의 두 트랙**:
@@ -100,22 +94,25 @@
 
 가장 단순한 시나리오. Sender 가 Seq=10/11/12 의 TLP 3 개를 연속 송신, 12 가 LCRC error 로 깨짐. 그 후 13/14 가 추가 송신.
 
-```
-   Sender (RC)                                                Receiver (EP)
-   ───────────                                                ──────────────
-   [Replay Buf]
-    Seq=10 TLP ───────────────────────────────▶ LCRC OK   → next expected = 11
-    Seq=11 TLP ───────────────────────────────▶ LCRC OK   → next expected = 12
-    Seq=12 TLP ───────────────────────────────▶ LCRC FAIL → NAK send
-                                          ◀── NAK Seq=12
-   ↓ NAK 수신
-   Replay Buffer 에서 Seq=12 부터 재송신
-    Seq=12 TLP ───────────────────────────────▶ LCRC OK   → next expected = 13
-    Seq=13 TLP ───────────────────────────────▶ LCRC OK
-                                                ACK timer 만료 (또는 packet 누적)
-                                          ◀── ACK Seq=13
-   ↓ ACK 수신
-   Replay Buffer 에서 Seq ≤ 13 entry retire
+```mermaid
+sequenceDiagram
+    participant TX as Sender (RC)<br/>[Replay Buf]
+    participant RX as Receiver (EP)
+    TX->>RX: Seq=10 TLP
+    RX->>RX: LCRC OK → next expected = 11
+    TX->>RX: Seq=11 TLP
+    RX->>RX: LCRC OK → next expected = 12
+    TX->>RX: Seq=12 TLP
+    RX->>RX: LCRC FAIL → NAK send
+    RX-->>TX: NAK Seq=12
+    Note over TX: NAK 수신<br/>Replay Buffer 에서 Seq=12 부터 재송신
+    TX->>RX: Seq=12 TLP (re-send)
+    RX->>RX: LCRC OK → next expected = 13
+    TX->>RX: Seq=13 TLP
+    RX->>RX: LCRC OK
+    Note over RX: ACK timer 만료 (또는 packet 누적)
+    RX-->>TX: ACK Seq=13
+    Note over TX: ACK 수신<br/>Replay Buffer 에서 Seq ≤ 13 entry retire
 ```
 
 ### 단계별 의미
@@ -231,22 +228,25 @@ void on_ack(uint16_t cumulative_seq) {
 
 ### 5.2 ACK / NAK 타임라인 (전체)
 
-```
-   Sender                                         Receiver
-   ────────                                       ──────────
-   [Replay Buf]
-    Seq=10 TLP ───────────────────────────────▶ LCRC OK   → next expected = 11
-    Seq=11 TLP ───────────────────────────────▶ LCRC OK   → next expected = 12
-    Seq=12 TLP ───────────────────────────────▶ LCRC FAIL → NAK send
-                                          ◀── NAK Seq=12
-   ↓ NAK 수신
-   Replay Buffer 에서 Seq=12 부터 재송신
-    Seq=12 TLP ───────────────────────────────▶ LCRC OK   → next expected = 13
-    Seq=13 TLP ───────────────────────────────▶ LCRC OK
-                                                ACK timer 만료 (또는 packet 누적)
-                                          ◀── ACK Seq=13
-   ↓ ACK 수신
-   Replay Buffer 에서 Seq ≤ 13 entry retire
+```mermaid
+sequenceDiagram
+    participant TX as Sender<br/>[Replay Buf]
+    participant RX as Receiver
+    TX->>RX: Seq=10 TLP
+    RX->>RX: LCRC OK → next expected = 11
+    TX->>RX: Seq=11 TLP
+    RX->>RX: LCRC OK → next expected = 12
+    TX->>RX: Seq=12 TLP
+    RX->>RX: LCRC FAIL → NAK send
+    RX-->>TX: NAK Seq=12
+    Note over TX: NAK 수신 → Replay Buffer 에서 Seq=12 부터 재송신
+    TX->>RX: Seq=12 TLP (re-send)
+    RX->>RX: LCRC OK → next expected = 13
+    TX->>RX: Seq=13 TLP
+    RX->>RX: LCRC OK
+    Note over RX: ACK timer 만료 (또는 packet 누적)
+    RX-->>TX: ACK Seq=13
+    Note over TX: ACK 수신 → Replay Buffer 에서 Seq ≤ 13 entry retire
 ```
 
 #### Replay Buffer
@@ -320,25 +320,23 @@ Replay 횟수가 한도 (보통 4) 초과 → DL 가 link recovery 트리거. LT
 
 #### FC Initialization
 
-```
-   Sender                                Receiver
-   ─────                                 ────────
-   InitFC1 (P, advertised_credit) ────▶
-   InitFC1 (NP, ...)              ────▶
-   InitFC1 (Cpl, ...)             ────▶
-                                      ◀── InitFC1 (P, ...)
-                                      ◀── InitFC1 (NP, ...)
-                                      ◀── InitFC1 (Cpl, ...)
-                                      ◀── InitFC2 (P, ...)
-                                      ◀── InitFC2 (NP, ...)
-                                      ◀── InitFC2 (Cpl, ...)
-   InitFC2 (P) ────▶
-   InitFC2 (NP) ────▶
-   InitFC2 (Cpl) ────▶
-
-   → 양 끝 모두 FC2 보낸 후 FC initialization complete.
-   → DL_Active 상태.
-   → 정상 traffic 시작 (UpdateFC 로 credit 갱신).
+```mermaid
+sequenceDiagram
+    participant S as Sender
+    participant R as Receiver
+    S->>R: InitFC1 (P, advertised_credit)
+    S->>R: InitFC1 (NP, …)
+    S->>R: InitFC1 (Cpl, …)
+    R-->>S: InitFC1 (P, …)
+    R-->>S: InitFC1 (NP, …)
+    R-->>S: InitFC1 (Cpl, …)
+    R-->>S: InitFC2 (P, …)
+    R-->>S: InitFC2 (NP, …)
+    R-->>S: InitFC2 (Cpl, …)
+    S->>R: InitFC2 (P)
+    S->>R: InitFC2 (NP)
+    S->>R: InitFC2 (Cpl)
+    Note over S,R: 양 끝 모두 FC2 보낸 후 FC initialization complete<br/>DL_Active 상태 → 정상 traffic (UpdateFC 로 credit 갱신)
 ```
 
 UpdateFC: 현재 credit consumed 의 총합 (modulo) 을 주기적으로 송신.

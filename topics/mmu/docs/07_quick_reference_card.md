@@ -56,21 +56,34 @@ MMU 6 모듈을 끝까지 읽고 나면 머릿속에 _path 6개_ (Hit / Miss / W
 
 ### 한 장 그림 — VA → PA 6 path
 
-```
-                          ┌──── ① Hit ─────────────▶ PA (1 cycle) ★
-                          │
-   VA + ASID ──▶ TLB lookup ┤── ② Miss ──▶ PWC ──▶ Page Walk Engine
-                          │                              │
-                          │                              ├── ③ Walk OK ──▶ TLB fill ──▶ PA
-                          │                              ├── ④ Translation fault ──▶ Page Fault
-                          │                              └── ⑤ Permission fault   ──▶ Page Fault
-                          │
-                          └── ⑥ Stage 1 done → IPA ──▶ Stage 2 (VTTBR_EL2) ──▶ PA
-                                                        (가상화 환경에서만)
+```mermaid
+flowchart LR
+    REQ["VA + ASID"]
+    TLB["TLB lookup"]
+    PWC["PWC"]
+    PWE["Page Walk Engine"]
+    HIT["① Hit → PA (1 cycle) ★"]
+    OK["③ Walk OK<br/>→ TLB fill → PA"]
+    TF["④ Translation fault<br/>→ Page Fault"]
+    PF["⑤ Permission fault<br/>→ Page Fault"]
+    S2["⑥ Stage 1 done → IPA<br/>→ Stage 2 (VTTBR_EL2) → PA<br/>(가상화 환경에서만)"]
 
-   ⑦ ASID 변경 시: 다른 ASID 의 entry 와 공존 (Flush 안 함) — 컨텍스트 스위치 핵심
-   ⑧ TLBI 호출 시: 특정 (ASID, VA) / ALL / by-IPA 단위로 invalidate
+    REQ --> TLB
+    TLB -- "① Hit" --> HIT
+    TLB -- "② Miss" --> PWC --> PWE
+    PWE --> OK
+    PWE --> TF
+    PWE --> PF
+    TLB -- "S1 done" --> S2
+
+    classDef fast stroke:#27ae60,stroke-width:3px
+    classDef fault stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
+    class HIT fast
+    class TF,PF fault
 ```
+
+> ⑦ **ASID 변경 시**: 다른 ASID 의 entry 와 공존 (Flush 안 함) — 컨텍스트 스위치 핵심.<br>
+> ⑧ **TLBI 호출 시**: 특정 (ASID, VA) / ALL / by-IPA 단위로 invalidate.
 
 ### 왜 카드가 6 path 로 정리되는가 — Design rationale
 

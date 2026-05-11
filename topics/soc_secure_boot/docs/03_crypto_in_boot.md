@@ -57,34 +57,25 @@ Module 02 의 chain 은 _신뢰 전파_ 의 _구조_ 였습니다. 이번 모듈
 
 ### 한 장 그림 — 빌드와 부팅의 두 시간축
 
-```
-   ┌─────────── Build server (off-chip, HSM 안의 private key) ─────────┐
-   │                                                                    │
-   │   bl2.bin (2 MB)                                                  │
-   │      │                                                             │
-   │      ▼  H = SHA-256(bl2.bin)         ┌── HSM ──┐                  │
-   │   32 B hash ───────────────────────▶ │ private │                  │
-   │                                       │  key d  │ Sign(H, d)       │
-   │                                       └─────┬───┘                  │
-   │                                             │                      │
-   │   ┌─ cert ─────────────────────────────────┴──────┐               │
-   │   │ public key (e, n)                              │               │
-   │   │ BL2 hash = H                                   │               │
-   │   │ Signature                                      │               │
-   │   │ AlgoID, Version, Validity                      │               │
-   │   └───────────────────────────────┬───────────────┘               │
-   └───────────────────────────────────┼───────────────────────────────┘
-                                       │  Flash 에 저장 → 칩 운반
-                                       ▼
-   ┌────────── On-chip, every boot (BootROM, HW Crypto) ───────────────┐
-   │                                                                    │
-   │   1) SHA-256(cert.PK) == OTP[ROTPK_HASH] ?           PK 인증       │
-   │   2) Verify(cert.sig, cert.PK, cert.body) == OK ?    Cert 인증     │
-   │   3) SHA-256(loaded BL2) == cert.BL2_hash ?          Image 무결성  │
-   │                                                                    │
-   │   세 단계 모두 PASS → BL2 jump                                      │
-   │   하나라도 FAIL → halt / fallback                                   │
-   └────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph BUILD["Build server (off-chip, HSM 안의 private key)"]
+        direction TB
+        BIN["bl2.bin (2 MB)"]
+        HASH["H = SHA-256(bl2.bin)<br/>32 B hash"]
+        HSM["HSM<br/>private key d<br/>Sign(H, d)"]
+        CERT["cert<br/>- public key (e, n)<br/>- BL2 hash = H<br/>- Signature<br/>- AlgoID, Version, Validity"]
+        BIN --> HASH --> HSM --> CERT
+    end
+    subgraph BOOT["On-chip, every boot (BootROM, HW Crypto)"]
+        direction TB
+        V1["1) SHA-256(cert.PK) == OTP[ROTPK_HASH] ?<br/>PK 인증"]
+        V2["2) Verify(cert.sig, cert.PK, cert.body) == OK ?<br/>Cert 인증"]
+        V3["3) SHA-256(loaded BL2) == cert.BL2_hash ?<br/>Image 무결성"]
+        RES["세 단계 모두 PASS → BL2 jump<br/>하나라도 FAIL → halt / fallback"]
+        V1 --> V2 --> V3 --> RES
+    end
+    BUILD -- "Flash 에 저장 → 칩 운반" --> BOOT
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -185,23 +176,18 @@ status_t verify_bl2_rsa2048(const cert_t *cert, const uint8_t *bl2, size_t bl2_l
 
 ### 4.1 두 연산의 결합 — 무결성 + 인증성
 
-```
-서명 검증 = Hash + Signature
+```mermaid
+flowchart TB
+    H1["(1) 무결성 (Integrity)<br/>이미지가 변조되지 않았나?"]
+    H2["SHA-256 / SHA-384"]
+    H3["이미지 해시 계산"]
+    S1["(2) 인증성 (Authenticity)<br/>정당한 제작자가 만들었나?"]
+    S2["RSA / ECDSA<br/>전자 서명"]
+    S3["서명을 공개키로 복호화"]
+    CMP["일치? → PASS / FAIL"]
 
-  (1) 무결성(Integrity)        (2) 인증성(Authenticity)
-  "이미지가 변조되지 않았나?"    "정당한 제작자가 만들었나?"
-
-  +----------+                 +--------------+
-  | SHA-256  |                 | RSA / ECDSA  |
-  | SHA-384  |                 | 전자 서명     |
-  +----------+                 +--------------+
-       |                             |
-       v                             v
-  이미지 해시 계산             서명을 공개키로 복호화
-       |                             |
-       +----------+------------------+
-                  v
-          일치? → PASS / FAIL
+    H1 --> H2 --> H3 --> CMP
+    S1 --> S2 --> S3 --> CMP
 ```
 
 ### 4.2 Hash 의 핵심 속성
@@ -214,12 +200,20 @@ status_t verify_bl2_rsa2048(const cert_t *cert, const uint8_t *bl2, size_t bl2_l
 
 ### 4.3 키 계층 구조 — 왜 다단인가
 
-```
-          ROTPK (Root)        ← 해시가 OTP에 저장 (변경 불가)
-          /           \
-   Trusted Key    Non-Trusted Key   ← 인증서에 포함 (교체 가능)
-    /      \           |
-BL2 Key  BL32 Key  BL33 Key        ← 이미지별 Content Key
+```mermaid
+flowchart TB
+    ROTPK["ROTPK (Root)<br/>해시가 OTP 에 저장 (변경 불가)"]
+    TK["Trusted Key<br/>(인증서에 포함, 교체 가능)"]
+    NTK["Non-Trusted Key<br/>(인증서에 포함, 교체 가능)"]
+    BL2K["BL2 Key<br/>(이미지별 Content Key)"]
+    BL32K["BL32 Key<br/>(이미지별 Content Key)"]
+    BL33K["BL33 Key<br/>(이미지별 Content Key)"]
+
+    ROTPK --> TK
+    ROTPK --> NTK
+    TK --> BL2K
+    TK --> BL32K
+    NTK --> BL33K
 ```
 
 | 이유 | 설명 |
@@ -401,22 +395,15 @@ BootROM 의 보안 핸드셰이크 (특히 인터칩 키 교환) 는 HW + FW 협
 
 #### 인터칩 키 교환 프로토콜 (Meta/Apple 협업)
 
-```
-Host SoC (BootROM)            Partner Chip
-     |                              |
-     | 1. Challenge 생성/전송        |
-     | ----------------------------> |
-     |                              |
-     | 2. Response 수신              |
-     | <---------------------------- |
-     |                              |
-     | 3. 키 도출 + 검증             |
-     |    (HW Crypto + FW 로직)     |
+```mermaid
+sequenceDiagram
+    participant H as Host SoC (BootROM)
+    participant P as Partner Chip
 
-검증 방법:
-  - DPI-C로 C Reference Model이 동일 Challenge에 대한 기대 Response 계산
-  - Scoreboard에서 DUT 출력과 비트 단위 비교
-  - 키 도출 결과까지 End-to-End 검증
+    H->>P: 1. Challenge 생성/전송
+    P->>H: 2. Response 수신
+    Note over H: 3. 키 도출 + 검증<br/>(HW Crypto + FW 로직)
+    Note over H,P: 검증 방법<br/>- DPI-C 로 C Reference Model 이<br/>  동일 Challenge 에 대한 기대 Response 계산<br/>- Scoreboard 에서 DUT 출력과 비트 단위 비교<br/>- 키 도출 결과까지 End-to-End 검증
 ```
 
 자세한 DPI-C 아키텍처는 [Module 07 (DV 방법론)](07_bootrom_dv_methodology.md) 에서 다룹니다.

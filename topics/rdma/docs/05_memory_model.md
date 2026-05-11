@@ -60,23 +60,37 @@
 
 ### 한 장 그림 — 객체 묶음 + 검증 chain
 
-```
-   PD (보호 도메인)
-    │ owns
-    ├── MR ── (lkey, rkey, [iova, len], access_flags)
-    │    │
-    │    └── pages pinned + IOVA→PA mapping in HCA's ATS
-    │
-    └── QP ── 같은 PD 안에서만 MR 사용 가능
+```mermaid
+flowchart TB
+    PD["<b>PD</b> 보호 도메인"]
+    MR["<b>MR</b><br/>(lkey, rkey, [iova, len], access_flags)<br/>pages pinned + IOVA→PA mapping in HCA's ATS"]
+    QP["<b>QP</b><br/>같은 PD 안에서만 MR 사용 가능"]
+    PD -- owns --> MR
+    PD -- owns --> QP
 
-   원격 WRITE 도착 시 5-step 검증:
-   ┌─ rkey 일치? ─┐  ┌─ access? ─┐  ┌─ PD 같음? ─┐  ┌─ range 안? ─┐  ┌─ IOVA→PA? ─┐
-   │              │→│            │→│             │→│              │→│             │→ DMA write
-   │ key table    │  │ remote_w?  │  │ qp.pd ==   │  │ [va, va+len] │  │ TLB hit?    │
-   │              │  │            │  │  mr.pd     │  │  ⊆ MR range  │  │ else PTW    │
-   └──────────────┘  └────────────┘  └────────────┘  └──────────────┘  └─────────────┘
-        ↓ fail            ↓ fail        ↓ fail           ↓ fail            ↓ fail
-       NAK              NAK              NAK            NAK            NAK (translation)
+    WR["incoming RDMA WRITE"]
+    V1{"rkey 일치?<br/>(key table)"}
+    V2{"access?<br/>(remote_w?)"}
+    V3{"PD 같음?<br/>qp.pd == mr.pd"}
+    V4{"range 안?<br/>[va, va+len] ⊆ MR"}
+    V5{"IOVA→PA?<br/>TLB hit? else PTW"}
+    OK["DMA write"]
+    NAK["NAK"]
+    WR --> V1
+    V1 -- Yes --> V2
+    V2 -- Yes --> V3
+    V3 -- Yes --> V4
+    V4 -- Yes --> V5
+    V5 -- Yes --> OK
+    V1 -- No --> NAK
+    V2 -- No --> NAK
+    V3 -- No --> NAK
+    V4 -- No --> NAK
+    V5 -- No --> NAK
+    classDef bad stroke:#c0392b,stroke-width:2px
+    classDef good stroke:#137333,stroke-width:2px
+    class NAK bad
+    class OK good
 ```
 
 ### 왜 이렇게 설계했는가 — Design rationale
@@ -163,21 +177,21 @@ A 가 1 MB buffer 를 등록하고, B 가 그 영역에 1 KB RDMA WRITE.
 
 ### 4.1 객체 계층
 
-```
-        ┌────────────┐
-        │     PD     │  Protection Domain (보호 경계)
-        └──────┬─────┘
-               │ owns
-               ▼
-        ┌────────────┐                ┌────────────┐
-        │     MR     │ ◀── pairs ──▶  │   QP / SRQ │
-        │  (region)  │                └────────────┘
-        └──────┬─────┘
-               │ has
-               ▼
-        ┌────────────┬─────────────┐
-        │   L_Key    │   R_Key     │
-        └────────────┴─────────────┘
+```mermaid
+flowchart TB
+    PD["<b>PD</b><br/>Protection Domain (보호 경계)"]
+    MR["<b>MR</b> (region)"]
+    QPSRQ["QP / SRQ"]
+    LK["L_Key"]
+    RK["R_Key"]
+    PD -- owns --> MR
+    MR <-- pairs --> QPSRQ
+    MR -- has --> LK
+    MR -- has --> RK
+    classDef pd stroke:#1a73e8,stroke-width:2px
+    classDef key stroke:#137333,stroke-width:2px
+    class PD pd
+    class LK,RK key
 ```
 
 | 객체 | 정의 (ISO 11179) |
@@ -190,19 +204,35 @@ A 가 1 MB buffer 를 등록하고, B 가 그 영역에 1 KB RDMA WRITE.
 
 ### 4.2 5-step 검증 체인 (responder)
 
-```
-   incoming RDMA WRITE (PSN=N)
-        │  RETH: remote_va, len, rkey
-        ▼
-   ┌──────────────────────────────┐
-   │ 1) rkey 로 MR 찾기            │ → 미일치 → NAK Remote Access Error
-   │ 2) MR 의 access flag 검증     │ → Remote Write 없음 → NAK
-   │ 3) MR 의 PD 와 QP 의 PD 비교  │ → 다름 → NAK
-   │ 4) [remote_va, remote_va+len] │ → 범위 벗어남 → NAK
-   │    가 MR 영역 안에 있는지     │
-   │ 5) IOVA → PA 변환 (TLB/PTW)   │ → 변환 실패 → NAK
-   │ 6) DMA write 수행              │
-   └──────────────────────────────┘
+```mermaid
+flowchart TB
+    IN["incoming RDMA WRITE (PSN=N)<br/>RETH: remote_va, len, rkey"]
+    S1["1) rkey 로 MR 찾기"]
+    S2["2) MR 의 access flag 검증"]
+    S3["3) MR 의 PD 와 QP 의 PD 비교"]
+    S4["4) [remote_va, remote_va+len] 가<br/>MR 영역 안에 있는지"]
+    S5["5) IOVA → PA 변환 (TLB/PTW)"]
+    S6["6) DMA write 수행"]
+    NAK1["NAK Remote Access Error"]
+    NAK2["NAK"]
+    NAK3["NAK"]
+    NAK4["NAK"]
+    NAK5["NAK"]
+    IN --> S1
+    S1 -- 미일치 --> NAK1
+    S1 -- match --> S2
+    S2 -- "Remote Write 없음" --> NAK2
+    S2 -- ok --> S3
+    S3 -- 다름 --> NAK3
+    S3 -- 같음 --> S4
+    S4 -- 범위 벗어남 --> NAK4
+    S4 -- 안 --> S5
+    S5 -- 변환 실패 --> NAK5
+    S5 -- ok --> S6
+    classDef bad stroke:#c0392b,stroke-width:2px
+    classDef good stroke:#137333,stroke-width:2px
+    class NAK1,NAK2,NAK3,NAK4,NAK5 bad
+    class S6 good
 ```
 
 → **모든 단계에서 fail 시 NAK + WC error** (`IBV_WC_REM_ACCESS_ERR` 류).
@@ -216,29 +246,20 @@ A 가 1 MB buffer 를 등록하고, B 가 그 영역에 1 KB RDMA WRITE.
 
 ### 5.1 Memory Registration 흐름 상세
 
-```
-   User-space                Kernel                   HCA
-   ─────────                 ──────                   ───
-   ibv_reg_mr(pd, addr,      ┌──────────────┐
-              length,        │ 1) get_user_ │
-              access_flags)  │    pages_pin │ ── pin pages → PA list
-                             │              │
-                             │ 2) build IOVA│
-                             │    mapping   │
-                             │              │
-                             │ 3) PCIe MMIO │ ── push descriptor
-                             │              │
-                             └─────┬────────┘
-                                   │
-                                   ▼
-                             ┌─────────────┐
-                             │ HCA / RNIC  │
-                             │ - ATS table │ ← 4) IOVA→PA 등록
-                             │ - PD lookup │ ← 5) PD 와 묶기
-                             │ - Key table │ ← 6) L/R Key 발급
-                             └─────────────┘
-                                   │
-   ◀────────── (lkey, rkey) ───────┘
+```mermaid
+sequenceDiagram
+    participant U as User-space
+    participant K as Kernel
+    participant H as HCA / RNIC
+    U->>K: ibv_reg_mr(pd, addr,<br/>length, access_flags)
+    K->>K: 1) get_user_pages_pin<br/>pin pages → PA list
+    K->>K: 2) build IOVA mapping
+    K->>H: 3) PCIe MMIO<br/>push descriptor
+    H->>H: 4) ATS table<br/>IOVA→PA 등록
+    H->>H: 5) PD lookup<br/>PD 와 묶기
+    H->>H: 6) Key table<br/>L/R Key 발급
+    H-->>K: (lkey, rkey)
+    K-->>U: (lkey, rkey)
 ```
 
 각 단계에서 발생할 수 있는 검증 포인트:
@@ -278,23 +299,25 @@ A 가 1 MB buffer 를 등록하고, B 가 그 영역에 1 KB RDMA WRITE.
 
 ### 5.3 IOVA, ATS, PTW, TLB
 
-```
-                        ┌──────────────────┐
-   RDMA packet → BTH    │       HCA        │
-                ↓        │  ┌────────────┐ │
-                RETH    │  │  ATS / TLB │ │ ← 6) 변환 캐시
-                ↓        │  └─────┬──────┘ │
-            (rkey, IOVA, len)     │ TLB miss
-                                  ▼
-                        │  ┌────────────┐ │
-                        │  │   PTW      │ │ ← Page Table Walker
-                        │  │ (page table│ │
-                        │  │   walk)    │ │
-                        │  └─────┬──────┘ │
-                                  │ PA
-                                  ▼
-                        │   PCIe DMA      │ → host memory
-                        └──────────────────┘
+```mermaid
+flowchart TB
+    PKT["RDMA packet → BTH → RETH<br/>(rkey, IOVA, len)"]
+    subgraph HCA["HCA"]
+        direction TB
+        ATS["ATS / TLB<br/>(변환 캐시)"]
+        PTW["PTW · Page Table Walker<br/>(page table walk)"]
+        DMA["PCIe DMA"]
+        ATS -- TLB miss --> PTW
+        PTW -- PA --> DMA
+        ATS -- TLB hit · PA --> DMA
+    end
+    HOST["host memory"]
+    PKT --> ATS
+    DMA --> HOST
+    classDef cache stroke:#1a73e8,stroke-width:2px
+    classDef walk stroke:#b8860b,stroke-width:2px
+    class ATS cache
+    class PTW walk
 ```
 
 RDMA-TB 의 sub-IP 검증 환경은 이 변환 chain 을 직접 검증:

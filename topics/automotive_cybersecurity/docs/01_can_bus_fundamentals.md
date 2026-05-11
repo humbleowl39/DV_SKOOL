@@ -56,22 +56,33 @@
 
 ### 한 장 그림 — CAN Bus 와 외부 진입점
 
-```
-                         ┌─── 1983 가정 ───┐
-                         │ "버스 위는 신뢰"  │
-                         └────────────────┘
-                                  ▼
-   ECU-A (엔진)──┐
-   ECU-B (브레이크)──┼── CAN Bus (shared, broadcast, no auth)
-   ECU-C (ADAS)─┤              │
-   GW  (게이트웨이)─┘            │
-                                │ Pin 6/14
-                                │
-                       OBD-II Port (법적 의무)
-                                │
-                          [외부 진단 도구]
-                          [악성 동글]   ← 여기서 가정 붕괴
-                          [정비소 SW]
+```mermaid
+flowchart TB
+    ASSUME["1983 설계 가정<br/>'버스 위는 신뢰'"]
+    ECU_A["ECU-A<br/>엔진"]
+    ECU_B["ECU-B<br/>브레이크"]
+    ECU_C["ECU-C<br/>ADAS"]
+    GW["GW<br/>게이트웨이"]
+    BUS(["CAN Bus<br/>shared · broadcast · no auth"])
+    OBD["OBD-II Port<br/>법적 의무 · Pin 6/14"]
+    EXT_TOOL["외부 진단 도구"]
+    EXT_DONGLE["악성 동글"]
+    EXT_SW["정비소 SW"]
+
+    ASSUME -.기반.-> BUS
+    ECU_A --- BUS
+    ECU_B --- BUS
+    ECU_C --- BUS
+    GW --- BUS
+    BUS --- OBD
+    OBD --> EXT_TOOL
+    OBD --> EXT_DONGLE
+    OBD --> EXT_SW
+
+    classDef assume stroke-dasharray:4 4,stroke-width:2px
+    classDef attacker stroke-width:2px,stroke-dasharray:6 3
+    class ASSUME assume
+    class EXT_DONGLE attacker
 ```
 
 ECU 4 대가 동일한 wired-AND 버스를 공유하고, **OBD-II 포트가 그 버스에 직결** 됩니다. 외부 장치가 어떤 ID 로도 메시지를 송신할 수 있고, 모든 ECU 가 그 메시지를 수신·처리합니다 — 발신자가 누군지 _구별할 방법이 프로토콜 내부에 없음_.
@@ -88,35 +99,26 @@ ECU 4 대가 동일한 wired-AND 버스를 공유하고, **OBD-II 포트가 그 
 
 가장 단순한 시나리오. 노드 **TX-ECU** 가 brake-status 메시지를 노드 **RX-ECU** 에게 SecOC 로 인증해서 전송합니다. CAN-FD 64 B payload 한 프레임.
 
-```
-   ┌── TX-ECU (브레이크) ──┐                        ┌── RX-ECU (Body) ──┐
-   │                        │                        │                    │
-   │  app: status=0x42      │                        │                    │
-   │       │                │                        │                    │
-   │       ▼ ① payload=8B   │                        │                    │
-   │   SecOC stack          │                        │                    │
-   │       │                │                        │                    │
-   │       ▼ ② FV++ (counter│                        │                    │
-   │              =0x000A)  │                        │                    │
-   │       │                │                        │                    │
-   │       ▼ ③ AES-CMAC req │                        │                    │
-   │   HSM ─────────┐       │                        │                    │
-   │   K_secoc      │       │                        │                    │
-   │       │  ④ MAC=        │                        │                    │
-   │       │     0xDEADBEEF │                        │                    │
-   │       ▼ (truncated 4B) │                        │                    │
-   │  [Data | MAC | FV] ────┼─── CAN-FD frame ──────▶│  ⑤ frame 수신       │
-   │   8B    4B    2B       │   (ID=0x201, BRS=1)    │       │             │
-   │                        │                        │       ▼ ⑥ FV check  │
-   │                        │                        │   prev=0x0009       │
-   │                        │                        │   recv=0x000A → OK  │
-   │                        │                        │       │             │
-   │                        │                        │       ▼ ⑦ MAC verify│
-   │                        │                        │   HSM ──── K_secoc  │
-   │                        │                        │       │             │
-   │                        │                        │       ▼ ⑧ deliver   │
-   │                        │                        │   app: status=0x42  │
-   └────────────────────────┘                        └────────────────────┘
+```mermaid
+sequenceDiagram
+    participant TXA as TX-app<br/>(브레이크)
+    participant TXS as TX-SecOC
+    participant TXH as TX-HSM<br/>K_secoc
+    participant BUS as CAN-FD<br/>(ID=0x201, BRS=1)
+    participant RXS as RX-SecOC
+    participant RXH as RX-HSM<br/>K_secoc
+    participant RXA as RX-app<br/>(Body)
+
+    TXA->>TXS: ① payload=8B<br/>status=0x42
+    TXS->>TXS: ② FV++ → 0x000A
+    TXS->>TXH: ③ AES-CMAC req<br/>(ID‖Data‖FV)
+    TXH-->>TXS: ④ MAC=0xDEADBEEF<br/>(truncated 4B)
+    TXS->>BUS: [Data 8 ‖ MAC 4 ‖ FV 2]
+    BUS->>RXS: ⑤ frame 수신
+    RXS->>RXS: ⑥ FV check<br/>prev=0x0009<br/>recv=0x000A → OK
+    RXS->>RXH: ⑦ MAC verify req
+    RXH-->>RXS: verify OK
+    RXS->>RXA: ⑧ deliver<br/>status=0x42
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -206,15 +208,22 @@ bit    A   B   C   bus     판정
 
 각 ECU 는 **TEC** (Transmit Error Counter), **REC** (Receive Error Counter) 두 카운터를 유지하고 세 상태를 오갑니다.
 
-```
-                 TEC/REC < 128         TEC/REC ≥ 128         TEC > 255
-[Error Active] ──────────────▶ [Error Passive] ──────────────▶ [Bus-Off]
-   │ 정상 동작                  │ 송신은 가능하나                │ 통신 완전 차단
-   │ Active Error Flag (6 dom)  │ Passive Error Flag (6 rec)    │ 128 × 11 rec
-   │ → 다른 노드 transmission   │ → 다른 노드 방해 안 함         │ 관찰 후 복귀
-   │   강제 abort               │                                │
-   │                            │                                │
-   └─ error +8 / success -1 ────┴────────────────────────────────┘
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> ErrorActive
+    ErrorActive: Error Active<br/>정상 동작<br/>Active Error Flag (6 dom)<br/>→ 다른 노드 transmission 강제 abort
+    ErrorPassive: Error Passive<br/>송신 가능<br/>Passive Error Flag (6 rec)<br/>→ 다른 노드 방해 안 함
+    BusOff: Bus-Off<br/>통신 완전 차단<br/>128 × 11 rec 관찰 후 복귀
+
+    ErrorActive --> ErrorPassive: TEC/REC ≥ 128
+    ErrorPassive --> BusOff: TEC > 255
+    ErrorPassive --> ErrorActive: TEC/REC < 128
+    BusOff --> ErrorActive: 복귀 시퀀스
+    note right of ErrorActive
+        error 시 +8 / success 시 −1
+        → 12.5% 만 넘어도 단조 증가
+    end note
 ```
 
 **핵심 비대칭**: error 시 +8, success 시 -1 → **에러 비율이 12.5 % 만 넘어도 카운터 단조 증가**. 이 비대칭이 Bus-Off attack 의 수학적 기반입니다.
@@ -293,35 +302,37 @@ CANsec = CAN-XL 의 Layer 2 보안
 
 ### 5.6 Bus-Off attack 시나리오 (dry-run)
 
+**공격 목표**: 브레이크 ECU(ID `0x101`) 을 Bus-Off 로 만들기
+
+**Step 1 — 타겟 프레임 식별**: 브레이크 ECU 가 ID `0x101` 로 주기적(20 ms) 송신함을 sniffing 으로 확인.
+
+**Step 2 — 동시 송신으로 비트 충돌 유발**:
+
+```mermaid
+sequenceDiagram
+    participant ATK as 공격자
+    participant BRK as 브레이크 ECU
+    participant BUS as CAN Bus
+
+    BRK->>BUS: ID 0x101 정상 송신 시작
+    ATK->>BUS: 같은 ID 0x101, 다른 data 송신
+    BUS-->>BRK: 데이터 필드에서 비트 충돌
+    BUS-->>ATK: Error Frame
+    BUS-->>BRK: Error Frame
+    Note over ATK,BRK: TEC: 양쪽 +8
 ```
-공격 목표: 브레이크 ECU(ID 0x101) 을 Bus-Off 로 만들기
 
-Step 1 — 타겟 프레임 식별
-  - 브레이크 ECU 가 ID 0x101 로 주기적(20 ms) 송신함을 sniffing 으로 확인
+**Step 3 — 비대칭 누적**:
 
-Step 2 — 동시 송신으로 비트 충돌 유발
-  [공격자]      [브레이크 ECU]     [CAN Bus]
-      │              │                │
-      │  ID 0x101 송신 시작 ──────▶   │  ← 정상 송신 시작
-      │              │                │
-      │  같은 ID, 다른 data 송신 ──▶  │  ← 데이터 필드에서 비트 충돌
-      │              │                │
-      │              │   ◀── Error Frame
-      │              │                │
-      │  TEC: +8     │   TEC: +8      │  ← 양쪽 다 카운터 증가
+- 공격자: 충돌 후 곧바로 정상 프레임 성공 송신 → TEC −1
+- 브레이크 ECU: 재시도 → 공격자가 또 충돌 → TEC +8
 
-Step 3 — 비대칭 누적
-  - 공격자: 충돌 후 곧바로 정상 프레임 성공 송신 → TEC −1
-  - 브레이크 ECU: 재시도 → 공격자가 또 충돌 → TEC +8
-  
-  반복 32 회 후:
-    공격자 TEC: ~32  (안정)
-    브레이크 ECU TEC: 256 → Bus-Off ✗
+반복 32 회 후:
 
-Step 4 — 결과
-  - 브레이크 ECU 가 CAN Bus 에서 격리
-  - 차량은 브레이크 상태 메시지를 수신할 수 없음 → 안전 임계 기능 상실
-```
+- 공격자 TEC: ~32 (안정)
+- 브레이크 ECU TEC: 256 → **Bus-Off**
+
+**Step 4 — 결과**: 브레이크 ECU 가 CAN Bus 에서 격리. 차량은 브레이크 상태 메시지를 수신할 수 없음 → 안전 임계 기능 상실.
 
 → CAN 자체에 이 공격에 대한 프로토콜 레벨 방어 **없음**. Gateway 의 Rate Limiting + IDS 의 error-frame burst 모니터링이 필수 보강.
 
@@ -359,38 +370,51 @@ Step 4 — 결과
 
 #### Tesla FSD 탈옥에서의 역할 (Module 03 미리보기)
 
-```
-[탈옥 동글] ──OBD-II──▶ [CAN Bus]
-     │
-     ├── GPS 좌표 위조 CAN 프레임 주입
-     ├── Region Code 프레임 변조
-     └── Feature Flag 프레임 위조
-          │
-          ▼
-     [FSD SoC 가 위조 프레임을 정상으로 수용]
-     → CAN 메시지 인증이 없으므로 구별 불가
+```mermaid
+flowchart LR
+    DONGLE["탈옥 동글"]
+    BUS(["CAN Bus"])
+    GPS["GPS 좌표 위조<br/>CAN 프레임 주입"]
+    REGION["Region Code<br/>프레임 변조"]
+    FLAG["Feature Flag<br/>프레임 위조"]
+    FSD["FSD SoC<br/>위조 프레임을 정상으로 수용<br/>(CAN 메시지 인증 부재)"]
+
+    DONGLE -- OBD-II --> BUS
+    BUS --> GPS
+    BUS --> REGION
+    BUS --> FLAG
+    GPS --> FSD
+    REGION --> FSD
+    FLAG --> FSD
+
+    classDef attacker stroke-width:2px,stroke-dasharray:6 3
+    class DONGLE attacker
 ```
 
 ### 5.9 구조적 취약점 요약 — 한 장
 
-```
-1980 년대 설계 가정: "버스에 연결된 노드는 모두 신뢰 가능"
-        │
-        ▼
-  ┌─────────────────────────────────────────┐
-  │  CAN 의 4 가지 구조적 결함                │
-  │                                         │
-  │  1. 무인증     : 발신자 검증 없음          │
-  │  2. 무암호화   : 평문 전송                │
-  │  3. 브로드캐스트: 전체 노드에 전파         │
-  │  4. 무상태     : 세션/시퀀스 관리 없음     │
-  └─────────────────────────────────────────┘
-        │
-        ▼
-  현대 차량에서의 결과:
-  - OBD-II 로 외부 장치가 CAN 에 접근
-  - 위조 메시지와 정상 메시지를 구별할 방법 없음
-  - GPS, 속도, 기능 플래그 등 모든 데이터 조작 가능
+```mermaid
+flowchart TB
+    ASSUME["1980 년대 설계 가정<br/>'버스에 연결된 노드는 모두 신뢰 가능'"]
+    FLAW1["1. 무인증<br/>발신자 검증 없음"]
+    FLAW2["2. 무암호화<br/>평문 전송"]
+    FLAW3["3. 브로드캐스트<br/>전체 노드에 전파"]
+    FLAW4["4. 무상태<br/>세션/시퀀스 관리 없음"]
+    R1["OBD-II 로 외부 장치가<br/>CAN 에 접근"]
+    R2["위조 메시지와 정상 메시지를<br/>구별할 방법 없음"]
+    R3["GPS / 속도 / 기능 플래그 등<br/>모든 데이터 조작 가능"]
+
+    ASSUME --> FLAW1
+    ASSUME --> FLAW2
+    ASSUME --> FLAW3
+    ASSUME --> FLAW4
+    FLAW1 --> R2
+    FLAW2 --> R3
+    FLAW3 --> R1
+    FLAW4 --> R2
+
+    classDef assume stroke-dasharray:4 4,stroke-width:2px
+    class ASSUME assume
 ```
 
 ### 5.10 Automotive Ethernet 과의 비교

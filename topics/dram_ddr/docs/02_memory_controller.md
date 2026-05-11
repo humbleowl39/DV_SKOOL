@@ -57,28 +57,37 @@ Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지
 
 ### 한 장 그림 — MC 가 만드는 변환
 
-```
-   ─── input side (host) ──────         ─── output side (DRAM) ───
-                                                                  
-   AXI master 들                          DRAM device(s)            
-     CPU  ─▶ ─┐                           ▲                       
-     GPU  ─▶ ─┤                           │ DDR phy / CA bus       
-     DMA  ─▶ ─┤                           │                        
-     Disp ─▶ ─┤                           │                        
-     ISP  ─▶ ─┤                           │                        
-              ▼                           │                        
-        +─────────────────────────────────────+                    
-        │             Memory Controller       │                    
-        │                                     │                    
-        │   1. AXI request 수집 (RQ)          │                    
-        │   2. 주소 → R/BG/B/Row/Col 디코드   │                    
-        │   3. Row buffer state 추적          │                    
-        │   4. timing constraint 체크         │                    
-        │   5. FR-FCFS 등 정책으로 재배치    │                    
-        │   6. Refresh 끼워넣기              │                    
-        │   7. Write batching / R/W turn     │                    
-        │   8. ACT/RD/WR/PRE/REF 발행        │                    
-        +─────────────────────────────────────+                    
+```mermaid
+flowchart LR
+    subgraph HOST["input side (host)"]
+        direction TB
+        CPU["CPU"]
+        GPU["GPU"]
+        DMA["DMA"]
+        DISP["Display"]
+        ISP["ISP"]
+    end
+    subgraph MC["Memory Controller"]
+        direction TB
+        MC1["1. AXI request 수집 (RQ)"]
+        MC2["2. 주소 → R/BG/B/Row/Col 디코드"]
+        MC3["3. Row buffer state 추적"]
+        MC4["4. timing constraint 체크"]
+        MC5["5. FR-FCFS 등 정책으로 재배치"]
+        MC6["6. Refresh 끼워넣기"]
+        MC7["7. Write batching / R/W turn"]
+        MC8["8. ACT/RD/WR/PRE/REF 발행"]
+        MC1 --> MC2 --> MC3 --> MC4 --> MC5 --> MC6 --> MC7 --> MC8
+    end
+    subgraph DRAM["output side (DRAM)"]
+        DEV["DRAM device(s)"]
+    end
+    CPU --> MC1
+    GPU --> MC1
+    DMA --> MC1
+    DISP --> MC1
+    ISP --> MC1
+    MC8 -- "DDR phy / CA bus" --> DEV
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -198,46 +207,23 @@ function command_t mc_pick_next() {
 
 ### 5.1 MC 블록 다이어그램
 
-```
-+------------------------------------------------------------------+
-|                    Memory Controller                              |
-|                                                                   |
-|  AXI/ACE Interface                                                |
-|  +------------------------------------------------------------+  |
-|  | Request Queue (RQ)                                          |  |
-|  |  - AXI Read/Write 요청 수신                                 |  |
-|  |  - 주소 → Rank/BG/Bank/Row/Col 디코딩                      |  |
-|  +------------------------------------------------------------+  |
-|           |                                                       |
-|  +--------+-------+                                               |
-|  | Address Mapper  |  주소 매핑 정책:                             |
-|  | (Interleaving)  |  Row:Bank:Col / Row:BG:Bank:Col 등          |
-|  +--------+-------+                                               |
-|           |                                                       |
-|  +--------+--------------------------------------------+          |
-|  | Command Scheduler                                    |          |
-|  |                                                      |          |
-|  |  - Row Buffer 상태 관리 (Open/Closed per Bank)       |          |
-|  |  - 타이밍 제약 검사 (tRCD, tRP, tCCD, tRAS, ...)     |          |
-|  |  - 스케줄링 정책 (FR-FCFS, Open/Close Page, ...)     |          |
-|  |  - Bank-level Parallelism 활용                       |          |
-|  +--------+--------------------------------------------+          |
-|           |                                                       |
-|  +--------+-------+    +------------------+                       |
-|  | Refresh Engine  |    | Power Manager    |                       |
-|  |                 |    |                  |                       |
-|  | - Periodic REF  |    | - CKE 제어      |                       |
-|  | - Postpone/Pull |    | - Self-Refresh   |                       |
-|  | - Per-bank (DDR5)|   | - Power-Down     |                       |
-|  +--------+-------+    +------------------+                       |
-|           |                                                       |
-|  +--------+--------------------------------------------+          |
-|  | PHY Interface                                        |          |
-|  |  - CA (Command/Address) Bus 구동                     |          |
-|  |  - DQ/DQS 데이터 버스 제어                           |          |
-|  |  - Training 시퀀스 제어                              |          |
-|  +------------------------------------------------------+          |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    AXI["AXI/ACE Interface"]
+    subgraph MC["Memory Controller"]
+        direction TB
+        RQ["Request Queue (RQ)<br/>· AXI Read/Write 요청 수신<br/>· 주소 → Rank/BG/Bank/Row/Col 디코딩"]
+        ADM["Address Mapper (Interleaving)<br/>Row:Bank:Col / Row:BG:Bank:Col 등"]
+        CS["Command Scheduler<br/>· Row Buffer 상태 관리 (Open/Closed per Bank)<br/>· 타이밍 제약 검사 (tRCD, tRP, tCCD, tRAS, ...)<br/>· 스케줄링 정책 (FR-FCFS, Open/Close Page, ...)<br/>· Bank-level Parallelism 활용"]
+        REF["Refresh Engine<br/>· Periodic REF<br/>· Postpone/Pull<br/>· Per-bank (DDR5)"]
+        PM["Power Manager<br/>· CKE 제어<br/>· Self-Refresh<br/>· Power-Down"]
+        PHY["PHY Interface<br/>· CA Bus 구동<br/>· DQ/DQS 데이터 버스 제어<br/>· Training 시퀀스 제어"]
+        RQ --> ADM --> CS
+        CS --> REF
+        CS --> PM
+        CS --> PHY
+    end
+    AXI --> RQ
 ```
 
 ### 5.2 Command Scheduler — 정책별 비교
@@ -474,22 +460,19 @@ DDR5 초기화 차이:
 
 ### 5.10 Power Management — 전력 상태 머신
 
+```mermaid
+stateDiagram-v2
+    [*] --> Active
+    Active --> PowerDown: CKE LOW
+    PowerDown --> Active: CKE HIGH
+    Active --> Idle: PRE all
+    Idle --> SelfRefresh: CKE LOW + SRE
+    SelfRefresh --> Idle: SRX
+    note right of Active: 정상 동작
+    note right of PowerDown: Power-Down (PD)
+    note left of Idle: 모든 Bank precharged
+    note left of SelfRefresh: Self-Refresh (SR)
 ```
-DRAM의 전력 상태:
-
-  +----------+    CKE LOW    +-----------+
-  |  Active  | -----------> | Power-Down |
-  | (정상)   | <----------- |  (PD)      |
-  +----+-----+    CKE HIGH   +-----------+
-       |                           |
-       |    Self-Refresh 진입      |
-       |    (CKE LOW + SRE)        |
-       v                           v
-  +----------+              +-----------+
-  |   Idle   |              |   Self-   |
-  | (Prechar |              |  Refresh  |
-  |  ged)    |              | (SR)      |
-  +----------+              +-----------+
 
 각 상태 설명:
 

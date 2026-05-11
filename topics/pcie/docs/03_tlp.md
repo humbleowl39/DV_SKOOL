@@ -61,25 +61,12 @@
 
 ### 한 장 그림 — TLP 포맷과 Switch 의 라우팅
 
-```
-   sender 가 만든 TLP
-   ┌────────────────────┬───────────────────┬────────────┐
-   │ Header (12 / 16 B) │ Payload (0..4096) │ ECRC (opt) │
-   └────────┬───────────┴───────────────────┴────────────┘
-            │ Fmt+Type+Length+Address+Tag+RequesterID...
-            │
-   ┌────────▼─────────────────────────────────────────────┐
-   │                Switch (PCIe routing)                  │
-   │   Address routing : Header.Address  → port 결정       │
-   │   ID routing      : Header.DestID   → port 결정       │
-   │   Implicit        : Type[2:0] (Msg) → 정의된 경로     │
-   │                                                       │
-   │   ── ECRC 그대로 보존 (end-to-end) ⭐                  │
-   │   ── LCRC 는 매 hop 새로 계산 (Module 02, 04)          │
-   └────────┬─────────────────────────────────────────────┘
-            │
-            ▼
-   receiver 가 받는 TLP (Header 가 그대로, Payload 가 그대로)
+```mermaid
+flowchart TB
+    TX["Sender TLP<br/>[ Header (12/16 B) | Payload (0..4096) | ECRC (opt) ]<br/>Fmt + Type + Length + Address + Tag + RequesterID …"]
+    SW["Switch (PCIe routing)<br/>· Address routing : Header.Address → port<br/>· ID routing : Header.DestID → port<br/>· Implicit : Type[2:0] (Msg) → 정의된 경로<br/>━━━<br/>ECRC 그대로 보존 (end-to-end)<br/>LCRC 는 매 hop 새로 계산 (Module 02, 04)"]
+    RX["Receiver TLP<br/>(Header / Payload 그대로)"]
+    TX --> SW --> RX
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -100,28 +87,21 @@
 
 ### 단계별 추적
 
-```
-   Requester (RC, BDF=00:00.0)             Switch                  Completer (EP, BDF=01:00.0)
-   ────────────────────────────            ──────                  ──────────────────────────
-   ① MRd 4DW header
-       Fmt   = 00 (3DW, no data) — 실제로는 4DW for 64-bit addr
-       Type  = 00000 (MRd)
-       Length= 128 DW (= 512 byte)
-       TC    = 0
-       ReqID = 00:00.0
-       Tag   = 0x05
-       Addr  = 0x80001000
-       (Cat = NP)                           ──── Address routing ────▶
-                                            (Address 가 EP 의 BAR 범위)
-                                                                        ② MRd 수신
-                                                                        ③ memory read 실행
-   ◀──── ④ CplD #1 (Tag=5, ByteCount=512, LowAddr=0x00, payload 128B)
-                                            ──── ID routing (DestID=ReqID) ────▶
-   ◀──── ⑤ CplD #2 (Tag=5, ByteCount=384, LowAddr=0x80, payload 128B)
-   ◀──── ⑥ CplD #3 (Tag=5, ByteCount=256, LowAddr=0x100, payload 128B)
-   ◀──── ⑦ CplD #4 (Tag=5, ByteCount=128, LowAddr=0x180, payload 128B)
-                                                                        ⑧ 모든 split 송신 완료
-   ⑨ 4 packet 모두 수신 + Tag=5 매칭 → read 완료
+```mermaid
+sequenceDiagram
+    participant RC as Requester (RC, 00:00.0)
+    participant SW as Switch
+    participant EP as Completer (EP, 01:00.0)
+    RC->>SW: ① MRd 4DW (Type=00000, Length=128 DW=512 B,<br/>TC=0, ReqID=00:00.0, Tag=0x05,<br/>Addr=0x80001000, Cat=NP)
+    SW->>EP: Address routing<br/>(Addr 가 EP 의 BAR 범위)
+    EP->>EP: ② MRd 수신 → ③ memory read 실행
+    EP->>SW: ④ CplD #1 (Tag=5, ByteCount=512, LowAddr=0x00, payload 128 B)
+    SW->>RC: ID routing (DestID=ReqID)
+    EP->>RC: ⑤ CplD #2 (Tag=5, ByteCount=384, LowAddr=0x80, 128 B)
+    EP->>RC: ⑥ CplD #3 (Tag=5, ByteCount=256, LowAddr=0x100, 128 B)
+    EP->>RC: ⑦ CplD #4 (Tag=5, ByteCount=128, LowAddr=0x180, 128 B)
+    Note over EP: ⑧ 모든 split 송신 완료
+    Note over RC: ⑨ 4 packet 모두 수신 + Tag=5 매칭 → read 완료
 ```
 
 ### 단계별 의미
@@ -314,43 +294,34 @@ void send_cpld(uint8_t tag, uint16_t total_remaining, uint8_t low_addr_7b,
 
 ### 5.4 Routing 상세 — Type 0 vs Type 1 Configuration TLP
 
+```mermaid
+flowchart TB
+    RC["RC"]
+    SW["Switch (Bus N)"]
+    EP["EP (Bus N+1, Dev 0)"]
+    RC -- "Bus N" --> SW
+    SW -- "Bus N+1" --> EP
 ```
-   ┌── PCIe ──────────────────────────────────────────┐
-   │                                                    │
-   │   RC                                               │
-   │   │                                                │
-   │   ▼ (Bus N)                                        │
-   │   Switch (Bus N)                                   │
-   │   │                                                │
-   │   ▼ (Bus N+1)                                      │
-   │   EP (Bus N+1, Dev 0)                              │
-   │                                                    │
-   └────────────────────────────────────────────────────┘
 
-   RC → Switch 자기 자신 config 접근  : CfgRd0  (Type 0, target = same bus)
-   RC → Switch 의 secondary 측 통과   : CfgRd1  (Type 1, switch 가 forwarding)
-                                       Switch 가 받은 후 CfgRd0 로 변환해 EP 에 전달
-```
+- **RC → Switch 자기 자신 config 접근**: `CfgRd0` (Type 0, target = same bus).
+- **RC → Switch 의 secondary 측 통과**: `CfgRd1` (Type 1) — switch 가 받아 `CfgRd0` 로 변환해 EP 에 전달.
 
 → **Type 1 → 0 변환은 PCI-PCI Bridge / Switch 의 책임**.
 
 ### 5.5 Memory Read 흐름 (Tag matching)
 
-```
-   Requester EP                           Completer (RC or other EP)
-   ────────────                           ───────────────────────────
-   MRd Tag=5, Length=16, Addr=0x1000  ──▶
-                                          (memory read 수행)
-                                          512 byte / 64 byte payload size
-                                          → 8 packet 으로 split 가능
-
-   ◀── CplD Tag=5, ByteCount=512, LowAddr=0x00, payload 64B
-   ◀── CplD Tag=5, ByteCount=448, LowAddr=0x40, payload 64B
-   ◀── CplD Tag=5, ByteCount=384, LowAddr=0x80, payload 64B
-   …
-   ◀── CplD Tag=5, ByteCount= 64, LowAddr=0x1C0, payload 64B
-
-   Requester 가 모든 Completion 받으면 read 완료.
+```mermaid
+sequenceDiagram
+    participant REQ as Requester EP
+    participant CMP as Completer (RC 또는 다른 EP)
+    REQ->>CMP: MRd Tag=5, Length=16, Addr=0x1000
+    Note over CMP: memory read 수행<br/>512 byte / 64 byte payload size<br/>→ 8 packet 으로 split 가능
+    CMP-->>REQ: CplD Tag=5, ByteCount=512, LowAddr=0x00, 64 B
+    CMP-->>REQ: CplD Tag=5, ByteCount=448, LowAddr=0x40, 64 B
+    CMP-->>REQ: CplD Tag=5, ByteCount=384, LowAddr=0x80, 64 B
+    Note over REQ,CMP: …
+    CMP-->>REQ: CplD Tag=5, ByteCount=64, LowAddr=0x1C0, 64 B
+    Note over REQ: 모든 Completion 받으면 read 완료
 ```
 
 | 필드 | 의미 |

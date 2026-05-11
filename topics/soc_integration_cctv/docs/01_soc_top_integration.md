@@ -56,22 +56,37 @@
 
 ### 한 장 그림 — IP 검증 vs Top 검증의 결함 영역
 
-```
-   IP-level DV 가 catch 하는 영역                Top-level DV 가 catch 하는 영역
-   ───────────────────────────────              ─────────────────────────────────
-        ┌─ IP_A ─┐                                ┌─ IP_A ─┐ ⇄ ┌─ IP_B ─┐ ⇄ ┌─ IP_C ─┐
-        │ FSM    │                                │        │   │        │   │        │
-        │ FIFO   │                                └───┬────┘   └───┬────┘   └───┬────┘
-        │ Reg    │                                    │            │            │
-        │ Proto  │                                  ╔═╧════════════╧════════════╧═╗
-        └────────┘                                  ║  Bus Fabric (AXI/AHB/APB)   ║
-                                                    ╚═╤════════════╤════════════╤═╝
-   - 단일 IP 기능                                    │            │            │
-   - Register / FIFO / FSM                          ⚡ ───────────⚡            │
-   - Protocol compliance                            (irq → GIC SPI[?])         │
-                                                                          🔥 Power off
-   ●  IP 단독 TB 만으로 충분                         ●  연결 / 라우팅 / 도메인
-                                                       경계는 _Top 에만 존재_
+```mermaid
+flowchart LR
+    subgraph IPDV["IP-level DV 가 catch 하는 영역"]
+        direction TB
+        IPA["IP_A<br/>FSM · FIFO · Reg · Protocol"]
+        IPNOTE["단일 IP 기능<br/>Register / FIFO / FSM<br/>Protocol compliance<br/>→ IP 단독 TB 로 충분"]
+        IPA --- IPNOTE
+    end
+    subgraph TOPDV["Top-level DV 가 catch 하는 영역"]
+        direction TB
+        TA["IP_A"]
+        TB["IP_B"]
+        TC["IP_C"]
+        FAB["Bus Fabric<br/>(AXI / AHB / APB)"]
+        IRQ["IRQ → GIC SPI[?]<br/>(라우팅)"]
+        PWR["Power off 경계<br/>(isolation)"]
+        TA <--> TB
+        TB <--> TC
+        TA --- FAB
+        TB --- FAB
+        TC --- FAB
+        TA -. irq .-> IRQ
+        FAB -. domain .-> PWR
+    end
+
+    classDef ipnote stroke:#1a73e8,stroke-width:2px
+    classDef topfab stroke:#c0392b,stroke-width:3px
+    classDef topcost stroke:#b8860b,stroke-width:2px,stroke-dasharray:4 2
+    class IPNOTE ipnote
+    class FAB topfab
+    class IRQ,PWR topcost
 ```
 
 ### 왜 두 단계가 모두 필요한가 — Design rationale
@@ -90,28 +105,42 @@
 
 CCTV / 영상 SoC 의 가장 단순한 시나리오. **CMOS image sensor** 가 한 장의 **1920 × 1080 RAW10** frame 을 찍어 → ISP 가 RGB 로 변환 → Video codec (H.264 encoder) 이 압축 → DDR 에 bitstream 적재 → Display IP 가 preview 로 다시 읽어 LCD 로 출력. 이 한 frame 의 여행에서 **IP 간 연결 / 라우팅 / 도메인 경계가 어떻게 동시에 검증되는지** 따라가 봅니다.
 
-```
-   ┌───────────┐  MIPI CSI-2   ┌─────┐  AXI-S    ┌────────┐  AXI-MM   ╔═══════╗
-   │ CMOS      │ ───────────▶ │ ISP │ ────────▶ │ H.264  │ ────────▶ ║       ║
-   │ Sensor    │  pixel bus    │     │  RGB888   │ Encoder│  bitstm   ║  DDR  ║
-   └────┬──────┘               └──┬──┘           └────┬───┘           ║  via  ║
-        │ ① VSYNC irq              │ ② frame_done irq │ ③ bs_ready    ║  MC   ║
-        ▼                          ▼                  ▼               ╚═══╤═══╝
-   ┌───────────────────  GIC (SPI) ─────────────────────────┐               │
-   │   spi[12]            spi[13]               spi[14]      │               │
-   └───┬─────────────────────────────────────────┬──────────┘               │
-       │ ④ to CPU0                                │                          │
-       ▼                                          │                  ⑤ AXI-MM read
-   ┌────────┐                                     │              ┌───────────┴─┐
-   │ CPU    │ ──── reg-config (APB) ─────────────▶│              │ Display IP  │
-   │ (FW)   │ ◀─── ISR ack ────                                  └──────┬──────┘
-   └────────┘                                                            │ ⑥ MIPI DSI
-                                                                         ▼
-                                                                      LCD panel
-   PD_VIDEO  ━━━━━━━━━━━━━━━━━━━━━━ ON ━━━━━━━━━━━━━━━━━━━━━ (ISP+codec+display)
-   PD_CORE   ━━━━━━━━━━━━━━━━━━━━━━ ON ━━━━━━━━━━━━━━━━━━━━━ (CPU+GIC+MC)
-   PIXCLK    ──── 297 MHz (sensor) ──→ ISP
-   AXICLK    ──── 533 MHz (PD_CORE) ──→ codec, display, MC
+```mermaid
+flowchart LR
+    SENSOR["CMOS Sensor"]
+    ISP["ISP"]
+    CODEC["H.264 Encoder"]
+    DDR[("DDR · MC")]
+    DISP["Display IP"]
+    LCD["LCD panel"]
+    GIC["GIC (SPI)<br/>spi[12] · spi[13] · spi[14]"]
+    CPU["CPU (FW)"]
+
+    SENSOR -- "MIPI CSI-2<br/>pixel bus" --> ISP
+    ISP -- "AXI-S<br/>RGB888" --> CODEC
+    CODEC -- "AXI-MM<br/>bitstream" --> DDR
+    DDR -- "⑤ AXI-MM read" --> DISP
+    DISP -- "⑥ MIPI DSI" --> LCD
+
+    SENSOR -. "① VSYNC irq" .-> GIC
+    ISP -. "② frame_done irq" .-> GIC
+    CODEC -. "③ bs_ready" .-> GIC
+    GIC -- "④ to CPU0" --> CPU
+    CPU -- "reg-config (APB)" --> ISP
+    CPU -. "ISR ack" .-> GIC
+
+    subgraph PWR_CLK["Power / Clock 도메인"]
+        direction TB
+        PD_VIDEO["PD_VIDEO ON · ISP + codec + display"]
+        PD_CORE["PD_CORE ON · CPU + GIC + MC"]
+        PIXCLK["PIXCLK 297 MHz → sensor, ISP"]
+        AXICLK["AXICLK 533 MHz → codec, display, MC"]
+    end
+
+    classDef mem stroke:#1a73e8,stroke-width:3px
+    classDef ctrl stroke:#c5221f,stroke-width:2px
+    class DDR mem
+    class GIC,CPU ctrl
 ```
 
 ### 단계별 추적
@@ -146,19 +175,25 @@ void isp_isr(void) {
 
 §3 의 frame path 시나리오에서 등장한 _연결 / 클럭 / 리셋 / 인터럽트 / 메모리맵 / 전원_ 을 일반화하면 SoC Top 검증의 **5 축** 이 됩니다.
 
-```
-                       ┌─────────────────── SoC Top 결함 ───────────────────┐
-                       │                                                     │
-              ┌────────┴────────┐                              ┌─────────────┴─────────────┐
-              │                 │                              │                           │
-        Connectivity       Memory Map                     Clock / Reset              Interrupt Routing
-        (signal mis-route) (decoder mismatch)             (CDC, deassert order)      (wrong SPI / type)
-                                                                                            │
-                                                                                  ┌─────────┴────┐
-                                                                                  │ Power Domain │
-                                                                                  │ (isolation,  │
-                                                                                  │  sequence)   │
-                                                                                  └──────────────┘
+```mermaid
+flowchart TB
+    ROOT["SoC Top 결함"]
+    CONN["Connectivity<br/>(signal mis-route)"]
+    MMAP["Memory Map<br/>(decoder mismatch)"]
+    CR["Clock / Reset<br/>(CDC, deassert order)"]
+    IRQ["Interrupt Routing<br/>(wrong SPI / type)"]
+    PWR["Power Domain<br/>(isolation, sequence)"]
+
+    ROOT --> CONN
+    ROOT --> MMAP
+    ROOT --> CR
+    ROOT --> IRQ
+    IRQ --> PWR
+
+    classDef root stroke:#1a73e8,stroke-width:3px
+    classDef axis stroke:#5f6368,stroke-width:2px
+    class ROOT root
+    class CONN,MMAP,CR,IRQ,PWR axis
 ```
 
 | 축 | 결함 형태 | IP 검증으로 못 잡는 이유 |
@@ -312,38 +347,51 @@ Reset 순서 예시:
 
 ### 5.3 SoC Top TB 아키텍처 (이력서 연결)
 
+```mermaid
+flowchart TB
+    subgraph EXT["외부 모델 (자극원)"]
+        direction LR
+        CPUM["CPU Model<br/>(C-model / Processor VIP)"]
+        MEMM["External Memory<br/>(DRAM BFM)"]
+        IFM["External IF Model<br/>(UFS / Ethernet)"]
+    end
+
+    subgraph DUT["DUT — Full SoC RTL"]
+        direction LR
+        D_CPU["CPU"]
+        D_MC["MC"]
+        D_UFS["UFS"]
+        D_DCMAC["DCMAC"]
+        D_MMU["MMU"]
+        D_OTH["..."]
+    end
+
+    subgraph CHK["Checker / Monitor Layer"]
+        direction TB
+        BUSCHK["Bus Protocol Checker<br/>(AXI / AHB / APB)"]
+        IRQMON["Interrupt Monitor"]
+        MMAPCHK["Memory Map Checker"]
+        PWRMON["Power State Monitor"]
+    end
+
+    CPUM --> DUT
+    MEMM --> DUT
+    IFM --> DUT
+    DUT --> CHK
+
+    classDef ext stroke:#1a73e8,stroke-width:2px
+    classDef dut stroke:#137333,stroke-width:2px
+    classDef chk stroke:#b8860b,stroke-width:2px
+    class CPUM,MEMM,IFM ext
+    class D_CPU,D_MC,D_UFS,D_DCMAC,D_MMU,D_OTH dut
+    class BUSCHK,IRQMON,MMAPCHK,PWRMON chk
 ```
-+------------------------------------------------------------------+
-|                    SoC Top-Level TB                                |
-|                                                                   |
-|  +------------------+  +------------------+  +------------------+ |
-|  | CPU Model        |  | External Memory  |  | External IF      | |
-|  | (C-model or      |  | Model            |  | Model            | |
-|  |  Processor VIP)  |  | (DRAM BFM)       |  | (UFS/Ethernet)   | |
-|  +--------+---------+  +--------+---------+  +--------+---------+ |
-|           |                      |                      |         |
-|           v                      v                      v         |
-|  +------------------------------------------------------------+  |
-|  |                DUT (Full SoC RTL)                           |  |
-|  |  +------+ +-----+ +------+ +-------+ +------+ +------+    |  |
-|  |  | CPU  | | MC  | | UFS  | |DCMAC  | | MMU  | | ...  |    |  |
-|  |  +------+ +-----+ +------+ +-------+ +------+ +------+    |  |
-|  +------------------------------------------------------------+  |
-|                                                                   |
-|  +------------------------------------------------------------+  |
-|  | Checker / Monitor Layer                                     |  |
-|  |  - Bus Protocol Checker (AXI/AHB/APB)                      |  |
-|  |  - Interrupt Monitor                                        |  |
-|  |  - Memory Map Checker                                       |  |
-|  |  - Power State Monitor                                      |  |
-|  +------------------------------------------------------------+  |
-+------------------------------------------------------------------+
 
 특징:
-  - CPU Model이 FW(BootROM, BL2 등)를 실행 → 실제 부팅 시뮬레이션
-  - 또는 AXI Master VIP으로 레지스터 접근 시나리오 실행
-  - 외부 메모리/디바이스는 BFM(Bus Functional Model)으로 대체
-```
+
+- CPU Model이 FW(BootROM, BL2 등)를 실행 → 실제 부팅 시뮬레이션
+- 또는 AXI Master VIP으로 레지스터 접근 시나리오 실행
+- 외부 메모리/디바이스는 BFM(Bus Functional Model)으로 대체
 
 ### 5.4 코드 예시 — Connectivity 검증 SVA
 

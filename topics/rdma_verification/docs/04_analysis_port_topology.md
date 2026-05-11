@@ -57,24 +57,44 @@ RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/
 
 ### 한 장 그림 — 5 AP + derived AP
 
-```
-   ┌─────────── vrdma_driver (방송국) ──────────┐
-   │  5 채널을 항상 broadcast                    │
-   │                                             │
-   │  ① issued_wqe_ap     ─────▶ *_handler ───▶ 1side / 2side / imm / c2h_tracker
-   │                                             │
-   │  ② completed_wqe_ap ─────▶ data_scoreboard │   (단, ErrQP 는 차단 ⭐)
-   │                                             │
-   │  ③ cqe_ap           ─────▶ 1side / 2side / imm
-   │                                             │
-   │  ④ qp_reg_ap        ─────▶ 1side / 2side / imm / c2h_tracker / scoreboard
-   │                                             │
-   │  ⑤ mr_reg_ap        ─────▶ c2h_tracker / scoreboard
-   └─────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph DRV["vrdma_driver (방송국) — 5 채널 broadcast"]
+        direction TB
+        AP1["issued_wqe_ap"]
+        AP2["completed_wqe_ap<br/>ErrQP 차단"]
+        AP3["cqe_ap"]
+        AP4["qp_reg_ap"]
+        AP5["mr_reg_ap"]
+    end
+    subgraph CQH["vrdma_cq_handler (derived)"]
+        APD["cqe_validation_cqe_ap"]
+    end
 
-   ┌─────── vrdma_cq_handler (derived 방송국) ──┐
-   │  cqe_validation_cqe_ap → cqe_validation_checker, cqe_cov_collector
-   └─────────────────────────────────────────────┘
+    HND["*_handler"]
+    C123["1side / 2side / imm"]
+    CT["c2h_tracker"]
+    SB["data_scoreboard"]
+    CV["cqe_validation_checker"]
+    CC["cqe_cov_collector"]
+
+    AP1 --> HND
+    HND --> C123
+    HND --> CT
+    AP2 --> SB
+    AP3 --> C123
+    AP4 --> C123
+    AP4 --> CT
+    AP4 --> SB
+    AP5 --> CT
+    AP5 --> SB
+    APD --> CV
+    APD --> CC
+
+    classDef ap stroke:#1a73e8,stroke-width:2px
+    classDef gate stroke:#c0392b,stroke-width:3px
+    class AP1,AP3,AP4,AP5,APD ap
+    class AP2 gate
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -93,37 +113,42 @@ RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/
 
 `RDMAWrite` 한 번이 발행될 때 5 AP 의 어느 채널이 어느 시점에 어디로 가는지.
 
-```
-   t = T0       │  driver.qp_reg_ap.write(qp_obj)         (post_configure 의 init_seq 시점)
-                │      └▶ 1side_compare 가 [node][qp] 키 미리 생성
-                │      └▶ c2h_tracker 가 m_qp_tracker[node][qp] 슬롯 준비
-                │
-   t = T1       │  driver.mr_reg_ap.write(mr_obj)         (init_seq 시점)
-                │      └▶ c2h_tracker 가 expected PA 리스트 사전 준비
-                │      └▶ data_scoreboard 가 lkey/rkey lookup 테이블 갱신
-                │
-   t = T2       │  driver.RDMAWrite cmd 발행 후
-                │  driver.issued_wqe_ap.write(write_cmd)
-                │      └▶ write_handler (stateless) → 1side_compare.write_queue 에 enqueue
-                │      └▶ write_handler → c2h_tracker.write_pa_queue 에 expected PA enqueue
-                │
-   t = T3       │  DUT 가 패킷 송신, 상대측 C2H DMA → host mem write
-                │  c2h_tracker 가 C2H 매칭 (M10)
-                │
-   t = T4       │  CQE 도착, cq_handler 가 decode
-                │  cq_handler.cqe_validation_cqe_ap.write(decoded_cqe)
-                │      └▶ cqe_validation_checker 가 cqe 필드 검증
-                │      └▶ cqe_cov_collector 가 coverage 샘플
-                │
-   t = T5       │  driver.cqe_ap.write(cqe)
-                │      └▶ 1side_compare 가 cqe 와 outstanding write_cmd 매칭
-                │
-   t = T6       │  driver 가 outstanding 정리
-                │  if(!t_qp.isErrQP())                     ⭐ ErrQP 게이트
-                │    driver.completed_wqe_ap.write(write_cmd)
-                │      └▶ data_scoreboard 가 정상 완료로 카운트
-                │  else
-                │    skip — scoreboard 검증 대상에서 제외
+```mermaid
+sequenceDiagram
+    autonumber
+    participant DRV as driver
+    participant CQH as cq_handler
+    participant C1 as 1side_compare
+    participant CT as c2h_tracker
+    participant SB as data_scoreboard
+    participant CV as cqe_validation_checker
+
+    Note over DRV: T0 — init_seq 시점
+    DRV->>C1: qp_reg_ap.write(qp_obj)<br/>[node][qp] 키 생성
+    DRV->>CT: qp_reg_ap → m_qp_tracker 슬롯 준비
+
+    Note over DRV: T1 — init_seq 시점
+    DRV->>CT: mr_reg_ap.write(mr_obj)<br/>expected PA 사전 준비
+    DRV->>SB: mr_reg_ap → lkey/rkey 테이블 갱신
+
+    Note over DRV: T2 — verb 발행
+    DRV->>C1: issued_wqe_ap → write_handler<br/>→ 1side_compare.write_queue
+    DRV->>CT: issued_wqe_ap → write_handler<br/>→ c2h_tracker.write_pa_queue
+
+    Note over CT: T3 — DUT 패킷 송신<br/>C2H DMA 매칭 (M10)
+
+    Note over CQH: T4 — CQE 도착
+    CQH->>CV: cqe_validation_cqe_ap<br/>(decoded CQE)
+
+    Note over DRV: T5 — cqe broadcast
+    DRV->>C1: cqe_ap.write(cqe)<br/>cmd 매칭
+
+    Note over DRV: T6 — outstanding 정리<br/>ErrQP 게이트
+    alt !isErrQP()
+        DRV->>SB: completed_wqe_ap.write<br/>정상 완료 카운트
+    else isErrQP()
+        DRV-->>SB: skip — 검증 제외
+    end
 ```
 
 ### 단계별 의미

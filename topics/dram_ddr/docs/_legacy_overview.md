@@ -65,37 +65,15 @@
 
 ## 컨셉 맵
 
-```
-      +------------------+
-      | SoC (CPU/GPU/DMA)|
-      +--------+---------+
-               | AXI/ACE
-               v
-      +--------+---------+
-      | Memory Controller|
-      | (MC)             |
-      |                  |
-      | - Cmd Scheduler  |
-      | - Bank Mgmt      |
-      | - Refresh         |
-      | - Training       |
-      +--------+---------+
-               | PHY Interface
-               v
-      +--------+---------+
-      | Memory Interface |
-      | (MI / PHY)       |
-      |                  |
-      | - DQ/DQS Driver  |
-      | - Timing Calib   |
-      | - ZQ Calibration |
-      +--------+---------+
-               | DDR4/5 Bus
-               v
-      +--------+---------+
-      | DRAM Device      |
-      | (DIMM/Package)   |
-      +------------------+
+```mermaid
+flowchart TB
+    SOC["SoC (CPU/GPU/DMA)"]
+    MC["Memory Controller (MC)<br/>· Cmd Scheduler<br/>· Bank Mgmt<br/>· Refresh<br/>· Training"]
+    MI["Memory Interface (MI / PHY)<br/>· DQ/DQS Driver<br/>· Timing Calib<br/>· ZQ Calibration"]
+    DRAM["DRAM Device<br/>(DIMM/Package)"]
+    SOC -- "AXI/ACE" --> MC
+    MC -- "PHY Interface" --> MI
+    MI -- "DDR4/5 Bus" --> DRAM
 ```
 
 ## 학습 단위 (Units)

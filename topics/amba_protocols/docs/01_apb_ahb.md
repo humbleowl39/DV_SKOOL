@@ -199,17 +199,28 @@ assign PENABLE = (state == S_ACCESS);
 
 ### 4.4 AHB-to-APB Bridge — 두 패턴의 접점
 
-```
-   CPU ── AHB(pipeline) ──▶ [AHB-APB Bridge] ──▶ APB(2-phase) ──▶ slave
+```mermaid
+flowchart LR
+    CPU["CPU"]
+    BR["AHB-APB Bridge"]
+    SL["APB slave"]
+    CPU -- "AHB (pipeline)" --> BR
+    BR -- "APB (2-phase)" --> SL
 
-   Bridge 의 책임:
-     1) AHB Address phase 에서 PADDR / PWRITE 캡처
-     2) AHB Data phase 에서 PWDATA 캡처
-     3) APB SETUP/ACCESS 를 시퀀싱 (2 cycle 추가)
-     4) APB PREADY 가 1 이 될 때까지 AHB HREADY=0 으로 stall
-     5) AHB Burst → APB 단일 transfer N 개로 분해
-     6) HRESP ↔ PSLVERR 매핑
+    classDef ep stroke:#1a73e8,stroke-width:2px
+    classDef br stroke:#137333,stroke-width:2px
+    class CPU,SL ep
+    class BR br
 ```
+
+**Bridge 의 책임**
+
+1. AHB Address phase 에서 PADDR / PWRITE 캡처
+2. AHB Data phase 에서 PWDATA 캡처
+3. APB SETUP/ACCESS 를 시퀀싱 (2 cycle 추가)
+4. APB PREADY 가 1 이 될 때까지 AHB HREADY=0 으로 stall
+5. AHB Burst → APB 단일 transfer N 개로 분해
+6. HRESP ↔ PSLVERR 매핑
 
 **의사 동작 (AHB Single Write)**
 

@@ -56,35 +56,33 @@
 
 ### 한 장 그림 — VA → PA 흐름
 
-```
-   App / Driver                     CPU core                       DRAM
-   ───────────────                  ──────────────────────         ────────────
-       │                                │
-       │ load r0, [VA=0x4000_1234]      │
-       ▼                                │
-                                  ┌─────▼─────┐
-                                  │  TLB look │ ─── Hit  ──▶ PA + perm + attr
-                                  │  ASID/VA  │              (1 cycle)
-                                  └─────┬─────┘
-                                        │ Miss
-                                        ▼
-                                  ┌───────────┐
-                                  │ Page Walk │ ◀── L0 → L1 → L2 → L3 PTE read ── DRAM
-                                  │  Engine   │     (4 mem access, ~400 ns)
-                                  └─────┬─────┘
-                                        │ done
-                                  ┌─────▼─────┐
-                                  │ Perm chk  │ ── 위반 ──▶ Page Fault → OS Handler
-                                  │ R/W/X     │
-                                  │ EL0/EL1   │
-                                  └─────┬─────┘
-                                        │ ok
-                                        ▼
-                                  TLB fill (PA, ASID, attrs) + bus access
-                                        │
-                                        ▼
-                                  attr=Cacheable → cache line
-                                  attr=Device    → strict-ordered MMIO
+```mermaid
+flowchart TB
+    APP["App / Driver<br/>load r0, [VA=0x4000_1234]"]
+    TLB["① TLB lookup<br/>(ASID, VPN)"]
+    PWE["② Page Walk Engine<br/>L0 → L1 → L2 → L3 PTE read<br/>(4 mem access, ~400 ns)"]
+    PERM["③ Permission check<br/>R/W/X, EL0/EL1, AF"]
+    FILL["④ TLB fill<br/>(PA, ASID, attrs)"]
+    BUS["⑤ Bus access"]
+    CACHE["attr=Cacheable<br/>→ cache line"]
+    MMIO["attr=Device<br/>→ strict-ordered MMIO"]
+    FAULT["Page Fault<br/>→ OS Handler"]
+    HIT["Hit path<br/>(1 cycle)<br/>PA + perm + attr"]
+
+    APP --> TLB
+    TLB -- "Hit" --> HIT
+    TLB -- "Miss" --> PWE
+    PWE -- "done" --> PERM
+    PERM -- "위반" --> FAULT
+    PERM -- "ok" --> FILL
+    FILL --> BUS
+    BUS --> CACHE
+    BUS --> MMIO
+
+    classDef fast stroke:#27ae60,stroke-width:3px
+    classDef slow stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
+    class HIT fast
+    class PWE,FAULT slow
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -217,31 +215,35 @@ ARMv8 Exception Level 별 Translation:
 
 ### 4.4 MMU 의 위치 — CPU 내장 vs SoC 레벨
 
-```
-+------------------------------------------------------------------+
-|                           SoC                                     |
-|                                                                   |
-|  +-------+    +-----+                                             |
-|  | CPU   +--->| MMU +---> Memory Controller ---> DRAM             |
-|  +-------+    +-----+                                             |
-|                                                                   |
-|  +--------+   +-------+                                           |
-|  | GPU    +-->| SMMU  +---> Memory Controller ---> DRAM           |
-|  +--------+   +-------+                                           |
-|                                                                   |
-|  +--------+   +-------+                                           |
-|  | DMA    +-->| IOMMU +---> Memory Controller ---> DRAM           |
-|  +--------+   +-------+                                           |
-|                                                                   |
-|  +--------+   +-------+                                           |
-|  | NIC/   +-->| sysMMU+---> Memory Controller ---> DRAM           |
-|  | Accel  |   +-------+                                           |
-|  +--------+                                                       |
-+------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph SoC["SoC"]
+        CPU["CPU"]
+        GPU["GPU"]
+        DMA["DMA"]
+        ACC["NIC / Accel"]
+        MMU["MMU<br/>(CPU 전용)"]
+        SMMU["SMMU"]
+        IOMMU["IOMMU"]
+        SYSMMU["sysMMU"]
+        MC["Memory<br/>Controller"]
+    end
+    DRAM[("DRAM")]
 
-CPU → MMU (CPU 전용, 보통 CPU 내부)
-GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
+    CPU --> MMU --> MC
+    GPU --> SMMU --> MC
+    DMA --> IOMMU --> MC
+    ACC --> SYSMMU --> MC
+    MC --> DRAM
+
+    classDef cpuPath stroke:#2980b9,stroke-width:2px
+    classDef devPath stroke:#8e44ad,stroke-width:2px,stroke-dasharray: 4 2
+    class CPU,MMU cpuPath
+    class GPU,DMA,ACC,SMMU,IOMMU,SYSMMU devPath
 ```
+
+> CPU → MMU (CPU 전용, 보통 CPU 내부) <br>
+> GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 
 **SoC 에서 MMU 가 중요한 이유**: HW 가속기(NPU, GPU, DMA)가 직접 메모리에 접근할 때, 가상 주소를 사용해야 OS의 메모리 관리 체계와 일관성을 유지하고, 잘못된 접근으로부터 시스템을 보호할 수 있다. 자세한 SMMU 구조는 [Module 04](04_iommu_smmu.md) 에서 다룹니다.
 
@@ -381,31 +383,44 @@ ARMv8에서 Exception Level별 Translation Regime:
 
 ### 5.7 Secure vs Non-secure — TrustZone 과 MMU
 
+```mermaid
+flowchart LR
+    subgraph Normal["Normal World"]
+        NOS["Normal OS<br/>(Android / Linux)"]
+        NMMU["Normal MMU<br/>(TTBR_EL1)"]
+        NOS --> NMMU
+    end
+    subgraph Secure["Secure World"]
+        SOS["Trusted OS<br/>(OP-TEE 등)"]
+        SMMU2["Secure MMU<br/>(TTBR_EL1_S)"]
+        SOS --> SMMU2
+    end
+    TZASC["TZASC<br/>(TrustZone Address<br/>Space Controller)"]
+    NMMU --> TZASC
+    SMMU2 --> TZASC
+
+    classDef sec stroke:#c0392b,stroke-width:3px
+    classDef nor stroke:#27ae60,stroke-width:2px
+    class SOS,SMMU2 sec
+    class NOS,NMMU nor
 ```
-ARM TrustZone: Secure World와 Normal World 분리
 
-  +---Normal World---+     +---Secure World---+
-  | Normal OS        |     | Trusted OS       |
-  | (Android/Linux)  |     | (OP-TEE 등)      |
-  |                  |     |                  |
-  | Normal MMU       |     | Secure MMU       |
-  | (TTBR_EL1)      |     | (TTBR_EL1_S)    |
-  +------------------+     +------------------+
+**물리 주소 공간 분리**:
 
-  물리 주소 공간도 분리:
-  - NS (Non-Secure) 비트: PTE[5]
-  - NS=0 → Secure 물리 메모리 접근 가능
-  - NS=1 → Non-secure 물리 메모리만 접근 가능
+- NS (Non-Secure) 비트: PTE[5]
+- NS=0 → Secure 물리 메모리 접근 가능
+- NS=1 → Non-secure 물리 메모리만 접근 가능
 
-  보안 경계:
-  - Normal World에서 Secure 메모리 접근 시도 → Bus Error / Slave Error
-  - TrustZone Address Space Controller (TZASC)가 물리 주소 수준에서 차단
+**보안 경계**:
 
-DV 관점:
-  - Secure → Non-secure 전환 시 TLB 상태 관리 검증
-  - NS bit가 잘못 설정된 PTE로 Secure 메모리 접근 시도 → 차단 확인
-  - World 전환 시 TLB Flush 범위 검증 (Secure TLB와 Normal TLB 독립성)
-```
+- Normal World 에서 Secure 메모리 접근 시도 → Bus Error / Slave Error
+- TrustZone Address Space Controller (TZASC) 가 물리 주소 수준에서 차단
+
+**DV 관점**:
+
+- Secure → Non-secure 전환 시 TLB 상태 관리 검증
+- NS bit 가 잘못 설정된 PTE 로 Secure 메모리 접근 시도 → 차단 확인
+- World 전환 시 TLB Flush 범위 검증 (Secure TLB 와 Normal TLB 독립성)
 
 ### 5.8 CPU MMU vs IOMMU/SMMU 비교
 
@@ -431,14 +446,21 @@ DV 관점:
 
 #### Page Fault 처리 흐름
 
-```
-1. CPU가 VA 접근 시도
-2. MMU: TLB Miss → Page Walk → PTE 없거나 권한 위반
-3. MMU → CPU에 Page Fault Exception 전달
-4. CPU: OS의 Page Fault Handler 호출
-5. Handler: 원인 분석 → 페이지 할당/로드/권한 업데이트
-6. Handler 완료 → CPU가 원래 명령어 재실행
-7. MMU: 이번에는 정상 변환 성공
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CPU
+    participant MMU
+    participant Handler as OS Fault Handler
+    CPU->>MMU: VA 접근 시도
+    MMU->>MMU: TLB Miss → Page Walk
+    Note over MMU: PTE 없거나 권한 위반
+    MMU->>CPU: Page Fault Exception
+    CPU->>Handler: Page Fault Handler 호출
+    Handler->>Handler: 원인 분석<br/>페이지 할당/로드<br/>권한 업데이트
+    Handler->>CPU: 복귀 → 원래 명령어 재실행
+    CPU->>MMU: VA 재접근
+    MMU-->>CPU: 정상 변환 성공
 ```
 
 **DV 관점**: Page Fault 발생 → Exception → Handler → 재실행의 전체 흐름이 올바르게 동작하는지, 특히 Fault 발생 시 MMU 상태(TLB, Page Walk Engine)가 정확히 유지되는지 검증해야 한다.

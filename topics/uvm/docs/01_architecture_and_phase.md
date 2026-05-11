@@ -57,39 +57,43 @@
 
 ### 한 장 그림 — Phase 흐름과 컴포넌트 트리
 
-```
-   uvm_test (top)
-      │
-      │  ┌──────────────────┐
-      ▼  │ build_phase      │  Top → Down (부모가 먼저)
-    uvm_env       │   "자식을 type_id::create 로 생성"
-      │  │       │          │
-      ▼  │ ▼     │          │
-   agent  │ scoreboard │    │
-   ▲ │ ▼  │             │   │
-  drv mon sqr           │   │
-                        │   │
-   ──────────────────────   │
-                            │
-   ┌──────────────────┐     │
-   │ connect_phase    │ ◀───┘  Bottom → Up (자식이 먼저)
-   │ "TLM 포트 연결"   │
-   └──────────────────┘
-            │
-            ▼
-   ┌──────────────────┐
-   │ run_phase        │  ◆◆◆ 모든 컴포넌트 동시 (병렬)
-   │ raise_objection  │  "objection count 가 0 이 될 때까지 유지"
-   │ ... 자극·관찰 ... │
-   │ drop_objection   │
-   └──────────────────┘
-            │
-            ▼  drain time (선택) → phase_ready_to_end (선택)
-            ▼
-   ┌──────────────────┐
-   │ extract → check  │  Bottom → Up
-   │ → report → final │
-   └──────────────────┘
+```mermaid
+flowchart TB
+    subgraph TREE["컴포넌트 트리"]
+        direction TB
+        T["uvm_test (top)"]
+        E["uvm_env"]
+        A["agent"]
+        SB["scoreboard"]
+        DRV["driver"]
+        MON["monitor"]
+        SQR["sequencer"]
+        T --> E
+        E --> A
+        E --> SB
+        A --> DRV
+        A --> MON
+        A --> SQR
+    end
+
+    BUILD["<b>build_phase</b><br/>Top → Down (부모가 먼저)<br/>자식을 type_id::create 로 생성"]
+    CONNECT["<b>connect_phase</b><br/>Bottom → Up (자식이 먼저)<br/>TLM 포트 연결"]
+    RUN["<b>run_phase</b> (모든 컴포넌트 병렬)<br/>raise_objection<br/>... 자극 · 관찰 ...<br/>drop_objection<br/>objection count = 0 이 될 때까지 유지"]
+    DRAIN(["drain time (선택)<br/>phase_ready_to_end (선택)"])
+    CLEAN["<b>extract → check → report → final</b><br/>Bottom → Up"]
+
+    TREE -.-> BUILD
+    BUILD --> CONNECT
+    CONNECT --> RUN
+    RUN --> DRAIN
+    DRAIN --> CLEAN
+
+    classDef phase stroke:#1a73e8,stroke-width:2px
+    classDef run stroke:#137333,stroke-width:3px
+    classDef drain stroke:#5f6368,stroke-dasharray:4 2
+    class BUILD,CONNECT,CLEAN phase
+    class RUN run
+    class DRAIN drain
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -110,29 +114,35 @@
 
 ### 단계별 다이어그램
 
-```
-   t=0           build              connect       run (parallel)        cleanup
-   │              │                   │              │                    │
-   ▼              ▼                   ▼              ▼                    ▼
- ┌──────┐  ① test 생성        ④ test.connect    ⑥ test.run_phase    ⑪ extract
- │ test │ ─→ build ─────────→  (NOP)         ─→ raise_objection ──→  check
- └──┬───┘                                       │                    report
-    │ ② env = create("env")                     │                    final
-    ▼                                            │
- ┌──────┐  ③ env.build                          │  ⑦ env.run (parallel)
- │ env  │ ─→ drv = create("drv")                │
- └──┬───┘                                        │
-    │                                            │
-    ▼                                            │
- ┌──────┐                       ⑤ drv.connect   ⑧ drv.run_phase
- │ drv  │                          (NOP)         "DRV: run start"
- └──────┘                                        #100ns
-                                                 "DRV: run end"
-                                                 │
-                                                 │  ⑨ test.run 본문 종료
-                                                 │  ⑩ drop_objection
-                                                 │     drain 200ns
-                                                 ▼
+```mermaid
+sequenceDiagram
+    autonumber
+    participant K as UVM kernel
+    participant T as test
+    participant E as env
+    participant D as drv
+
+    Note over K,D: build (top → down)
+    K->>T: ① test 생성 + build
+    T->>E: ② env = create("env")
+    E->>D: ③ drv = create("drv")
+
+    Note over K,D: connect (bottom → up)
+    D-->>E: ⑤ drv.connect (NOP)
+    E-->>T: ④ env.connect / test.connect (NOP)
+
+    Note over K,D: run (parallel)
+    T->>T: ⑥ raise_objection<br/>run 본문 시작
+    par 병렬 실행
+        E->>E: ⑦ env.run (NOP)
+    and
+        D->>D: ⑧ drv.run_phase<br/>"DRV: run start"<br/>#100ns<br/>"DRV: run end"
+    end
+    T->>T: ⑨ #500ns 시나리오 종료
+    T->>T: ⑩ drop_objection<br/>drain 200ns
+
+    Note over K,D: cleanup (bottom → up)
+    K->>K: ⑪ extract → check → report → final
 ```
 
 ### 단계별 의미
@@ -235,21 +245,45 @@ UVM_INFO ... [Report Server] PASSED             ← report_phase 출력
 
 ### 4.2 클래스 계층 — UVM 의 6 컴포넌트 + 3 데이터
 
-```
-uvm_void
- ├─ uvm_object               (데이터, Phase 없음)
- │   ├─ uvm_transaction
- │   │   └─ uvm_sequence_item    ◀── 트랜잭션 데이터 (Module 03)
- │   ├─ uvm_sequence              ◀── 자극 시나리오 (Module 03)
- │   └─ uvm_reg_block             ◀── RAL 모델
- └─ uvm_component             (인프라, Phase 있음)
-     ├─ uvm_monitor               ◀── DUT 신호 관찰 → AP (Module 02)
-     ├─ uvm_driver                ◀── DUT 자극 인가 (Module 02)
-     ├─ uvm_sequencer             ◀── Sequence ↔ Driver 중개
-     ├─ uvm_agent                 ◀── 위 셋 묶음 (Module 02)
-     ├─ uvm_scoreboard            ◀── 결과 비교 (Module 05)
-     ├─ uvm_env                   ◀── Agent + SB 묶음
-     └─ uvm_test                  ◀── 최상위, 시나리오 선택
+```mermaid
+flowchart LR
+    VOID["uvm_void"]
+    OBJ["<b>uvm_object</b><br/>데이터 · Phase 없음"]
+    COMP["<b>uvm_component</b><br/>인프라 · Phase 있음"]
+
+    TRX["uvm_transaction"]
+    SI["uvm_sequence_item<br/><i>트랜잭션 데이터 (M03)</i>"]
+    SEQ["uvm_sequence<br/><i>자극 시나리오 (M03)</i>"]
+    REG["uvm_reg_block<br/><i>RAL 모델</i>"]
+
+    MON["uvm_monitor<br/><i>DUT 신호 관찰 → AP (M02)</i>"]
+    DRV["uvm_driver<br/><i>DUT 자극 인가 (M02)</i>"]
+    SQR["uvm_sequencer<br/><i>Sequence ↔ Driver 중개</i>"]
+    AG["uvm_agent<br/><i>위 셋 묶음 (M02)</i>"]
+    SB["uvm_scoreboard<br/><i>결과 비교 (M05)</i>"]
+    ENV["uvm_env<br/><i>Agent + SB 묶음</i>"]
+    TST["uvm_test<br/><i>최상위, 시나리오 선택</i>"]
+
+    VOID --> OBJ
+    VOID --> COMP
+    OBJ --> TRX
+    TRX --> SI
+    OBJ --> SEQ
+    OBJ --> REG
+    COMP --> MON
+    COMP --> DRV
+    COMP --> SQR
+    COMP --> AG
+    COMP --> SB
+    COMP --> ENV
+    COMP --> TST
+
+    classDef root stroke:#5f6368,stroke-width:2px,stroke-dasharray:4 2
+    classDef obj stroke:#1a73e8,stroke-width:2px
+    classDef comp stroke:#137333,stroke-width:2px
+    class VOID root
+    class OBJ obj
+    class COMP comp
 ```
 
 이후 모든 모듈에서 이 9 개가 등장합니다. 새 클래스가 나오면 일단 이 9 개 중 하나의 변형/특수화인지 확인하세요.

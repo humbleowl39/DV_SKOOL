@@ -57,16 +57,35 @@
 
 ### 한 장 그림 — RNN/LSTM 시대 vs Transformer 시대
 
-```
-              RNN/LSTM (~2017)                     Transformer (2017~)
-              ─────────────────                    ─────────────────────
-   tok₁ → tok₂ → tok₃ → ... → tokₙ           tok₁ ↔ tok₂ ↔ tok₃ ↔ ... ↔ tokₙ
-        ●          ●          ●                       (모든 쌍이 직접 연결)
-        │ vanish/explode gradient                       │
-        │ 순차 처리 → GPU 병렬화 불가                    │ 행렬곱 한 번에 모든 쌍 점수
-        ▼                                               ▼
-   장거리 의존성 손실                                완전 병렬 + 장거리 직접 참조
-       ● = 정보 손실 / 학습 어려움
+```mermaid
+flowchart LR
+    subgraph RNN["RNN/LSTM (~2017) — 순차 처리"]
+        direction LR
+        R1["tok₁"]
+        R2["tok₂"]
+        R3["tok₃"]
+        R4["tokₙ"]
+        R1 -- "hidden state" --> R2
+        R2 -- "hidden state" --> R3
+        R3 -- "..." --> R4
+        RL["vanish/explode gradient<br/>GPU 병렬화 불가<br/>→ 장거리 의존성 손실"]
+    end
+    subgraph TX["Transformer (2017~) — 모든 쌍 직접 연결"]
+        direction LR
+        T1["tok₁"]
+        T2["tok₂"]
+        T3["tok₃"]
+        T4["tokₙ"]
+        T1 <--> T2
+        T1 <--> T3
+        T1 <--> T4
+        T2 <--> T3
+        T2 <--> T4
+        T3 <--> T4
+        TL["Q@Kᵀ 한 번에<br/>모든 쌍 점수 계산<br/>→ 완전 병렬 + 장거리 직접 참조"]
+    end
+    classDef cost stroke:#c0392b,stroke-width:3px
+    class R1,R2,R3,R4 cost
 ```
 
 세 개의 빨간 원이 Transformer 에서는 모두 사라지고, 대신 **attention 행렬** 이 토큰 쌍의 관계를 직접 잡습니다.
@@ -83,25 +102,21 @@ GPU 는 행렬곱에 최적화되어 있습니다. 토큰을 "순차" 로 처리
 
 가장 단순한 시나리오. 사용자 입력 `"Write a UVM"` 을 받아 LLM 이 다음 토큰 하나 (`" test"`) 를 예측해 응답하는 한 사이클을 8단계로 추적합니다.
 
-```
-   ┌─── Client (사용자) ───┐                       ┌─── Inference Server (GPU) ───┐
-   │                       │  ① "Write a UVM"      │                              │
-   │  app + tokenizer ─────│──────────────────────▶│  ② BPE 토크나이즈            │
-   │                       │      (raw text)        │       ↓                      │
-   │                       │                       │  [W,rite, ,a, ,U,VM]         │
-   │                       │                       │       ↓ ③ embedding lookup   │
-   │                       │                       │  [v₁, v₂, ..., v₇]  (d_model)│
-   │                       │                       │       ↓ ④ + RoPE position    │
-   │                       │                       │       ↓ ⑤ N×Transformer block│
-   │                       │                       │   (Q@Kᵀ → softmax → @V)      │
-   │                       │                       │       ↓                      │
-   │                       │                       │  hidden state h₇ (마지막 위치)│
-   │                       │                       │       ↓ ⑥ output head        │
-   │                       │                       │  vocab_size 확률 분포        │
-   │                       │                       │       ↓ ⑦ argmax/sampling    │
-   │                       │  ⑧ " test" + KV cache │  next_token = " test"        │
-   │  console ◀────────────│───────────────────────│  (K₁..K₇, V₁..V₇ GPU 메모리에) │
-   └───────────────────────┘                       └──────────────────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Client<br/>(app + tokenizer)
+    participant S as Inference Server<br/>(GPU)
+
+    C->>S: ① "Write a UVM"<br/>(raw text)
+    S->>S: ② BPE 토크나이즈<br/>[W, rite, ' ', a, ' ', U, VM]
+    S->>S: ③ embedding lookup<br/>[v₁, v₂, ..., v₇] (d_model)
+    S->>S: ④ + RoPE position 주입
+    S->>S: ⑤ N × Transformer block<br/>(Q@Kᵀ → softmax → @V)
+    Note over S: hidden state h₇<br/>(마지막 위치)
+    S->>S: ⑥ output head<br/>vocab_size 확률 분포
+    S->>S: ⑦ argmax / sampling<br/>next_token = " test"
+    S-->>C: ⑧ " test" 반환<br/>(K₁..K₇, V₁..V₇ KV cache 보관)
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -142,44 +157,20 @@ mask = cumulative <= top_p
 
 ### 4.1 Transformer 블록의 골격
 
-```
-입력: "The cat sat on the"
-
-+--------------------------------------------------+
-|                Token Embedding                    |
-|  "The" → [0.1, -0.3, ...] (d_model 차원 벡터)    |
-+--------------------------------------------------+
-         |
-         v
-+--------------------------------------------------+
-|           Positional Encoding                     |
-|  위치 정보 추가 (Transformer는 순서를 모르므로)    |
-|  Token Embedding + Position Embedding             |
-+--------------------------------------------------+
-         |
-         v (× N layers, 예: 32, 80, 128 레이어)
-+--------------------------------------------------+
-|           Transformer Block                       |
-|                                                   |
-|  +--------------------------------------------+  |
-|  | Multi-Head Self-Attention                   |  |
-|  | (각 토큰이 다른 모든 토큰을 참조)            |  |
-|  +--------------------------------------------+  |
-|         |                                         |
-|  +--------------------------------------------+  |
-|  | Feed-Forward Network (FFN)                  |  |
-|  | (비선형 변환)                                |  |
-|  +--------------------------------------------+  |
-|         |                                         |
-|  (+ Residual Connection + Layer Normalization)    |
-+--------------------------------------------------+
-         |
-         v
-+--------------------------------------------------+
-|           Output Head                             |
-|  벡터 → 어휘 크기의 확률 분포                     |
-|  argmax → "mat" (다음 토큰 예측)                  |
-+--------------------------------------------------+
+```mermaid
+flowchart TB
+    IN["입력: 'The cat sat on the'"]
+    TE["Token Embedding<br/>'The' → [0.1, -0.3, ...] (d_model 차원)"]
+    PE["Positional Encoding<br/>Token Emb + Position Emb<br/>(Transformer 는 순서를 모름)"]
+    subgraph TB1["Transformer Block × N (32 / 80 / 128 ...)"]
+        direction TB
+        MHA["Multi-Head Self-Attention<br/>(각 토큰이 다른 모든 토큰 참조)"]
+        FFN["Feed-Forward Network (FFN)<br/>(비선형 변환)"]
+        RES["+ Residual Connection + LayerNorm"]
+        MHA --> FFN --> RES
+    end
+    OH["Output Head<br/>벡터 → 어휘 크기 확률 분포<br/>argmax → 'mat'"]
+    IN --> TE --> PE --> TB1 --> OH
 ```
 
 ### 4.2 Self-Attention 의 핵심 수식
@@ -420,29 +411,32 @@ DV 관점:
 
 ### 5.5 MoE (Mixture of Experts) 아키텍처
 
+기존 (Dense Model): 모든 입력이 모든 파라미터를 통과 → 파라미터 수 = 연산량 (비례).
+MoE: 입력마다 일부 Expert 만 활성화 (Sparse Activation) → 총 파라미터는 크지만 토큰당 연산량은 적음.
+
+```mermaid
+flowchart TB
+    IN["입력 토큰"]
+    R["Router (Gate Network)<br/>어떤 Expert 를 선택할지 결정<br/>Top-K (보통 K=2)"]
+    E1["Expert 1<br/>(FFN)"]
+    E2["Expert 2<br/>(FFN)"]
+    E3["Expert 3<br/>(FFN)"]
+    E4["..."]
+    E8["Expert 8<br/>(FFN)"]
+    OUT["Weighted Sum → 출력"]
+    IN --> R
+    R -. "선택 안 됨" .-> E1
+    R ==> E2
+    R ==> E3
+    R -. "선택 안 됨" .-> E4
+    R -. "선택 안 됨" .-> E8
+    E2 --> OUT
+    E3 --> OUT
+    classDef active stroke:#27ae60,stroke-width:3px
+    class E2,E3 active
 ```
-기존 (Dense Model):
-  모든 입력이 모든 파라미터를 통과
-  → 파라미터 수 = 연산량 (비례)
 
-MoE:
-  입력마다 일부 Expert 만 활성화 (Sparse Activation)
-  → 총 파라미터는 크지만, 토큰당 연산량은 적음
-
-  구조:
-  +--------------------------------------------------+
-  |  Router (Gate Network)                            |
-  |  입력 토큰 → 어떤 Expert 를 선택할지 결정          |
-  |  Top-K 선택 (보통 K=2)                            |
-  +--------------------------------------------------+
-       |  |  |  |  |  |  |  |
-       v  v  v  v  v  v  v  v
-  +----+  +----+  +----+  +----+
-  | E1 |  | E2 |  | E3 |  | E8 |  ← Expert (각각 FFN)
-  +----+  +----+  +----+  +----+
-
-  → 8개 Expert 중 2개만 활성화 = 파라미터 8x, 연산 ~2x
-```
+→ 8개 Expert 중 2개만 활성화 = 파라미터 8x, 연산 ~2x.
 
 | 모델 | 총 파라미터 | 활성 파라미터 | Expert 수 | Top-K |
 |------|-----------|-------------|----------|-------|

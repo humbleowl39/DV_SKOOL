@@ -57,20 +57,20 @@ DCMAC = AMD 100 / 200 / 400 GbE MAC IP.
     **DCMAC** = **초고속 우체국 창구**.<br>
     들어오는 편지 (AXI-S 데이터) 에 봉투 (Preamble + FCS) 를 씌워 배달망 (Line Side) 에 내보내고, 반대로 배달망에서 온 봉투를 열어 내용만 전달한다. 초당 수백억 비트를 처리하면서 하나도 빠뜨리지 않아야 한다.
 
-```
-   Host (TOE/IP)
-        │  AXI-S byte
-        ▼
-   ┌────────────┐    ┌──────────────────────────┐
-   │  DCMAC TX  │───►│  PCS + RS-FEC + lane dist│──► SerDes ─► Network
-   │ MAC engine │    │  (block, PHY 영역)       │
-   └────────────┘    └──────────────────────────┘
-   ┌────────────┐    ┌──────────────────────────┐
-   │  DCMAC RX  │◄───│  PCS + FEC decode + align│◄── SerDes ◄─ Network
-   └────────────┘    └──────────────────────────┘
-        ▲ AXI-S byte + tuser (bad_fcs, vlan_tagged, ts)
-        │
-   Host (TOE/IP)
+```mermaid
+flowchart LR
+    HOST_T["Host (TOE / IP)<br/>↓ AXI-S byte"]
+    DTX["DCMAC TX<br/>MAC engine"]
+    PCS_TX["PCS + RS-FEC + lane dist<br/>(block, PHY 영역)"]
+    SD_TX["SerDes"]
+    NET((Network))
+    SD_RX["SerDes"]
+    PCS_RX["PCS + FEC decode + align"]
+    DRX["DCMAC RX"]
+    HOST_R["Host (TOE / IP)<br/>↑ AXI-S byte + tuser<br/>(bad_fcs, vlan_tagged, ts)"]
+
+    HOST_T --> DTX --> PCS_TX --> SD_TX --> NET
+    NET --> SD_RX --> PCS_RX --> DRX --> HOST_R
 ```
 
 ---
@@ -254,12 +254,21 @@ Mixed      가변         포트별         포트별                53.125 G
 
 ### 5.10 MangoBoost 데이터 패스 전체
 
-```
-Host ↔ [PCIe/DMA] ↔ TOE ↔ [AXI-S] ↔ DCMAC ↔ [SerDes] ↔ Network
-        (MMU 포함)   (TCP)              (MAC)              (100 Gbps+)
+```mermaid
+flowchart LR
+    HOST(("Host"))
+    TOE["TOE<br/>(TCP)"]
+    DCMAC["DCMAC<br/>(MAC)"]
+    NET(("Network<br/>(100 Gbps+)"))
 
-        mmu_ko/      toe_ko/    ethernet_dcmac_ko/
-        ← 학습 자료가 전체 데이터 패스를 커버 →
+    HOST <-- "PCIe / DMA<br/>(MMU 포함)" --> TOE
+    TOE <-- "AXI-S" --> DCMAC
+    DCMAC <-- "SerDes" --> NET
+```
+
+```
+mmu_ko/   →   toe_ko/   →   ethernet_dcmac_ko/
+← 학습 자료가 전체 데이터 패스를 커버 →
 ```
 
 ---

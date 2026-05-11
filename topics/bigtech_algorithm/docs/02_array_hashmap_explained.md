@@ -56,22 +56,31 @@ LeetCode Easy / Medium 문제의 **30~40 %** 는 hash map 단 하나로 O(N) 풀
 
 ### 한 장 그림 — Brute Force vs Hash Map
 
-```
-              Brute Force O(n²)                   Hash Map O(n)
-              ─────────────────────────           ──────────────────────────
-   for i:     ┌─ i=0 ─────────────────┐           seen = {}                
-                for j: 1..n            │           
-                  검색하며 O(n)        │           for i:
-                                       │             complement 계산        
-              ┌─ i=1 ─────────────────┐             ┌──────────────────┐
-                for j: 2..n            │             │  seen.exists(c)?  │ O(1)
-                  검색하며 O(n)        │             │       │           │
-                                       │             │   ┌───┴───┐       │
-              ┌─ i=2 ... ─────────────┐             │   YES    NO       │
-                                       │             │   │      │        │
-              ⋮                                          답!   seen[v]=i  
-                                                                         
-   총 비용:   n × n = O(n²)                       총 비용: n × O(1) = O(n)
+```mermaid
+flowchart LR
+    subgraph BF["Brute Force — O(n²)"]
+        direction TB
+        B1["for i in 0..n"]
+        B2["for j in i+1..n<br/>(내부 루프가 매번 검색)"]
+        B3["nums[i] + nums[j] == target ?"]
+        B1 --> B2 --> B3
+        B3 -- "총 비용 n × n" --> Bcost["= O(n²)"]
+    end
+    subgraph HM["Hash Map — O(n)"]
+        direction TB
+        H1["seen = {}"]
+        H2["for i in 0..n<br/>complement 계산"]
+        H3{"seen.exists(c) ?<br/>O(1) lookup"}
+        H4["답 반환"]
+        H5["seen[v] = i"]
+        H1 --> H2 --> H3
+        H3 -- YES --> H4
+        H3 -- NO --> H5
+        H5 --> H2
+        H4 --> Hcost["총 비용 n × O(1)<br/>= O(n)"]
+    end
+    classDef hot stroke-width:3px
+    class B2,H3 hot
 ```
 
 핵심 변환: **"내부 루프의 검색"** 을 **"hash map 의 O(1) lookup"** 으로 바꾼 것이 전부입니다.
@@ -146,22 +155,21 @@ def two_sum(nums, target):
 
 ### 4.1 신호 → Hash Map 결정 트리
 
-```
-   문제를 보고 자문:
-   ┌──────────────────────────────────────────────────────┐
-   │ "이 값을 이전에 본 적 있는가?" 라는 lookup 이 있나?     │
-   └──────┬───────────────────────────────────────────────┘
-          │
-       ┌──┴──┐
-       YES   NO  →  Hash Map 후보 아님 (Two Pointers / DP / 다른 패턴)
-       │
-       ▼
-   ┌────────────────────────────────────────────────────┐
-   │ 무엇을 추적하나?                                     │
-   │   ① 존재 여부            → Key=값,    Value=index/1 │
-   │   ② 빈도(count)         → Key=값,    Value=count   │
-   │   ③ 그룹                → Key=불변식, Value=목록    │
-   └────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Q1{"'이 값을 이전에 본 적 있는가?'<br/>라는 lookup 이 있나?"}
+    NO["Hash Map 후보 아님<br/>(Two Pointers / DP / 다른 패턴)"]
+    Q2{"무엇을 추적하나?"}
+    U1["① 존재 여부<br/>Key=값, Value=index/1"]
+    U2["② 빈도 (count)<br/>Key=값, Value=count"]
+    U3["③ 그룹<br/>Key=불변식, Value=목록"]
+    Q1 -- NO --> NO
+    Q1 -- YES --> Q2
+    Q2 --> U1
+    Q2 --> U2
+    Q2 --> U3
+    classDef pick stroke-width:3px
+    class U1,U2,U3 pick
 ```
 
 ### 4.2 세 가지 용법 요약

@@ -57,40 +57,14 @@ LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은
 
 ### 한 장 그림 — Naive RAG 의 4 단계
 
-```
-   ┌─── User ───┐
-   │            │  "sysMMU 의 TLB invalidation 검증 시나리오는?"
-   └─────┬──────┘
-         ▼
-   ┌─── 1. Query Processing ───┐
-   │  - 쿼리 임베딩 생성         │
-   │  - (선택) 쿼리 재작성/확장  │
-   └─────┬──────────────────────┘
-         ▼
-   ┌─── 2. Retrieval ───────────────────────┐
-   │  Vector DB (FAISS) 에서 유사 chunk 검색│
-   │  Top-K (예: k=5)                        │
-   │     [1] sysMMU spec: TLBI cmd ...       │
-   │     [2] sysMMU test plan: scenarios ... │
-   │     [3] IP-XACT: TLB register map ...   │
-   └─────┬──────────────────────────────────┘
-         ▼
-   ┌─── 3. Augmentation ────────────────────┐
-   │  검색된 chunk 를 prompt 에 삽입         │
-   │  "다음 참고 자료를 기반으로 답하라:    │
-   │   [chunk 1][chunk 2][chunk 3]          │
-   │   질문: ..."                            │
-   └─────┬──────────────────────────────────┘
-         ▼
-   ┌─── 4. Generation ──────────────────────┐
-   │  LLM 이 검색 결과를 근거로 답변 생성  │
-   │  → 출처 기반 → Hallucination 감소     │
-   │                                        │
-   │  "TLB invalidation 검증 시나리오:      │
-   │   1. TLBI ALL: 전체 TLB 무효화 ...     │
-   │   2. TLBI by VA: 특정 VA 만 ...         │
-   │   mrun test --test_name tlb_inv_all"   │
-   └────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    U["User<br/>'sysMMU 의 TLB invalidation 검증 시나리오는?'"]
+    S1["1. Query Processing<br/>- 쿼리 임베딩 생성<br/>- (선택) 쿼리 재작성 / 확장"]
+    S2["2. Retrieval<br/>Vector DB (FAISS) 유사 chunk 검색<br/>Top-K (예: k=5)<br/>[1] sysMMU spec: TLBI cmd<br/>[2] sysMMU test plan: scenarios<br/>[3] IP-XACT: TLB register map"]
+    S3["3. Augmentation<br/>검색 chunk 를 prompt 에 삽입<br/>'다음 참고 자료를 기반으로 답하라:<br/>[chunk 1][chunk 2][chunk 3]<br/>질문: ...'"]
+    S4["4. Generation<br/>LLM 이 검색 결과 근거로 답변 생성<br/>→ 출처 기반 → Hallucination 감소<br/><br/>'TLB invalidation 검증 시나리오:<br/>1. TLBI ALL: 전체 TLB 무효화<br/>2. TLBI by VA: 특정 VA<br/>mrun test --test_name tlb_inv_all'"]
+    U --> S1 --> S2 --> S3 --> S4
 ```
 
 ### 왜 이 구조인가 — Design rationale
@@ -109,49 +83,24 @@ LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은
 
 가장 단순한 시나리오. FAISS 인덱스가 이미 빌드돼 있고, 사용자가 한 쿼리를 보내 LLM 이 답하는 한 사이클을 추적합니다.
 
-```
-   ┌─── User ───┐
-   │            │  query="sysMMU 의 TLB invalidation 검증 시나리오는?"
-   └─────┬──────┘
-         │ ① HTTPS POST /rag/query
-         ▼
-   ┌─── RAG Server ────────────────────────────────────────────────────────────┐
-   │                                                                            │
-   │  ② embed(query) → q ∈ ℝ¹⁰²⁴  (BGE-large)                                  │
-   │                                                                            │
-   │  ③ FAISS search(q, k=5)  ────────────▶ ┌── FAISS Index ──┐               │
-   │                                          │ ip_spec.ivf      │               │
-   │                                          └─────────────────┘               │
-   │  ④ top-5 chunks + metadata 회수                                            │
-   │     [c₂₃] "TLBI ALL command ..." (src=sysMMU_spec.pdf, sec=4.2)            │
-   │     [c₅₆] "TLB invalidation timing ..." (src=sysMMU_spec.pdf, sec=4.5)     │
-   │     [c₈₇] "TLB security check ..." (src=sysMMU_spec.pdf, sec=7.3)          │
-   │     [c₉₂] "Existing test plan: tlb_inv_all" (src=vplan.md)                 │
-   │     [c₉₃] "Existing test plan: tlb_inv_by_va" (src=vplan.md)               │
-   │                                                                            │
-   │  ⑤ Prompt 조립:                                                            │
-   │     System: "당신은 검증 아키텍트. 아래 자료만 근거로 답하라."             │
-   │     Context: [c₂₃ ... c₉₃]                                                 │
-   │     User: "sysMMU 의 TLB invalidation 검증 시나리오는?"                    │
-   │                                                                            │
-   │  ⑥ LLM call (Claude Sonnet, T=0)                                           │
-   │     ┌────────────────────────────────────────────┐                         │
-   │     │ "1. TLBI ALL — 전체 무효화 + DMA 활성 시   │                         │
-   │     │     race 확인 [c₂₃, c₅₆]                  │                         │
-   │     │  2. TLBI by VA — 특정 VA 만 [c₂₃]         │                         │
-   │     │  3. Security DMA — security bit 가 있는    │                         │
-   │     │     entry 의 격리 [c₈₇]                    │                         │
-   │     │  기존 cover: 1, 2 / 누락: 3                │                         │
-   │     │  mrun test --test_name dma_sec_check ..."  │                         │
-   │     └────────────────────────────────────────────┘                         │
-   │                                                                            │
-   │  ⑦ 응답 + 출처 메타 (citation list) 반환                                  │
-   └────────────────────────────────────────────────────────────────────────────┘
-         │
-         ▼
-   ┌─── User ───┐
-   │  답변 + 클릭 가능한 출처 링크
-   └────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant R as RAG Server
+    participant E as Embed (BGE-large)
+    participant F as FAISS Index<br/>(ip_spec.ivf)
+    participant L as LLM<br/>(Claude Sonnet, T=0)
+
+    U->>R: ① HTTPS POST /rag/query<br/>'sysMMU 의 TLB invalidation 검증 시나리오는?'
+    R->>E: ② embed(query)
+    E-->>R: q ∈ ℝ¹⁰²⁴
+    R->>F: ③ search(q, k=5), nprobe=10
+    F-->>R: ④ top-5 chunks + metadata<br/>[c₂₃] TLBI ALL command (sysMMU_spec.pdf §4.2)<br/>[c₅₆] TLB invalidation timing (sysMMU_spec.pdf §4.5)<br/>[c₈₇] TLB security check (sysMMU_spec.pdf §7.3)<br/>[c₉₂] tlb_inv_all (vplan.md)<br/>[c₉₃] tlb_inv_by_va (vplan.md)
+    R->>R: ⑤ Prompt 조립<br/>System: '검증 아키텍트, 아래 자료만 근거'<br/>Context: [c₂₃ ... c₉₃]<br/>User: 원 쿼리
+    R->>L: ⑥ LLM call
+    L-->>R: '1. TLBI ALL + DMA race [c₂₃, c₅₆]<br/>2. TLBI by VA [c₂₃]<br/>3. Security DMA 격리 [c₈₇]<br/>기존 cover: 1,2 / 누락: 3<br/>mrun test --test_name dma_sec_check'
+    R-->>U: ⑦ 답변 + citation list<br/>(클릭 가능한 출처 링크)
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -203,38 +152,22 @@ Naive 가 망가지는 지점이 어디인지 측정해서 그곳에 _필요한 
 
 ### 5.1 Indexing (인덱싱) — 오프라인 단계
 
-```
 문서 수집 → 청킹 → 임베딩 → 인덱스 저장
 
-+------------------------------------------------------------------+
-|  Source Documents                                                 |
-|  +--------+  +--------+  +--------+  +--------+                  |
-|  | IP Spec|  | IP-XACT|  | Design |  | Test   |                  |
-|  | (PDF)  |  | (XML)  |  | Doc    |  | Plan   |                  |
-|  +---+----+  +---+----+  +---+----+  +---+----+                  |
-|      |           |            |           |                       |
-|      v           v            v           v                       |
-|  +--------------------------------------------------+            |
-|  |  Document Parser                                  |            |
-|  |  - PDF → 텍스트 추출                              |            |
-|  |  - XML → 구조적 파싱 (IP-XACT)                   |            |
-|  |  - 테이블/다이어그램 처리                          |            |
-|  +--------------------------------------------------+            |
-|      |                                                            |
-|      v                                                            |
-|  +--------------------------------------------------+            |
-|  |  Chunking                                         |            |
-|  |  - 시맨틱 분할 (섹션/테이블/시퀀스)              |            |
-|  |  - 메타데이터 보존 (출처, 페이지, IP 이름)        |            |
-|  +--------------------------------------------------+            |
-|      |                                                            |
-|      v                                                            |
-|  +--------------------------------------------------+            |
-|  |  Embedding + FAISS Index                          |            |
-|  |  - 각 청크 → 벡터                                |            |
-|  |  - FAISS 인덱스에 저장                            |            |
-|  +--------------------------------------------------+            |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    S1["IP Spec<br/>(PDF)"]
+    S2["IP-XACT<br/>(XML)"]
+    S3["Design<br/>Doc"]
+    S4["Test<br/>Plan"]
+    P["Document Parser<br/>- PDF → 텍스트 추출<br/>- XML → 구조적 파싱 (IP-XACT)<br/>- 테이블/다이어그램 처리"]
+    C["Chunking<br/>- 시맨틱 분할 (섹션/테이블/시퀀스)<br/>- 메타데이터 보존 (출처, 페이지, IP 이름)"]
+    E["Embedding + FAISS Index<br/>- 각 청크 → 벡터<br/>- FAISS 인덱스에 저장"]
+    S1 --> P
+    S2 --> P
+    S3 --> P
+    S4 --> P
+    P --> C --> E
 ```
 
 ### 5.2 Retrieval (검색) — 온라인 단계
@@ -303,35 +236,25 @@ AI 생성:     RAG 시스템이 생성한 검증 시나리오 목록
 
 ### 5.7 DVCon 논문의 RAG 아키텍처 (이력서 직결)
 
+```mermaid
+flowchart TB
+    subgraph SRC["데이터 소스"]
+        direction LR
+        D1["IP-XACT<br/>(구조)"]
+        D2["IP Spec<br/>(시맨틱)"]
+        D3["Design Doc"]
+    end
+    HDE["Hybrid Data Extraction<br/>IP-XACT → 구조 데이터 (레지스터, 버스, 메모리맵)<br/>IP Spec → 시맨틱 데이터 (기능, 동작 모드, 제약)<br/>결합 → 풍부한 IP 프로파일"]
+    IDX["FAISS 인덱싱<br/>IP 프로파일 → Embedding → FAISS Index"]
+    TG["LLM-Based Test Generation<br/>'Feature X 검증' → FAISS 검색 → 관련 IP 정보<br/>→ LLM → 테스트 명령어 + V-Plan bin"]
+    OUT["결과<br/>Project A: 293 gaps (2.75%)<br/>Project B: 216 gaps (4.99%)<br/>Human oversight: 96.30% (소형)"]
+    D1 --> HDE
+    D2 --> HDE
+    D3 --> HDE
+    HDE --> IDX --> TG --> OUT
 ```
-+------------------------------------------------------------------+
-|  "Engineering Intelligence" Framework                             |
-|                                                                   |
-|  데이터 소스:                                                     |
-|  +--------+  +---------+  +--------+                              |
-|  | IP-XACT|  | IP Spec |  | Design |                              |
-|  | (구조) |  | (시맨틱)|  | Doc    |                              |
-|  +---+----+  +----+----+  +---+----+                              |
-|      |            |            |                                   |
-|      v            v            v                                   |
-|  Hybrid Data Extraction:                                          |
-|      IP-XACT → 구조적 데이터 (레지스터, 버스, 메모리맵)            |
-|      IP Spec → 시맨틱 데이터 (기능 설명, 동작 모드, 제약)         |
-|      결합 → 풍부한 IP 프로파일                                    |
-|                                                                   |
-|  FAISS 인덱싱:                                                    |
-|      IP 프로파일 → Embedding → FAISS Index                        |
-|                                                                   |
-|  LLM-Based Test Generation:                                       |
-|      쿼리 "Feature X 검증" → FAISS 검색 → 관련 IP 정보 반환       |
-|      → LLM 에 전달 → 테스트 명령어 + V-Plan bin 자동 생성          |
-|                                                                   |
-|  결과:                                                            |
-|      Project A: 293 gaps (2.75%) 발견                             |
-|      Project B: 216 gaps (4.99%) 발견                             |
-|      Human oversight: 96.30% (소형 프로젝트)                      |
-+------------------------------------------------------------------+
-```
+
+위 그림은 DVCon 의 "Engineering Intelligence" Framework 전체 흐름입니다.
 
 ---
 

@@ -57,36 +57,35 @@
 
 ### 한 장 그림 — Active Agent 가 DUT 인터페이스를 다루는 모습
 
-```
-              ┌─────────────────── Active Agent ───────────────────┐
-              │                                                     │
-              │       ┌─────────┐ seq_item   ┌───────────┐          │
-   Test ─────▶│ Sequencer ─────────────────▶│ Driver    │          │
-        seq   │       └─────────┘ get/done  └─────┬─────┘          │
-              │                                    │ vif (driving)  │
-              │                                    ▼                │
-              │                          ┌─────────────────┐        │
-              │                          │     virtual     │        │
-              │                          │   my_if vif     │        │
-              │                          │ ───────────────  │        │
-              │                          │ valid/ready/data│        │
-              │                          └────────┬────────┘        │
-              │                                   │ DUT pins        │
-              │                                   ▼                  │
-              │                              ┌─────────┐            │
-              │                              │   DUT   │            │
-              │                              └────┬────┘            │
-              │                                   │                  │
-              │       ┌─────────┐                 │ vif (sampling)  │
-              │       │ Monitor │ ◀───────────────┘                  │
-              │       └────┬────┘                                    │
-              │            │ ap.write(item)                          │
-              └────────────┼────────────────────────────────────────┘
-                           ▼
-                     Scoreboard / Coverage   (다음 챕터)
+```mermaid
+flowchart TB
+    TEST["Test<br/>(seq.start)"]
+    subgraph AGENT["Active Agent"]
+        direction TB
+        SQR["Sequencer"]
+        DRV["Driver"]
+        MON["Monitor"]
+        SQR -- "seq_item<br/>get / done" --> DRV
+    end
+    VIF["<b>virtual my_if vif</b><br/>valid / ready / data"]
+    DUT["DUT"]
+    SB["Scoreboard / Coverage<br/>(다음 챕터)"]
 
-   Passive Agent: 위에서 Sequencer + Driver 두 박스를 통째로 제거 → Monitor 만.
+    TEST -- "seq" --> SQR
+    DRV -- "vif (driving)" --> VIF
+    VIF -- "DUT pins" --> DUT
+    DUT -- "vif (sampling)" --> MON
+    MON -- "ap.write(item)" --> SB
+
+    classDef act stroke:#1a73e8,stroke-width:2px
+    classDef passive stroke:#137333,stroke-width:2px
+    classDef bridge stroke:#5f6368,stroke-dasharray:4 2
+    class SQR,DRV act
+    class MON passive
+    class VIF bridge
 ```
+
+> Passive Agent: 위에서 Sequencer + Driver 두 박스를 통째로 제거 → Monitor 만.
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
@@ -106,34 +105,28 @@
 
 ### 단계별 다이어그램
 
-```
-   t=0ns                                                         drain
-   │                                                                 │
-   ▼                                                                 ▼
- ┌────────────┐  ① start_item(req)         ┌──────────┐
- │ Sequence   │ ─────────────────────────▶│Sequencer │
- │ (in test)  │  ② randomize() with {...} └────┬─────┘
- └────────────┘  ③ finish_item(req)            │ grant
-                                                │
-                                                ▼
-                                          ┌──────────┐
-                                          │ Driver   │  ④ get_next_item(req)
-                                          │ run_phase│  ⑤ vif.valid<=1; vif.data<=req.data
-                                          └────┬─────┘  ⑥ wait(vif.ready)
-                                               │       ⑦ vif.valid<=0
-                                               ▼       ⑧ item_done()
-                                       ┌─────────────┐
-                                       │  vif (DUT)  │  ⑨ DUT 가 한 사이클 후 결과 도착
-                                       └──────┬──────┘
-                                              │
-                                              ▼
-                                       ┌─────────────┐
-                                       │   Monitor   │  ⑩ @posedge clk; if (valid && ready)
-                                       │  run_phase  │  ⑪ item.data <= vif.data; ap.write(item)
-                                       └──────┬──────┘
-                                              │
-                                              ▼
-                                       Scoreboard / Coverage
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SEQ as Sequence<br/>(in test)
+    participant SQR as Sequencer
+    participant DRV as Driver<br/>(run_phase)
+    participant VIF as vif (DUT)
+    participant MON as Monitor<br/>(run_phase)
+    participant SB as Scoreboard /<br/>Coverage
+
+    SEQ->>SQR: ① start_item(req)
+    SEQ->>SEQ: ② randomize() with {...}
+    SEQ->>SQR: ③ finish_item(req)
+    SQR->>DRV: grant
+    DRV->>SQR: ④ get_next_item(req)
+    DRV->>VIF: ⑤ vif.valid<=1<br/>vif.data<=req.data
+    VIF-->>DRV: ⑥ wait(vif.ready)
+    DRV->>VIF: ⑦ vif.valid<=0
+    DRV->>SQR: ⑧ item_done()
+    VIF->>VIF: ⑨ DUT 가 1 cycle 후<br/>결과 도착
+    VIF-->>MON: ⑩ @posedge clk<br/>if (valid && ready)
+    MON->>SB: ⑪ item.data <= vif.data<br/>ap.write(item)
 ```
 
 ### 단계별 의미
@@ -219,18 +212,31 @@ endclass
 
 ### 4.2 Active vs Passive 의 의미
 
-```
-Active Agent (UVM_ACTIVE):
-  +---+---+---+
-  |Drv|Mon|Sqr|  → DUT 에 자극 인가 + 관찰
-  +---+---+---+
-  용도: DUT 입력 인터페이스 (예: AXI master 측)
+```mermaid
+flowchart LR
+    subgraph ACT["Active Agent (UVM_ACTIVE)"]
+        direction LR
+        ADRV["Driver"]
+        AMON["Monitor"]
+        ASQR["Sequencer"]
+    end
+    ACT_USE["DUT 에 자극 인가 + 관찰<br/>용도: DUT 입력 인터페이스<br/>(예: AXI master 측)"]
 
-Passive Agent (UVM_PASSIVE):
-  +---+
-  |Mon|  → DUT 신호 관찰만 (자극 없음)
-  +---+
-  용도: DUT 출력 관찰, 프로토콜 체크 (예: AXI slave 측 또는 일반 spy)
+    subgraph PAS["Passive Agent (UVM_PASSIVE)"]
+        direction LR
+        PMON["Monitor"]
+    end
+    PAS_USE["DUT 신호 관찰만 (자극 없음)<br/>용도: DUT 출력 관찰, 프로토콜 체크<br/>(예: AXI slave 측 또는 spy)"]
+
+    ACT -.-> ACT_USE
+    PAS -.-> PAS_USE
+
+    classDef act stroke:#1a73e8,stroke-width:2px
+    classDef passive stroke:#137333,stroke-width:2px
+    classDef note stroke:#5f6368,stroke-dasharray:4 2
+    class ADRV,AMON,ASQR act
+    class PMON passive
+    class ACT_USE,PAS_USE note
 ```
 
 같은 `my_agent` 클래스를 두 위치 (입력측 = Active, 출력측 = Passive) 에 배치할 수 있어야 진정한 재사용. 따라서 Driver / Sequencer 는 Active 에서만 create — Passive 에서 create 하면 메모리/시뮬 낭비.
@@ -370,22 +376,22 @@ endclass
 
 #### Response 흐름 다이어그램
 
-```
-               Sequence                Sequencer/Driver
-                  |                         |
-  start_item(req) |─────────────────────────>|
-  finish_item(req)|─────────────────────────>| → DUT 구동
-                  |                         |
-                  |      put_response(rsp)  |
-                  |<─────────────────────────| ← DUT 응답
-  get_response(rsp)|                        |
-                  |      item_done()        |
-                  |<─────────────────────────|
+```mermaid
+sequenceDiagram
+    participant S as Sequence
+    participant D as Sequencer / Driver
 
-set_id_info 가 없으면:
-  → Sequencer 가 Response 를 올바른 Sequence 에 전달할 수 없음
-  → 여러 Sequence 가 동시 실행 중일 때 Response 가 엉뚱한 Sequence 로 감
+    S->>D: start_item(req)
+    S->>D: finish_item(req)
+    Note over D: DUT 구동
+    D-->>S: put_response(rsp)<br/>← DUT 응답
+    S->>S: get_response(rsp)
+    D-->>S: item_done()
 ```
+
+!!! warning "set_id_info 가 없으면"
+    - Sequencer 가 Response 를 올바른 Sequence 에 전달할 수 없음
+    - 여러 Sequence 가 동시 실행 중일 때 Response 가 엉뚱한 Sequence 로 감
 
 ### 5.4 Pipelining Driver — 고성능 구동
 

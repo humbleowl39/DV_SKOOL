@@ -60,28 +60,22 @@
 
 ### 한 장 그림 — 무엇을 변경하는가
 
+```mermaid
+flowchart TB
+    W["LLM 가중치 (W)"]
+    P["Prompt 변경<br/>입력 분포 (instruction)<br/>비용: 추론만<br/>갱신: 즉시<br/>유연성: 최고<br/>보안: context"]
+    R["RAG 변경<br/>외부 지식 (검색 chunk)<br/>비용: 인프라 + 추론<br/>갱신: 인덱스만<br/>유연성: 높음<br/>보안: 로컬 DB OK"]
+    F["FT 변경<br/>가중치 W' (재학습)<br/>비용: GPU 학습 + 인프라<br/>갱신: 재학습 (시간 / 비용)<br/>유연성: 낮음<br/>보안: 모델에 영구 저장 (위험)"]
+    W --> P
+    W --> R
+    W --> F
+    P -. "한계 시" .-> R
+    R -. "한계 시" .-> F
+    classDef esc stroke:#3498db,stroke-width:2px,stroke-dasharray: 4 2
+    class P,R,F esc
 ```
-                     LLM 가중치 (W)
-                          │
-        ┌─────────────────┼─────────────────┐
-        ▼                 ▼                 ▼
-   ┌────────┐       ┌──────────┐       ┌────────┐
-   │ Prompt │       │   RAG    │       │   FT   │
-   │  변경  │       │  변경    │       │  변경  │
-   └────────┘       └──────────┘       └────────┘
-        │                 │                 │
-        ▼                 ▼                 ▼
-   입력 분포          외부 지식         가중치 W'
-   (instruction)      (검색 chunk)      (재학습됨)
-        │                 │                 │
-        ▼                 ▼                 ▼
-   비용: 추론만     비용: 인프라+추론   비용: GPU 학습 + 인프라
-   갱신: 즉시       갱신: 인덱스만      갱신: 재학습 (시간/비용)
-   유연성: 최고     유연성: 높음        유연성: 낮음
-   보안: context    보안: 로컬 DB OK    보안: 모델에 영구 저장 (위험)
 
-   ★ 항상 Prompt → RAG → FT 순서로 escalation
-```
+★ 항상 Prompt → RAG → FT 순서로 escalation.
 
 ### 왜 이 순서인가 — Design rationale
 

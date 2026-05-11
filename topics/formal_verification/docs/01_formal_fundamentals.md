@@ -82,31 +82,27 @@
 
 가장 단순한 시나리오. **8-entry FIFO** 의 `wr_en && full` (overflow attempt) property 한 개를 SVA 로 작성 → bind → JasperGold 에 로드 → PROVEN 까지 전체 사이클을 따라가 봅시다.
 
-```
-  ┌─────────── DUT (fifo_8entry) ───────────┐    ┌──── SVA bind ─────┐
-  │                                          │    │                    │
-  │   wr_en ──┐                               │    │ assert            │
-  │   wr_data │   ┌─────────────────┐         │ ── │   !(wr_en &&      │
-  │           ▼   │ count [3:0]     │ → full ─┼─→  │      full)         │
-  │   rd_en ──┐   │ buf  [7:0][N]   │         │    │ cover (wr_en &&    │
-  │           │   └─────────────────┘ → empty │    │   count == N-1)    │
-  │           ▼                               │    └────────────────────┘
-  └──────────────────────────────────────────┘             │
-            │                                              │
-            └──────────── elaborate (JG) ──────────────────┘
-                                  │
-                                  ▼
-                        ┌─────────────────────┐
-                        │  prove -all          │
-                        │  ─ Engine: SAT/SMT   │
-                        │  ─ Induction         │
-                        └──────────┬──────────┘
-                                   │
-                       ┌───────────┴────────────┐
-                       │                        │
-                  CEX (FAILED)              PROVEN
-                  (count overflow            (모든 cycle 안전)
-                   path 발견)                 ↑ 우리 목표
+```mermaid
+flowchart TB
+    subgraph DUT["DUT — fifo_8entry"]
+        direction LR
+        IN["wr_en / wr_data<br/>rd_en"]
+        ST["count [3:0]<br/>buf [7:0][N]"]
+        OUT["full / empty"]
+        IN --> ST --> OUT
+    end
+    subgraph SVA["SVA bind"]
+        direction TB
+        A["assert<br/>!(wr_en && full)"]
+        C["cover<br/>(wr_en && count == N-1)"]
+    end
+    DUT -- "bind" --> SVA
+    SVA --> EL["elaborate (JG)"]
+    EL --> PR["prove -all<br/>Engine: SAT/SMT<br/>Induction"]
+    PR --> CEX["CEX (FAILED)<br/>count overflow path 발견"]
+    PR --> PV["PROVEN<br/>모든 cycle 안전<br/>(목표)"]
+    classDef goal stroke:#27ae60,stroke-width:3px
+    class PV goal
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -185,20 +181,9 @@ Formal:
 
 ### 4.2 Formal 의 3가지 결과
 
-```
-1. PROVEN (증명됨)
-   모든 가능한 입력/상태에서 Property 성립
-   → 수학적 보장 → 가장 강력한 결과
-
-2. FAILED (반례 발견 = CEX = Counterexample)
-   Property 를 위반하는 구체적 입력 시퀀스 발견
-   → 파형으로 확인 가능 → 버그 확정
-
-3. BOUNDED (제한적 증명)
-   N cycle 까지는 증명, 그 이후는 미검증
-   → State Explosion 으로 완전 증명 불가 시
-   → "N cycle 이내에서는 안전" (실용적으로 충분할 수 있음)
-```
+1. **PROVEN (증명됨)** — 모든 가능한 입력/상태에서 Property 성립 → 수학적 보장 → 가장 강력한 결과.
+2. **FAILED (반례 발견 = CEX = Counterexample)** — Property 를 위반하는 구체적 입력 시퀀스 발견 → 파형으로 확인 가능 → 버그 확정.
+3. **BOUNDED (제한적 증명)** — N cycle 까지는 증명, 그 이후는 미검증 → State Explosion 으로 완전 증명 불가 시 → "N cycle 이내에서는 안전" (실용적으로 충분할 수 있음).
 
 ### 4.3 Induction — BOUNDED 와 PROVEN 의 차이를 만드는 핵심
 
@@ -241,20 +226,25 @@ Induction 실패 원인과 대응:
 
 ### 4.4 Formal 적합/부적합 — 한 장 결정 트리
 
-```
-이 IP/블록에 Formal 을 적용할까?
-
-  상태 공간이 관리 가능한가? (레지스터 수, 메모리 크기)
-    NO → 시뮬레이션 (또는 Abstraction 후 Formal)
-    YES ↓
-
-  기능 명세가 Property 로 표현 가능한가?
-    NO → 시뮬레이션 (E2E 데이터 비교)
-    YES ↓
-
-  시뮬레이션으로 놓치기 쉬운 코너 케이스가 있는가?
-    YES → Formal 강력 추천 ✓
-    NO → 시뮬레이션으로 충분
+```mermaid
+flowchart TB
+    Q0["이 IP/블록에 Formal 을 적용할까?"]
+    Q1{"상태 공간이<br/>관리 가능한가?<br/>(레지스터 수, 메모리 크기)"}
+    Q2{"기능 명세가<br/>Property 로 표현 가능한가?"}
+    Q3{"시뮬레이션으로 놓치기 쉬운<br/>코너 케이스가 있는가?"}
+    S1["시뮬레이션<br/>(또는 Abstraction 후 Formal)"]
+    S2["시뮬레이션<br/>(E2E 데이터 비교)"]
+    S3["시뮬레이션으로 충분"]
+    F["Formal 강력 추천 ✓"]
+    Q0 --> Q1
+    Q1 -- "NO" --> S1
+    Q1 -- "YES" --> Q2
+    Q2 -- "NO" --> S2
+    Q2 -- "YES" --> Q3
+    Q3 -- "NO" --> S3
+    Q3 -- "YES" --> F
+    classDef pick stroke:#27ae60,stroke-width:3px
+    class F pick
 ```
 
 ---
@@ -318,46 +308,39 @@ SVA 로 Property 작성 → Formal Engine (SAT/SMT) 이 증명
   결과: PROVEN → 어떤 상황에서도 ack 가 보장됨 (Induction 성공)
         FAILED → req 후 ack 없는 시나리오 반례 제공 (SAT 해 발견)
         BOUNDED → N cycle 까지는 성립, 이후 미검증 (Induction 미완)
+```
 
-  워크플로:
-  ┌──────────┐    ┌──────────┐    ┌──────────────┐    ┌──────────┐
-  │ RTL 로드  │ → │ SVA 로드  │ → │ Engine 실행   │ → │ 결과 분석 │
-  └──────────┘    └──────────┘    └──────────────┘    └──────────┘
-                                   prove -all          PROVEN/FAILED/
-                                                       BOUNDED
+워크플로:
+
+```mermaid
+flowchart LR
+    A["RTL 로드"] --> B["SVA 로드"]
+    B --> C["Engine 실행<br/>prove -all"]
+    C --> D["결과 분석<br/>PROVEN / FAILED / BOUNDED"]
 ```
 
 #### 5.3.2 Equivalence Checking (동등성 검증)
 
-```
 두 설계가 기능적으로 동일한지 검증:
 
-  사용 시나리오:
-  ┌───────────────────────────────────────────────────────────┐
-  │ (a) RTL vs RTL (Sequential Equivalence, SEQ)              │
-  │     - 리팩토링, 최적화, ECO 후 동일성 확인                │
-  │     - "코드를 바꿨는데, 기능이 달라지지 않았는가?"        │
-  │     - FSM 재인코딩, 파이프라인 단계 변경 등 검증 가능     │
-  │                                                           │
-  │ (b) RTL vs Netlist (Logic Equivalence, LEC)               │
-  │     - 합성 (Synthesis) 후 동일성 확인                     │
-  │     - "합성 도구가 로직을 바꾸지 않았는가?"               │
-  │     - Synopsys Formality, Cadence Conformal 등 사용       │
-  │                                                           │
-  │ (c) C/C++ vs RTL (HLS 검증)                               │
-  │     - HLS 생성 RTL 이 원본 C++ 알고리즘과 동일한지        │
-  │     - 실무에서는 C-sim + Co-sim 으로 대체하는 경우 많음   │
-  └───────────────────────────────────────────────────────────┘
+**사용 시나리오 3종**
 
-  핵심 개념 — Miter Circuit:
-  ┌──────┐
-  │Spec A│──→ out_A ─┐
-  └──────┘           ├─ XOR ─→ 0이면 동일, 1이면 차이 발견
-  ┌──────┐           │
-  │Impl B│──→ out_B ─┘
-  └──────┘
-  같은 입력에 대해 두 설계의 출력이 항상 동일한지 수학적으로 증명
+- **(a) RTL vs RTL (Sequential Equivalence, SEQ)** — 리팩토링, 최적화, ECO 후 동일성 확인. "코드를 바꿨는데, 기능이 달라지지 않았는가?" FSM 재인코딩, 파이프라인 단계 변경 등 검증 가능.
+- **(b) RTL vs Netlist (Logic Equivalence, LEC)** — 합성 (Synthesis) 후 동일성 확인. "합성 도구가 로직을 바꾸지 않았는가?" Synopsys Formality, Cadence Conformal 등 사용.
+- **(c) C/C++ vs RTL (HLS 검증)** — HLS 생성 RTL 이 원본 C++ 알고리즘과 동일한지. 실무에서는 C-sim + Co-sim 으로 대체하는 경우 많음.
+
+**핵심 개념 — Miter Circuit**
+
+```mermaid
+flowchart LR
+    IN["같은 입력"] --> SA["Spec A"]
+    IN --> IB["Impl B"]
+    SA -- "out_A" --> X(("XOR"))
+    IB -- "out_B" --> X
+    X --> R["0 = 동일<br/>1 = 차이 발견"]
 ```
+
+같은 입력에 대해 두 설계의 출력이 항상 동일한지 수학적으로 증명.
 
 #### 5.3.3 Connectivity Checking (연결성 검증)
 
@@ -396,39 +379,38 @@ Formal 의 근본 한계:
 
 #### 대응 기법 1: Abstraction (추상화)
 
-```
 불필요한 디테일을 제거하여 상태 공간을 줄이는 핵심 기법.
 
-(a) Blackboxing — 모듈을 블랙박스로 치환
-    검증 대상이 아닌 서브모듈을 "입출력만 있는 빈 박스" 로 교체
-    → 내부 상태가 제거되어 탐색 공간 대폭 축소
+**(a) Blackboxing — 모듈을 블랙박스로 치환**
 
-    예: 데이터 경로 (곱셈기, ALU) 를 블랙박스로 → 제어 FSM 만 검증
-    ┌────────────────────────────────┐
-    │  DUT                           │
-    │  ┌──────┐    ┌──────────────┐  │
-    │  │ FSM  │←──→│ 곱셈기(32bit)│  │ ← 블랙박스 처리
-    │  │ (검증)│    │ (블랙박스)   │  │    내부 상태 제거
-    │  └──────┘    └──────────────┘  │
-    └────────────────────────────────┘
+검증 대상이 아닌 서브모듈을 "입출력만 있는 빈 박스" 로 교체 → 내부 상태가 제거되어 탐색 공간 대폭 축소.
 
-    주의: 블랙박스 출력은 자유 (unconstrained) 가 됨
-    → 필요시 assume 으로 출력 범위 제한
+예: 데이터 경로 (곱셈기, ALU) 를 블랙박스로 → 제어 FSM 만 검증.
 
-(b) Data Abstraction — 데이터 폭 축소
-    32-bit 데이터를 2~4-bit 으로 축소하여 검증
-    제어 로직의 정확성은 데이터 폭에 독립적인 경우 유효
-
-    예: FIFO 의 Overflow/Underflow → 데이터 내용이 아니라
-        wr_en/rd_en/full/empty 관계가 핵심 → 데이터 폭 무관
-
-(c) Counter Abstraction — 카운터 범위 축소
-    32-bit 카운터를 3-bit 으로 축소 → 8가지 상태로 검증
-    "카운터가 0 에서 MAX 까지 간다" 는 속성은 작은 범위에서도 동일
-
-    예: 타이머가 0 → N 카운트 후 이벤트 발생
-        N=1000 을 N=3 으로 축소해도 제어 로직 검증 가능
+```mermaid
+flowchart LR
+    subgraph DUT["DUT"]
+        FSM["FSM<br/>(검증)"]
+        MUL["곱셈기 (32-bit)<br/>(블랙박스 — 내부 상태 제거)"]
+        FSM <--> MUL
+    end
+    classDef bb stroke:#c0392b,stroke-width:3px,stroke-dasharray:4 4
+    class MUL bb
 ```
+
+주의: 블랙박스 출력은 자유 (unconstrained) 가 됨 → 필요시 assume 으로 출력 범위 제한.
+
+**(b) Data Abstraction — 데이터 폭 축소**
+
+32-bit 데이터를 2~4-bit 으로 축소하여 검증. 제어 로직의 정확성은 데이터 폭에 독립적인 경우 유효.
+
+예: FIFO 의 Overflow/Underflow → 데이터 내용이 아니라 wr_en/rd_en/full/empty 관계가 핵심 → 데이터 폭 무관.
+
+**(c) Counter Abstraction — 카운터 범위 축소**
+
+32-bit 카운터를 3-bit 으로 축소 → 8가지 상태로 검증. "카운터가 0 에서 MAX 까지 간다" 는 속성은 작은 범위에서도 동일.
+
+예: 타이머가 0 → N 카운트 후 이벤트 발생. N=1000 을 N=3 으로 축소해도 제어 로직 검증 가능.
 
 #### 대응 기법 2: Assume (환경 제약)
 
@@ -443,22 +425,22 @@ Formal 의 근본 한계:
 
 #### 대응 기법 3: Cut Point (분할 검증)
 
-```
 큰 설계를 작은 블록으로 분할하여 각각 Formal 적용.
 
-  ┌────────────────────────────────────────┐
-  │  대규모 SoC                             │
-  │  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐    │
-  │  │블록A │──│블록B │──│블록C │──│블록D │  │
-  │  └─────┘  └─────┘  └─────┘  └─────┘    │
-  └────────────────────────────────────────┘
-
-  각 블록을 독립적으로 Formal 검증:
-  - 블록A 의 출력 스펙 → 블록B 의 Assume 으로 사용
-  - 블록 간 인터페이스만 정확하면, 전체가 정확
-
-  = Compositional Verification (합성적 검증)
+```mermaid
+flowchart LR
+    subgraph SoC["대규모 SoC"]
+        direction LR
+        A["블록 A"] --> B["블록 B"] --> C["블록 C"] --> D["블록 D"]
+    end
 ```
+
+각 블록을 독립적으로 Formal 검증:
+
+- 블록A 의 출력 스펙 → 블록B 의 Assume 으로 사용
+- 블록 간 인터페이스만 정확하면, 전체가 정확
+
+= Compositional Verification (합성적 검증)
 
 #### 대응 기법 4: Bounded Proof (제한적 증명)
 

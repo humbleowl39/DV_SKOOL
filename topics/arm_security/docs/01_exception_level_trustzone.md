@@ -57,23 +57,33 @@
 
 ### 한 장 그림 — EL × NS 매트릭스 + 단일 게이트 EL3
 
-```
-            Non-Secure World                    Secure World
-          ┌───────────────────┐              ┌───────────────────┐
-   EL0    │ NS-EL0 일반 앱     │              │ S-EL0 Trusted App │
-          │  (브라우저, 게임)   │              │  (결제 / DRM / 생체)│
-          ├───────────────────┤              ├───────────────────┤
-   EL1    │ NS-EL1 Linux/An.   │              │ S-EL1 OP-TEE       │
-          ├───────────────────┤              ├───────────────────┤
-   EL2    │ NS-EL2 KVM / Xen   │              │ S-EL2 SPM (v8.4+)  │
-          ├───────────────────┴──────────────┴───────────────────┤
-   EL3    │              Secure Monitor (ATF / BL31)              │   ⭐ 항상 Secure
-          │              유일한 월드 전환 게이트                    │
-          └──────────────────────────────────────────────────────┘
-                       ▲                                ▲
-                       │ SMC                            │ SMC
-                       └──── NS world 에서 진입 ───────┘
-                            (직접 NS-EL1 → S-EL1 전환은 불가)
+```mermaid
+flowchart TB
+    subgraph NS["Non-Secure World"]
+        direction TB
+        NS0["NS-EL0 일반 앱<br/>(브라우저, 게임)"]
+        NS1["NS-EL1 Linux / Android"]
+        NS2["NS-EL2 KVM / Xen"]
+        NS0 --- NS1 --- NS2
+    end
+    subgraph S["Secure World"]
+        direction TB
+        S0["S-EL0 Trusted App<br/>(결제 / DRM / 생체)"]
+        S1["S-EL1 OP-TEE"]
+        S2["S-EL2 SPM (v8.4+)"]
+        S0 --- S1 --- S2
+    end
+    EL3["<b>EL3 — Secure Monitor (ATF / BL31)</b><br/>유일한 월드 전환 게이트 · 항상 Secure"]
+    NS2 -- "SMC" --> EL3
+    S2 -- "SMC" --> EL3
+    EL3 -. "직접 NS-EL1 ↔ S-EL1 전환 불가" .- NS1
+
+    classDef ns stroke:#1a73e8,stroke-width:2px
+    classDef sec stroke:#c5221f,stroke-width:2px
+    classDef gate stroke:#b8860b,stroke-width:3px
+    class NS0,NS1,NS2 ns
+    class S0,S1,S2 sec
+    class EL3 gate
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -92,29 +102,26 @@
 
 가장 단순한 시나리오. 사용자가 결제 버튼을 누르면, 앱 (NS-EL0) 이 OS (NS-EL1) 의 syscall 을 거쳐 EL3 monitor 를 경유해 OP-TEE (S-EL1) 의 결제 TA (S-EL0) 까지 도달하고, 결과가 역순으로 반환됩니다.
 
-```
-                                     ┌───── EL3 (Secure Monitor / BL31) ─────┐
-                                     │  ④ NS context save → SCR.NS=0          │
-                                     │     → S context restore → ERET         │
-                                     │                                         │
-                                     │  ⑨ S context save → SCR.NS=1            │
-                                     │     → NS context restore → ERET         │
-                                     └────────────────────────────────────────┘
-                                              ▲                 │
-                                              │ SMC #0          │ ERET
-                                              │ ③               │ ⑤
-       ┌── Non-Secure World ──┐               │                 ▼               ┌── Secure World ──┐
-       │                      │               │                                 │                   │
-   ① NS-EL0 결제 앱           │               │                                 │ ⑤→⑥ S-EL1 OP-TEE  │
-       │      │  SVC #0 ② ──→ │               │                                 │      │             │
-       ▼      ▼               │               │                                 │      ▼  ⑥ TA call  │
-   ② NS-EL1 Linux             │               │                                 │ ⑥→⑦ S-EL0 결제 TA │
-   ───kernel───→ SMC #0 ──────┘               │                                 │      │ 결제 처리   │
-                                              │                                 │      ▼  ⑧ SMC ret  │
-   결과 ← NS-EL1 ← ERET ──────┐               │                                 │ ⑧ S-EL1 OP-TEE     │
-       ▲   ⑩ ERET (NS-EL1)    │               │                                 └───────────────────┘
-       │                      │               │
-   ⑪ NS-EL0 (결제 결과 표시) ◀┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as NS-EL0<br/>결제 앱
+    participant Linux as NS-EL1<br/>Linux kernel
+    participant BL31 as EL3<br/>BL31 monitor
+    participant OPTEE as S-EL1<br/>OP-TEE
+    participant TA as S-EL0<br/>결제 TA
+
+    App->>Linux: SVC #0 (결제 요청)
+    Linux->>BL31: SMC #0
+    Note over BL31: NS context save<br/>SCR_EL3.NS = 0<br/>S context restore
+    BL31->>OPTEE: ERET (S-EL1)
+    OPTEE->>TA: TA dispatch
+    Note over TA: 결제 키 사용<br/>결과 생성
+    TA-->>OPTEE: 결과 반환
+    OPTEE->>BL31: SMC (S→NS 복귀)
+    Note over BL31: S context save<br/>SCR_EL3.NS = 1<br/>NS context restore
+    BL31-->>Linux: ERET (NS-EL1)
+    Linux-->>App: 결제 결과
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -153,46 +160,46 @@ asm volatile("smc #0" : "+r"(x0), "+r"(x1));
     - **Exception Level (EL)**: ARMv8 PE (Processing Element) 의 권한 계층 (`EL0` < `EL1` < `EL2` < `EL3`) 으로, 각 level 이 system register / 메모리 매핑 / 명령어 사용 권한 범위를 결정한다.
     - **Security State (NS bit)**: PE 의 1-bit 상태로, 현재 instruction 이 Secure World 에서 실행되는지 (`NS=0`) Non-Secure World 에서 실행되는지 (`NS=1`) 를 표시하며, 모든 outgoing bus transaction 의 보안 attribute 로 전파된다.
 
-```
-    EL (수직, 권한)               NS (수평, 월드)
-   ─────────────────             ───────────────────────────
-   EL3 ─ Secure Monitor          NS=0 ─ Secure   (TEE)
-   EL2 ─ Hypervisor              NS=1 ─ Non-Secure (Rich OS)
-   EL1 ─ OS kernel
-   EL0 ─ Application
+```mermaid
+flowchart LR
+    subgraph V["EL — 수직 (권한)"]
+        direction TB
+        E3["EL3 — Secure Monitor"]
+        E2["EL2 — Hypervisor"]
+        E1["EL1 — OS kernel"]
+        E0["EL0 — Application"]
+        E3 --- E2 --- E1 --- E0
+    end
+    subgraph H["NS — 수평 (월드)"]
+        direction TB
+        NS0["NS=0 · Secure (TEE)"]
+        NS1["NS=1 · Non-Secure (Rich OS)"]
+    end
+
+    classDef axis stroke:#1a73e8,stroke-width:2px
+    class E3,E2,E1,E0,NS0,NS1 axis
 ```
 
 핵심: 두 축은 **독립** 입니다. EL3 만 항상 NS=0 으로 고정되고 (전환 게이트), 나머지 EL 은 (S, NS) 둘 다 가능. 그래서 표면상 4 × 2 = 8 mode 가 존재합니다.
 
 ### 4.2 8 mode 매트릭스와 사용 시점
 
-```
-        ┌───────────────────────────────┬────────────────────────────────┐
-        │  Non-Secure (NS=1)            │  Secure (NS=0)                  │
-   ─────┼───────────────────────────────┼────────────────────────────────┤
-   EL0  │ NS-EL0  일반 앱                │ S-EL0  Trusted App (TA)         │
-   EL1  │ NS-EL1  Linux / Android       │ S-EL1  OP-TEE / Trusty / Knox    │
-   EL2  │ NS-EL2  KVM / Xen / Hyper-V    │ S-EL2  SPM (Hafnium, ARMv8.4+)   │
-   EL3  │ ──────── 존재하지 않음 ────── │ EL3   Secure Monitor (BL31)     │
-        └───────────────────────────────┴────────────────────────────────┘
-```
+| | Non-Secure (NS=1) | Secure (NS=0) |
+|---|---|---|
+| **EL0** | NS-EL0 일반 앱 | S-EL0 Trusted App (TA) |
+| **EL1** | NS-EL1 Linux / Android | S-EL1 OP-TEE / Trusty / Knox |
+| **EL2** | NS-EL2 KVM / Xen / Hyper-V | S-EL2 SPM (Hafnium, ARMv8.4+) |
+| **EL3** | (존재하지 않음) | EL3 Secure Monitor (BL31) |
 
 - **EL3 는 항상 Secure** — NS=1 EL3 라는 mode 는 아키텍처적으로 정의되지 않습니다 (그래서 8 - 1 = 7 mode 가 실용적으로 존재).
 - **NS-EL2 ↔ S-EL2 의 비대칭** — Secure EL2 는 ARMv8.4-A 이전에는 없었고, 추가된 후에도 SPM (Secure Partition Manager) 의 자리만 차지합니다.
 
 ### 4.3 EL 전환의 일반 규칙
 
-```
-   상향 (낮은 EL → 높은 EL)            하향 (높은 EL → 낮은 EL)
-   ───────────────────────              ────────────────────────
-   ▶ Exception 으로만 가능               ▶ ERET 으로만 가능
-     - SVC: EL0 → EL1                    ▶ SPSR_ELn 의 M field 가
-     - HVC: EL1 → EL2                       복귀할 EL 을 결정
-     - SMC: any → EL3                    ▶ ELR_ELn 이 복귀 PC
-     - IRQ/FIQ/Abort: 설정에 따라        ▶ 항상 같은 EL 또는 더 낮은 EL
-   ▶ HW 가 자동: PSTATE→SPSR_ELn,         로만 복귀 (상승 ERET 금지)
-       PC→ELR_ELn, PC = VBAR_ELn+offset
-```
+| 방향 | 규칙 |
+|---|---|
+| **상향** (낮은 EL → 높은 EL) | Exception 으로만 가능 — SVC (EL0→EL1) / HVC (EL1→EL2) / SMC (any→EL3) / IRQ·FIQ·Abort (설정에 따라). HW 자동: PSTATE→SPSR_ELn, PC→ELR_ELn, PC = VBAR_ELn + offset. |
+| **하향** (높은 EL → 낮은 EL) | ERET 으로만 가능. SPSR_ELn.M 가 복귀 EL 을 결정, ELR_ELn 이 복귀 PC. 항상 같은 EL 또는 더 낮은 EL 로만 복귀 (상승 ERET 금지). |
 
 이 규칙이 **"권한 상승은 HW 가 통제, SW 가 임의로 올릴 수 없다"** 라는 모델의 본질입니다. 이후 모든 모듈에서 이 규칙은 변하지 않고 반복됩니다.
 
@@ -202,27 +209,20 @@ asm volatile("smc #0" : "+r"(x0), "+r"(x1));
 
 ### 5.1 Exception Level (EL0 ~ EL3)
 
-```
-권한 높음
-  ^
-  |
-EL3 ─── Secure Monitor (ATF/BL31, BootROM/BL1)
-  |      - 최고 권한, Secure/Non-Secure 전환 관리
-  |      - SMC (Secure Monitor Call)로 진입
-  |      - 항상 Secure 상태
-  |
-EL2 ─── Hypervisor
-  |      - VM (Virtual Machine) 관리
-  |      - Secure EL2 (ARMv8.4+): Secure 가상화
-  |      - Non-Secure EL2: 일반 가상화 (KVM 등)
-  |
-EL1 ─── OS Kernel
-  |      - Secure EL1: TEE OS (OP-TEE, Trusty)
-  |      - Non-Secure EL1: 일반 OS (Linux, Android)
-  |
-EL0 ─── Application
-         - Secure EL0: Trusted App (결제, DRM, 생체)
-         - Non-Secure EL0: 일반 앱
+```mermaid
+flowchart TB
+    EL3["<b>EL3 — Secure Monitor</b><br/>ATF/BL31, BootROM/BL1<br/>최고 권한 · 월드 전환 관리<br/>SMC 로 진입 · 항상 Secure"]
+    EL2["<b>EL2 — Hypervisor</b><br/>VM 관리<br/>S-EL2 (ARMv8.4+) · NS-EL2 (KVM)"]
+    EL1["<b>EL1 — OS Kernel</b><br/>S-EL1: TEE OS (OP-TEE, Trusty)<br/>NS-EL1: Linux, Android"]
+    EL0["<b>EL0 — Application</b><br/>S-EL0: Trusted App (결제, DRM, 생체)<br/>NS-EL0: 일반 앱"]
+    EL3 --> EL2 --> EL1 --> EL0
+
+    classDef high stroke:#c5221f,stroke-width:3px
+    classDef mid stroke:#1a73e8,stroke-width:2px
+    classDef low stroke:#5f6368,stroke-width:1px
+    class EL3 high
+    class EL2,EL1 mid
+    class EL0 low
 ```
 
 #### 각 EL 의 핵심 역할
@@ -240,42 +240,54 @@ EL0 ─── Application
 
 #### 왜 두 개의 "월드" 가 필요한가?
 
-```
-문제: 일반 OS가 해킹되면?
-  → OS 커널 권한 탈취 → 모든 메모리/디바이스 접근 가능
-  → 결제 정보, 암호 키, 생체 데이터 노출
+문제: 일반 OS 가 해킹되면 OS 커널 권한 탈취 → 모든 메모리/디바이스 접근 → 결제 정보, 암호 키, 생체 데이터 노출.
 
-TrustZone 해결:
-  Secure World (TEE)          Normal World
-  +-------------------+      +-------------------+
-  | 결제 처리          |      | 일반 앱           |
-  | 암호 키 저장       |      | 브라우저          |
-  | 생체 인증          |      | 게임              |
-  | DRM 복호화         |      | OS (Linux)        |
-  +-------------------+      +-------------------+
-         ↑ HW 격리                  ↑
-         |                          |
-  Normal World에서 Secure World 메모리 접근 불가 (HW 강제)
-  → OS가 해킹되어도 Secure World의 키/데이터는 안전
+```mermaid
+flowchart LR
+    subgraph S["Secure World (TEE)"]
+        S1["결제 처리"]
+        S2["암호 키 저장"]
+        S3["생체 인증"]
+        S4["DRM 복호화"]
+    end
+    subgraph N["Normal World"]
+        N1["일반 앱"]
+        N2["브라우저"]
+        N3["게임"]
+        N4["OS (Linux)"]
+    end
+    N -. "HW 강제 격리<br/>Normal → Secure 메모리 접근 불가" .- S
+
+    classDef sec stroke:#c5221f,stroke-width:2px
+    classDef norm stroke:#1a73e8,stroke-width:2px
+    class S1,S2,S3,S4 sec
+    class N1,N2,N3,N4 norm
 ```
+
+→ OS 가 해킹되어도 Secure World 의 키/데이터는 안전.
 
 #### TrustZone 의 HW 격리 메커니즘
 
-```
 모든 버스 트랜잭션에 NS (Non-Secure) 비트 추가:
 
-  +--------+    +------+-------+------+
-  | Master | →  | NS=0 | ADDR  | DATA |  Secure 접근
-  +--------+    +------+-------+------+
-                | NS=1 | ADDR  | DATA |  Non-Secure 접근
-                +------+-------+------+
+```mermaid
+flowchart LR
+    M["Master"] --> BUS["Bus transaction<br/>{NS, ADDR, DATA}"]
+    BUS -- "NS=0 (Secure)" --> SEC["Secure 메모리/디바이스<br/>접근 허용"]
+    BUS -- "NS=1 (Non-Secure)" --> CHK{"Secure 영역?"}
+    CHK -- yes --> ERR["버스 에러 — 차단"]
+    CHK -- no --> NOK["Non-Secure 영역<br/>접근 허용"]
 
-  NS=0 (Secure): Secure 메모리/디바이스 접근 가능
-  NS=1 (Non-Secure): Secure 영역 접근 시 → 버스 에러 (차단)
-
-  → NS 비트는 HW가 강제 — SW로 조작 불가능
-  → EL3 (Secure Monitor)만 NS 비트를 변경할 수 있음
+    classDef sec stroke:#c5221f,stroke-width:2px
+    classDef ns stroke:#1a73e8,stroke-width:2px
+    classDef err stroke:#b8860b,stroke-width:2px,stroke-dasharray:4 2
+    class SEC sec
+    class NOK ns
+    class ERR err
 ```
+
+- NS 비트는 HW 가 강제 — SW 로 조작 불가능.
+- EL3 (Secure Monitor) 만 NS 비트를 변경할 수 있음.
 
 ### 5.3 SCR_EL3 (Secure Configuration Register)
 
@@ -402,50 +414,55 @@ ERET 실행 (복귀):
 
 #### Stage 1 vs Stage 2 Translation (EL2 의 핵심)
 
+```mermaid
+flowchart LR
+    subgraph BM["EL2 없을 때 (베어메탈)"]
+        direction LR
+        VA1["VA<br/>(가상 주소)"]
+        PA1["PA<br/>(물리 주소)"]
+        VA1 -- "Stage 1" --> PA1
+    end
+    subgraph VZ["EL2 있을 때 (가상화)"]
+        direction LR
+        VA2["VA"]
+        IPA["IPA<br/>(중간 물리 주소)"]
+        PA2["PA"]
+        VA2 -- "Stage 1<br/>Guest OS (EL1) 관리" --> IPA
+        IPA -- "Stage 2<br/>Hypervisor (EL2) 관리" --> PA2
+    end
+
+    classDef stage stroke:#1a73e8,stroke-width:2px
+    class VA1,PA1,VA2,IPA,PA2 stage
 ```
-EL2가 없을 때 (베어메탈):
-  VA ──Stage 1──→ PA
-  (가상 주소)       (물리 주소)
 
-EL2가 있을 때 (가상화):
-  VA ──Stage 1──→ IPA ──Stage 2──→ PA
-  (가상 주소)       (중간 물리 주소)    (물리 주소)
-
-  Stage 1: Guest OS(EL1)가 관리 — VM 내부 매핑
-  Stage 2: Hypervisor(EL2)가 관리 — VM 간 격리
-
-  왜 2단계인가?
-    → Guest OS는 자신이 물리 메모리를 직접 관리한다고 "착각"
-    → 실제로는 Hypervisor가 Stage 2로 물리 메모리를 격리
-    → VM-A가 VM-B의 메모리에 접근 불가 (Stage 2가 차단)
-    → 이것이 VM 탈출(VM Escape) 공격을 막는 HW 기반 방어
-
-  TrustZone과의 결합:
-    Stage 2 테이블에도 NS 속성 존재
-    → Hypervisor가 VM에 Secure 메모리를 매핑하는 것 자체를 차단
-    → EL2도 NS 상태이면 Secure PA 매핑 불가
-```
+- **Stage 1**: Guest OS (EL1) 가 관리 — VM 내부 매핑.
+- **Stage 2**: Hypervisor (EL2) 가 관리 — VM 간 격리.
+- **왜 2 단계인가**: Guest OS 는 자신이 물리 메모리를 직접 관리한다고 "착각" → 실제로는 Hypervisor 가 Stage 2 로 물리 메모리를 격리 → VM-A 가 VM-B 의 메모리에 접근 불가 (Stage 2 가 차단). 이것이 VM 탈출 (VM Escape) 공격을 막는 HW 기반 방어.
+- **TrustZone 과의 결합**: Stage 2 테이블에도 NS 속성 존재 → Hypervisor 가 VM 에 Secure 메모리를 매핑하는 것 자체를 차단. EL2 도 NS 상태이면 Secure PA 매핑 불가.
 
 ### 5.8 EL3 가 항상 Secure 인 이유
 
+EL3 = Secure Monitor = 보안 월드 전환의 유일한 게이트.
+
+```mermaid
+flowchart LR
+    NSEL1["NS-EL1 (Linux)"]
+    EL3M["EL3 (Secure Monitor)"]
+    SEL1["S-EL1 (OP-TEE)"]
+    NSEL1 -- "SMC 호출 (결제 요청)" --> EL3M
+    EL3M -- "ERET → Secure" --> SEL1
+    SEL1 -- "결제 처리 후<br/>SMC 반환" --> EL3M
+    EL3M -- "ERET → Non-Secure" --> NSEL1
+
+    classDef ns stroke:#1a73e8,stroke-width:2px
+    classDef sec stroke:#c5221f,stroke-width:2px
+    classDef gate stroke:#b8860b,stroke-width:3px
+    class NSEL1 ns
+    class SEL1 sec
+    class EL3M gate
 ```
-EL3 = Secure Monitor = 보안 월드 전환의 유일한 게이트
 
-  Non-Secure World                    Secure World
-  +------------------+              +------------------+
-  | NS-EL1 (Linux)   |              | S-EL1 (OP-TEE)  |
-  |                   |   SMC 호출   |                  |
-  |   결제 요청 ------+------→ EL3 →-+--- 결제 처리     |
-  |                   |   결과 반환   |                  |
-  |   결과 수신 ←-----+------← EL3 ←-+--- 결과 반환     |
-  +------------------+              +------------------+
-
-  EL3가 Non-Secure가 될 수 있다면?
-    → Normal World에서 EL3를 장악 → 보안 전환 조작 가능
-    → TrustZone 전체 무력화
-
-  따라서 EL3는 항상 Secure — ARM 아키텍처 수준에서 강제
-```
+만약 EL3 가 Non-Secure 가 될 수 있다면 Normal World 에서 EL3 를 장악 → 보안 전환 조작 → TrustZone 전체 무력화. 따라서 EL3 는 항상 Secure — ARM 아키텍처 수준에서 강제.
 
 ### 5.9 Secure EL2 (ARMv8.4+) — Secure 가상화
 
@@ -456,26 +473,34 @@ ARMv8.4 이전:
   → 복수의 TEE를 격리할 수 없음
   → 하나의 TEE가 전체 Secure 메모리 접근 가능 → 보안 위험
 
-ARMv8.4+:
-  Secure EL2 추가
-  → Secure Hypervisor가 복수의 Secure Partition(SP)을 격리
-  → FF-A (Firmware Framework for Arm) 표준으로 통신
+ARMv8.4+: Secure EL2 추가 → Secure Hypervisor 가 복수의 Secure Partition (SP) 을 격리 → FF-A (Firmware Framework for Arm) 표준으로 통신.
 
-  +-----+-----+-----+       +----------+
-  | SP0 | SP1 | SP2 |       | NS-VM    |
-  |(TEE)|(DRM)|(...) |       | (Linux)  |
-  +-----+-----+-----+       +----------+
-        |                         |
-  +-----+-----+           +------+------+
-  | S-EL2     |           | NS-EL2     |
-  | (Secure   |           | (KVM)      |
-  |  Partition|           |            |
-  |  Manager) |           |            |
-  +-----------+           +------------+
-        |                         |
-  +-----+-------------------------+-----+
-  |              EL3 (Monitor)          |
-  +-------------------------------------+
+```mermaid
+flowchart TB
+    subgraph SW["Secure side"]
+        SP0["SP0 (TEE)"]
+        SP1["SP1 (DRM)"]
+        SP2["SP2 (...)"]
+        SEL2["<b>S-EL2</b><br/>Secure Partition Manager"]
+        SP0 --> SEL2
+        SP1 --> SEL2
+        SP2 --> SEL2
+    end
+    subgraph NW["Non-Secure side"]
+        VM["NS-VM (Linux)"]
+        NSEL2["<b>NS-EL2</b><br/>KVM"]
+        VM --> NSEL2
+    end
+    EL3M["<b>EL3 — Secure Monitor</b>"]
+    SEL2 --> EL3M
+    NSEL2 --> EL3M
+
+    classDef sec stroke:#c5221f,stroke-width:2px
+    classDef ns stroke:#1a73e8,stroke-width:2px
+    classDef gate stroke:#b8860b,stroke-width:3px
+    class SP0,SP1,SP2,SEL2 sec
+    class VM,NSEL2 ns
+    class EL3M gate
 ```
 
 #### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준
@@ -514,31 +539,31 @@ SPM (Secure Partition Manager):
 
 ### 5.10 전환 흐름 종합 예시 — 실제 결제 경로
 
-```
-사용자 앱이 결제 요청하는 전체 경로:
+```mermaid
+flowchart TB
+    NSEL0["NS-EL0 (앱)"]
+    NSEL1["NS-EL1 (Linux Kernel)<br/>optee_driver"]
+    EL3F["EL3 (ATF / BL31) — VBAR_EL3 + 0x400<br/>① NS context save<br/>② SCR_EL3.NS = 0<br/>③ S context restore<br/>④ ERET → S-EL1"]
+    SEL1["S-EL1 (OP-TEE)<br/>결제 TA 호출"]
+    SEL0["S-EL0 (결제 Trusted App)<br/>결제 처리"]
+    BACK["S-EL1 → EL3 → NS-EL1 → NS-EL0<br/>(역순 복귀)"]
 
-  NS-EL0 (앱)
-    │  SVC #0 (시스템 콜)
-    ▼
-  NS-EL1 (Linux Kernel)
-    │  optee_driver: SMC #0 실행
-    ▼
-  EL3 (ATF/BL31)  ← VBAR_EL3 + 0x400
-    │  1. NS 컨텍스트 저장
-    │  2. SCR_EL3.NS = 0
-    │  3. S 컨텍스트 복원
-    │  4. ERET → S-EL1
-    ▼
-  S-EL1 (OP-TEE)
-    │  결제 TA 호출
-    ▼
-  S-EL0 (결제 Trusted App)
-    │  결제 처리 완료
-    ▼
-  S-EL1 → EL3 → NS-EL1 → NS-EL0 (역순 복귀)
+    NSEL0 -- "SVC #0" --> NSEL1
+    NSEL1 -- "SMC #0" --> EL3F
+    EL3F --> SEL1
+    SEL1 --> SEL0
+    SEL0 --> BACK
 
-  총 EL 전환: 6회 (상향 3 + 하향 3)
+    classDef ns stroke:#1a73e8,stroke-width:2px
+    classDef sec stroke:#c5221f,stroke-width:2px
+    classDef gate stroke:#b8860b,stroke-width:3px
+    class NSEL0,NSEL1 ns
+    class SEL1,SEL0 sec
+    class EL3F gate
+    class BACK ns
 ```
+
+총 EL 전환: 6 회 (상향 3 + 하향 3).
 
 ---
 

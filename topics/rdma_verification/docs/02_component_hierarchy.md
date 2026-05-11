@@ -55,6 +55,8 @@
 
 ### 한 장 그림 — 7 디렉토리 한눈에
 
+이 디렉토리 트리는 ASCII 로 유지 (구조가 의도적으로 directory listing 형식):
+
 ```
    lib/base/component/
    │

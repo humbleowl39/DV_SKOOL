@@ -57,28 +57,23 @@
 
 ## 컨셉 맵
 
-```
-     +-----------------------------------------------+
-     |          SoC Integration Verification          |
-     |                                                |
-     |  IP-Level          SoC-Top Level               |
-     |  (블록 검증)        (통합 검증)                 |
-     |  ┌────────┐        ┌─────────────────────┐    |
-     |  │ IP DV  │  →→→   │ Connectivity        │    |
-     |  │ (UVM)  │        │ Clock/Reset         │    |
-     |  │ 기능   │        │ Interrupt Routing    │    |
-     |  │ 완전성 │        │ Power Domain         │    |
-     |  └────────┘        │ Memory Map           │    |
-     |                    │ Common Task (CCTV)   │    |
-     |                    └─────────────────────┘    |
-     |                             |                  |
-     |                    +--------+--------+         |
-     |                    | CCTV             |         |
-     |                    | (Common Coverage)|         |
-     |                    | sysMMU, Security |         |
-     |                    | DVFS, Access Ctrl|         |
-     |                    +-----------------+         |
-     +-----------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph SOC["SoC Integration Verification"]
+        direction LR
+        IPLVL["<b>IP-Level</b> (블록 검증)<br/>IP DV (UVM)<br/>기능 완전성"]
+        TOPLVL["<b>SoC-Top Level</b> (통합 검증)<br/>Connectivity<br/>Clock / Reset<br/>Interrupt Routing<br/>Power Domain<br/>Memory Map<br/>Common Task (CCTV)"]
+        CCTV["<b>CCTV</b> (Common Coverage)<br/>sysMMU, Security<br/>DVFS, Access Ctrl"]
+        IPLVL --> TOPLVL
+        TOPLVL --> CCTV
+    end
+
+    classDef ip stroke:#1a73e8,stroke-width:2px
+    classDef top stroke:#137333,stroke-width:2px
+    classDef cctv stroke:#c0392b,stroke-width:3px
+    class IPLVL ip
+    class TOPLVL top
+    class CCTV cctv
 ```
 
 ## 학습 단위

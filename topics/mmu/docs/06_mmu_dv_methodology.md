@@ -57,58 +57,30 @@
 
 ### 한 장 그림 — MMU UVM Verification Env
 
-```
-+------------------------------------------------------------------+
-|                    MMU UVM Verification Env                        |
-|                                                                   |
-|  +------------------+  +------------------+                       |
-|  | Translation Req  |  | Page Table       |                       |
-|  | Agent            |  | Memory Model     |                       |
-|  |                  |  |                  |                       |
-|  | - Random VA gen  |  | - Multi-level PT |                       |
-|  | - Traffic pattern|  | - PTE 동적 변경  |                       |
-|  |   (Seq/Rand/Hot) |  | - Fault injection|                       |
-|  | - Burst/Single   |  |   (Invalid PTE)  |                       |
-|  +--------+---------+  +--------+---------+                       |
-|           |                      |                                |
-|           v                      v                                |
-|  +------------------------------------------------------------+  |
-|  |              Virtual Sequence (시나리오 조합)                |  |
-|  |  예: Random VA + Huge Page + TLB Full + Page Fault          |  |
-|  +------------------------------------------------------------+  |
-|           |                                                       |
-|           v                                                       |
-|  +------------------------------------------------------------+  |
-|  |                    DUT (MMU IP)                              |  |
-|  +------------------------------------------------------------+  |
-|           |                      |                                |
-|           v                      v                                |
-|  +------------------+  +------------------+                       |
-|  | Custom "Thin" VIP|  | Memory Response  |                       |
-|  | (AXI-S)          |  | Model            |                       |
-|  |                  |  |                  |                       |
-|  | - tdata/valid/   |  | - Page Walk 응답 |                       |
-|  |   ready만 처리   |  | - 지연 모델링    |                       |
-|  | - 경량 메모리    |  | - 에러 주입      |                       |
-|  +--------+---------+  +------------------+                       |
-|           |                                                       |
-|           v                                                       |
-|  +------------------------------------------------------------+  |
-|  |              Dual Scoreboard                                |  |
-|  |                                                             |  |
-|  |  Functional Check: DUT.PA == FuncModel.PA?                  |  |
-|  |  Performance Check: DUT.Latency vs IdealModel.Latency       |  |
-|  |  Protocol Check: AXI-S handshake compliance                 |  |
-|  +------------------------------------------------------------+  |
-|           |                                                       |
-|           v                                                       |
-|  +------------------------------------------------------------+  |
-|  |              Functional Coverage                             |  |
-|  |  - Translation type × Page size × TLB state                |  |
-|  |  - Miss Ratio bins × Traffic pattern                        |  |
-|  |  - Fault type × Recovery                                    |  |
-|  +------------------------------------------------------------+  |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph ENV["MMU UVM Verification Env"]
+        REQ["Translation Req Agent<br/>- Random VA gen<br/>- Traffic pattern<br/>  (Seq / Rand / Hot)<br/>- Burst / Single"]
+        PT["Page Table Memory Model<br/>- Multi-level PT<br/>- PTE 동적 변경<br/>- Fault injection<br/>  (Invalid PTE)"]
+        VSEQ["Virtual Sequence<br/>(시나리오 조합)<br/>예: Random VA + Huge Page<br/>+ TLB Full + Page Fault"]
+        DUT["DUT (MMU IP)"]
+        THIN["Custom Thin VIP (AXI-S)<br/>- tdata/valid/ready 만<br/>- 경량 메모리"]
+        MEM["Memory Response Model<br/>- Page Walk 응답<br/>- 지연 모델링<br/>- 에러 주입"]
+        SB["Dual Scoreboard<br/>① DUT.PA == FuncModel.PA?<br/>② DUT.Latency vs IdealModel.Latency<br/>③ AXI-S handshake compliance"]
+        COV["Functional Coverage<br/>- Translation × Page size × TLB state<br/>- Miss Ratio × Traffic pattern<br/>- Fault type × Recovery"]
+    end
+    REQ --> VSEQ
+    PT --> VSEQ
+    VSEQ --> DUT
+    DUT --> THIN
+    DUT --> MEM
+    THIN --> SB
+    SB --> COV
+
+    classDef thin stroke:#27ae60,stroke-width:3px
+    classDef gold stroke:#2980b9,stroke-width:2px
+    class THIN thin
+    class SB gold
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -129,55 +101,24 @@
 
 ### 단계별 추적
 
-```
-   ┌─ T0 ─────────────────────────────────────────────────────────┐
-   │ Sequence (mmu_basic_trans_seq)                                │
-   │   tr = mmu_trans::type_id::create("tr")                       │
-   │   tr.randomize() with { va=0x4000_1000; asid=5; acc=READ; }   │
-   │   start_item(tr); finish_item(tr)                             │
-   └─────────────┬─────────────────────────────────────────────────┘
-                 │ uvm_seq_item_pull
-                 ▼
-   ┌─ T1 ─────────────────────────────────────────────────────────┐
-   │ Driver (mmu_driver)                                           │
-   │   AXI-S signals 구동: tdata={va, asid, READ}, tvalid=1        │
-   │   wait (tready)                                               │
-   └─────────────┬─────────────────────────────────────────────────┘
-                 ▼
-   ┌─ T2 ──────────────────────────────────────────────────────────┐
-   │ DUT (MMU IP, RTL)                                              │
-   │   ① TLB lookup (asid=5, vpn) → miss                           │
-   │   ② Page Walk Engine 발동 → mem read 4번 → PTE 결과            │
-   │   ③ Permission check OK → PA=0x9_2000 + offset                 │
-   │   ④ TLB fill                                                   │
-   │   ⑤ resp_valid=1, resp_pa=0x9_2000, resp_latency=42            │
-   └─────────────┬─────────────────────────────────────────────────┘
-                 │ AXI-S response
-                 ▼
-   ┌─ T3 ──────────────────────────────────────────────────────────┐
-   │ Monitor (mmu_monitor) — passive, sniffs interface              │
-   │   capture: req {va, asid, acc} + resp {pa, latency, fault}    │
-   │   trans_observed = mmu_trans 합성 → analysis_port 로 전송       │
-   └────────┬───────────────────────────────────────────────────────┘
-            │ analysis_port_write
-            ▼
-   ┌─ T4 ────────────────────────────────────────────────────────────────┐
-   │ Dual Scoreboard                                                      │
-   │                                                                      │
-   │   functional_model.translate(tr.va, tr.asid) → ref_pa = 0x9_2000      │
-   │   ideal_model.translate(tr.va, tr.asid)      → ideal_lat = 8         │
-   │                                                                      │
-   │   Check 1 (정확성): observed.pa == ref_pa ?                          │
-   │       ✓ 0x9_2000 == 0x9_2000  → PASS                                │
-   │                                                                      │
-   │   Check 2 (성능): observed.latency <= ideal_lat × K(2.0) ?           │
-   │       42 <= 16 ? → ✗ FAIL → uvm_warning("PERF", "ratio=5.25x")      │
-   │                                                                      │
-   │   Check 3 (프로토콜): valid-ready handshake 정상?                    │
-   │       SVA bind 모듈에서 별도 검사 → 위반 시 uvm_error                 │
-   │                                                                      │
-   │   coverage.sample(tr, observed) → CG1/CG2/CG4 covergroup 갱신         │
-   └─────────────────────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SEQ as Sequence<br/>(mmu_basic_trans_seq)
+    participant DRV as Driver
+    participant DUT as DUT (MMU IP, RTL)
+    participant MON as Monitor (passive)
+    participant SB as Dual Scoreboard
+
+    Note over SEQ: T0: tr.randomize()<br/>va=0x4000_1000, asid=5, READ
+    SEQ->>DRV: uvm_seq_item_pull
+    Note over DRV: T1: AXI-S 구동<br/>tdata={va,asid,READ}<br/>tvalid=1, wait(tready)
+    DRV->>DUT: req
+    Note over DUT: T2:<br/>① TLB lookup → miss<br/>② Page Walk (4 mem read)<br/>③ Permission OK → PA=0x9_2000<br/>④ TLB fill<br/>⑤ resp_valid, lat=42
+    DUT->>MON: AXI-S response
+    Note over MON: T3: capture req/resp<br/>→ analysis_port
+    MON->>SB: analysis_port_write
+    Note over SB: T4: 3-axis check<br/>① observed.pa == ref_pa? PASS<br/>② lat ≤ ideal × K(2.0)?<br/>   42 ≤ 16? FAIL → uvm_warning<br/>③ handshake (SVA bind)<br/>coverage.sample → CG1/CG2/CG4
 ```
 
 ### 단계별 의미
@@ -208,38 +149,12 @@
 
 ### 4.1 계층적 검증 — TLB 서브모듈 → MMU Top
 
-```
-Level 1: TLB 서브모듈 검증
-  +-------------------+
-  | TLB Unit TB       |
-  |                   |
-  | - TLB Hit/Miss    |
-  | - Replacement     |
-  | - Invalidation    |
-  | - ASID/VMID       |
-  | - Multi-size page |
-  +-------------------+
-
-Level 2: Page Walk Engine 검증
-  +-------------------+
-  | PWE Unit TB       |
-  |                   |
-  | - Multi-level walk|
-  | - Block Descriptor|
-  | - Walk error      |
-  | - Concurrent walks|
-  +-------------------+
-
-Level 3: MMU Top-level 검증
-  +-------------------+
-  | MMU Top TB        |
-  |                   |
-  | - End-to-End flow |
-  | - TLB + PWE 통합  |
-  | - 성능 측정       |
-  | - Stress test     |
-  | - Error recovery  |
-  +-------------------+
+```mermaid
+flowchart LR
+    L1["Level 1: TLB Unit TB<br/>- TLB Hit/Miss<br/>- Replacement<br/>- Invalidation<br/>- ASID/VMID<br/>- Multi-size page"]
+    L2["Level 2: PWE Unit TB<br/>- Multi-level walk<br/>- Block Descriptor<br/>- Walk error<br/>- Concurrent walks"]
+    L3["Level 3: MMU Top TB<br/>- End-to-End flow<br/>- TLB + PWE 통합<br/>- 성능 측정<br/>- Stress test<br/>- Error recovery"]
+    L1 --> L2 --> L3
 ```
 
 ### 4.2 각 레벨의 검증 초점

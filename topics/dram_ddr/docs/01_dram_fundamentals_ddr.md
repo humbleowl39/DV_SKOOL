@@ -57,26 +57,18 @@
 
 ### 한 장 그림 — DRAM access 의 세 가지 결말
 
-```
-                ┌──────────────────────────────────────────────────┐
-                │              DRAM Bank N                         │
-                │                                                  │
-                │   Row Buffer (= 책상 위에 편 서류)               │
-                │   ┌────────────────────────────────────┐         │
-                │   │  현재 open 된 Row  (예: Row 5)     │         │
-                │   └────────────────────────────────────┘         │
-                │                                                  │
-   요청 도착 ──▶│   요청한 row 가 …                                │
-   (Bank N,    │                                                  │
-    Row R)     │   ① R == open Row    →  Row HIT                  │
-                │       └─ tCL 만 기다리면 데이터 나감 ★ 가장 빠름 │
-                │                                                  │
-                │   ② open Row 없음    →  Row MISS                 │
-                │       └─ ACT(tRCD) → RD(tCL)                     │
-                │                                                  │
-                │   ③ 다른 R 이 open  →  Row CONFLICT              │
-                │       └─ PRE(tRP) → ACT(tRCD) → RD(tCL) ★ 가장 느림│
-                └──────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    REQ["요청 도착<br/>(Bank N, Row R)"]
+    BANK["Bank N<br/>Row Buffer = 현재 open 된 Row (예: Row 5)"]
+    REQ --> BANK
+    BANK --> HIT["① R == open Row<br/><b>Row HIT</b><br/>tCL 만 기다리면 데이터 나감<br/>★ 가장 빠름"]
+    BANK --> MISS["② open Row 없음<br/><b>Row MISS</b><br/>ACT(tRCD) → RD(tCL)"]
+    BANK --> CONF["③ 다른 R 이 open<br/><b>Row CONFLICT</b><br/>PRE(tRP) → ACT(tRCD) → RD(tCL)<br/>★ 가장 느림"]
+    classDef fast stroke-width:3px
+    classDef slow stroke-width:3px,stroke-dasharray:4 2
+    class HIT fast
+    class CONF slow
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -142,26 +134,42 @@ return BL_data;                                  // ⑦
 
 ### 4.1 DRAM 주소 계층
 
+```mermaid
+flowchart TB
+    DRAM["DRAM Device"]
+    R0["Rank 0"]
+    R1["Rank 1"]
+    BG0["BG0"]
+    BG1["BG1"]
+    BG2["BG2"]
+    BG3["BG3"]
+    B0["Bank 0"]
+    B1["Bank 1"]
+    B2["Bank 2"]
+    B3["Bank 3"]
+    ROW["Row 0 .. Row 65535"]
+    COL["Column 0 .. Column 1023"]
+    DRAM --> R0
+    DRAM --> R1
+    R0 --> BG0
+    R0 --> BG1
+    R0 --> BG2
+    R0 --> BG3
+    BG0 --> B0
+    BG0 --> B1
+    BG0 --> B2
+    BG0 --> B3
+    B0 --> ROW
+    ROW --> COL
 ```
-DRAM 주소 계층:
 
-  Rank → Bank Group → Bank → Row → Column
-
-  +-----+  +-----+  +-----+     DDR4 예시 (8Gb):
-  |Rank0|  |Rank1|  |     |     - 2 Rank
-  +--+--+  +--+--+  |     |     - 4 Bank Group
-     |        |     |     |     - 4 Bank/Group (총 16 Bank)
-  +--+--------+-----+-----+     - 65536 Row/Bank
-  | BG0 | BG1 | BG2 | BG3 |     - 1024 Column/Row
-  | B0  | B0  | B0  | B0  |
-  | B1  | B1  | B1  | B1  |
-  +-----+-----+-----+-----+
+DDR4 예시 (8Gb): 2 Rank · 4 Bank Group · 4 Bank/Group (총 16 Bank) · 65536 Row/Bank · 1024 Column/Row.
 
 접근 시퀀스:
-  1. ACTIVATE (ACT): Row를 Row Buffer에 로드 (Row Open)
-  2. READ/WRITE (RD/WR): Column 주소로 데이터 접근
-  3. PRECHARGE (PRE): Row Buffer 닫기 (다른 Row 접근 전)
-```
+
+1. **ACTIVATE (ACT)**: Row를 Row Buffer에 로드 (Row Open)
+2. **READ/WRITE (RD/WR)**: Column 주소로 데이터 접근
+3. **PRECHARGE (PRE)**: Row Buffer 닫기 (다른 Row 접근 전)
 
 ### 4.2 Row Hit / Miss / Conflict — 일반화
 
@@ -178,28 +186,16 @@ Row Conflict: 다른 Row가 열려 있음     → PRE + ACT  → tRP + tRCD + tC
 
 ### 4.3 명령 FSM — Bank 별 상태 머신
 
-```
-                    ┌─────────────┐
-                    │   POWER-UP  │
-                    └──────┬──────┘
-                           │ MRS / ZQ / Init
-                           ▼
-                    ┌─────────────┐
-            ┌──────▶│    IDLE     │◀──────── PRE (tRP)
-            │       │ (precharged)│
-            │       └──────┬──────┘
-            │              │ ACT (tRCD)
-            │              ▼
-            │       ┌─────────────┐
-            │       │    ACTIVE   │
-       PRE  │       │ (row open)  │
-       (tRAS│       └──────┬──────┘
-        만족│              │ RD / WR (tCL / tCWL)
-         후)│              │ (반복 가능, tCCD 간격)
-            └──────────────┘
-                           │
-                           │ REF (tRFC) → 모든 bank IDLE 로
-                           ▼
+```mermaid
+stateDiagram-v2
+    [*] --> POWERUP
+    POWERUP --> IDLE: MRS / ZQ / Init
+    IDLE --> ACTIVE: ACT (tRCD)
+    ACTIVE --> ACTIVE: RD / WR<br/>(tCL / tCWL,<br/>tCCD 간격)
+    ACTIVE --> IDLE: PRE (tRP)<br/>tRAS 만족 후
+    IDLE --> IDLE: REF (tRFC)<br/>모든 bank IDLE
+    note right of IDLE: precharged
+    note right of ACTIVE: row open
 ```
 
 ### 4.4 DDR4 vs DDR5 — 무엇이 바뀌었나
@@ -218,23 +214,18 @@ Row Conflict: 다른 Row가 열려 있음     → PRE + ACT  → tRP + tRCD + tC
 
 ### 4.5 Prefetch + Bank Group 의 결합 — 대역폭의 두 축
 
+```mermaid
+flowchart TB
+    CELL["내부 cell 어레이<br/>(느림, ~수백 MHz)"]
+    BUF["Row Buffer / I/O sense"]
+    DQ["DQ pin<br/>(빠름, 수 GHz)"]
+    CELL -- "① Prefetch n bit (BL = n)" --> BUF
+    BUF -- "② Bank Group 별 독립 I/O<br/>같은 BG: tCCD_L (느림)<br/>다른 BG: tCCD_S (빠름)" --> DQ
 ```
-              내부 cell 어레이 (느림, ~수백 MHz)
-                       │
-                       │  ① Prefetch n bit (BL = n)
-                       ▼
-              Row Buffer / I/O sense
-                       │
-                       │  ② Bank Group 별 독립 I/O
-                       │     같은 BG : tCCD_L (느림)
-                       │     다른 BG : tCCD_S (빠름)
-                       ▼
-              DQ pin (빠름, 수 GHz)
 
-  → 한 번의 column access 가 BL beat 의 데이터 전송으로 변환되고,
-  → MC scheduler 가 연속 access 를 다른 BG 로 분산하면 tCCD_S 로 이어붙임.
-  → 두 layer 의 곱 = peak bandwidth 효율.
-```
+- 한 번의 column access 가 BL beat 의 데이터 전송으로 변환되고,
+- MC scheduler 가 연속 access 를 다른 BG 로 분산하면 tCCD_S 로 이어붙임.
+- 두 layer 의 곱 = peak bandwidth 효율.
 
 ---
 

@@ -64,35 +64,17 @@
 
 ## 컨셉 맵
 
-```
-        +-------------------+
-        | SW Driver (UFSHCD)|
-        | (Linux Kernel)    |
-        +--------+----------+
-                 | Register / Doorbell
-                 v
-        +--------+----------+
-        |   UFS HCI (Host   |
-        |   Controller IF)  |
-        |                   |
-        | - UTP (SCSI→UPIU) |
-        | - Task Mgmt       |
-        | - DMA Engine      |
-        | - Interrupt       |
-        +--------+----------+
-                 | UPIU (UFS Protocol Info Unit)
-                 v
-        +--------+----------+
-        |   UniPro (Link)   |
-        |  - DME / L3~L1.5  |
-        +--------+----------+
-                 |
-        +--------+----------+
-        |   M-PHY (Physical)|
-        |  - HS/PWM Gear    |
-        +-------------------+
-                 |
-           UFS Device
+```mermaid
+flowchart TB
+    SW["<b>SW Driver (UFSHCD)</b><br/>(Linux Kernel)"]
+    HCI["<b>UFS HCI (Host Controller IF)</b><br/>· UTP (SCSI → UPIU)<br/>· Task Mgmt<br/>· DMA Engine<br/>· Interrupt"]
+    UNI["<b>UniPro (Link)</b><br/>· DME / L3 ~ L1.5"]
+    PHY["<b>M-PHY (Physical)</b><br/>· HS / PWM Gear"]
+    DEV["UFS Device"]
+    SW -- "Register / Doorbell" --> HCI
+    HCI -- "UPIU (UFS Protocol Info Unit)" --> UNI
+    UNI --> PHY
+    PHY --> DEV
 ```
 
 ## 학습 단위 (Units)

@@ -55,18 +55,33 @@ RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 
 
 ### 한 장 그림 — phase 와 시퀀스 패턴
 
-```
-   build  →  connect  →  reset  →  configure  →  post_configure  →  main  →  shutdown  →  check
-   (func)    (func)      (task)    (task)         (task)             (task)   (task)       (func)
-   ───────   ─────────   ───────   ───────────    ─────────────────  ───────  ──────────   ─────────
-   env 인스턴스화          DUT reset  RAL/BAR 설정    ⭐ init_seq 자동      test seq  outstanding   잔존
-   AP/export                                       (default sequence)    실행      마무리        검증
-                                                                          │
-                                                                          ├ 패턴 1: default seq
-                                                                          ├ 패턴 2: start_item / finish_item
-                                                                          │         (.sequencer(t_seqr))
-                                                                          ├ 패턴 3: cq_handler.RDMACQPoll
-                                                                          └ 패턴 4: my_top_seq.start(top_vseqr)
+```mermaid
+flowchart LR
+    B["build<br/>(func)<br/>env 인스턴스화<br/>AP/export"]
+    C["connect<br/>(func)"]
+    R["reset<br/>(task)<br/>DUT reset"]
+    CFG["configure<br/>(task)<br/>RAL/BAR 설정"]
+    PC["post_configure<br/>(task)<br/>init_seq 자동<br/>(default sequence)"]
+    M["main<br/>(task)<br/>test seq 실행"]
+    SD["shutdown<br/>(task)<br/>outstanding 마무리"]
+    CK["check<br/>(func)<br/>잔존 검증"]
+
+    B --> C --> R --> CFG --> PC --> M --> SD --> CK
+
+    P1["패턴 1<br/>default seq"]
+    P2["패턴 2<br/>start_item / finish_item<br/>.sequencer(t_seqr)"]
+    P3["패턴 3<br/>cq_handler.RDMACQPoll"]
+    P4["패턴 4<br/>my_top_seq.start(top_vseqr)"]
+
+    PC -. 자동 .-> P1
+    M -.-> P2
+    M -.-> P3
+    M -.-> P4
+
+    classDef phase stroke:#1a73e8,stroke-width:2px
+    classDef phaseHi stroke:#1a73e8,stroke-width:3px
+    class B,C,R,CFG,SD,CK phase
+    class PC,M phaseHi
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -87,25 +102,28 @@ RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 
 
 ### 단계별 추적
 
-```
-   build_phase     :  env.node[0..1] 생성, agent.driver / sequencer / handler 인스턴스화
-                      └ default_sequence 등록: post_configure_phase 에 vrdma_init_seq
-   connect_phase   :  driver.issued_wqe_ap.connect(write_handler.analysis_export)
-                      driver.qp_reg_ap.connect(comparator.qp_subscriber.analysis_export)
-                      ... (M04 토폴로지 전체 wiring)
-   reset_phase     :  DUT reset, host memory clear
-   configure_phase :  RAL 로 BAR / MMU / link 설정
-   post_configure  :  ⭐ vrdma_init_seq 가 자동 실행
-                      └ RDMAQPCreate(t_seqr=seqr[0]), RDMAQPCreate(t_seqr=seqr[1])
-                      └ RDMAMRRegister(t_seqr=seqr[0]), ...
-                      └ RDMACQCreate(...)
-   main_phase      :  test 가 my_top_seq.start(top_vseqr)
-                      └ my_top_seq.body() → this.RDMAWrite(.t_seqr(seqr[0]))
-                          └ start_item(write_cmd, .sequencer(seqr[0]))
-                            randomize → finish_item
-                          └ 기다린 후 cq_handler.RDMACQPoll(seqr[0]) 직접 호출
-   shutdown_phase  :  잔존 outstanding 마무리, error_cq drain
-   check_phase     :  c2h_tracker / scoreboard 가 잔존 outstanding 검사
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UVM as UVM
+    participant Test as test
+    participant Env as top_env
+    participant Init as vrdma_init_seq
+    participant TopSeq as my_top_seq
+    participant Seqr0 as seqr[0]
+    participant CQH as cq_handler
+
+    Note over Env: build_phase<br/>env.node[0..1] 생성<br/>agent/driver/sequencer/handler<br/>default_sequence 등록
+    Note over Env: connect_phase<br/>AP wiring<br/>(M04 토폴로지)
+    Note over Env: reset_phase<br/>DUT reset, host mem clear
+    Note over Env: configure_phase<br/>RAL: BAR / MMU / link
+    UVM->>Init: post_configure_phase (자동)
+    Init->>Seqr0: RDMAQPCreate / RDMAMRRegister / RDMACQCreate
+    Test->>TopSeq: main_phase: start(top_vseqr)
+    TopSeq->>Seqr0: RDMAWrite — start_item / finish_item<br/>(.sequencer=seqr[0])
+    TopSeq->>CQH: RDMACQPoll(seqr[0]) 직접 호출
+    Note over Env: shutdown_phase<br/>잔존 outstanding 마무리<br/>error_cq drain
+    Note over Env: check_phase<br/>잔존 outstanding 검사
 ```
 
 ### 단계별 의미
@@ -140,13 +158,25 @@ RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 
 
 ### 4.2 Sequencer 계층
 
-```
-top_vseqr (vrdma_top_virtual_sequencer)
-├── host_vseqr[0] (vrdma_host_virtual_sequencer)
-│   └── rdma_seqr[0] (vrdma_sequencer)  ← node 0 의 verb queue
-├── host_vseqr[1] (vrdma_host_virtual_sequencer)
-│   └── rdma_seqr[1] (vrdma_sequencer)  ← node 1 의 verb queue
-└── ...
+```mermaid
+flowchart TB
+    TVS["top_vseqr<br/>(vrdma_top_virtual_sequencer)"]
+    HV0["host_vseqr[0]<br/>(vrdma_host_virtual_sequencer)"]
+    HV1["host_vseqr[1]<br/>(vrdma_host_virtual_sequencer)"]
+    RS0["rdma_seqr[0]<br/>(vrdma_sequencer)<br/>node 0 verb queue"]
+    RS1["rdma_seqr[1]<br/>(vrdma_sequencer)<br/>node 1 verb queue"]
+
+    TVS --> HV0
+    TVS --> HV1
+    HV0 --> RS0
+    HV1 --> RS1
+
+    classDef top stroke:#1a73e8,stroke-width:3px
+    classDef host stroke:#1a73e8,stroke-width:2px
+    classDef seqr stroke:#137333,stroke-width:2px
+    class TVS top
+    class HV0,HV1 host
+    class RS0,RS1 seqr
 ```
 
 핵심 규칙:

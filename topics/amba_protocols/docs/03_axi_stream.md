@@ -55,22 +55,32 @@
 
 ### 한 장 그림 — AXI 와 AXI-Stream 의 골격 차이
 
-```
-   AXI (memory-mapped)                       AXI-Stream (point-to-point)
-   ──────────────────────────────            ──────────────────────────────
-       Master                                Master                Slave
-         │                                     │                     │
-   AW ───┼──────▶ Slave                  TDATA │──────────▶ │
-   W  ───┼──────▶                        TVALID│──────────▶ │
-   B  ◀──┼──────                         TREADY│◀──────────│
-   AR ───┼──────▶                        TLAST │──────────▶ │  (마지막 beat 표시)
-   R  ◀──┼──────                         TKEEP │──────────▶ │  (byte 마스크)
-                                          TUSER│──────────▶ │  (사이드밴드, 옵션)
+```mermaid
+flowchart LR
+    subgraph AXI["AXI (memory-mapped)<br/>채널 5개, ADDR 있음, R/W"]
+        direction LR
+        AX_M["Master"]
+        AX_S["Slave"]
+        AX_M -- "AW" --> AX_S
+        AX_M -- "W"  --> AX_S
+        AX_S -- "B"  --> AX_M
+        AX_M -- "AR" --> AX_S
+        AX_S -- "R"  --> AX_M
+    end
+    subgraph AXIS["AXI-Stream (point-to-point)<br/>채널 1개, 주소 없음, 단방향"]
+        direction LR
+        ST_M["Master"]
+        ST_S["Slave"]
+        ST_M -- "TDATA / TVALID / TLAST<br/>TKEEP / TUSER" --> ST_S
+        ST_S -- "TREADY" --> ST_M
+    end
 
-   채널 5개, ADDR 있음                     채널 1개, 주소 없음
-   transaction = (AW,W) → B  /  AR → R     packet = TLAST 까지의 beat 들
-   memory R/W                              packet streaming
+    classDef ep stroke:#1a73e8,stroke-width:2px
+    class AX_M,AX_S,ST_M,ST_S ep
 ```
+
+- AXI: `transaction = (AW,W) → B` 또는 `AR → R`. memory read/write.
+- AXI-Stream: `packet = TLAST 까지의 beat 들`. packet streaming.
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
@@ -240,24 +250,33 @@ Continuous Stream (오디오 DAC):
 
 ### 4.4 TID/TDEST 기반 multi-stream
 
-```
-TID: 스트림 식별 — "이 데이터가 어떤 스트림에 속하는가?"
-TDEST: 라우팅 목적지 — "이 데이터가 어디로 가야 하는가?"
+- **TID**: 스트림 식별 — "이 데이터가 어떤 스트림에 속하는가?"
+- **TDEST**: 라우팅 목적지 — "이 데이터가 어디로 가야 하는가?"
 
-  Master A                     Interconnect              Slave 0
-  (TDEST=0,TID=0) ──────→    ┌───────────┐  ──────→   (포트 0)
-  (TDEST=1,TID=0) ──────→    │  TDEST로   │
-                              │  라우팅    │  ──────→   Slave 1
-  Master B                    │           │            (포트 1)
-  (TDEST=0,TID=1) ──────→    │  TID로     │
-  (TDEST=1,TID=1) ──────→    │  인터리브  │
-                              └───────────┘
+```mermaid
+flowchart LR
+    MA["Master A"]
+    MB["Master B"]
+    IC["Interconnect<br/>TDEST 라우팅 +<br/>TID 인터리브"]
+    S0["Slave 0<br/>(포트 0)"]
+    S1["Slave 1<br/>(포트 1)"]
 
-  - TDEST=0인 패킷 → Slave 0으로 라우팅
-  - TDEST=1인 패킷 → Slave 1로 라우팅
-  - TID=0 (Master A)와 TID=1 (Master B)의 패킷이 같은 Slave로 갈 때
-    → TID로 서로 다른 스트림을 식별/분리
+    MA -- "TDEST=0, TID=0" --> IC
+    MA -- "TDEST=1, TID=0" --> IC
+    MB -- "TDEST=0, TID=1" --> IC
+    MB -- "TDEST=1, TID=1" --> IC
+    IC -- "TDEST=0" --> S0
+    IC -- "TDEST=1" --> S1
+
+    classDef ep stroke:#1a73e8,stroke-width:2px
+    classDef ic stroke:#137333,stroke-width:2px
+    class MA,MB,S0,S1 ep
+    class IC ic
 ```
+
+- `TDEST=0` 인 패킷 → Slave 0 으로 라우팅
+- `TDEST=1` 인 패킷 → Slave 1 로 라우팅
+- `TID=0` (Master A) 와 `TID=1` (Master B) 의 패킷이 같은 Slave 로 갈 때 → TID 로 서로 다른 스트림을 식별/분리
 
 ---
 

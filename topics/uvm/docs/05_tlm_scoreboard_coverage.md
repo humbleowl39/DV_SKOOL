@@ -57,25 +57,27 @@ TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard
 
 ### 한 장 그림 — Monitor 한 곳에서 N 곳으로 fan-out
 
-```
-            DUT
-             │ (vif sampling)
-             ▼
-        ┌──────────┐
-        │ Monitor  │
-        │ run_phase│
-        │  ap.write│ ───┐  (1:N broadcast)
-        └──────────┘    │
-                        ├──▶ Scoreboard.write   (analysis_imp)
-                        │      └─ expected_queue 와 비교
-                        │
-                        ├──▶ Scoreboard.actual_fifo (analysis_fifo)
-                        │      └─ run_phase task 에서 get → 시간 소비 가능 비교
-                        │
-                        ├──▶ Coverage.write     (uvm_subscriber)
-                        │      └─ cg.sample()
-                        │
-                        └──▶ Logger / Protocol Checker (선택)
+```mermaid
+flowchart LR
+    DUT["DUT"]
+    MON["<b>Monitor</b><br/>run_phase<br/>ap.write(item)"]
+    SB1["<b>Scoreboard.write</b><br/>(analysis_imp)<br/>expected_queue 와 비교"]
+    SB2["<b>Scoreboard.actual_fifo</b><br/>(analysis_fifo)<br/>run_phase task get<br/>시간 소비 가능 비교"]
+    COV["<b>Coverage.write</b><br/>(uvm_subscriber)<br/>cg.sample()"]
+    LOG["Logger /<br/>Protocol Checker<br/><i>(선택)</i>"]
+
+    DUT -- "vif sampling" --> MON
+    MON -- "1:N broadcast" --> SB1
+    MON --> SB2
+    MON --> COV
+    MON -.-> LOG
+
+    classDef pub stroke:#1a73e8,stroke-width:3px
+    classDef sub stroke:#137333,stroke-width:2px
+    classDef opt stroke:#5f6368,stroke-dasharray:4 2
+    class MON pub
+    class SB1,SB2,COV sub
+    class LOG opt
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -96,35 +98,22 @@ TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard
 
 ### 단계별 다이어그램
 
-```
-   t=T  (vif.valid && vif.ready 의 posedge clk)
-   │
-   ▼
- ┌──────────────────┐
- │ Monitor          │
- │  @posedge vif.clk │
- │  if (valid&&ready)│
- │    item.addr=...  │
- │    item.data=...  │
- │  ① ap.write(item) │ ───────┐
- └──────────────────┘         │
-                              │  fan-out (1:N broadcast)
-                              │
-              ┌───────────────┼─────────────────────┐
-              │               │                     │
-              ▼               ▼                     ▼
-   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-   │ Scoreboard       │  │ Scoreboard       │  │ Coverage         │
-   │ analysis_imp.    │  │ actual_fifo.     │  │ subscriber.      │
-   │   write(item)    │  │   write(item)    │  │   write(item)    │
-   │                  │  │   (큐에 push)     │  │                  │
-   │ ② queue pop      │  │                  │  │ ③ cg.sample()    │
-   │   compare(exp,   │  │ run_phase task:  │  │   covergroup     │
-   │           act)   │  │   ④ get(actual)  │  │   bin 카운트 ↑   │
-   │                  │  │     get(expected)│  │                  │
-   │ mismatch →       │  │     compare      │  │ ⑤ cross-bin       │
-   │   `uvm_error     │  │                  │  │   카운트 ↑       │
-   └──────────────────┘  └──────────────────┘  └──────────────────┘
+```mermaid
+flowchart TB
+    MON["<b>Monitor</b><br/>@posedge vif.clk<br/>if (valid && ready)<br/>  item.addr / item.data 채움<br/>① ap.write(item)"]
+
+    SB_IMP["<b>Scoreboard</b><br/>analysis_imp.write(item)<br/>② queue pop<br/>compare(exp, act)<br/>mismatch → `uvm_error"]
+    SB_FIFO["<b>Scoreboard</b><br/>actual_fifo.write(item)<br/>(큐에 push)<br/>run_phase task:<br/>④ get(actual)<br/>get(expected)<br/>compare"]
+    COV["<b>Coverage</b><br/>subscriber.write(item)<br/>③ cg.sample()<br/>covergroup bin 카운트 ↑<br/>⑤ cross-bin 카운트 ↑"]
+
+    MON -- "fan-out (1:N broadcast)" --> SB_IMP
+    MON --> SB_FIFO
+    MON --> COV
+
+    classDef pub stroke:#1a73e8,stroke-width:3px
+    classDef sub stroke:#137333,stroke-width:2px
+    class MON pub
+    class SB_IMP,SB_FIFO,COV sub
 ```
 
 ### 단계별 의미
@@ -242,29 +231,50 @@ endfunction
 
 ### 4.2 analysis_imp vs analysis_fifo
 
-```
-uvm_analysis_imp:
-  ┌──────────┐     write()      ┌──────────┐
-  │ Monitor  │ ───────────────→ │Scoreboard│
-  └──────────┘   (function)     └──────────┘
-  - write() 는 function → 시간 소비(#, @) 불가
-  - Monitor 의 run_phase 안에서 직접 호출됨
-  - 단순한 비교에 적합
+```mermaid
+flowchart LR
+    subgraph IMP["uvm_analysis_imp"]
+        direction LR
+        M1["Monitor"]
+        S1["Scoreboard"]
+        M1 -- "write()<br/>(function)" --> S1
+    end
 
-uvm_tlm_analysis_fifo:
-  ┌──────────┐     write()      ┌──────┐   get()   ┌──────────┐
-  │ Monitor  │ ───────────────→ │ FIFO │ ────────→ │Scoreboard│
-  └──────────┘   (function)     └──────┘  (task)    └──────────┘
-  - FIFO 가 중간에서 버퍼링
-  - Scoreboard 의 run_phase 에서 get() (task) → 시간 제어 가능
-  - Monitor 와 Scoreboard 가 완전 비동기 (디커플링)
-  - ★ 실무에서 가장 많이 사용하는 패턴
+    subgraph FIFO["uvm_tlm_analysis_fifo"]
+        direction LR
+        M2["Monitor"]
+        F["FIFO"]
+        S2["Scoreboard"]
+        M2 -- "write()<br/>(function)" --> F
+        F -- "get()<br/>(task)" --> S2
+    end
 
-사용 지침:
-  - 단순 카운터 / 플래그 업데이트 → analysis_imp
-  - 비교 로직, 순서 대기, 복잡한 처리 → analysis_fifo
-  - 다중 포트 수신 후 매칭 → analysis_fifo (필수)
+    classDef pub stroke:#1a73e8,stroke-width:2px
+    classDef sub stroke:#137333,stroke-width:2px
+    classDef buf stroke:#b8860b,stroke-width:2px
+    class M1,M2 pub
+    class S1,S2 sub
+    class F buf
 ```
+
+**`uvm_analysis_imp`**
+
+- `write()` 는 function → 시간 소비 (`#`, `@`) 불가
+- Monitor 의 run_phase 안에서 직접 호출됨
+- 단순한 비교에 적합
+
+**`uvm_tlm_analysis_fifo`**
+
+- FIFO 가 중간에서 버퍼링
+- Scoreboard 의 run_phase 에서 get() (task) → 시간 제어 가능
+- Monitor 와 Scoreboard 가 완전 비동기 (디커플링)
+- 실무에서 가장 많이 사용하는 패턴
+
+**사용 지침**
+
+- 단순 카운터 / 플래그 업데이트 → `analysis_imp`
+- 비교 로직, 순서 대기, 복잡한 처리 → `analysis_fifo`
+- 다중 포트 수신 후 매칭 → `analysis_fifo` (필수)
 
 ### 4.3 In-Order vs Out-of-Order 비교 전략
 

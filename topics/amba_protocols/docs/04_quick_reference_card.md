@@ -66,22 +66,22 @@
 
 ### 한 장 그림 — AMBA family 와 SoC 내 위치
 
-```
-                                   AMBA family
+```mermaid
+flowchart LR
+    APB["<b>APB</b><br/>2-phase<br/>register · peripheral"]
+    AHB["<b>AHB</b><br/>pipelined<br/>legacy IP · DMA"]
+    AXI["<b>AXI</b><br/>5채널 + OoO<br/>CPU↔MC · NoC · Accel"]
+    AXIS["<b>AXI-Stream / CHI / ACE</b><br/>스트리밍 · coherent<br/>AI · DSP · Network packet"]
 
-  ┌──── 저속 / 게이트 작은 ────┐  ┌──── 고속 / 처리량 큰 ────┐
-  │                              │  │                            │
-  APB     ──▶  AHB     ────▶  AXI    ────▶  AXI-Stream / CHI / ACE
-  (2-phase)   (pipelined)     (5채널 + OoO)    (스트리밍 / coherent)
-   │            │                │                  │
-   │            │                │                  │
-   register   legacy IP        CPU↔MC, NoC       AI/DSP/Network
-   peripheral DMA              Accelerator       Packet flow
+    APB --> AHB --> AXI --> AXIS
 
-   한 줄 요약
-   ──────────
-   APB(레지스터) → AHB(중간, 파이프라인) → AXI(고성능, 5채널, OoO) → AXI-S(스트리밍, 주소 없음)
+    classDef low stroke:#5f6368,stroke-width:2px
+    classDef hi stroke:#1a73e8,stroke-width:2px
+    class APB,AHB low
+    class AXI,AXIS hi
 ```
+
+> 한 줄 요약: APB(레지스터) → AHB(중간, 파이프라인) → AXI(고성능, 5채널, OoO) → AXI-S(스트리밍, 주소 없음). 왼쪽이 저속 / 게이트 작은 쪽, 오른쪽이 고속 / 처리량 큰 쪽.
 
 ### 왜 이렇게 구분됐는가 — Design rationale
 
@@ -264,22 +264,39 @@ AXI-Stream:
 
 ### 5.5 SoC 내 AMBA 프로토콜 위치
 
-```
-+------------------------------------------------------------------+
-|                           SoC                                     |
-|                                                                   |
-|  CPU ──AXI/ACE──→ Interconnect ──AXI──→ MC → DRAM                |
-|                        |                                          |
-|                    AXI Bridge                                     |
-|                        |                                          |
-|                    AHB Bridge                                     |
-|                        |                                          |
-|           +────────────+────────────+                             |
-|           |            |            |                             |
-|         APB→OTP     APB→Timer    APB→UART                        |
-|                                                                   |
-|  TOE ──AXI-Stream──→ DCMAC → PHY → Network                      |
-+------------------------------------------------------------------+
+```mermaid
+flowchart TB
+    subgraph SOC["SoC"]
+        direction TB
+        CPU["CPU"]
+        IC["Interconnect"]
+        MC["MC"]
+        DRAM["DRAM"]
+        AXIBR["AXI Bridge"]
+        AHBBR["AHB Bridge"]
+        OTP["APB · OTP"]
+        TMR["APB · Timer"]
+        UART["APB · UART"]
+        TOE["TOE"]
+        DCMAC["DCMAC"]
+        PHY["PHY"]
+        NET(("Network"))
+
+        CPU -- "AXI / ACE" --> IC
+        IC -- "AXI" --> MC --> DRAM
+        IC --> AXIBR --> AHBBR
+        AHBBR --> OTP
+        AHBBR --> TMR
+        AHBBR --> UART
+        TOE -- "AXI-Stream" --> DCMAC --> PHY --> NET
+    end
+
+    classDef hi stroke:#1a73e8,stroke-width:2px
+    classDef mid stroke:#137333,stroke-width:2px
+    classDef low stroke:#5f6368,stroke-width:2px
+    class CPU,IC,MC,DRAM,TOE,DCMAC hi
+    class AXIBR,AHBBR mid
+    class OTP,TMR,UART low
 ```
 
 ### 5.6 프로토콜 버전 빠른 참조
