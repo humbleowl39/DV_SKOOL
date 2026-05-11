@@ -56,28 +56,38 @@
 
 ### 한 장 그림 — TCP path vs RDMA path
 
-```
-              TCP/IP (3 copies + interrupt)              RDMA (0 copies, no IRQ)
-              ─────────────────────────────              ────────────────────────
-   App ──▶ user buf                                App ──▶ user buf (= MR)
-            │ copy_from_user  ●                              │
-            ▼                                                ▼
-         socket buf                                      (등록만 해 두면 끝)
-            │ TCP/IP stack    ●                              │
-            ▼                                                ▼ MMIO doorbell
-           NIC ──▶ wire ──▶ NIC                            HCA ─DMA→ wire
-                                                            │         │
-                                                            │         ▼
-                                                          DMA       HCA
-                                                            ▼         │
-                                                          peer MR ◀──┘ (rkey 검증 후 직접 write)
-            ▲                                                         (peer CPU 안 깨움)
-            │ copy_to_user    ●
-         socket buf
-            │ ksoftirqd       ●
-            ▼
-           App
-       ● = CPU cycle / cache pollution
+```mermaid
+flowchart LR
+    subgraph TCP["TCP/IP — 3 copies + interrupt"]
+        direction TB
+        T1["App"]
+        T2["user buf"]
+        T3["socket buf"]
+        T4["NIC"]
+        T5["NIC (수신)"]
+        T6["socket buf"]
+        T7["App"]
+        T1 --> T2
+        T2 -- "copy_from_user · CPU" --> T3
+        T3 -- "TCP/IP stack · CPU" --> T4
+        T4 -- "wire" --> T5
+        T5 -- "IRQ → ksoftirqd · CPU" --> T6
+        T6 -- "copy_to_user · CPU" --> T7
+    end
+    subgraph RDMA["RDMA — 0 copies, no IRQ"]
+        direction TB
+        R1["App"]
+        R2["user buf<br/>(= MR, 등록만 해 두면 끝)"]
+        R3["HCA"]
+        R4["HCA (peer)"]
+        R5["peer MR"]
+        R1 --> R2
+        R2 -- "MMIO doorbell" --> R3
+        R3 -- "DMA → wire" --> R4
+        R4 -- "rkey 검증 후<br/>직접 DMA write<br/>(peer CPU 안 깨움)" --> R5
+    end
+    classDef cost fill:#ffe5e5,stroke:#c0392b
+    class T2,T3,T5,T6 cost
 ```
 
 세 개의 빨간 원이 RDMA 에서는 모두 사라지고, 대신 **HCA hardware** 가 PSN, ACK, 재전송, 무결성 검사를 처리합니다.
@@ -92,28 +102,23 @@
 
 가장 단순한 시나리오. 노드 **A** 가 노드 **B** 의 메모리에 **1 KB** 를 RDMA WRITE 합니다.
 
-```
-   ┌─── Node A ───┐                                         ┌─── Node B ───┐
-   │              │                                         │              │
-   │  app + lbuf  │                                         │  app + rbuf  │
-   │       │      │                                         │       │      │
-   │       ▼      │  ②  rbuf 의 (remote_va, rkey) 전달      │       │      │
-   │  HCA_A ◀═════│════════ out-of-band (RDMA-CM/TCP) ══════│════▶ HCA_B   │
-   │       │      │                                         │       │      │
-   │       │ ③ post_send WQE                                │       │      │
-   │       ▼ ④ DMA read lbuf                                │       │      │
-   │      pkt ════════════════ wire ════════════════════════│════▶ pkt     │
-   │              │                       BTH+RETH+payload  │       │ ⑤    │
-   │              │                                         │       ▼      │
-   │              │                                         │  rkey verify │
-   │              │                                         │       │ ⑥    │
-   │              │                                         │       ▼ DMA write
-   │              │                                         │     rbuf     │
-   │              │            ⑦  ACK packet               │       │      │
-   │  HCA_A ◀═════│═════════════════════════════════════════│═══════┘      │
-   │       │ ⑧ CQE 생성                                     │              │
-   │   poll_cq    │                                         │  (CPU 안 깨움)│
-   └──────────────┘                                         └──────────────┘
+```mermaid
+sequenceDiagram
+    autonumber
+    participant AppA as Node A · app+lbuf
+    participant HA as HCA_A
+    participant HB as HCA_B
+    participant AppB as Node B · app+rbuf
+
+    Note over AppB,HB: ① ibv_reg_mr(rbuf) — pinning + rkey 발급
+    AppB->>AppA: ② (remote_va, rkey) 전달<br/>out-of-band (RDMA-CM / TCP)
+    AppA->>HA: ③ post_send WQE
+    HA->>HA: ④ DMA read lbuf
+    HA->>HB: BTH + RETH + payload (over wire)
+    HB->>HB: ⑤ rkey verify<br/>⑥ DMA write → rbuf
+    HB-->>HA: ⑦ ACK packet
+    HA-->>AppA: ⑧ CQE 생성 (poll_cq)
+    Note over AppB,HB: B 의 CPU 한 번도 안 깨움 ⭐
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -166,29 +171,60 @@ ibv_poll_cq(cq, 1, &wc);              // ⑧ 까지 끝나면 status=SUCCESS
     - **DMA**: CPU 의 직접 개입 없이 디바이스가 호스트 메모리를 직접 read/write 하는 메커니즘.
     - **RDMA**: 네트워크의 양 끝에서 DMA 가 동시에 일어나, **원격** 노드의 메모리를 read/write 하는 메커니즘.
 
-```
-    Local DMA                   RDMA
-   ─────────────────         ─────────────────────────────────
-   CPU                       CPU₁                    CPU₂
-    │                         │                       │
-   memory ←── DMA ── disk     mem₁ ← DMA ─ HCA₁ ↔ HCA₂ ─ DMA → mem₂
-                                 (R_Key + VA 가 mem₂ 의 일부 영역을 가리킴)
+```mermaid
+flowchart LR
+    subgraph DMAg["Local DMA"]
+        direction LR
+        LD_CPU["CPU"]
+        LD_MEM["memory"]
+        LD_DISK["disk"]
+        LD_CPU -.- LD_MEM
+        LD_MEM <-- DMA --> LD_DISK
+    end
+    subgraph RDMAg["RDMA"]
+        direction LR
+        R_CPU1["CPU₁"]
+        R_MEM1["mem₁"]
+        R_HCA1["HCA₁"]
+        R_HCA2["HCA₂"]
+        R_MEM2["mem₂"]
+        R_CPU2["CPU₂"]
+        R_CPU1 -.- R_MEM1
+        R_CPU2 -.- R_MEM2
+        R_MEM1 <-- DMA --> R_HCA1
+        R_HCA1 <-- "R_Key + VA" --> R_HCA2
+        R_HCA2 <-- DMA --> R_MEM2
+    end
 ```
 
 핵심: RDMA 는 "원격 노드의 메모리 주소" 를 (1) 사전 등록(Memory Registration), (2) 보호 키 (R_Key) 와 함께 노출, (3) 양 끝의 NIC 가 그 주소를 인식해 DMA 를 수행.
 
 ### 4.3 Verbs 6 객체 — 협력 관계
 
-```
-       PD (Protection Domain) ──── 같은 PD 안에서만 cross-access 허용
-        │
-        ├── MR (Memory Region) ── DMA 가능 영역 + access flag (lkey/rkey)
-        │
-        └── QP (Queue Pair) ─────┬── SQ (Send Queue)  ◀── post_send (WQE)
-                                 ├── RQ (Recv Queue)  ◀── post_recv (WQE)
-                                 └── service type: RC / UC / UD / XRC
-                  │
-                  └── 완료는 ▶ CQ (Completion Queue) ◀── poll_cq → WC (Work Completion)
+```mermaid
+flowchart TB
+    PD["<b>PD</b> · Protection Domain<br/>같은 PD 안에서만 cross-access 허용"]
+    MR["<b>MR</b> · Memory Region<br/>DMA 가능 영역 + access flag<br/>lkey / rkey"]
+    QP["<b>QP</b> · Queue Pair<br/>service: RC / UC / UD / XRC"]
+    SQ["<b>SQ</b> · Send Queue"]
+    RQ["<b>RQ</b> · Recv Queue"]
+    CQ["<b>CQ</b> · Completion Queue"]
+    WQE(["WQE — operation 디스크립터"])
+    WC(["WC — 처리 결과"])
+
+    PD --> MR
+    PD --> QP
+    QP --> SQ
+    QP --> RQ
+    WQE -- "post_send" --> SQ
+    WQE -- "post_recv" --> RQ
+    QP -. 완료 통지 .-> CQ
+    CQ -- "poll_cq" --> WC
+
+    classDef obj fill:#e8f0fe,stroke:#1a73e8,color:#0b3a86
+    classDef inner fill:#f1f3f4,stroke:#5f6368
+    class PD,MR,QP,CQ obj
+    class SQ,RQ inner
 ```
 
 <div class="parallel-grid">
@@ -232,27 +268,25 @@ WQE 처리 결과 (status, byte count, opcode, source QP 등). CQ 에서 polling
 
 ### 5.1 TCP/IP 가 가진 세 가지 비용 (RDMA 가 제거하는 것)
 
-```
-                Application
-                    |
-                    | (1) copy_from_user  ← CPU cycle
-                    v
-                 Socket buffer
-                    |
-                    | (2) Protocol stack (TCP/IP, checksum, retransmit timers)
-                    v                      ← CPU cycle + cache pollution
-                    NIC
-                    |
-              ── Network ──
-                    |
-                    NIC
-                    |                      ← Interrupt → ksoftirqd
-                    v
-                 Socket buffer
-                    |
-                    | (3) copy_to_user    ← CPU cycle
-                    v
-                Application
+```mermaid
+flowchart TB
+    AppS["Application (송신)"]
+    SBS["Socket buffer"]
+    NICS["NIC"]
+    NET(("Network"))
+    NICR["NIC"]
+    SBR["Socket buffer"]
+    AppR["Application (수신)"]
+
+    AppS -- "<b>(1)</b> copy_from_user<br/><i>CPU cycle</i>" --> SBS
+    SBS -- "<b>(2)</b> TCP/IP, checksum, retransmit<br/><i>CPU cycle + cache pollution</i>" --> NICS
+    NICS --> NET
+    NET --> NICR
+    NICR -- "Interrupt → ksoftirqd" --> SBR
+    SBR -- "<b>(3)</b> copy_to_user<br/><i>CPU cycle</i>" --> AppR
+
+    classDef cost fill:#fff3cd,stroke:#b8860b
+    class SBS,SBR,NICR cost
 ```
 
 | 비용 | 발생 위치 | RDMA 의 해결 |
@@ -265,16 +299,24 @@ WQE 처리 결과 (status, byte count, opcode, source QP 등). CQ 에서 polling
 
 ### 5.2 RDMA 의 세 가지 변형 — IB / iWARP / RoCE
 
-```
-                            ┌──────────── RDMA 패밀리 ─────────────┐
-                            │                                       │
-   InfiniBand (IB)        iWARP                  RoCE (v1, v2)
-   ────────────────       ──────────────────     ──────────────────────────
-   IB Link/Net Layer      TCP/IP 위에 RDMA       Ethernet 위에 RDMA
-   IB SerDes (1x..12x)    표준 IP 인프라         RoCEv1: Eth L2 직결
-                          느림 (TCP overhead)    RoCEv2: IP/UDP(4791)/BTH
-   HPC, 전용 Fabric       Long-distance, WAN     데이터센터 표준
-   IBTA Vol1 spec         IETF spec              IBTA Annex A16/A17
+```mermaid
+flowchart TB
+    ROOT["RDMA 패밀리"]
+    IB["<b>InfiniBand (IB)</b><br/>━━━━━━━━━━━━<br/>IB Link / Net Layer<br/>IB SerDes (1x..12x)<br/>HPC, 전용 Fabric<br/><i>IBTA Vol1</i>"]
+    IW["<b>iWARP</b><br/>━━━━━━━━━━━━<br/>TCP/IP 위에 RDMA<br/>표준 IP 인프라<br/>느림 (TCP overhead)<br/>Long-distance, WAN<br/><i>IETF spec</i>"]
+    ROCE["<b>RoCE (v1, v2)</b><br/>━━━━━━━━━━━━<br/>Ethernet 위에 RDMA<br/>v1: Eth L2 직결<br/>v2: IP/UDP(4791) + BTH<br/>데이터센터 표준<br/><i>IBTA Annex A16/A17</i>"]
+    ROOT --> IB
+    ROOT --> IW
+    ROOT --> ROCE
+
+    classDef root fill:#1a73e8,color:#fff,stroke:#0b3a86,font-weight:bold
+    classDef ib fill:#e8f0fe,stroke:#1a73e8
+    classDef iw fill:#fef7e0,stroke:#b8860b
+    classDef rc fill:#e6f4ea,stroke:#137333
+    class ROOT root
+    class IB ib
+    class IW iw
+    class ROCE rc
 ```
 
 | 항목 | InfiniBand | iWARP | RoCEv1 | RoCEv2 |
@@ -293,21 +335,24 @@ WQE 처리 결과 (status, byte count, opcode, source QP 등). CQ 에서 polling
 
 ### 5.3 Verbs API — Control path vs Data path
 
-```
-                    User application
-                          │
-                          ▼
-              ┌────────────────────────┐
-              │   libibverbs (Verbs)    │   ← OFED user-space lib
-              └────────────────────────┘
-                          │
-                          ▼ ioctl/uverbs (control only)
-              ┌────────────────────────┐
-              │   ib_uverbs / rdma_cm   │   ← kernel module
-              └────────────────────────┘
-                          │ MMIO + DMA
-                          ▼
-                       HCA / RNIC
+```mermaid
+flowchart TB
+    APP["User application"]
+    LIB["<b>libibverbs</b> (Verbs)<br/><i>OFED user-space lib</i>"]
+    KER["<b>ib_uverbs / rdma_cm</b><br/><i>kernel module</i>"]
+    HW["HCA / RNIC"]
+
+    APP --> LIB
+    LIB -- "ioctl / uverbs<br/>(control path)" --> KER
+    KER -- "MMIO + DMA" --> HW
+    LIB -. "data path: MMIO doorbell<br/>(kernel bypass)" .-> HW
+
+    classDef user fill:#e8f0fe,stroke:#1a73e8
+    classDef kernel fill:#fce8e6,stroke:#c5221f
+    classDef hw fill:#e6f4ea,stroke:#137333
+    class APP,LIB user
+    class KER kernel
+    class HW hw
 ```
 
 !!! note "Internal (Confluence: RDMA Verbs (basic), id=32178388)"
