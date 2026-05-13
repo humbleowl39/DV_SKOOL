@@ -15,3 +15,6 @@ Thumbs.db
 
 # NFS leftover lock files
 .nfs*
+
+# mkdocs-d2-plugin cache
+topics/*/.cache/
