@@ -64,17 +64,18 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    SW["<b>SW Driver (UFSHCD)</b><br/>(Linux Kernel)"]
-    HCI["<b>UFS HCI (Host Controller IF)</b><br/>· UTP (SCSI → UPIU)<br/>· Task Mgmt<br/>· DMA Engine<br/>· Interrupt"]
-    UNI["<b>UniPro (Link)</b><br/>· DME / L3 ~ L1.5"]
-    PHY["<b>M-PHY (Physical)</b><br/>· HS / PWM Gear"]
-    DEV["UFS Device"]
-    SW -- "Register / Doorbell" --> HCI
-    HCI -- "UPIU (UFS Protocol Info Unit)" --> UNI
-    UNI --> PHY
-    PHY --> DEV
+```d2
+direction: down
+
+# unparsed: SW["<b>SW Driver (UFSHCD)</b><br/>(Linux Kernel)"]
+# unparsed: HCI["<b>UFS HCI (Host Controller IF)</b><br/>· UTP (SCSI → UPIU)<br/>· Task Mgmt<br/>· DMA Engine<br/>· Interrupt"]
+# unparsed: UNI["<b>UniPro (Link)</b><br/>· DME / L3 ~ L1.5"]
+# unparsed: PHY["<b>M-PHY (Physical)</b><br/>· HS / PWM Gear"]
+# unparsed: DEV["UFS Device"]
+SW -> HCI: "Register / Doorbell"
+HCI -> UNI: "UPIU (UFS Protocol Info Unit)"
+UNI -> PHY
+PHY -> DEV
 ```
 
 ## 학습 단위 (Units)

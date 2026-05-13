@@ -57,23 +57,20 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    subgraph SOC["SoC Integration Verification"]
-        direction LR
-        IPLVL["<b>IP-Level</b> (블록 검증)<br/>IP DV (UVM)<br/>기능 완전성"]
-        TOPLVL["<b>SoC-Top Level</b> (통합 검증)<br/>Connectivity<br/>Clock / Reset<br/>Interrupt Routing<br/>Power Domain<br/>Memory Map<br/>Common Task (CCTV)"]
-        CCTV["<b>CCTV</b> (Common Coverage)<br/>sysMMU, Security<br/>DVFS, Access Ctrl"]
-        IPLVL --> TOPLVL
-        TOPLVL --> CCTV
-    end
+```d2
+direction: down
 
-    classDef ip stroke:#1a73e8,stroke-width:2px
-    classDef top stroke:#137333,stroke-width:2px
-    classDef cctv stroke:#c0392b,stroke-width:3px
-    class IPLVL ip
-    class TOPLVL top
-    class CCTV cctv
+SOC: "SoC Integration Verification" {
+  direction: right
+  # unparsed: IPLVL["<b>IP-Level</b> (블록 검증)<br/>IP DV (UVM)<br/>기능 완전성"]
+  # unparsed: TOPLVL["<b>SoC-Top Level</b> (통합 검증)<br/>Connectivity<br/>Clock / Reset<br/>Interrupt Routing<br/>Power Domain<br/>Memory Map<br/>Common Task (CCTV)"]
+  # unparsed: CCTV["<b>CCTV</b> (Common Coverage)<br/>sysMMU, Security<br/>DVFS, Access Ctrl"]
+  IPLVL { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  TOPLVL { style.stroke: "#137333"; style.stroke-width: 2 }
+  IPLVL -> TOPLVL
+  CCTV { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  TOPLVL -> CCTV
+}
 ```
 
 ## 학습 단위

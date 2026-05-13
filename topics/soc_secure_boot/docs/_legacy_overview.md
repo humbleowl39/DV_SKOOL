@@ -74,20 +74,20 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    POR["Power-On Reset"]
-    HWROT["Hardware Root of Trust<br/>(eFuse/OTP + BootROM)"]
-    COT["Chain of Trust<br/>BL1 → BL2 → BL31/32/33 → OS"]
-    CRYPTO["Crypto<br/>RSA/ECC<br/>PQC"]
-    BOOTDEV["Boot Device<br/>UFS/eMMC<br/>USB/SPI"]
-    ATTACK["Attack Surface<br/>& Defense"]
+```d2
+direction: down
 
-    POR --> HWROT
-    HWROT --> COT
-    COT --> CRYPTO
-    COT --> BOOTDEV
-    COT --> ATTACK
+# unparsed: POR["Power-On Reset"]
+# unparsed: HWROT["Hardware Root of Trust<br/>(eFuse/OTP + BootROM)"]
+# unparsed: COT["Chain of Trust<br/>BL1 → BL2 → BL31/32/33 → OS"]
+# unparsed: CRYPTO["Crypto<br/>RSA/ECC<br/>PQC"]
+# unparsed: BOOTDEV["Boot Device<br/>UFS/eMMC<br/>USB/SPI"]
+# unparsed: ATTACK["Attack Surface<br/>& Defense"]
+POR -> HWROT
+HWROT -> COT
+COT -> CRYPTO
+COT -> BOOTDEV
+COT -> ATTACK
 ```
 
 ## 학습 단위 (Units)
@@ -104,25 +104,25 @@ flowchart TB
 
 ## 학습 의존성 흐름
 
-```mermaid
-flowchart TB
-    U1["Unit 1 (HW RoT)<br/>신뢰의 닻이 무엇인가?"]
-    U2["Unit 2 (Chain of Trust)<br/>신뢰가 어떻게 전파되는가?"]
-    U3["Unit 3 (암호학)<br/>서명/검증 원리"]
-    U4["Unit 4 (Boot Device)<br/>부팅 장치 프로토콜"]
-    U5["Unit 5 (공격/방어)<br/>위협과 대응"]
-    U7["Unit 7 (DV 방법론)<br/>이론 → 실리콘 품질"]
-    U6["Unit 6 (Quick Reference)<br/>면접 전 최종 복습"]
+```d2
+direction: down
 
-    U1 --> U2
-    U1 --> U5
-    U2 --> U3
-    U2 --> U4
-    U2 --> U5
-    U3 --> U7
-    U4 --> U7
-    U5 --> U7
-    U7 --> U6
+# unparsed: U1["Unit 1 (HW RoT)<br/>신뢰의 닻이 무엇인가?"]
+# unparsed: U2["Unit 2 (Chain of Trust)<br/>신뢰가 어떻게 전파되는가?"]
+# unparsed: U3["Unit 3 (암호학)<br/>서명/검증 원리"]
+# unparsed: U4["Unit 4 (Boot Device)<br/>부팅 장치 프로토콜"]
+# unparsed: U5["Unit 5 (공격/방어)<br/>위협과 대응"]
+# unparsed: U7["Unit 7 (DV 방법론)<br/>이론 → 실리콘 품질"]
+# unparsed: U6["Unit 6 (Quick Reference)<br/>면접 전 최종 복습"]
+U1 -> U2
+U1 -> U5
+U2 -> U3
+U2 -> U4
+U2 -> U5
+U3 -> U7
+U4 -> U7
+U5 -> U7
+U7 -> U6
 ```
 
 **권장 학습 순서**: Unit 1 → 2 → 3/4/5 (병렬 가능) → 7 → 6 (면접 직전 복습)

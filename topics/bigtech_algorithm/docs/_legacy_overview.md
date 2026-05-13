@@ -57,29 +57,39 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    ROOT["알고리즘 면접<br/>핵심 패턴"]
-    DS["자료구조 패턴"]
-    SR["탐색 패턴"]
-    OP["최적화 패턴"]
-    ROOT --> DS
-    ROOT --> SR
-    ROOT --> OP
+```d2
+direction: down
 
-    DS --> A["Array + String"]
-    DS --> H["Hash Map"]
-    DS --> SQ["Stack / Queue"]
-    SR --> BFS["BFS"]
-    SR --> DFS["DFS"]
-    SR --> BS["Binary Search"]
-    OP --> DP["DP"]
-    OP --> GR["Greedy"]
-
-    A --> TP["Two Pointers<br/>Sliding Window"]
-    SQ --> MS["Monotonic Stack"]
-    classDef branch stroke-width:3px
-    class DS,SR,OP branch
+# unparsed: ROOT["알고리즘 면접<br/>핵심 패턴"]
+# unparsed: DS["자료구조 패턴"]
+# unparsed: SR["탐색 패턴"]
+# unparsed: OP["최적화 패턴"]
+DS { style.stroke-width: 3 }
+ROOT -> DS
+SR { style.stroke-width: 3 }
+ROOT -> SR
+OP { style.stroke-width: 3 }
+ROOT -> OP
+A: "Array + String"
+DS -> A
+H: "Hash Map"
+DS -> H
+SQ: "Stack / Queue"
+DS -> SQ
+BFS: "BFS"
+SR -> BFS
+DFS: "DFS"
+SR -> DFS
+BS: "Binary Search"
+SR -> BS
+DP: "DP"
+OP -> DP
+GR: "Greedy"
+OP -> GR
+TP: "Two Pointers\nSliding Window"
+A -> TP
+MS: "Monotonic Stack"
+SQ -> MS
 ```
 
 ## 핵심 원칙
@@ -99,43 +109,48 @@ flowchart TB
 
 ## 패턴 인식 플로차트
 
-```mermaid
-flowchart TB
-    START["문제 수신"]
-    Q1{"입력이 정렬?"}
-    Q2{"연속 부분 배열/<br/>부분 문자열?"}
-    Q3{"두 값의 관계<br/>(합/차)?"}
-    Q4{"트리/그래프 구조?"}
-    Q5{"최대/최소/경우의 수?"}
-    Q6{"매칭 쌍 / 중첩?"}
-    FALLBACK["Brute Force 먼저,<br/>그 다음 최적화"]
+```d2
+direction: down
 
-    P_BS_TP["Binary Search<br/>또는 Two Pointers"]
-    P_SW["Sliding Window"]
-    P_TP["Two Pointers<br/>(정렬 가능)"]
-    P_HM["Hash Map<br/>(정렬 불가)"]
-    P_BFS["BFS (레벨 순서)"]
-    P_DFS["DFS (경로/깊이)"]
-    P_DP["DP<br/>(이전 선택이 다음에 영향)"]
-    P_STACK["Stack"]
-
-    START --> Q1
-    Q1 -- YES --> P_BS_TP
-    Q1 -- NO --> Q2
-    Q2 -- YES --> P_SW
-    Q2 -- NO --> Q3
-    Q3 -- "YES · 정렬 가능" --> P_TP
-    Q3 -- "YES · 정렬 불가" --> P_HM
-    Q3 -- NO --> Q4
-    Q4 -- "YES · 레벨" --> P_BFS
-    Q4 -- "YES · 경로/깊이" --> P_DFS
-    Q4 -- NO --> Q5
-    Q5 -- YES --> P_DP
-    Q5 -- NO --> Q6
-    Q6 -- YES --> P_STACK
-    Q6 -- NO --> FALLBACK
-    classDef pick stroke-width:3px
-    class P_BS_TP,P_SW,P_TP,P_HM,P_BFS,P_DFS,P_DP,P_STACK pick
+# unparsed: START["문제 수신"]
+Q1: "입력이 정렬?" { shape: diamond }
+Q2: "연속 부분 배열/\n부분 문자열?" { shape: diamond }
+Q3: "두 값의 관계\n(합/차)?" { shape: diamond }
+Q4: "트리/그래프 구조?" { shape: diamond }
+Q5: "최대/최소/경우의 수?" { shape: diamond }
+Q6: "매칭 쌍 / 중첩?" { shape: diamond }
+# unparsed: FALLBACK["Brute Force 먼저,<br/>그 다음 최적화"]
+# unparsed: P_BS_TP["Binary Search<br/>또는 Two Pointers"]
+# unparsed: P_SW["Sliding Window"]
+# unparsed: P_TP["Two Pointers<br/>(정렬 가능)"]
+# unparsed: P_HM["Hash Map<br/>(정렬 불가)"]
+# unparsed: P_BFS["BFS (레벨 순서)"]
+# unparsed: P_DFS["DFS (경로/깊이)"]
+# unparsed: P_DP["DP<br/>(이전 선택이 다음에 영향)"]
+# unparsed: P_STACK["Stack"]
+START -> Q1
+P_BS_TP { style.stroke-width: 3 }
+Q1 -> P_BS_TP: "YES"
+Q1 -> Q2: "NO"
+P_SW { style.stroke-width: 3 }
+Q2 -> P_SW: "YES"
+Q2 -> Q3: "NO"
+P_TP { style.stroke-width: 3 }
+Q3 -> P_TP: "YES · 정렬 가능"
+P_HM { style.stroke-width: 3 }
+Q3 -> P_HM: "YES · 정렬 불가"
+Q3 -> Q4: "NO"
+P_BFS { style.stroke-width: 3 }
+Q4 -> P_BFS: "YES · 레벨"
+P_DFS { style.stroke-width: 3 }
+Q4 -> P_DFS: "YES · 경로/깊이"
+Q4 -> Q5: "NO"
+P_DP { style.stroke-width: 3 }
+Q5 -> P_DP: "YES"
+Q5 -> Q6: "NO"
+P_STACK { style.stroke-width: 3 }
+Q6 -> P_STACK: "YES"
+Q6 -> FALLBACK: "NO"
 ```
 
 ## 추천 연습 문제 (16문제)

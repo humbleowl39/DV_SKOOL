@@ -65,15 +65,16 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    SOC["SoC (CPU/GPU/DMA)"]
-    MC["Memory Controller (MC)<br/>· Cmd Scheduler<br/>· Bank Mgmt<br/>· Refresh<br/>· Training"]
-    MI["Memory Interface (MI / PHY)<br/>· DQ/DQS Driver<br/>· Timing Calib<br/>· ZQ Calibration"]
-    DRAM["DRAM Device<br/>(DIMM/Package)"]
-    SOC -- "AXI/ACE" --> MC
-    MC -- "PHY Interface" --> MI
-    MI -- "DDR4/5 Bus" --> DRAM
+```d2
+direction: down
+
+# unparsed: SOC["SoC (CPU/GPU/DMA)"]
+# unparsed: MC["Memory Controller (MC)<br/>· Cmd Scheduler<br/>· Bank Mgmt<br/>· Refresh<br/>· Training"]
+# unparsed: MI["Memory Interface (MI / PHY)<br/>· DQ/DQS Driver<br/>· Timing Calib<br/>· ZQ Calibration"]
+# unparsed: DRAM["DRAM Device<br/>(DIMM/Package)"]
+SOC -> MC: "AXI/ACE"
+MC -> MI: "PHY Interface"
+MI -> DRAM: "DDR4/5 Bus"
 ```
 
 ## 학습 단위 (Units)

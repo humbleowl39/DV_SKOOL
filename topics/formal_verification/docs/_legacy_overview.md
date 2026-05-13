@@ -70,17 +70,18 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    SPEC["Property Specification<br/>(SVA Assertions)"]
-    ENG["Formal Verification Engine<br/>- Model Checking<br/>- Bounded / Unbounded<br/>- Counterexample Gen"]
-    PV["PROVEN<br/>(증명됨)"]
-    FL["FAILED<br/>(반례)"]
-    BD["BOUNDED<br/>(제한적 증명)"]
-    SPEC --> ENG
-    ENG --> PV
-    ENG --> FL
-    ENG --> BD
+```d2
+direction: down
+
+# unparsed: SPEC["Property Specification<br/>(SVA Assertions)"]
+# unparsed: ENG["Formal Verification Engine<br/>- Model Checking<br/>- Bounded / Unbounded<br/>- Counterexample Gen"]
+# unparsed: PV["PROVEN<br/>(증명됨)"]
+# unparsed: FL["FAILED<br/>(반례)"]
+# unparsed: BD["BOUNDED<br/>(제한적 증명)"]
+SPEC -> ENG
+ENG -> PV
+ENG -> FL
+ENG -> BD
 ```
 
 ## 학습 단위 (Units)

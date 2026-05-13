@@ -69,29 +69,29 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    TST["uvm_test"]
-    ENV["uvm_env"]
-    AG["Agent<br/>(Drv / Mon / Sqr)"]
-    SB["Scoreboard<br/>(Checker)"]
-    SL["Sequence Library"]
-    CDB["config_db<br/>(설정)"]
-    FAC["Factory<br/>(생성)"]
+```d2
+direction: down
 
-    TST --> ENV
-    ENV --> AG
-    ENV --> SB
-    ENV --> SL
-    ENV --> CDB
-    ENV --> FAC
-
-    classDef top stroke:#1a73e8,stroke-width:2px
-    classDef env stroke:#137333,stroke-width:2px
-    classDef infra stroke:#b8860b,stroke-width:2px
-    class TST top
-    class ENV,AG,SB env
-    class SL,CDB,FAC infra
+# unparsed: TST["uvm_test"]
+# unparsed: ENV["uvm_env"]
+# unparsed: AG["Agent<br/>(Drv / Mon / Sqr)"]
+# unparsed: SB["Scoreboard<br/>(Checker)"]
+# unparsed: SL["Sequence Library"]
+# unparsed: CDB["config_db<br/>(설정)"]
+# unparsed: FAC["Factory<br/>(생성)"]
+TST { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+ENV { style.stroke: "#137333"; style.stroke-width: 2 }
+TST -> ENV
+AG { style.stroke: "#137333"; style.stroke-width: 2 }
+ENV -> AG
+SB { style.stroke: "#137333"; style.stroke-width: 2 }
+ENV -> SB
+SL { style.stroke: "#b8860b"; style.stroke-width: 2 }
+ENV -> SL
+CDB { style.stroke: "#b8860b"; style.stroke-width: 2 }
+ENV -> CDB
+FAC { style.stroke: "#b8860b"; style.stroke-width: 2 }
+ENV -> FAC
 ```
 
 ## 학습 단위

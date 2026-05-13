@@ -71,24 +71,25 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    VA["Virtual Address<br/>(CPU / Device)"]
-    subgraph MMU["MMU"]
-        TLB["TLB (Cache)"]
-        PWE["Page Walk Engine<br/>(Page Table Traversal)"]
-        MERGE["결과 합류"]
-        TLB -- "Hit" --> MERGE
-        TLB -- "Miss" --> PWE --> MERGE
-    end
-    PA["Physical Addr<br/>+ 권한 체크"]
-    MEM["Memory Access"]
-    FH["Fault Handler"]
+```d2
+direction: down
 
-    VA --> TLB
-    MERGE --> PA
-    PA --> MEM
-    PA --> FH
+# unparsed: VA["Virtual Address<br/>(CPU / Device)"]
+MMU: "MMU" {
+  # unparsed: TLB["TLB (Cache)"]
+  # unparsed: PWE["Page Walk Engine<br/>(Page Table Traversal)"]
+  # unparsed: MERGE["결과 합류"]
+  TLB -> MERGE: "Hit"
+  TLB -> PWE: "Miss"
+  PWE -> MERGE
+}
+# unparsed: PA["Physical Addr<br/>+ 권한 체크"]
+# unparsed: MEM["Memory Access"]
+# unparsed: FH["Fault Handler"]
+VA -> TLB
+MERGE -> PA
+PA -> MEM
+PA -> FH
 ```
 
 ## 학습 단위 (Units)

@@ -351,21 +351,22 @@ WQE 처리 결과 (status, byte count, opcode, source QP 등). CQ 에서 polling
 ### 5.1 TCP/IP 가 가진 세 가지 비용 (RDMA 가 제거하는 것)
 
 ```d2
-direction: down
+direction: right
 
-AppS: "Application (송신)"
-SBS: "Socket buffer"
-NICS: "NIC"
-NET: "Network" { shape: circle }
-NICR: "NIC"
-SBR: "Socket buffer"
-AppR: "Application (수신)"
-AppS -> SBS: "**(1)** copy_from_user\n_CPU cycle_"
-SBS -> NICS: "**(2)** TCP/IP, checksum, retransmit\n_CPU cycle + cache pollution_"
+AppS: "App\n(송신)"
+SBS: "Socket\nbuffer"
+NICS: NIC
+NET: Network { shape: circle }
+NICR: NIC
+SBR: "Socket\nbuffer"
+AppR: "App\n(수신)"
+
+AppS -> SBS: "(1) copy_from_user"
+SBS -> NICS: "(2) TCP/IP\nchecksum, retransmit"
 NICS -> NET
 NET -> NICR
-NICR -> SBR: "Interrupt → ksoftirqd"
-SBR -> AppR: "**(3)** copy_to_user\n_CPU cycle_"
+NICR -> SBR: "IRQ → ksoftirqd"
+SBR -> AppR: "(3) copy_to_user"
 ```
 
 | 비용 | 발생 위치 | RDMA 의 해결 |

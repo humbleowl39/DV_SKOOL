@@ -95,75 +95,69 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    ROOT["AMBA Protocol Family"]
-    APB["<b>APB</b><br/>최소 면적<br/>Config / Reg<br/>APB3 → APB4 → APB5"]
-    AHB["<b>AHB</b><br/>중간<br/>Legacy / 단순 DMA<br/>AHB → AHB-Lite"]
-    AXI["<b>AXI</b><br/>고성능<br/>CPU↔MC, IP↔IP<br/>AXI3 → AXI4 → AXI5"]
-    ACE["<b>ACE / CHI</b><br/>Coherency<br/>Cache Coherent"]
-    AXIS["<b>AXI4-Stream</b><br/>스트리밍 (주소 없음)<br/>TOE↔DCMAC, DSP"]
-    BR["AHB-APB Bridge"]
+```d2
+direction: down
 
-    ROOT --> APB
-    ROOT --> AHB
-    ROOT --> AXI
-    AXI --- ACE
-    AXI --> AXIS
-    AHB --> BR
-    BR --> APB
-
-    classDef root stroke:#1a73e8,stroke-width:3px
-    classDef low stroke:#5f6368,stroke-width:2px
-    classDef mid stroke:#137333,stroke-width:2px
-    classDef hi stroke:#1a73e8,stroke-width:2px
-    class ROOT root
-    class APB low
-    class AHB,BR mid
-    class AXI,ACE,AXIS hi
+# unparsed: ROOT["AMBA Protocol Family"]
+# unparsed: APB["<b>APB</b><br/>최소 면적<br/>Config / Reg<br/>APB3 → APB4 → APB5"]
+# unparsed: AHB["<b>AHB</b><br/>중간<br/>Legacy / 단순 DMA<br/>AHB → AHB-Lite"]
+# unparsed: AXI["<b>AXI</b><br/>고성능<br/>CPU↔MC, IP↔IP<br/>AXI3 → AXI4 → AXI5"]
+# unparsed: ACE["<b>ACE / CHI</b><br/>Coherency<br/>Cache Coherent"]
+# unparsed: AXIS["<b>AXI4-Stream</b><br/>스트리밍 (주소 없음)<br/>TOE↔DCMAC, DSP"]
+# unparsed: BR["AHB-APB Bridge"]
+ROOT { style.stroke: "#1a73e8"; style.stroke-width: 3 }
+APB { style.stroke: "#5f6368"; style.stroke-width: 2 }
+ROOT -> APB
+AHB { style.stroke: "#137333"; style.stroke-width: 2 }
+ROOT -> AHB
+AXI { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+ROOT -> AXI
+ACE { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+AXI -- ACE
+AXIS { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+AXI -> AXIS
+BR { style.stroke: "#137333"; style.stroke-width: 2 }
+AHB -> BR
+BR -> APB
 ```
 
 > 모두 VALID/READY 기반 핸드셰이크. APB 만 PSEL/PENABLE 방식.
 
 ### SoC 내 프로토콜 계층 — "왜 여러 개가 필요한가?"
 
-```mermaid
-flowchart TB
-    subgraph HI["AXI / ACE — 성능 높음"]
-        direction TB
-        CPU["CPU"]
-        GPU["GPU"]
-        MC["MC"]
-        DMA1["DMA"]
-    end
-    subgraph MID["AHB — 중간"]
-        direction TB
-        DMA2["DMA"]
-        BOOT["Boot ROM"]
-    end
-    subgraph LO["APB — 게이트 비용 낮음"]
-        direction TB
-        TMR["Timer"]
-        UART["UART"]
-        GPIO["GPIO"]
-        OTP["OTP"]
-    end
-    ICN["AXI Interconnect"]
-    BR1["AXI → AHB Bridge"]
-    BR2["AHB → APB Bridge"]
+```d2
+direction: down
 
-    HI --> ICN
-    ICN --> BR1
-    BR1 --> MID
-    MID --> BR2
-    BR2 --> LO
-
-    classDef hi stroke:#1a73e8,stroke-width:2px
-    classDef mid stroke:#137333,stroke-width:2px
-    classDef low stroke:#5f6368,stroke-width:2px
-    class CPU,GPU,MC,DMA1,ICN hi
-    class DMA2,BOOT,BR1,BR2 mid
-    class TMR,UART,GPIO,OTP low
+HI: "AXI / ACE — 성능 높음" {
+  direction: down
+  # unparsed: CPU["CPU"]
+  # unparsed: GPU["GPU"]
+  # unparsed: MC["MC"]
+  # unparsed: DMA1["DMA"]
+}
+MID: "AHB — 중간" {
+  direction: down
+  # unparsed: DMA2["DMA"]
+  # unparsed: BOOT["Boot ROM"]
+}
+LO: "APB — 게이트 비용 낮음" {
+  direction: down
+  # unparsed: TMR["Timer"]
+  # unparsed: UART["UART"]
+  # unparsed: GPIO["GPIO"]
+  # unparsed: OTP["OTP"]
+}
+# unparsed: ICN["AXI Interconnect"]
+# unparsed: BR1["AXI → AHB Bridge"]
+# unparsed: BR2["AHB → APB Bridge"]
+ICN { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+HI -> ICN
+BR1 { style.stroke: "#137333"; style.stroke-width: 2 }
+ICN -> BR1
+BR1 -> MID
+BR2 { style.stroke: "#137333"; style.stroke-width: 2 }
+MID -> BR2
+BR2 -> LO
 ```
 
 - 고성능 IP 는 AXI, 레거시 IP 는 AHB, 저속 말단은 APB.

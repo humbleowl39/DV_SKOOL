@@ -59,19 +59,16 @@
 
 ## 컨셉 맵
 
-```mermaid
-flowchart TB
-    UPPER["Upper Layer<br/>(TOE / IP)"]
-    DCMAC["DCMAC<br/>(Ethernet MAC)<br/>- Frame 생성<br/>- FCS 계산/검증<br/>- Flow Control<br/>- Rate Adapt"]
-    PHY["Ethernet PHY<br/>(SerDes, Optic)"]
-    LINK(("Ethernet Link<br/>(100G / 200G / 400G)"))
+```d2
+direction: down
+UPPER: "Upper Layer\n(TOE / IP)"
+DCMAC: "DCMAC\n(Ethernet MAC)\n- Frame 생성\n- FCS 계산/검증\n- Flow Control\n- Rate Adapt" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+PHY: "Ethernet PHY\n(SerDes, Optic)"
+LINK: "Ethernet Link\n(100G / 200G / 400G)" { shape: circle }
 
-    UPPER -- "AXI-Stream" --> DCMAC
-    DCMAC -- "PCS / PMA" --> PHY
-    PHY --> LINK
-
-    classDef hl stroke:#1a73e8,stroke-width:2px
-    class DCMAC hl
+UPPER -> DCMAC: "AXI-Stream"
+DCMAC -> PHY: "PCS / PMA"
+PHY -> LINK
 ```
 
 ## 학습 단위 (Units)

@@ -1514,3 +1514,41 @@ input, button, select, textarea {
 .mermaid > svg:hover {
   cursor: zoom-in;
 }
+
+/* ===========================================================
+   D2 다이어그램 sizing + 가시성 (Mermaid 와 동등한 처리)
+   - D2 SVG 가 mkdocs-d2-plugin 으로 inline 될 때
+     기본은 자연 크기로 렌더 → max-width 제한 없으면 페이지 폭 초과
+   - light/dark 별도 SVG (data-d2-version + d2-light/d2-dark) 모두 적용
+   =========================================================== */
+
+.d2-svg,
+svg[data-d2-version] {
+  max-width: 100%;
+  height: auto;
+  margin: 0.6em auto;
+  display: block;
+}
+
+/* D2 plugin 이 light/dark pair 로 inline 시 둘 다 max-width 100% */
+.d2-light,
+.d2-dark {
+  max-width: 100%;
+}
+
+/* light/dark 모드별 표시/숨김 (Material 의 data-md-color-scheme 따라) */
+[data-md-color-scheme="default"] .d2-dark,
+[data-md-color-scheme="slate"] .d2-light {
+  display: none;
+}
+
+/* D2 의 cluster 라벨 가독성 (Pretendard 통일) */
+svg[data-d2-version] text {
+  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system,
+               'Segoe UI', 'Helvetica Neue', sans-serif !important;
+}
+
+/* Zoom hint */
+svg[data-d2-version]:hover {
+  cursor: zoom-in;
+}
