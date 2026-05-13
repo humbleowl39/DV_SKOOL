@@ -42,6 +42,23 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 첫 _verb_ 부터 _fatal_
+
+당신은 새 RDMA test 작성. main_phase 에서 `ibv_post_send` 호출 → **즉시 fatal**: "QP not in RTS state".
+
+원인: QP 가 _아직 Reset_ 상태. Init seq (Modify(Init) → Modify(RTR) → Modify(RTS)) 가 _실행 안 됨_.
+
+해법: **`post_configure_phase` 에서 init seq 자동 실행**.
+- build/connect: 자원 생성.
+- reset: 청소.
+- configure: 설정.
+- **post_configure: init seq 실행** ← 모든 QP 가 RTS 진입.
+- main: 정상 verb.
+- shutdown: outstanding drain.
+- check: 결과 검증.
+
+각 phase 의 _책임이 명확_ 해야 race 없음. RDMA-TB 의 핵심 패턴.
+
 RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 가 잘못 구성되면 race / dead-lock 이 쉽게 생깁니다. 예를 들어 QP/CQ/MR 등록 (init seq) 이 정상 main_phase verb 보다 늦으면 첫 verb 부터 fatal. RDMA-TB 는 이를 해결하기 위해 phase 별 책임을 명확히 나눴고, `post_configure_phase` 에서 default sequence 로 HW 초기화를 자동 수행합니다.
 
 이 모듈을 건너뛰면 새 테스트 작성 시 "왜 init 이 자동 실행되는지", "왜 `t_seqr` 를 명시해야 하는지", "왜 CQ 폴링은 `start_item` 을 안 쓰는지" 같은 질문이 끊임없이 나옵니다. 4 패턴 + sequencer 계층을 잡으면 모든 시퀀스 작성 결정이 자동화됩니다.
@@ -345,6 +362,38 @@ endclass
 !!! warning "실무 주의점"
     - 새 verb 함수 추가 시 `t_seqr` 파라미터를 첫 인자로 두기 (RDMA-TB 컨벤션).
     - 멀티노드 동시 발행은 `fork ... join_none` + `wait fork` 또는 `join` 으로 명시적 동기.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Phase 적합한 위치 (Bloom: Apply)"
+    "Node 0 의 QP RTS 진입" 시퀀스. 어느 phase?
+
+    ??? success "정답"
+        **`post_configure_phase`** (init seq).
+
+        - `build_phase`: 자원 생성 (component instance).
+        - `connect_phase`: AP connect.
+        - `reset_phase`: HW reset.
+        - `configure_phase`: register config.
+        - **`post_configure_phase`**: HW init seq (QP RTS 전환). main_phase 전.
+        - `main_phase`: 정상 verb.
+
+!!! question "🤔 Q2 — Multi-node race (Bloom: Analyze)"
+    Node 0, Node 1 _동시_ SEND. `fork ... join_none` 후 _wait 없으면_?
+
+    ??? success "정답"
+        Test 가 main_phase 종료 → fork 의 sub-thread _kill_ → 진행 중 verb _abort_.
+
+        대응:
+        - `fork ... join`: 둘 다 완료 까지 wait.
+        - 또는 `fork ... join_none` + `wait fork` 명시적 sync.
+
+        UVM objection 도 필수 — phase drop 방어.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 phase / test flow 자료
 
 ---
 

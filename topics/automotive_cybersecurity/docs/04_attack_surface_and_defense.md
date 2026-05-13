@@ -43,9 +43,41 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _가장 약한 link_ 가 전체를 결정
+
+당신은 차량 OEM. 다음 방어 모두 구현:
+- OBD-II 게이트웨이 (강).
+- CAN SecOC (강).
+- V2X TLS (강).
+- 인포테인먼트 sandbox (강).
+
+그런데 **공급망**:
+- 한 supplier 의 ECU firmware 에 _backdoor_ — supplier 직원의 실수 또는 의도적 sabotage.
+- _OTA server_ 의 한 admin account 가 phishing 으로 탈취.
+
+이 _두 약점_ 이 _수십 보안 layer 의 가치_ 를 _0_ 으로 만듦.
+
+**Defense-in-depth 의 본질**: _모든 surface_ 를 _동시에_ 방어. 한 곳 약점이 _다른 강한 layer_ 를 무용지물로 만듦.
+
 방어를 잘 하려면 **공격자가 어디부터 들어오는지** 체계적으로 알아야 합니다. 차량은 _외부_ (셀룰러, V2X), _근접_ (BT, WiFi, NFC, OBD-II), _내부_ (CAN, Ethernet), _공급망_ (ECU FW, OTA 서버) 등 광범위한 surface 를 가집니다. 이 모듈은 각 surface 를 **자산 → 위협 → 방어 계층** 매트릭스로 정리해, 학습자가 자기 시스템에도 같은 표를 직접 그릴 수 있게 합니다.
 
 이 모듈은 ISO 21434 의 TARA (Threat Analysis & Risk Assessment) 사고를 _체화_ 하는 단계입니다. Module 03 의 Tesla 사례가 1 가지 surface (OBD) 의 1 가지 attack (CAN injection) 이었다면, 이 모듈은 _12 가지 attack × 6 layer_ 의 매트릭스로 시야를 넓힙니다.
+
+!!! question "🤔 잠깐 — TARA 의 _impact_ 평가는?"
+    ISO 21434 의 위협 분석에서 _impact_ 점수가 가장 높은 것은?
+
+    ??? success "정답"
+        **Safety impact** (생명 위협).
+
+        ISO 21434 의 impact 4 차원:
+        - **Safety** (S): 생명/부상. 최고 점수.
+        - **Financial** (F): 차량 또는 회사 손실.
+        - **Operational** (O): 차량 기능 일부 손상.
+        - **Privacy** (P): 개인 정보 노출.
+
+        대응 우선순위: Safety > Financial > Operational > Privacy. 예: 브레이크 control message 위조 (Safety) > 라디오 hack (Operational).
+
+        그래서 _safety-critical_ ECU (조향, 브레이크) 에 _가장 강한 보안_ 적용. 인포테인먼트는 _상대적_ 으로 약해도 OK (단 _gateway_ 로 격리 필수).
 
 ---
 
@@ -679,6 +711,51 @@ CAN IDS 탐지 방식:
     **원인**: 임계값은 차량 밀도 시뮬레이션 기반으로 설정하지만, 실도로 엣지 케이스 (대형 주차장, 터널 출구 밀집) 를 커버하지 못하는 경우가 많다.
 
     **점검 포인트**: BSM (Basic Safety Message) 수신 로그에서 동일 위치 좌표를 공유하는 Certificate 가 임계 개수 (예: 3 개) 이상 있는지 확인. Misbehavior Authority 보고 API 호출 여부와 CRL 갱신 주기가 실시간에 준하는지 검토.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — TARA 우선순위 (Bloom: Apply)"
+    Asset: _브레이크 제어 ECU_. Threat 후보:
+    - (a) OBD-II 로 CAN injection.
+    - (b) Cellular modem RCE.
+    - (c) USB infotainment 공격.
+
+    어떤 것이 _Impact × Likelihood_ 최고?
+
+    ??? success "정답"
+        - (a) OBD-II: Impact ★★★ (브레이크 위협), Likelihood ★ (물리 접근 필요).
+        - **(b) Cellular: Impact ★★★, Likelihood ★★★** (원격 + scale).
+        - (c) USB: Impact ★★, Likelihood ★ (사용자 행동 필요).
+
+        **(b) 가 최고**. 2015 Jeep 해킹 정확히 이 path. 우선순위 1.
+
+!!! question "🤔 Q2 — Defense in depth (Bloom: Analyze)"
+    _Cellular modem → CAN bus_ path 의 _3 단 방어_ 설계.
+
+    ??? success "정답"
+        1. **Modem firmware secure boot**: modem 자체가 _signed firmware_ 만 실행.
+        2. **Infotainment sandbox**: modem driver process 가 _OS-level sandbox_ → kernel 침해 불가.
+        3. **Gateway whitelist**: infotainment ↔ CAN bus 간 gateway 가 _제한된 message ID_ 만 허용.
+
+        한 단계 깨져도 _다른 단계_ 가 막음. Jeep 사례에서는 _gateway 미설정_ 이 결정적.
+
+!!! question "🤔 Q3 — V2X Sybil 방어 (Bloom: Evaluate)"
+    V2X 의 _가짜 차량_ (Sybil) 위협. _기술적 vs 운영적_ 방어 비교.
+
+    ??? success "정답"
+        - **기술적**: PKI 인증서 (각 차량의 unique cert), CRL (취소 목록), misbehavior detection (이상 메시지 패턴).
+        - **운영적**: Certificate Authority 운영, MBO (Misbehavior Authority) 의 실시간 분석.
+
+        한계: PKI 만으로는 _발급된 cert 가 도난_ 되면 무효. 운영적 _빠른 revocation_ 필수. _기술 + 운영 모두_ 필요.
+
+### 7.2 출처
+
+**External**
+- ISO/SAE 21434 *Road vehicles — Cybersecurity engineering*
+- UN R155 / R156 (Type approval for cybersecurity)
+- *Remote Exploitation of an Unaltered Passenger Vehicle* — Miller & Valasek, BlackHat 2015
+- IEEE 1609 *Wireless Access in Vehicular Environments* (WAVE)
+- *Automotive Cybersecurity Best Practices* — Auto-ISAC
 
 ---
 

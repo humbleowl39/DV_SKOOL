@@ -263,6 +263,37 @@ Checksum Offload ⊂ TSO/LRO ⊂ TOE ⊂ RDMA (TCP 우회)
     - **수치는 가정 의존**: MSS, RTO_min, TIME_WAIT 등은 _표준 가정_ 의 값. 환경별로 다를 수 있음.
     - **검증 = 적용**: 카드의 검증 4 축 / Coverage / SVA 는 _읽기_ 가 아니라 _구현_ 으로만 체화.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — TOE 의 가치 (Bloom: Apply)"
+    "100 Gbps 트래픽에서 TOE 적용 vs CPU TCP stack 의 차이?"
+    ??? success "정답"
+        CPU bottleneck:
+        - **CPU stack**: 100 Gbps = ~7M small packet/s → 1 core 로 처리 불가 → 다중 core 사용 → cache contention.
+        - **TOE**: TCP state machine + checksum + segmentation 을 HW 로 → CPU 는 socket API 만.
+        - **trade-off**: TOE 의 connection 수 제한 (보통 수 K), CPU stack 은 수 M 가능 (메모리만 충분하면).
+        - 결론: 고대역 + 적은 connection = TOE, 저대역 + 많은 connection = CPU.
+
+!!! question "🤔 Q2 — TIME_WAIT 의 _목적_ (Bloom: Analyze)"
+    TCP TIME_WAIT (2 MSL) 가 _존재해야 하는_ 이유?
+    ??? success "정답"
+        지연된 segment 의 oclusion:
+        - **시나리오**: A↔B 연결 close 직후, network 에 _delayed_ segment 잔류. A 가 즉시 같은 port 로 새 연결 시작 → delayed segment 가 새 연결에 도달 → 잘못된 데이터.
+        - **2 MSL** = Max Segment Lifetime × 2 → delayed segment 가 _확실히_ network 에서 소멸할 시간.
+        - **trade-off**: 짧으면 port reuse race, 길면 socket FD 고갈 (server-side).
+        - 검증 포인트: TIME_WAIT 진입/이탈 시각 + 즉시 reuse 시 RST 발생 시나리오.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `TOE Curriculum` — 5 모듈 매핑
+- `TCP State Machine DV` — TIME_WAIT / RTO 검증 사례
+
+**External**
+- RFC 9293 *Transmission Control Protocol (TCP)*
+- RFC 6298 *Computing TCP's Retransmission Timer*
+- *TCP/IP Illustrated, Volume 1* (Stevens) — TCP state machine
+
 ---
 
 ## 코스 마무리

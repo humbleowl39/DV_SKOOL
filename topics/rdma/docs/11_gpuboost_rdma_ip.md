@@ -44,9 +44,34 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
-RDMA-TB 의 모든 scoreboard 와 monitor 는 **wrapper 경계** 에서 transaction 을 캡처합니다. 어떤 wrapper 가 어떤 신호를 만들고 어디로 보내는지 모르면 fail 시 "어느 wrapper 의 책임?" 의 분기 결정 자체가 불가능. 또한 HLS 합성 결과의 II/WNS 가 throughput 에 직결되므로 spec 보다 _구현 timing 특성_ 을 봐야 정확한 검증 시나리오 설계가 가능합니다.
+### 1.1 시나리오 — "scoreboard 가 fail 했는데 _누구_ 책임?"
+
+당신은 RDMA-TB 시뮬을 돌립니다. `WC_REM_ACCESS_ERR` 가 떴습니다. 즉시 두 후보:
+
+- **(a)** sender 의 _requester wrapper_ 가 잘못된 rkey 를 보냈다 (송신측 버그).
+- **(b)** receiver 의 _responder wrapper_ 가 valid rkey 를 잘못 reject 했다 (수신측 버그).
+
+이 분기를 즉답하려면 _두 wrapper 의 경계_ 와 _signal 흐름_ 을 알아야 합니다. 단순 spec 만으로 부족 — **구현의 ground truth** 가 필요.
+
+GPUBoost RDMA-IP 는 5 개 wrapper 분업 — **requester / completer / responder / cc / mmu**. 각 wrapper 가 _다른 II_ (handle rate) 와 _다른 latency budget_ 을 가지므로:
+
+- _Scoreboard timing assumption_ 이 wrapper 별로 다름.
+- _Inject 위치_ 가 wrapper 경계에 정확히 매핑됨 (e.g. "responder_frontend 의 packet 입력 한계로 inject").
+- _Coverage closure_ 가 wrapper 별 corner case 로 분해됨.
+
+또한 HLS 합성 결과의 II/WNS 가 throughput 에 직결되므로 spec 보다 _구현 timing 특성_ 을 봐야 정확한 검증 시나리오 설계가 가능합니다.
 
 이 모듈은 RDMA-TB 의 모든 후속 디버그/시나리오 설계의 **구현 ground truth** 를 제공합니다.
+
+!!! question "🤔 잠깐 — 왜 _wrapper 5 개_ 가 필요한가?"
+    한 큰 monolithic RTL 으로 RDMA NIC 을 구현하면 안 되나? Wrapper 분리의 _구체적 trade-off_ 한 가지를 떠올려 보세요.
+
+    ??? success "정답"
+        **HLS II (Initiation Interval) 한계**.
+
+        예: requester 의 doorbell 처리는 _1 cycle II_ 가능 (단순). 하지만 responder 의 _5-step access check + DMA 변환_ 은 _4~6 cycle II_ 필요. 한 monolithic RTL 으로 합치면 _가장 느린 II_ 가 전체 throughput 을 결정.
+
+        Wrapper 분리 → 각자 자신의 II 로 동작 + _AXI4 / streaming I/F 로 buffer_ → 전체 throughput 이 _가장 느린 wrapper_ 가 아닌 _bottleneck wrapper_ 의 II 로 결정. 분업의 효과.
 
 ---
 
@@ -387,6 +412,28 @@ retry
     - WNS > 3 ns 인 모듈 하나가 인접 모듈의 routing 까지 망가뜨린다 — *combined* 단계 regression diff 를 PR 마다 첨부.
     - Wrapper 별 debug register 는 sticky bit 가 많아 reset 후 read 해도 잔여 — bring-up 직후 `clear-on-read` 패스를 sequence 에 둔다.
     - Spec 변경 (cap) 시 본 모듈 본문보다 GPUBoost spec 이 우선. 학습용 표는 *예시 default*.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Wrapper 책임 분리 (Bloom: Apply)"
+    Sender 의 `WC_REM_ACCESS_ERR` — _어느 wrapper_ 의 _어느 debug register_ 부터 확인해야 가장 효율적인가?
+
+    ??? success "정답"
+        Receiver 측 **responder_frontend** 의 `o_responder_frontend_invalid_request_hwcnt` (BAR2 0x38440) — protection check 위반 카운트. 동시에 access flag, MR/PD validity 도 확인. (Confluence: RDMA debug register guide, id=884966146)
+
+!!! question "🤔 Q2 — HLS II bottleneck (Bloom: Analyze)"
+    한 wrapper 의 II 가 다른 wrapper 의 두 배. 전체 throughput 에 어떤 영향?
+
+    ??? success "정답"
+        Throughput = 1 / max(II_i). 가장 느린 wrapper 가 전체를 결정. 해결: bottleneck wrapper 를 _두 instance 병렬_ 또는 _unroll_ 로 II 1/2 로. 단 area 폭증 가능.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `High-Level Architecture Description (for DV team)` (id=1211203656)
+- `Completer` (id=1212973064)
+- `RDMA debug register guide` (id=884966146)
+- 사내 GPUBoost spec (NDA)
 
 ---
 

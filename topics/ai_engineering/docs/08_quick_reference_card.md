@@ -292,6 +292,36 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 - **계측 없는 도입은 운영 부채** — 도입 첫날부터 metric 수집 파이프라인을 만들어라.
 - **답변 패턴 = 기준 1개 + 숫자 1개 + 트레이드오프 1개** — 30초 답변의 황금 비율.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 카드 사용 trigger (Bloom: Apply)"
+    "RAG 도입할까?" 라는 질문에 이 카드를 펴면 어디부터?
+    ??? success "정답"
+        §4.2 결정 트리 → §5.6 RAG 파이프라인 → §6 흔한 오해:
+        - **§4.2**: workload 가 fact-heavy 인가, reasoning-heavy 인가 판별 → fact-heavy 면 RAG, 아니면 fine-tune 고려.
+        - **§5.6**: chunk size / retrieval top-K / re-rank 의 default 값 확인.
+        - **§6**: "RAG = LLM 만 갈아끼우면 됨" 같은 오해 회피.
+        - 카드의 가치: 30 초 안에 의사결정 + 빠진 고려사항 회피.
+
+!!! question "🤔 Q2 — Agent 비용 폭주 (Bloom: Evaluate)"
+    면접에서 "Agent 도입 후 30 일 운영 비용이 예측치의 10 배" 사례. 카드로 정답할 답변 패턴?
+    ??? success "정답"
+        기준 + 숫자 + trade-off:
+        - **기준**: max-step / budget guard 누락이 90% 의 root cause.
+        - **숫자**: 1 query × avg 8 tool call × $0.02/call = $0.16 → 1000 query/day = $160/day.
+        - **trade-off**: hard cap → robustness ↓ (작업 미완료), soft cap (warning + degrade) → cost predictable.
+        - 결론: 계측 없이 launch = 운영 부채 1 위.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `AI Engineering Curriculum` — 모듈 1–7 매핑
+- `Agent Cost Audit` — max-step / budget 정책
+
+**External**
+- *LangChain Documentation* — Agent / RAG 패턴
+- OpenAI *Cookbook* — production guardrails
+
 ## 다음 단계
 
 - 퀴즈로 마무리: [전체 Quiz Index](../quiz/) — 8개 모듈 각 5문항씩, 총 40문항.

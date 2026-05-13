@@ -43,6 +43,17 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Single lane OK_, _Multi-lane FAIL_
+
+당신의 DCMAC 검증. 100G 단일 lane mode 모든 test 통과. 200G 4-lane 모드로 옮기니 _ random 시간에 frame skew error_.
+
+추적:
+- Lane 0, 1, 2, 3 의 _PCS alignment marker_ 가 _다른 시점_ 도착.
+- DCMAC 의 _lane reorder buffer_ 가 _이 skew 를 흡수_ 해야 함.
+- Bug: reorder buffer 가 _expected 보다 작은 depth_.
+
+**Multi-lane bug 는 단일 lane test 에서 _절대_ 안 잡힘**. 다른 시나리오 필요.
+
 DCMAC 검증 환경의 모든 신호 이름 — `tx_axis_tdata`, `rx_axis_tuser`, `pause_req`, `pcs_align_status`, `gt_txusrclk2` — 는 이 모듈의 5 블록 중 하나에 속합니다. 어느 블록의 신호인지 모르면 **scoreboard 위치 / SVA bind 모듈 / coverage 도메인** 자체가 잘못 설정됩니다.
 
 또한 100/200/400G **multi-channel mode** 는 같은 IP 가 SerDes lane 을 다르게 매핑한 결과입니다. 이 매핑이 틀어지면 단일 lane test 는 통과해도 4-lane / 8-lane 구성에서 silent failure 가 누적됩니다. 이 모듈을 건너뛰면 그 silent failure 의 root cause 를 찾을 어휘가 없습니다.
@@ -565,6 +576,57 @@ DCMAC → TOE (RX):
     **현상**: 단일 레인 단독 테스트에서는 정상이지만, 4-레인 또는 8-레인 구성 시 간헐적 frame error 가 발생하거나 link up 자체가 안 된다.<br>
     **원인**: Multi-lane 구성에서 각 SerDes lane 은 물리 배선 차이로 skew 가 발생하고, 보드 레이아웃에 따라 lane 순서가 뒤바뀌는(swap) 경우가 있다. PCS 의 lane deskew/reorder 기능이 제대로 설정되지 않으면 조용히 CRC 오류가 누적된다.<br>
     **점검 포인트**: 시뮬레이션에서 `lane_skew` 파라미터를 최대 허용 skew (보통 ±half bit period) 까지 변화시킨 시나리오를 반드시 포함. `rx_pcs_align_status` 및 `rx_lane_lock` 신호가 모든 lane 에서 동시에 assert 되는지 로그 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 신호 분류 (Bloom: Apply)"
+    Debug log:
+    ```
+    tx_axis_tdata[511:0] = 0x...
+    pause_req = 1
+    pcs_align_status = 0
+    ```
+    각 신호 _어느 블록_ 소속?
+
+    ??? success "정답"
+        - `tx_axis_tdata`: **User interface (AXI-S TX)** — frame data.
+        - `pause_req`: **Pause/PFC block** — flow control.
+        - `pcs_align_status`: **PCS block** — alignment marker lock status.
+
+        각 신호 분류 → scoreboard 의 hook 위치 + monitor 결정.
+
+!!! question "🤔 Q2 — Multi-lane race (Bloom: Analyze)"
+    8-lane 모드에서 _lane 0, 1, 2_ 의 `pcs_align_status=1`, _lane 3-7_ 의 `=0`. 어떤 상태?
+
+    ??? success "정답"
+        **Partial alignment** — link 가 _완전히_ up 안 됨.
+
+        가능한 원인:
+        - Lane 3-7 의 SerDes _trained_ 안 됨.
+        - PCB 의 lane 3-7 trace 의 _길이 차이_ 가 PCS deskew 한계 초과.
+        - Alignment marker 의 _frequency error_.
+
+        Link 가 _전부 lane align_ 까지 not L0. 검증 시 _부분 align_ 시나리오 inject.
+
+!!! question "🤔 Q3 — 모드 전환 검증 (Bloom: Evaluate)"
+    DCMAC 가 _100G → 400G 동적 전환_. 어떤 SVA?
+
+    ??? success "정답"
+        - `assert property (mode_change |=> $stable(traffic) until link_up_new)` — 전환 중 _데이터 loss 없음_.
+        - `assert property (mode_change |-> ##[1:100] all_lanes_aligned)` — _100 cycle 내_ 새 mode 의 alignment.
+        - SerDes _PLL 안정화_ 시간 SVA.
+        - In-flight frame 의 _완료_ 보장 (다음 mode 진입 전).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[Jaehyeok] Ethernet Wrapper (DCMAC)` (id=893747237)
+- 사내 DCMAC user manual
+
+**External**
+- IEEE 802.3 *Ethernet*
+- Xilinx UltraScale+ Integrated DCMAC IP guide
+- Cadence MAC IP / Verisium docs
 
 ---
 

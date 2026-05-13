@@ -43,9 +43,44 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _5 layer 중 하나_ 만 빠지면?
+
+당신은 차량 OEM. 5 보안 layer 모두 구현:
+- L1 Boot: Secure boot, HSM 키 보호.
+- L2 Communication: SecOC for CAN.
+- L3 Domain: Gateway 격리.
+- L4 Network: TLS for V2X.
+- L5 Cloud: OTA 인증.
+
+**한 layer 만 빠뜨리면 어떻게 되나?**
+
+| 빠진 layer | 결과 |
+|----------|------|
+| **L1 (Boot)** | Bootloader 우회 → custom firmware → 모든 보안 정책 무효 |
+| **L2 (Communication)** | 한 침해 ECU 가 CAN 으로 _임의 메시지_ → 다른 ECU 신뢰 |
+| **L3 (Domain)** | 인포테인먼트 침해 → powertrain CAN bus 진입 (Jeep 2015) |
+| **L4 (Network)** | V2X 데이터 위조 → 잘못된 traffic info |
+| **L5 (Cloud)** | OTA 위조 → 전체 fleet 에 malware 배포 |
+
+**모든 5 가 _동시에 작동_ 해야 안전**. _Layer 부재 발견_ 까지 _수년_ 걸리는 경우 흔함 (예: Jeep 의 L3 부재가 2015 까지 보이지 않음).
+
 CAN 자체는 보안 빈 깡통입니다 (Module 01). 그래서 _모든 보안 메커니즘은 SoC + ECU + Gateway 레벨의 추가 layer 로_ 구현됩니다 — HSM 이 키를 보호하지 못하거나 SecOC 가 빠지면 한 노드 침해가 곧 차량 전체 침해. 이 모듈은 **"프로토콜 위에 어떤 보안 스택을 올려야 하는가"** 의 아키텍처 사고를 다루며, Module 03 (Tesla 사례 — _이 스택 중 한 layer 가 빠졌을 때 무엇이 무너지는가_) 의 직접 전제입니다.
 
 이 모듈을 건너뛰면 Tesla 탈옥 분석이 _"Tesla 가 보안을 안 한 이야기"_ 로 단순화됩니다. 반대로 5-layer 스택을 잡고 가면, 탈옥 사례가 _"L1 (Boot) 과 L5 (Cloud) 는 강했지만 L2 (Communication) 가 비어 있었던 결과"_ 로 정확히 분해됩니다.
+
+!!! question "🤔 잠깐 — HSM 이 _진짜_ 안전한가?"
+    HSM 은 _하드웨어 격리_ 된 key vault. 그런데 키가 _어떻게_ HSM 에 _처음_ 들어가는가?
+
+    ??? success "정답"
+        **Key injection** — _공장에서_ 또는 _OTA 로_:
+
+        - **공장 injection**: HSM 의 OTP fuse 에 root key 영구 저장. _신뢰_ 는 _공장 보안_ 에 의존.
+        - **Key ceremony**: 여러 사람 _동시 입회_ 하에 key shard 합성 → injection.
+        - **OTA**: Secure channel (TLS + HSM 인증) 으로 신규 key. _첫 root key_ 는 여전히 공장 injection.
+
+        결국 _최초 신뢰_ 는 **공장의 boot ROM 코드 + 첫 root key**. 그래서 _Apple/Google 의 device root key_ 는 _공장에서만_ 발급, 후속 모든 보안의 _anchor_.
+
+        만약 공장이 침해되면? 그 모델의 _모든 device_ 가 위험. 그래서 _공장 보안_ 이 자동차/스마트폰 모두에서 _가장 critical_.
 
 ---
 
@@ -661,6 +696,51 @@ flowchart TB
     **원인**: SecOC 는 수신 ECU 가 MAC 검증을 하지 않으면 all-or-nothing 보호가 깨진다. 레거시 ECU 교체 일정이 차량 수명 (15–20 년) 보다 짧지 않아 혼재 기간이 길어진다.
 
     **점검 포인트**: 네트워크 매트릭스에서 SecOC 미적용 송신자 ID 목록을 추출하고, Gateway 의 Rate Limiter 가 해당 ID 에 대한 burst 주입 (동일 ID 연속 송신) 을 차단하는지 `candump` 로그로 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Layer 매핑 (Bloom: Apply)"
+    OBD-II port 진단 도구로 _CAN spoofing_. _어느 layer_ 의 _어떤 메커니즘_ 이 막아야?
+
+    ??? success "정답"
+        - **L3 (Domain)** — Gateway 의 ID whitelist + rate limiter. OBD port → diagnostic CAN segment 만, 그 외 control segment 격리.
+        - **L2 (SecOC)** — 그래도 통과한 메시지의 MAC 검증.
+
+        두 layer 가 같이 동작해야 안전. _하나만_ 으로는 부족.
+
+!!! question "🤔 Q2 — HSM key injection (Bloom: Analyze)"
+    공장에서 HSM 에 _root key injection_. 어떤 _보안 위협_ 이 있나?
+
+    ??? success "정답"
+        - **Insider threat**: 공장 직원이 key copy → 차종 전체 보안 무효.
+        - **Supply chain**: 공급망에서 _bad chip_ 삽입 → 알려지지 않은 backdoor.
+        - **Storage**: Key 가 _다른 server_ 로 export 되었으면 추적 어려움.
+
+        방어: _Key ceremony_ (M-of-N 다인 입회), _HSM 자체 key generation_ (외부 import 없이 chip 내부에서), _전수 audit_.
+
+!!! question "🤔 Q3 — 5 Layer 우선순위 (Bloom: Evaluate)"
+    Cost-constrained automotive. 5 layer 중 _하나_ 만 추가 가능. 어떤 것이 _ROI 최고_?
+
+    ??? success "정답"
+        보통 **L3 (Domain Gateway)**.
+
+        이유:
+        - 단일 HW (gateway ECU) 로 _모든 도메인_ 보호.
+        - L2 SecOC 는 _각 ECU_ 변경 필요 (수십 개) → 비용 큼.
+        - L4 V2X 는 미래 기능.
+        - L5 Cloud 은 _연결성_ 필요.
+
+        L3 = _즉시 + 광범위 + 비용 효율_. 그래서 _첫 도입_ 의 표준 선택.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- (사내 자동차 보안 자료)
+
+**External**
+- ISO/SAE 21434 *Road vehicles — Cybersecurity engineering*
+- AUTOSAR *Specification of Secure Onboard Communication* (SecOC)
+- *Surviving the Sec0C: Bus-Off Attack* — Cho et al., 2016
 
 ---
 

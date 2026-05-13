@@ -43,6 +43,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _1 백만 연결_ 의 _RTO timer_
+
+당신은 cloud server. 동시 활성 TCP 연결 _1 백만_. 각 연결마다 _RTO timer_ 가 _별도_ — 응답 안 오면 retransmit.
+
+**Naive (SW 모델)**: 매 cycle 마다 _1M timer_ 비교 → CPU _대부분 시간_ timer 처리에 소진.
+
+**Timer Wheel (TOE HW)**:
+- 1 ms 단위 _bucket_ 들.
+- 각 timer 가 _자기 만료 bucket_ 에 link.
+- 매 1 ms _wheel rotation_ → _만료 bucket_ 의 timer 만 처리 (수십 개).
+- 비용: _O(만료 수)_ vs _O(전체 N)_.
+
+또한:
+- **Connection Table** = 1M 연결의 _4-tuple → state_ 매핑, SRAM 액세스 _O(1)_.
+- **Active vs Idle**: 활성 연결 SRAM (빠른), idle 연결 DRAM (느린).
+
+이 구조 없이 _SW 로_ 처리 = _CPU 8 코어 100%_ 점유. _HW offload_ 면 _0.5 코어_.
+
 Module 01 에서 "TOE 는 stateful offload" 라는 한 줄을 잡았습니다. 이 모듈은 그 한 줄이 **실제 칩 안에서 어떻게 블록으로 나뉘는가** 를 보여줍니다. TX path 의 6 단계, RX path 의 6 단계, 그 사이를 잇는 Connection Table, 수백만 연결의 RTO 를 처리하는 Timer Wheel, SRAM/DRAM 하이어라키 — 이 다섯이 TOE 의 골격입니다.
 
 이 모듈을 건너뛰면 Module 03 (Key Functions) 에서 "Checksum 이 어디서 일어나는지", "재전송 버퍼가 어디 있는지" 같은 위치 질문에 답할 수 없습니다. 또 Module 04 (DV) 의 scoreboard 와 monitor 가 어느 인터페이스에서 hook 되는지도 이 architecture 위에서만 의미가 있습니다.
@@ -507,6 +525,39 @@ TOE ↔ DCMAC 인터페이스:
     - Connection Table SRAM 크기 = 동시 _활성_ 연결 수의 상한. 그 이상은 DRAM swap → latency 변동.
     - Timer Wheel cascade 의 정확도는 level 1 → level 0 재등록 시 slot 계산이 핵심.
     - Retx buffer 의 DRAM 대역폭은 종종 throughput 의 병목 — 채널 수와 access pattern 검토 필수.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Timer Wheel level 설계 (Bloom: Analyze)"
+    TOE 가 _RTO 100ms~60s_ 처리. Single-level vs Multi-level wheel?
+
+    ??? success "정답"
+        **Multi-level cascade**.
+
+        Single-level @ 1ms tick: 60000 slot. 메모리 큼.
+
+        Multi-level:
+        - L0: 1ms tick × 1000 slot.
+        - L1: 1s tick × 60 slot.
+        - Cascade: L1 timer 가 _만료 1초 전_ L0 으로 _재등록_.
+
+        총 1060 slot, single 보다 _57× 적음_.
+
+!!! question "🤔 Q2 — SRAM/DRAM hierarchy (Bloom: Apply)"
+    100만 connection, _10만 active_. SRAM/DRAM 크기?
+
+    ??? success "정답"
+        - **Active 10만**: SRAM. 1 state ~200 byte × 100K = **20 MB SRAM**.
+        - **Idle 90만**: DRAM. 200 × 900K = **180 MB DRAM**.
+
+        Active 변화 시 SRAM ↔ DRAM swap. Cache hit rate 가 throughput 결정.
+
+### 7.2 출처
+
+**External**
+- IETF RFC 793 *TCP*
+- *A Hierarchical Timer Wheel* — academic
+- Chelsio Terminator TOE architecture
 
 ---
 

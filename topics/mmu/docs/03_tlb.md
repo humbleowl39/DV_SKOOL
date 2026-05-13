@@ -42,6 +42,20 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Stale TLB_ 의 silent corruption
+
+당신은 OS 에서 `mmap` 으로 file 을 mapping. 작업 후 `munmap`. 다른 process 가 _같은 VA 영역_ 에 _다른 file_ mmap. 잠시 후 **wrong file 의 데이터 access**.
+
+원인: **Stale TLB entry**.
+- 첫 mmap → TLB 에 VA → PA1 매핑.
+- munmap → page table 에서 매핑 제거. _그런데 TLB invalidate 안 함_.
+- 새 mmap → 새 매핑 (VA → PA2) 추가, 단 TLB 에 _구 entry (PA1)_ 잔존.
+- Access 시 TLB hit (구 entry) → _PA1 access_ → 다른 file 의 데이터.
+
+해법: `munmap` 후 _반드시_ `tlb_invalidate(va)` 또는 `INVLPG` (x86) / `tlbi` (ARM).
+
+OS 의 _가장 자주 발생하는 bug_ 중 하나 — Linux 커널 history 에 수십 건.
+
 **TLB 는 MMU 성능의 90% 를 결정**합니다. Page walk 이 ~400 ns 인 반면 TLB hit 는 ~1 cycle (~0.5 ns) — _800 배_ 차이. Hit rate 가 99% 에서 95% 로 4%p 만 떨어져도 effective access time 이 4.5 ns 에서 20.5 ns 로 _4.6배_ 늘어납니다. 즉, TLB hit-rate 가 IPC 를 직접 결정.
 
 검증 관점에서 **stale TLB entry 는 silent correctness bug 의 가장 흔한 원인** 입니다 — page table update 후 invalidate 누락이면 잘못된 PA 에 access 하지만 _아무 경고도 없이_ 진행. 이 모듈의 invalidation 시나리오를 빠짐없이 다루는 것이 핵심.
@@ -577,6 +591,37 @@ sequenceDiagram
 - **TLBI 명령**: `ASIDE1` / `VAE1` / `VMALLE1` / `ALLE1`. Page table 변경 / context switch 시 필수. 반드시 `DSB ISH; ISB` 동반.
 - **TLB shootdown**: Multi-core SMP 에서 _다른_ 코어의 TLB 도 무효화하는 메커니즘. ARM = HW broadcast (TLBI ... IS), x86 = SW IPI. 둘 다 비싸므로 batch 처리.
 - **HW-managed 가 표준**: 검증에서는 walk engine + TLB 의 정확성 (특히 invalidation 후 stale 없는지) 핵심.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — TLB miss 의 latency (Bloom: Apply)"
+    TLB hit = 1 cycle, miss = 100 cycle (4-level walk + cache miss). hit rate 99% 와 95% 의 effective access time 차이?
+    ??? success "정답"
+        EAT = hit_rate × 1 + miss_rate × 100:
+        - 99%: 0.99 × 1 + 0.01 × 100 = 1.99 cycle.
+        - 95%: 0.95 × 1 + 0.05 × 100 = 5.95 cycle.
+        - 차이: ~3 배. 1% miss rate 변화가 IPC 에 _배수_ 영향.
+        - 결론: TLB hit rate 가 cache hit rate 만큼 IPC 의 핵심 변수 → huge page / ASID / prefetch 모두 hit rate 최적화 도구.
+
+!!! question "🤔 Q2 — TLB shootdown 순서 (Bloom: Analyze)"
+    `PTE store → TLBI → DSB → IPI` 순서가 _뒤바뀌면_ 어떤 race?
+    ??? success "정답"
+        PTE store 후 TLBI 전에 다른 core 가 stale entry 사용:
+        - **시나리오**: PTE invalid 로 변경 → 다른 core 가 _아직 invalidate 되지 않은_ TLB 로 접근 → unmapped 영역 access.
+        - **DSB 누락**: TLBI 완료 보장 안 됨 → IPI 받은 core 가 _아직 propagate 되지 않은_ TLBI 를 commit 하기 전에 stale 사용.
+        - **순서 보장 메커니즘**: TLBI broadcast (ARM IS) 또는 SW barrier (x86 IPI). Inner-Shareable domain 안에서 _모든_ core 가 invalidate 확인 후 DSB 완료.
+        - 검증 포인트: PTE store 시각 + 원격 core TLBI 완료 시각 + 그 사이 VA 접근 → 셋의 timeline assertion.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `TLB Architecture` — μTLB/L2 TLB/PWC 계층 + ASID 정책
+- `TLB Shootdown Verification` — multi-core race 시나리오
+
+**External**
+- ARM ARM (DDI0487) §D5.10 *TLB Maintenance*
+- Intel SDM Vol 3A §4.10 *Caching Translation Information*
+- *Computer Architecture: A Quantitative Approach* — Memory hierarchy / TLB design
 
 ## 다음 단계
 

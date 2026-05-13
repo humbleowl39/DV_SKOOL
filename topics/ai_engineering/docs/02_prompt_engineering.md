@@ -42,9 +42,49 @@
 
 ## 1. Why care? — Prompt 가 왜 출력의 운명을 결정하는가
 
-LLM 활용에서 가장 큰 ROI 는 **모델 변경 없이 입력만으로 출력을 통제하는 능력** 입니다. 모든 RAG / Agent / Fine-tune-after-Prompt 워크플로의 _마지막 단_ 은 결국 prompt — 검색을 잘해도, 도구를 잘 정의해도, prompt 가 모호하면 모든 노력이 무산됩니다.
+### 1.1 시나리오 — 같은 모델, 다른 답
+
+당신은 Claude Sonnet 으로 _SystemVerilog UVM testbench_ 를 만들고 싶습니다. 두 prompt:
+
+**Prompt A** (naive): `"UVM 테스트벤치 만들어줘"` (8 token)
+
+응답:
+```systemverilog
+// 일반적인 UVM 코드 ...
+class my_test extends uvm_test;
+  $display("Test running");  // ⚠ $display 금지된 패턴
+  // ... 추측된 port 이름들
+endclass
+```
+
+**Prompt B** (구조화): _Role + DUT spec + 컨벤션 + 출력 포맷_ 명시 (150 token)
+
+응답:
+```systemverilog
+class axi_basic_test extends uvm_test;
+  `uvm_component_utils(axi_basic_test)
+  // ... 실제 DUT 의 port 와 일치
+  `uvm_info("AXI_TEST", $sformatf(...))  // ✓ UVM macro 사용
+endclass
+```
+
+**결과 차이**: 같은 모델, 같은 temperature, 다른 prompt → _컴파일 통과율_ 30% → 95%. **모델 변경 없이 prompt 만 바꿔서**.
+
+이게 prompt engineering 이 LLM 활용에서 _가장 큰 ROI_ 인 이유. 모든 RAG / Agent / Fine-tune-after-Prompt 워크플로의 _마지막 단_ 은 결국 prompt — 검색을 잘해도, 도구를 잘 정의해도, prompt 가 모호하면 모든 노력이 무산됩니다.
 
 이 모듈은 학습자가 "왜 이 prompt 가 더 잘 동작하는지" 를 _가설 → 실험 → 검증_ 사이클로 다룰 수 있게 만듭니다. 다음 모듈 (Embedding, RAG, Agent) 의 모든 LLM 호출 단에서 이 모듈의 패턴이 그대로 재등장합니다.
+
+!!! question "🤔 잠깐 — Few-shot 이 zero-shot 보다 _왜_ 잘 동작?"
+    LLM 의 _가중치는 동일_. 그런데 1-2 개 예시를 prompt 에 넣으면 정확도가 _10~30%_ 향상. 가중치가 바뀐 게 아닌데 어떻게?
+
+    ??? success "정답"
+        **In-context learning (ICL)** — Transformer 의 attention 이 _prompt 내의 example pattern_ 을 보고 "**이 패턴을 흉내내라**" 라는 신호를 받음.
+
+        구체적으로:
+        - Zero-shot: 학습 분포 전체의 _평균_ 같은 응답.
+        - Few-shot: prompt 의 example 이 attention 으로 _특정 sub-distribution_ 활성화 → 그 영역의 응답.
+
+        Mechanism 가설 (Olsson et al. 2022): "**induction heads**" 라는 특정 attention head 가 "이전에 본 패턴" 을 찾아서 흉내냄. 가중치는 동일하지만 _activation 분포_ 가 다른 영역으로 routing.
 
 ---
 
@@ -565,6 +605,55 @@ DV 태스크별 평가 기준:
     **원인**: API 는 기본적으로 초과 토큰에 대해 예외를 발생시키지 않고 truncation 을 수행하며, 어느 부분이 잘렸는지 응답 메타데이터에 명시하지 않는 경우가 많다.
 
     **점검 포인트**: 응답 메타데이터의 `usage.prompt_tokens` 가 입력 토큰 수와 일치하는지 확인. Few-shot 예제나 시스템 지시가 응답에 반영되지 않으면 `tiktoken` 등으로 실제 토큰 수를 계산해 한계치와 비교.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Prompt 디버깅 (Bloom: Analyze)"
+    당신은 LLM 으로 _RTL bug 분석_ 을 요청. Naive prompt 결과가 _too generic_. 5 축 (Role/Context/Task/Constraint/Format) 중 무엇이 부족할 가능성이 가장 높은가?
+
+    ??? success "정답"
+        주로 **Role + Context** 부족. 예:
+        - Role 부족: "당신은 ASIC verification 엔지니어" → "당신은 senior verification 엔지니어 + 10년 경력 + AXI 전문가" 같이 _구체화_.
+        - Context 부족: spec 인용, 코드 snippet, error log 가 없으면 모델이 _일반론_ 으로 응답.
+
+        나머지 (Task/Constraint/Format) 는 부족해도 응답이 _generic_ 이 되진 않음 — 보통 _너무 길거나 형식이 안 맞음_ 의 증상.
+
+!!! question "🤔 Q2 — CoT 효과 측정 (Bloom: Apply)"
+    당신은 "Think step by step" 을 추가했더니 응답이 _3 배 길어지고_ token 비용 _3 배 증가_. 정확도는 향상됐을지 어떻게 검증?
+
+    ??? success "정답"
+        **A/B test**:
+        1. 동일 task 30+ case 를 _naive_ 와 _CoT_ 둘 다 실행.
+        2. Pass/fail 자동 채점 (예: 코드 컴파일 통과 / 정답 일치).
+        3. Pass rate 차이가 _비용 증가_ 를 정당화하는지 ROI 계산.
+
+        대략 가이드: CoT 가 _계산/추론_ 작업에서 10-30% 향상 → 비용 3 배 정당. _단순 lookup_ 에서는 0~5% → 비용 정당화 안 됨.
+
+!!! question "🤔 Q3 — Prompt Chaining vs Single Mega-prompt (Bloom: Evaluate)"
+    당신은 "**RTL 분석 → bug 식별 → fix 제안**" 의 3 단계 작업이 있다. 한 번의 mega-prompt 로 다 시키나, 3 번의 chained prompt 로 분리하나? 어느 쪽이 _왜_ 나은가?
+
+    ??? success "정답"
+        **Chained prompts** — 이유:
+        - 각 step 의 _출력 검증_ 가능 (예: bug 식별 단계의 출력을 사람이 review 후 fix 진행).
+        - 각 step 에 _다른 모델_ 사용 가능 (분석은 강한 모델, fix 는 빠른 모델).
+        - Error 격리: fix 가 틀려도 분석은 살아 있음.
+        - Token 비용도 보통 _더 적음_ (context 중복 최소화).
+
+        Single mega-prompt 의 장점: latency (한 번 호출) — _실시간_ 시나리오에서만 유리.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Understanding LLMs: A Comprehensive Overview` (id=910786585)
+- `Cursor 사용법` (id=935919694), `[WG] Cursor Setup` (id=871399489)
+- `[HDG15][제안] VMG SIM delivery with Tuning by Cursor` (id=928612357)
+
+**External**
+- *Chain-of-Thought Prompting Elicits Reasoning in Large Language Models* — Wei et al., NeurIPS 2022
+- *In-context Learning and Induction Heads* — Olsson et al., 2022 (mechanism)
+- *Tree of Thoughts* — Yao et al., NeurIPS 2023
+- *Self-Consistency Improves Chain of Thought Reasoning* — Wang et al., ICLR 2023
+- Anthropic / OpenAI prompt engineering guides (2024-2025)
 
 ---
 

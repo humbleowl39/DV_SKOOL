@@ -43,6 +43,16 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _IFG 가 11 byte 면_?
+
+당신은 100G Ethernet MAC 을 검증. 모든 frame 정상, FCS 통과. 그런데 _peer 가 frame loss_ 보고.
+
+원인: **IFG 11 byte 발생** (12 byte 규정 위반).
+- Spec: 최소 IFG 12 byte (96 bit).
+- 11 byte → peer PHY 가 다음 frame 의 _preamble_ 인식 못함 → frame _drop_.
+
+11 byte vs 12 byte 의 _0.8% 차이_ — 시뮬에서 _대부분 통과_ 하지만 silicon 에서 _intermittent fail_.
+
 DCMAC 검증의 모든 트랜잭션은 **Ethernet frame 1 개** 단위로 출발합니다. Frame 의 어느 byte 가 PHY 영역이고 어느 byte 가 MAC 영역인지, FCS 가 어디부터 어디까지를 보호하는지, IFG 가 왜 12 byte 인지 — 이 어휘 없이 scoreboard / SVA / coverage 를 작성하면 거의 모든 비교가 silent 로 어긋납니다.
 
 또한 100GbE 이상에서는 frame 자체보다 **PCS 64b/66b + RS-FEC + lane distribution** 이 더 큰 검증 비중을 차지합니다. lane skew, alignment marker, FEC corner case 가 line-rate 손실을 만들기 때문입니다. 이 모듈이 없으면 이후 모든 DCMAC corner case 가 "그냥 외워야 하는 규칙" 으로 보입니다.
@@ -527,6 +537,51 @@ DV 관점:
     **현상**: Scoreboard 에서 FCS 값이 항상 mismatch. TB 가 삽입한 FCS 가 DUT 출력과 다름.<br>
     **원인**: FCS (CRC-32) 는 Dst MAC 부터 Payload 까지만. Preamble/SFD (총 8B) 는 제외 대상인데 TB 코드가 Preamble 을 CRC 입력 버퍼에 포함시키는 실수 빈번.<br>
     **점검 포인트**: TX model 의 CRC 계산 시작 offset = Preamble(7B) + SFD(1B) = 8B 이후. VLAN tag 삽입 시 EtherType 이전 4B 추가되므로 Jumbo 임계값 (1518B → 1522B) 도 재계산 필요.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — IFG 계산 (Bloom: Apply)"
+    400 Gbps line rate. 64-byte minimum frame + 12-byte IFG. _초당 최대 frame rate_?
+
+    ??? success "정답"
+        - Frame + IFG = 64 + 12 + 8 (preamble+SFD) = **84 byte**.
+        - 400 Gbps / (84 × 8 bit) ≈ **595 M frames/sec**.
+
+        그래서 _64B minimum frame_ 이 _최대 packet rate_ 의 worst case. DV scoreboard 가 _초당 ~6 억 frame_ 처리 가능해야.
+
+!!! question "🤔 Q2 — RS-FEC 검증 (Bloom: Analyze)"
+    100GBASE-R 의 RS-FEC. _얼마나 많은 error_ 까지 복구?
+
+    ??? success "정답"
+        **RS(528, 514, t=7)**: 528-symbol codeword 에서 _최대 7 symbol error_ 복구.
+        - 1 symbol = 10 bit.
+        - 7 symbol = 70 bit per codeword.
+
+        실제 _burst error_ 에 강함 (burst 가 consecutive symbol 에 분포).
+
+        Pre-FEC BER 10^-5 → Post-FEC BER 10^-15 가능 (10^10× 개선).
+
+!!! question "🤔 Q3 — Lane skew (Bloom: Evaluate)"
+    400G 8-lane 의 _lane skew_. 어디까지 허용?
+
+    ??? success "정답"
+        IEEE 802.3 spec: PMA-to-PMA skew _최대 ~180 ns_ (lane 간).
+        - 400 Gbps / 8 lanes = 50 Gbps/lane.
+        - 1 bit time @ 50 Gbps = 20 ps.
+        - 180 ns = 9000 bit time.
+
+        Lane re-ordering 의 _buffer depth_ 가 _이 skew × line rate_ 이상이어야. DV 시 _worst skew injection_ + buffer overflow 안 함 검증.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[Jaehyeok] Ethernet Wrapper (DCMAC)` (id=893747237)
+- `DCMAC spec related to AXIS intf` (id=894402571)
+
+**External**
+- IEEE 802.3 *Ethernet Standard*
+- IEEE 802.3bj/bs — 100/400GBASE-R with RS-FEC
+- Reed-Solomon code analysis textbooks
 
 ---
 

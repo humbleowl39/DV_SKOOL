@@ -42,6 +42,21 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _하나의 에러_, _전체 fail_
+
+당신은 _intentional NAK_ 시나리오 작성. 한 QP 에 _rkey violation_ inject → NAK 받음 + WC error 확인.
+
+결과: **시뮬레이션 전체 FATAL**. 다른 _정상_ QP 의 verb 까지 fail.
+
+원인: Scoreboard 가 _하나의 NAK_ 를 _전역 fatal_ 로 처리 → 다른 QP 의 정상 시나리오까지 _abort_.
+
+해법: **에러 격리 (isolation)**:
+- **Per-cmd gate**: 이 NAK 는 _expected_, 해당 cmd 만 fail 처리.
+- **Per-QP gate**: 다른 QP 는 정상 검증 계속.
+- **Per-component gate**: 다른 컴포넌트 (예: receive scoreboard) 는 영향 없음.
+
+3 단위 gate 가 _정밀_ 한 에러 시나리오 검증의 _필수_ 조건.
+
 RDMA 검증에서 "에러 시나리오" 는 정상 시나리오만큼 중요합니다. 그러나 에러 케이스에 다른 정상 검증이 휩쓸려가면 (false positive fatal) 디버깅이 불가능해집니다. RDMA-TB 는 에러를 **격리 (isolate)** 하면서도 **검증 (check)** 하는 정밀한 메커니즘을 가지고 있습니다.
 
 이 모듈을 건너뛰면 에러 테스트 작성 시 "왜 정상 verb 까지 fatal 이 나오는지" 헤맵니다. 3 경로 + 3 단위 게이트 (per-cmd / per-QP / per-component) 를 잡으면 어떤 에러를 어느 단위로 promote 할지 즉시 결정됩니다.
@@ -401,6 +416,37 @@ endclass
 !!! warning "실무 주의점"
     - per-component `err_enabled` 는 검증 능력 약화 — fault injection 같은 의도된 광범위 시나리오에만.
     - `expected_error=1` 은 cmd 발행 _전에_ 설정. randomize 후 set 하면 too late.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Error gate 선택 (Bloom: Apply)"
+    "QP 3 의 _하나의 WRITE_ 가 NAK 받아도 OK" — 어느 gate?
+
+    ??? success "정답"
+        **Per-cmd `expected_error=1`** — 특정 cmd 만.
+
+        - Per-QP: QP 3 의 _모든 cmd_ 가 fail 허용 → 너무 광범위.
+        - Per-component: 전체 scoreboard 영향 → 광범위.
+
+        Per-cmd 가 _가장 좁은 격리_.
+
+!!! question "🤔 Q2 — Expected error timing (Bloom: Analyze)"
+    `expected_error=1` 을 _randomize 후_ 설정. 왜 _too late_?
+
+    ??? success "정답"
+        Sequence flow:
+        1. `start_item`.
+        2. `randomize`.
+        3. `finish_item` → driver 가 즉시 발행.
+
+        Driver 가 발행 후 cmd 가 _wire 위_ → DUT 처리 → response → scoreboard. Scoreboard 가 _expected_error_ 안 보고 _fatal_.
+
+        해결: `randomize` 직후 _즉시_ `expected_error = 1`. 또는 randomize constraint 안에 표현.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Error Handling Path` (id=1335525456)
 
 ---
 

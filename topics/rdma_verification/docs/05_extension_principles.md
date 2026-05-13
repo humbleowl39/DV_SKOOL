@@ -42,6 +42,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _수십 명_ 의 _동시 변경_ regression
+
+당신의 RDMA-TB. 팀 30 명 동시 작업. 매주:
+- 5 개 PR merge.
+- _2-3 개 regression_ (다른 사람의 변경이 자기 test 깨뜨림).
+- 평균 _2 시간_ debug per regression.
+
+**시간 손실: 30 명 × 4-6 시간/주 = 120-180 시간/주**.
+
+원인 추적: 대부분 _"내가 필요한 기능을 위해 driver 코드 1 줄 변경"_ → 다른 test 의 hidden assumption 깨짐.
+
+해법: **4 원칙**:
+1. **Open/Closed**: 기존 코드 _수정 안 함_, _추가_ 만.
+2. **AP 사용**: driver 변경 대신 broadcast 구독.
+3. **Subclassing**: 기존 class 수정 대신 _override_ + factory.
+4. **Config-driven**: hardcode 대신 _config_db_.
+
+이 4 가 _자동 PR review checklist_ — "_이 변경이 4 원칙 어느 것 위반?_". 위반 없으면 merge. Regression _80% 감소_.
+
 RDMA-TB 는 수십 명이 동시에 변경하는 코드베이스입니다. "기존 동작을 바꾸지 않으면서 새 기능을 추가한다" 는 규율이 깨지면 회귀 (regression) 가 폭증합니다. 이 4 원칙은 그 규율을 명문화한 것입니다.
 
 이 모듈을 건너뛰면 "내가 필요한 정보는 driver 안에 있으니 driver 안에 hook 추가하자" 같은 short-cut 이 반복돼 base TB 가 점점 깨집니다. 4 원칙을 잡으면 PR 리뷰가 "이 변경이 4 원칙 중 어느 것을 위반?" 으로 자동화됩니다.
@@ -281,6 +300,46 @@ flowchart TB
 !!! warning "실무 주의점"
     - PR 리뷰 핵심 질문: "이 컴포넌트 제거 시 base TB 가 동작하는가?"
     - object 필드 추가가 시그니처 변경보다 항상 안전 — 새 필드는 default 초기화 잊지 말기.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 4 원칙 위반 진단 (Bloom: Apply)"
+    PR 리뷰. "내가 필요한 정보를 driver 안에서 직접 hook 으로 빼겠다". 어떤 원칙 위반?
+
+    ??? success "정답"
+        **Open/Closed 원칙 위반** + AP 미사용.
+
+        Driver 코드 변경 = 기존 component 수정 (closed 가 깨짐). 다른 사용자 영향.
+
+        해법: AP broadcast 추가, 새 component 가 subscribe. Driver 코드 _불변_.
+
+!!! question "🤔 Q2 — Sequence 시그니처 변경 (Bloom: Evaluate)"
+    Sequence task 의 _인자 추가_ — 모든 호출자가 _update_ 필요. 안전한 방법?
+
+    ??? success "정답"
+        **Default 인자 추가** 또는 **object field 변경**:
+
+        ```sv
+        // Before
+        task post_send(qp_t qp);
+        // After (불-호환)
+        task post_send(qp_t qp, int new_flag);
+
+        // Safer: default
+        task post_send(qp_t qp, int new_flag = 0);
+
+        // Best: object field
+        class send_item;
+          int new_flag = 0;  // default
+        endclass
+        ```
+
+        Default + object field 가 _backward compatible_.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Adding New Components` (id=1333297423)
 
 ---
 

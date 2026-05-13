@@ -45,6 +45,28 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 40 년의 누적 _왜_
+
+당신은 _modern SoC_ 를 봅니다. MMU, IOMMU, ATS, PASID, StreamID, AxUSER, hypervisor mode, EPT, ... _수십 개의 가상화 관련 hardware_. 처음 보면 **압도적**.
+
+질문: 이게 _왜 이렇게 복잡_ 한가? _한 번에_ 다 만들 수 없었나?
+
+답: **40 년의 점진적 진화**.
+
+```
+1970s: MMU (process 격리)
+1990s: VT-x / AMD-V (CPU 가상화)
+2000s: IOMMU (DMA 격리)
+2008+: EPT/NPT (2-stage page table)
+2010+: SR-IOV (device 가상화)
+2015+: ATS/PRI (latency 감소)
+2020+: PASID (process-level isolation in device)
+```
+
+각 단계는 _이전 단계의 한계_ 가 _구체적으로 드러난 후_ 추가됨. _이론적_ 으로 한 번에 만들 수 있었지만 _실제로는_ 그 _한계가 _운영_ 에서 드러나야 _필요성_ 인정.
+
+예: IOMMU 가 _없었을 때_ 가상화 OK 였다. 그러다 _2010 년대_ 100 GbE pass-through 가 _DMA 보안 hole_ 만들면서 IOMMU _필수_ 가 됨.
+
 가상화는 **하루아침에 만들어진 것이 아닙니다**. CPU 에 처음 MMU 가 붙은 1970 년대부터 IOMMU 가 표준이 된 2010 년대까지 거의 40 년의 누적 결과입니다. 각 단계는 이전 단계의 한계를 정확히 인식하고 그것만 풀기 위해 추가됐습니다.
 
 이 진화 흐름을 모르면 — 왜 IOMMU 가 "가상화의 전제 조건" 인지, AxUSER / StreamID 가 왜 필요한지, 단계 6 (현대 SoC) 의 4 대 요소가 왜 그 순서로 들어왔는지 — 이런 디자인 결정이 그냥 나열된 사실로 보입니다. 7 단계로 정리하고 나면 "왜 이게 거기에 있는가" 가 보입니다.
@@ -679,6 +701,35 @@ Hypervisor 입장: IPA → PA 를 관리 (실제 물리 메모리 배치 결정)
     - **IOMMU disable 상태의 device passthrough 는 host kernel panic 유도 가능** — `dmesg | grep -i "DMAR\|IOMMU"` 와 `/sys/class/iommu/` 존재 여부를 시뮬 시작 시 체크.
     - **IOMMU group 의 ACS isolation** 이 깨져 있으면 같은 group 의 모든 device 가 한 VM 에 묶여야 함 — pass-through 단위가 의도와 달라질 수 있다.
     - **단계 6 가 단계 5 의 sub-set 이라 착각하지 말 것** — IOMMU 추가만으로는 PE 다양성 / LLC / Coherency 가 자동으로 따라오지 않는다.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 단계 5 → 6 차이 (Bloom: Apply)"
+    "MMU 가 추가된 multi-core" (단계 5) 와 "IOMMU 가 추가된 단계 6". 가상화 측면의 _결정적_ 변화 1 가지?
+    ??? success "정답"
+        IOMMU 가 _DMA path_ 를 가상화:
+        - 단계 5: CPU 의 메모리 접근만 page table 거침. DMA (device → memory) 는 _직접_ 물리 주소 사용 → VM passthrough 시 host RAM 침해 가능.
+        - 단계 6: IOMMU 가 device 의 GPA → HPA 변환 → VM passthrough 가 _안전_.
+        - 결론: SR-IOV / VFIO / GPU passthrough 가 _가능_ 해진 분기점이 단계 6.
+
+!!! question "🤔 Q2 — 7 단계 진화 ROI (Bloom: Evaluate)"
+    7 단계 모두를 신규 SoC 에 _다 적용_ 할 필요는 없다. 어떤 단계까지가 _비용 대비_ 적정선?
+    ??? success "정답"
+        SoC 카테고리별 분기:
+        - **IoT / MCU**: 단계 1~2 (코어 + protected mode) 충분 — 가상화 불필요.
+        - **Mobile SoC**: 단계 5–6 (MMU + IOMMU) — TEE 격리에 IOMMU 필요.
+        - **Server / Cloud SoC**: 단계 7 (Hypervisor + SR-IOV) 필수.
+        - **trade-off**: 단계마다 silicon 면적 + verification 노력 증가. 단계 7 의 검증 비용 = 단계 1~5 합보다 큼 (가상화 격리 음성 시나리오 폭증).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `SoC Architecture Evolution` — 7 단계 분류 + 검증 매트릭스
+- `IOMMU Integration Guide` — ACS / group 격리 사례
+
+**External**
+- ARM *AMBA System Memory Management Unit Architecture Specification (SMMUv3)*
+- Intel *VT-d Architecture Specification* — DMA remapping
 
 ---
 

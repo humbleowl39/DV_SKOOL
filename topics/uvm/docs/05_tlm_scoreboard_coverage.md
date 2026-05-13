@@ -43,6 +43,27 @@
 
 ## 1. Why care? — TB 의 검증 가치는 _비교_ 와 _커버리지_ 에서 나온다
 
+### 1.1 시나리오 — _OoO AXI_ scoreboard 의 false fail
+
+당신은 AXI master agent 검증. Scoreboard: expected queue 에 _expected_, actual queue 에 _DUT 결과_, FIFO 비교.
+
+**문제**: AXI 는 _OoO 응답_ — Tag ID 다른 transaction 이 다른 순서 도착 가능.
+
+```
+Expected:  [W1(id=1), W2(id=2)]
+Actual:    [W2(id=2), W1(id=1)]   ← OoO 도착
+```
+
+Naive FIFO pop_front 비교 → _mismatch_. False fail.
+
+해법: **Per-ID queue** scoreboard:
+```
+queue_per_id[1] expected ↔ queue_per_id[1] actual: FIFO 비교 (같은 ID 는 in-order).
+queue_per_id[2] expected ↔ queue_per_id[2] actual.
+```
+
+이게 _OoO 프로토콜_ scoreboard 의 _표준 패턴_. UVM 의 TLM analysis port 가 _자유로운 비교_ 가능하게 함.
+
 TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard)** 로 결함을 발견하고, **커버리지 (Coverage)** 로 검증 완전성을 측정합니다. 둘 다 TLM 위에서 동작하므로 Analysis Port 연결이 잘못되면 두 기능 _모두_ 무력해집니다.
 
 이 모듈을 건너뛰면 검증 환경은 _자극은 인가하지만 결과를 못 잡는_ 상태로 빠집니다. 특히 OoO 응답을 가진 프로토콜 (AXI ID, PCIe TLP tag) 에서는 Scoreboard 매칭 로직 설계가 검증 신뢰성의 핵심 — 단순 큐 pop_front 비교를 그대로 쓰면 spurious mismatch 가 폭발합니다.
@@ -716,6 +737,36 @@ endclass
     - Scoreboard 의 `check_phase` 에서 _잔여 expected 큐 size_ 검사 — 빠지면 DUT miss 가 silent.
     - covergroup 인스턴스화 (`cg = new()`) 는 _new 함수 안에서_ — covergroup 만 선언하고 new 호출 안 하면 sample 무시.
     - `illegal_bins` 는 assertion 의 _대체_ 가 아니라 _보완_. 핵심 protocol 위반은 SVA 도 같이.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Analysis Port 1:N (Bloom: Analyze)"
+    Monitor 의 `analysis_port` 가 한 transaction 을 _여러_ subscriber 에게 보낸다. _수신측_ 이 transaction 을 변형 (mutate) 하면 어떤 일이?
+    ??? success "정답"
+        모든 subscriber 가 동일 객체 핸들을 받음 → 한 곳에서 변형 시 다른 subscriber 가 _변형 후_ 객체 관찰:
+        - **증상**: scoreboard 가 normal, coverage 가 mutated 를 보는 식의 _silent_ 데이터 오염.
+        - **방어**: subscriber 의 `write()` 첫 줄에 `do_copy()` 또는 `clone()` 으로 _자기 사본_ 생성.
+        - 또는 송신 monitor 가 매번 `new()` + 필드 채워 broadcasting → 송신측 보장이 더 깔끔.
+        - 디버그 단서: 같은 trans 가 다른 시각에 다른 값으로 찍히면 mutate 의심.
+
+!!! question "🤔 Q2 — Scoreboard `check_phase` (Bloom: Evaluate)"
+    `run_phase` 에서 매 transaction 마다 비교했는데, `check_phase` 에서 _다시_ 검사할 게 남는 이유?
+    ??? success "정답"
+        Steady-state 와 final-state 검사가 다름:
+        - **run_phase 매 트랜잭션**: 도착한 actual 과 expected_q.front 비교 → drop/mismatch 검출.
+        - **check_phase 잔여 검사**: `expected_q.size() == 0` 검사 → DUT 가 _빠뜨린_ 트랜잭션 검출. run_phase 에서는 pop 만 → 잔여를 모름.
+        - 추가: scoreboard 가 unexpected 도 큐로 들고 있다면 그 size 도 0 이어야.
+        - 누락 시 증상: DUT 가 10 개 중 1 개 drop 해도 silent PASS — 가장 위험한 escape.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Scoreboard Patterns` — analysis port + clone 의무
+- `Coverage Strategy` — covergroup new + illegal_bins 사용 기준
+
+**External**
+- *UVM 1.2 User's Guide* §9 (Analysis) — Accellera
+- *Coverage-Driven Verification* (Cadence) — covergroup design
 
 ---
 

@@ -352,6 +352,41 @@ BOUNDED → ① Blackbox → ② Abstraction → ③ Helper Assert
 
     **점검 포인트**: 모든 assume 마다 "이 가정이 spec 의 어느 항목에 대응되는가" 를 주석으로 남기고 review. Simulation 에서 같은 assume 이 위반되지 않는지 cross-check. JasperGold 의 `check_assumptions` / `prove -property -bg` 으로 unreachable assumption 탐지. Sign-off 시 assumption 목록을 spec reviewer 와 함께 walk-through.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Convergence 6 단계 적용 (Bloom: Apply)"
+    Property 가 8 시간 후 INCONCLUSIVE. 어느 단계부터?
+    ??? success "정답"
+        진단 → 적용:
+        1. **check_coi**: COI 가 100 만 flop 이상이면 design 의 _절반_ 이 reach → blackbox 후보 식별.
+        2. **visualize -bounded_trace**: bound 50 까지 PROVEN 보이면 bound 늘리고 helper assertion 추가.
+        3. **Blackbox**: COI 의 큰 sub-module (DSP, encoder) 를 abstract → state space 압축.
+        4. **Helper**: intermediate invariant 추가 → tool 이 step 별 reasoning 단축.
+        5. **Assume**: spec 상 reachable 하지만 검증 목적 외 입력은 제한.
+        6. **K-induction**: bound 깊이 늘리기.
+        - 원칙: 진단 없이 blackbox/assume 적용 = 의미 없는 PROVEN 위험.
+
+!!! question "🤔 Q2 — Over-constraint 검출 (Bloom: Evaluate)"
+    "Formal PROVEN, Simulation FAIL" 상황. 무엇이 의심?
+    ??? success "정답"
+        Assume 이 spec 보다 강함:
+        - **증상**: Formal 이 sim 보다 더 좁은 입력 공간만 탐색 → CEX 미발견.
+        - **검증 방법 1**: 모든 assume 을 sim 의 monitor 로 변환 → sim 에서 violation 나오면 over-constraint.
+        - **검증 방법 2**: JasperGold `check_assumptions` 로 unreachable assumption 탐지.
+        - **방어 절차**: assume 마다 spec section 주석 + review.
+        - 결론: PROVEN 의 _quality_ = assumption audit 완료 여부. 자동화 안 됨.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Formal Sign-off Criteria` — 5 기준 + assumption audit
+- `Convergence Recipe Book` — 6 단계 사례
+
+**External**
+- *Practical Formal Verification* (Pong P. Chu)
+- Cadence/Synopsys/Siemens *Formal App Notes* — Convergence techniques
+- Accellera *Open Verification Library (OVL)*
+
 ---
 
 ## 코스 마무리

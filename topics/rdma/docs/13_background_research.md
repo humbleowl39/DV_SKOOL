@@ -44,9 +44,32 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _작년_ 의 spec 으로 _내년_ 의 chip 을 만든다?
+
+당신은 RDMA RTL 을 _2 년_ 걸려 만듭니다. 그런데 그 _2 년 사이_ 에:
+
+- **UEC v1.0** 등장 (2024) → multipath / lossy 새 표준.
+- **Google Falcon** 발표 (2023) → programmable CC.
+- **NVIDIA Connect-X 8** → 800 Gbps + DPU 통합.
+- **AMD Pensando** acquisition → smartNIC 통합.
+
+당신이 _지금_ 만드는 chip 이 _출시_ 될 때 시장은 이미 _다른 곳_ 에 있을 수 있습니다.
+
+해법은 **산업 동향 추적의 시스템화**. 새 spec / 논문 / 산업 발표가 _내 검증 자산_ 에 어떤 영향을 미치는지 _즉시_ 평가 가능한 _지도_ 가 필요. 이게 본 모듈.
+
 RDMA 분야는 **spec 변경 속도가 빠릅니다** — IB Spec 1.4 → 1.7, RoCEv2, UEC v1, Falcon, Programmable CC, packet spraying 등이 1~2 년 간격으로 등장. 산업 동향을 추적하지 않으면 _현재 사내 IP 가 어디에 위치하는지_ 모르고, 검증 우선순위 결정이 _스펙_ 만 보고 의사결정하게 됩니다.
 
 이 모듈은 _학습/연구/검증_ 의 연결 지도 — 새로 발견된 spec 변화나 논문 아이디어를 어디 검증 자산에 hook 할지 즉답 가능하게 합니다.
+
+!!! question "🤔 잠깐 — 새 논문이 나왔다, 어떤 의사결정이 _즉시_ 필요한가?"
+    SIGCOMM 2025 에서 _새 RDMA CC 알고리즘_ 이 발표됐다 — 기존 DCQCN 보다 2× 빠르다. 당신은 RDMA-IP 의 검증 책임자. 어떤 _3 가지 의사결정_ 을 _이번 주_ 안에 해야 하는가?
+
+    ??? success "정답"
+        1. **Adoption 여부**: 사내 IP 에 채택할 가치가 있는가? (vendor, customer 요구, ROI 분석)
+        2. **검증 영향**: 채택 시 RDMA-TB 에 어떤 _새 scoreboard / agent / cov_ 가 필요한가?
+        3. **Timeline**: 채택 시 chip 출시일까지 검증 가능한가? (논문 → spec draft → RTL → DV 의 lead time)
+
+        이 3 의사결정이 _2 일 안에_ 안 되면 다음 quarter 의 chip 계획이 _뒤집힘_. 그래서 이런 의사결정의 _signpost_ 가 본 모듈.
 
 ---
 
@@ -310,6 +333,24 @@ MPI primer      ────▶ model  ───▶ (UEC SES 매핑)      ──
     - 논문의 결과는 *환경 (switch, NIC, fabric)* 에 강하게 의존. 동일 알고리즘이 사내 환경에서 같은 결과를 내지 않을 수 있음.
     - "산업이 그렇게 한다" 가 spec 우선 이유가 되지 않음 — 검증의 1차 truth 는 spec / 사내 design.
     - Paper Study 의 idea 를 검증 시나리오로 옮길 때는 **사내 IP capability 와의 매핑 표** 를 먼저 만든다.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 논문 → 검증 자산 매핑 (Bloom: Apply)"
+    SIGCOMM 의 _SACK + Selective Repeat_ 알고리즘을 사내 IP 검증에 옮긴다. 어떤 _3 단계_ 로?
+
+    ??? success "정답"
+        1. **Capability 매핑**: 사내 IP 의 SWQ 가 selective repeat 을 지원하는가? scheduler 가 OOO retransmit 가능한가?
+        2. **Scoreboard 확장**: 기존 Go-Back-N scoreboard 가 selective repeat 의 OOO ACK 를 false fail 안 내는가?
+        3. **Coverage bin 추가**: SACK 의 _hole pattern_ × _retransmit timing_ × _ACK coalescing_ 의 cross.
+
+!!! question "🤔 Q2 — 산업 동향 추적 빈도 (Bloom: Evaluate)"
+    당신은 RDMA 검증 lead. 산업 동향 추적을 _어느 주기_ 로 해야 chip 출시 타이밍을 놓치지 않을까? 그리고 _누구_ 가 해야?
+
+    ??? success "정답"
+        - **빈도**: SIGCOMM/NSDI 학회 발표 (2 주에 1 회), IEEE / IBTA spec update (분기 1 회), vendor 발표 (월 1 회).
+        - **누구**: 검증 lead 또는 architect 중 1 명이 "**RDMA 산업 watcher**" 역할. Confluence 의 _Background Research_ 페이지를 _분기 1 회_ 갱신.
+        - 추가: **외부 conf 참석** (1 명, 연 1 회) 으로 _공식 발표 전_ 의 hint 수집.
 
 ---
 

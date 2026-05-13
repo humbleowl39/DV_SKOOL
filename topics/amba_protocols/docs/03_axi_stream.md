@@ -42,9 +42,38 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 왜 AXI 가 _아니라_ AXI-Stream 인가?
+
+당신은 AI 가속기의 _weight loader_ 를 설계합니다. DDR 에서 weight 를 _연속적으로_ 읽어서 가속기로 보냄. AXI 와 AXI-Stream 의 차이가 결정적:
+
+| 차원 | AXI (memory-mapped) | AXI-Stream |
+|------|---------------------|------------|
+| **주소** | Master 가 매 transaction 에 명시 | 없음 — pure data flow |
+| **채널 수** | 5 | 1 |
+| **Burst** | 최대 256 beat | _무한_ (TLAST 까지) |
+| **Outstanding** | ID 로 OoO | 단순 ordered |
+| **응답** | B/R 채널 | 없음 |
+| **면적 (양 endpoint)** | ~30K gates | ~3K gates |
+
+가속기 weight loader 는 **주소가 필요 없음** — DDR 의 한 영역을 _연속적_ 으로 읽기만 함. AXI 의 5 채널 = _10× 면적 낭비_. AXI-Stream 은 _주소 없는 단방향 stream_ 이라 _훨씬 작고 빠름_.
+
 **AXI-Stream 은 데이터 패스의 공용어** 입니다. AI 가속기의 weight/activation 흐름, DSP filter chain, 네트워크 IP 의 packet 흐름이 모두 AXI-Stream 으로 이동합니다. memory-mapped 와 다른 사고방식이 필요 — **주소가 없는 대신 TLAST 로 데이터의 경계를 표시** 합니다.
 
 이 모듈을 건너뛰면 "AXI 패밀리" 라는 이름에 끌려 burst/outstanding/OoO 가 그대로 적용된다고 오해하기 쉽습니다. 반대로 _주소 없는 단방향 스트림_ 모델을 한 번 손으로 그려 보면, TKEEP 으로 unaligned data 를 표현하는 패턴, packet 중간에 데이터를 stall 할 때의 신호 hold 규칙 같은 검증의 함정이 분명히 보입니다. 또한 AI 가속기 / 네트워크 IP 검증 시 _custom thin VIP_ 의 설계 이유도 자연스럽게 도출됩니다.
+
+!!! question "🤔 잠깐 — _TLAST 가 없다면_?"
+    AXI-Stream 의 핵심 신호 TLAST. 빠지면 어떤 시스템 실패가?
+
+    ??? success "정답"
+        **Packet 경계가 사라짐**.
+
+        Stream 의 본질은 _연속 beat_. 하지만 가속기는 _N beat 단위_ 로 처리 (예: 입력 64 byte 단위). TLAST 없이는:
+        - Receiver 가 "한 packet 끝났음" 을 _모름_.
+        - 잘못된 boundary 로 data corruption.
+
+        예: video frame stream 에서 TLAST 없으면 frame 경계 모름 → 다음 frame 의 처음 byte 가 _이전 frame_ 에 붙음.
+
+        대안: 길이를 _별도 sideband signal_ (TUSER) 로 전달. 일부 protocol 은 fixed-length 라 TLAST 불필요 (보통은 _variable-length_ 라 TLAST 필수).
 
 ---
 
@@ -611,6 +640,51 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
     **원인**: AXI-Stream 의 invariant: TVALID=1 이면 TREADY=1 이 될 때까지 모든 신호 (TDATA, TKEEP, TSTRB, TLAST, TID, TDEST, TUSER) 를 hold 해야 한다. 송신 FSM 이 TREADY 와 무관하게 다음 beat 데이터를 미리 update 하면 위반.
 
     **점검 포인트**: SVA 로 `(TVALID && !TREADY) |=> $stable({TDATA, TKEEP, TSTRB, TLAST, TID, TDEST, TUSER})` 검증. monitor 에서 같은 transaction 을 두 번 sample 해 비교. RTL 의 데이터 source FF 가 `TREADY || !TVALID` 조건으로만 update 되는지 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Stream vs AXI 선택 (Bloom: Apply)"
+    PCIe TLP 를 inter-IP 전달. AXI 또는 AXI-Stream 중?
+
+    ??? success "정답"
+        **AXI-Stream**. 이유:
+        - TLP 는 _패킷 단위_ — TLAST 가 패킷 경계.
+        - 주소는 _TLP 헤더_ 안에 (transport 가 아니라 _payload_).
+        - 양방향이 아닌 _단방향_ flow → 5 채널 불필요.
+
+        AXI 는 _memory-mapped target_ 일 때 (예: PCIe BAR 의 register access).
+
+!!! question "🤔 Q2 — TKEEP 활용 (Bloom: Analyze)"
+    64-bit AXI-Stream 에 _13-byte_ packet 전달. 마지막 beat 에 TKEEP 값?
+
+    ??? success "정답"
+        - Beat 1 (byte 0-7): TKEEP = `8'b1111_1111` (모든 byte valid), TLAST=0.
+        - Beat 2 (byte 8-12, _5 byte_): TKEEP = `8'b0001_1111` (low 5 byte valid), TLAST=1.
+
+        TKEEP 으로 _partial beat_ 표현 — 64-bit 단위로 송신해도 packet length 가 8 의 배수 아닐 때 사용.
+
+!!! question "🤔 Q3 — Backpressure 처리 (Bloom: Evaluate)"
+    Stream 의 _slave 가 가끔 backpressure_ (TREADY=0 several cycles). Master 가 _data drop_ 하면 안 됨. 어떻게 설계?
+
+    ??? success "정답"
+        **Skid buffer** (한 beat 의 holding register):
+        - Backpressure 도착 _직전_ beat 을 buffer 에 hold.
+        - Master 가 _다음 beat_ 를 _이미 prep_ 했더라도 buffer 가 받음.
+        - TREADY=1 되면 buffer beat 먼저 전송 후 master 의 새 beat.
+
+        없으면: TREADY=0 의 _첫 cycle_ data 가 _drop_ (master 가 다음 beat 으로 update 했으면).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[HIG] AXI-Stream RegSlice IP Generation` (id=99156158)
+- `DCMAC spec related to AXIS intf` (id=894402571)
+- `[Jaehyeok] Ethernet Wrapper (DCMAC)` (id=893747237)
+
+**External**
+- ARM, *AMBA AXI-Stream Protocol Specification* (IHI 0051A)
+- Xilinx PG-085 *AXI-Stream Infrastructure*
+- *AXI4-Stream protocol Tutorial* — Realdigital, 2024
 
 ---
 

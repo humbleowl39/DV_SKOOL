@@ -43,6 +43,29 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _RSA-4096_ 또는 _ECDSA P-384_?
+
+당신은 secure boot 설계자. Signature algorithm 선택:
+
+| 차원 | RSA-4096 | ECDSA P-384 |
+|------|---------|-------------|
+| 키 크기 | 512 byte | 48 byte |
+| 서명 크기 | 512 byte | 96 byte |
+| Verify time (HW) | ~1 ms | ~100 µs |
+| BootROM 면적 | 큼 (modexp engine) | 작음 (ECC engine) |
+| PQC migration | 어려움 | 어려움 (둘 다 quantum 취약) |
+| 산업 표준 | 레거시 표준 | 새 표준 |
+
+선택 영향:
+- _BootROM 면적_ 작은 SoC → **ECDSA**.
+- _Legacy interop_ 필요 (예: 기존 PKI) → **RSA**.
+- _PQC 미래 대비_ → 두 종류 모두 지원 (algorithm agility).
+
+ROTPK 침해 시:
+- _Chain of trust 전체 무효_ — public key 위조 가능 → 가짜 signature 통과.
+- 영구 — OTP 의 ROTPK hash 변경 불가.
+- 해법: **Key revocation list** (revoked key 영구 mark).
+
 Module 02 의 chain 은 _신뢰 전파_ 의 _구조_ 였습니다. 이번 모듈은 그 구조 위에 _도장_ 을 찍는 도구 — Hash, Signature, Key Hierarchy, Anti-rollback. 도구를 정확히 모르면 chain 의 어느 link 가 _왜_ 안전한지 설명하지 못합니다.
 
 특히 면접/실무에서 가장 자주 나오는 세 가지: (1) "RSA vs ECDSA 어느 쪽?" (2) "PQC 전환 어떻게?" (3) "ROTPK 가 침해되면?" — 이 세 질문은 모두 이 모듈의 도구 이해도를 측정합니다. 도구를 잡으면 Module 04 (boot device) 의 RPMB HMAC, Module 05 (attack surface) 의 side-channel, Module 07 (DV) 의 DPI-C golden reference 가 모두 같은 어휘로 보입니다.
@@ -464,6 +487,35 @@ sequenceDiagram
     - HSM 에서만 private key 사용. 빌드 서버에서도 평문 노출 금지.
     - Constant-time memcmp 는 컴파일러 최적화로 사라질 수 있음 — `volatile` + `memcmp_s` 또는 어셈블리 검증.
     - PQC 전환을 미리 준비하지 않으면 PK 1.9 KB / Sig 3.3 KB 가 cert tree 와 boot time 을 깨뜨릴 수 있음.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Image 가 아닌 Hash 서명 (Bloom: Analyze)"
+    이미지 전체가 아니라 _hash_ 만 서명하는 이유 2 가지?
+    ??? success "정답"
+        1. **RSA 입력 한계**: RSA-3072 은 input ≤ key size (384 B). 수 MB 이미지를 직접 서명 불가 → hash (32 B) 로 압축.
+        2. **고정 비용**: 이미지 크기와 무관하게 서명/검증 시간이 일정 — boot time predictable.
+        - 추가 이점: hash 알고리즘만 교체하면 서명 알고리즘은 그대로 (예: SHA-256 → SHA-384).
+
+!!! question "🤔 Q2 — PQC 하이브리드 정당화 (Bloom: Evaluate)"
+    PQC 전환에서 단독 ML-DSA 대신 _하이브리드_ (ECDSA + ML-DSA) 가 default 인 이유?
+    ??? success "정답"
+        하이브리드 정당화:
+        - **PQC 알고리즘 미성숙**: ML-DSA / ML-KEM 도 향후 cryptanalysis 로 깨질 가능성. 하나만 사용 시 single point of failure.
+        - **호환성**: 기존 ECDSA 검증 인프라 (HSM, CA) 를 즉시 폐기 불가.
+        - **boot time/공간 trade-off**: PK 1.9 KB + Sig 3.3 KB 추가 → cert tree 와 OTP 슬롯 재설계 필요. 하이브리드로 _점진_ 도입.
+        - 결론: 하이브리드 = 두 알고리즘 _모두_ 깨져야 무력화 → 안전 마진 확보.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Secure Boot Crypto` — hash/signature/anti-rollback 매트릭스
+- `PQC Transition Plan` — 하이브리드 cert 포맷
+
+**External**
+- NIST FIPS 204 *ML-DSA (Module-Lattice-Based Digital Signature Standard)*
+- NIST SP 800-208 *Stateful Hash-Based Signatures* — anti-rollback 용
+- RFC 8017 *PKCS #1 v2.2 (RSA)* — Sign/Verify 명세
 
 ## 다음 단계
 

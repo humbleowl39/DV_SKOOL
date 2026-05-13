@@ -42,6 +42,22 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Silicon 후_ 에 발견된 _1 줄_ bug
+
+당신은 SoC 출시 직전. 모든 IP 의 IP-level DV 통과. 통합 후 system 시뮬도 통과. Tape-out → 6 주 후 silicon 도착.
+
+Silicon 부팅: **fail**. 추적:
+- IP A 의 _interrupt_ 가 _wrong IRQ controller port_ 로 connect.
+- 1 줄 connectivity bug.
+- IP-level DV 에서 _절대_ 안 잡힘 — IP 자체는 정상 IRQ 보냄. _연결_ 만 틀림.
+
+비용:
+- 1 silicon revision = $1-3M (mask cost).
+- 6 주 시간 손실.
+- 또는 SW workaround → 영구 부담.
+
+**1 줄 connectivity bug = $1M+ + 6 주**. 이게 SoC integration DV 가 _IP-level 만큼 critical_ 인 이유.
+
 **SoC integration bug 는 가장 비싸게 잡힙니다.** IP-level 은 모두 PASS 인데 통합 후 connectivity 한 줄 누락 → silicon revision 또는 software workaround. 이 단계에서 못 잡으면 **post-silicon debug 수 주 + 다음 tape-out 까지 1~3 개월** 의 비용이 따라옵니다.
 
 이 모듈을 건너뛰면 이후의 Common Task / CCTV / TB Top 자동화 (Module 02–03) 가 "그냥 매트릭스를 채우는 작업" 으로 보입니다. 반대로 **"IP 검증으로는 절대 못 잡는 결함의 종류"** 를 구체적으로 알면, 매트릭스의 각 칸이 _어떤 silicon 버그를 막는지_ 가 보이기 시작합니다. 이후 모든 Common Task 정의의 출발점이 이 한 챕터입니다.
@@ -825,6 +841,51 @@ IP_C (DMA):      Base=0x1300_0000, Size=0x0001_0000
     **원인**: `soc_top.sv` 의 포트 매핑에서 GIC SPI 인덱스가 스펙 대비 1 차이나게 연결된 경우, IP-level DV 는 GIC 없이 인터럽트 신호만 확인하므로 통과된다. SoC 통합 시점에서야 드러나는 전형적인 connectivity 버그.
 
     **점검 포인트**: SVA `assert property (@(posedge clk) ip_a_irq_out == gic_spi[47])` 구문에서 GIC SPI 인덱스를 IP-XACT interrupt_map 과 1:1 대조. `soc_top.sv` 포트 매핑에서 `irq_out` 연결 라인을 grep 하여 스펙 CSV 와 직접 비교.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Connectivity 자동 검증 (Bloom: Apply)"
+    100 IP × 평균 10 interrupt = _1000 connection_. 어떻게 _자동_ 검증?
+
+    ??? success "정답"
+        IP-XACT 기반:
+        1. **IP-XACT XML** 에 각 IP 의 interrupt 출력 → GIC SPI 매핑 정의.
+        2. **자동 SVA 생성**: XML parser 가 `assert property (ip_a_irq == gic_spi[N])` 같은 _수백 SVA_ 자동 작성.
+        3. **Connectivity scan**: 모든 SVA 통과 = connectivity 완벽.
+
+        Manual 검증의 _수십 배 빠름_ + _100% coverage_.
+
+!!! question "🤔 Q2 — Power domain bug (Bloom: Analyze)"
+    Power domain A off → domain B 의 신호가 _X_ propagation. 어떤 SVA?
+
+    ??? success "정답"
+        - **Isolation cell**: domain A off 일 때 출력 _0 또는 1_ clamp.
+        - SVA: `assert property (pwr_a_off |-> (ip_a_to_b_sig === 1'b0))`.
+        - 만약 `=== 1'bx` → isolation cell 누락 또는 misplace.
+
+        SoC top 검증의 _가장 흔한_ silicon bug source.
+
+!!! question "🤔 Q3 — Scan 시 SoC 검증 (Bloom: Evaluate)"
+    Scan chain test 시 _normal traffic_ 영향?
+
+    ??? success "정답"
+        Scan mode 진입 시:
+        - 모든 IP 가 _scan FF chain_ 으로 변형.
+        - Normal traffic 차단 (또는 isolated).
+        - DFT signal `scan_en=1` 시점에 _모든 mission mode signal_ 무효.
+
+        SVA: `assert property (scan_en |-> all_outputs_safe)` (X propagation 없음).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 SoC integration 자료
+- `PCIe AMBA Integration Guide` (id=639270996)
+
+**External**
+- IP-XACT (IEEE 1685) Standard
+- *SoC Verification Methodology Manual* — Cadence/Synopsys
+- ARM Cortex-A integration guides
 
 ---
 

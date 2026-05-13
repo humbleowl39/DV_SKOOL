@@ -42,9 +42,37 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — VM 의 _TLB miss_ 가 _6 배_ 비싸다
+
+당신은 VM 에서 _memory-intensive_ 워크로드 (e.g., database). Bare metal 대비 _30% 느림_. 추적:
+
+**TLB miss 비용 (cycle)**:
+- Bare metal: page walk = _4 memory access_ (4-level page table).
+- VM with **shadow page table**: VM exit 마다 hypervisor 가 _PT 동기화_ → _수십 VM Exit_ + 비용 폭증.
+- VM with **EPT (Extended Page Tables)**: _Guest PT walk × Host PT walk_ = **24 memory access** [Wikipedia SLAT, 2025]. _6 배_.
+
+[VMware 측정: EPT 가 shadow PT 대비 _MMU-intensive workload 에서 600% 향상_].
+
+해법:
+- **Huge page (2 MB / 1 GB)**: page count 감소 → TLB miss 감소 → 6× 비용 영향 _최소화_.
+- 가상화 환경 _필수_ 옵션. 일반 환경에선 _선택_, 가상화는 _안 쓰면_ 손실 큼.
+
 가상화 환경의 latency / bandwidth 병목의 _대부분_ 이 메모리 가상화에서 옵니다. 100 Gbps NIC 의 throughput 이 30% 떨어지는 가장 흔한 원인이 Stage-2 TLB miss 의 page walk 비용입니다. AI training 클러스터의 step time 에 ms 단위로 끼어드는 노이즈도 IPA → PA mapping 에서 옵니다.
 
 이 모듈을 건너뛰면 — 왜 huge page 가 가상화에서 _필수_ 인지, 왜 Shadow PT 가 사라지고 EPT 가 표준이 됐는지, 왜 IOMMU 와 CPU MMU 의 Stage-2 가 _같은 자료_ 를 공유하는지 — 모두 외워야 하는 사실이 됩니다. Worked example 의 25 회 산식 + Stage 2 의 locality 분석만 잡으면 나머지는 변형입니다.
+
+!!! question "🤔 잠깐 — Shadow PT 가 _완전히_ 죽었나?"
+    EPT 가 _600% 빠른데_ shadow PT 가 여전히 _어딘가_ 쓰이나?
+
+    ??? success "정답"
+        **거의 _죽음_** — 2008+ CPU 에서 EPT/NPT 표준 후 shadow PT 거의 미사용.
+
+        예외:
+        - **Nested virtualization** (VM 안의 VM): Stage-3 까지 hardware support 부족 → shadow 다시 등장.
+        - **Legacy hardware**: Pre-Nehalem CPU.
+        - **특정 hypervisor design** 결정 (드물음).
+
+        오늘날 (2026) hypervisor (KVM, Xen, Hyper-V) 모두 EPT/NPT default. Shadow PT 는 _historical_ 토픽.
 
 ---
 
@@ -508,6 +536,37 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
     - **2-stage translation 후 TLB invalidate 누락** 이 silent corruption 1 위 원인 — `TLBI VMALLE1IS` / `INVEPT` 시점, vCPU 마이그레이션 직후 재발행 여부.
     - **Huge page 미적용** 이 성능 병목의 80% — `/proc/meminfo`, `numactl --hardware`, transparent huge page 정책.
     - **Live migration 의 dirty tracking** 은 PML / write-protect / fault 모두 race 가능 — `KVM_CAP_MANUAL_DIRTY_LOG_PROTECT` 와 last round throttle 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Shadow Page Table 폐기 이유 (Bloom: Analyze)"
+    Pre-2010 의 Shadow Page Table 방식 대신 EPT/NPT 가 채택된 _구조적_ 이유?
+    ??? success "정답"
+        Shadow PT 의 본질적 비용:
+        - Guest 가 PT 수정마다 _trap_ → VMM 이 shadow 갱신 → VM Exit 폭주.
+        - fork() / mmap() 빈번한 workload (예: webserver) 에서 50% 성능 손실.
+        - EPT/NPT: HW 가 GVA → GPA → HPA 를 _직접_ 변환 → guest PT 수정 시 trap 불필요.
+        - trade-off: TLB miss 시 24 step page walk (vs 4) → TLB hit rate 가 더 중요해짐 → huge page 가치 상승.
+
+!!! question "🤔 Q2 — TLB invalidate 시점 (Bloom: Apply)"
+    vCPU 가 host CPU 0 → CPU 1 로 _migration_. 어떤 TLB invalidate 가 필요?
+    ??? success "정답"
+        Inner Shareable 범위의 광역 invalidate 필요:
+        - ARM: `TLBI VMALLE1IS` — Inner Shareable 도메인의 EL1 entries 무효.
+        - x86: `INVEPT` (single-context or all-context).
+        - 빠뜨리면: CPU 1 의 TLB 가 stale GVA→HPA 매핑 보유 → silent memory corruption (다른 VM 의 HPA 접근 가능).
+        - 검증 포인트: vCPU migration race 시나리오 — concurrent guest write + migration → CPU 1 에서 stale 읽기 검출 SVA.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `2-Stage Translation DV` — EPT/NPT 검증 사례
+- `Live Migration Dirty Tracking` — PML race 매트릭스
+
+**External**
+- ARM ARMv8-A *Virtualization* (Stage 2 Translation)
+- Intel SDM Vol 3C, *Extended Page Tables (EPT)*
+- "The Turtles Project" (OSDI 2010) — Nested virtualization + Shadow vs EPT 비교
 
 ---
 

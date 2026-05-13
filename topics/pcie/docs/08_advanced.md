@@ -43,6 +43,19 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _하나의 GPU_, _64 VM_
+
+당신은 클라우드 운영자. NVIDIA A100 GPU 1 개를 _64 VM 에 분할_ 임대.
+
+순진한 해법: VM 마다 _전체 GPU 시간 슬롯_ 할당. 결과: 95% 시간이 _idle_ — 한 VM 의 inference 작업이 GPU 의 1% 만 사용해도 나머지 99% 시간 동안 _다른 VM 차단_.
+
+**해법: SR-IOV (Single Root I/O Virtualization)**:
+- 한 _Physical Function (PF)_ + 64 _Virtual Functions (VFs)_.
+- 각 VF 가 _독립적_ BAR + interrupt.
+- IOMMU 가 _VF 별 격리_ — VF 끼리 메모리 안 보임.
+
+결과: 64 VM 이 _동시에_ GPU 의 _다른 부분_ 사용. Utilization 80%+.
+
 지금까지의 PCIe 는 **"한 host 의 한 EP 가 host memory 와 직접 대화"** 라는 단일 모델이었습니다. 그런데 _modern 데이터센터·AI·cloud_ 의 워크로드는 그 모델로는 풀리지 않습니다 — ① 한 GPU 를 64 개 VM 이 나눠 써야 하고 (SR-IOV), ② DMA 마다 IOMMU walk 가 일어나면 latency 가 못 견디고 (ATS), ③ NIC RX 가 host memory 거치지 않고 GPU memory 로 바로 들어가야 하며 (P2P), ④ DDR 슬롯이 부족해 메모리를 PCIe 슬롯에 꽂아야 합니다 (CXL).
 
 이 모듈을 건너뛰면 modern PCIe 검증의 _절반_ 이 빠집니다 — VF 별 BAR offset, ATS Invalidate timing, ACS 의 default-block 정책, CXL alternate protocol negotiation 모두 spec 의 별도 절(section)이고, 잘못 알면 silent failure (driver 가 capability 검증 누락 → 동작은 하는데 성능 0) 가 가장 흔합니다. 반대로 이 네 가지 메커니즘을 잡아 두면, `lspci -vvv` 의 `Capabilities: [xxx] Single Root I/O Virtualization` 한 줄을 보고 _"아, 이 device 는 PF 가 VF 256 개까지 derived BAR 로 expose 가능 + ARI enable 필수"_ 라고 즉시 해석됩니다.
@@ -582,6 +595,40 @@ P2P 를 허용/차단하는 정책:
     - CXL 은 PCIe 와 같은 connector 라 hot swap 했을 때 PCIe ↔ CXL 협상 다시 발생. 양쪽 모드 모두 검증 필요.
     - PASID 가 enabled 안 된 IOMMU 위에 PASID-aware device 두면 **silently fail** — driver 가 capability 검증 필수.
     - SR-IOV + ATS + PASID 의 stacked 검증이 가장 어려움 — 각 축의 단독 검증 통과 후 _조합 시나리오_ 가 별도 sign-off.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — ATS Invalidate race (Bloom: Analyze)"
+    IOMMU 가 page unmap → ATS Invalidate 발송. Device 의 ATC (cache) 가 _아직 cache 응답_ → invalidate _도착 전_ DMA 사용. Race?
+
+    ??? success "정답"
+        Spec: ATS Invalidate 의 **Completion** 받기 _전_ IOMMU 는 _unmap 완료 보고_ 못함.
+
+        - IOMMU: unmap 요청 후 ATS Invalidate 전송.
+        - 도착할 때까지: device 의 ATC stale TLB 가능.
+        - Completion 수신 후: ATC 무효화 확정 → OS 가 _page free_ 안전.
+
+        DV: ATS Invalidate completion latency 측정 → IOMMU 의 _unmap 응답 wait_ SVA.
+
+!!! question "🤔 Q2 — SR-IOV + ATS + PASID stack (Bloom: Evaluate)"
+    셋 조합. _가장 흔한 silent fail_?
+
+    ??? success "정답"
+        **PASID capability mismatch**:
+        - Device: PASID-aware (예: GPU).
+        - IOMMU: PASID 미지원.
+        - Driver: capability 검증 누락.
+
+        결과: device 가 _PASID-tagged TLP_ 보냄 → IOMMU 가 _ignore_ → 모든 DMA 가 _wrong context_.
+
+        Driver 가 _`pci_pasid_features`_ 같은 capability 검증 필수.
+
+### 7.2 출처
+
+**External**
+- PCIe SR-IOV / ATS / PASID specifications
+- CXL Consortium spec
+- *Linux IOMMU subsystem*
 
 ---
 

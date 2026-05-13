@@ -43,6 +43,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _신뢰_ 의 _첫 source_ 는 어디?
+
+당신은 Apple iPhone 의 secure boot 설계자. 모든 후속 단계 (BL1 → BL2 → kernel) 가 _서명 검증_ 으로 다음 단계 인증. 그런데:
+
+**문제: 첫 번째 검증자는 _누가_ 검증하나?**
+
+만약 BL1 (첫 boot loader) 도 _공격자가 교체_ 가능하면 → BL1 이 _가짜 서명 검증_ 통과시키고 _임의 OS_ 로드 → 전체 보안 무효.
+
+**해법: HW RoT (Hardware Root of Trust)**:
+- **BootROM**: 칩 제조 시점에 _마스크 ROM_ 으로 박힘. _수정 절대 불가능_ — 실리콘 회로 자체.
+- **OTP (One-Time Programmable) fuse**: ROTPK (Root of Trust Public Key) 의 _hash_ 만 저장. _한 번 프로그램 후 변경 불가_.
+- BootROM 이 _OTP 의 ROTPK hash_ 를 _읽고_ BL1 서명 검증.
+
+**Immutability 의 근거**:
+- BootROM 코드 변경 → 칩 자체 교체 필요 (실리콘 수준).
+- OTP fuse 변경 → fuse 가 _영구 blown_, 물리적 변경 불가.
+
+이 _hardware 수준의 immutability_ 가 _신뢰의 anchor_. SW 만으로는 _절대_ 만들 수 없는 신뢰.
+
 이후 모든 secure boot 모듈은 **"제조 시점에 한 번 박아 둔 anchor 가 변하지 않는다"** 라는 한 가정에서 출발합니다. ROTPK hash, anti-rollback counter, JTAG lock, secure boot enable bit — 이 모든 것이 _immutable_ 이라는 약속이 깨지면 chain of trust, 서명 검증, 공격 방어가 차례로 무너집니다.
 
 이 모듈을 건너뛰면 이후의 모든 spec/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 RoT = BootROM + OTP 결합과 그 immutability 의 _근거_ 를 잡고 나면, 이후 단계에서 만나는 디테일 (왜 ROTPK 는 OTP 에 hash 만 저장하는가, 왜 fallback 경로가 OTP 에 미리 박혀야 하는가) 이 _이유_ 로 보입니다.
@@ -522,6 +541,35 @@ DV 관점에서 lifecycle 전환은 모두 비가역이므로, 다음을 직접 
     - "ROM Patch 슬롯 8~16 개 = 검증 마지막 보험" — pre-silicon 검증이 ROM Patch 에 의존하지 않게 zero-defect 목표.
     - OTP read protection (lock) 자체도 OTP fuse 로 거는 경우가 많음 — lock fuse 가 안 blown 이면 production 칩에서 OTP 재기록 시도 가능.
     - DV 환경에서 OTP 를 force 로 매번 다른 값을 박는 시나리오는 OTP Abstraction Layer 가 program-once 위반을 자동 차단해야 안전.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Hash 저장 이유 (Bloom: Analyze)"
+    OTP 에 PK 자체 대신 _hash_ 만 저장하는 결정적 이유 1 가지?
+    ??? success "정답"
+        **OTP 공간 절약 + 알고리즘 독립성**:
+        - RSA-3072 PK 는 384 B, ECC-P256 은 64 B — 알고리즘별로 가변.
+        - SHA-256 hash 는 _항상_ 32 B 고정.
+        - OTP 영역은 mm² 단위 면적 비용 → 고정 32 B 가 ROI 최적.
+        - 추가 이점: PK 알고리즘 변경 시 hash 만 갱신, OTP 레이아웃 불변.
+
+!!! question "🤔 Q2 — Lifecycle 비가역성 (Bloom: Evaluate)"
+    Lifecycle 의 4 상태 전환이 모두 _비가역_ 인 설계 결정. 양산 ROI 관점에서 정당화하라.
+    ??? success "정답"
+        비가역의 정당화:
+        - **공격 모델**: 공격자가 Production → Debug 로 _되돌릴 수_ 있으면 모든 보안 무력화.
+        - **양산 yield 비용**: 비가역 정책 위반 시 칩 폐기 → DV 단계에서 ROTPK=0 + SecBoot=1 같은 fatal 조합을 _반드시_ 음성 시나리오로 검출해야 폐기율 0 화.
+        - **trade-off**: provisioning 실수 = 칩 1 개 손실 vs 가역성 허용 = 전체 fleet 해킹 가능. 후자 손실이 압도적으로 큼.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Secure Boot DV Strategy` — BootROM + OTP 검증 사례
+- `Lifecycle State Machine` — 4 상태 전환 음성 시나리오
+
+**External**
+- NIST SP 800-193 *Platform Firmware Resiliency Guidelines* — RoT 정의
+- ARM *Trusted Board Boot Requirements* (TBBR-CLIENT) — ROTPK / OTP / lifecycle 명세
 
 ## 다음 단계
 

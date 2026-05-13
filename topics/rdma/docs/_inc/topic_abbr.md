@@ -55,3 +55,30 @@
 *[BECN]: Backward Explicit Congestion Notification
 *[PFC]: Priority Flow Control
 *[QCN]: Quantized Congestion Notification
+*[SSN]: Send Sequence Number (per-message at requester)
+*[MSN]: Message Sequence Number (per-completed-message in AETH)
+*[LSN]: Limit Sequence Number (credit-based flow control bound)
+*[RNR]: Receiver Not Ready (NAK syndrome 0x20/0x60)
+*[MPT]: Memory Protection Table (lkey/rkey → access permission)
+*[MTT]: Memory Translation Table (IOVA → PA)
+*[MW]: Memory Window
+*[IETH]: Invalidate Extended Transport Header
+*[ImmDt]: Immediate Data header (4-byte)
+*[AtomicETH]: Atomic Extended Transport Header
+*[AtomicAckETH]: Atomic Acknowledge Extended Transport Header
+*[DETH]: Datagram Extended Transport Header (UD)
+*[MAD]: Management Datagram
+*[GSI]: General Service Interface (QP1)
+*[SMI]: Subnet Management Interface (QP0)
+*[CAS]: Compare-And-Swap (ATOMIC verb)
+*[FAA]: Fetch-And-Add (ATOMIC verb)
+*[AH]: Address Handle (UD destination descriptor)
+*[REQ]: Connection Request (RDMA CM MAD)
+*[REP]: Connection Reply (RDMA CM MAD)
+*[RTU]: Ready-To-Use (RDMA CM MAD, final ACK of REP)
+*[DREQ]: Disconnect Request (RDMA CM MAD)
+*[DREP]: Disconnect Reply (RDMA CM MAD)
+*[REJ]: Reject (RDMA CM MAD, immediate failure)
+*[GBN]: Go-Back-N (retransmission scheme)
+*[SQ]: Send Queue
+*[RQ]: Receive Queue

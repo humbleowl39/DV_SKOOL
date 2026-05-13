@@ -42,6 +42,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _`E-SB-WRITE-...`_ 의 한 줄
+
+당신은 RDMA-TB regression fail. log:
+```
+[F-CQHDL-001] CQE poll timeout @ NODE_0 QP_3 at 1.2us
+```
+
+이 한 줄을 보고:
+- **F**: Fatal 레벨.
+- **CQHDL**: Completion Queue Handler 컴포넌트.
+- **NODE_0**, **QP_3**: 어느 node + queue pair.
+
+즉시 `lib/base/component/env/cq_hdl_env.sv` 의 _QP_3 처리 로직_ 으로 이동. 1 분 안에 진단 시작.
+
+vs naive 디버그: log grep, 파일 찾기, 함수 추적 — 30 분.
+
+**Component hierarchy + error prefix 규약** 이 _디버그 시간 30 배_ 단축. RDMA-TB 의 _가장 큰 운영 가치_.
+
 디버깅의 80% 는 "이 에러가 어디서 나왔는지" 를 빠르게 찾는 것입니다. 모든 에러 메시지는 특정 컴포넌트에서 발생하므로, 컴포넌트 계층을 알면 에러 ID prefix (`E-DRV-...`, `E-SB-...`, `F-C2H-...`, `F-CQHDL-...`) 만 보고도 1초 만에 위치를 잡을 수 있습니다.
 
 이 모듈을 건너뛰면 모든 에러 로그에서 grep 으로 파일을 찾아야 합니다. 7 디렉토리 + 3-요소 agent + prefix 매핑을 외워두면 디버그 첫 단계가 자동화됩니다.
@@ -282,6 +300,33 @@ RDMAMBWCFlag_t debug_wc_flag[int][$];
 !!! warning "실무 주의점"
     - State 를 보유한 클래스 (driver, sequencer) 와 stateless 클래스 (handler, top_sequence) 의 구분을 항상 점검.
     - 새 컴포넌트는 카테고리에 맞게 7 디렉토리 중 하나에 배치 — 카테고리 섞으면 lib 분류가 무너짐.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Error prefix → 모듈 (Bloom: Apply)"
+    `F-C2H-MATCH-0002` log. 어디로?
+
+    ??? success "정답"
+        - **F**: Fatal.
+        - **C2H**: dma_env / c2h_tracker.
+        - **MATCH**: address matching 단계.
+        - 모듈: `lib/base/component/env/dma_env/vrdma_c2h_tracker/`.
+
+        Prefix 만 보고 1 step 으로 위치 결정.
+
+!!! question "🤔 Q2 — State vs stateless 분류 (Bloom: Analyze)"
+    Driver 와 handler 의 _state 보유 여부_ 결정 기준?
+
+    ??? success "정답"
+        - **Driver**: state 보유. Outstanding WR queue, sequencer state. 같은 instance 재사용.
+        - **Handler**: stateless. Pure function — input → output. 매 호출 독립.
+
+        Stateless 가 _testable + reusable_. State 는 _필요_ 한 곳에만.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 RDMA-TB component hierarchy 자료
 
 ---
 

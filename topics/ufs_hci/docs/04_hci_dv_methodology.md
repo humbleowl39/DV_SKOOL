@@ -42,6 +42,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — Host-only DV 의 한계
+
+당신은 UFS HCI 검증을 _host side_ 만 수행:
+- Driver 가 UTRD 작성 → doorbell → HCI 처리 OK → response 받음.
+- Functional test 모두 통과.
+
+Silicon 후:
+- 특정 _UPIU malformed_ 시나리오에서 _HCI hang_.
+- Bug 추적: HCI 가 _UPIU header field_ 의 _reserved bit_ 를 잘못 해석.
+
+이 bug 는 _host side test_ 에서 _안 잡힘_ — host 가 _well-formed UPIU_ 만 생성하므로.
+
+**Dual-side DV** 필요:
+- **Host side agent**: UTRD / doorbell / IRQ.
+- **Device side agent**: UPIU 생성 (정상 + 비정상). _Reserved bit 값 변경_ 등.
+
+Dual-side scoreboard 가 _양방향 변환_ 의 silent corruption 잡음.
+
 **UFS HCI 검증은 host-device 양방향** 입니다. driver-side (register / UTRD) 와 device-side (UPIU / UniPro) 가 모두 동시에 검증되어야 silent corruption 이 잡힙니다 — 한쪽만 검증하면 변환 오류가 그대로 통과. 특히 **error 복구 시나리오** (timeout, abort, reset) 는 production silicon 의 robustness 를 좌우 — happy path 는 곧 통과하지만 error path 는 silent bug 의 단골 source.
 
 이 모듈은 앞 세 모듈에서 정착시킨 어휘 (UTRD, UPIU, doorbell, IRQ, Task Tag) 를 **UVM env / sequence / scoreboard / SVA / coverage** 로 어떻게 매핑하는지 — 즉, _프로토콜 지식 → 검증 인프라_ 의 변환을 다룹니다.
@@ -794,6 +812,34 @@ Resume:
     **원인**: doorbell ring 과 completion interrupt 사이에서 IS write-1-to-clear 와 UTRLDBR slot clear 의 순서 race 를 검증 시나리오에 포함하지 않았다.
 
     **점검 포인트**: ISR 진입 → IS clear → UTRLDBR poll 사이에 새로운 doorbell 을 ring 하는 stress 시퀀스와, 해당 race 를 cover 하는 covergroup 이 있는지 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Host vs Device agent (Bloom: Apply)"
+    UFS DV. _Host agent_ + _Device agent_ 양쪽. 각각 _무엇_ 검증?
+
+    ??? success "정답"
+        - **Host agent**: UTRD 작성, doorbell, IRQ 처리, register access. SW driver 측 시나리오 + race.
+        - **Device agent**: UPIU 생성 (정상 + malformed), Data-Out 응답, Task Mgmt response.
+
+        Dual agent 가 _양방향 변환_ silent corruption catch. Single agent (host only) 는 _device-side_ malformed 안 잡힘.
+
+!!! question "🤔 Q2 — Race coverage (Bloom: Analyze)"
+    Doorbell-Completion ISR race. _coverage bin_ 어떻게?
+
+    ??? success "정답"
+        Cross bin:
+        - **(ISR_entry_phase, new_doorbell_timing)**: ISR 진입 직후 / IS clear 후 / UTRLDBR poll 후 × doorbell 시점.
+        - 각 cell 의 _negative outcome_ (timeout) 도 별도 bin.
+
+        Stress: 1000+ random doorbell timing → 모든 cell hit 까지 시뮬.
+
+### 7.2 출처
+
+**External**
+- JEDEC JESD223 *UFS HCI*
+- UVM 1.2 best practices
+- Production UFS host controller DV experience
 
 ---
 

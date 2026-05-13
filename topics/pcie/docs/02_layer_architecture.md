@@ -42,6 +42,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _LCRC error_ vs _ECRC error_ 의 진단
+
+당신은 PCIe error log:
+```
+PCI Express: Correctable error: LCRC error
+```
+
+이 한 줄이 _즉시_ 알려주는 것:
+- **L** in LCRC = _Link Layer_ → DLL (Data Link Layer) 책임.
+- **Correctable** → DLL 의 _ACK/NAK retry_ 가 자동 복구.
+- 즉 _복구됨_, 단 _frequency 증가_ 면 _PHY 신호 품질_ 문제 의심.
+
+vs _ECRC error_:
+- **E** = _End-to-end_ → Transaction Layer 책임.
+- _Endpoint 의 TLP 생성 또는 RC 의 receive_ 문제.
+
+**같은 "CRC error" 라도 layer 가 다르면 _완전히 다른 진단_**. Layer 모델 모르면 _혼동_ → 잘못된 RTL 영역 디버그.
+
 **모든 PCIe spec 의 기능 분류와 디버그 분류가 "어느 layer 의 일?"** 에서 출발합니다. AER (Module 07) 의 error class, retry 메커니즘 (Module 04), LTSSM (Module 05) 모두 layer 책임이 명확히 분리된 상태에서 정의됩니다.
 
 이 모듈의 어휘 — **Transaction / Data Link / Physical, TLP / DLLP / Ordered Set, ECRC / LCRC** — 가 이후 모든 packet trace, scoreboard 비교, AER 카운터 해석의 기본 단위. 이 layer 모델을 머리에 정확히 넣어 두면 "이 에러는 LCRC error" 라는 한 줄로 즉시 어느 layer 의 어느 메커니즘이 동작했는지 그릴 수 있게 됩니다.
@@ -432,6 +450,36 @@ flowchart TB
     - LCRC 와 ECRC 를 혼동하지 말 것 — LCRC 는 hop, ECRC 는 end-to-end. 둘 다 32-bit CRC 지만 generator polynomial 이 다름.
     - Replay buffer 의 size 는 spec 가 아니라 implementation. 작으면 RTT 큰 link 에서 sender stall 발생 (credit 처럼).
     - Gen6 FLIT 모드에서는 layer boundary 가 살짝 변경됨 — TLP/DLLP 가 FLIT 안에 함께 들어가 ACK/NAK 메커니즘이 단순화. 자세한 건 Module 04.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — LCRC vs ECRC (Bloom: Analyze)"
+    한 packet 의 LCRC 통과, ECRC fail. _어느 layer_ 의 _어떤 시나리오_?
+
+    ??? success "정답"
+        - LCRC 통과 → DLL 의 _link integrity OK_ → wire 전송 자체는 무결.
+        - ECRC fail → end-to-end 어딘가에서 _data corruption_:
+            - Endpoint 의 TLP 생성 시 bug.
+            - RC 또는 switch 가 _routing 중_ TLP payload 변경 (예: NAT-like).
+            - Memory 의 ECC 처리 실패.
+
+        LCRC 만 보면 _안전_ 같지만 ECRC 가 catch.
+
+!!! question "🤔 Q2 — Layer boundary 책임 (Bloom: Apply)"
+    AER (Module 07) 가 _correctable error_ 를 카운트. 어느 layer 의 어떤 error?
+
+    ??? success "정답"
+        - **Receiver Error**: PHY layer (8b/10b encoding error, symbol error).
+        - **Bad TLP / Bad DLLP**: DLL layer (LCRC error).
+        - **Replay Num Rollover / Timer Timeout**: DLL.
+
+        모든 layer 가 _자체 error counter_ → AER 통합. 어느 layer 가 _주된 error source_ 인지 즉시 분류.
+
+### 7.2 출처
+
+**External**
+- PCIe Specification 5.0/6.0
+- *PCI Express Technology* — MindShare
 
 ---
 

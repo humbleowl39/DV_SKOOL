@@ -43,6 +43,29 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _PASS 인데_ silicon 에서 깨졌다
+
+당신의 SVA assertion 모두 _PASS_. sign-off. silicon 후 _AXI bridge 에서 data corruption_.
+
+분석:
+```systemverilog
+property axi_data_stable;
+  @(posedge clk) (VALID && !READY) |=> $stable(DATA);
+endproperty
+assert property (axi_data_stable);  // PASS!
+```
+
+PASS 인 이유: **Antecedent 조건 (`VALID && !READY`) 이 _한 번도_ 발생 안 함**.
+- 시뮬에서 사용한 stimulus 가 _slave 가 항상 READY=1_ 인 모델 → backpressure 시나리오 없음.
+- Implication 의 _left side false_ → property _자동 true_ (vacuous pass).
+
+**진단**: SVA `assert` 만 보지 말고 _`cover` property_ 동시 작성:
+```systemverilog
+cover property (@(posedge clk) (VALID && !READY));  // 실제 발생?
+```
+
+이 cover 가 _hit 0_ 이면 → assert 는 _아무것도 검증 안 함_. _Vacuous pass_ 확정.
+
 **SVA 는 검증의 spec language** 입니다. 자연어로 적힌 protocol 규칙 ("valid 가 1 이면 ready 가 올 때까지 data 가 stable 해야 한다") 을 SVA 한 줄로 옮기면, 시뮬레이션과 Formal 양쪽에서 동일하게 검증됩니다. 이후 모든 Formal property / 모든 protocol monitor / 모든 scoreboard assertion 이 이 모듈의 어휘 (`|->`, `##N`, `throughout`, `cover`) 를 사용합니다.
 
 또한 SVA 는 **Vacuous Pass** 라는 가장 위험한 함정의 진원지입니다. assert 는 PASS 인데 사실 antecedent 가 한 번도 발생하지 않아 아무것도 검증하지 않은 상태 — 이것을 cover 짝과 함께 작성하는 습관을 이 모듈에서 만들지 못하면 sign-off 후에 silicon bug 로 돌아옵니다.
@@ -591,6 +614,51 @@ assert property (
     **원인**: `req |-> ##[1:5] gnt` 같은 implication 에서 `req` 가 한 번도 1 이 안 되면 명제는 자동으로 참. assume 이 너무 강해서 antecedent 가 unreachable 한 경우, 또는 신호 이름 오타로 cover 가 없는 경우 발견 못한다.
 
     **점검 포인트**: 모든 assert 마다 매칭되는 cover 를 작성 — `cover property (req)`, `cover property (req ##[1:5] gnt)`. JasperGold 의 "trace 1 covered" 가 실제 출력되었는지 확인. Sign-off 체크리스트에 "every assert has a covered antecedent" 를 항목으로 포함.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — SVA 작성 (Bloom: Apply)"
+    Spec: "AXI valid 가 1 이면 ready 올 때까지 data stable". SVA?
+
+    ??? success "정답"
+        ```sv
+        property axi_data_stable;
+          @(posedge clk) disable iff (!rst_n)
+            (valid && !ready) |=> $stable(data) until_with ready;
+        endproperty
+        assert property (axi_data_stable);
+        cover property (@(posedge clk) (valid && !ready));  // 필수
+        ```
+
+        Cover 가 _vacuous pass_ 방어. Backpressure 시나리오 _실제 발생_ 확인.
+
+!!! question "🤔 Q2 — Implication 선택 (Bloom: Analyze)"
+    `|->` (overlapping) vs `|=>` (non-overlapping). 언제 어느 것?
+
+    ??? success "정답"
+        - `|->`: antecedent 가 true 인 _같은 cycle_ 에 consequent 평가. _zero-delay_ 관계.
+          - 예: `req |-> grant_or_busy` (req 와 동시에 grant 또는 busy).
+        - `|=>`: antecedent 가 true 인 _다음 cycle_ 부터 consequent 평가. _1-cycle delay_.
+          - 예: `req |=> ack` (req 다음 cycle 에 ack).
+
+        실수: `|->` 인데 consequent 가 _다음 cycle_ 에 발생하면 fail (실제로는 정상인데).
+
+!!! question "🤔 Q3 — Disable condition (Bloom: Evaluate)"
+    `disable iff` 의 _부적절한_ 사용?
+
+    ??? success "정답"
+        **너무 광범위한 disable** — property 가 _대부분 시간 disabled_ → vacuous pass.
+
+        예: `disable iff (config_reg != ENABLED)` → config_reg 가 _대부분 disabled_ 이면 _그 동안_ assertion 안 평가.
+
+        올바른 사용: _reset_ 만 disable. `disable iff (!rst_n)`. 외 다른 disable 은 _명시적 reason_ 필요.
+
+### 7.2 출처
+
+**External**
+- IEEE 1800-2017 *SystemVerilog Standard* — SVA chapter
+- *SystemVerilog Assertions Handbook* — Cohen, Venkataramanan, Kumari
+- Synopsys SVA training material
 
 ---
 

@@ -42,6 +42,25 @@
 
 ## 1. Why care? — config_db / Factory 가 UVM 유연성의 핵심인 이유
 
+### 1.1 시나리오 — _Project A 에서 B_ 로 _3 일_ 안에
+
+당신은 AXI verification 환경을 _1 년_ 작성. Project B 시작 — 같은 AXI 인터페이스, 다른 _data width / burst length / address width_.
+
+**Naive 포팅**: 모든 component 의 _hardcoded 값_ 추적 → 변경 → bug fix → 검증. **수 주**.
+
+**UVM config_db + factory**:
+- Width / burst / address 는 _config object_ 의 field → Project B 의 test 에서 _config 인스턴스_ 만 다르게.
+- 다른 _구현 변형_ (예: AXI4 vs AXI5 driver) → factory override 1 줄.
+- **3-5 일** 안에 포팅 완료.
+
+**비교**:
+
+| 작업 | Naive | config_db + factory |
+|------|-------|---------------------|
+| 포팅 시간 | 수 주 | 3-5 일 |
+| 코드 수정 | 모든 component | _test 의 config 만_ |
+| 디버그 | 수십 곳 race | 단일 config 추적 |
+
 UVM 환경의 **유연성과 재사용성은 모두 config_db + Factory 에서 나옵니다**. 한 환경을 다른 프로젝트에 _3-5 일 안에_ 포팅하는 비결은 다음 둘:
 
 1. _설정 차이_ 를 config_db 의 Config Object 1 개로 흡수 (`my_agent_config` 의 필드만 바꿈).
@@ -407,6 +426,35 @@ BootROM 검증에서의 config_db 활용:
     - **모든 derived test** 의 `build_phase` 첫 줄에 `super.build_phase(phase)` — 빠지면 base 의 set / override 가 전부 무효.
     - get 의 inst="" 는 _자기 자신의 full_name_ 사용 — 컴포넌트의 hierarchy 위치를 _set 측이 알아야_.
     - Config Object 패턴은 _포팅의 핵심_: SoC 별 차이를 Object 의 필드 1 곳으로 흡수.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — config_db get 실패 (Bloom: Apply)"
+    `uvm_config_db#(virtual axi_if)::get(this, "", "vif", vif)` 가 NULL 을 받는 _3 가지_ 원인은?
+    ??? success "정답"
+        1. **Test 의 build_phase 에서 set 누락**: top tb 에서 set 안 함 → 어디서도 없음.
+        2. **Hierarchy 불일치**: set 시 `"uvm_test_top.env.agent"` 인데 get 측 컴포넌트 full_name 이 `"uvm_test_top.env.master_agent"` → 경로 불일치.
+        3. **Phase ordering**: set 이 derived test 의 build_phase 인데, 자식 agent 가 _부모 build 직후_ 에 get → set 이 아직 일어나지 않음 (build top→bottom 인데 super.build_phase 빠진 경우).
+        - 디버그: `+UVM_CONFIG_DB_TRACE` 로 set/get 시각 + 경로 dump.
+
+!!! question "🤔 Q2 — Factory override vs config (Bloom: Evaluate)"
+    "Agent 의 driver 를 Error 주입 버전으로 교체" 와 "Driver 의 inject_error 필드 true 로 설정". 둘 중 어느 방식?
+    ??? success "정답"
+        **상황에 따라 결정**:
+        - **Factory override**: 동작 _자체_ 가 다름 (잘못된 신호 인터리브, 프로토콜 위반) → 코드 분기보다 별도 클래스가 깔끔. Test 별로 override.
+        - **Config 필드**: 동작은 같고 _빈도/확률_ 만 다름 (에러 1%) → if/case 로 충분.
+        - **일반 규칙**: 분기 5 줄 미만 = config, 분기 50 줄 이상 = override. 그 사이는 팀 컨벤션.
+        - **trade-off**: override 가 많아지면 클래스 폭증, config 가 많아지면 driver 가 god class 화.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `config_db Best Practices` — set/get 위치 + scope 규칙
+- `Factory Override Patterns` — type vs inst override 선택 기준
+
+**External**
+- *UVM 1.2 User's Guide* §6 (Configuration) — Accellera
+- *UVM Cookbook* (Mentor) — Factory Override Recipes
 
 ---
 

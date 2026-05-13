@@ -44,9 +44,55 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — AHB 가 GPU-DDR transaction 에서 죽는다
+
+당신은 CPU + GPU + DDR controller 의 SoC. AHB 로 연결:
+
+```
+CPU read 100 lines (RAM)        GPU write 200 lines (frame buffer)
+   ↓                              ↓
+   AHB bus (single channel, single direction at a time)
+   ↓
+   순차 처리: CPU read 끝나야 GPU write 가능 → throughput 절반
+```
+
+**AHB 의 3 가지 병목**:
+1. **Read 와 Write 가 같은 채널** — 양방향 트래픽 막힘.
+2. **Address/Data 가 순차** — 다음 transaction address 가 _이전 data 끝난 후_.
+3. **Outstanding 한 개** — 응답 안 오면 master 가 _다음 request_ 못 보냄.
+
+해법: **AXI 의 5 채널 분리**
+
+| 채널 | 방향 | 역할 |
+|------|------|------|
+| AW (Write Address) | M→S | Write 주소 |
+| W (Write Data) | M→S | Write 데이터 |
+| B (Write Response) | S→M | Write 응답 |
+| AR (Read Address) | M→S | Read 주소 |
+| R (Read Data/Response) | S→M | Read 데이터 + 응답 |
+
+5 채널이 _완전 독립_ → 동시 진행 가능 → AHB 대비 **4-8 배 throughput**.
+
+추가: **Outstanding** (응답 안 와도 다음 request 보낼 수 있음) + **Out-of-Order** (응답이 _다른 순서_ 로 도착 가능, ID 로 매칭).
+
 **AXI 는 현대 SoC 의 사실상 표준** 입니다. NoC 기반 인터커넥트, 메모리 컨트롤러, GPU/CPU 트랜잭션, 가속기 IP 연결 — 모두 AXI 로 흐릅니다. 검증에서 AXI 를 깊이 이해하지 못하면 timing, throughput, OoO 시나리오에서 silent bug 를 놓치기 쉽습니다.
 
 특히 두 가지가 AXI 검증의 중심 위험 영역입니다 — **VALID/READY 데드락** 과 **outstanding 응답 매칭**. 또한 Module 01 에서 AHB 가 풀지 못한 두 한계 (1) read/write 동시 진행 불가, (2) 응답 대기로 인한 throughput 저하 — 가 AXI 의 5채널 분리 + Outstanding/OoO 로 해결되는 과정을 추적하면, 이후 AXI-Stream / CHI / ACE 의 진화 방향이 자연스럽게 보입니다.
+
+!!! question "🤔 잠깐 — VALID 가 _READY 를 기다리면_ 무슨 일이?"
+    AXI spec 의 결정적 규칙: "**VALID 는 READY 에 dependency 가지면 안 됨**". 어겼을 때 정확한 시나리오를 떠올려 보세요.
+
+    ??? success "정답"
+        **Deadlock**.
+
+        - Master VALID = (Slave READY) AND (data ready).
+        - Slave READY = (Master VALID) AND (buffer space).
+
+        둘 다 _상대방을 기다림_ → 영원히 0. 둘 중 한쪽이 _상대방과 무관_ 하게 _독립적으로_ asserted 돼야 handshake 가능.
+
+        AXI 규칙: **Master VALID 는 _자기 데이터 ready_ 만 보고 결정**. Slave READY 를 절대 보면 안 됨. (반대는 OK — Slave READY 는 Master VALID 보고 결정해도 됨.)
+
+        이게 _가장 흔한 AXI bug_. SVA 로 detect 가능: `assert property (VALID && !READY |=> VALID)` (한 번 VALID 면 handshake 까지 유지).
 
 ---
 
@@ -703,6 +749,58 @@ Master B는 OKAY를 받으면 다시 Exclusive Read부터 재시도해야 함 (C
     **원인**: AXI 의 byte-lane 동작은 `WSTRB[i]==1` 인 byte 만 유효하다. master 가 narrow transfer 를 하면서 WSTRB 를 정확히 set 하지 않으면, slave 는 spec 상 어느 byte 가 valid 인지 알 길이 없어 default 값 (0 또는 그대로) 으로 기록한다. 또 AxSIZE 와 WSTRB pattern 이 일치하지 않으면 IP-vendor 간 해석이 갈린다.
 
     **점검 포인트**: 모든 write transaction 에 대해 `AxSIZE`, `AxADDR[low_bits]`, `WSTRB` 의 일관성을 SVA 로 검증 (`AxSIZE=2 (4B) → WSTRB 의 set bit 가 정확히 4 개 이며 byte address 정렬에 맞는지`). slave 의 partial-write 동작은 IP doc 으로 확정 후 monitor 에서 동일 동작 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Outstanding 깊이 (Bloom: Analyze)"
+    당신의 AXI master 는 _outstanding 깊이 16_, slave 는 _4_. 트래픽이 throughput cap 보다 _낮음_. 왜?
+
+    ??? success "정답"
+        **Slave 가 bottleneck**. Outstanding 깊이는 _둘 중 작은 값_ 으로 결정.
+
+        Master 가 _16 개 in-flight_ 가능하지만 slave 가 _4 개_ 만 처리 가능 → master 가 5 번째 요청 _보내도_ slave 가 BREADY/RREADY 안 줌 → master 가 _stall_.
+
+        해법:
+        - Slave outstanding 늘리기 (buffer 추가).
+        - 또는 master 의 outstanding 줄여서 _다른 critical path_ 에 자원 양보.
+
+!!! question "🤔 Q2 — OoO + ID 매칭 (Bloom: Apply)"
+    Master 가 ID=3 으로 read 2 개 요청. Slave 가 _OoO_ 로 응답. 두 응답이 모두 ID=3. 어떻게 _구분_ 하나?
+
+    ??? success "정답"
+        **AXI spec: 같은 ID 의 응답은 FIFO 순서로** (out-of-order 가 _다른 ID 사이_ 만 가능).
+
+        즉 ID=3 의 첫 응답이 _첫 요청_ 에 매칭, 두 번째가 _두 번째 요청_. Slave 는 같은 ID 의 응답 순서를 _절대_ 바꿀 수 없음.
+
+        반대로 ID=3 와 ID=5 사이는 OoO 가능 → ID=5 응답이 ID=3 응답보다 _먼저_ 도착해도 OK.
+
+        DV 시 monitor: same-ID 응답이 _FIFO order_ 인지 SVA assertion.
+
+!!! question "🤔 Q3 — VALID/READY deadlock 진단 (Bloom: Evaluate)"
+    당신의 시뮬레이션이 _hang_. AXI bus 가 _얼어붙음_. 어떻게 진단?
+
+    ??? success "정답"
+        3-step:
+        1. **어느 채널이 hang?** waveform 에서 모든 5 채널 (AW/W/B/AR/R) 의 VALID 와 READY 확인. _VALID=1 인데 READY=0_ 의 채널 식별.
+        2. **VALID 가 READY 에 dependency 있나?** RTL 의 VALID 생성 로직 추적 → READY signal 이 _직접 사용_ 되는지.
+        3. **양쪽 모두 dependency** 면 deadlock 확정. 한쪽을 _독립_ 으로 만들어야.
+
+        SVA 로 자동화: `assert property (xVALID && !xREADY |=> xVALID)` (VALID 가 한 번 assert 되면 handshake 까지 유지) + `assert property (rose(xVALID) |-> $past(some_data_ready))` (VALID 가 _READY 가 아닌_ 다른 signal 로 결정).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[HIG] AXI RegSlice IP Generation` (id=99057876)
+- `[AXI asyncBridge] Final Verification Report` (id=959709185)
+- `[AXI FIFO] Final Verification Report` (id=959643649)
+- `[AXI-to-AXIL Conv] Final Verification Report` (id=959610881)
+- `[AXI DW conv] Final Verification Report` (id=959512582)
+
+**External**
+- ARM, *AMBA AXI and ACE Protocol Specification* (IHI 0022H)
+- *AXI Handshaking Rules* — ZipCPU blog (2021)
+- *AXI4 Lite Handshake: Preventing Combinatorial Paths* — System on Chips, 2025
+- *AMBA AXI4 Bus Architecture* — University of Pennsylvania CIS 5710 lecture, 2024
 
 ---
 

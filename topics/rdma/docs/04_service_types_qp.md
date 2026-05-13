@@ -41,9 +41,39 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — "왜 같은 RDMA 인데 service type 이 4 개나?"
+
+당신은 두 종류의 워크로드를 RDMA 로 처리해야 합니다:
+
+- **워크로드 A**: 분산 KV store. 노드 1000 개가 _서로 1:1_ 로 작은 메시지 (~100 B) 를 자주 교환. 1 query/response 당 평균 latency 가 중요.
+- **워크로드 B**: Service discovery. 노드 1000 개가 _모두에게_ "내 IP/port" 를 1 회씩 multicast. 작은 메시지, 손실 허용.
+
+워크로드 A 를 **RC** (Reliable Connection) 로 짜면? **1000 × 1000 = 100 만 connection** 의 메타데이터를 _모든 노드_ 가 보관해야 함. QP 1 개당 ~1 KB 메모리 → **노드당 1 GB** 의 connection state 만으로 메모리 폭발.
+
+워크로드 B 를 **RC** 로 짜면? 1000 × 1000 RC 면 위와 같음. 그리고 multicast 가 _안 됨_ — RC 는 1:1 만 가능.
+
+**그래서 service type 이 4 개**:
+
+| 워크로드 | RC | UC | UD | XRC | 채택 |
+|---------|----|----|----|----|------|
+| A. 1:1 KV (신뢰성↑) | ★★★★ | △ | ✗ | ★★★ | RC 또는 XRC |
+| B. 1:N multicast | ✗ | ✗ | ★★★★★ | ✗ | UD |
+| C. throughput-only | ★ | ★★★ | ★ | ★★ | UC |
+| D. hyperscale fan-in | ★★ | ★ | ✗ | ★★★★★ | XRC |
+
 **Service type 선택이 RDMA 시스템 설계의 가장 큰 결정** 입니다 — RC 는 신뢰성을 hardware 가 책임지지만 connection 비용이 크고, UD 는 connectionless 라 scaling 좋지만 user 가 reliability 를 책임집니다. 검증 관점에서도 service type 마다 "어떤 패킷 유형이 합법인가", "어떤 error 가 가능한가" 가 완전히 달라서, 한 service 의 시나리오를 다른 service 에 그대로 옮기면 거의 다 false fail.
 
 QP FSM 은 시스템 검증의 **bring-up 시퀀스의 뼈대** 입니다. RAL 이 Modify QP 의 attribute 를 단계별로 set 하면서 FSM 을 진행시키는 흐름을 정확히 알아야 sequence/test 작성이 가능.
+
+!!! question "🤔 잠깐 — Reset 에서 RTS 로 _바로 점프_ 할 수 없는 이유"
+    Spec 은 Reset → Init → RTR → RTS 를 각각 _별도 Modify 호출_ 로 강제합니다. _한 번에_ 점프하면 안 되는 _race condition_ 한 가지를 떠올려 보세요.
+
+    ??? success "정답"
+        **In-flight 패킷이 Modify 도중 도착하는 race**.
+
+        가령 Reset 직후 receiver 의 RNIC 가 우연히 한 패킷을 wire 에서 받았는데, 그 시점 QP state 가 "_RX 가능_" 으로 막 transition 중이면 — 그 패킷을 받아도 되는지/dropping 해야 하는지 ill-defined. 단계적 진입 (Init → 권한 잠금 → RTR → RX 비로소 가능) 로 _각 단계 사이의 race window_ 를 spec 으로 닫아둠.
+
+        이게 검증에서 _bring-up sequence_ 의 각 step 사이에 _wait + read-back_ 을 두는 이유.
 
 ---
 
@@ -465,6 +495,52 @@ sequenceDiagram
     - UC 에서 packet drop = 메시지 silent loss → scoreboard 가 그것을 정상으로 처리해야 false fail 안 남.
     - UD 의 max payload 는 MTU − (Eth+IP+UDP+BTH+DETH+ICRC) 로 계산해야 함 — 단순 MTU 가 아님.
     - XRC 검증은 SRQ (Shared Receive Queue) 행동까지 함께 봐야 함.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Service type 선택 (Bloom: Apply)"
+    1024 GPU AI training 잡. 매 step 마다 _all-reduce_ 32 GB. 각 GPU 는 _모든 다른 GPU 와_ 데이터 교환. 어떤 service type 이 가장 적합한가? 그리고 _100 만 connection_ 메모리 문제는 어떻게 푸는가?
+
+    ??? success "정답"
+        - **RC** (or XRC) — gradient 무손실 + 순서 보장 필요.
+        - 100 만 connection (1024² = 1 백만) 메모리 문제는 두 가지로 완화:
+          1. **XRC** — 한 receive QP 를 여러 sender QP 가 공유 → target 메모리 절약.
+          2. **NVIDIA Dynamically Connected Transport (DCT)** — 필요할 때만 connection 만들고 idle 시 해제 (Confluence id=961249303).
+
+!!! question "🤔 Q2 — QP FSM 디버그 (Bloom: Analyze)"
+    당신의 sequence 에서 Modify(Init → RTR) 이 EINVAL 반환합니다. 어떤 attribute 를 _어떤 순서로_ 체크하시겠습니까?
+
+    ??? success "정답"
+        Modify(Init→RTR) 필수 attribute (§5.4 표):
+        1. `dest_qp_num` — peer QPN. CM 에서 받았는가?
+        2. `rq_psn` — receive 측 expected PSN. CM 에서 받았는가?
+        3. `path_mtu` — 양 끝 MTU 합의값. RC 의 경우 4096 까지.
+        4. `max_dest_rd_atomic` — outstanding READ/ATOMIC 한계.
+        5. `min_rnr_timer` — RNR retry 간격.
+        6. `ah_attr` — DLID/GID/SL/...
+
+        디버그 순서: read-back 으로 _어떤 필드가 0_ 인지 먼저 확인 → 누락 attribute 를 sequence 에 추가. EINVAL 은 보통 attribute mask 누락 또는 invalid 값.
+
+!!! question "🤔 Q3 — RTS 진입 후 동작 (Bloom: Evaluate)"
+    당신의 RC QP 가 RTS 에 있다. 갑자기 `retry_cnt` 만큼의 retry 가 exhausted 됐다고 합시다. QP 상태는? 어떻게 _복구_ 하나? 단순 Modify(RTS) 재호출이 작동하지 않는 이유는?
+
+    ??? success "정답"
+        - QP → **Err** state (auto transition).
+        - 복구는 **Reset 거쳐서** (Err → Reset → Init → RTR → RTS) — 단계 skip 불가.
+        - Modify(RTS) 재호출이 안 되는 이유: spec 이 Err → 다른 state 로의 직접 transition 을 _금지_ (state machine 의 closing).
+        - 검증: WC_RETRY_EXC_ERR 이후 QP state read = Err, Modify(Reset) → Modify(Init) → ... 의 _재진입_ 시퀀스가 성공하는지.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[RDMA] EE context vs QP number` (id=985661494) — RC/UC/UD 의 EE context
+- `[RDMA] ETH (Extended Transport Header)` (id=993361924) — service 별 xTH
+- `Nvidia Dynamically Connected Transport` (id=961249303) — DCT, XRC 의 hyperscale 대안
+- 사내 `RDMA-TB/error_handling/VPLAN_error_handling.md` — packet drop / retry 시나리오
+
+**External**
+- IBTA Spec 1.7, §9.7 RC service / §9.8 UC, UD service
+- IBTA Spec 1.7, §10.3 QP state machine
 
 ---
 

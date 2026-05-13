@@ -42,9 +42,48 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Guest_ 가 _ring 0_ 인 척하기
+
+당신은 hypervisor 설계자. Guest OS (Linux) 가 _자기가 ring 0 (kernel mode)_ 인 줄 알고 동작해야 함. 그런데:
+
+- Guest 가 `CR3` (page table base) 변경 시도 → _hypervisor 의 메모리 매핑 깨짐_ → 다른 VM 침해.
+- Guest 가 `HLT` (CPU halt) 실행 → _전체 시스템 정지_.
+- Guest 가 `INVLPG` (TLB invalidate) → _wrong TLB 영향_.
+
+**순진한 해법 1 (소프트웨어)**: Guest 코드를 _스캔_ + sensitive instruction _재작성_. Slow, 복잡.
+
+**순진한 해법 2 (Paravirtualization)**: Guest OS 수정해서 sensitive 명령을 _hypercall_ 로 교체. 변경 불가능한 OS (Windows) 적용 안 됨.
+
+**Intel VT-x / AMD-V 의 해법**: **Ring -1 hypervisor**.
+- CPU 에 _root mode_ + _non-root mode_ 추가 (기존 ring 0-3 위).
+- Guest 가 non-root mode 에서 _자기가 ring 0_ 인 줄 알고 동작.
+- Sensitive instruction → _VM Exit_ → root mode 의 hypervisor 가 가로채서 emulate.
+- 일반 instruction → 그대로 native 실행. _대부분_ overhead 없음.
+
+**VMCS (Virtual Machine Control Structure)**: VM 별 _상태 보관 메모리 구조_.
+- Guest state: CR0, CR3, EIP, EFLAGS 등.
+- Host state: VM Exit 시 복원할 hypervisor 상태.
+- Control: 어떤 명령이 _exit 유발_ 할지.
+
 CPU 가상화는 가상화의 **심장** 입니다. Memory / I/O 가상화도 결국 "Guest 가 sensitive 명령을 실행하면 어떻게 되는가" 의 변형이고, VMCS / VM Exit / EL 전환 같은 어휘는 이후 모듈 모든 그림에 등장합니다.
 
 이 모듈을 건너뛰면 — 왜 EPT / Stage-2 가 "PT 변경 시 VM Exit 가 안 일어난다" 는 게 큰 일인지 (Module 03), 왜 SR-IOV 가 "VM Exit 을 줄인다" 가 핵심인지 (Module 04), 왜 KVM 의 분류가 모호한지 (Module 05) — 이 모든 게 "그냥 사실" 이 됩니다. 반대로 이 모듈의 trap-and-emulate 사이클 + VMCS 구조 + 4 회 context switch 만 잡으면 나머지 모듈은 _이걸 어떻게 줄이는가_ 의 변형으로 보입니다.
+
+!!! question "🤔 잠깐 — _VM Exit_ 의 _cost_ 가 얼마?"
+    한 VM Exit + Entry 의 cycle 수는?
+
+    ??? success "정답"
+        **~1000-2000 cycles** (~500 ns @ 4 GHz).
+
+        포함:
+        - Guest state → VMCS 저장.
+        - Hypervisor state ← VMCS 로딩.
+        - Hypervisor handler 실행 (수십 cycle).
+        - Reverse path.
+
+        한 VM 이 _초당 100만 번_ VM Exit 면 → 0.5 초 / 1 초 = **50% 가상화 overhead**.
+
+        그래서 _VM Exit 최소화_ 가 가상화 성능의 _핵심_. EPT (PT walk 시 exit 안 함), SR-IOV (DMA 시 exit 안 함) 모두 이 목적.
 
 ---
 
@@ -523,6 +562,37 @@ User App (EL0)
     - **VM Exit 빈도** 가 가상화 성능의 첫 KPI — `perf kvm stat` 으로 항상 측정.
     - **CPUID / RDMSR 의 tight loop 호출** 이 흔한 함정. Guest 코드 hot path 에서 발견되면 hypervisor 측 synthetic value cache 또는 host-side hoist.
     - **VHE = Host OS 의 EL2 실행** 이지 Guest ↔ Hypervisor 전환 제거가 아님.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — VM Exit 의 비용 (Bloom: Analyze)"
+    Guest 코드에서 한 번의 `CPUID` 호출 = native vs virtualized 비용 차이?
+    ??? success "정답"
+        Native: ~50 cycle. Virtualized:
+        - VM Exit (state save) ~ 500 cycle.
+        - VMM 의 CPUID emulation handler 실행 ~ 200 cycle.
+        - VM Entry (state restore) ~ 500 cycle.
+        - 총 ~1200 cycle = native 의 ~25 배.
+        - tight loop 에 `CPUID` 가 들어가면 hot path 의 _주범_ → synthetic cache 또는 host-side hoist 로 대응.
+
+!!! question "🤔 Q2 — VHE 의 효과 (Bloom: Evaluate)"
+    VHE (Virtualization Host Extensions) 가 Host KVM 성능을 올리는 _정확한_ 메커니즘?
+    ??? success "정답"
+        Pre-VHE: Linux host kernel = EL1, KVM hypervisor 부분 = EL2 → host kernel → KVM 호출마다 EL1↔EL2 전환.
+        VHE: Host kernel _전체_ 를 EL2 에서 실행 → EL1↔EL2 전환 _제거_.
+        - 효과: Host → KVM 호출 비용 ~수십 cycle 절감.
+        - _Guest ↔ Hypervisor_ 전환 (EL2 ↔ EL1) 은 여전히 존재 — VHE 가 줄이는 것은 _host_ 측.
+        - 흔한 오해: "VHE 는 guest 성능 향상" (X) → host KVM 코드 path 단축 (O).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `KVM Performance Tuning` — VM Exit 분포 + tight loop 핫스팟
+- `ARM Virtualization (EL2/VHE)` — VHE 적용 가이드
+
+**External**
+- Intel SDM Vol 3C, *VMX Operation* — VMCS 필드 매핑
+- ARM ARMv8-A *Virtualization Host Extensions* (DDI0487) — VHE 정의
 
 ---
 

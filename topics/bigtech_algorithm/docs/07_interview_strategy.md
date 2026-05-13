@@ -42,9 +42,44 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _완벽한 풀이_, _불합격_
+
+당신은 면접 문제를 _완벽하게_ 풀었습니다. 코드 작동, 복잡도 최적. 그런데 _불합격_.
+
+피드백:
+> "후보는 30 분 동안 _침묵_ 한 채 코딩만. 어떤 _생각 과정_ 인지 모르겠다. 그리고 _edge case_ (빈 입력, single element) 를 _안 다룸_."
+
+**면접관의 평가 차원** (4 축):
+1. **Correctness**: 정답인가? (50%)
+2. **Complexity**: 효율적인가? (20%)
+3. **Code Quality**: 깔끔한가? (15%)
+4. **Communication**: 사고 과정 명확한가? (15%)
+
+**Correctness 100% 인데 Communication 0% 면 _합격선 미달_**. 면접관은 _당신과 함께 일할 사람_ 을 평가 — _침묵하는 천재_ 보다 _말하는 평범_ 이 종종 합격.
+
 알고리즘 실력 ≠ 면접 통과. **시간 관리 + 의사소통 + 엣지케이스 인지** 가 같이 필요합니다. Module 01~06 의 도구를 _45 분 안에_ 작동시키는 메타-스킬이 없으면, 다 풀어도 떨어지고 다 못 풀어도 통과하는 역설이 발생합니다.
 
 이 모듈을 건너뛰면 _연습 문제는 풀리는데 면접에서만 막히는_ 패턴에서 벗어나기 어렵습니다. 반대로 _4 축 평가_ (Correctness, Complexity, Code Quality, Communication) 를 의식하며 풀이하면, _녹음한 모의 면접을 자기 채점_ 할 수 있게 되어 학습 속도가 크게 빨라집니다.
+
+!!! question "🤔 잠깐 — _Edge case_ 빼먹는 가장 흔한 실수?"
+    면접에서 _가장 자주 누락_ 되는 edge case 는?
+
+    ??? success "정답"
+        **빈 입력 (empty)** + **단일 원소 (single)**.
+
+        - `arr = []` → IndexError 가능.
+        - `arr = [x]` → loop 가 _아예 안 돔_, 또는 분기 빠짐.
+
+        면접 답변 시 _첫 30 초_ 에 명시:
+        > "_빈 배열 / 단일 원소_ 도 가능한가요?"
+
+        면접관이 _yes_ 하면 처리. _no_ 하면 가정 명시. _ask_ 가 _miss_ 보다 무조건 좋음.
+
+        다른 흔한 edge:
+        - 음수 / 0 / 큰 양수.
+        - 중복 원소.
+        - 정렬됨 / 안 됨.
+        - Overflow (int32 vs int64).
 
 ---
 
@@ -381,6 +416,37 @@ Week 3 (Medium 도전):
     - **Clarify 시간 절약하지 말기** — 첫 5 분의 명세 합의가 뒤 30 분의 follow-up 폭탄을 막아준다.
     - **Brute → Optimal 발화 순서** — 외운 답이라도 brute 를 먼저 말해 _사고 과정_ 의 증거를 남긴다.
     - **녹음으로 self-review** — 모의 면접을 녹음 후 4 축 기준으로 자기 채점이 가장 빠른 학습 경로.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 45 분 면접 time budget (Bloom: Apply)"
+    45 분 면접. 각 phase 에 _몇 분_ 배분?
+
+    ??? success "정답"
+        - **Clarify + edge case** (5 분): 빈 입력, 단일 원소, 큰 N, 음수 등.
+        - **Brute force 발화** (5 분): O(N²) 또는 simple solution + 복잡도.
+        - **Optimize** (5 분): 개선 방향 toss + 후보 알고리즘 결정.
+        - **Implementation** (15-20 분): 코드 작성. 도중 _talk through_.
+        - **Test + edge case 검증** (5 분): 종이 dry-run, hidden bug 찾기.
+        - **Follow-up** (5 분): 면접관 question.
+
+!!! question "🤔 Q2 — 막혔을 때 (Bloom: Evaluate)"
+    풀이 막힘. _침묵 vs 말하기_?
+
+    ??? success "정답"
+        **말하기** — _명시적으로_:
+        - "이 접근으로 가려는데 X 부분에서 막혔다."
+        - "Brute force 로는 풀리지만 더 효율적인 방법이 안 떠오른다."
+        - "Hint 주시면 큰 도움 될 것 같다."
+
+        침묵 = 면접관이 _당신의 사고 과정 모름_ = 평가 못함. 말하면 면접관이 _hint_ 줄 수 있고, 그것도 _평가 점수_ (의사소통).
+
+### 7.2 출처
+
+**External**
+- *Cracking the Coding Interview* — Gayle Laakmann McDowell
+- 빅테크 (Google / Meta / Amazon) interview 후기
+- LeetCode discuss
 
 ---
 

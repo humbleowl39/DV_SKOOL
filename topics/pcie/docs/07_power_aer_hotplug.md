@@ -43,6 +43,26 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _laptop 배터리_ 1 시간
+
+당신은 laptop 디자이너. PCIe NVMe SSD 사용. _Idle 시_ ASPM 미지원:
+- SSD 가 _L0 (full power)_ 유지.
+- _수 W_ 소비 (idle 인데도).
+- Laptop _1 시간_ 배터리 cliff.
+
+ASPM 지원 시:
+- Idle 감지 → L1 (low power) 전환.
+- SSD power _0.1 W_.
+- Laptop _5-6 시간_ 배터리.
+
+**ASPM 설정 차이 _하나_** 가 사용자 경험의 _수 배_ 차이.
+
+다른 두 critical scenario:
+- **AER (Cpl timeout)**: 한 PCIe error → AER 미설정 시 _커널 panic_, 설정 시 _device reset 후 복구_.
+- **Hot Plug (SSD 뽑힘)**: surprise removal → driver 가 _MMIO_ 시도 → bus error → _OS freeze_. Hot Plug 적절 구현 시 _graceful 처리_.
+
+이 _3 영역_ 이 _production 품질_ 의 진짜 결정자.
+
 지금까지의 모듈은 **"정상 동작 path"** 였습니다 — TLP 가 잘 만들어지고, ACK 가 잘 돌고, LTSSM 이 L0 에 머무는 happy path. 그런데 production 환경에서 PCIe IP / driver / OS 가 **품질의 차이를 드러내는 곳은 happy path 가 아니라** ① idle 시 전력을 얼마나 잘 빼는가 (ASPM), ② link error 가 났을 때 graceful 하게 처리되는가 (AER), ③ NVMe 가 갑자기 뽑혔을 때 driver 가 무한 reset loop 에 빠지지 않는가 (Hot Plug) 의 세 영역입니다.
 
 이 모듈을 건너뛰면 "정상 traffic 은 잘 가는데 laptop 배터리가 1 시간 만에 다 닳는다", "Cpl Timeout 한 번 났는데 시스템 전체 panic", "SSD 한 장 뽑았는데 OS 가 freeze" 같은 _현장 issue 의 99%_ 가 spec 의 어느 register 어느 bit 와 연결되는지 매핑이 안 됩니다. 반대로 D/L-state 와 AER 의 3 등급, Slot Capability 의 5 bit 를 잡아두면 `dmesg` 의 `pcieport ... AER: Corrected error received` 한 줄을 보고 **"아, 이건 LCRC 가 PHY 의 BER 상승으로 누적된 거고, threshold 넘으면 link retraining 트리거해야 하는 영역"** 처럼 1초 만에 분류됩니다.
@@ -512,6 +532,32 @@ void enable_aspm_l0s_l1(uint8_t bus, uint8_t dev, uint8_t func) {
     - D3cold 진입 후 **system 의 power rail 이 정상 차단되는지** = board-level 검증.
     - Hot Plug 시 enumeration 은 local (해당 bus tree 만) — 전체 시스템 enumeration 새로 안 함. SW 가 partial scan 지원해야 함.
     - AER Severity register 의 default 가 OS/board 마다 달라 같은 error 인데 한 시스템은 panic 한 시스템은 graceful 인 경우가 흔함 — `setpci` 로 명시적 설정 권장.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — AER severity 분류 (Bloom: Apply)"
+    AER report `Correctable Error: Receiver Error`. _적절한 대응_?
+
+    ??? success "정답"
+        - **Correctable**: PCIe layer 가 _자동 복구_ — 별도 action 없음.
+        - 단 _빈도_ 가 _임계값_ 초과 시 alert (silent reliability 악화).
+        - Threshold (예: 10 분당 100 error) 초과 → monitoring system alert.
+
+        Non-Fatal / Fatal 은 _graceful slot reset_ 또는 _panic_.
+
+!!! question "🤔 Q2 — ASPM L1 trade-off (Bloom: Evaluate)"
+    NVMe SSD, idle 90%. L1 enable?
+
+    ??? success "정답"
+        L1 exit ~7 µs. NVMe target latency 100 µs+ → exit 수용 가능 + idle power 절감 → **enable**.
+
+        예외: Optane SSD (~10 µs latency) → exit overhead 비율적 큼 → disable 권장.
+
+### 7.2 출처
+
+**External**
+- PCIe Specification — Power, AER, Hot Plug chapters
+- Linux PCI AER subsystem documentation
 
 ---
 

@@ -43,6 +43,20 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _같은 IP, 다른 BW_
+
+당신은 SoC 디자이너. 같은 GPU IP 를 두 SoC 에 통합. _A SoC_ 에서 BW 80 GB/s, _B SoC_ 에서 BW 50 GB/s. 똑같은 IP 인데 _40% 차이_.
+
+원인 추적:
+- Memory channel 수, frequency, DDR rank — _동일_.
+- 차이: **Memory Controller 의 scheduling 정책**.
+  - A: FR-FCFS (row hit 우선) + GPU 에 priority bin 할당.
+  - B: Round-robin (단순 fair).
+
+**FR-FCFS**: 같은 row 의 pending request 를 _먼저_ 처리 → row hit rate ↑ → row miss penalty (~42 cycle) 회피 → BW ↑.
+
+**Round-robin**: row 무시하고 ID 별 fair → row miss 폭증 → BW 폭락.
+
 Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지 봤습니다. 그러나 실제 SoC 에서는 **CPU + GPU + Display + DMA + ISP** 가 동시에 메모리에 access 하고, 각 요청은 bank conflict, refresh 충돌, R/W turnaround 라는 _시간_ 차원의 충돌을 겪습니다. **Memory Controller (MC) 는 이 모든 충돌을 해소하는 단일 결정자** — SoC 성능의 가장 직접적인 결정자입니다.
 
 이 모듈을 건너뛰면 "왜 같은 IP 에 같은 트래픽을 줘도 BW 가 다른가?" 같은 질문에 답할 수 없고, 검증 시 _기능적 정합성_ 외에 _성능 회귀_ 를 평가할 기준을 잡을 수 없습니다. 잘못된 스케줄링 정책 하나가 BW 50% 저하를 만들 수 있고, refresh 누락은 데이터 손실로 이어집니다. **MC 검증의 핵심은 functional correctness + performance regression 동시 관리**.
@@ -589,6 +603,33 @@ MC의 역할:
     - 평균 BW 가 정상이라도 latency tail / starvation 은 별도로 감시.
     - Open-page 는 random workload 에서 _역효과_ 가능 — workload profiling 필수.
     - Refresh 정책은 Module 01 의 cell physics 와 직결 — RFM/Row Hammer 와 반드시 함께 검증.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — FR-FCFS vs round-robin (Bloom: Analyze)"
+    Multi-master DRAM (CPU + GPU + Display). FR-FCFS 정책이 _Display starvation_ 가능?
+
+    ??? success "정답"
+        가능. FR-FCFS 는 _row-hit_ 우선 — Display 의 _random pattern_ 은 항상 row-miss → 우선순위 낮음.
+
+        해법: **QoS + Aging**:
+        - Display request 의 _AXI QoS_ field 가 high.
+        - _Aging counter_: 오래된 request 자동 priority 상승.
+        - 두 가지로 starvation 방어 + row-hit 효율 둘 다.
+
+!!! question "🤔 Q2 — Scheduler 비교 (Bloom: Evaluate)"
+    Open-page FR-FCFS vs Close-page Round-Robin. 어느 workload?
+
+    ??? success "정답"
+        - **HPC/AI** (sequential, high reuse): Open + FR-FCFS. row hit ↑.
+        - **OLTP database** (random small reads): Close + Round-Robin. row miss 어차피 많음, fairness 중요.
+        - **Hybrid (modern SoC)**: 동적 정책 전환 — workload 측정 후 5초마다 재결정.
+
+### 7.2 출처
+
+**External**
+- JEDEC DDR4/5 *Memory Controller* guidelines
+- Mutlu et al. *Memory Scheduling* 논문들
 
 ---
 

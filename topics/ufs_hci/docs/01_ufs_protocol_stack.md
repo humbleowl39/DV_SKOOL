@@ -42,6 +42,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _스마트폰 storage_ 의 _read latency_
+
+당신은 스마트폰 OEM. 사진 앱이 _느림_. 추적:
+- 앱이 _100 KB image_ read → UFS storage → 1 ms 소요.
+- _병렬_ 4 image read → 4 ms (1 ms × 4 순차).
+
+UFS 의 _병렬화_:
+- UTRD (UFS Transfer Request Descriptor) 32 슬롯.
+- 32 command 동시 _in-flight_.
+- 4 image 병렬 → _1 ms_ (concurrent).
+
+그런데 _bug_: HCI 가 UTRD 슬롯을 _1 개만_ 사용 (multi-slot doorbell 누락).
+- 4 image 순차 → 4 ms.
+
+**원인 파악**: 5 계층 중 **HCI layer** 의 doorbell 구현 누락. _UPIU 잘 만들고_ _UniPro 잘 전송_ 해도 _HCI 슬롯 관리_ 가 _병목_.
+
+이게 5 계층 _책임 분리_ 의 중요성 — 한 계층의 문제가 _다른 계층의 우수성_ 을 무용지물로.
+
 이후 모든 UFS HCI 모듈은 **"하나의 SCSI 명령이 어떻게 시리얼 라인 비트로 내려가고 다시 올라오는가"** 라는 한 질문에 답을 더해 갑니다. UTRD 가 왜 32 슬롯인지, doorbell 이 왜 SW/HW 분리의 핵심인지, gear 변경이 왜 그렇게 까다로운지 — 모두 이 5 계층 스택이 책임을 나눠 가지기 때문입니다.
 
 이 모듈을 건너뛰면 이후의 register 비트, UPIU 필드, error 시나리오가 **"외워야 하는 규칙"** 으로 보입니다. 반대로 5 계층을 정확히 잡고 나면, 디테일을 만날 때마다 **"이건 UTP 책임"**, **"이건 UniPro 책임"** 처럼 _어디에 속한 문제인지_ 가 자동으로 보입니다.
@@ -507,6 +525,39 @@ BootROM의 UFS 부팅 시퀀스 (soc_secure_boot_ko Unit 4와 연결):
     **원인**: HS-Gear 전환 시 PHY recalibration 동안 in-flight 상태였던 UPIU 가 drain 되지 않아, 새 Gear 의 라인 코딩으로 잘못 디코딩된다.
 
     **점검 포인트**: DME_SET(PA_PWRMode) 발행 전 UTRLDBR 이 0 인지, RTT/Data-Out 흐름이 모두 종료됐는지 sequence-level 에서 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 5 계층 분류 (Bloom: Apply)"
+    `LU=0 의 sense data` 가 wrong. 어느 계층 의심?
+
+    ??? success "정답"
+        **UTP (Application)** - SCSI Logical Unit / sense response 생성.
+
+        다른 가능성:
+        - UPIU header field 인코딩 → UTP transport.
+        - UniPro CRC → 안 잡힘 (전체 transfer 통과).
+
+        Sense data 는 _SCSI 응답_ 의 일부 → UTP 의 application 모듈이 주된 의심.
+
+!!! question "🤔 Q2 — Gear 전환 race (Bloom: Analyze)"
+    HS-Gear 변경 시 _in-flight UPIU loss_. Drain 시퀀스?
+
+    ??? success "정답"
+        1. **Quiesce SW**: 새 command issue 정지.
+        2. **Wait in-flight**: UTRLDBR 모니터 → 0 까지 wait.
+        3. **Drain link**: RTT/Data-Out 의 _residual buffer_ flush.
+        4. **DME_SET**: Gear 변경 명령 발행.
+        5. **PHY recal**: 새 Gear 로 PLL/CDR 재training.
+        6. **Resume**: SW restart.
+
+        각 step 사이 SVA 로 invariant 강제.
+
+### 7.2 출처
+
+**External**
+- JEDEC JESD220 *UFS Specification*
+- MIPI Alliance *UniPro Specification*
 
 ---
 

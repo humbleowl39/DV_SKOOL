@@ -42,9 +42,48 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _2 초 시간 제한_ 에 _N=10⁶_
+
+당신은 코딩 인터뷰. 문제:
+- _N = 10⁶_ 입력.
+- _2 초_ 시간 제한.
+
+당신의 풀이:
+- O(N²) → 10¹² 연산 → C++ 으로 _~1000 초_. **불가능**.
+- O(N log N) → 약 2 × 10⁷ 연산 → _~0.02 초_. **OK**.
+- O(N) → 10⁶ 연산 → _~0.001 초_. **OK**.
+
+**입력 크기 보고 _목표 복잡도_ 30 초 안에 결정** = 풀이의 절반.
+
+대략적 가이드 (C++ 기준, 1 초 = ~10⁸ 연산):
+
+| N 범위 | 최대 허용 복잡도 | 가능 패턴 |
+|--------|----------------|----------|
+| 10⁹ | O(log N) | Binary search |
+| 10⁸ | O(N) | Hash map, two pointers |
+| 10⁶ | O(N log N) | Sort + binary search |
+| 10⁴ | O(N²) | DP, nested loop |
+| 500 | O(N³) | Floyd-Warshall |
+| 20 | O(2^N) | Bitmask, brute force |
+
 빅테크 코딩 인터뷰의 핵심 평가 기준은 **올바른 복잡도 + 올바른 패턴 선택** 입니다. 입력 크기를 보고 "n=10⁵ 면 O(n²) 은 불가, O(n log n) 안에 풀려야 한다 → 정렬 + 이진 탐색 후보" 라고 30 초 안에 매핑할 수 있으면 풀이의 절반은 끝난 것입니다.
 
 이 모듈을 건너뛰면 이후 모든 모듈의 "이 문제는 이 패턴" 이라는 매핑이 _그냥 외워야 하는 룰_ 이 됩니다. 반대로 Big-O 직관이 잡히면, 이후 Hash Map / Two Pointers / DP 가 등장할 때 "왜 이 패턴이 이 N 범위에서 필요한가" 를 _이유_ 와 함께 받아들일 수 있습니다.
+
+!!! question "🤔 잠깐 — _O(N) 두 개_ vs _O(N²) 한 개_?"
+    한 풀이: O(N) + O(N) (두 단계 순차). 다른: O(N²) (nested).
+    어느 것이 더 빠른가?
+
+    ??? success "정답"
+        **항상 O(N) + O(N) = O(N)** 가 빠름.
+
+        - O(N) + O(N) → 합쳐도 O(N). 예: 100만 N → 200만 연산.
+        - O(N²) → N² 연산. 예: 100만 N → 1조 연산. **50만 배 차이**.
+
+        Big-O 의 _덧셈_ 은 _max_ 로 흡수 (상수 무시) — 두 단계 _순차_ 는 큰 것만 봄.
+        Big-O 의 _곱셈_ 은 _nested_ — 더 큰 차수로 폭주.
+
+        이게 _nested loop 회피_ 가 알고리즘 최적화의 _첫 단계_ 인 이유.
 
 ---
 
@@ -470,6 +509,33 @@ endmodule
     - **Amortized vs Worst-case 혼동**: `vector::push_back` 을 N 번 호출하면 amortized O(N) 이지만 single-call worst-case 는 재할당 시점에 O(N). 면접 기본은 worst-case 기준으로 합산.
     - **상수 무시의 함정**: N 이 작으면 상수가 큰 O(log N) 보다 단순 O(N) 이 빠를 수 있다. Big-O 는 _점근적_ 비교 도구이지 _절대적_ 비교가 아님.
     - **공간을 잊지 말기** — 시간만 답하면 면접관이 다시 물어봅니다.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 패턴 매핑 (Bloom: Apply)"
+    문제: "정렬된 배열에서 두 수의 합이 K 가 되는 pair 찾기". N=10⁶. 어떤 패턴?
+
+    ??? success "정답"
+        **Two pointers** (O(N)) 또는 **Binary search** (O(N log N)).
+
+        - **Two pointers** (best): left=0, right=N-1. sum < K → left++, sum > K → right--. _O(N)_.
+        - **Binary search**: 각 원소마다 보완값 binary search. _O(N log N)_.
+        - **Hash map**: _O(N)_ but _정렬됨_ 의 정보 낭비.
+        - **Nested loop**: _O(N²)_ → 10⁶ 에서 _불가능_.
+
+        N=10⁶ + 정렬됨 → two pointers 가 _첫 선택_.
+
+!!! question "🤔 Q2 — Space-time trade-off (Bloom: Evaluate)"
+    당신은 frequency 카운팅 문제. Hash map (O(N) time + O(N) space) vs Sort (O(N log N) time + O(1) space). 어느 것?
+
+    ??? success "정답"
+        **상황 따라**:
+        - **N 작음 + 메모리 충분**: Hash map (단순, 빠름).
+        - **N 매우 큼 + 메모리 제한**: Sort (in-place 가능, O(1) extra).
+        - **불변 데이터**: Hash map (반복 query 빠름).
+        - **한 번만 처리**: Sort (memory 절약).
+
+        면접에서: 보통 _hash map_ 이 _짧고 명확_ 한 답. 단 _follow-up_: "메모리 제한이라면?" → sort 답변 준비.
 
 ---
 

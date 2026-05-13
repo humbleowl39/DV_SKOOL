@@ -43,9 +43,48 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 스마트폰의 결제와 게임이 _같은 CPU_ 에서?
+
+당신은 스마트폰을 사용합니다. 동시에:
+- **게임 앱** (실시간 fps 60, 화면 그리기, 인터넷 통신).
+- **결제 모듈** (지문 인증, 카드 정보, 암호화 키).
+
+같은 CPU 에서 돌아갑니다. 그런데 _결제 모듈의 비밀키_ 가 _게임 앱_ 에서 읽히면 안 됩니다 — 해킹된 게임이 결제키를 훔쳐가는 _재앙_.
+
+**가장 순진한 해법: 다른 CPU 쓰기** — 비용 ↑, 면적 ↑, 통신 비용 ↑.
+
+ARM 의 해법: **TrustZone** — _같은 CPU 안에 두 세계_:
+- **Non-Secure World**: Android, 게임, 일반 앱.
+- **Secure World**: 결제 모듈, 지문 인증, DRM, 암호화 키.
+
+두 세계는 _서로 격리_ — Non-Secure 에서 Secure 메모리를 _읽지조차 못함_. 단 _Secure Monitor (EL3)_ 라는 _한 게이트_ 를 통해 전환 가능.
+
+| 자원 | NS 세계가 접근 가능? | S 세계가 접근 가능? |
+|------|---------------------|---------------------|
+| NS 메모리 | ✓ | ✓ (필요 시) |
+| S 메모리 | ✗ (TZASC 차단) | ✓ |
+| NS register | ✓ | ✓ |
+| S register | ✗ (TZPC 차단) | ✓ |
+
+**핵심 메커니즘**: AXI bus 의 _NS bit_ — 모든 transaction 에 "이게 NS 인가 S 인가" 표시. Slave 가 _자기 영역과 안 맞으면_ 거부.
+
 이후 모든 ARM Security 모듈은 한 가정에서 출발합니다 — **"같은 SoC 안에서 두 종류의 SW 가, 서로 메모리·레지스터·인터럽트를 보지 못한 채 공존한다"**. SCR_EL3.NS 가 왜 EL3 에서만 바뀌는지, BootROM 이 왜 EL3 에서 시작하는지, TZASC/TZPC/SMMU/GIC 가 왜 NS bit 를 따라가는지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 모든 spec/레지스터/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 EL × NS 라는 **두 축의 매트릭스** 를 정확히 잡고 나면, 새 register 를 만날 때마다 _"이건 어느 칸의 보호 자원인가"_ 처럼 위치가 보입니다.
+
+!!! question "🤔 잠깐 — _왜_ EL3 에서만 NS bit 변경?"
+    SCR_EL3.NS 라는 _한 비트_ 가 _세계 전환_ 결정. 왜 다른 EL 은 못 바꾸나?
+
+    ??? success "정답"
+        **권한 단조성**.
+
+        만약 EL1 (Linux 커널) 이 NS bit 를 바꿀 수 있으면 → Linux 커널이 _스스로_ S 세계로 진입 → S 메모리 read → _격리_ 가 의미 없어짐.
+
+        EL3 (Secure Monitor) 가 _유일한 NS bit 변경 권한_ 을 가짐으로써:
+        - NS world 의 어떤 code 도 S 자원에 _직접_ 접근 불가.
+        - 진입은 _SMC instruction_ 으로 EL3 호출 → EL3 가 _권한 검증 후_ NS bit 변경.
+
+        이게 ARM 의 _Single Gate_ 패턴 — 보안 모델의 _공리_. 게이트 하나만 잘 지키면 _모든 격리_ 가 성립.
 
 ---
 
@@ -627,6 +666,43 @@ flowchart TB
     - "TrustZone 켜짐 = 안전" 이 아니라 _TZASC/TZPC/GIC/SMMU 의 boot-time 설정 정확성_ 이 곧 안전입니다.
     - SCR_EL3.NS 변경은 EL3 의 _명시적 write_ 시점만 일어나야 합니다 — write 직후 한 cycle 안에 모든 master IF 가 새 NS 를 반영하는지 SVA 로 강제하세요.
     - EL3 미구현 SoC 에서는 여기 모듈의 모든 "EL3" 자리를 EL2 또는 monitor-less 모델로 재해석해야 합니다.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — World 전환 추적 (Bloom: Analyze)"
+    NS-EL0 의 게임 앱이 결제 모듈 호출. 어떤 _exception 시퀀스_ 로 전환?
+
+    ??? success "정답"
+        1. NS-EL0 → `SVC` → NS-EL1 (게임이 시스템 콜 통해 결제 모듈 호출 요청).
+        2. NS-EL1 → `SMC` → **EL3** (Secure Monitor).
+        3. EL3 가 SCR_EL3.NS = 0 으로 변경 + S-EL1 으로 `ERET`.
+        4. S-EL1 (OP-TEE) 가 결제 처리.
+        5. S-EL1 → `SMC` → EL3.
+        6. EL3 가 NS=1 으로 복원 + NS-EL1 으로 ERET.
+
+        총 _6 단계_. 각 단계가 _exception_ 으로 명시적 전환 — _임의 전환 불가_.
+
+!!! question "🤔 Q2 — NS bit 전파 검증 (Bloom: Apply)"
+    당신은 SoC verifier. SCR_EL3.NS 가 _AXI bus 의 AxPROT[1]_ 으로 전파됨. 검증 시나리오?
+
+    ??? success "정답"
+        - **Positive**: EL3 가 NS=1 write → 다음 cycle 의 AxPROT[1] = 1 인지.
+        - **Negative**: NS=0 (Secure) 인 상태에서 NS 메모리에 write 시도 → TZASC 가 차단하는지.
+        - **Cross-check**: 모든 master (CPU, DMA, GPU) 의 AxPROT[1] 이 _동일_ 한지 (race 없는지).
+
+        SVA: `assert property (rose(SCR_EL3.NS) |=> AxPROT[1] == 1)`.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `ARM Base System Architecture (BSA)` (id=712278023)
+- `ARM Server Base System Architecture (SBSA)` (id=755073043)
+- `Identity & Access control` (id=998899872)
+
+**External**
+- ARM, *Architecture Reference Manual for A-profile (ARM DDI 0487)*
+- ARM, *TrustZone for ARMv8-A* whitepaper
+- ARM Trusted Firmware (TF-A) docs, 2024
 
 ---
 

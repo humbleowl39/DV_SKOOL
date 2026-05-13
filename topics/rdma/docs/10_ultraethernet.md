@@ -45,9 +45,40 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
-RoCEv2 의 _lossless 가정_ 이 hyperscale AI training (수만 GPU) 에서 한계에 부딪히면서 등장한 **차세대 transport**. PFC 없이도 동작 + multipath 기본 + libfabric 시맨틱 호환을 목표로 합니다. 사내 IP 는 아직 RoCEv2 1차이지만 **UEC 호환 준비** 가 향후 spec 영향을 결정하므로 검증/설계 모두 미리 알아야 합니다.
+### 1.1 시나리오 — RoCEv2 가 50000 GPU 에서 _부서지는_ 순간
+
+당신은 50000 GPU AI 클러스터를 운영합니다. RoCEv2 로 시작했는데:
+
+- **PFC storm**: 한 link 의 incast 가 cascading PAUSE → 1000 link 가 일시 정지 → 학습 step time 폭주.
+- **DCQCN 의 한계**: 50000 sender 가 동시에 ECN 신호 받으면 _전부 동시에 감속_ → throughput collapse → 회복 후 다시 incast.
+- **Single-path**: ECMP 가 _flow-level_ 분산만, _packet-level_ 안 됨. 한 큰 flow 가 한 path 에 쏠림 → tail latency 폭주.
+
+**RoCEv2 의 _lossless 가정_** 이 hyperscale 에서 한계. 운영 비용 (PFC 관리, ECN tune) 도 큼.
+
+**Ultra Ethernet Consortium (UEC, 2023)** 의 해법: "**lossy 허용 + multipath 기본 + message 단위 ordering**". 즉 _packet drop_ 을 정상으로 받아들이고, 여러 path 에 _packet-level_ 분산하며, _메시지 단위_ 로만 순서 보장.
+
+|  | RoCEv2 | **UEC** |
+|---|--------|---------|
+| Drop 가정 | 0 (lossless) | 허용 (lossy OK) |
+| Ordering | packet-level strict | message-level (packet OOO 가능) |
+| Multipath | flow-level (ECMP) | packet-level (PDC 가 spray) |
+| PFC 의존 | 필수 | _제거_ |
+| 협상 모델 | 1:1 connection (RC) | per-PDC + SACK + retransmit |
+| 시맨틱 API | Verbs | libfabric (MPI 친화) |
+
+사내 IP 는 아직 RoCEv2 1차이지만 **UEC 호환 준비** 가 향후 spec 영향을 결정하므로 검증/설계 모두 미리 알아야 합니다.
 
 또한 검증 관점에서 UEC 는 **message 단위 ordering** 으로 강하게 갈리는데, RoCEv2 의 strict in-order assertion 을 UEC 에 그대로 옮기면 false fail 폭발 — 가정 변경 지점을 명확히 잡는 것이 이 모듈의 목적.
+
+!!! question "🤔 잠깐 — UEC 가 RoCEv2 를 _완전 대체_ 할까?"
+    UEC 가 시작되면 RoCEv2 가 사라질까? 단기/중기/장기로 생각해보세요.
+
+    ??? success "정답"
+        - **단기 (~2026)**: RoCEv2 가 시장 다수, UEC 가 hyperscale (>10K GPU) 만.
+        - **중기 (2027~2029)**: UEC HCA 가 다수의 hyperscaler 채택. RoCEv2 는 enterprise / smaller cluster 에 남음.
+        - **장기 (2030+)**: 두 표준이 공존하거나 _수렴_. 같은 HCA 가 두 모드 다 지원할 가능성 (Mellanox/NVIDIA 의 길).
+
+        검증/설계 함의: **두 transport 의 _기저 시맨틱_** (PSN, ordering, retransmit) 의 _차이점_ 을 _interface_ 로 분리. Hard-code 하면 UEC 전환 시 RTL/TB 모두 폭발.
 
 ---
 
@@ -391,6 +422,33 @@ UEC-CC 는 **WAN 비대상**이며, low-latency control loop (1µs ~ 20µs) 를 
     - 사내 IP 의 UEC 지원은 **planning / 비교 검토 단계** — 실 검증 자산은 아직 RoCEv2 가 1차.
     - libfabric API 매핑은 vendor 별 implementation detail — UEC spec 자체가 강제하지 않으므로 검증 시 가정 명시 필요.
     - INC (In-Network Collectives) 는 switch 협조가 필요해 lab 전체 설정 의존성이 큼. 단위 검증에는 unsuitable.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Ordering 가정 (Bloom: Analyze)"
+    RoCEv2 scoreboard 가 _packet-level strict in-order_ 를 가정. UEC 에 그대로 옮기면 어떤 시나리오에서 _false fail_ 이 발생하는가?
+
+    ??? success "정답"
+        UEC 는 _packet-level OOO_ 허용. PDC 가 multipath 로 spray 하면 packet 이 _다른 순서_ 로 도착 가능. Scoreboard 가 PSN 단조 증가를 assert 하면 즉시 fail.
+
+        대응: _message-level_ ordering 만 assert (SOM/EOM/MID 기반). _packet-level_ 은 reorder buffer 후 message 재조립 확인.
+
+!!! question "🤔 Q2 — Multipath spray (Bloom: Apply)"
+    UEC PDC 가 multipath spray 를 어떻게 결정하는가? RoCEv2 의 ECMP 와 _무엇이 다른가_?
+
+    ??? success "정답"
+        - **RoCEv2 ECMP**: switch 가 _flow_ (5-tuple) hash 로 분산. 한 flow 는 한 path 에 _고정_.
+        - **UEC PDC spray**: NIC 가 _packet 단위_ 로 path 결정 (round-robin, telemetry-based, ...). 같은 flow 의 packet 도 다른 path 통과.
+
+        결과: 한 큰 flow 의 throughput 이 _path 수만큼 증가_ — bottleneck 해소.
+
+### 7.2 출처
+
+**External**
+- Ultra Ethernet Consortium (UEC) Spec v1.0 (2024)
+- libfabric API docs (OFI)
+- *Demystifying NCCL* — arXiv:2507.04786 (2025)
+- *RDMA over Ultra Ethernet* — UEC whitepaper
 
 ---
 

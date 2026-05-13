@@ -43,9 +43,45 @@
 
 ## 1. Why care? — LLM 을 "내부 구조" 로 이해해야 하는 이유
 
+### 1.1 시나리오 — "왜 같은 모델인데 API 비용이 _10 배_ 차이?"
+
+당신은 같은 LLaMA-2 13B 모델을 두 사용자에게 서비스합니다:
+
+- **사용자 A**: 500-token 요약 작업. 응답 시간 1 초.
+- **사용자 B**: 32K-token long-document QA. 응답 시간 30 초, **GPU 비용 80 배**.
+
+같은 모델인데 왜? **답은 KV cache** — LLaMA-2 13B 의 KV cache 는 _토큰 당 ~1 MB_ 입니다 [Introl 2025]. 32K context 면 **32 GB 의 GPU 메모리** 가 _한 sequence_ 에만. Batch=32 로 운영하면 **1 TB**.
+
+이게 LLM API 의 _가격이 토큰 수에 _제곱_ 비슷하게 늘어나는_ 정확한 이유:
+
+| Context | KV cache | GPU 1 개에서 batch 가능 수 | 토큰당 비용 |
+|---------|----------|--------------------------|------------|
+| 2K | 2 GB | 16 | $0.001 |
+| 8K | 8 GB | 4 | $0.004 |
+| 32K | 32 GB | 1 (또는 multi-GPU) | $0.04 |
+
+이 _비용 cliff_ 가 KV cache 의 크기에서 _기계적으로_ 나옵니다. Magic 이 아닙니다.
+
+### 1.2 그래서 이 모듈을 잡아야 한다
+
 이후 모든 모듈 (Prompt / RAG / Agent / Strategy) 은 한 가정에서 출발합니다 — **"LLM 은 magic box 가 아니라 _자기회귀 토큰 생성기_ 다"**. KV cache 메모리가 왜 폭증하는지, context window 가 왜 비싼지, batch 가 왜 throughput 을 결정하는지, MoE 가 왜 "총 파라미터 ≠ 활성 파라미터" 인지 — 모두 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 prompt/RAG 결정이 "그냥 외워야 하는 best practice" 가 됩니다. 반대로 이 가정을 정확히 잡으면 latency / 비용 / 품질 trade-off 를 만날 때마다 _이유_ 가 보입니다.
+
+!!! question "🤔 잠깐 — KV cache 메모리는 _왜_ 그렇게 크나?"
+    LLaMA-2 13B 의 토큰 당 1 MB KV cache. 어디에서 오는 수치인지 _대략_ 계산해보세요.
+
+    힌트: hidden dim ≈ 5120, 40 layers, K + V 각각, 16-bit floats.
+
+    ??? success "정답"
+        토큰 당 KV cache = `2 × num_layers × hidden_dim × 2 byte`
+        = `2 × 40 × 5120 × 2` = **819 KB ≈ 1 MB**.
+
+        ("2 ×" 는 K 와 V 각각, 마지막 "2 byte" 는 fp16/bf16).
+
+        그래서 _layer 수 + hidden dim + fp16_ 의 곱이 토큰당 메모리. **모델이 커지면 _layer 와 hidden 이 같이 커지므로_ KV cache 가 빠르게 늘어남.**
+
+        이게 GQA / MLA / Flash Attention 같은 _최근 모든 추론 최적화_ 가 "KV 줄이기" 에 집중하는 이유.
 
 ---
 
@@ -90,11 +126,44 @@ flowchart LR
 
 세 개의 빨간 원이 Transformer 에서는 모두 사라지고, 대신 **attention 행렬** 이 토큰 쌍의 관계를 직접 잡습니다.
 
-### 왜 이렇게 설계됐는가 — Design rationale
+### 왜 이렇게 설계됐는가 — 두 순진한 시도가 실패한 결과
+
+Transformer 도 _하늘에서 떨어진_ 게 아닙니다. 두 순진한 시도가 _구체적으로 어디서 막혔는지_ 의 결과물입니다.
+
+**시도 1 — "RNN/LSTM 으로 sequence 처리"** (1997-2017)
+
+순차적으로 처리하면 자연스럽다. 결과:
+- **Vanishing/exploding gradient**: 100+ 토큰 시퀀스에서 학습 불가능 → BPTT 가 깊은 timestep 의 gradient 를 잃거나 폭주.
+- **GPU 병렬화 불가**: `tᵢ₊₁` 계산이 `tᵢ` 결과를 기다림 → GPU 의 수천 코어 활용 못함 → 학습 속도 cap.
+- **장거리 의존성 손실**: "100 토큰 전의 그 단어가 지금 토큰을 결정한다" 같은 패턴 학습 어려움.
+
+**시도 2 — "Convolution 으로 local window 처리"** (ByteNet, ConvS2S 등 ~2017)
+
+각 토큰이 _주변 N 개 토큰_ 만 본다. 결과:
+- **장거리 의존성 더 손실**: window 밖 토큰을 보려면 layer 를 쌓아야 → 표현력 제한.
+- **고정 receptive field**: 동적으로 "이 토큰은 100 토큰 전 그 단어를 봐야" 같은 결정 불가.
+
+**해법 — Attention "모든 쌍 점수 한 번에"**
+
+세 요구가 동시에 풀려야 했습니다:
+
+1. **Gradient 가 깊은 sequence 에도 흐르도록** → attention 의 _직접 path_ (모든 토큰이 다른 모든 토큰을 한 step 으로 봄).
+2. **GPU 병렬화 가능** → `Q @ Kᵀ` 의 _큰 행렬곱_ 한 번이 모든 쌍을 계산.
+3. **장거리 의존성 직접 학습** → attention weight 가 _어느 쌍이 중요한지_ 를 학습.
+
+이 세 요구의 교집합이 _self-attention_ + _multi-head_ + _residual + LayerNorm_ 의 패키지입니다.
 
 GPU 는 행렬곱에 최적화되어 있습니다. 토큰을 "순차" 로 처리하면 `tᵢ₊₁` 계산이 `tᵢ` 결과를 기다려야 하므로 GPU 병렬화가 막힙니다. Transformer 는 "토큰 쌍의 점수를 한 번의 `Q @ Kᵀ` 행렬곱으로 계산" 하는 자세를 잡아 학습 단계의 병렬화를 풀었습니다. 그 대가로 추론 단계에서는 여전히 한 토큰씩 생성해야 하고, 그래서 KV cache · GQA · Flash Attention 같은 추론 최적화가 모두 필요해진 것입니다.
 
 이 한 줄 — _"학습은 병렬, 추론은 순차"_ — 이 LLM 비용 구조 전체의 출발점입니다.
+
+#### 실패 모드 — 세 축이 빠지면 정확히 무엇이 일어나는가
+
+| 빠진 축 | 시스템 증상 | 측정 가능한 metric |
+|--------|------------|------------------|
+| **KV cache 없음** (매 토큰마다 전체 시퀀스 재계산) | latency 가 _시퀀스 길이의 제곱_ 으로 증가 | 32K 시퀀스에서 토큰 당 latency 1000× |
+| **Multi-head 없음** (single head) | 다양한 관계 (syntax + semantic + position) 동시 표현 못함 | downstream 성능 -5~10% |
+| **Position encoding 없음** | 토큰 순서 무관 (bag-of-tokens) | "I love you" vs "you love I" 구분 불가 |
 
 ---
 
@@ -646,6 +715,62 @@ Temperature 효과:
     **원인**: 추론 서버 설정에서 `use_cache=False` 가 디버그 목적으로 설정된 채 운영에 배포되거나, 배치 크기가 급증할 때 캐시 메모리 부족으로 자동 비활성화되는 경우가 있다.
 
     **점검 포인트**: 추론 서버 응답 헤더 또는 로그에서 `cached_tokens` 카운트가 0 인지 확인. `time-to-first-token` 이 `total_tokens × generation_time` 에 비례하면 KV Cache 미작동 의심. 배포 설정 파일의 `max_cache_size` 항목이 모델 레이어 수 × batch × context 에 충분한지 검토.
+
+### 7.1 자가 점검 — 이 모듈을 진짜로 이해했는지
+
+!!! question "🤔 Q1 — KV cache 비용 계산 (Bloom: Analyze)"
+    LLaMA-2 70B 모델 (80 layers, hidden 8192, fp16) 의 _8K context_ 한 sequence 의 KV cache 메모리는?
+    그리고 _batch 32_ 라면? GPU 1 개 (H100 80GB) 에서 _batch 가능 수_ 는?
+
+    ??? success "정답"
+        - 토큰당: `2 × 80 × 8192 × 2 byte` ≈ 2.6 MB.
+        - 8K seq: 2.6 × 8192 ≈ **21 GB**.
+        - Batch 32: 21 × 32 ≈ **672 GB** → H100 80 GB 한 개로 불가능. _Multi-GPU 또는 batch 축소_ 필요.
+        - H100 80GB 의 KV 가용량 (모델 130GB 의 대부분이 weight, ~40GB 만 KV): batch ≈ **1~2**.
+
+        이게 _70B 모델의 long-context 서비스가 비싼 정확한 이유_. PagedAttention / MLA 같은 최적화가 _이 cap 을 push out_ 함.
+
+!!! question "🤔 Q2 — Greedy vs Sampling 선택 (Bloom: Apply)"
+    당신은 LLM 으로 SystemVerilog 모듈을 생성한다. T=0 (greedy) 와 T=0.7 (sampling) 중 _어느 것_ 을 _왜_ 선택해야 하나?
+
+    ??? success "정답"
+        **T=0 (greedy)**. 이유:
+        - SV 코드는 _문법적 정확성_ 이 결정적 — T=0.7 면 `always_ff` 가 `always` 로 됐다거나 미세한 흔들림이 _컴파일 에러_ 가 됨.
+        - 또한 _재현 가능성_ 이 중요 — 같은 prompt 가 같은 결과를 내야 디버그 가능.
+        - 단점: 다양성 0 — 한 시도 실패하면 _다른 시도_ 도 동일 결과. 그래서 _다양성 필요할 때만_ T=0.3~0.5 권장.
+
+!!! question "🤔 Q3 — Context window 확장 trade-off (Bloom: Evaluate)"
+    당신은 4K → 32K context 로 확장하고 싶다. 두 가지 옵션:
+    - **(a)** Retraining 으로 32K 학습.
+    - **(b)** RoPE 기반 외삽 (YaRN / NTK-aware).
+
+    두 옵션의 trade-off 를 3 차원으로 비교하시오.
+
+    ??? success "정답"
+        | 차원 | (a) 32K Retrain | (b) RoPE 외삽 |
+        |------|----------------|--------------|
+        | 비용 | _매우 큼_ (수 주의 GPU 학습) | 0 (코드 한 줄) |
+        | 성능 | 32K 에서 최적 | 32K 에서 성능 _저하 가능_ (8K 학습 기반) |
+        | 안정성 | 검증된 | _hallucination_ 증가 가능 |
+
+        실무: (b) 로 시작 → 성능 부족 시 (a) 로 escalate.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Understanding LLMs: A Comprehensive Overview from Training to Inference` (id=910786585)
+- `Literature Reviews: LLM Infrastructure and Systems` (id=958005272)
+- `MoE` (id=964100206)
+- `LLM | Inference` (id=996769852)
+- `Cache basic` (id=941817928)
+
+**External**
+- *KV Caching Explained* — Hugging Face blog, 2025
+- *KV Cache Optimization* — Introl Blog, 2025 (LLaMA-2 70B 토큰당 ~2.6 MB)
+- *KV Cache Optimization via Multi-Head Latent Attention* — PyImageSearch, 2025 (8× MLA 축소)
+- *Attention is All You Need* — Vaswani et al., 2017 (Transformer 원논문)
+- *RoFormer: Enhanced Transformer with Rotary Position Embedding* — Su et al., 2021 (RoPE)
+- *FlashAttention* — Dao et al., NeurIPS 2022
 
 ---
 

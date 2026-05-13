@@ -42,6 +42,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Fault Injection_ 으로 _RSA verify_ 우회
+
+2017: 한 SoC 의 RSA signature verify 가 _glitch 공격_ 으로 우회됨.
+
+공격:
+1. BootROM 이 RSA verify 실행 중.
+2. 정확한 시점에 _전원 라인_ 에 _glitch_ (~ns 단위 voltage spike).
+3. _Verify result branch_ instruction 에서 _NOP_ 되거나 _wrong branch_.
+4. _Invalid signature_ 인데도 _OK 처리_ → 임의 image load.
+
+**Fault injection 의 본질**: _alle algorithm_ 정확해도 _실행 환경_ 이 _공격당하면_ 결과 corruption. 검증 시 _silicon spec_ 만 검증 ≠ 보안.
+
+방어:
+- **Double verify**: verify 후 _다시 verify_, 두 결과 비교 → glitch 한 번에 둘 다 우회 어려움.
+- **Random delay**: glitch timing 예측 못하게.
+- **Hardware glitch detector**: voltage / clock monitor.
+
+검증 시 _이런 negative scenario_ 를 _명시적으로_ 시뮬에 inject 해야 _진짜 보안_.
+
 Module 01-04 는 _정상적으로_ chain 이 동작하는 모습이었습니다. 이번 모듈은 그 chain 에 _공격자가 끼어들 자리_ 가 어디인지를 봅니다 — 그리고 그 자리마다 **DV 가 reproducible 한 negative scenario 로 미리 두드려야** 합니다. 그러지 않으면 spec 만 맞춘 검증 = false sense of security.
 
 이후 Module 07 (DV 방법론) 의 _Active UVM Driver / 5 covergroup / Negative scenario framework_ 가 모두 이 모듈에서 본 surface 를 기반으로 설계됩니다. 즉 Module 05 = 공격자 관점 모델, Module 07 = 그것을 검증으로 환원한 결과.
@@ -526,6 +545,37 @@ endclass
     - 컴파일러 최적화로 constant-time / 이중 검증이 사라질 수 있음 — final binary 분기 패턴 검사.
     - Glitch detector 자체도 글리치 surface — duplicate sensor 권장.
     - Negative scenario 는 _카테고리_ 화 — 단순 나열 X. 5 카테고리 (Crypto / Rollback / Fault / Input / Config) 가 default.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 글리치 surface 식별 (Bloom: Apply)"
+    `if (signature_verify(img) == OK) jump(img);` 코드를 글리치 관점에서 _최소 2 가지_ 약점은?
+    ??? success "정답"
+        글리치 surface:
+        1. **분기 자체**: `==` 비교 결과를 글리치로 OK 로 위조 → jump 강제.
+        2. **단일 호출**: `signature_verify` 가 1 회 → return value 만 위조하면 됨.
+        - **방어**: 이중 호출 + flow magic + HW glitch detector → 셋이 일치해야 jump.
+        - 추가: `signature_verify` 내부의 memcmp 도 글리치 surface — constant-time + double-check.
+
+!!! question "🤔 Q2 — TOCTOU 본질 (Bloom: Analyze)"
+    Verify-then-execute 가 _이미_ 수행됐는데도 TOCTOU 공격이 가능한 이유?
+    ??? success "정답"
+        TOCTOU = Time-Of-Check ↔ Time-Of-Use:
+        - Verify 시점: image hash A 가 검증됨.
+        - Use 시점 (jump): 그 사이에 DMA / 다른 마스터가 SRAM 의 image 를 B 로 swap → B 가 실행됨.
+        - **방어**: verify 완료 후 SRAM region lock + 모든 DMA disable → use 까지 region 불변.
+        - 비유: 보안 검색대 통과 후 raw bag 으로 바뀌면 무의미 — 검색 후 sealed bag 으로 유지해야 함.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Secure Boot Threat Model` — FI/SCA/Rollback/TOCTOU 매트릭스
+- `Negative Scenario Catalog` — 5 카테고리 분류
+
+**External**
+- Common Criteria *AVA_VAN* (Vulnerability Analysis) — attack potential 평가
+- *The Hardware Hacker* (Andrew Huang) — FI / SCA 실제 사례
+- NIST SP 800-90B — 엔트로피 / 글리치 검출
 
 ## 다음 단계
 

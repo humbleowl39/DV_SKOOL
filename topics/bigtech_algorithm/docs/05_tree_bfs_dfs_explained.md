@@ -42,9 +42,45 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — BFS vs DFS _선택의 결정 인자_
+
+같은 그래프 문제도 BFS / DFS 선택이 _정답_ 을 결정합니다:
+
+| 문제 | 답 | 이유 |
+|------|---|------|
+| **최단 경로** (unweighted) | BFS | 거리 순서 보장 |
+| **모든 경로** (DAG) | DFS | path 추적 단순 |
+| **Connected components** | BFS or DFS | 둘 다 OK |
+| **Cycle detection** | DFS | recursion stack 으로 자연스러움 |
+| **Bipartite check** | BFS | level coloring |
+| **Topological sort** | DFS | post-order natural |
+
+**잘못 선택하면**:
+- 최단 경로에 DFS → 첫 도달 경로가 _최단_ 아닐 수 있음.
+- Topological sort 에 BFS → Kahn's algorithm 으로 가능하지만 _DFS 가 단순_.
+
 Tree / Graph 탐색은 **인터뷰에서 가장 큰 문제 군** 입니다. 상속 / 트리 / 의존성 / 그래프 모두 같은 패턴 (BFS / DFS) 으로 풀립니다. 이 모듈은 "이 문제가 BFS 인지 DFS 인지" 를 빠르게 분류하는 직관과, DFS 4 줄 템플릿으로 _대부분의 트리 문제를 풀이로 연결하는_ 메타-스킬을 만듭니다.
 
 이 모듈을 건너뛰면 트리/그래프 문제가 매번 _처음부터 풀이를 만들어야 하는_ 일이 됩니다. 반대로 **DFS 템플릿 (base / left / right / combine)** 이 손에 익으면, Max Depth · Tree Sum · Is Balanced · Path Sum 이 모두 _10 줄 안에_ 끝납니다.
+
+!!! question "🤔 잠깐 — DFS 의 _stack overflow_?"
+    DFS 가 _재귀_ 로 구현 시 깊은 트리 (예: N=10⁶ skewed tree) 에서 _stack overflow_. 어떻게?
+
+    ??? success "정답"
+        **Iterative DFS** (명시적 stack):
+
+        ```python
+        stack = [root]
+        while stack:
+            node = stack.pop()
+            # process
+            for child in reversed(node.children):
+                stack.append(child)
+        ```
+
+        OS stack (보통 1-8 MB) 한계 회피. heap 의 _explicit stack_ 사용 → GB 단위 OK.
+
+        Python: `sys.setrecursionlimit()` 도 가능하지만 OS stack 자체가 한계 → iterative 가 안전.
 
 ---
 
@@ -682,6 +718,38 @@ endmodule
     - **Stack overflow** — skewed tree 에서 재귀 깊이 한계 도달 가능. 입력 N 큰 케이스는 명시적 stack 검토.
     - **Visited 표시** — 그래프 (트리 아님) 에서 cycle 무한 루프 방지의 핵심.
     - **Level snapshot** — BFS level-order 에서 `level_size = queue.size()` 한 줄을 빠뜨리면 모든 레벨이 섞임.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Tree 의 최대 depth (Bloom: Apply)"
+    DFS 템플릿 한 줄?
+
+    ??? success "정답"
+        ```python
+        def max_depth(node):
+            if not node: return 0
+            return 1 + max(max_depth(node.left), max_depth(node.right))
+        ```
+        4 줄 template (base / left / right / combine). 모든 _tree aggregate_ 패턴 (sum, depth, balance, path) 같은 모양.
+
+!!! question "🤔 Q2 — Cycle detection (Bloom: Analyze)"
+    Directed graph 의 cycle. DFS 가 어떻게 감지?
+
+    ??? success "정답"
+        **3-color marking**:
+        - WHITE: 미방문.
+        - GRAY: 방문 중 (현재 DFS path).
+        - BLACK: 완료.
+
+        DFS 중 GRAY node 만나면 = _back edge_ = **cycle**.
+
+        BFS 는 cycle detection 부적합 — directed graph 의 _backward edge_ 추적 어려움. Topological sort + count 방식이 BFS 대안.
+
+### 7.2 출처
+
+**External**
+- *Introduction to Algorithms* — CLRS Chapter 22 Graph
+- *Algorithm Design Manual* — Skiena
 
 ---
 

@@ -43,9 +43,46 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _수십억 시나리오_ 를 _초_ 안에
+
+당신은 AXI bridge IP 의 _deadlock 부재_ 를 검증해야 합니다.
+
+**Simulation 접근**:
+- 100 시나리오 작성, 각각 100K cycle 시뮬.
+- 1 일 후: 95% 시나리오 통과. 그런데 _남은 5%_? 그리고 _아직 안 본_ corner case?
+- 일주일 후: 1000 시나리오 통과. 신뢰도 ~99%, 단 _수학적 보장_ 없음.
+
+**Formal 접근**:
+- AXI handshake 의 _deadlock-free property_ 한 줄 작성.
+- JasperGold 가 모든 가능한 입력 sequence 를 _수학적으로_ 탐색.
+- 30 분 후: **PROVEN** — _어떤 입력 시퀀스_ 에서도 deadlock 없음 _수학 증명_.
+
+**Trade-off**:
+| | Simulation | Formal |
+|---|-----------|--------|
+| 검증 범위 | _직접 본_ 시나리오 | _모든_ 시나리오 (수학) |
+| 시간 | 일 ~ 주 | 시간 ~ 일 |
+| 디자인 크기 | 임의 | _state explosion_ 한계 |
+| 결과 신뢰도 | 통계적 | _수학적_ |
+
 이후 모든 Formal 모듈은 한 가정에서 출발합니다 — **"property 한 개를 증명하면 모든 입력/모든 cycle 에서 violation 이 없음을 수학적으로 보장한다"**. SVA 가 왜 implication 중심으로 쓰이는지, JasperGold 가 왜 Cover/Assume 을 강제하는지, BOUNDED 가 왜 PROVEN 이 아닌지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후 모든 Formal 결정이 "도구 사용법" 으로만 보입니다. 반대로 이 가정을 정확히 잡으면 PROVEN/BOUNDED/CEX 어떤 결과를 받아도 **"엔진이 무엇을 보지 못했는가"** 가 보입니다 — 그게 Formal 엔지니어의 핵심 역량입니다.
+
+!!! question "🤔 잠깐 — Formal 이 _모든 IP_ 에 안 쓰이는 이유?"
+    Formal 이 _수학적 증명_ 이면 _simulation 대체_ 가능하지 않나? 왜 둘 다 사용?
+
+    ??? success "정답"
+        **State explosion**.
+
+        Formal 의 _수학적 증명_ 은 _design state space_ 가 _작을 때_ 만 가능. 큰 IP (예: CPU pipeline) 는 state 가 _2^1000_ 이상 → 도구가 _수렴 못함_ (BOUNDED 까지만 = N cycle 만 증명).
+
+        규칙:
+        - **작은 + critical**: arbiter, FIFO, AXI bridge → Formal.
+        - **큰 + complex**: CPU pipeline, GPU → Simulation + UVM.
+        - **Hybrid**: 큰 IP 의 _작은 sub-module_ 만 Formal, _전체_ 는 Simulation.
+
+        Formal 은 _silver bullet 아님_ — _좁은 영역_ 의 _깊은 보장_.
 
 ---
 
@@ -525,6 +562,44 @@ flowchart LR
     **원인**: JasperGold/VC Formal 의 PROVEN 과 BOUNDED 는 다르다. BOUNDED 는 "현재 도달한 N cycle 까지 위반 없음" 일 뿐 N+1 cycle 부터의 동작은 보장하지 않는다. tool 의 status 만 보고 "통과" 라고 판단하면 induction 실패를 놓친다.
 
     **점검 포인트**: 매 property 의 결과를 PROVEN / BOUNDED / CEX 별로 분류해 보고. BOUNDED 인 경우 (1) helper invariant 추가, (2) abstraction (blackbox / cut), (3) max bound 명시 후 sign-off 위험을 문서화. Sign-off 시 BOUNDED 만 있는 property 는 "검증 불완전" 으로 표시.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — PROVEN vs BOUNDED (Bloom: Analyze)"
+    Property A: PROVEN. Property B: BOUNDED (bound=100 cycle). 둘의 _신뢰도 차이_?
+
+    ??? success "정답"
+        - **PROVEN**: _수학적_ 보장. _모든 cycle, 모든 입력_ 에서 violation 없음.
+        - **BOUNDED (100)**: _100 cycle 까지_ 만 보장. 101 cycle 부터 _unknown_.
+
+        Sign-off 위험:
+        - PROVEN: 안전.
+        - BOUNDED: _운영 시간_ 이 _bound_ 초과 가능 (예: counter overflow at cycle 2^32) → 위반 잠복.
+
+        대응: bound 가 _critical path_ 모두 cover 하는지 분석.
+
+!!! question "🤔 Q2 — Formal 적용 결정 (Bloom: Evaluate)"
+    당신은 verification lead. 어떤 IP 를 _Formal_ vs _Simulation_?
+
+    ??? success "정답"
+        **Formal 적합**:
+        - 작은 state space (arbiter, FIFO, AXI bridge).
+        - Critical safety property (예: never deadlock).
+        - Concurrent corner case 가 많음 (race, deadlock).
+
+        **Simulation 적합**:
+        - 큰 IP (CPU pipeline, GPU).
+        - Sequential workload (datapath throughput).
+        - Coverage 가 _자연스럽게_ 채워지는 시나리오.
+
+        Hybrid: 큰 IP 의 _작은 sub-module_ 에 Formal.
+
+### 7.2 출처
+
+**External**
+- Cadence JasperGold User Guide
+- Synopsys VC Formal Reference
+- *Formal Verification: An Essential Toolkit for Modern VLSI Design* — Erik Seligman et al.
 
 ---
 

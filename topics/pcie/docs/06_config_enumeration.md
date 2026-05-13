@@ -42,6 +42,19 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _lspci 안 보임_
+
+당신은 새 PCIe device. Link up (LTSSM L0), 그런데 _`lspci`_ 에 _안 보임_. Driver 인식 못함.
+
+진단 순서:
+1. LTSSM = L0? → OK.
+2. Configuration Space read 시도 → _all 0xFF_.
+3. 원인: Device 가 _Configuration Read TLP_ 에 _응답 안 함_ (Endpoint type field 누락 또는 BDF mismatch).
+
+해법: Device 의 _Configuration Space header_ (offset 0x00 - 0x3F) 에 _Vendor ID, Device ID_ 등을 정확히 channel.
+
+**Configuration Space 가 OS / firmware 의 _첫 device 식별 메커니즘_** — 잘못되면 _전체 기능 무효_.
+
 **Bring-up 시 device 가 enumerate 되지 않으면 어떤 기능도 안 동작** 합니다. Configuration Space 가 OS / firmware 가 device 를 발견하고 자원 (memory range, IO range, IRQ) 을 할당하는 표준 메커니즘. 검증/설계 결정의 첫 관문.
 
 이 모듈의 어휘 — **BDF, Type 0/1, BAR, Cap Pointer, ECAM** — 가 이후 SR-IOV (Module 08), AER (Module 07), MSI/MSI-X (Module 03) 의 구성 기반. 한 번 잡고 나면 `lspci -vvv` 출력의 모든 줄이 _"아, 이건 Capability ID 0x10 의 LnkSta 구나"_ 처럼 즉시 매핑됩니다.
@@ -543,6 +556,40 @@ PCIe ARI (Alternative Routing-ID Interpretation) Capability:
     - BAR sizing 의 "write all-1" 은 device 의 register 를 망가뜨리지 않음 (sizing 모드만 활성화) — 그래서 OS 가 부팅 때마다 안전하게 호출.
     - 64-bit BAR 가 두 BAR slot 차지하는 걸 모르고 BAR0+BAR1 둘 다 32-bit 로 가정한 driver 가 의외로 많음.
     - PCIe Extended Capability 가 disabled 되어 있는데 OS 가 ATS/SR-IOV 사용 시도 → silent failure. Driver 가 capability presence 검증해야 함.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — BAR sizing protocol (Bloom: Apply)"
+    Device 의 BAR 가 _얼마나 큰 영역_ 요청? OS 의 sizing 절차?
+
+    ??? success "정답"
+        OS sequence:
+        1. BAR read → 현재 base address.
+        2. BAR write 0xFFFFFFFF → 모든 bit 1.
+        3. BAR read → device 가 _자기 size 비트_ 만 1 로 답함.
+        4. OS 가 _low bit_ 의 0 영역으로 size 계산 (예: 0xFFF0_0000 → 1 MB 영역).
+
+        Device register _안 망가짐_ — sizing 시점만 활성화. OS 가 매 부팅 시 안전하게 호출.
+
+!!! question "🤔 Q2 — CRS handling (Bloom: Evaluate)"
+    Link up 직후 OS 가 Config Read. Device 가 _준비 안 됨_. 어떻게 응답?
+
+    ??? success "정답"
+        **CRS (Configuration Request Retry Status)** 응답:
+        - Device 가 _준비 안 됨_ 표시.
+        - OS 가 _최대 N retry_, 또는 _timeout_.
+
+        CRS 누락 시:
+        - Device 가 _wrong data_ (또는 fail) 응답.
+        - OS 가 "device 없음" 판정 → enumeration 실패.
+
+        Spec: CRS Software Visibility 모드 도입 (Spec 1.0+) — OS 가 CRS 인식 + 적절 backoff.
+
+### 7.2 출처
+
+**External**
+- PCIe Specification — Configuration Space, Type 0/1 header
+- *Linux PCI subsystem documentation*
 
 ---
 

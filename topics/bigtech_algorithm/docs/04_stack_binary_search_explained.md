@@ -42,9 +42,41 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — "_더 빠르게_?" 의 함정
+
+당신은 _Daily Temperatures_ 문제 풀이. 첫 시도 — 각 day 마다 _뒤에_ 더 따뜻한 day 찾기 → **O(N²)**.
+
+면접관: "**N=10⁶ 이면 timeout. 더 빠르게?**"
+
+당신은 _hash map / two pointers_ 적용 시도. _안 됨_. 패턴이 다름.
+
+**답은 Monotonic Stack**:
+```
+stack 에 _아직 답 못 찾은_ index 저장.
+새 day i 의 temp > stack top index 의 temp 면 → pop + 답 채움.
+```
+Amortized O(N) — 각 element 가 stack 에 _한 번 push + 한 번 pop_.
+
+**Binary Search** 가 답인 경우:
+- **Monotonicity**: 어떤 함수 f(x) 가 _단조_. 정렬된 배열은 자명한 예.
+- _숨겨진_ monotonicity: "**parameter K 에 대한 yes/no 답이 단조**" — Binary search on answer.
+
 Stack 은 **이전 상태를 미루어 두었다 다시 쓰는** 가장 단순하지만 강력한 도구이고, Binary Search 는 **단조성(monotonicity)** 만 있다면 어디든 통하는 보편 패턴입니다. 이 둘을 패턴으로 익히면 면접에서 "이게 stack/이진 탐색 문제인가?" 를 인지하는 시간이 크게 줄어듭니다.
 
 이 모듈을 건너뛰면 Daily Temperatures / Largest Rectangle / Search Rotated Array 같은 빈출 문제에서 _O(N²) brute force_ 로 떨어지고 면접관이 "더 빠르게?" 라고 되물을 때 막힙니다. 반대로 monotonic stack 의 _amortized O(N)_ 직관과 binary search 3 원칙이 잡히면 이 카테고리의 문제가 _10 분 안에_ 끝납니다.
+
+!!! question "🤔 잠깐 — Monotonic stack 의 _amortized_?"
+    각 element 가 stack 에서 _최대 N 번_ pop 될 수 있는 것처럼 보임 → O(N²) 인 듯?
+
+    ??? success "정답"
+        **각 element 가 _전체 동작 동안_ 최대 _1 번 push + 1 번 pop_**.
+
+        - Push: 입력 element 마다 한 번씩. 총 N 번.
+        - Pop: 한 번 pop 된 element 는 _다시 안 들어옴_. 총 ≤ N 번.
+
+        합산: 2N 연산 = O(N). _amortized_ 개념의 가장 깔끔한 예.
+
+        면접에서 명시: "_각 element 의 _아 amortized cost 가 O(1)_, 총 N 개 → O(N)_".
 
 ---
 
@@ -548,6 +580,45 @@ endmodule
     - **Integer overflow** — `mid = lo + (hi-lo)/2` 가 표준. 한 번 잘못 적으면 production 에서만 발현.
     - **±1 누락** — `left = mid` 또는 `right = mid` 는 즉시 무한루프. 면접관이 가장 먼저 보는 실수.
     - **Stack overflow vs heap** — 재귀 깊이 한계는 언어/OS 환경 의존. N=10⁴ 이상 깊이는 위험 신호.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Search rotated sorted array (Bloom: Analyze)"
+    `[4,5,6,7,0,1,2]` 에서 `0` 찾기. 정렬돼 있지만 회전. Binary search?
+
+    ??? success "정답"
+        가능. _Mid 가 어느 정렬 partition_ 결정:
+        ```
+        if (arr[lo] <= arr[mid]):  # 왼쪽 partition 정렬됨
+            if (arr[lo] <= target < arr[mid]):  # target 이 왼쪽에
+                hi = mid - 1
+            else:
+                lo = mid + 1
+        else:  # 오른쪽 partition 정렬됨
+            ...
+        ```
+        O(log N). _완전 정렬 가정_ binary search 의 변형.
+
+!!! question "🤔 Q2 — Monotonic stack 의 적용 (Bloom: Apply)"
+    "Daily Temperatures" — 매 day 마다 _다음 더 따뜻한 day 까지 며칠_?
+
+    ??? success "정답"
+        ```python
+        stack = []  # index 의 stack, temps 가 decreasing
+        result = [0] * len(temps)
+        for i, t in enumerate(temps):
+            while stack and temps[stack[-1]] < t:
+                j = stack.pop()
+                result[j] = i - j
+            stack.append(i)
+        ```
+        O(N) amortized. Stack 안의 index 의 _temps decreasing 한 성질_ 유지.
+
+### 7.2 출처
+
+**External**
+- *Introduction to Algorithms* — CLRS
+- LeetCode patterns: Monotonic Stack, Binary Search
 
 ---
 

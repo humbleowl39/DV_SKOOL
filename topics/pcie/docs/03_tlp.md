@@ -42,6 +42,17 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Tag 가 _안 맞음_
+
+당신은 PCIe RC verification. Memory Read TLP 를 보내고 _Completion_ 기다림. 응답이 _다른 데이터_.
+
+원인: **Tag mismatch**.
+- Request TLP 의 _Tag_ field 가 _outstanding request 의 ID_.
+- Completion 이 _같은 Tag_ 로 와야 매칭.
+- Bug: RC 가 두 요청에 _같은 Tag_ 할당 → completion 이 _어느 request_ 응답인지 모름 → data corruption.
+
+**Tag 의 핵심**: PCIe 는 **out-of-order completion** 허용 → request 와 completion 매칭에 _Tag 필수_.
+
 **TLP 는 PCIe 의 "데이터 path" 입니다.** 모든 driver, NIC, NVMe, GPU 의 통신은 결국 TLP. Header field 의 의미를 알아야 packet trace 를 읽을 수 있고 (검증/디버그), VIP coverage 를 설계할 수 있습니다.
 
 이 모듈의 어휘 — **Fmt/Type, P/NP/Cpl, Tag, Address vs ID routing** — 가 이후 모든 DV scoreboard, AER error 분류, SR-IOV/ATS/CXL 의 기본 단위. 이 layer 모델을 정확히 잡고 나면 처음 보는 TLP 도 _"아, 이게 NP 라 Cpl 매칭이 필요하구나"_ 처럼 행동을 즉시 예측할 수 있습니다.
@@ -452,6 +463,35 @@ Routing field (Type[2:0]) 이 destination 결정:
     - Tag 가 8b → 10b extended 로 늘어난 것은 outstanding NP 가 256 개 → 1024 개로 확장. Sender 의 max outstanding 추적 필요.
     - Posted 라고 해서 ACK/NAK 까지 없는 게 아님 — DLL ACK 는 발생. 단지 TL 응답 없음.
     - ECRC 는 optional 이라 disabled 인 경우가 흔함. AER 카운터 0 이라고 안전한 게 아니라 ECRC 자체가 꺼져 있을 수 있음.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Posted vs Non-Posted (Bloom: Apply)"
+    MemWr (32-bit), MemRd, IOWr, CfgWr. 각각 P / NP / Cpl?
+
+    ??? success "정답"
+        - **MemWr**: **P** (Posted) — write 보내고 응답 없음. Fast.
+        - **MemRd**: **NP** (Non-Posted) — completion 으로 data 받아야.
+        - **IOWr**: **NP** — legacy ISA 호환, completion 요구.
+        - **CfgWr**: **NP** — config register 변경 후 completion 확인.
+
+        직관 깨짐: write 가 _대부분_ P 이지만 _config / IO_ 는 NP.
+
+!!! question "🤔 Q2 — Length encoding (Bloom: Analyze)"
+    Length field = 10 bit. 표현 가능한 _가장 큰 payload_?
+
+    ??? success "정답"
+        Length = 0 → **1024 DW** (= 4096 byte). 10 bit binary 0 이 _최대값_ 의미.
+        Length = 1 → 1 DW (4 byte).
+        Length = 1023 → 1023 DW.
+
+        직관 반대: 0 이 최대, 1 이 최소.
+
+### 7.2 출처
+
+**External**
+- PCIe Specification 5.0 / 6.0
+- Mindshare *PCI Express Technology* book
 
 ---
 

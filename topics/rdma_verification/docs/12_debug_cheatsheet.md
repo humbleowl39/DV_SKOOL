@@ -41,6 +41,26 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 30 초 안에 _M08 또는 M11_?
+
+당신의 RDMA test fail. error log:
+```
+F-CQHDL-TBERR-0003: Unexpected error CQE
+```
+
+5 분 vs 30 초:
+- **Naive (5 분)**: M08 (data integrity), M09 (CQ timeout), M10 (C2H tracker), M11 (error CQE) 를 _순서대로_ 펴서 _자기 케이스_ 찾기.
+- **Cheatsheet (30 초)**: §5.1 한 표:
+  ```
+  prefix       → 모듈
+  E-SB-WRITE   → M08
+  F-CQ-POLL    → M09
+  F-C2H-MATCH  → M10
+  F-CQHDL-TBERR → M11
+  ```
+
+이 _한 표_ 가 _하루에 수 번_ 사용. 누적 시간 절감 _수십 분/일_.
+
 M08–M11 은 4 대 디버그 케이스를 _각각_ 다룹니다. 그런데 실제 시뮬 fail 이 나면 (1) 어느 케이스인지 모르는 상태에서 (2) 5 분 안에 어느 모듈을 펼칠지 결정해야 합니다. M08–M11 을 매번 처음부터 다시 읽을 수는 없죠.
 
 이 모듈은 그 5 분을 위한 **한 페이지 검색 카드** 입니다. 에러 ID prefix → 컴포넌트 → 모듈 → 첫 액션 의 4 단 매핑, QID 한 줄 표, static flag 한 줄 표, 5 단계 디버그 절차, 그리고 의도된 에러 시퀀스 보일러플레이트까지 — 모두 한 페이지 안에 들어가도록 압축되어 있습니다. M08–M11 의 "어디로 가나" 부분만 따로 분리한 셈입니다.
@@ -335,6 +355,34 @@ vrdma_cq_handler
     - cheatsheet 매핑표에 없는 에러 ID 를 만나면 M06 (lifecycle) 또는 새 모듈을 추가해야 — 매핑표를 갱신.
     - `grep head -5` 의 결과가 cascading error 일 수 있음 — 첫 에러 ID 가 항상 root cause 는 아님.
     - 보일러플레이트 복사 후 randomize constraint 와 cleanup (`RDMAQPDestroy(.err)` + `clearErrorStatus`) 누락이 가장 흔한 실수.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 매핑표 활용 (Bloom: Apply)"
+    `UVM_FATAL: CQ poll timeout @ QID=0x42`. Cheatsheet 의 어느 칸을 먼저 보나?
+    ??? success "정답"
+        §5.1 의 에러 ID → 모듈 매핑:
+        1. **CQ poll timeout** → M09 → 첫 액션: `phase_started_q` / `phase_ended_q` 시각 비교.
+        2. 시각 차이가 비정상 → M07 (QID map) 로 분기 — h2c/c2h QID 불일치 가능성.
+        3. 정상이면 M11 (unexpected CQE) — error promote 누락 여부.
+
+!!! question "🤔 Q2 — Cheatsheet 한계 (Bloom: Evaluate)"
+    Cheatsheet 가 _존재만_ 알면 된다는 의미는?
+    ??? success "정답"
+        Cheatsheet 는 _검색 카드_:
+        - 외울 필요 없음 — `Ctrl-F` 로 찾을 수 있어야 함.
+        - 매번 새 디버그 시 다시 열어 _빠른 분기_ 만 함.
+        - **암기 시도 = 안티패턴** — 디버그는 매번 다르므로 카드를 도구로 사용해야 함.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `RDMA Debug Cheatsheet` (M05–M11 통합 매핑)
+- M05 (extension principles), M07 (QID), M08 (data integrity), M09 (CQ poll timeout), M10 (c2h tracker), M11 (unexpected CQE)
+
+**External**
+- IBTA Volume 1, Chapter 11 (Completion Queue) — CQE syndrome codes
+- *The Art of Debugging* (No Starch Press) — Chapter 4: triage tables
 
 ---
 

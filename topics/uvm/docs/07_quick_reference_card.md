@@ -278,6 +278,37 @@ uvm = 모든 DV 자료의 "검증 방법론" 기반
 - **이 카드는 _index_, Module 01-06 이 _content_** — 치트시트만 보고 환경 구축 시도 금지.
 - **트리거 매핑 (§6)** 으로 어느 상황에 어느 절을 보면 되는지 즉시 결정.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 카드 trigger 매핑 (Bloom: Apply)"
+    "신규 agent 작성 직전". 카드의 어디부터?
+    ??? success "정답"
+        §5.1 Factory 등록 → §5.4 안티패턴:
+        - **§5.1**: `type_id::create(...)` + `uvm_component_utils` 매크로 등록 → 누락 시 factory override 무력.
+        - **§5.4**: Driver `item_done` 누락 / Monitor 가 `vif.sig <= ...` write / `new()` 직접 호출 등 검증 1차 reject 사유.
+        - 본문 점프: Module 02 (Agent/Driver/Monitor).
+        - 안티패턴: 카드 안 보고 작성 → review 에서 6 안티패턴 모두 hit.
+
+!!! question "🤔 Q2 — 환경 구축 한계 (Bloom: Evaluate)"
+    "카드만 보고 env 구축 시도" 가 _명백히_ 실패하는 이유?
+    ??? success "정답"
+        Cheatsheet 의 본질:
+        - 카드는 _이미 아는 사람_ 의 _재인_ 용. _학습_ 용 아님.
+        - **누락 항목**: phase 의 _순서 이유_, config_db hierarchy 의 _전파 메커니즘_, sequence/sequencer/driver 의 _handshake protocol_.
+        - 카드의 한 줄 = 본문 1–2 페이지의 압축 → 본문 이해 없이는 한 줄에서 "무엇이 빠진지" 모름.
+        - 결론: M01–M06 본문 학습 후 카드 = 강력한 도구. 그 전에는 _덫_.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `UVM Curriculum` — M01–M06 + 카드 매핑
+- `Code Review Checklist` — 6 안티패턴 + 15 단계
+
+**External**
+- *UVM 1.2 User's Guide* — Accellera
+- IEEE 1800.2-2020 *UVM Reference Manual*
+- *UVM Cookbook* (Mentor)
+
 !!! warning "코스 마무리"
     7 개 모듈을 마치셨습니다. 다음을 권장합니다:
 

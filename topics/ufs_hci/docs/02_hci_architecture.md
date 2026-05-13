@@ -43,6 +43,27 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — UTRD _1 bit_ 의 silent corruption
+
+당신은 UFS storage. Driver 가 _UTRD descriptor_ 에 _data buffer address_ 작성:
+```
+UTRD field: data_addr[63:0] = 0x1000_0000_0000_0000
+```
+
+HCI 가 _bit 32_ 만 0 으로 해석:
+```
+실제 사용: 0x0000_0000_0000_0000
+```
+
+결과: data 가 _wrong physical address_ 에 write → memory corruption → 다른 process 데이터 깨짐.
+
+증상:
+- 일부 sector 만 corrupt.
+- _시뮬에서 안 잡힘_ (test 가 _high address_ 안 씀).
+- _Production_ 에서 _수 시간_ 후 발견.
+
+UTRD parsing 의 _1 bit_ 가 _silent corruption_. JEDEC spec 의 _모든 field_ 정확히 해석돼야 안전.
+
 **HCI 는 SW 와 UFS HW 사이의 _표준 contract_** (JEDEC JESD223) 입니다. 어떤 OS, 어떤 driver 를 쓰더라도 이 contract 만 지키면 명령이 통합니다. 그래서 HCI 를 검증한다는 것은 곧 **driver-side (register / UTRD) ↔ device-side (UPIU)** 양방향 contract 를 검증한다는 뜻입니다.
 
 UTRD parsing 한 비트만 잘못 해석되면 storage 의 read/write 데이터가 silently 망가집니다. 그래서 register layout, UTRD field, doorbell 동작, interrupt 의미를 정확히 잡지 못하면 이후의 어떤 시나리오 / coverage / SVA 도 안전망이 못 됩니다. 이 모듈이 그 contract 의 어휘를 정착시키는 자리.
@@ -498,6 +519,33 @@ SDB vs MCQ 비교:
     **원인**: UTRLDBR set 직후 UTRLRSR(Run/Stop) 의 busy 상태를 확인하지 않아, run-stop 토글 타이밍과 race 가 발생한다.
 
     **점검 포인트**: UTRLDBR write 전 UTRLRSR == 1 인지, UTRD 가 메모리에 fully visible 한지(memory barrier) 드라이버 시퀀스에서 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 32-slot queueing (Bloom: Apply)"
+    HCI 가 32 UTRD slot. 33번째 command 어떻게?
+
+    ??? success "정답"
+        - **Slot wait**: SW driver 가 _완료된 slot_ 까지 wait. CQ poll.
+        - Slot 회수 → 새 command 발행.
+        - 또는 **MCQ (UFS 4.0+)**: SQ/CQ ring → 32 한계 _제거_, driver 가 _수천_ outstanding 가능.
+
+!!! question "🤔 Q2 — Doorbell ordering (Bloom: Analyze)"
+    Driver: UTRD write → memory barrier → doorbell. _Memory barrier 누락_ 시?
+
+    ??? success "정답"
+        **UTRD 가 메모리에 fully visible 안 된 상태에서 HCI fetch**.
+
+        - HCI 가 _doorbell_ 보고 _UTRD fetch_ 시도.
+        - CPU 의 _write buffer_ 가 _UTRD 일부_ 만 commit → HCI 가 _partial UTRD_ 읽음 → garbage.
+
+        SVA: doorbell write 시점에 UTRD memory write 가 _global visible_ 강제.
+
+### 7.2 출처
+
+**External**
+- JEDEC JESD223 *UFS Host Controller Interface (HCI)*
+- JEDEC JESD220 *UFS Specification*
 
 ---
 

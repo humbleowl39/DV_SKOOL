@@ -415,6 +415,37 @@ ufs_hci_ko:         UFS → BL2 이미지 로드 → BL2가 DRAM 초기화
     - §5.8 의 이력서 연결 표는 자기 프로젝트의 _실제 chip / 실제 measurement_ 로 치환해서 사용. 그대로 인용하면 면접관이 즉시 감지.
     - DDR4 와 DDR5 를 _섞어_ 인용하면 (예: BL8 + Sub-Ch) 면접관이 한 번에 신뢰 잃음. §5.4 표의 한 컬럼 안에서만 답.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 3 결말 즉답 (Bloom: Apply)"
+    Row buffer 의 _3 결말_ (Hit / Miss / Conflict) 의 latency 순서?
+    ??? success "정답"
+        Hit < Miss < Conflict:
+        - **Hit**: 이미 row open → CAS (CL) 만 → ~15 ns.
+        - **Miss**: row 미 open → ACT + CAS → ~25 ns.
+        - **Conflict**: 다른 row open → PRE + ACT + CAS → ~45 ns.
+        - 결론: scheduler 의 KPI = miss/conflict 비율 최소화 → bank interleave + open-page policy.
+
+!!! question "🤔 Q2 — DDR5 의 진짜 이득 (Bloom: Evaluate)"
+    "DDR5 는 DDR4 보다 _대역폭 2 배_" 라는 답변의 문제?
+    ??? success "정답"
+        대역폭은 _이론치_, 실측 이득은 parallelism:
+        - **이론**: DDR5-6400 vs DDR4-3200 → 2 배.
+        - **실측**: Random access pattern (DV workload) 에서는 bank conflict 가 botteneck → DDR4 도 50% 만 사용.
+        - DDR5 의 _진짜_ 이득: BG 8→16 + sub-channel 분리 + same-bank refresh → conflict 감소.
+        - 결론: bandwidth 답변 → "왜 더 빠른가" follow-up 시 parallelism + refresh 으로 확장.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `DDR Curriculum` — Module 01–04 매핑
+- `Memory Controller Tuning` — bank/row policy 사례
+
+**External**
+- JEDEC JESD79-4 *DDR4 SDRAM Specification*
+- JEDEC JESD79-5 *DDR5 SDRAM Specification*
+- Onur Mutlu *Memory Systems Course* (CMU/ETH) — DRAM scheduling
+
 ---
 
 ## 코스 마무리

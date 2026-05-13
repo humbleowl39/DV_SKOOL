@@ -43,6 +43,23 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Wire-side 끝단_ 의 DV 비용
+
+당신은 DCMAC verification 책임자. 두 가지 압박:
+
+1. **Line-rate (400 Gbps)** 가 _유지_ 되어야 함 — frame drop 0.
+2. **Frame 무결성, FCS, IFG, Pause, PFC, FEC** 모두 _byte-level_ 검증.
+
+이 둘이 _동시에_ 어려운 이유:
+
+- _Functional test_: 천천히 frame 보내 OK. → _line-rate corner case 누락_.
+- _Stress test_: Line-rate 만 — frame 내용 무시. → _byte corruption_ 누락.
+- **합쳐야 함**: line-rate 트래픽 + 매 frame _byte-level_ scoreboard. 시뮬 시간 폭증.
+
+또한 DCMAC 은 **silicon 직전 마지막 보루**:
+- TB 가 catch 못한 bug → silicon 후 _SerDes BER 통계_ 로만 보임.
+- BER 1e-12 = _하루 1 frame loss_ → 거의 _발견 불가_ 한 단계까지 잠복 가능.
+
 DCMAC 검증의 핵심 어려움은 두 가지가 **동시에** 일어난다는 점입니다 — (1) **line-rate throughput 유지** 와 (2) **byte-level 무결성 / 프로토콜 / 흐름제어 모두 검증**. 한 쪽만 보면 통과하지만 동시에 두면 corner case 가 silent 로 누적됩니다 (예: pause + line-rate 가 같이 일어날 때 IFG underrun).
 
 또한 DCMAC 은 **TOE / IP / 다른 NIC subsystem 의 wire-side 끝단** 이라 — 여기서 통과시킨 frame 은 곧바로 wire 로 나갑니다. TB 가 발견하지 못한 bug 는 silicon 후 SerDes BER 통계로만 보이게 됩니다. 즉 DV 비용의 sweet spot 이 다른 IP 보다 훨씬 높습니다. 이 모듈이 그 sweet spot 의 시나리오 / scoreboard / SVA / coverage / RAL 설계의 청사진을 제공합니다.
@@ -741,6 +758,50 @@ Resume: "Verified DCMAC-integrated subsystems by architecting and
     **현상**: 회귀 테스트에서 통계 카운터 (rx_frame_count, rx_error_count 등) 값이 읽을 때마다 달라지거나 0 으로 리셋된 것처럼 보임.<br>
     **원인**: DCMAC 통계 레지스터는 Read-on-Clear 방식이 많다. Scoreboard 와 Coverage 수집 루틴이 동일 카운터를 서로 다른 timestep 에서 각각 읽으면 첫 번째 read 에서 카운터가 클리어돼 두 번째 read 가 0.<br>
     **점검 포인트**: RAL task 내에서 통계 read 를 single atomic sequence 로 묶고, scoreboard / checker 가 동일 reg 를 중복 읽지 않도록 구현. `stat_snapshot` 방식으로 전체 카운터를 한 번에 latch 한 뒤 비교하는 패턴 채택.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Coverage bin 설계 (Bloom: Apply)"
+    DCMAC coverage 를 _어떤 차원_ 으로 cross?
+
+    ??? success "정답"
+        4 차원 cross:
+        1. **Frame size**: 64 / 128 / 1500 (jumbo) / 9000 (oversized) byte.
+        2. **VLAN**: 0 / 1 (single) / 2 (stacked).
+        3. **Priority**: 0-7 (PFC class).
+        4. **Mode**: 100G / 200G / 400G + lane count.
+
+        Cross = 4 × 3 × 8 × N modes = 수백 bin. 모든 bin _hit_ 까지 _수만 시뮬_.
+
+!!! question "🤔 Q2 — Line-rate + pause 동시 (Bloom: Analyze)"
+    Line-rate traffic 중 _PFC pause request_. 어떤 corner case?
+
+    ??? success "정답"
+        - **IFG underrun**: pause 즉시 traffic 멈춤 → 다음 frame 의 _IFG 가 줄어들 위험_.
+        - **In-flight frame**: pause 받은 시점 _진행 중 frame_ 은 _완료까지 전송_, _다음_ frame 부터 멈춤.
+        - **Resume**: pause 해제 시 _즉시 traffic_ vs _점진_.
+
+        검증: pause request _arbitrary 시점_ inject → IFG SVA 위반 없음 + in-flight 정상 종료.
+
+!!! question "🤔 Q3 — Counter snapshot atomicity (Bloom: Evaluate)"
+    DCMAC 가 _32 통계 counter_ 가짐. _atomic snapshot_ 으로 모든 counter 동시 latch 필요. RTL 설계?
+
+    ??? success "정답"
+        - **Snapshot register**: 일반 counter 외 _snapshot copy_.
+        - **Trigger bit**: SW write 1 → 모든 counter 의 _현재 값_ snapshot 으로 _한 cycle_ 에 copy.
+        - **Read**: SW 는 _snapshot register_ read (live counter 는 계속 update).
+
+        Hardware 비용: counter 수만큼 register 추가. Trade-off: race 회피 vs area. Production DCMAC IP 의 표준 pattern.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 DCMAC verification 사례
+
+**External**
+- IEEE 802.3 *Ethernet Standard*
+- IEEE 802.1Qbb *Priority Flow Control*
+- *SystemVerilog Assertions Handbook* — Cohen et al.
 
 ---
 

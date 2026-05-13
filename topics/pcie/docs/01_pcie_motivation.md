@@ -43,6 +43,29 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — PCI 가 _왜_ 폐기됐나?
+
+당신은 1990 년대 PC 디자이너. PCI bus 가 표준. 그런데 _2000 년대_ 그래픽 카드가 _32-bit / 33 MHz = 133 MB/s_ 한계에 부딪힘. 비디오 카드는 _수 GB/s_ 필요.
+
+순진한 해법: "PCI 폭 늘리기 + 클럭 올리기". 시도:
+- PCI-X 64-bit, 133 MHz → 1 GB/s. **여전히 부족**.
+- 200 MHz 시도 → _32 lane 의 skew_ 가 critical path → 각 lane 의 trace length _정확히 일치_ 필요. PCB 비용 폭증.
+- 200 MHz @ 32-bit + low skew → trace 가 _마더보드의 절반_ 차지. 면적 ↑.
+
+**근본 문제**: _parallel bus 는 lane skew_ 가 _frequency 의 제곱_ 으로 폭증. 1990 년대 SOC 에서는 GB/s 가능했지만, GHz 영역에서 한계.
+
+**PCIe 의 발상**: _Lane 을 독립_ 시키자.
+- 각 lane = _별도 differential pair_, _자체 clock 임베디드_.
+- Lane 간 skew? _상관 없음_ — packet 이 lane 끝에서 _재조립_.
+- N lane = N × 단일 lane bandwidth. _완전 scalable_.
+
+| | PCI (parallel) | PCIe (serial) |
+|---|----------------|---------------|
+| 1 lane BW | 4 MB/s | 1+ GB/s (gen 4) |
+| Skew | Critical | _독립_ |
+| Lane scale | 한계 | x1/x4/x8/x16 |
+| Frequency | 33-133 MHz | GHz |
+
 이후 모든 PCIe 모듈은 한 가정에서 출발합니다 — **"한 lane 의 직렬 전송을 여러 lane 으로 묶어 늘린다, 양 끝은 packet 단위로 layered protocol 을 주고받는다"**. TLP 가 왜 가변길이인지, LTSSM 이 왜 11 state 나 필요한지, AER 의 error class 가 왜 셋으로 갈라져 있는지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 모든 spec/패킷/검증 결정이 **"그냥 외워야 하는 규칙"** 으로 보입니다. 반대로 lane-scaling + serial + packet-switched 라는 세 결정을 정확히 잡고 나면, 디테일을 만날 때마다 _"아, 이게 lane 독립성을 위한 거구나"_ 처럼 **이유** 가 보입니다.
@@ -434,6 +457,34 @@ DV 엔지니어 관점에서 자주 나오는 질문 — "PCIe 가 직렬로 갔
     - x16 connector = 실제 x16 동작 보장 아님. RC/EP 의 capability 와 board routing 에 따라 down-train 가능.
     - "Gen 3 link" 라고 해도 양 끝의 capability 가 다르면 낮은 쪽으로 collapse — Gen capability 와 link speed 둘 다 Configuration Space 에서 확인.
     - Embedded clock 이라고 PHY 의 reference clock 이 없는 게 아님 — 100 MHz refclk 가 양 끝에 공급되어야 정상 동작 (Common Refclock vs Independent Refclock).
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Lane / Gen 결정 (Bloom: Apply)"
+    Endpoint capability x8 Gen4. Host RC capability x16 Gen5. 실제 link?
+
+    ??? success "정답"
+        **x8 Gen4** — 양 끝의 _작은 쪽_ 으로 collapse.
+
+        - Lane count: min(x8, x16) = x8.
+        - Gen: min(Gen4, Gen5) = Gen4.
+
+        Total BW: 8 × 16 GT/s × 128/130 ≈ **15.75 GB/s** unidir.
+
+!!! question "🤔 Q2 — PCIe vs PCI 면적 (Bloom: Evaluate)"
+    PCIe x1 (직렬) vs PCI 32-bit (병렬). 같은 BW 1 GB/s 의 PCB 면적?
+
+    ??? success "정답"
+        - **PCIe x1**: 2 trace (differential pair). _좁고 short_.
+        - **PCI 32-bit**: 32 + control trace = ~50 trace. _넓고 매칭 trace length 필요_.
+
+        면적 비: PCI 가 _10-20×_. PCIe 가 _경제적 + 빠름_. PCI 가 죽은 이유.
+
+### 7.2 출처
+
+**External**
+- PCIe Specification (PCI-SIG)
+- *PCI Express Technology* — Mike Jackson et al.
 
 ---
 

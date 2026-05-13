@@ -42,6 +42,30 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — Task Tag _swap_ 의 corruption
+
+당신의 UFS storage 가 _32 command 동시_ in-flight. 각 command 의 Task Tag _0-31_:
+
+```
+Cmd 0 (Tag=5): "Read sector 100, 1MB"
+Cmd 1 (Tag=10): "Read sector 200, 1MB"
+```
+
+UFS 가 OoO response 가능:
+```
+Resp 1 (Tag=10): "data from sector 200" → driver buffer at Cmd 1's address
+Resp 0 (Tag=5): "data from sector 100" → driver buffer at Cmd 0's address
+```
+
+**Bug 시나리오**: HCI 가 _Resp 의 Tag field_ 만 잘못 해석 (예: bit swap):
+```
+Resp 1 actual Tag=10, parsed as Tag=5 → wrong driver buffer (Cmd 0's) → sector 200's data overwrites sector 100's expected data
+```
+
+**Silent data corruption**. _Same time same flow_ 에서만 발생, _race-dependent_, 재현 어려움.
+
+Task Tag lifecycle 의 정확한 _spec compliance_ + DV scoreboard 의 _per-Tag tracking_ 이 _silent bug 의 안전망_.
+
 **UPIU 는 UFS 의 통신 단위** 입니다. 모든 명령 / 응답 / 데이터가 UPIU 로 캡슐화되므로 검증의 거의 모든 시나리오가 UPIU 정합성 + flow 정확성으로 귀결됩니다. Command UPIU 한 번에 Response UPIU 가 항상 한 번 — 이 _request/response 짝_ 만 정확히 잡으면 어떤 SCSI 명령도 같은 패턴으로 검증할 수 있습니다.
 
 특히 **Task Tag 매칭 오류 = 잘못된 응답 매핑** 입니다. driver 가 잘못된 command 에 응답을 받으면 데이터 corruption 으로 직결. Task Tag lifecycle 을 정확히 잡아야 multi-LU + multi-command 시나리오에서 silent bug 를 거를 수 있습니다.
@@ -584,6 +608,38 @@ Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
     **원인**: Response UPIU 수신만으로 Task Tag 를 재사용 가능하다고 판단했지만, 실제로는 OCS clear + UTRLDBR slot bit clear 까지 끝나야 free 상태다.
 
     **점검 포인트**: pending_tag table 을 OCS write-back 시점에만 갱신하는지, 같은 Tag 가 두 LU 로 동시에 발행되지 않는지 sequence-level assertion 으로 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Task Tag lifecycle (Bloom: Apply)"
+    Task Tag 의 _re-use 가능_ 시점?
+
+    ??? success "정답"
+        3 조건 _모두_ 충족:
+        1. **Response UPIU 수신**.
+        2. **OCS (Overall Command Status) write-back** to UTRD.
+        3. **UTRLDBR slot bit clear**.
+
+        한 단계라도 빠지면 _race_ — 다른 LU 응답이 wrong tag 와 매칭.
+
+        SVA: `assert property (tag_reuse |-> $past(all_3_conditions_met))`.
+
+!!! question "🤔 Q2 — OoO Response (Bloom: Analyze)"
+    Multi-LU + 32 outstanding. Tag 5 와 Tag 10 의 response 가 _OoO_ 도착. Scoreboard 매칭?
+
+    ??? success "정답"
+        **Tag 로 매칭** (FIFO 아님).
+
+        - Per-Tag queue 또는 hash map: Tag 5 의 expected → Tag 5 의 actual.
+        - FIFO pop_front 사용 시 _spurious mismatch_ 폭증.
+
+        UFS 의 OoO 는 _서로 다른 Tag 사이_ 만. 같은 Tag 는 _in-order_ (한 번에 한 outstanding).
+
+### 7.2 출처
+
+**External**
+- JEDEC JESD220 *UFS* — UPIU formats
+- SCSI Architecture Model (SAM)
 
 ---
 

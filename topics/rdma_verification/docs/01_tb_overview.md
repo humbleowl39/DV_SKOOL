@@ -42,6 +42,21 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — RDMA-TB 가 _2 노드_ 인 이유
+
+일반 ASIC DV: DUT 한 개 + agent + scoreboard. 단순.
+
+RDMA-TB: DUT _2 개_ (NODE 0 + NODE 1) + 양쪽 host 메모리 + 가운데 네트워크 + 횡단 scoreboard. _훨씬 복잡_.
+
+왜? **RDMA 의 정의가 "양 끝 node 의 hardware 가 _서로_ 통신"**:
+- Send 측만 검증하면 _packet 발신_ 만 OK 인지 확인. _수신_ 의 정확성 누락.
+- Recv 측만 검증하면 _packet 수신_ 만 OK. _발신_ 의 정확성 누락.
+- _두 NIC 사이의 protocol consistency_ (PSN/ACK/retry/flow control) 는 _양쪽_ 동시 보는 환경에서만 검증.
+
+또한 _interoperability_: 같은 RTL 의 두 instance 가 _서로_ 보낸 패킷을 처리. 한 instance 의 _Tx bug_ 가 다른 instance 의 _Rx_ 에서 catch 가능.
+
+**Trade-off**: dual-node 가 _2 배 시뮬 시간_ — 대신 _system-level bug catch_ 능력 압도적.
+
 RDMA 검증은 본질적으로 **두 노드 간 통신** 의 검증입니다. 한 노드에서 보낸 데이터가 다른 노드의 메모리에 정확히 도착하는지 (1-side write/read, 2-side send/recv) 확인해야 하므로, TB 자체가 multi-node 모델을 그대로 반영해야 합니다.
 
 이 모듈을 건너뛰면 이후 모든 모듈에서 만나는 `node[0]/node[1]`, `data_env`, `dma_env`, `ntw_env` 같은 이름이 그저 "디렉토리 명" 으로 보이고, 디버그 로그의 `[node][qp]` 키가 어디서 왔는지 모르게 됩니다. 반대로 5-부 구조 (두 노드 + 네트워크 + 횡단 검증) 를 잡고 나면, 모든 후속 모듈이 "이 5 영역 중 어느 영역의 디테일" 인지로 정렬됩니다.
@@ -326,6 +341,36 @@ uvm_test_top (rdma_basic_test)
 !!! warning "실무 주의점"
     - 새 횡단 검증 컴포넌트는 항상 top env 직속에 두기 — 노드 안에 두면 cross-node 비교 불가.
     - 노드를 N 개로 확장 전에 모든 시퀀스가 `t_seqr[i]` 를 정확히 라우팅하는지 점검.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Cross-node scoreboard 위치 (Bloom: Apply)"
+    "Node 0 가 보낸 메시지가 Node 1 메모리에 정확히 도착" 검증 컴포넌트. 어디에?
+
+    ??? success "정답"
+        **Top env 직속**.
+
+        - Node 안에 두면: 한 node 의 view 만 → cross-node 비교 불가.
+        - Top env 에 두면: 양 node 의 monitor AP 모두 subscribe → 양쪽 데이터 비교.
+
+!!! question "🤔 Q2 — Dual-node simulation cost (Bloom: Evaluate)"
+    Dual-node 가 single-node 의 _2× 비용_. 정당화?
+
+    ??? success "정답"
+        Single-node + BFM:
+        - BFM 이 _real DUT 응답_ 흉내내야 — protocol 복잡.
+        - BFM 의 _버그_ 가 false test pass 가능.
+
+        Dual-node:
+        - 두 instance 가 _서로_ 통신 → _real protocol_ check.
+        - 한 instance bug 가 _다른 instance_ 에서 catch.
+
+        _2× sim 비용_ vs _10× bug catch 능력_. 정당화.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 RDMA-TB ARCHITECTURE.md
 
 ---
 

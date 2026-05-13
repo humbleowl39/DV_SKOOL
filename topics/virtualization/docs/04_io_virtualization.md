@@ -42,9 +42,43 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _100 Gbps NIC_ 의 _4 가지_ 가상화 모델
+
+당신은 VM 에 100 Gbps NIC 제공해야 함. 4 가지 옵션:
+
+| 모델 | Throughput | CPU overhead | 구현 | 시나리오 |
+|------|----------|------------|------|--------|
+| **Emulation** (e.g., e1000) | 1-2 Gbps | 매우 큼 | 모든 register access → VM exit | _legacy_ |
+| **VirtIO** | 10-20 Gbps | 중간 | shared ring buffer, batched events | _일반 VM_ |
+| **Passthrough** (PCIe assign) | _100 Gbps_ | 작음 | NIC 완전 VM 소유 | _전용 VM, 단 1 VM_ |
+| **SR-IOV** | _90+ Gbps_ | 작음 | 1 NIC → N VF → N VM | _128 VM 동시_ |
+
+**핵심 트레이드오프**:
+- Emulation: 호환성 최고, 성능 최악.
+- VirtIO: 호환성/성능 balance.
+- Passthrough: _하나의 VM_ 만 사용 가능.
+- SR-IOV: _hardware support 필요_ — 모든 NIC 이 지원하는 건 아님. 단 _대규모 cloud_ 에서 _필수_.
+
 CPU + Memory 가상화는 _상태_ 의 격리이고, I/O 가상화는 _이벤트 + 데이터 흐름_ 의 격리입니다. 100 Gbps NIC, NVMe SSD, GPU 같은 _고대역폭 디바이스_ 의 throughput 은 거의 전적으로 I/O 가상화 모델 선택에서 결정됩니다.
 
 이 모듈을 건너뛰면 — VirtIO 가 왜 빠른지, SR-IOV 가 어떻게 1 NIC 으로 128 VM 을 지원하는지, IOMMU 가 _그냥 보안 기능_ 이 아니라 가상화 자체의 전제 조건이라는 게 — 모두 외워야 하는 사실. 한 패킷의 1 cycle 추적과 VM Exit 산식만 잡으면 나머지는 변형입니다.
+
+!!! question "🤔 잠깐 — _VirtIO_ 의 _ring buffer_ 가 _왜_ 빠른가?"
+    Emulation 대비 VirtIO 가 10× 빠른 _구체적 이유_?
+
+    ??? success "정답"
+        **Batched events + Memory-mapped sharing**.
+
+        - **Emulation**: 매 register write 마다 VM Exit → ~1000 cycle.
+        - **VirtIO**:
+          - Guest 와 host 가 _shared ring buffer_ 메모리 공유.
+          - Guest 가 _100 packet_ 의 descriptor 작성 후 _한 번_ doorbell write → 1 VM Exit.
+          - Host 가 100 packet 일괄 처리.
+          - VM Exit per packet = 0.01.
+
+        100× 적은 VM Exit → 비례하는 성능 향상.
+
+        그래서 _modern 가상화_ 에서 _VirtIO 또는 vhost-net_ 이 default.
 
 ---
 
@@ -553,6 +587,38 @@ DPDK: 모든 것을 user-space 에서 처리 (polling 기반)
     - **virtio queue full silent drop** — `VIRTIO_F_EVENT_IDX` 와 backend 의 notify suppression 동작을 항상 검증.
     - **IOMMU group 의 ACS** 가 깨져 있으면 같은 group 의 모든 device 가 한 VM 에 묶여야 함 — pass-through 단위가 의도와 달라질 수 있다.
     - **vhost backend 의 user-space fallback** 이 silent — `lsmod | grep vhost` 로 첫 검증.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Emulation vs VirtIO vs SR-IOV (Bloom: Apply)"
+    100 Gbps NIC + 8 VM 분할. 어느 방식을 선택?
+    ??? success "정답"
+        SR-IOV 가 유일한 해법:
+        - **Emulation** (E1000 emulated): ~1 Gbps 한계 → 100 Gbps 불가능.
+        - **VirtIO**: 10–40 Gbps 가능, 단 vhost-net 의 single thread bottleneck → 100 Gbps 미달.
+        - **SR-IOV**: VF 8 개 생성 → 각 VM 이 HW VF 직접 사용 → 100 Gbps 분할 가능.
+        - 단점: live migration 어려움 (passthrough → state 캡처 불가), HW 의존 (NIC 가 SR-IOV 지원해야).
+        - 대안: SR-IOV + virtio fallback (migration 시 일시 전환).
+
+!!! question "🤔 Q2 — ACS 깨진 IOMMU group (Bloom: Evaluate)"
+    `lspci` 로 같은 group 에 GPU + NIC. GPU 만 VM 에 주고 싶다. 무엇이 문제?
+    ??? success "정답"
+        ACS (Access Control Services) 미보장 → group 단위로만 격리 보장:
+        - **이유**: PCIe topology 에서 같은 root port 의 device 끼리 peer-to-peer DMA 가능 → 격리 깨짐.
+        - **결과**: GPU 만 주려면 NIC 도 같이 줘야 (또는 host 가 둘 다 못 씀).
+        - **우회**: ACS override patch (보안 약화), 또는 다른 root port 로 NIC 이동 (HW 재배치).
+        - 양산 ROI: 단순히 "passthrough 가능" 으로 끝나지 않고 group topology 가 _허용_ 해야.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `I/O Virtualization Strategy` — Emulation/VirtIO/SR-IOV 선택 매트릭스
+- `IOMMU Group / ACS` — passthrough granularity 가이드
+
+**External**
+- PCI-SIG *Single Root I/O Virtualization (SR-IOV) Specification*
+- OASIS *Virtual I/O Device (VIRTIO)* spec v1.2
+- Intel *VT-d* + ACS — DMA remapping + isolation
 
 ---
 

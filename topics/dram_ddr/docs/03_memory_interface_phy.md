@@ -43,6 +43,19 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _가끔만_ 깨지는 메모리
+
+당신의 SoC. 메모리 functional test 통과. 그런데 _수 시간 후_ random data corruption. 재현 어려움.
+
+원인: **온도 변화로 PHY timing 변동**.
+- Boot 시 _25°C_ 에서 training 완료.
+- 운영 중 _75°C_ 까지 가열.
+- 50°C 차이로 _PCB trace propagation delay_ 가 _~5 ps_ 변동.
+- DDR5 의 _데이터 유효 윈도우_ ~208 ps — 5 ps 변동도 _임계 영역_.
+- _데이터 유효 윈도우 가장자리_ 에서 sampling → _가끔 wrong bit_.
+
+**해법**: _운영 중에도 주기적 calibration_ — ZQ Calibration, periodic DQ training. PHY 가 _자기 진단_ 하고 _재조정_ 함.
+
 Module 02 에서 MC 가 발행한 ACT/RD/WR/PRE 명령은 _전기 신호_ 가 되어 PCB 트레이스를 건너 DRAM 에 도달해야 합니다. DDR4 3200 MT/s 의 _데이터 유효 윈도우_ 는 ~312 ps, DDR5 4800 MT/s 는 ~208 ps. PCB 배선 차이, PVT 변동, 크로스토크가 그 윈도우를 더 좁힙니다. **PHY 의 임무는 이 ns 도 안 되는 시간 안에서 정확한 샘플링을 보장하는 것** — 그리고 그것은 정적 설정으로는 불가능합니다. **Training 실패 = silent corruption** — silicon 이 동작하는 것처럼 보이지만 데이터 변조.
 
 이 모듈을 건너뛰면 timing parameter 의 의미가 _ns 단위 사이클 카운트_ 에 머무르고, 왜 boot 시 BL2 가 수십 KB 의 training 코드를 돌리는지, 왜 운영 중에도 ZQ Calibration 이 주기적으로 돌아야 하는지 답할 수 없습니다.
@@ -596,6 +609,35 @@ ZQ Calibration:
     - "PHY 가 한 번 set up 되면 끝" 은 가장 빈번한 오해 — retraining trigger 조건을 검증 시나리오에 반드시 포함.
     - Multi-Rank ODT 는 비타겟 RTT_PARK 가 더 중요. 무시하면 single-rank 에서는 깨끗했던 eye 가 multi-rank 에서 닫힘.
     - LPDDR5 의 DVFSC 전환은 _train 결과 보존 또는 재train_ 둘 중 하나가 일관되게 동작해야 — 둘 다 안 되면 silent corruption.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Eye width 계산 (Bloom: Apply)"
+    DDR5 4800 MT/s. _UI (Unit Interval)_ 와 _data valid window_ ?
+
+    ??? success "정답"
+        - UI = 1 / (4800 × 10^6) = **208 ps**.
+        - DDR 은 _half UI_ valid window: ~104 ps.
+        - 실제 jitter / skew 제외 후 _eye opening_ ~50-80 ps.
+
+        매우 좁아서 PHY training (CTLE, DFE) 정확도가 critical.
+
+!!! question "🤔 Q2 — Retraining trigger (Bloom: Analyze)"
+    PHY retraining 이 _언제_ 필요한가?
+
+    ??? success "정답"
+        - **온도 변화**: ΔT 10°C 마다 _propagation delay_ 변동. 자동 retraining.
+        - **DVFSC**: clock frequency 변경 시.
+        - **Refresh-induced disturb**: drift 누적.
+        - **Long idle**: PLL/CDR lock drift.
+
+        DV 시 _각 trigger_ inject + retraining 시퀀스 정확 동작 확인.
+
+### 7.2 출처
+
+**External**
+- JEDEC DDR5 PHY guidelines
+- *DDR5 PHY Training Algorithms* — Cadence / Synopsys WP
 
 ---
 

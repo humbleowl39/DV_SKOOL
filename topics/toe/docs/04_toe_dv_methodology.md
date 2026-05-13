@@ -43,6 +43,20 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _복합 시나리오_ 의 silent bug
+
+당신의 TOE happy path 모든 test 통과. Silicon 후 _수 시간_ 운영 시 _가끔_ corruption.
+
+추적:
+- _Packet loss_ + _OOO arrival_ + _Zero Window_ + _RTO_ 가 _동시_ 발생 시 _bug_.
+- Happy path 또는 _단일_ abnormal 만 test 했으면 안 잡힘.
+
+해법: **복합 abnormal scenario** test:
+- 4 abnormal 조합 × N 시나리오 = 수십 test.
+- 각 조합의 _상태 cover_ 가 _필수_.
+
+검증의 _진짜 가치_ 는 _복합 abnormal_ 시나리오에서 나옴. Happy path 만 test = false safety.
+
 Module 01~03 가 _DUT 가 무엇을 하는가_ 였다면, 이 모듈은 _그것이 정확히 동작하는지를 어떻게 증명하는가_ 입니다. TOE 의 검증은 단순히 "happy path 통과" 로는 부족합니다 — 실제 silent bug 들은 **packet loss + OOO + Zero Window + RTO 동시 발생** 같은 _복합 abnormal_ 상황에서 나타납니다.
 
 이 모듈을 건너뛰면 검증 환경이 직관적으로 구축은 되지만, _coverage hole_ 과 _vacuous SVA_ 가 가득해서 "테스트 통과 = 안전" 이 보장되지 않습니다. 반대로 이 모듈의 4 축 (Protocol / Functional / Performance / Error recovery) 을 잡으면, 어떤 시나리오를 어디에 hook 해야 하는지가 명확해집니다.
@@ -579,6 +593,37 @@ Resume: "Enhanced the TCP Offload Engine verification environment
     - Reference Model 의 _seed/ISN_ 동기화 — DUT 와 Reference 가 같은 ISN 을 써야 비교 가능.
     - SVA 의 _vacuous pass 함정_ — cover property 가 0 hit 이면 그 assertion 은 미검증.
     - Long regression 의 _hang detection_ — global watchdog 와 conn-level timeout 둘 다 필요.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Reactive vs Passive agent (Bloom: Apply)"
+    Network agent. _Pre-programmed sequence_ vs _Reactive responder_. 어느 것?
+
+    ??? success "정답"
+        **Reactive**.
+
+        Pre-programmed: 정해진 시퀀스 (예: SYN+SYN_ACK+ACK+...) → DUT 응답이 예상과 다르면 _stuck_.
+
+        Reactive: DUT 출력 monitor → _상태_ 보고 _적절한 응답_ 결정. Stateful protocol 의 필수 pattern.
+
+        예: DUT 가 SYN 보냄 → Network 가 _SYN_ACK_ 응답 (PASS) 또는 _RST_ 응답 (negative test).
+
+!!! question "🤔 Q2 — State machine coverage (Bloom: Analyze)"
+    TCP _11 state_. 각 state pair 의 _transition_ 모두 검증. 몇 개 시나리오?
+
+    ??? success "정답"
+        TCP state diagram 의 _legal transition_: ~30 개.
+        - LISTEN → SYN_RCVD, SYN_RCVD → ESTABLISHED, ESTABLISHED → FIN_WAIT_1, ...
+        - 각 transition 마다 1 시나리오 → **30+ 직접 시나리오**.
+
+        Cross with abnormal (RST inject, simultaneous close, ...) → **100+ 시나리오**.
+
+### 7.2 출처
+
+**External**
+- RFC 793 *TCP* state diagram
+- *UVM Reactive Agents* — Cadence/Synopsys best practices
+- *T1 TCP State Coverage* methodology
 
 ---
 

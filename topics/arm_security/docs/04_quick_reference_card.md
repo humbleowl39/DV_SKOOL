@@ -369,6 +369,37 @@ soc_secure_boot_ko Unit 7: BootROM DV
     - SoC 마다 EL3 implementation 여부 / TZASC 의 lock bit / SMMU 의 secure stream 지원이 다름 — _우리 SoC 의 spec 부터 확인_.
     - Stage 2 미설정 / NS attribute 미전파 / OTP mirror 누락 / BL31 context 누락 — 이 4 가지가 사내 실무 주의점에 직접 등장. _negative test_ 로 강제 검증.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 2축 매트릭스 진단 (Bloom: Apply)"
+    "EL1 Secure 가 BL31 (EL3) 의 메모리 읽기 가능한가?"
+    ??? success "정답"
+        매트릭스로 즉답:
+        - **EL3 = 최상위 권한**, NS bit 와 무관 + 모든 EL 위.
+        - EL1 (Secure) 가 EL3 영역 접근 → trap to EL3 → SMC abort.
+        - 단, EL3 가 _자기 영역의 NS=Secure 매핑_ 을 EL1S 에게 share 하면 가능 (정책 결정).
+        - 결론: HW 적으로 차단, _정책_ 으로만 share 가능 — secure firmware audit 의 핵심.
+
+!!! question "🤔 Q2 — 5 축 디버그 매핑 (Bloom: Analyze)"
+    "Secure DMA 가 Non-Secure RAM 으로 write 되었다". 5 축 (TZPC/TZASC/GIC/SMMU/Cache) 중 어디?
+    ??? success "정답"
+        Master 의 NS bit 가 SMMU/TZASC 까지 전파되었는지가 핵심:
+        - **SMMU**: master 가 Secure 인데 outgoing transaction 의 NS bit 가 _NS=1_ 로 잘못 → SMMU 가 NS RAM 으로 route.
+        - **TZASC**: TZASC 의 region permission 이 NS=1 도 허용 → write 통과.
+        - **Cache**: NS attribute 가 LLC 까지 안 전파 → cache fill 시 NS line 으로 저장.
+        - 디버그 순서: master 출력 NS → SMMU stream → TZASC region → Cache attribute.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `ARM Security Matrix` — 2축 + 7 mode
+- `5-Axis Debug Guide` — TZPC/TZASC/GIC/SMMU/Cache 매핑
+
+**External**
+- ARM ARM (DDI0487) §D14 *TrustZone Architecture*
+- ARM *Trusted Firmware-A (TF-A) Design* — BL31 context
+- ARM *CoreLink TZC-400 Specification*
+
 ---
 
 ## 코스 마무리

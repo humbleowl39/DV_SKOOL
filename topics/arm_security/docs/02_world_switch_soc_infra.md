@@ -43,9 +43,42 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _NS bit_ 가 _어떻게_ 모든 곳에 전파되나?
+
+Module 01 에서 NS bit 가 격리의 핵심임을 봤습니다. 그런데 _실제로_:
+
+- CPU 가 NS=0 으로 secure 메모리 access 요청 → 어떤 컴포넌트가 차단?
+- 외부 DMA 가 secure 메모리 access 시도 → 어떻게 막힘?
+- IRQ 가 secure timer 에서 발생 → 어떻게 NS 가 못 보게?
+
+답은 **5 개의 분산 컴포넌트** 가 각자 NS bit 를 _다른 단위_ 로 검사:
+
+| 컴포넌트 | 검사 단위 | 막는 것 |
+|---------|---------|--------|
+| **TZPC** | Peripheral 단위 | UART/GPIO 등 IP 의 secure/non-secure 격리 |
+| **TZASC** | DRAM region 단위 | DDR 의 _주소 범위_ 별 격리 |
+| **GIC** | Interrupt 단위 | IRQ 의 secure/non-secure 분류 |
+| **SMMU** | DMA stream 단위 | DMA master 의 격리 (PCIe, GPU 등) |
+| **Cache** | Cache line 단위 | L1/L2 의 NS tag |
+
+**모든 5 가 _동시에_ 작동해야** 안전. 하나라도 누락 = 격리 실패 = 보안 사고.
+
 Module 01 에서 _"NS bit 가 모든 transaction 에 함께 흐른다"_ 라고 했지만, **누가 그 bit 를 set 하고, 어느 컴포넌트가 그 bit 를 보고 차단하는지** 는 아직 안 봤습니다. 이 모듈이 그 답입니다 — BL31 의 SMC handler 가 SCR_EL3.NS 를 toggle 하면, downstream 에서 TZPC (peripheral), TZASC (DRAM), GIC (interrupt), SMMU (DMA), cache (NS tag) 가 각자 다른 단위로 같은 NS bit 를 _존중_ 합니다.
 
 이 모듈을 건너뛰면 디버그 시 _"NS world 에서 secure 자원이 노출되는데 어디서 새는지 모르겠다"_ 가 됩니다. 반대로 5 축 (TZPC/TZASC/GIC/SMMU/cache) 을 정확히 잡으면, 첫 실패 신호만 보고도 어느 컴포넌트가 누락됐는지 즉시 좁힐 수 있습니다.
+
+!!! question "🤔 잠깐 — _Cache 가 NS bit 무시_ 하면?"
+    L2 cache 가 NS tag 없이 보통 cache 처럼 동작하면 어떻게?
+
+    ??? success "정답"
+        **Cache 측면 채널 공격**.
+
+        - Secure code 가 비밀키 access → L2 에 _NS-Secure tag_ 로 cache line load.
+        - Cache 가 NS tag 안 봄 → 같은 line 을 NS world 가 read → **secure 데이터 누출**.
+
+        그래서 **cache line 마다 NS bit** 가 필요. ARM v8 의 모든 cache 는 _NS tag_ 가 mandatory.
+
+        더 미묘한 측면 채널: _timing attack_ (NS code 가 line 의 hit/miss 로 secure code 의 access pattern 추론). 별도 mitigation 필요 (cache partitioning, secure cache eviction).
 
 ---
 
@@ -604,6 +637,42 @@ flowchart LR
     - BL31 의 context list 가 ARM revision 마다 (NEON, SVE, MTE, MPAM 등 추가) 늘어납니다 — 새 ISA extension 추가 시 _BL31 context 코드 업데이트_ 가 필수 체크 항목.
     - 멀티코어 SMC 동시성: per-CPU context buffer 와 spinlock 정확성이 검증 대상.
     - Shared Memory 통신은 항상 _copy-then-validate_ — NS 측 buffer 를 secure 측에서 한 번에 복사한 후 검증/사용.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 5 컴포넌트 누락 진단 (Bloom: Analyze)"
+    당신의 SoC 에서 _NS world 가 secure UART 의 register 를 read 가능_ 한 bug 발견. 5 컴포넌트 중 무엇이 누락?
+
+    ??? success "정답"
+        **TZPC** (Peripheral 단위 격리). TZPC 가 UART 를 _secure-only_ 로 마크하지 않으면 NS world 의 AXI transaction 이 통과.
+
+        다른 누락 가능성:
+        - TZASC 누락: UART register 의 _physical address_ 가 secure DRAM 영역에 있어야 하는데 TZASC 미설정.
+        - SMMU 누락: 외부 master (DMA) 가 secure peripheral 의 address 로 transaction 보내는 경우.
+
+        디버그 순서: TZPC 먼저 (가장 흔함) → TZASC → SMMU.
+
+!!! question "🤔 Q2 — SMC handler 검증 (Bloom: Apply)"
+    BL31 의 SMC handler 가 _multi-core_ 환경에서 race condition. 검증 시나리오?
+
+    ??? success "정답"
+        - **Concurrent SMC**: CPU 0 과 CPU 1 이 _동시에_ SMC 호출. Per-CPU context buffer 가 _제대로 격리_ 되는지.
+        - **Spinlock 누락**: BL31 의 shared state (예: log buffer) 에 spinlock 없으면 _data race_.
+        - **Context save/restore**: CPU 0 의 NS context 가 _복원_ 되기 전에 CPU 1 이 EL3 진입 → context 충돌.
+
+        Cov bin: 모든 CPU pair 의 _concurrent SMC_ + _다른 SMC ID_ 조합.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `ARM Base System Architecture (BSA)` (id=712278023)
+- `PCIe AMBA Integration Guide` (id=639270996) — SMMU 통합
+- `MMU` (id=989003844)
+
+**External**
+- ARM, *ARM TrustZone for Cortex-A Processors* WP
+- ARM Trusted Firmware (TF-A) BL31 source
+- ARM, *GICv3/v4 Architecture Specification*
 
 ---
 

@@ -43,6 +43,22 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _USB stick_ 으로 _커널 메모리_ 읽기
+
+2010 년대 보안 연구: **악의적 USB device** 가 _IOMMU 없는_ system 에서 **kernel memory 전체** 를 _DMA 로_ 읽을 수 있음.
+
+작동 원리:
+- USB controller 의 DMA 가 _bus master_ — 임의 physical address access 가능.
+- 악의적 firmware → DMA 로 PA 0~∞ 영역 _read_.
+- Kernel 의 _secret_ (encryption key, password) 노출.
+
+**해법: IOMMU**.
+- Device 의 모든 DMA 가 _IOMMU 의 page table_ 을 거침.
+- OS 가 _device 마다_ 허용된 PA 영역만 _device VA → PA_ 매핑.
+- 다른 영역 접근 시도 → IOMMU 가 _차단_ + fault.
+
+오늘날 모든 PC/모바일 SoC 에 IOMMU/SMMU 가 _필수_ — _SoC 보안의 근간_.
+
 **SMMU 는 SoC 보안의 토대**입니다. IOMMU 없는 SoC 는 DMA master (GPU/USB/NIC) 가 시스템 메모리를 _무제한_ access — 단일 device compromise → 전체 SoC compromise. 가상화 환경에서는 Stage 2 가 hypervisor 의 메모리 격리 메커니즘 그 자체.
 
 또한 **SVM (Shared Virtual Memory) 은 GPU/AI accelerator 의 SoC 통합 표준 트렌드** — CPU 와 device 가 같은 page table 을 공유해 `malloc()` 포인터를 그대로 GPU 가 쓰는 모델. 검증에서는 ATS/PRI 시나리오가 점점 중요해지고, 사내 RDMA-IP 의 GPU peer-memory 매핑도 같은 패턴.
@@ -587,6 +603,38 @@ Resume의 Technical Challenge #3에서 언급:
 - **SVM**: device 가 CPU 의 VA 를 그대로 사용 — pin/map 불필요. ATS (주소 변환 caching), PRI (page fault 협력) 로 구현. GPU/Accel 트렌드.
 - **Page fault 는 비동기**: CPU 와 달리 event queue + interrupt + retry. Stall / Abort / PRI 의 세 모드. Recovery path 가 _device-OS 협력_ 으로 길어짐.
 - **벤더 용어 매핑**: ARM SMMU StreamID = Intel SourceID = AMD DeviceID. 개념은 같고 이름만 다름.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Two-stage translation 비용 (Bloom: Analyze)"
+    SMMU two-stage (S1 + S2) 의 worst-case page walk 가 _5×4 = 20_ memory access 인 이유?
+    ??? success "정답"
+        Nested page walk:
+        - S1 walk: 4 level → 4 memory access (VA → IPA).
+        - 그러나 각 S1 PT 의 PA 도 _IPA_ → 각 S1 단계마다 S2 walk 필요 → 4 + 1 (final IPA→PA) = 5 IPA 가 S2 walk 필요.
+        - 각 S2 walk = 4 memory access → 5 × 4 = 20.
+        - 그래서 IOTLB / PWC / Caching translation 가 _필수_ 최적화 — 매 access 마다 20 mem 은 unacceptable.
+        - 결론: SMMU 성능 KPI = IOTLB hit rate.
+
+!!! question "🤔 Q2 — Stage 2 bypass 위험 (Bloom: Evaluate)"
+    Guest VM 의 SMMU CD 에서 `S2_CFG = bypass`. 어떤 보안 사고가?
+    ??? success "정답"
+        Guest 가 host RAM 직접 접근:
+        - **공격 시나리오**: Guest 의 DMA 가 IPA → _S2 변환 없음_ → IPA 가 그대로 PA 로 해석 → host kernel memory 영역 PA 주입 시 host RAM 침해.
+        - **격리 무력화**: Guest 가 hypervisor 메모리 또는 _다른 VM_ 의 RAM 을 읽기/쓰기.
+        - **검증 의무**: Guest DMA 주소 == hypervisor 영역 PA 시 SMMU Abort 발생하는지 음성 시나리오.
+        - **방어**: SMMU CD 의 S2_CFG 가 _절대_ bypass 되지 않도록 hypervisor 코드 audit + DV SVA.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `SMMU Architecture` — Stream/Substream + S1/S2 매트릭스
+- `IOMMU Security DV` — bypass / abort 음성 시나리오
+
+**External**
+- ARM *SMMUv3 Architecture Specification* (IHI 0070)
+- Intel *VT-d Specification* — Source ID + nested translation
+- PCI-SIG *ATS / PRI Specification* — SVM + page fault 협력
 
 ## 다음 단계
 

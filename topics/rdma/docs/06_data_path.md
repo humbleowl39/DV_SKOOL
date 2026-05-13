@@ -42,9 +42,35 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 25 개의 OpCode 가 왜 필요한가?
+
+당신이 RDMA spec 을 처음 보면 OpCode 표를 보고 어지러워집니다 — **SEND, SEND_FIRST, SEND_MIDDLE, SEND_LAST, SEND_ONLY, SEND_LAST_WITH_IMMEDIATE, SEND_ONLY_WITH_IMMEDIATE, SEND_WITH_INVALIDATE, ...**. 한 service (RC) 에만 25 개 가까이. _왜 이렇게 많을까?_
+
+직관적으로 _하나로 통일_ 하면 어떨까? 예를 들어 "**RDMA WRITE 가 모든 걸 할 수 있다**" 고 가정해 봅시다:
+
+- 데이터를 보낸다 → WRITE.
+- Receiver 에게 "도착했음" 알린다 → WRITE_WITH_IMMEDIATE (4 B immediate 데이터).
+- Receiver 가 미리 _주소를 모르는_ 영역에 보낸다 → ??? **불가능**. WRITE 는 (remote_va, rkey) 약속 필요.
+- 메시지 모델 (queue 에 push) → ??? **불가능**. WRITE 는 _고정 주소_, 메시지 queue 와 안 맞음.
+
+**그래서 SEND 와 WRITE 가 따로 존재합니다**:
+- WRITE = "내가 _그 주소_ 에 쓴다" (one-sided, peer 가 _addr_ 미리 노출).
+- SEND = "내가 _메시지_ 를 보낸다, peer 가 _어디_ 에 받을지는 peer 가 결정" (two-sided, peer 의 RQ WQE 가 destination).
+
+이게 _기본 두 axis_. 여기에 **multi-packet (FIRST/MIDDLE/LAST/ONLY)** axis 와 **with-immediate/invalidate** axis 가 곱해져 25 개 OpCode 가 _필연적_ 입니다.
+
 **Data path 가 RDMA 검증의 비중상 80%** 입니다. Connection setup 은 한 번이지만 data path 는 시뮬레이션 매 cycle 마다 동작 — 모든 PSN 산정, OpCode, ACK 발생, retry 행동을 정확히 모델링해야 scoreboard 가 거짓 보고를 안 합니다.
 
 또한 디버그 시 만나는 거의 모든 fail 의 정확한 진단은 "어떤 PSN 의 어떤 OpCode 패킷이 어떤 syndrome 으로 NAK 됐는가" 의 형식 — 이 모듈이 그 어휘를 잡아줍니다.
+
+!!! question "🤔 잠깐 — WRITE 와 WRITE_WITH_IMM 의 차이는?"
+    둘 다 _원격 메모리에 직접 쓴다_ + _addr/rkey 사전 약속_. 차이는?
+
+    ??? success "정답"
+        - **WRITE**: peer 의 CPU **안 깨움**. CQE 도 peer 측에 _안 생김_ — 정말 무성/완전 비동기. application 이 polling memory 또는 다른 signal 로 도착 인지.
+        - **WRITE_WITH_IMM**: WRITE + 4 B Immediate. peer 의 RQ WQE 를 소비 + CQE 생성 → application 이 _ibv_poll_cq_ 로 "도착했음 + 4 B 추가 정보" 를 받음.
+
+        한 줄: **WRITE_WITH_IMM = WRITE + 통지의무**. peer application 이 _필요로 할 때_ 만 사용 (overhead 있음).
 
 ---
 
@@ -236,6 +262,133 @@ sequenceDiagram
 
 !!! quote "Spec 인용"
     "The PSN window for a given QP shall be 2^23." — IB Spec 1.7, §9.7.2 (R-198)
+
+### 4.4 세 가지 Sequence Number — SSN / PSN / MSN
+
+RC service 의 retransmission·completion·flow control 은 **서로 다른 layer 에서 동작하는 세 개의 sequence number** 위에 올라가 있습니다. 이름이 비슷해 혼동하기 쉬워서 먼저 한 장으로 분리해 둡니다.
+
+```
+   ┌─ Layer ──────────┬─ SN ─┬─ 부여 단위 ──────┬─ 어디에 들어감 ─┬─ 누가 만들고 누가 쓰나 ─────┐
+   │ Message (WQE)    │ SSN  │ Work Request 1개 │ requester 내부   │ 만든 곳: requester        │
+   │                  │      │ (≠ wire 에 안 실림)│ (QP context)    │ 쓰는 곳: requester (ACK   │
+   │                  │      │                  │                  │   matching, WQE retire)   │
+   ├──────────────────┼──────┼──────────────────┼──────────────────┼──────────────────────────┤
+   │ Packet (wire)    │ PSN  │ 패킷 1개          │ BTH (24 bit)     │ 만든 곳: requester        │
+   │                  │      │                  │                  │ 쓰는 곳: 양쪽 (in-order   │
+   │                  │      │                  │                  │   delivery, retry trigger)│
+   ├──────────────────┼──────┼──────────────────┼──────────────────┼──────────────────────────┤
+   │ Completed-Message│ MSN  │ 완료된 message 1개│ AETH (24 bit,    │ 만든 곳: responder        │
+   │   (responder의   │      │ (responder 시점) │  ACK/NAK packet) │ 쓰는 곳: requester (msg-  │
+   │   완료 통보)     │      │                  │                  │   level completion, flow  │
+   │                  │      │                  │                  │   control via LSN)        │
+   └──────────────────┴──────┴──────────────────┴──────────────────┴──────────────────────────┘
+```
+
+#### 동기화 한 컷
+
+```
+   requester                                    responder
+   ─────────                                    ──────────
+   WQE #SSN=1 (WRITE 8KB)                       ePSN init=100,  MSN init=0
+        │
+        ├── PSN=100  WRITE_FIRST  ──────────▶
+        ├── PSN=101  WRITE_LAST    A=1  ─────▶  마지막 packet 도착
+        │                                       → MSN += 1  (이제 MSN=1)
+        │                                       → AETH(syndrome=ACK, MSN=1)
+        │                                ◀────  ACK PSN=101
+        │
+        │ ACK 의 MSN=1 → SSN=1 의 WQE 완료     responder MSN
+        │ → SQ 에서 retire, CQE push
+        ▼
+   WQE #SSN=2 (READ 16KB)
+        ├── PSN=102  READ_REQUEST  ──────────▶  검증 통과
+        │                                       → MSN += 1  (이제 MSN=2)
+        │                                       → 첫 응답 패킷에 MSN=2 실음
+        │                                ◀────  READ_RESP_FIRST PSN=102 AETH(MSN=2)
+        │                                ◀────  READ_RESP_MIDDLE PSN=103
+        │                                ◀────  READ_RESP_LAST  PSN=104  AETH(MSN=2)
+        │
+        │ READ 만 예외: MSN 이 *시작* 시점에 증가 (credit 조기 회수 — §5.x 참조)
+```
+
+#### 왜 셋이 따로인가
+
+| 질문 | 해결 SN | 이유 |
+|------|--------|------|
+| "이 ACK 가 어느 WQE 의 완료인가?" | **SSN ↔ MSN 매핑** | PSN 만으로는 multi-packet message 의 완료 시점이 안 보임 |
+| "어느 packet 이 누락됐는가?" | **PSN** | byte-stream 이 아닌 packet-단위 reliability — wire 의 단조 +1 |
+| "이 message 가 끝났음을 어떻게 아는가?" | **MSN (AETH)** | responder 의 완료 통보. SEND/WRITE/ATOMIC 은 last packet 시점, READ 는 validate 시점 |
+| "responder 가 처리 가능한 한도는?" | **MSN + LSN** | credit-based message-level flow control (§5.x) |
+
+!!! note "검증에서 자주 헷갈리는 점"
+    - **PSN 이 단조 +1 이라고 SSN 도 +1 은 아님** — 한 WQE 가 multi-packet 이면 SSN=1 인 동안 PSN 은 여러 step.
+    - **MSN 의 단조 +1 가 깨지는 합법 케이스는 RDMA READ** — validate 시점에 미리 +1 하므로 _아직 마지막 응답 안 옴_ 상태에서도 MSN 이 커질 수 있음. scoreboard 가 이를 incidental error 로 잡으면 false fail.
+    - **duplicate request 는 MSN 을 증가시키지 않음** (§5.x).
+
+### 4.5 Verb Selection Decision Tree — 왜 verb 가 이렇게 많은가
+
+> "WRITE_WITH_IMM 이 있는데 SEND 가 왜 따로 존재?" 같은 질문은 verb 들의 _의도 (intent)_ 가 다르기 때문에 생깁니다. 모양이 비슷해도 **누가 buffer 위치를 정하나 / receiver CPU 가 깨어나야 하나 / RECV WQE 가 소비되나** 의 조합이 다 다릅니다.
+
+#### 결정 트리
+
+```
+   ① 데이터를 어디로 / 어디서?
+   │
+   ├─ 원격에 *내가 가진 데이터를 쓴다*
+   │    │
+   │    ├─ buffer 위치를 sender 가 안다 (rkey + remote_va 합의됨)?
+   │    │   │
+   │    │   ├─ 받는 쪽에 *완료 신호* 가 가야 하나? (CPU 깨워야 하나?)
+   │    │   │   ├─ 예 + 4B 메타데이터까지 함께        → RDMA_WRITE_WITH_IMM
+   │    │   │   └─ 아니오 (silent zero-copy)         → RDMA_WRITE
+   │    │   │
+   │    │   └─ 동시에 receiver 의 R_Key 도 무효화?    → SEND_WITH_INVALIDATE
+   │    │       (보안 패턴 — short-lived R_Key 회수)
+   │    │
+   │    └─ buffer 위치를 sender 가 *모른다*
+   │        → receiver 가 미리 RECV WR 로 buffer 를 잡아둠
+   │        ├─ 단순 control msg                       → SEND
+   │        └─ payload + 4B 메타데이터                 → SEND_WITH_IMM
+   │
+   ├─ 원격에 있는 데이터를 *가져온다*                  → RDMA_READ
+   │
+   └─ 원격의 8 byte 값을 *atomic 하게* 읽고 바꾼다
+        ├─ compare-and-swap                          → CMP_SWAP
+        └─ fetch-and-add                              → FETCH_ADD
+```
+
+#### 한 표로 본 SEND vs WRITE 변형들
+
+| Verb | buffer 위치 결정자 | 받는 RECV WQE 소비? | receiver CQE 생성? | IMM 4B | 대표 용도 |
+|------|------------------|-------------------|------------------|--------|----------|
+| **SEND** | **receiver** (사전 post RECV) | ✓ | ✓ | ✗ | 제어 메시지, handshake, payload |
+| **SEND_WITH_IMM** | receiver | ✓ | ✓ (imm_data 노출) | ✓ | "어떤 종류의 메시지인지" 32-bit 태그 |
+| **SEND_WITH_INVALIDATE** | receiver | ✓ | ✓ | (IETH 의 R_Key) | RDMA-after-RPC: write 끝나면 R_Key 즉시 회수 |
+| **RDMA_WRITE** | **sender** (rkey + remote_va) | ✗ | ✗ (receiver CPU silent) | ✗ | bulk zero-copy data placement |
+| **RDMA_WRITE_WITH_IMM** | sender | **✓** (예외) | **✓** (imm_data 노출) | ✓ | "다 썼다" 알림이 필요한 bulk write |
+| **RDMA_READ** | (양쪽) rkey + remote_va | ✗ | ✗ (sender 만 CQE) | ✗ | bulk fetch — RPC 응답 패턴 |
+| **CMP_SWAP / FETCH_ADD** | sender (8B aligned) | ✗ | ✗ | ✗ | distributed lock, counter |
+
+#### SEND 가 WRITE_WITH_IMM 으로 *대체 불가* 한 이유
+
+|  | SEND | WRITE_WITH_IMM |
+|---|------|----------------|
+| receiver 가 buffer 위치 알 필요 | **없음** — RECV WR 이 알려줌 | **있음** — sender 가 rkey + remote_va 사전 합의 필요 |
+| Connection setup 단계 (peer 가 rkey 모를 때) | ✓ 가능 | ✗ 불가능 (chicken-and-egg) |
+| 가변 크기 buffer | ✓ | ✗ — buffer 가 미리 합의된 길이 |
+| 다수의 sender 가 한 receiver 에 보낼 때 | ✓ (RECV pool 공유 가능, SRQ) | ✗ (각 sender 가 자기 rkey 와 합의해야) |
+| RDMA-CM private data 같은 *부트스트랩* | ✓ — 이때는 SEND 만이 자연스러움 | ✗ |
+
+→ 그래서 RDMA-CM REQ/REP/RTU 자체도 UD QP1 위의 **MAD = SEND 변형** 입니다. WRITE 계열로는 metadata 합의 자체를 할 수 없기 때문.
+
+#### 검증 관점에서 자주 묻는 한 줄 답
+
+- **"WRITE_WITH_IMM 이 one-sided 인가 two-sided 인가?"** → wire 모양은 one-sided (rkey + remote_va) 지만 **RECV WQE 를 소비하고 RECV CQE 를 만듦** — semantic 은 two-sided. scoreboard 는 둘 다 모델링해야 RNR / RECV-shortage 시나리오에서 false fail 이 안 남.
+- **"왜 RDMA_READ 는 IMM 변형이 없나?"** → READ 는 sender 가 데이터를 _받는_ 쪽. 이미 sender 의 CQE 가 생기므로 receiver-notify 의미의 IMM 이 필요 없음.
+- **"ATOMIC 의 변형은 왜 둘뿐인가?"** → CAS, FAA 두 RMW 패턴이 distributed system 의 거의 모든 lock/counter 시맨틱을 cover. 더 복잡한 RMW 는 SEND 로 control msg 교환 후 일반 WRITE 로 처리.
+
+!!! tip "한 줄 멘탈 모델"
+    **`SEND` = receiver 가 buffer 를 정함, `WRITE/READ` = sender 가 정함, `_WITH_IMM` = "다 됐다" 통지를 곁들임, `_WITH_INVALIDATE` = "이제 그 키 폐기" 를 곁들임, `ATOMIC` = 8B RMW.**
 
 ---
 
@@ -476,6 +629,73 @@ IB spec §9.6 에는 transaction ordering 의 정밀한 규칙이 있음. 핵심
 
     검증·로그 분석 시 이 필드를 이용해 retry 발생 위치를 PSN 정확도로 특정할 수 있다.
 
+### 5.x Duplicate Request Handling — opcode 별 처리
+
+ACK 가 wire 에서 사라지거나 너무 늦으면 requester 의 timer 가 만료되고 **이미 responder 가 처리했던 PSN** 이 다시 도착합니다. responder 는 이를 "duplicate request" 로 인지하고 **opcode 별로 다르게** 응답합니다.
+
+```
+   requester ── PSN=N WRITE ──▶ responder  (정상 처리, memory update 완료)
+              ◀── ACK PSN=N ─                (ACK drop!)
+
+   timeout 후
+   requester ── PSN=N WRITE ──▶ responder  ← 같은 PSN 재도착 = duplicate
+                                            ↓ opcode 별 분기
+```
+
+| Opcode | Responder 의 행동 | 이유 |
+|--------|-----------------|------|
+| **SEND / WRITE** | 캐시된 마지막 **ACK 만 재전송** — memory 재기록 **안 함** | 이미 memory update 완료 (idempotent 효과). 재실행하면 같은 데이터를 또 쓰는 낭비. |
+| **WRITE_WITH_IMM** | ACK 재전송 — **RECV WQE 재소비 안 함** (CQE 재발급 X) | RECV pool 을 보호. duplicate 가 RECV 를 소진하면 정상 SEND 도 RNR. |
+| **RDMA READ** | response 를 **재계산** — connection context 의 (rkey, va, length) 로 memory **다시 fetch** | response 자체가 wire 에서 손실됐을 수 있어 ACK 만으로는 부족. memory 도 변했을 수 있어 cache 가 위험. |
+| **CMP_SWAP / FETCH_ADD** | connection context 의 **저장된 original value** 로 AtomicACK 만 재전송 — RMW **재실행 안 함** | atomic 의 핵심은 RMW 가 _정확히 한 번_ 실행. 재실행하면 멱등성 깨짐. |
+| **out-of-range PSN** (너무 오래된) | silent drop | window 밖이면 retry 불가능한 상태 |
+
+#### Responder QP context 가 보관하는 metadata
+
+```
+   Per-QP duplicate region 캐시
+   ─────────────────────────────────────────
+   |  PSN  | opcode | (READ:  rkey, va, length)
+   |       |        | (ATOMIC: original 64-bit value)
+   |       |        | (SEND/WRITE: 없음 — ACK 만 다시 보내면 됨)
+   ─────────────────────────────────────────
+   ATOMIC 은 IBTA 가 "at most 2 most recent" 만 보존하도록 허용 — depth 제약은
+   max_dest_rd_atomic 으로 표현.
+```
+
+!!! note "검증 포인트"
+    - **WRITE duplicate 시 memory 가 두 번 update 되면 DV bug** — 일부 구현이 idempotence 를 깜빡함.
+    - **READ duplicate** 가 도착하면 memory 가 그동안 변했을 수 있음 — **변한 값을 다시 fetch 하는 것이 정답** (caching 의 함정).
+    - **ATOMIC duplicate** 시 cache 가 사라졌다면 (max_dest_rd_atomic 초과) responder 는 silently drop — requester 는 timeout 으로 인식 → retry counter 까지 깎임. 이 경계가 fault class D (§M07).
+
+### 5.y MSN 과 Message-Level Flow Control (LSN)
+
+§4.4 에서 본 MSN 은 _completion 통보_ 외에 **credit-based flow control** 의 신호도 겸합니다. RNR NAK 를 사전에 피하기 위함입니다.
+
+```
+   ACK packet 의 AETH:
+   ┌───────────────────────────────────────┐
+   │  syndrome (8 bit)  │   MSN (24 bit)   │
+   │  ↑                                     │
+   │  0_xxxxxxx 형식의 ACK 라면              │
+   │  하위 5-bit = credit                   │
+   │  → responder 가 "추가로 N 개 메시지     │
+   │     처리 가능" 을 알려줌                │
+   └───────────────────────────────────────┘
+
+   requester 는 매 ACK 마다 LSN 계산:
+       LSN = MSN + credit
+   새 WQE post 전에 `SSN ≤ LSN` 확인 — 위반이면 ACK 도착까지 대기
+```
+
+| 조건 | 행동 |
+|------|------|
+| SEND, WRITE_WITH_IMM 같은 RECV 소비 op | LSN 검증 — RNR 방지 |
+| WRITE / READ / ATOMIC | LSN 검증 불필요 (RECV WQE 안 씀) — LSN 만 update 하고 그대로 send |
+| `SSN > LSN` 인 RECV-소비 op | 발신 정지, 다음 ACK 까지 대기. limited-WQE 패턴 (SEND 1 packet 후 AckReq=1 으로 강제 ACK 유도) 으로 deadlock 회피. |
+
+→ **검증**: responder 의 credit 계산이 RECV pool depth 와 일치하는지, requester 가 LSN < SSN 일 때 정확히 멈추는지, ACK 가 long-coalesced 됐을 때 credit update 가 의도대로인지.
+
 ### 5.11 Confluence 보강 — SACK (Selective ACK) 와 Out-of-Order
 
 !!! note "Internal (Confluence: An_Out-of-Order_Packet_Processing_Algorithm_of_RoCE_Based_on_Improved_SACK, id=42599274)"
@@ -545,6 +765,60 @@ IB spec §9.6 에는 transaction ordering 의 정밀한 규칙이 있음. 핵심
     - RNR retry 와 일반 retry 의 counter 가 분리 — 둘 다 spec 상 별도 attribute.
     - RDMA READ Response 의 첫 패킷에 AETH 가 들어감 (ACK 의 역할 겸용). MIDDLE 에는 AETH 없음 — 이걸 헷갈리면 packet decoder 가 깨짐.
     - ATOMIC 은 8-byte align 강제 — spec 에서 misalign 시 NAK Inv Req. 검증에서 일부러 inject 해 거부되는지 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — PSN wrap-around (Bloom: Analyze)"
+    Sender 의 현재 sq_psn = 0xFFFFF0 (24-bit). 100 packet 을 보낸 뒤 sq_psn 은? PSN 비교에서 0x000005 < 0xFFFFFF 인가, 아니면 _뒤_ 에 있는가?
+
+    ??? success "정답"
+        - sq_psn = (0xFFFFF0 + 100) mod 2^24 = **0x000054**.
+        - **Modulo 비교**: PSN window = 2^23. 0xFFFFFF 와 0x000005 의 차이는 _signed_ 24-bit 로 봐서 5 - (-1) = 6 → 0x000005 가 _뒤_ (newer). 즉 `0x000005 > 0xFFFFFF` (modulo 의미).
+        - 단순 `>` 비교는 0xFFFFFF > 0x000005 로 잘못 판정 → wrap 직후 모든 valid PSN 을 _past_ 로 잘못 분류 → silent drop.
+
+        검증 시: PSN 비교 함수를 `((a - b) & 0xFFFFFF) < 2^23` 으로 wraparound-aware 하게 둠.
+
+!!! question "🤔 Q2 — Multi-packet WRITE fragmentation (Bloom: Apply)"
+    10 KB RDMA WRITE, MTU = 4 KB. Packet 시퀀스를 _OpCode 와 _ 함께 적으시오. 어느 패킷에 RETH 가, 어느 패킷에 AckReq 가 set 되는가?
+
+    ??? success "정답"
+        - Packet 1: **WRITE_FIRST** — RETH (remote_va, rkey, dmalen=10240) 포함. AckReq = 0 (보통).
+        - Packet 2: **WRITE_MIDDLE** — RETH 없음. AckReq = 0.
+        - Packet 3: **WRITE_LAST** — RETH 없음. **AckReq = 1**.
+
+        규칙: RETH 는 FIRST/ONLY 에만, AckReq 는 LAST/ONLY 에 (마지막에 한 번 ACK).
+
+!!! question "🤔 Q3 — Verb 선택 (Bloom: Evaluate)"
+    Peer 노드가 다음 두 작업을 _동시에_ 해야 한다:
+    - (a) 큰 데이터 블록 (1 MB) 을 peer 의 _이미 약속된_ 메모리에 쓴다.
+    - (b) "1 MB 데이터가 도착했음" 을 peer application 에 알린다.
+
+    어떤 단일 opcode 가 가장 효율적인가? 왜?
+
+    ??? success "정답"
+        **WRITE_WITH_IMMEDIATE** (마지막 패킷이 LAST_WITH_IMM).
+
+        이유:
+        - WRITE 시맨틱 (a 작업) + RECV WQE 소비 + CQE 생성 (b 작업) 을 _하나의 packet 시퀀스_ 로 결합.
+        - 대안 1: WRITE 후 별도 SEND 로 통지 — 2 round-trip, 2 배 메시지 수.
+        - 대안 2: WRITE 후 peer 가 memory polling — CPU busy-loop, 전력 낭비.
+        - WRITE_WITH_IMM 의 4 B Immediate 에 _데이터 ID 또는 length_ 같은 metadata 를 실어 보낼 수도 있음.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[RDMA] WRITE` (id=989560925) — multi-packet sequence
+- `[RDMA] SEND` (id=973439000) — RECV WQE 소비 시맨틱
+- `[RDMA] Transfer functions` (id=992804897) — payload assembly
+- `[RDMA] ETH (Extended Transport Header)` (id=993361924) — RETH/AETH/AtomicETH
+- `[RDMA] Drop vs Silent drop` (id=996573316) — 7장의 silent drop 과 link
+- `[RDMA] BTH (Base Transport Header)` (id=984907807) — OpCode encoding
+- 사내 `NCCL official docs summary` (id=99779475) — allreduce 의 verb 사용 패턴
+
+**External**
+- IBTA Spec 1.7, §9.5 Transaction Ordering
+- IBTA Spec 1.7, §9.7 Reliable Connection Service
+- IBTA Spec 1.7, Annex A19 — Memory Placement Extensions (FLUSH/ATOMIC WRITE)
 
 ---
 

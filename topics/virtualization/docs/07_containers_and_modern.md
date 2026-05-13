@@ -42,6 +42,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — AWS Lambda 의 _125 ms cold start_
+
+AWS Lambda — _serverless_. 사용자가 함수 호출 시 _AWS 가 즉시 VM 띄워서 실행_.
+
+요구사항:
+- **Cold start**: <500 ms (사용자가 _기다린다고 느낌_).
+- **격리**: 다른 고객의 코드와 _완전 분리_ — 보안 critical.
+- **Density**: 한 서버에 _수천 함수 인스턴스_.
+
+3 가지 시도:
+
+| 옵션 | Cold start | 격리 | Density | Lambda 적합? |
+|------|----------|------|---------|-------------|
+| **Full VM** (KVM) | _수 초_ | ★ | 100/서버 | ✗ (느림) |
+| **Container** (Docker) | _수십 ms_ | △ (kernel 공유) | 수천/서버 | ✗ (격리 약함) |
+| **MicroVM** (Firecracker) | **125 ms** | ★ | 수천/서버 | ✓ |
+
+**Firecracker = AWS 가 Lambda 용으로 만든 microVM**. _최소 device 모델_ + _최소 kernel_ + _Rust 작성_ → _작고 빠르고 안전_.
+
 같은 "가상화" 라는 단어 아래 두 개의 완전히 다른 모델이 있습니다 — **kernel 을 _분리_ 하는 VM 과 kernel 을 _공유_ 하는 container**. 이 한 줄의 차이가 startup 시간 (분 vs ms), density (수십/서버 vs 수천/서버), 격리 (강함 vs 약함), 보안 표면 (작음 vs 큼) 의 _모든 trade-off_ 를 결정합니다. 그리고 2017 년 이후 등장한 **microVM (Firecracker, kata)** 은 _container 의 속도_ 와 _VM 의 격리_ 를 동시에 얻으려는 hybrid — 이걸 모르면 AWS Lambda · Fargate · GKE Sandbox 가 왜 그렇게 생겼는지 답이 안 나옵니다.
 
 이 모듈을 건너뛰면 "Docker 가 VM 보다 빠른 이유" 같은 면접 질문에 **"OS 부팅이 없어서"** 라는 _문장 한 줄_ 로만 답하게 됩니다. 반대로 **namespace + cgroup + kernel 공유** 의 세 단어가 _어떤 격리 boundary 를 만들고 어디가 약한지_ 를 잡으면, container escape CVE 가 나올 때마다 _어느 boundary 가 깨졌는지_ 즉시 보입니다.
@@ -543,6 +562,36 @@ Timeline:
     - **cgroup 은 상한만** — priority inversion, OOM scoring 은 별도 tuning.
     - **Kubernetes Pod 는 격리 단위가 아니라 _공동_ 격리 단위** — 같은 Pod 의 container 들은 NET/IPC 공유.
     - **MicroVM 의 핵심은 device model 최소화** — 단순히 작은 VM 이 아닌 _감사 가능한_ 공격 표면.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Container vs VM 격리 강도 (Bloom: Analyze)"
+    Container 와 VM 의 _격리 강도_ 차이의 근본 원인?
+    ??? success "정답"
+        Kernel 공유 여부:
+        - **VM**: 각 VM 이 _자기 kernel_ + hypervisor 가 격리. Hypervisor 침해만이 escape 경로 (수 MB 코드).
+        - **Container**: host kernel _공유_. Kernel CVE (CVE-2022-0492 등) 가 모든 container 의 escape vector → 공격 표면 ~20 MB 코드.
+        - 결론: container 는 가벼움 ↑ + 격리 ↓. 다중 tenant 환경 (cloud) 에서는 _kata containers_ / _gVisor_ 같은 hybrid 가 필요.
+
+!!! question "🤔 Q2 — Firecracker 의 가치 (Bloom: Evaluate)"
+    AWS Lambda 가 Docker 가 아닌 Firecracker microVM 을 쓰는 _경제적_ 이유?
+    ??? success "정답"
+        Multi-tenant 격리 + 빠른 cold start:
+        - **격리**: Lambda 는 _다른 고객_ 의 코드를 한 host 에 실행 → kernel escape = 데이터 유출. VM 격리 _필수_.
+        - **cold start**: Docker = 수백 ms ~ 초, Firecracker = ~125 ms (device 모델 최소화).
+        - **밀도**: 한 host 에 수천 microVM (각 ~5 MB 메모리 overhead) → tenant 분리하면서 cost 효율.
+        - 결론: container 의 격리 부족 + VM 의 무거움 사이의 _스위트 스팟_.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Container Security` — namespace/cgroup 격리 한계
+- `MicroVM Architecture` — Firecracker/Cloud Hypervisor 비교
+
+**External**
+- *Firecracker: Lightweight Virtualization for Serverless Applications* (NSDI 2020)
+- Linux `man 7 namespaces`, `man 7 cgroups`
+- Google *gVisor* whitepaper — userspace kernel approach
 
 ---
 

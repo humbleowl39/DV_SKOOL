@@ -430,6 +430,37 @@ flowchart TB
 
     **점검 포인트**: master 에서 `AxLEN` 계산 코드가 `beat_count − 1` 인지 확인. WRAP burst 는 `wrap_boundary = (start_addr / total_bytes) × total_bytes` 이고 `total_bytes = (AxLEN+1) × (1<<AxSIZE)`. monitor / scoreboard 에서 expected beat 수와 실제 수신 beat 수를 매 transaction 별로 비교.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 카드 즉답 (Bloom: Apply)"
+    "AXI 4-beat WRAP, 데이터 폭 32-bit. 주소 0x40 부터 시작. 어디로 wrap?"
+    ??? success "정답"
+        카드의 §3 검산표 직접 적용:
+        - `total_bytes = (AxLEN+1) × (1<<AxSIZE) = 4 × 4 = 16 B`.
+        - `wrap_boundary = (0x40 / 16) × 16 = 0x40`.
+        - Beats: 0x40 → 0x44 → 0x48 → 0x4C → (wrap) → 0x40.
+        - 검증 포인트: monitor 가 `0x4C` 다음에 `0x50` 받으면 wrap 오류.
+
+!!! question "🤔 Q2 — Protocol 선택 trade-off (Bloom: Evaluate)"
+    "Register interface 에 AXI 안 쓰고 APB 쓰는 이유" — 카드의 §5.4 + §5.5 로 답하라.
+    ??? success "정답"
+        APB 가 fit-for-purpose:
+        - **신호 수**: APB ~6 신호 vs AXI ~50+ 신호 → register block 수십 개에 AXI = silicon 낭비.
+        - **bandwidth 불필요**: register 는 trans 가 가끔 (config) → AXI 의 burst/outstanding 가치 없음.
+        - **검증 단순**: APB 의 trans-by-trans 핸드셰이크 → SVA 작성 ~10 분 vs AXI ~수일.
+        - 안티패턴: 모든 인터페이스를 AXI 로 통일 → 면적 + 검증 시간 폭증.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `AMBA Protocol Selection` — APB/AHB/AXI 매트릭스
+- `AXI Burst Encoding` — AxLEN/AxSIZE 검증 사례
+
+**External**
+- ARM *AMBA AXI and ACE Protocol Specification* (IHI 0022)
+- ARM *AMBA APB Protocol Specification* (IHI 0024)
+- ARM *AMBA 4 AXI4-Stream Protocol Specification* (IHI 0051)
+
 ---
 
 ## 코스 마무리

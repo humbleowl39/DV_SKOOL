@@ -43,9 +43,41 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 왜 _SRAM 처럼_ 안 만들었나?
+
+당신은 CPU 와 메모리 설계자. SRAM (캐시) 은 _1 cycle_ 에 read/write. DRAM 은 _수십 cycle_ + 복잡한 timing. 왜?
+
+**SRAM cell**: 6 transistor flip-flop. 영구 저장 (전원 켜진 동안). 빠름. **면적 크다**.
+
+**DRAM cell**: 1 transistor + 1 capacitor. _capacitor_ 에 charge 로 저장. **면적 1/6**. 단:
+- **Capacitor 누설**: 시간 지나면 data 사라짐 → _refresh 필요_.
+- **Destructive read**: 한 번 읽으면 _data 파괴_ → _restore 필요_.
+- **Sense amplifier 시간**: capacitor 의 미세 전하 감지에 시간 필요 → _tRCD_.
+
+**Trade-off**:
+| 항목 | SRAM | DRAM |
+|------|------|------|
+| 면적 | 1 (baseline) | 1/6 |
+| Latency | 1 cycle | 수십 cycle |
+| Refresh | 불필요 | 필수 |
+| 비용/bit | 6× | 1× |
+
+**결과**: SRAM 으로는 _GB 단위_ 메모리 _경제적으로_ 불가능. DRAM 이 _수십 cycle latency_ 라는 _대가로_ _대용량_ 가능. 그래서 CPU 는 _SRAM 캐시 + DRAM main memory_ 의 hybrid.
+
 이후 모든 DRAM/DDR 모듈은 한 가정에서 출발합니다 — **"DRAM cell 은 capacitor 이므로 데이터가 시간에 따라 누설되고, 외부에서 한 번 읽으면 파괴되며, 따라서 모든 access 는 row open → column access → row close 라는 stateful 시퀀스를 거친다"**. Memory Controller (MC) 가 왜 그렇게 복잡한 스케줄러를 갖는지, PHY 가 왜 nano-second margin 을 보정해야 하는지, DV TB 가 왜 timing SVA 수십 개를 동시에 보는지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 모든 timing parameter / refresh 정책 / training 시퀀스 결정이 "그냥 외워야 하는 숫자" 로 보입니다. 반대로 capacitor → destructive read → restore → refresh 의 인과를 정확히 잡고 나면, tRCD / tRP / tRAS / tFAW 가 만나는 모든 디테일에서 _이유_ 가 보입니다.
+
+!!! question "🤔 잠깐 — Row buffer 의 _hit/miss_ 의 비용 차이?"
+    Same row 또 access (hit) vs 다른 row access (miss). 시간 비용?
+
+    ??? success "정답"
+        - **Row hit**: 이미 _open_ 된 row buffer 에서 column access — _~1 cycle_ (~tCL = 14 cycle).
+        - **Row miss (conflict)**: 현재 row close (`PRE`, ~tRP=14) → 새 row open (`ACT`, ~tRCD=14) → column access (~tCL=14). **~42 cycle**.
+
+        **3× 차이**. 그래서 _row buffer locality_ 가 메모리 성능의 _가장 큰 결정 인자_.
+
+        Memory controller 의 _스케줄러_ 가 이걸 활용: _같은 row 의 access 모으기_ (FR-FCFS — First Ready First Come First Served).
 
 ---
 
@@ -610,6 +642,34 @@ DDR5 Mode Register (MR0~MR63+, 크게 확장):
     - "DDR 빠르다" 는 **prefetch + DDR + bank parallelism** 의 곱. 하나라도 빠지면 nominal BW 미달.
     - **Open-page 가 항상 좋지 않다** — workload 의 row reuse rate 가 낮으면 close-page 가 더 좋을 수 있음.
     - **On-die ECC ≠ 시스템 ECC** — 1-bit / 128-bit 한정. multi-bit 보호는 외부 SECDED 가 책임.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Refresh 비용 계산 (Bloom: Apply)"
+    DDR4 의 _tREFI = 7.8 µs_ × 8192 row. _Refresh 가 차지하는 시간 비율_?
+
+    ??? success "정답"
+        - 매 7.8 µs 마다 1 refresh.
+        - 1 refresh = `tRFC` ~350 ns @ 8 Gb DRAM.
+        - 비율 = 350 / 7800 = **~4.5%**.
+
+        DDR5 with same-bank refresh: 비율 _감소_ (bank-level 병렬 refresh).
+
+!!! question "🤔 Q2 — Row buffer locality (Bloom: Analyze)"
+    Workload 의 _row reuse rate 90%_ vs _10%_. Open-page vs close-page?
+
+    ??? success "정답"
+        - **90% reuse**: Open-page 압도. 다음 access 가 같은 row 일 확률 큼 → row hit (1 cycle).
+        - **10% reuse**: Close-page 우월. 같은 row 안 옴 → 미리 close 하면 다음 access 의 PRE 비용 절감.
+
+        Memory controller 는 _workload 측정_ 후 policy 동적 전환 가능.
+
+### 7.2 출처
+
+**External**
+- JEDEC JESD79 *DDR4* / JESD79-5 *DDR5*
+- *DRAM Refresh Mechanisms* — academic survey
+- Mutlu et al. *Row Hammer* papers
 
 ---
 

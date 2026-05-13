@@ -43,6 +43,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Chain_ 의 _한 link_ 가 깨지면
+
+당신의 secure boot 가 _BL1 → BL2 → kernel_ 3 단계. 모든 단계에 서명 검증.
+
+**Attack 시도**: 공격자가 _BL2 image_ 를 위조 (custom code 삽입).
+
+정상 동작:
+1. BootROM 이 BL1 서명 검증 → OK → BL1 실행.
+2. BL1 이 BL2 서명 검증 → **FAIL** (위조됨) → boot abort.
+
+**Chain 의 한 link 누락 시나리오**: BL1 이 _BL2 서명 검증_ 단계를 _skip_ (구현 누락 또는 race condition).
+1. BootROM 이 BL1 서명 검증 → OK.
+2. BL1 이 BL2 _no verify_ → BL2 (위조됨) 실행 → kernel 위조.
+
+**결과**: HW RoT 가 강해도 _SW chain 의 한 link 누락_ 으로 전체 무효.
+
+검증의 핵심: **모든 link 가 _다음 단계 진입 전_ 서명 검증 통과** 확인.
+
 HW RoT 만으로는 모든 것을 검증할 수 없습니다 — BootROM 면적이 한정되고, DRAM 도 안 켜져 있고, OS 의 모든 코드를 ROM 에 담을 수도 없습니다. 그래서 **trust 는 _전파_ 됩니다**: 한 단계 가 다음 단계의 서명을 확인한 뒤에만 제어권을 넘긴다는 릴레이.
 
 이 한 가지 invariant 가 깨지면 — 즉 **"검증자 자신이 검증되지 않은 상태에서 다음 단계로 jump 가 일어나면"** — Secure Boot 의 모든 후속 검증은 의미가 없습니다. Module 05 의 Fault Injection, Module 07 의 BL1→BL2 Jump 직전 검증 생략 케이스가 모두 이 invariant 의 위반.
@@ -517,6 +535,35 @@ BL2 DRAM 초기화 단계:
     - `signature_verify()` 의 _분기 자체_ 가 글리치 surface — 이중 검증 + Flow Integrity 가 _쌍_ 으로 있어야 안전.
     - Measured Boot 의 PCR 측정 순서가 빌드마다 다르면 Remote Attestation 의 expected PCR 도 매번 갱신해야 함.
     - DRAM training 미완료 상태의 DRAM 접근은 random data — 검증 환경에서 BL2 entry 후 첫 DRAM access 가 wait_training_done() 뒤인지 assertion 으로 잡기.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — BL1 ROM 화 (Bloom: Analyze)"
+    BL1 만 ROM, BL2 부터는 flash. 왜 _BL1_ 이 ROM 이어야 하는가?
+    ??? success "정답"
+        BL1 = trust anchor 의 _코드_ 측. ROM 이어야 하는 이유:
+        - **불변성**: flash 라면 공격자가 BL1 자체를 갈아끼움 → chain 전체 무력화.
+        - **trade-off**: ROM 은 패치 불가 → 결함이 silicon revision 으로만 수정. 그래서 BL1 코드 크기를 최소화하고 검증을 1 순위로 함.
+        - **BL2 가 flash 인 이유**: DRAM training / SoC 별 init / 정책 업데이트가 필요 → 가변성 필요. BL1 이 BL2 를 _검증_ 하므로 flash 라도 안전.
+
+!!! question "🤔 Q2 — Measured vs Verified (Bloom: Evaluate)"
+    Verified Boot 만으로 충분하지 않고 Measured Boot 가 추가로 필요한 시나리오?
+    ??? success "정답"
+        Verified Boot 는 _차단_, Measured 는 _기록_ — 둘은 직교:
+        - **시나리오**: Cloud TEE 에서 Remote Attestation 필요 시 — 서버가 _어떤_ BL/OS 가 동작 중인지 PCR hash 로 확인.
+        - Verified 만 있으면 "통과/실패" 만 알 수 있고, _버전/구성_ 은 모름.
+        - Measured 가 있어야 "v1.2.3 + config A 로 부팅됨" 같은 _내용_ attestation 가능.
+        - 결론: Verified = local 차단, Measured = remote 가시성. 둘 다 필요.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Boot Chain Verification` — BL1→BL2→BL3x 시퀀스
+- `Measured Boot DV` — PCR extend / TPM event log
+
+**External**
+- ARM *Trusted Firmware-A (TF-A) Documentation* — BL1/BL2/BL31/BL33 단계
+- TCG *PC Client Platform Firmware Profile* — PCR / Measured Boot 명세
 
 ## 다음 단계
 

@@ -42,9 +42,36 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 보안 사고가 한 번에 1000 노드를 망친다
+
+당신은 분산 KV store 를 RDMA WRITE 로 구현했습니다. 작동합니다. 그런데 한 노드의 메모리가 _이상하게_ 변조되어 갑니다 — application 이 안 쓴 메모리 영역까지.
+
+추적해 보니: 외부 attacker 가 _R_Key 를 알아냈고_, 그 노드의 _임의 주소_ 에 RDMA WRITE 를 쏘는 중입니다.
+
+**RDMA 의 보안 모델**: "**키만 보면 누구든 접근 가능**". TCP 처럼 connection 자체가 인증 단위가 _아니다_. 그래서 **키가 곧 권한 토큰** 이고, 키 위조/유출 = 보안 사고. 다중 방어층이 필요:
+
+1. **PD 격리** — 다른 PD 의 MR 은 못 봄.
+2. **Access flag 제한** — Remote Read 만 줄지, Remote Write 도 줄지.
+3. **Range 제한** — MR base + len 범위 안에서만.
+4. **R_Key 자체의 lifetime 제한** — Memory Window 패턴.
+
+이 다섯이 **하드웨어가 패킷 수신 시점에 _즉시_ 검증** 해야 합니다 (SW 가 끼면 latency 가 망가짐). 그래서 5-step 검증이 _hardware ASIC 레벨_ 로 명세돼 있습니다.
+
 **RDMA 의 모든 데이터 path 는 "주소 + key" 의 쌍으로 표현** 됩니다. local 측 sg_list 는 (`addr`, `length`, `lkey`), remote 측 RDMA WRITE 의 RETH 는 (`remote_va`, `length`, `rkey`). 이 키 검증과 IOVA → PA 변환을 누가 어떻게 하는지가 RDMA 보안과 성능의 핵심.
 
 검증 환경에서 **가장 디버그가 어려운 영역** 도 이쪽입니다 — `WC_LOC_PROT_ERR`, `WC_REM_ACCESS_ERR` 같은 에러는 lkey/rkey/PD/access flag/range 5가지 중 하나라도 틀리면 발생하므로, 정확한 진단을 위해 5가지 모두를 알아야 합니다.
+
+!!! question "🤔 잠깐 — L_Key 와 R_Key 를 _분리_ 한 이유"
+    같은 MR 등록에서 _두 키_ 가 발급됩니다. "한 키" 로 통일했다면 무엇이 깨질까?
+
+    ??? success "정답"
+        **_자기_ 가 쓸 때와 _남_ 이 쓸 때 권한이 달라야 한다**.
+
+        예: GPU memory 를 RDMA 가 _자기_ buffer (Local Read) 로 쓰는 건 OK. 그러나 _외부 노드_ 가 임의로 쓰게 하는 건 보안 위험.
+        - 해법 A (단일 키): MR 에 access flag 만 두고 같은 키를 양쪽 모두 사용 → "자기 access" 와 "외부 access" 권한을 _별도로_ 줄 수가 없음 (한 키, 한 access set).
+        - 해법 B (이중 키): L_Key 만 발급하고 R_Key 발급 _안 함_ 가능 → 외부 노출 자체를 차단. 더 fine-grained.
+
+        IBTA 는 해법 B 채택. _R_Key 가 없으면_ 외부 노드는 _이름조차 모름_.
 
 ---
 
@@ -461,6 +488,59 @@ MW 는 **MR 의 부분 영역에 대해 일시적으로 다른 R_Key 를 발급*
     - R_Key 를 외부에 "노출" 하는 것은 보안 책임 — RDMA spec 은 access flag 에서 제한할 뿐, key 자체는 노출 가정. 따라서 **R_Key 는 짧은 lifetime + MW 패턴이 권장**.
     - PCIe ATS 가 비활성화된 환경에서는 IOMMU/SMMU 가 모든 변환을 처리 → host platform 별 검증.
     - ODP 와 RC retry 의 상호작용: page fault 가 길면 sender retry 가 먼저 발동 → packet duplicate 처리 필요.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 5-step 검증 추적 (Bloom: Analyze)"
+    Sender 가 외부에서 _훔친_ R_Key 로 노드 B 에 RDMA WRITE 합니다. _5-step 중 어디서_ 차단되는가? 만약 어떤 step 도 차단 못 하면 어떤 단계가 _부족_ 한 것인가?
+
+    ??? success "정답"
+        - Step 1 (rkey 일치) → 통과 (정확한 rkey 라).
+        - Step 2 (access flag) → MR 의 Remote Write 권한이 켜져 있으면 통과.
+        - Step 3 (PD same) → attacker QP 와 MR 이 같은 PD 면 통과 (attacker 가 RDMA-CM 으로 같은 PD 와 합의했을 수도 있음).
+        - Step 4 (range) → MR base + len 범위 안에서 통과.
+        - Step 5 (IOVA → PA) → 통과.
+
+        즉 **5-step 다 통과 가능**. RDMA spec 의 보안은 "**R_Key 가 비밀이라는 가정**" 에 의존. R_Key 가 유출되면 5-step 으로는 안 됨 → 그래서 _Memory Window_ + _짧은 lifetime_ 정책이 권장됨.
+
+!!! question "🤔 Q2 — `WC_REM_ACCESS_ERR` 진단 (Bloom: Apply)"
+    Receiver B 가 _모든 RDMA WRITE_ 에 대해 `WC_REM_ACCESS_ERR` 를 NAK 로 보냅니다. 5-step 중 어디부터 의심해야 효율적인가?
+
+    ??? success "정답"
+        효율 순서:
+        1. **Step 2 (access flag)** — 가장 흔한 실수. MR 등록 시 `IBV_ACCESS_REMOTE_WRITE` 안 켰을 가능성. read-back 으로 첫 확인.
+        2. **Step 1 (rkey)** — 두 노드의 rkey 동기 실패. CM 에서 받은 값 vs sender 가 보낸 RETH.RKey.
+        3. **Step 3 (PD)** — QP 와 MR 가 다른 PD. 다중 PD 환경에서만 가능.
+        4. **Step 4 (range)** — RETH.VA + DMALen 이 MR 범위 밖. 보통 _특정 offset_ 부터만 실패.
+        5. **Step 5 (IOVA)** — TLB stale 또는 PTW 실패.
+
+        Step 1, 2 가 80% 의 케이스. read-back 으로 빠르게 확인.
+
+!!! question "🤔 Q3 — MR dereg 의 race (Bloom: Evaluate)"
+    당신은 _RDMA WRITE in-flight_ 중에 MR 을 dereg 한다. 어떤 race 가 발생할 수 있는가? RDMA-TB 가 이걸 검증해야 하는 이유는?
+
+    ??? success "정답"
+        Race: **R_Key 는 invalidate 됐지만 DMA 가 _이미 wire 위_ 에 있는 경우**.
+        - 수신 측에서 새 R_Key 로 재할당이 발생하면 _다른 MR_ 의 메모리에 DMA write 가 들어갈 수 있음 (use-after-free / aliasing).
+        - 또는 in-flight DMA 가 dereg 후 도착해서 _이미 회수된 메모리_ 에 corruption.
+
+        RDMA-TB 의 검증: dereg 시 in-flight WR drain (§5.10 의 Confluence id=133497307) — 모든 outstanding WR 완료 후 R_Key invalidate. 이게 _구현 책임_ 인 이유는 spec 이 명시적으로 drain 을 요구하지 않기 때문 (race 가 _silent corruption_ 으로 나타날 수 있음).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[RDMA] MMU Basic` (id=992346170) — IOVA → PA 변환의 ATS/PTW/TLB
+- `[RDMA] Memory Window (MW)` (id=989561005) — Type 1 vs Type 2 (DH)
+- `[RDMA] Transfer functions` (id=992804897) — sg_list 처리
+- `RDMA atomic operation` (id=93880360) — CAS/FAA
+- `Local/Remote Invalidation` (id=155844886) — invalidate semantics
+- `Memory Placement Extensions (MPE)` (id=217808945) — FLUSH/ATOMIC WRITE
+- `Large MR support` (id=93814912), `In-flight WR management` (id=133497307) — corner case
+
+**External**
+- IBTA Spec 1.7, §10.6 Memory Management
+- IBTA Annex A19 — Memory Placement Extensions
+- PCIe Spec — ATS (Address Translation Service)
 
 ---
 

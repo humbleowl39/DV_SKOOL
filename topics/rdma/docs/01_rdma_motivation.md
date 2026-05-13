@@ -42,9 +42,39 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 1024-GPU LLM 학습이 통신에서 죽는다
+
+2026년 1월. 우리는 H100 1024 개로 GPT 급 LLM 을 학습합니다. 매 step 마다 **32 GB 의 gradient** 를 all-reduce 해야 합니다.
+
+**문제**: 한 step 의 compute 시간은 ~600 ms. 그런데 _통신_ 만 잘못 짜면 step 시간이 **2~3 배** 늘어납니다. 측정해 봅시다.
+
+```
+   Per-step gradient allreduce, 1024 GPU × 32 GB = 32 TB aggregate
+                            ┌─────────────────────────────────────────┐
+   TCP/IP over 100 GbE      │ ~ 6.4 s / step    (10× compute time)    │ ← 학습 불가능
+   RDMA over 100 GbE        │ ~ 0.4 s / step    (compute 와 겹침)      │
+                            └─────────────────────────────────────────┘
+   * 출처: NCCL all_reduce_perf, 92% of fabric peak ~ 370 GB/s on 400G fabric.
+     [Oracle/Nebius blog, 2025]
+```
+
+**왜 이 차이가 나는가?** TCP/IP 는 100 Gbps 라인레이트를 채우려면 CPU 코어를 **4 ~ 8 개** 통째로 통신 처리에 쓴다 — 그러면 _학습 코드_ 가 돌 수 있는 코어가 그만큼 줄어듭니다. 그리고 매 메시지마다 `copy_from_user` + 스택 + interrupt 의 누적이 **p99 latency** 를 폭주시킵니다 (10 µs → 50 µs 의 tail).
+
+### 1.2 그래서 이 모듈을 잡아야 한다
+
 이후 모든 RDMA 모듈은 한 가정에서 출발합니다 — **"네트워크의 양 끝 NIC 가 host CPU 를 거치지 않고 상대 노드의 메모리를 직접 읽고/쓴다"**. IB 패킷 헤더가 왜 그렇게 생겼는지, RC service 가 왜 PSN/ACK 를 hardware 로 처리하는지, DV TB 가 왜 host memory 와 MMU 까지 모델링해야 하는지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 모든 spec/패킷/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이게 zero-copy 를 위한 거구나"** 처럼 _이유_ 가 보입니다.
+
+!!! question "🤔 잠깐 — 100 Gbps 에서 패킷 한 개 간격은?"
+    1500-byte 이더넷 프레임을 100 Gbit/s 로 연속 전송한다고 합시다. 패킷 하나가 도착하는 시간 간격은 약 얼마인가요?
+
+    이게 왜 중요한가? CPU 가 인터럽트 받고 context switch 하는 데 **수백 ns** 가 듭니다. 만약 패킷 간격이 그것보다 짧으면?
+
+    ??? success "정답"
+        **약 120 ns** (1500 B × 8 / 100 Gbit/s ≈ 120 ns).
+
+        Context switch 가 ~500 ns 이므로, 패킷이 도착할 때마다 CPU 가 깨면 **CPU 가 패킷 도착 속도를 못 따라잡습니다**. → 이게 곧 "interrupt coalescing" 과 "kernel bypass" 가 동시에 필요한 이유.
 
 ---
 
@@ -92,9 +122,35 @@ flowchart LR
 
 세 개의 빨간 원이 RDMA 에서는 모두 사라지고, 대신 **HCA hardware** 가 PSN, ACK, 재전송, 무결성 검사를 처리합니다.
 
-### 왜 이렇게 설계됐는가 — Design rationale
+### 왜 이렇게 설계됐는가 — 순진한 시도가 모두 실패한 결과
 
-100 Gbps 라인레이트에서는 패킷 1개 도착 간격이 **~80 ns** 입니다. CPU 가 인터럽트 받고 컨텍스트 전환만 해도 수백 ns. 즉 **CPU 가 끼는 한 라인레이트를 못 채웁니다**. 그래서 RDMA 의 세 축 — **kernel bypass + zero-copy + transport offload** — 는 동시에 만족돼야 의미가 있고, 셋 중 하나라도 빠지면 전체가 의미를 잃습니다. 이 세 축이 곧 IB/RoCE 패킷 포맷, Verbs API 디자인, 검증 환경의 구조를 결정합니다.
+RDMA 가 채택한 설계는 _하늘에서 떨어진_ 게 아닙니다. 1990년대~2000년대 초 여러 순진한 시도가 _구체적으로 어디서 막혔는지_ 의 결과물입니다. 세 가지 대표 시도를 따라가 봅시다.
+
+**시도 1 — "TCP/IP 스택을 더 빠르게 만들면?"** (Toe, TCP Offload Engine)
+NIC 에 TCP 처리를 일부 offload 하면? → 일부 latency 개선되지만 _user space 까지_ 의 `copy_to_user` 와 socket buffer 가 여전히 존재. CPU jitter 가 사라지지 않음. **결론: socket API 자체가 병목.**
+
+**시도 2 — "그냥 DMA 를 wire 로 확장하면?"** (단순 remote DMA)
+"내 메모리 ↔ 내 디바이스" 의 DMA 를 "내 메모리 ↔ 원격 메모리" 로 일반화하면 안 되나? → 두 가지가 막힘:
+
+- **보안**: 원격 노드가 임의 메모리 주소를 쓸 수 있으면 OS isolation 붕괴. → "사전 등록(MR) + 키(R_Key)" 같은 권한 제어 필요.
+- **주소**: 원격 노드는 내 가상 주소도, 물리 주소도 모름. → IOVA 와 MR 등록으로 매핑 필요.
+
+**시도 3 — "MMIO 로 원격 메모리 직접 쓰면?"** (memory-mapped over wire)
+PCIe 같은 메모리-매핑 IO 를 네트워크로 확장? → 거리/지연 때문에 cache coherence 가 불가능. cache flush latency 만 ~10 µs. **결론: per-load/store 가 아닌 _메시지 단위_ 의 비동기 모델 필요.**
+
+세 시도의 _부분 정답_ 을 합치면 다음 세 가지가 _동시에_ 만족돼야 한다는 결론에 도달합니다:
+
+| 축 | 시도 1 이 못 푼 것 | 시도 2 가 못 푼 것 | 시도 3 이 못 푼 것 |
+|----|------------------|------------------|------------------|
+| **Kernel bypass** | ✗ (socket 잔존) | — | — |
+| **Zero-copy** | ✗ (copy 잔존) | — | — |
+| **Transport offload** | △ (부분만) | △ (DMA 만) | — |
+| **메모리 등록 + 키** | — | ✗ (보안 구멍) | — |
+| **메시지 단위 비동기** | — | — | ✗ (per-load/store) |
+
+이 다섯이 동시에 만족돼야 _100 Gbps 라인레이트 + p99 안정 + 보안_ 이라는 세 마리 토끼가 잡힙니다. 이게 RDMA 의 설계 결정 — **kernel bypass + zero-copy + transport offload** — 가 _하나라도 빠지면 전체가 무너지는_ 이유.
+
+100 Gbps 라인레이트에서는 패킷 1개 도착 간격이 **~120 ns** (1.1 의 계산). CPU 가 인터럽트 받고 컨텍스트 전환만 해도 수백 ns. 즉 **CPU 가 끼는 한 라인레이트를 못 채웁니다**. 그래서 세 축이 _동시에_ 만족돼야 의미가 있고, 셋 중 하나라도 빠지면 전체가 의미를 잃습니다. 이 세 축이 곧 IB/RoCE 패킷 포맷, Verbs API 디자인, 검증 환경의 구조를 결정합니다.
 
 ---
 
@@ -153,17 +209,49 @@ ibv_poll_cq(cq, 1, &wc);              // ⑧ 까지 끝나면 status=SUCCESS
     **(1) 양 노드의 CPU 가 거의 안 쓰임** — A 는 post_send + poll_cq, B 는 0회. 이게 RDMA 의 본질. <br>
     **(2) "원격 메모리 주소" 가 미리 약속돼야 한다** — RDMA 는 _주소를 알고 직접 쓰는_ 모델. 그래서 connection setup (control path) 과 data 전송 (data path) 이 분리됩니다.
 
+!!! question "🤔 잠깐 — 만약 step ⑥ 에서 B 의 CPU 를 깨우려면?"
+    위 그림에서 B 의 CPU 는 한 번도 안 깨워졌습니다. 만약 B 의 application 이 "데이터 도착했음" 을 알아야 한다면 (예: 메시지 큐에 새 항목 push), A 는 어떤 opcode 를 써야 할까요?
+
+    ??? success "정답"
+        **SEND** 또는 **WRITE_WITH_IMMEDIATE**.
+        - **SEND** 는 B 의 RQ 에서 RECV WQE 를 소비 → CQ 에 WC 가 떨어짐 → B 의 application 이 `poll_cq` 로 알아챔.
+        - **WRITE_WITH_IMMEDIATE** 는 WRITE 본체와 함께 4 byte ImmDt 도 전달, 마찬가지로 B 의 CQ 에 WC 생성.
+        - **일반 WRITE** 는 _완전 비동기_ — 데이터만 도착, B 의 application 은 다른 방법(polling memory, signal flag)으로 감지해야 함.
+
+        이게 M06 의 "왜 SEND 와 WRITE_WITH_IMM 가 따로 존재하는가?" 질문의 답: **completion 통지 의무** 가 다릅니다.
+
 ---
 
 ## 4. 일반화 — 세 가지 축과 6 객체
 
-### 4.1 RDMA 의 세 축
+### 4.1 RDMA 의 세 축 — 그리고 각 축이 빠지면 무엇이 부서지는가
 
-| 축 | 무엇을 제거 | TCP/IP 와의 차이 |
-|---|---|---|
-| **Kernel bypass** | Syscall + context switch | post_send 는 user-space MMIO doorbell |
-| **Zero-copy** | `copy_from/to_user` | NIC 가 user buffer 에서 직접 DMA (MR pinning 으로 가능) |
-| **Transport offload** | TCP stack (PSN, ACK, retransmit, congestion) 의 SW 처리 | HCA hardware 가 RC PSN/ACK/NAK/retry 처리 |
+| 축 | 무엇을 제거 | TCP/IP 와의 차이 | **이 축이 빠지면 발생하는 시스템 실패** |
+|---|---|---|---|
+| **Kernel bypass** | Syscall + context switch | post_send 는 user-space MMIO doorbell | 매 메시지마다 context switch (~500 ns) → p99 latency jitter 폭주 → AI training step 시간 분산 큼 → 동기 barrier 가 _가장 느린 GPU_ 에 의해 결정 → 평균 throughput 폭락 |
+| **Zero-copy** | `copy_from/to_user` | NIC 가 user buffer 에서 직접 DMA (MR pinning 으로 가능) | 매 메시지마다 memcpy → 100 Gbps 양방향이면 25 GB/s memcpy → DDR4 25.6 GB/s 한 채널 통째로 점유 → application 의 메모리 대역폭이 0 으로 수렴 |
+| **Transport offload** | TCP stack (PSN, ACK, retransmit, congestion) 의 SW 처리 | HCA hardware 가 RC PSN/ACK/NAK/retry 처리 | 100 Gbps 채우려면 4~8 코어 통째로 통신 처리에 점유 (Mellanox WP 2014 측정) → 64 코어 서버에서 12% 의 코어가 _학습/추론_ 이 아닌 _통신_ 에 소진 |
+
+!!! note "Internal (Confluence: [RDMA] basic, id=934608922)"
+    사내 보고서도 같은 결론: "1Gbps 네트워크 시대에 설계된 소켓 통신 방식은 100Gbps, 400Gbps, 나아가 800Gbps에 이르는 현대의 고속 네트워크 대역폭을 감당하기에 지나치게 비효율적이다. 100Gbps 대역폭을 TCP/IP로 포화시키기 위해서는 최신 멀티코어 프로세서의 상당수 코어를 오직 통신 처리에만 할당해야 하는 비효율이 발생한다."
+
+    **사내 자료가 외부 자료(Mellanox WP, Oracle Cloud benchmark)와 일치하므로 이 측정은 신뢰 가능.**
+
+### 4.1.1 대안 비교 — 왜 iWARP 가 시장에서 사실상 졌나?
+
+세 축이 모두 만족돼야 한다면, _부분만_ 만족시키는 대안은 어떻게 됐을까? iWARP 의 흥망에서 답을 찾을 수 있습니다.
+
+| 변형 | Kernel bypass | Zero-copy | Transport offload | 결과 |
+|------|---------------|-----------|-------------------|------|
+| **TCP/IP** | ✗ | ✗ | ✗ | 100 Gbps 부적합 (CPU 폭주) |
+| **iWARP** | ✓ | ✓ | △ (TCP 위라 retransmit/PSN 결국 SW 도움) | 3 µs latency. RoCE 의 1.3 µs 에 비해 **2.3 배 느림**. 시장 outcompete 됨 |
+| **RoCEv2** | ✓ | ✓ | ✓ (BTH 가 IB Transport 그대로) | 7~10 µs latency (DC 라우팅 시), IB 의 1~2 µs 에 가까운 성능 |
+| **InfiniBand** | ✓ | ✓ | ✓ | 1~2 µs latency, switch port-port 100 ns |
+
+**교훈**: iWARP 는 "TCP 위에서 RDMA 의 _프로그래밍 모델_ 만 제공" — 호환성은 좋지만 transport offload 가 _TCP 의 제약_ 을 그대로 안고 감. 그래서 latency 와 throughput 모두 RoCE 에 밀림. 2026 년 현재 iWARP 는 legacy 로 분류[NVIDIA RoCE vs iWARP WP, 2025; AI Journal RoCEv2 vs IB vs iWARP, 2025].
+
+!!! quote "외부 자료"
+    "There are RoCE HCAs with a latency as low as 1.3 microseconds while the lowest known iWARP HCA latency in 2011 was 3 microseconds." — *RDMA over Converged Ethernet, Wikipedia, 2025*
 
 ### 4.2 DMA vs RDMA — 한 글자 차이의 의미
 
@@ -367,7 +455,76 @@ flowchart TB
 | Control | `ibv_open_device` `ibv_alloc_pd` `ibv_reg_mr` `ibv_create_qp` | O (자원·권한) | 초기화 sequence + RAL |
 | Data | `ibv_post_send` `ibv_post_recv` `ibv_poll_cq` | X (kernel bypass) | scoreboard + agent |
 
-### 5.4 어울리는 워크로드 / 어울리지 않는 워크로드
+### 5.4 실패 모드 — "이 축이 빠지면 정확히 어떤 증상이 보이나"
+
+각 축이 빠지면 시스템 레벨에서 _관찰 가능한 증상_ 이 어떻게 나타나는지를 알면, DV 환경에서 fault injection 시나리오를 설계할 수 있습니다.
+
+#### 실패 모드 1 — Kernel bypass 미적용 (예: TCP 로 같은 워크로드)
+
+```
+   AI training step 의 NCCL allreduce, 1024 GPU
+                          │
+                          ▼
+   매 메시지마다 context switch (~500 ns)
+                          │
+                          ▼
+   p50: 평소 1 µs → 5 µs (5× degradation)
+   p99: 평소 2 µs → 50 µs (25× degradation, tail 폭주)
+                          │
+                          ▼
+   barrier 가 _가장 느린 GPU_ 를 기다림
+                          │
+                          ▼
+   step 시간이 _평균이 아닌 worst-case_ 에 의해 결정
+                          │
+                          ▼
+   1024 GPU x 600 ms compute = 614 s wall  →  실제로는 ~1500 s (2.4× slowdown)
+```
+
+**관측 증상**: `nccl-tests/all_reduce_perf` 에서 latency variance 가 크고, throughput 이 fabric peak 의 30 ~ 40 % 에서 cap. DV TB 에서는 _CPU latency injection_ 시나리오로 재현 가능.
+
+#### 실패 모드 2 — Zero-copy 미적용 (예: 일반 socket-buf 통신)
+
+100 Gbps 양방향 = 25 GB/s 의 송수신 memcpy. DDR4 한 채널 대역폭이 ~25.6 GB/s 이므로:
+
+```
+   네트워크 처리에 DDR 한 채널 통째로 점유
+                  │
+                  ▼
+   application 의 메모리 대역폭이 0 으로 수렴
+                  │
+                  ▼
+   `numactl --membind` 으로 봐도 application 이 cache 에만 의존
+                  │
+                  ▼
+   working set > L3 cache 이면 throughput 0 (사실상 hang)
+```
+
+**관측 증상**: `perf stat` 으로 본 memory bandwidth 가 saturated, application 의 IPC 가 0.1 이하로 떨어짐, top 에서 `kworker` 또는 `ksoftirqd` 가 CPU 점유. DV 관점: scoreboard 의 buffer copy count 가 0 이 아닌 시나리오를 시각화.
+
+#### 실패 모드 3 — Transport offload 미적용 (예: SW PSN/ACK)
+
+```
+   HCA 가 PSN/ACK 를 SW 에 위임
+                  │
+                  ▼
+   CPU 코어 4~8 개 통째로 통신 처리에 점유 [Mellanox WP, 2014]
+                  │
+                  ▼
+   64 코어 서버에서 12 % 의 코어가 _학습_ 이 아닌 _통신_ 에 소진
+                  │
+                  ▼
+   동일 GPU 클러스터에서 1024-GPU job 의 effective throughput 이
+   12 % 의 코어 손실만큼 추가로 감소
+```
+
+**관측 증상**: `mpstat 1` 에서 특정 코어들이 100 % `sys` 점유. iWARP 가 실패한 정확한 이유.
+
+!!! note "Internal (Confluence: RDMA AI Workload Performance Modeling, id=98795521 / 98140444)"
+    AI workload 관점에서 step time = compute time + comm time 일 때, RDMA 가 없으면 comm time 이 compute time 의 _배수_ 가 되어 학습 자체가 _경제성_ 을 잃는다.
+    사내 모델링에서도 1024-GPU 학습 시 comm overhead 가 25 % 이내로 들어와야 손익분기점이라는 분석.
+
+### 5.5 어울리는 워크로드 / 어울리지 않는 워크로드
 
 | 워크로드 | RDMA 적합성 | 이유 |
 |---------|------------|------|
@@ -378,7 +535,7 @@ flowchart TB
 | **일반 웹 서비스 (HTTP)** | ★★ | RDMA 의 setup 비용이 connection 짧은 워크로드에 비해 큼 |
 | **WAN (대륙간)** | ★ | RDMA reliability 는 LAN/DC 가정 |
 
-### 5.5 인접 영역 — AI Server, NRT, GPUBoost
+### 5.6 인접 영역 — AI Server, NRT, GPUBoost
 
 !!! note "Internal (Confluence: AI Servers, RDMA for NRT, Latest GPUBoost Specification)"
     사내 RDMA-IP 의 운용 환경은 **AI training / inference 노드** (예: NVIDIA DGX, AMD MI325X) 와 **NRT (Non-RDMA Transport) fallback** 시나리오를 모두 포함한다.
@@ -386,6 +543,76 @@ flowchart TB
     - **AI Servers** — RCCL/NCCL allreduce, all-to-all, scatter/gather 가 핵심. RDMA-IP 는 GPU peer-memory 를 IOVA 로 노출하기 위해 **MR Large MR 모드** 를 자주 사용한다 (참조: M05).
     - **RDMA for NRT** — RDMA QP 를 사용할 수 없는 경로 (예: CPU-only flow) 를 위해 IP 가 fallback path 를 노출. 검증에서는 두 path 가 **동일 application 시맨틱** 을 보장하는지 비교 scoreboard 로 확인.
     - **GPUBoost spec** — 사내 RNIC 의 외부 spec. opcode·MTU·QP 수 등의 cap 은 spec 에서 직접 인용한다.
+
+### 5.7 RDMA Communication Lifecycle — 한 장 그림
+
+지금까지 본 객체와 verb 가 _실제 통신 한 번_ 에서 **어떤 순서로 등장하는가** 를 끝에서 끝으로 따라갑니다. 다음 모듈들이 각 구간을 잘게 쪼개 다루므로, 이 그림은 **앞으로의 모듈을 어디에 끼워 읽을지** 의 지도로 사용하세요.
+
+```
+   ┌── Phase 1. Initialization ───────────────────────────────────────────┐
+   │   ibv_open_device  →  ibv_alloc_pd  →  ibv_reg_mr  →  ibv_create_cq  │
+   │   ibv_create_qp(PD, CQ, service_type=RC)                              │
+   │   Modify(Reset → Init)        ← pkey_index, port, access_flags       │
+   │   상태: QP=Init, MR 등록 완료, CQ 준비됨                                │
+   └──────────────────────────────────────────────────────────────────────┘
+                                ↓ (RC 만 해당)
+   ┌── Phase 2. Connection Setup (RC service) — Module 03, 04 ────────────┐
+   │   RDMA CM (또는 OOB) 으로 양 끝이 교환:                                  │
+   │       peer QPN, init PSN, MTU, retry/timeout, rkey                    │
+   │   Modify(Init → RTR)          ← peer QPN, rq_psn, path_mtu, ah_attr   │
+   │   Modify(RTR → RTS)           ← sq_psn, timeout, retry_cnt            │
+   │   상태: QP=RTS (양방향 data 가능)                                       │
+   │                                                                       │
+   │   UD 는 Phase 2 가 가벼움 — Init → RTR (Q_Key 만) → RTS, AH 만 더 만들면 │
+   │   임의 peer 로 SEND. Connection 자체는 안 맺음.                          │
+   └──────────────────────────────────────────────────────────────────────┘
+                                ↓
+   ┌── Phase 3. Data Transfer — Module 05, 06, 07 ────────────────────────┐
+   │   ① ibv_post_send / ibv_post_recv  → SQ/RQ 에 WQE 쓰기                 │
+   │   ② Doorbell MMIO write           → RNIC 가 새 WQE 알아챔                │
+   │   ③ RNIC: WQE fetch, MPT/MTT 로 access 검증, DMA read payload        │
+   │   ④ RNIC: BTH+xTH 패킷 만들어 wire 로 송신 (PSN 부여)                    │
+   │   ⑤ 상대 RNIC: PSN/rkey/range 검증 → DMA write to peer MR             │
+   │   ⑥ ACK / NAK / READ-RESP / ATOMIC-ACK (AETH + MSN)                  │
+   │   ⑦ 요청자 RNIC: WQE retire → CQE 생성                                │
+   │   ⑧ ibv_poll_cq → user 가 완료 회수                                    │
+   │                                                                       │
+   │   장애 시:                                                              │
+   │     packet/ack drop → timer 만료 → Go-Back-N 재전송 (Module 07)          │
+   │     receiver RECV 없음 → RNR NAK → min_rnr_timer 후 재전송               │
+   │     rkey/range 위반 → NAK + QP→Err                                    │
+   └──────────────────────────────────────────────────────────────────────┘
+                                ↓
+   ┌── Phase 4. Disconnection / Cleanup ──────────────────────────────────┐
+   │   (RC) RDMA CM: rdma_disconnect → DREQ / DREP (UD QP1 의 MAD)         │
+   │   Modify(Any → Reset) — in-flight WR flush + WC FLUSH_ERR             │
+   │   ibv_destroy_qp → ibv_destroy_cq → ibv_dereg_mr → ibv_dealloc_pd     │
+   │   ibv_close_device                                                    │
+   └──────────────────────────────────────────────────────────────────────┘
+```
+
+#### Phase 별 책임자
+
+| Phase | 누가 | 무엇을 | 어디서 자세히 |
+|------|------|--------|------------|
+| **1. Init** | host SW (control verb) | 자원 할당, MR pin, QP/CQ 생성, kernel/IOMMU 매핑 | M04 §3, M05 |
+| **2. Setup** | host SW + UD QP1 (control plane) | metadata 합의 — peer QPN, init PSN, MTU, retry, rkey | M03 §5.9, M04 §3 |
+| **3. Data** | RNIC hardware (data verb) | doorbell, WQE fetch, DMA, packet build, PSN/ACK | M05 §4, M06 전체, M07 |
+| **4. Teardown** | host SW + RNIC | flush in-flight, dereg, dealloc | M04 §5.3 (FSM) |
+
+#### RC vs UD 의 lifecycle 차이 (한 표)
+
+| 단계 | RC | UD |
+|------|----|----|
+| Phase 1 (init) | 동일 | 동일 |
+| Phase 2 (setup) | **RDMA CM 으로 양 끝 metadata 합의 + Modify(RTR/RTS)** | Init → RTR(Q_Key) → RTS 만. 1:1 합의 없음 |
+| 매 SEND 마다 | 사전에 합의된 peer QPN/PSN 사용 | **AH (Address Handle)** 가 dest LID/QPN 을 매번 지정 |
+| Phase 3 (data) | SEND / WRITE / READ / ATOMIC 전부 | SEND only (write_with_imm 일부 변형 가능) |
+| ACK / retry | RNIC 가 자동 처리 | 없음 — drop = 메시지 loss |
+| Phase 4 (disconnect) | DREQ/DREP MAD + cleanup | RTS 에서 바로 Reset 가능 (peer 통보 없음) |
+
+!!! note "왜 이 lifecycle 을 한 번에 봐야 하나"
+    Phase 1·4 는 **kernel** 이 처리, Phase 2 는 host SW + UD QP1 (control plane), Phase 3 만 **RNIC hardware** 의 데이터 패스 — 검증 환경도 이 경계를 따라 분리됩니다. 사내 RDMA-TB 는 Phase 1·2 를 sequence 의 _init_phase_ 로, Phase 3 을 _io_phase_ 로 분리해 대다수 시나리오가 Phase 3 의 변형이라는 사실을 반영합니다.
 
 ---
 
@@ -435,6 +662,51 @@ flowchart TB
     - "RDMA 빠르다" 는 **latency / CPU 점유율**. throughput 만 보면 TCP 도 라인레이트 가능.
     - **RDMA-CM ≠ RDMA**. RDMA-CM 은 TCP 위 connection setup.
     - 보안: rkey 노출 = remote write 가능 → MR access flag 와 PD 격리는 구현 책임.
+
+### 7.1 자가 점검 — 이 모듈을 진짜로 이해했는지
+
+다음 3 문제를 _책 안 보고_ 풀어보세요. 답이 막히면 본문 어디로 돌아가야 하는지가 보일 겁니다.
+
+!!! question "🤔 Q1 — 1024-GPU 학습의 step time 계산 (Bloom: Analyze)"
+    1024 H100 GPU, 매 step compute 600 ms, gradient 32 GB allreduce.
+    - **(a)** 100 GbE TCP/IP 로 통신하면 step time 은 대략 얼마? 왜?
+    - **(b)** 100 GbE RoCEv2 로 통신하면? 왜?
+    - **(c)** 두 시나리오에서 _가장 큰 차이_ 가 throughput 인가 latency variance 인가? 한 줄로 답.
+
+    ??? success "정답"
+        - (a) ~6.4 s (10× compute) — TCP/IP 는 100 Gbps 의 ~30~40% 만 실제로 활용, 그리고 CPU 점유 → 결과적으로 step time 이 compute 의 10 배.
+        - (b) ~0.4 s — RoCEv2 는 fabric peak 의 ~92% 활용 (NCCL all_reduce_perf 측정), compute 와 overlap 가능.
+        - (c) **Latency variance (p99 tail)**. 1024-GPU barrier 는 _가장 느린 GPU_ 가 step 시간을 결정하므로 throughput 보다 _tail latency_ 가 더 치명적.
+
+!!! question "🤔 Q2 — opcode 선택 (Bloom: Apply)"
+    노드 B 의 application 이 "데이터가 도착했음" 을 알 _필요가 없는_ 경우 (예: 주기적으로 메모리를 polling) A 는 어떤 opcode 를 써야 가장 효율적일까? 그리고 알 _필요가 있는_ 경우는?
+
+    ??? success "정답"
+        - **알 필요 없음** → **RDMA WRITE** (일반). B 의 CPU 안 깨움, CQE 도 B 측에 안 생김.
+        - **알 필요 있음** → **WRITE_WITH_IMMEDIATE** (WRITE 의 효율 + 통지 결합) 또는 **SEND** (RECV WQE 가 미리 필요, 메시지 모델).
+
+!!! question "🤔 Q3 — DV scoreboard 설계 (Bloom: Evaluate)"
+    당신이 RDMA-TB scoreboard 를 설계한다. _zero-copy_ 가 깨졌음 (예: HCA RTL bug 로 user buffer 가 아닌 임시 buffer 를 거침) 을 어떤 measurement 로 감지할 수 있을까? 한 줄로.
+
+    ??? success "정답"
+        Host memory model 의 **buffer access trace** 에서 user-MR 영역이 아닌 _다른 주소_ 가 등장하는지 검사. 또는 DMA channel 의 source/destination 주소가 MR base ± len 범위 밖이면 fail. 더 단순하게는 _DMA 사이즈 ≠ 메시지 사이즈_ 면 copy 가 끼었다는 신호.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[RDMA] basic` (id=934608922) — 본 모듈 §1.1, §4.1 의 3 축 모티베이션과 100 Gbps 코어 점유 통계
+- `RDMA AI Workload Performance Modeling` (id=98795521 / 98140444) — §5.4 실패 모드의 step time 모델링
+- `[RDMA] SEND` (id=973439000) — §3 의 opcode 별 시맨틱
+- `RDMA Verbs (basic)` (id=32178388) — §5.3 control vs data path
+- `NCCL official docs summary` (id=99779475) — §1.1 의 allreduce throughput 측정 컨텍스트
+
+**External**
+- IBTA, *InfiniBand Architecture Specification Volume 1, Release 1.7* (2023)
+- IBTA, *Annex A17: RoCEv2 — RDMA over Converged Ethernet v2*
+- NVIDIA/Mellanox, *RoCE vs iWARP Competitive Analysis WP* (2014; rev. 2024)
+- *RoCEv2 vs InfiniBand vs iWARP for Large-Scale Training Fabrics* — AI Journal (2025)
+- *Demystifying NCCL: An In-depth Analysis of GPU Communication Protocols and Algorithms* — arXiv:2507.04786 (2025)
+- *RDMA over Converged Ethernet* — Wikipedia (revision 2025) — latency 1.3 µs vs 3 µs 인용
 
 ---
 

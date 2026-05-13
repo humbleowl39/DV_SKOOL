@@ -43,6 +43,21 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — AWS Nitro 의 _혁명_
+
+2017 년 AWS Nitro 발표. 이전 AWS EC2:
+- VM 의 모든 I/O 가 _host hypervisor 거침_ → throughput 한계.
+- _Bare metal 대비 20-30% 성능 손실_.
+
+Nitro 후:
+- **Pass-through + SR-IOV** + **Nitro card** (전용 DPU) 로 _bare metal 성능_.
+- VM 이 NIC, EBS, SSD 에 _직접_ access.
+- IOMMU 가 _보안 격리_ — VM 끼리 못 봄.
+
+**가격**: 같은 성능 EC2 가 _20-30% 저렴_ 또는 _같은 가격에 더 큰 VM_. AWS 의 _market share_ 큰 차이 만듦.
+
+이게 _strict vs passthrough_ 의사결정이 _수십억 USD_ 규모 영향.
+
 I/O 가상화의 가장 큰 trade-off 는 한 문장입니다 — **"hypervisor 가 모든 I/O 를 가로채면 안전하지만 느리다. VM 이 device 에 직접 닿으면 빠르지만 IOMMU 없이는 보안이 깨진다."** 100 Gbps NIC · GPU · NVMe 같은 고대역폭 device 가 들어오면서 _전부 hypervisor 가 가로채는 strict 모델_ 은 throughput 의 _병목_ 이 됐고, 그래서 등장한 것이 SR-IOV / VFIO / pass-through. 그러나 device 가 VM 메모리에 직접 DMA 한다는 것은 **device 가 잘못 동작하거나 악의적이면 host kernel/다른 VM 메모리까지 침해 가능** 하다는 뜻 — 그래서 IOMMU 가 _없으면 안 되는_ 부품이 됐습니다.
 
 이 모듈을 건너뛰면 이후 "왜 클라우드는 SR-IOV 를 쓰는가", "왜 GPU 는 항상 pass-through 인가", "Nitro 가 무엇을 바꿨는가" 같은 질문에 _그림 없이 단어로만_ 답하게 됩니다. 반대로 _두 path 의 hop 수와 IOMMU 의 위치_ 만 잡으면, 새로운 device (DPU, CXL accelerator 등) 가 와도 즉시 적절한 I/O 모델을 선택할 수 있습니다.
@@ -622,6 +637,37 @@ Azure:
     - **IOMMU 켰다고 끝이 아님** — page table / fault 처리 / ACS 까지 모두 SW 정책의 책임.
     - **Pass-through 자체 ≠ 빠름** — Huge page, Posted Interrupt, ACS override 가 동반돼야 실 성능.
     - **VF 는 PF 의 축소판** — vendor 별 capability 차이 큼. Guest driver 호환성 미리 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Strict vs Pass-through 선택 (Bloom: Apply)"
+    "Live migration 필수 + 보안 최우선" workload. 어느 모델?
+    ??? success "정답"
+        Strict (hypervisor mediated):
+        - **Live migration**: VM state 가 hypervisor 안에 있어야 capture → passthrough 는 device 내부 state 캡처 불가.
+        - **보안**: 모든 I/O 가 hypervisor 검사 → audit/policy 적용 가능.
+        - **trade-off**: 성능 손실 ~20–30% (extra hop).
+        - 대안: SR-IOV 로 운영하다 migration 직전 virtio fallback 으로 hot-swap — 복잡도 ↑.
+
+!!! question "🤔 Q2 — IOMMU 페이지 fault (Bloom: Analyze)"
+    Passthrough VM 에서 IOMMU page fault 가 발생. Root cause 후보 3 가지?
+    ??? success "정답"
+        1. **Guest 의 잘못된 DMA address**: GPA 가 mapped region 밖 → 가장 흔함.
+        2. **IOMMU page table 미동기화**: VM memory hot-add 시 IOMMU table 갱신 누락.
+        3. **ACS 위반**: device 가 다른 group 의 영역에 peer-to-peer DMA 시도 → IOMMU 차단.
+        - 디버그: `dmesg | grep DMAR` (Intel) 또는 `dmesg | grep arm-smmu` (ARM) 에서 fault address + device BDF 확인.
+        - 검증 포인트: DV 시 IOMMU translation failure 가 host 보호로 _이어지는지_ assertion.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Strict vs Passthrough Decision Tree` — workload 별 매트릭스
+- `IOMMU Fault Triage` — DMAR/SMMU fault root cause 사례
+
+**External**
+- ARM *SMMUv3 Architecture Specification*
+- Intel *VT-d Specification* — DMA remapping fault 모델
+- *XenServer / VMware vSphere* — passthrough 운영 가이드
 
 ---
 

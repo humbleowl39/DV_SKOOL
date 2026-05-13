@@ -42,6 +42,25 @@
 
 ## 1. Why care? — BootROM 검증이 왜 Zero-Defect 이어야 하는가
 
+### 1.1 시나리오 — _Mask ROM_ 의 _$50M bug_
+
+당신은 SoC OEM. BootROM 에 _1 bug_ 가 _tape-out 후_ 발견:
+
+- **Bug 종류**: ROM patch path 가 _malformed patch_ 거부 못함 → 공격자가 _임의 코드_ ROM 영역 실행 가능.
+- **영향**: 출시된 모든 device 가 secure boot 우회 가능.
+
+해법 옵션:
+1. **Silicon respin** ($30-50M, 6 개월).
+2. **SW workaround** (영구 부담, completeness 의문).
+3. **Recall** ($수억).
+
+이게 BootROM 의 _bug 비용_. 다른 IP 의 _patch 가능_ 한 bug 와 _완전히 다른_ economics.
+
+해결책: **Zero-defect 검증**.
+- 모든 boot path (Normal / Fallback / Recovery / Patch) × Boot device × OTP fuse combo.
+- _All combination cover_ 가 _필수_.
+- UVM + functional coverage + FI scenario 모두.
+
 BootROM 은 **silicon 에 mask 로 영구 고정** 됩니다. Bug = silicon respin = 수개월 + 수십억. 다른 IP 는 patch / firmware update 가 가능하지만, BootROM 은 첫 부팅의 anchor 라서 _self-patch_ 도 자기 자신을 못 고칩니다.
 
 이 한 가정 — **"BootROM 의 모든 부팅 path 는 _tape-out 전_ 에 검증돼야 한다"** — 를 잡지 않으면 이후의 모든 결정 (UVM 으로 갈 것인가, OTP 를 어떻게 모델링할 것인가, FI/TOCTOU 를 어떻게 재현할 것인가, Coverage 를 어디까지 닫을 것인가) 이 "그냥 외워야 하는 best practice" 가 됩니다. 반대로 이 가정을 잡고 나면, Legacy SV → UVM 전환의 모든 디테일이 _이유_ 로 보입니다.
@@ -671,6 +690,37 @@ Post-silicon Bring-up 시나리오:
 - **Scenario matrix**: Boot mode (eMMC/UFS/QSPI/USB) × OTP config (security on/off, ROTPK 변형) × Image (golden/corrupted/unsigned/version mismatch).
 - **Coverage-driven**: 모든 시나리오가 covered + 모든 fail path 가 expected behavior. Sign-off 의 핵심.
 - **Pre-silicon 의 보상은 post-silicon**: 100% 검증 → bring-up 에서 BootROM 즉시 배제 → 비-ROM 이슈 빠른 root cause 분리.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — OTP Abstraction Layer 필요성 (Bloom: Analyze)"
+    BootROM DV 에서 OTP 를 _직접_ force 하지 않고 OTP Abstraction Layer 를 거치는 이유?
+    ??? success "정답"
+        OTP Abstraction Layer 가 강제하는 것:
+        - **program-once 의무**: 같은 비트 두 번 write 시도를 _차단_ → silicon 동작과 동일하게.
+        - **read protection**: lock fuse blown 후 read 시도를 차단.
+        - **시나리오 재현성**: 매 test 마다 다른 ROTPK 를 박는 directed test 가 _안전_ — abstraction 없이 force 하면 누적 오염.
+        - 직접 force 의 위험: silicon 에는 없는 동작이 TB 에서만 통과 → escape bug.
+
+!!! question "🤔 Q2 — Zero-Defect 의 의미 (Bloom: Evaluate)"
+    BootROM DV 가 "100 % coverage + 0 escape" 를 절대 목표로 하는 _경제적_ 근거?
+    ??? success "정답"
+        Silicon respin 비용:
+        - Mask set 재제작: 수억 ~ 수십억 원 (공정 노드별).
+        - Schedule slip: 3–6 개월 → 양산 출시 지연 → revenue 손실.
+        - ROM Patch 슬롯 (8–16 개) 은 _최후 보험_ — 그 슬롯에 의존 = silicon 결함 인정.
+        - 대조: SW bug = OTA 패치, BootROM bug = silicon respin.
+        - 결론: BootROM 1 bug 의 ROI 가 다른 모듈의 1000 bug 와 동급 → coverage 최우선.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `BootROM DV Methodology` — 4 축 구조 (OTP/Driver/Cmodel/Coverage)
+- `BootROM Sign-off Criteria` — coverage closure + escape 0
+
+**External**
+- *Secure Boot Verification at Scale* — DAC presentation
+- Synopsys *VC Formal BootROM App Note* — formal + sim 결합 검증
 
 ## 코스 마무리
 

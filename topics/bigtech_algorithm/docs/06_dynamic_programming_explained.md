@@ -42,9 +42,41 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — Exponential → Polynomial
+
+문제: "_N 개 동전_ 으로 _금액 K_ 만들기. 최소 동전 수?"
+
+**Brute force (재귀)**: 각 동전을 _사용/불사용_ 결정. **O(2^N)**. N=30 이면 10⁹ → 1초.
+
+**DP**: `dp[k] = 금액 k 만드는 최소 동전 수`. 점화식: `dp[k] = min(dp[k - c] + 1) for c in coins`. **O(N × K)**.
+
+N=30, K=10⁴ → 3×10⁵ 연산 → 즉시.
+
+**DP 의 가치**: _overlapping subproblems_ + _optimal substructure_ → exponential 을 polynomial 로.
+
+**5 단계 풀이 표준**:
+1. **State**: 무엇을 dp[i] 가 나타내는가?
+2. **Recurrence**: dp[i] 가 dp[j<i] 들로 어떻게 표현되는가?
+3. **Base case**: dp[0] 또는 가장 작은 case.
+4. **Iteration order**: bottom-up (반복문) 또는 top-down (memoization).
+5. **Space optimization**: dp[i] 가 _최근 k 개_ 만 보면 → O(1) space.
+
 DP 는 면접관이 _reasoning depth_ 를 가장 좋아하는 패턴입니다. **상태 정의 → 점화식 → 베이스 케이스 → 구현 → 최적화** 의 5 단계 표준 풀이를 만들 수 있으면 거의 모든 DP 문제를 풀 수 있고, 이 표준은 운영 코드(parsing, scoring, scheduling) 에도 그대로 등장합니다.
 
 이 모듈을 건너뛰면 "경우의 수 / 최대-최소 / 가능한가?" 류 문제에서 _exponential brute force_ 를 그대로 제출하게 됩니다. 반대로 _state 한 줄 정의_ 와 _점화식 한 줄_ 을 _코드 작성 전_ 에 적는 습관이 잡히면, DP 문제가 _얼개_ 와 _세부 구현_ 으로 깔끔하게 분리되어 빨라집니다.
+
+!!! question "🤔 잠깐 — DP _vs Greedy_?"
+    어떤 문제는 _greedy_ (각 step _최선_ 선택) 로도 풀림. 언제 DP 가 필요하고 언제 greedy 면 충분?
+
+    ??? success "정답"
+        **Greedy** 는 _현재 결정이 미래에 영향 없는_ 경우 (또는 _exchange argument_ 가능).
+
+        - Coin change (US 동전: 25, 10, 5, 1): _greedy 통함_.
+        - Coin change (random 동전: 1, 3, 4): _greedy 실패_ (예: 6 = 3+3 인데 greedy 는 4+1+1). _DP 필요_.
+
+        결정 방법: 작은 example 으로 _greedy 가 실패_ 하는지 시도. 실패하면 DP.
+
+        면접 답변: _두 접근 모두 시도_. Greedy 가 _증명_ 가능하면 채택 (간단), 안 되면 DP.
 
 ---
 
@@ -522,6 +554,44 @@ endmodule
     - **State 차원 누락** — knapsack 의 weight axis 가 빠진 채 1D 로 풀면 작은 케이스만 통과하고 큰 케이스에서 오답. deterministic 검증.
     - **Base case 정의** — 점화식 시작점은 _문제 정의에 의존_. dp[0] 의 의미를 한 줄로 적기.
     - **재귀 vs 반복** — 재귀 깊이 한계가 우려되면 bottom-up 으로 변환.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 0/1 Knapsack DP (Bloom: Apply)"
+    N 아이템, capacity W. State + recurrence?
+
+    ??? success "정답"
+        **State**: `dp[i][w]` = 첫 i 아이템 + capacity w 의 최대 value.
+
+        **Recurrence**:
+        ```
+        dp[i][w] = max(
+            dp[i-1][w],                        # 안 담음
+            dp[i-1][w - wt[i]] + val[i]        # 담음 (w >= wt[i])
+        )
+        ```
+        Base: dp[0][*] = 0, dp[*][0] = 0.
+
+        Time: O(N × W). Space: O(N × W) → O(W) (1D rolling).
+
+!!! question "🤔 Q2 — Greedy vs DP (Bloom: Evaluate)"
+    Activity selection — 시간 겹치지 않는 최대 activity 수. Greedy?
+
+    ??? success "정답"
+        **Greedy 통함**.
+        - 끝 시간 기준 정렬.
+        - 끝 시간 가장 빠른 것 선택.
+        - 그 다음 끝 시간 이후 시작 가능한 것 중 가장 빠른 끝 시간 선택.
+
+        Exchange argument 로 _최적성_ 증명 가능. O(N log N).
+
+        만약 _가치_ 가 있는 (weighted activity) 면 → DP 필요. Greedy 가 _가치_ 무시.
+
+### 7.2 출처
+
+**External**
+- *Introduction to Algorithms* — CLRS Chapter 15 DP
+- *Algorithm Design Manual* — Skiena
 
 ---
 

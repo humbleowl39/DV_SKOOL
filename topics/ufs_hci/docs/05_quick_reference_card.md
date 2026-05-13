@@ -293,6 +293,40 @@ ufs_hci_ko/: HCI 내부 동작 상세
 
     **점검 포인트**: 에러 분류를 명령 단위(timeout/sense → abort) vs 링크 단위(UE/UECPA → link reset) vs 디바이스 단위(LUN reset) 로 분리해 recovery sequence 를 선택하는지 확인.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Error recovery 5 단계 (Bloom: Apply)"
+    "Single command timeout. 어느 단계부터?"
+    ??? success "정답"
+        Retry → Abort:
+        1. **Retry** (1–2 회): 일시적 ECC / network glitch.
+        2. **Abort** (Task Management): 해당 task tag 만 취소, 다른 in-flight 무관.
+        3. **LUN Reset**: 같은 LUN 의 모든 task 영향 → 정당화 필요.
+        4. **Host Reset**: HCI controller 자체 재시작.
+        5. **Link Reset**: UniPro/M-PHY 재초기화 → 최후.
+        - 안티패턴: Single timeout 에 즉시 link reset → 다른 LUN 의 in-flight 까지 잃음.
+
+!!! question "🤔 Q2 — MCQ 의 가치 (Bloom: Evaluate)"
+    UFS 4.0 의 MCQ (Multi-Circular Queue). UFS 3.x 의 single queue 대비 _진짜_ 이득?
+    ??? success "정답"
+        NVMe-style parallelism:
+        - **UFS 3.x**: single TRD list (32 slot) + single doorbell → tail pointer 의 atomic update 가 bottleneck.
+        - **MCQ**: SQ/CQ pair 가 N 개 (보통 8–32) → CPU core 별 dedicated queue 가능 → lock contention 제거.
+        - **실측**: random 4K IOPS 가 2–4 배 향상 (queue depth 가 충분히 클 때).
+        - **한계**: HW resource (FIFO/SRAM) 비용 ↑ → mobile UFS 는 보통 2–4 queue.
+        - 결론: server-class UFS 의 핵심 진화, mobile 은 SW 최적화 위주.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `UFS Curriculum` — 모듈 01–04 매핑
+- `Error Recovery Policy` — 5 단계 분류 + 사내 정책
+
+**External**
+- JEDEC JESD220 *Universal Flash Storage (UFS)*
+- JEDEC JESD223 *UFS Host Controller Interface (UFSHCI)*
+- MIPI *UniPro Specification* / *M-PHY Specification*
+
 ---
 
 ## 코스 마무리

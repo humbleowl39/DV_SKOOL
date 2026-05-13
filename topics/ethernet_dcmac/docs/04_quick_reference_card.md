@@ -324,6 +324,38 @@ mmu_ko/   →   toe_ko/   →   ethernet_dcmac_ko/
     **원인**: EEE 진입 / 해제 시 Tw_sys_tx 타이머 동안 MAC 은 데이터 송신 불가. 이 구간에 새 frame 이 도착하면 IFG 축소 또는 drop. quick reference 표에서 EEE 타이머 누락되기 쉬움.<br>
     **점검 포인트**: `tx_lpi_active` High 구간에 트래픽 인가 시나리오 별도 추가. Tw_sys_tx + Tf 타이머 설정값 vs 실제 link 복귀 시간 로그 비교.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Mode 변경 비용 (Bloom: Analyze)"
+    DCMAC 의 1×400 G → 4×100 G 모드 변경. 왜 _reset_ 필요?
+    ??? success "정답"
+        Lane pool 의 _분할 단위_ 가 바뀜:
+        - 1×400 G: 8 lane → 1 channel.
+        - 4×100 G: 8 lane → 4 channel (각 2 lane).
+        - **변경 시**: PCS lane alignment, FEC interleaver, MAC TX/RX FIFO 구조 모두 재구성 → mid-traffic 변경 불가.
+        - **단편 동작 위험**: PCS lane skew 파라미터가 mode 별로 다름 → reset 없이 변경 시 alignment 실패.
+        - 결론: link down → mode write → reset → link up. 약 100 ms 의 traffic gap.
+
+!!! question "🤔 Q2 — FCS 범위 (Bloom: Apply)"
+    Ethernet frame 의 FCS 가 계산되는 _필드 범위_?
+    ??? success "정답"
+        DA + SA + EtherType + Payload — Preamble/SFD/FCS 자체 제외:
+        - **Preamble + SFD** (8 B): 동기화 용 → FCS 와 무관.
+        - **FCS (4 B)**: 자기 자신 제외 — 계산 후 append.
+        - **VLAN tag**: 포함 (FCS 재계산 필요 — VLAN 추가 시 핵심 함정).
+        - 검증 포인트: scoreboard 의 FCS 계산 범위가 frame parser 와 일치하는지 — mismatch 시 모든 frame drop.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Ethernet DCMAC Architecture` — mode 매핑 + reset 규칙
+- `PCS/FEC Verification` — lane alignment + FEC interleaver
+
+**External**
+- IEEE 802.3-2022 *Ethernet Standard*
+- IEEE 802.3ba/bj/bs *40/100/200/400 Gb/s Ethernet*
+- IEEE 802.3az *Energy-Efficient Ethernet (EEE)*
+
 ---
 
 ## 코스 마무리

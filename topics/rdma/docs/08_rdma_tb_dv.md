@@ -41,9 +41,40 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
-**RDMA-TB 는 DV 환경 자체가 RDMA 시스템의 두 노드를 모델링** 합니다 — 즉 sender 와 responder 두 쪽 다 환경 안에 있고, 그 사이에 가짜 네트워크가 있고, 양쪽 host 메모리도 모델로 들어 있습니다. 이 구조를 한 번 잡으면 어떤 시나리오를 만들든 어디에 hook 을 걸어야 할지 즉답할 수 있게 됩니다.
+### 1.1 시나리오 — 어떤 ASIC 도 _혼자_ 검증되지 않는다
+
+당신은 RDMA NIC RTL 을 검증해야 합니다. 첫 번째 본능 — 일반 ASIC DV 처럼 "**DUT 에 stimulus 보내고, output 비교**" 하면 되겠다.
+
+하지만 첫 시도부터 막힙니다:
+
+- **stimulus 는 어디서 오는가?** RDMA NIC 의 input 은 _wire 위의 패킷_ + _PCIe 위의 host 메모리/MMIO_. 두 가지를 _동시에_ 모델링해야 함.
+- **output 은 어떻게 비교하는가?** RDMA WRITE 의 output 은 _wire 패킷_ + _peer 메모리의 변경_ + _CQE_. 셋 다 봐야 함.
+- **scoreboard 는 무엇을 비교하는가?** 단순 transaction 비교가 아닌 _"peer memory 의 region X 가 sender 의 lbuf 와 bit-exact 인가?"_ — 즉 _system-level_ semantics.
+
+**그래서 RDMA-TB 는 _DV 환경 자체가 두 노드 + 그 사이 네트워크 + 양쪽 host 메모리_ 를 모델링** 합니다. RTL 외 모델 (host model, MMU model, network model, memory model) 이 _RTL 만큼 큼_.
+
+다음 결정은 _어디에 코드를 넣는가_:
+
+| 새 feature 의 성격 | 어디로? |
+|--------------------|---------|
+| 모든 시나리오에 필요 (예: RAL backbone) | `base/` |
+| 특정 시나리오 (예: SRQ 검증) | `ext/srq_test/` |
+| Project-independent VIP | `external/` |
+| Sub-IP TB 만 사용 | `submodule/` |
+
+이 분류가 **"새 feature 를 어디에 넣을지" 의 결정 트리** — base 가 비대해지면 모두가 무거워지고, ext 가 비대해지면 sharing 안 되는 부분이 늘어남.
 
 또한 새 feature 추가 시 "어디에 코드 넣지?" 의 즉답이 어렵습니다 — base / ext / external / submodule 의 분류가 이 결정의 backbone. 이 모듈이 그 결정 트리를 명문화합니다.
+
+!!! question "🤔 잠깐 — 왜 _두 노드_ 모두 모델 안에?"
+    일반 ASIC DV 는 DUT 하나 + agent 들이 stimulus. 왜 RDMA-TB 는 _두 노드 (그래서 DUT 도 2개?)_ 가 환경 안에 있나? 단순히 한 NIC 만 DUT 로 두고 다른 쪽은 BFM 으로 안 되나?
+
+    ??? success "정답"
+        가능하긴 합니다 — 그게 **single-node TB**. 하지만 _system semantics_ 검증에 부족:
+        - **양 끝 NIC 가 모두 _DUT_ 인 경우** (예: A→B WRITE 가 정상이고 B→A ACK 도 정상): _두 NIC 사이의 protocol consistency_ 도 검증.
+        - **양 끝 NIC 가 _다른 vendor_ 인 시나리오**: 한쪽은 우리 RTL, 다른 쪽은 SoftRoCE — interoperability 검증.
+
+        사내 RDMA-TB 는 **dual-node** 모델 — DUT 0 + DUT 1 양쪽 다 RTL instantiation. 같은 RTL 의 두 instance 가 _서로_ 보낸 패킷을 처리. 이게 single-node 보다 _2 배 비싸지만_ system bug 잡는 능력이 압도적.
 
 ---
 
@@ -613,6 +644,52 @@ Log file 위치는 `mrun` 의 `vsim/<test>/run.log`. FSDB 는 `vsim/<test>/wave.
     - `vrdma_io_err_top_seq` 의 callback 메커니즘이 매우 강력 — 새 error 시나리오는 99% 새 callback 추가로 해결, 새 sequence 작성보다 callback 작성을 먼저 시도.
     - Cross-node coverage 는 NODE0/NODE1 양쪽에서 같은 op 를 hit 해야 close — 시나리오 설계 시 양방향 traffic 비대칭 주의.
     - `mrun comp` 단계에서 깨지면 99% filelist (`*.f`) 누락 — 새 파일 추가 시 해당 영역의 `vlist/` 또는 `lib/.../filelist/` 갱신 필수.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 새 feature 배치 결정 (Bloom: Evaluate)"
+    당신은 _Memory Window Type 2_ 검증을 추가해야 한다. base / ext / external / submodule 중 어디에 가야 하는가? 그리고 _왜_?
+
+    ??? success "정답"
+        **`ext/mw_test/`** (또는 `lib/ext/feature/mw/`).
+
+        이유:
+        - MW Type 2 는 _특정 시나리오_ 에 한정 — 모든 시나리오에서 쓸 게 아님 → base 부적합.
+        - Project-independent VIP 가 아님 — external 부적합 (external 은 일반 RDMA verbs API 같은 generic 자원).
+        - Sub-IP 의 standalone TB 가 아닌 IP-top level — submodule 부적합.
+
+        결정 트리: "모든 시나리오에 필요한가?" → no → "ext"; "MW 끄면 다른 시나리오에 영향?" → no → ext 가 맞음.
+
+!!! question "🤔 Q2 — Scoreboard 의 비교 범위 (Bloom: Analyze)"
+    당신의 RDMA WRITE scoreboard 가 가끔 _intermittent fail_. 의심 가는 영역 세 가지를 우선순위 순서대로 적으시오.
+
+    ??? success "정답"
+        1. **Multi-packet ordering** — WRITE_FIRST/MIDDLE/LAST 의 PSN 순서 가정이 reorder 가능 환경에서 깨짐. Scoreboard 가 _packet-level_ 비교가 아닌 _message-level_ 비교를 해야 함.
+        2. **CQE timing race** — CQE 가 _DMA 완료 후_ 와 _AckReq 처리 후_ 의 두 시점이 가능. Scoreboard 가 한 시점만 expect 하면 다른 시점에 fail.
+        3. **Receiver memory state** — DMA write 이 _wire 패킷 arrival_ 과 _async_. Scoreboard 가 즉시 비교하면 race.
+
+        대응: 모든 expected 가 _이벤트 시점_ 으로 정의되도록 (e.g. CQE 발생 직후 비교). RDMA-TB 의 `vrdma_data_env` 가 이런 패턴.
+
+!!! question "🤔 Q3 — Sub-IP TB ↔ IP-top sequence 호환 (Bloom: Apply)"
+    Sub-IP MMU TB 에서 OK 인 sequence 가 IP-top TB 에서 fail 합니다. 무엇을 가장 먼저 의심하시오?
+
+    ??? success "정답"
+        **RAL 주소 abstraction**. Sub-IP TB 는 보통 _abstract_ register address (MMU.PT_BASE) 를 사용하지만 IP-top 은 _actual BAR offset_ (0x38a00). RAL backbone 이 _같은 register_ 를 _다른 abstraction_ 으로 노출하면 sequence 의 raw address 사용이 깨짐.
+
+        대응: sequence 가 RAL `m_reg.write()` 같은 abstract API 만 사용 (절대 address 직접 X). Common base sequence 를 `lib/base/component/sequence/` 에 두고 reuse.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 RDMA-TB README, ARCHITECTURE.md
+- `RDMA debug register guide` (id=884966146) — BAR2 offset map (`/0x38000` 영역)
+- 사내 `vplan/error_handling/` — S1~S9 시나리오
+- 사내 `vplan/coverage/` — base + feature 의 cross coverage
+
+**External**
+- UVM 1.2 Reference Manual
+- *SystemVerilog for Verification* — Spear & Tumbush
+- Synopsys VCS user guide — coverage / FSDB
 
 ---
 

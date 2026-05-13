@@ -43,6 +43,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 상용 VIP 가 _OOM_
+
+당신은 MMU 검증. 상용 VIP (Cadence / Synopsys) 사용 시도:
+- 4 KB granule × 1 GB address range = 250K page entries.
+- VIP 내부 모델: page entry 당 _~100 byte_ overhead.
+- 250K × 100 = **25 GB RAM**.
+
+대부분 시뮬 환경: _16 GB / job_ 한계. → **OOM**.
+
+해법: **Custom Thin VIP**:
+- Page entry 당 _10 byte_ (8x 감소).
+- 250K × 10 = 2.5 GB → 16 GB 안에 OK.
+
+또한 _Dual-Reference Model_:
+- **Functional**: 모든 PTE 정확히 추적.
+- **Ideal**: 최적 TLB / PWC 모델 — DUT 의 _성능 gap_ 자동 측정.
+
+이 _Custom + Dual_ 패턴이 MMU DV 의 _시그니처_. 일반 IP 의 VIP 직접 사용 어려움.
+
 **MMU 검증은 일반 IP 보다 복잡**합니다 — 기능 정확성 (주소 변환) + 성능 (TLB / throughput) + 프로토콜 (AXI / AXI-S) **3 축** 을 _동시_ 검증해야 하고, 상용 VIP 의 메모리 한계 때문에 large-dataset stress 시뮬에서 OOM 이 발생합니다. **Custom Thin VIP + Dual-Reference Model** 이 이 코스의 시그니처 패턴이며, 이력서 / 면접의 핵심 차별화 요소.
 
 또한 _스펙 변경이 잦은_ MMU IP 환경에서 **AI-assisted 환경 자동화** 가 검증 일정을 _설계 일정 앞_ 으로 가져오는 핵심 도구가 됩니다 (DAC 2026). 이 모듈을 마치면 _개념_ 에서 _체계_ 로 — 검증 작업의 reproducibility 와 회귀 자동화가 가능해집니다.
@@ -842,6 +861,40 @@ Agile 개발에서의 MMU 스펙 변경:
 - **Constrained Random 3 축**: VA 분포 (hotspot / 일반 / 넓음) × PTE 구성 (정상 / invalid / permission) × 시나리오 조합 (대량 + invalidation + fault injection).
 - **AI 활용**: spec 변경 시 LLM 으로 sequence / coverage 자동 생성 → 회귀 시간 _수 일 → 수 시간_.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Thin VIP 메모리 분석 (Bloom: Apply)"
+    상용 VIP: 250K page × 100 B = 25 GB. Thin VIP: 250K × 10 B = 2.5 GB. _10 B 가 어떻게 가능_?
+
+    ??? success "정답"
+        Thin VIP 의 _per-page state_:
+        - PA (8 byte).
+        - Permission flags (1 byte).
+        - LRU info (1 byte).
+
+        상용 VIP 가 _100 B_ 인 이유: history (access pattern), full audit trail, statistics, ECC model 등 _DV 무관한_ 부가 정보.
+
+        Thin VIP 는 _필수만_ — 검증 정확도 동일, 메모리 1/10.
+
+!!! question "🤔 Q2 — SVA + Coverage 짝 (Bloom: Evaluate)"
+    TLB hit assertion: `assert property (tlb_hit |-> data_valid_next_cycle)`. Cover 가 _hit 0_ 면?
+
+    ??? success "정답"
+        **Vacuous pass** — TLB hit 시나리오가 _시뮬에서 발생 안 함_. Assertion 이 _의미 있는 검증_ 못 함.
+
+        대응:
+        - Cover 짝: `cover property (tlb_hit)`. Hit rate _최소 1_ 이상.
+        - 부족하면 _stimulus 강화_: TLB hit-friendly workload (sequential access) 추가.
+
+        모든 SVA 가 _cover 짝_ 갖고 _hit ≥ 1_ 만 sign-off.
+
+### 7.2 출처
+
+**External**
+- *Verification Methodology Manual for SystemVerilog*
+- DAC 2026 *AI-assisted MMU Verification* paper
+
+---
 ## 다음 단계
 
 - 📝 [**Module 06 퀴즈**](quiz/06_mmu_dv_methodology_quiz.md)

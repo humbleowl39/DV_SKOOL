@@ -42,6 +42,21 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 같은 KVM 이 _Type 1 또는 Type 2_?
+
+당신은 hypervisor 선택. 옵션:
+- **VMware ESXi**: Type 1 (bare metal).
+- **KVM**: Type 2 (Linux 위) 또는 Type 1 (Linux 가 hypervisor 의 일부)?
+- **Hyper-V**: Type 1 (Windows 가 _management partition_).
+- **VirtualBox**: Type 2 (host OS 위 app).
+
+KVM 의 _분류 모호_: Linux kernel module 형태로 _host OS 위_ 동작 (Type 2 같음), 하지만 Linux kernel 자체가 _가상화 ring -1 모드_ 진입 (Type 1 같음). 결과: **Hybrid**.
+
+분류가 _왜_ 중요?
+- **VM Exit handler 위치**: Type 1 = bare metal hypervisor 직접 처리. Type 2 = host OS 거쳐서 hypervisor. _Latency 차이_ 큼.
+- **Driver 접근**: Type 1 = 자체 driver. Type 2 = host OS 의 driver 재사용.
+- **Boot order**: Type 1 = hypervisor 가 boot 직후. Type 2 = host OS boot 후 hypervisor 시작.
+
 같은 "가상화" 라는 말 아래에 ESXi · Xen · KVM · Hyper-V · VirtualBox · VMware Workstation 이 모두 들어 있지만, 각자 **부팅 순서가 다르고 trap 의 종착지가 다릅니다**. 어떤 hypervisor 가 host OS 위에 앉는지 아니면 bare metal 위에 앉는지를 모르면, 같은 증상 (`KVM: entry failed`, `vmx_vmexit_handler` panic 등) 이 어디서 났는지 한 줄도 추적할 수 없습니다.
 
 이 모듈을 건너뛰면 이후 모듈 (Strict vs Passthrough, MicroVM, Live Migration) 에서 "이건 ESXi 에선 가능하지만 KVM 에선 다른 path" 같은 문장이 그냥 외워야 하는 명제가 됩니다. 반대로 Type 1 / Type 2 / Hybrid 의 세 개 box 와 그 경계만 잡으면, **새 hypervisor 가 나와도 box 위치만 찍으면 trap 경로 · driver 위치 · 보안 표면을 즉시 그릴 수 있습니다**.
@@ -498,6 +513,37 @@ ARM VHE 이후:
     - **분류 라벨에 휘둘리지 말 것** — trap 경로의 _hop 수_ 와 _host OS scheduler 개입 여부_ 가 실제 성능 변수.
     - **Hyper-V 는 Type 1**: Windows Server 부팅 _전_ hypervisor 가 먼저 깔리고, Windows 가 root partition.
     - **Type 2 는 production 금지**: jitter 통제 불가, SLA 보장 어려움. 데스크탑/개발 전용.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — KVM 분류 (Bloom: Analyze)"
+    KVM 은 Type 1 인가 Type 2 인가?
+    ??? success "정답"
+        Hybrid — 분류 라벨이 모호한 _가장 좋은_ 예:
+        - **Type 1 측면**: KVM 모듈이 Linux kernel 내부 → guest 진입 시 user space 거치지 않음 (hypervisor가 kernel mode 에서 직접 실행).
+        - **Type 2 측면**: Linux 가 _OS_ 로서 깔린 위에 KVM 이 모듈로 로드 → bare-metal hypervisor 가 _아님_.
+        - 실무 관점: 성능 = Type 1 급, 설치/관리 = Type 2 급 → KVM 이 cloud 의 표준.
+        - 결론: 분류보다 _trap 경로 hop 수_ 가 실용적 변수.
+
+!!! question "🤔 Q2 — Type 2 production 금지 (Bloom: Evaluate)"
+    VirtualBox / VMware Workstation 이 production server 에서 _금지_ 되는 정확한 이유?
+    ??? success "정답"
+        Host OS scheduler 가 _hypervisor 위_ 가 아닌 _아래_ → VM 의 시간 보장 깨짐:
+        - **Jitter**: host 의 다른 user process 가 CPU 점유 시 VM 의 vCPU schedule 지연 → latency-sensitive workload 불가.
+        - **SLA**: 99.99% 보장 어려움 — host kernel 의 _다른_ 활동에 종속.
+        - **격리 약화**: host kernel bug 가 모든 VM 에 영향 (Type 1 은 micro-kernel 분리 가능).
+        - 결론: 데스크탑 (개발/테스트) 에서만 적합. Production 은 KVM / Xen / Hyper-V / ESXi 4 종 중.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Hypervisor Selection Guide` — KVM/Xen/ESXi/Hyper-V 비교
+- `Live Migration Dirty Bit` — KVM emulation 누락 사례
+
+**External**
+- *KVM: The Linux Virtual Machine Monitor* (OLS 2007)
+- VMware *ESXi Architecture* whitepaper
+- Microsoft *Hyper-V Architecture* (Type 1 분류 근거)
 
 ---
 

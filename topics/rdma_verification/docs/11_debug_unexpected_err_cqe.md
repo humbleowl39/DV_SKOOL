@@ -45,6 +45,28 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Error CQE_ 의 3 가지 가설
+
+당신의 RDMA test 가 _unexpected error CQE_:
+```
+WC status = WC_REM_ACCESS_ERR
+QP = 3, opcode = WRITE
+```
+
+가능한 3 가지 _완전히 다른_ 진단:
+
+1. **DUT bug**: HW 가 _valid rkey_ 인데 access error 잘못 발급. → fix RTL.
+2. **TB sequence bug**: Sequence 가 _wrong rkey/lkey_ 발행. → fix sequence.
+3. **Promote 누락**: 이 에러가 _의도된 시나리오_ 인데 `expected_error=1` 표시 안 함. → fix scoreboard config.
+
+**가장 큰 시간 낭비**: 가설 1 (DUT bug) 부터 시작 → fsdb 뒤지기 → 결국 가설 3 (단순 promote 누락) 임을 발견.
+
+**올바른 순서**: 가설 3 (TB config) → 가설 2 (sequence) → 가설 1 (DUT). _trivial_ 부터 _복잡_ 으로.
+
+WC status 분기:
+- `WC_RETRY_EXC_ERR` 계열 → _network 또는 timing_ 문제 (DUT or env).
+- 그 외 → _대부분 TB sequence 또는 promote_ 문제.
+
 RDMA-TB 의 가장 강한 invariant 중 하나는 **"RETRY_EXC 계열을 제외한 모든 에러 CQE 는 정상 시뮬레이션에서 발생하면 안 된다"** 입니다. 이 invariant 가 깨지면 곧 DUT 버그이거나 TB 시퀀스가 잘못된 lkey/rkey/length 를 발행한 것 — 어느 쪽이든 **사람의 결정** 이 필요합니다. 그래서 TB 는 `F-CQHDL-TBERR-0003` 으로 fatal 을 띄워 시뮬을 멈춥니다.
 
 이 모듈을 건너뛰면 에러 CQE 가 떴을 때 (a) DUT 버그인지 (b) TB 시퀀스 오류인지 (c) 의도된 에러를 promote 누락한 것인지 — 세 가설을 매번 헷갈리게 됩니다. `wc_status` 의 2-분기 (RETRY vs 그 외) 와 `expected_error=1` promote 패턴을 외우면 5 분 안에 트리아지가 끝납니다.
@@ -428,6 +450,35 @@ endclass
     - `expected_error=1` 은 per-cmd 게이트 — 전체 시퀀스에 걸면 진짜 DUT 버그를 silently 통과 (가장 위험한 false-negative).
     - RETRY 가 반복되면 retry 만 늘리지 말고 동시 outstanding / MTU / burst 부터 조절.
     - 에러 CQE 는 데이터 CQ 와 ERR_CQ 양쪽에 떨어질 수 있음 — `enable_error_cq_poll=1` 외에 데이터 CQ 도 감시 필요.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 가설 분기 (Bloom: Apply)"
+    `WC_REM_ACCESS_ERR`. 어느 가설부터 시작?
+
+    ??? success "정답"
+        Trivial → 복잡 순서:
+        1. **TB config** (`expected_error` promote 누락) — 30 초 확인.
+        2. **TB sequence** (잘못된 rkey/lkey 발행) — 1 분.
+        3. **DUT bug** (정상 rkey 인데 reject) — 30 분~몇 시간.
+
+        90% 의 경우 (1), (2) 에서 root cause. (3) 까지 가는 경우 드물음.
+
+!!! question "🤔 Q2 — RETRY 폭주 (Bloom: Evaluate)"
+    Retry exhaust. 단순 retry_cnt 증가가 _부적절_ 한 이유?
+
+    ??? success "정답"
+        Retry exhaust 의 root cause:
+        - Network 의 _drop pattern_ (incast, PFC storm).
+        - Receiver 의 _RNR_ (recv WQE 부족).
+        - DUT 의 _ACK 안 보냄_.
+
+        Retry_cnt 만 늘리면 _증상 무마_, root cause 안 잡힘. 진단 우선: NAK syndrome, ACK packet trace.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Unexpected Error CQE` (id=1335099464)
 
 ---
 

@@ -42,6 +42,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _CQ timeout_ 의 4 갈래
+
+당신의 RDMA test 가 _CQ poll timeout_. DUT 가 _어디서_ 멈춰있나?
+
+4 갈래:
+1. **SQ doorbell 미인식**: SW post_send 했는데 _DUT 가 못 봄_.
+2. **WQE fetch 안 됨**: doorbell 봤지만 WQE 가져오기 실패 (PCIe DMA 문제).
+3. **WQE 처리 시작 안 됨**: WQE fetch OK, 처리 logic 시작 못함.
+4. **Completion 안 옴**: 처리 완료, 그런데 CQE 작성 안 됨.
+
+각 분기 _확인 방법_ (QID 기반):
+- QID 1 (SQ doorbell): activity 있나?
+- QID 4 (WQE fetch C2H): packet 보나?
+- QID 5 (WQE result): output 보나?
+- QID 6 (CQE write H2C): packet 보나?
+
+각 QID 의 _activity 유무_ 가 _4 갈래 중 어디_ 즉시 결정. _5 분_ 안에 stage 좁힘.
+
 CQ polling 타임아웃은 "DUT 가 내가 보낸 work 를 처리하긴 했나?" 라는 가장 기본적인 질문에 답이 안 오는 상태입니다. 무엇이 멈춘 것인지 (SQ doorbell 미인식 / WQE 처리 시작 안 됨 / completion engine 버그 / phase bit 동기화 실패) 단계적으로 좁혀가야 합니다.
 
 이 모듈을 건너뛰면 timeout 로그를 보고 "DUT 죽었나?" 라는 모호한 가설로 fsdb 를 헤매게 됩니다. 4 가지 QID 분기점만 외우면 5 분 안에 어느 stage 까지 진행됐는지 결정.
@@ -358,6 +376,36 @@ flowchart TB
 !!! warning "실무 주의점"
     - timeout_count 가 호출 위치마다 다름 (top_seq=50000, sequence=10000) — 의도와 다른 timeout 이면 호출 위치부터 점검.
     - try_once=1 (단발) 은 timeout 자체가 안 발동 — `monitorErrCQ` 백그라운드 패턴 전용.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Timeout 원인 분기 (Bloom: Apply)"
+    CQ poll timeout. _4 갈래 확인_ 순서?
+
+    ??? success "정답"
+        QID activity check (5 분 내):
+        1. **H2C qid=1 (SQ doorbell)**: activity 있나? 없으면 SW post_send 실패.
+        2. **C2H qid=4 (WQE fetch)**: packet 있나? 없으면 DUT 가 doorbell 미인식.
+        3. **C2H qid=5 (WQE result)**: 있나? 없으면 DUT 처리 못 함.
+        4. **H2C qid=6 (CQE write)**: 있나? 없으면 completion engine bug.
+
+        Activity 가 멈춘 _첫 stage_ 가 root cause.
+
+!!! question "🤔 Q2 — try_cnt vs c2h_tracker active (Bloom: Analyze)"
+    Timeout 직전 _try_cnt=50000_ + _c2h_tracker.active=1_. 의미?
+
+    ??? success "정답"
+        - try_cnt 폭주 = poll 많이 시도.
+        - active=1 = DUT 가 _아직 다른 cmd 처리 중_.
+
+        → **죽은 게 아님**, _다른 일 하고 있음_. timeout 은 _spurious_ 가능. 보통 `monitorErrCQ` 백그라운드 패턴.
+
+        대응: timeout threshold 늘리거나 _active 까지 wait_ 추가.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `CQ Poll Timeout` (id=1335853134)
 
 ---
 

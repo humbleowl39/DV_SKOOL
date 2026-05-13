@@ -43,9 +43,46 @@
 
 ## 1. Why care? — 단일 LLM 호출로 못 푸는 task 들
 
-LLM 한 번 호출로 _다단계 추론_, _환경 상호작용_, _자기 점검_ 을 풀 수 없습니다 — 한 호출은 한 _텍스트 응답_ 일 뿐. 실세계 task 는 (1) 파일을 _읽고_, (2) 결과를 _보고_, (3) 다음 _행동_ 을 결정하는 loop 가 필요합니다. 이 loop 의 표준 형태가 **agent 패턴**.
+### 1.1 시나리오 — "RTL 디버그를 LLM 에 맡길 수 있을까?"
+
+당신은 simulation fail. 다음 task 를 LLM 한 번 호출로 풀려고 합니다:
+
+```
+"이 log 파일을 분석해서 root cause 찾고 fix 제안해줘"
+```
+
+LLM 의 한계:
+- **파일 못 읽음** — LLM 은 텍스트 입력만 받음. log 가 1 MB 면 prompt 에 직접 붙여야 함.
+- **mrun 명령 실행 못 함** — Hypothesis 를 검증하려면 실제 실행 필요.
+- **여러 시도 반복 못 함** — 한 응답 = 한 추론. 시도 1 실패 후 시도 2 자동 안 됨.
+
+해법은 **Agent 패턴**:
+
+```
+사용자: "log 분석해서 fix"
+   ↓
+Agent loop:
+  ① LLM 추론: "log 읽어야겠다" → read_file(log.txt)
+  ② Tool 실행: log 내용 반환
+  ③ LLM 추론: "이건 PSN error. RTL 의 PSN 비교 함수 의심" → grep("PSN", rtl/)
+  ④ Tool 실행: 파일 위치 반환
+  ⑤ LLM 추론: "modulo 비교 누락" → read_file(specific_file)
+  ⑥ Tool 실행: 코드 반환
+  ⑦ LLM: "fix 제안 + 검증"
+```
+
+**핵심**: LLM 이 _도구를 선택_ 하고 _결과를 보고 다음 행동 결정_. 이게 단일 호출과의 차이.
 
 DV / 코딩 / 분석 자동화 등 거의 모든 실무 응용은 결국 agent 형태로 수렴하며, [Module 07](07_dv_application.md) 의 모든 적용 사례도 agent 골격을 가집니다.
+
+!!! question "🤔 잠깐 — Agent vs Chained Prompts 의 차이?"
+    Module 02 의 _prompt chaining_ 도 다단계 호출. Agent 와 무엇이 다른가?
+
+    ??? success "정답"
+        - **Chained prompts**: 단계가 _미리 정해짐_. 코드가 "1 단계 → 2 단계 → 3 단계" 를 _순서대로_ 호출.
+        - **Agent**: 단계가 _LLM 의 선택_ 으로 _동적_ 결정. LLM 이 "이번엔 read_file, 다음엔 grep, 그 다음엔 또 read_file..." 를 결과 보고 결정.
+
+        Chained 가 _predictable_, agent 가 _flexible_. Trade-off: agent 가 _무한 loop_ 또는 _비용 폭주_ 가능 (LLM 이 잘못 결정하면) → guard rail 필수.
 
 ---
 
@@ -664,6 +701,54 @@ flowchart TB
     **원인**: Agent loop 에 최대 스텝 수 제한(`max_steps`) 이 없거나, 이전 시도와 동일한 Action 을 재시도할 때 중단하는 탈출 조건이 없는 경우 발생한다.
 
     **점검 포인트**: Agent 프레임워크 설정에서 `max_iterations` 또는 `max_steps` 값이 설정되어 있는지 확인. 운영 환경의 LLM API 호출 로그에서 동일 tool + 동일 input 의 반복 호출 패턴을 모니터링하고, 비용 알림 임계값을 설정.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Tool 정의의 명확성 (Bloom: Apply)"
+    당신은 `run_simulation` 라는 tool 을 agent 에 노출. Agent 가 _계속_ 잘못된 인자로 호출. 어떻게 _tool spec_ 을 개선?
+
+    ??? success "정답"
+        4 가지 개선:
+        1. **Description 명확화**: "_DUT 의 testbench 를 실행한다_" → "_SystemVerilog testbench 를 VCS 로 컴파일 + 실행한다. 필요: test_name, optional: seed, fsdb_."
+        2. **JSON schema strict**: `test_name` 을 enum (가능한 test 이름 목록) 으로.
+        3. **Example 추가**: tool description 에 _valid 예시 1-2 개_.
+        4. **Error 반환 명확화**: tool 이 실패하면 _LLM 이 이해 가능한 에러_ (예: "test_name 'foo' 가 존재 안 함. 사용 가능: a, b, c").
+
+        Tool 의 좋은 spec 이 agent 정확도의 _가장 큰_ 결정 인자.
+
+!!! question "🤔 Q2 — Multi-agent 통신 비용 (Bloom: Analyze)"
+    당신은 _3 개_ specialized agent (analyzer, fixer, reviewer) 을 만들어 multi-agent 시스템 구성. 단일 agent 보다 token 비용 _얼마나_ 증가?
+
+    ??? success "정답"
+        보통 **3~10×**. 이유:
+        - 각 agent 가 _자체 system prompt + 도구 정의_ 를 가짐 → 중복 토큰.
+        - Agent 간 _통신_ 도 LLM call (예: analyzer 가 fixer 에게 결과 전달).
+        - 한 agent 의 _맥락_ 이 다른 agent 와 _공유 안 됨_ → context 재구축 필요.
+
+        Multi-agent 가 정당화되는 경우: 단일 agent 의 _system prompt 가 너무 길어서_ (~10K token) 한 호출에 다 못 넣을 때. 또는 _병렬화 ROI_ 가 큰 경우 (예: 100 파일을 동시 분석).
+
+!!! question "🤔 Q3 — Guard rail 설계 (Bloom: Evaluate)"
+    당신의 agent 가 _production_ 환경에서 1주일에 _10000 회_ 호출. 필수 guard 4 종을 _우선순위_ 로 설계.
+
+    ??? success "정답"
+        1. **Dangerous-action filter** (1순위): `rm -rf`, `git push --force` 같은 _복구 불가_ 명령은 agent 가 _제안만_ 하고 _사용자 confirm_ 필요. 비용보다 _안전성_ 우선.
+        2. **Max steps** (2순위): 한 호출당 _N 회 도구 호출_ 제한 (예: 20). Infinite loop 방지.
+        3. **Budget cap** (3순위): 일/월 단위 token 비용 한도. 폭주 시 자동 차단.
+        4. **Loop detection** (4순위): 같은 action 이 _3 회 이상 반복_ 되면 break. Subtle infinite loop 잡기.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `How to run LangGraph` (id=999030785)
+- `[Low-end] AI-Agents` (id=1237811201)
+- `Report: Open-sourced Agent AI Trajectories with Human-in-the-Loop` (id=1214218318)
+
+**External**
+- *ReAct: Synergizing Reasoning and Acting in Language Models* — Yao et al., ICLR 2023
+- *Reflexion: Language Agents with Verbal Reinforcement Learning* — Shinn et al., NeurIPS 2023
+- *Plan-and-Solve Prompting* — Wang et al., ACL 2023
+- Anthropic *Model Context Protocol (MCP)* spec, 2024
+- Claude Code, Cursor agent docs (2024-2025)
 
 ---
 

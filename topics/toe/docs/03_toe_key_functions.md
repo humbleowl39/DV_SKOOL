@@ -43,6 +43,20 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Interop 실패_ 의 원인
+
+당신의 TOE 가 Linux peer 와 통신. 정상 데이터는 OK, _packet loss 발생_ 시 _connection drop_.
+
+추적:
+- Linux 의 _SACK block_ 송신 → 당신의 TOE 가 _ignore_.
+- Linux 는 _SACK 통한 selective retransmit_ 기대 → 안 옴 → timeout → drop.
+
+원인: TOE 가 **RFC 2018 SACK 미구현**. _Linux peer 가 RFC compliant_, 당신의 TOE 가 _아님_.
+
+이게 _TCP interop_ 의 어려움. TCP 의 _수십 개 RFC_ (2018 SACK, 1323 PAWS, 5681 congestion control, ...) 모두 _정확히_ 구현되어야 _다양한 peer_ 와 호환.
+
+검증의 90% 는 _abnormal scenario_ — packet loss, OOO, duplicate, timeout, zero window — 의 _복구 동작_ 검증.
+
 Module 02 의 architecture 가 _블록 배치_ 였다면, 이 모듈은 그 블록들 _안에서 실행되는 알고리즘_ 입니다. **Checksum / Segmentation+Reassembly / Retransmission / Flow Control / Congestion Control** — 이 5 가지가 packet 마다 반복되며, 각각의 alg 가 정확히 RFC 를 따라야 peer 와 호환됩니다.
 
 검증의 90 % 는 이 5 가지 기능의 _상태 조합_ 을 커버하는 일입니다. 즉 이 모듈의 어휘 — RTO, SRTT, cwnd, ssthresh, SACK block, PAWS — 가 이후 **거의 모든 DV scoreboard / SVA / coverage bin** 에 등장합니다.
@@ -694,6 +708,39 @@ Timestamps 옵션 — 두 가지 목적:
     - RTO timer 와 Fast Retransmit 의 _동시 trigger_ 는 가장 흔한 HW 버그 — Fast Retx 진입 시 반드시 RTO timer 리셋.
     - SACK 의 4 블록 제한은 _Options 필드 공간 계산_ 의 결과, 임의의 상한이 아님.
     - PAWS 는 _100 Gbps 에서 Seq wrap 이 17 초마다_ 일어나서 필수, 저속 환경에서는 비활성도 무방.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — RTO 계산 (Bloom: Apply)"
+    측정한 RTT 가 _10ms, 12ms, 8ms, 15ms_. RFC 6298 로 SRTT, RTTVAR, RTO?
+
+    ??? success "정답"
+        RFC 6298:
+        - SRTT = (1-α) × SRTT_prev + α × RTT_new, α=1/8.
+        - RTTVAR = (1-β) × RTTVAR + β × |SRTT - RTT|, β=1/4.
+        - RTO = SRTT + max(G, 4 × RTTVAR), G=clock granularity.
+
+        대략 SRTT ≈ 11ms, RTTVAR ≈ 2ms, RTO ≈ 11 + 8 = **~19ms**.
+
+        Min RTO 1초 강제 (RFC) — 위 계산이 1초 미만이면 _1초_ 사용.
+
+!!! question "🤔 Q2 — Cubic vs Reno (Bloom: Evaluate)"
+    DC 내 1ms RTT vs WAN 100ms RTT. 어느 congestion control?
+
+    ??? success "정답"
+        - **DC (1ms RTT, low BDP)**: Reno 충분. Cubic 의 _큰 cwnd 회복_ 이 의미 없음.
+        - **WAN (100ms RTT, high BDP)**: **Cubic 우월** — 큰 BDP 에서 _빠른 회복_ 능력 발휘.
+
+        DCQCN / DCTCP 가 DC RDMA 의 표준 — DC 환경에 특화.
+
+### 7.2 출처
+
+**External**
+- RFC 6298 *Computing TCP's Retransmission Timer*
+- RFC 5681 *TCP Congestion Control*
+- RFC 2018 *SACK*
+- RFC 1323 *PAWS / Timestamps*
+- Cubic 원논문 (Ha et al., 2008)
 
 ---
 

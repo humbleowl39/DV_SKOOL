@@ -43,6 +43,22 @@
 
 ## 1. Why care? — Agent 가 UVM 재사용의 최소 단위인 이유
 
+### 1.1 시나리오 — 같은 AXI agent, _Master_ + _Slave_
+
+당신은 AXI bridge 검증. 두 측면:
+- **AXI master agent**: bridge 의 master IF 에 stimulus.
+- **AXI slave agent**: bridge 의 slave IF 에서 응답.
+
+순진한 해법: 두 개의 _별도 agent class_ 작성. _200% 작업량_.
+
+UVM 해법: **같은 agent class** + `is_active` config:
+- `UVM_ACTIVE` → Driver + Sequencer + Monitor (stimulus).
+- `UVM_PASSIVE` → Monitor only (observe).
+
+같은 코드, _config 한 줄_ 차이. AXI bridge → 한 agent, master 측은 active, slave 측은 passive. 또는 양쪽 모두 active (양방향 traffic).
+
+또한 _PCIe RC vs EP_, _AXI master vs slave_ 같은 _dual role_ 모든 경우에 _같은 agent_ 재사용. UVM 재사용성의 _핵심_.
+
 이후 검증 환경의 모든 _프로토콜 인터페이스_ 는 Agent 한 개로 캡슐화됩니다. Agent 의 설계가 잘못되면 — 예를 들어 Active / Passive 분리를 안 두면 — 같은 인터페이스를 다른 위치에서 (PCIe RC vs EP, AXI master vs slave) 검증할 때 Agent 를 새로 짜야 합니다. 그래서 이 모듈의 패턴 (Active/Passive 분기, Driver/Monitor 책임 분리, vif 전달) 은 _재사용성의 출발점_ 입니다.
 
 또한 디버그 관점에서도, 자극 / 관찰 / 비교의 책임이 어느 컴포넌트에 있는지 명확해야 fail log 에서 prefix (`[DRV]`, `[MON]`, `[SQR]`) 만 보고 어느 책임자에게 책임이 있는지 즉시 분류할 수 있습니다.
@@ -604,6 +620,36 @@ Security Driver: force / release 로 DUT 내부 신호에 직접 접근
     - Driver `run_phase` 의 모든 분기 (if / case / early return) 에서 `item_done()` 호출 누락 없는지 코드 리뷰 시 _경로 추적_.
     - Monitor 는 `vif.signal <= ...` 패턴이 _절대_ 없어야 함 — review 자동화로 grep.
     - `set_id_info(req)` 는 response 가 있는 Driver 에서 _기본 습관_ 으로.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Active vs Passive (Bloom: Apply)"
+    Same agent class 를 _Active_ / _Passive_ 두 모드로 쓰는 시나리오?
+    ??? success "정답"
+        멀티 인스턴스 시나리오:
+        - **DUT-as-master**: 우리 DUT 가 AXI master, 외부 slave → slave agent _passive_ (모니터링만), 우리 마스터 agent _active_.
+        - **System-level**: 같은 protocol 의 여러 인스턴스 — 일부는 직접 자극 (active), 일부는 다른 master 가 driving (passive monitor).
+        - `is_active` config 로 build_phase 에서 sequencer/driver 생성 여부 분기. Monitor 는 항상 생성.
+        - 잘못된 패턴: 별도 클래스 2 개로 분리 → 코드 중복 + monitor 가 불일치.
+
+!!! question "🤔 Q2 — `item_done()` 누락 (Bloom: Analyze)"
+    Driver 의 한 분기에서 `item_done()` 을 빠뜨리면 어떤 _증상_ 이?
+    ??? success "정답"
+        Sequencer 가 다음 item 을 보내지 못함:
+        - **Hang**: `start_item` 후 sequencer 가 `item_done` 대기 → sequence 가 멈춤 → test timeout.
+        - **얼핏 보이는 증상**: scoreboard 에 transaction 1 개만 도착, 이후 0 개 — sequence 가 _죽은 줄_ 알기 쉬움.
+        - 디버그 단서: `+UVM_OBJECTION_TRACE` 로 phase objection 가 raise 후 drop 안 됨.
+        - 방어: early return 경로마다 `item_done()` 또는 wrapper 매크로로 강제.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Agent Patterns` — Active/Passive 분리 + multi-instance
+- `Driver Handshake` — get_next_item / item_done 의무 매트릭스
+
+**External**
+- *UVM 1.2 User's Guide* §7 (Building the TB) — Accellera
+- *UVM Cookbook* (Mentor) — Active vs Passive Agent
 
 ---
 

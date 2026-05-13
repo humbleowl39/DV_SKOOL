@@ -42,6 +42,23 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 100 Gbps 에서 _CPU 코어 다 잃기_
+
+당신의 서버 100 Gbps NIC. TCP/IP 모든 처리 _SW_ 에서. 측정:
+
+- 100 Gbps 양방향 처리 → CPU 코어 _4-8 개 100% 점유_ (Mellanox WP, 2014).
+- 64 코어 서버 → 12% 코어 손실 _전부 통신만_.
+- Application 의 가용 CPU = 56 코어.
+
+또는 hardware offload (TOE):
+- TCP segmentation, checksum, ACK/timer 모두 _NIC HW_.
+- CPU 부담 = ~0.5 코어 (connection 관리만).
+- Application 의 가용 CPU = 63.5 코어.
+
+**5-7 코어 차이** = _수만 USD_ 의 서버 가치. Cloud 운영자는 _수십만 서버 fleet_ → 누적 절감 _수십억 USD_.
+
+이게 TOE 가 _대규모 데이터센터_ 에서 _필수_ 인 이유.
+
 이후 모든 TOE 모듈은 한 가정에서 출발합니다 — **"100 Gbps 라인레이트에서 host CPU 가 TCP/IP 를 처리하면 코어 여러 개가 100 % 점유되어 애플리케이션이 멈춘다"**. 왜 TOE 의 connection table 이 hardware 에 있어야 하는지, 왜 RTO 타이머가 SW timer 가 아니라 HW timer wheel 인지, 왜 DV TB 가 host agent 와 network agent 를 둘 다 두어야 하는지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 모든 architecture/기능/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이게 CPU cycle 을 줄이려는 거구나"** 처럼 _이유_ 가 보입니다.
@@ -435,6 +452,41 @@ Offload 수준:
     - "TOE = 빠르다" 는 **CPU 점유율 / tail latency** 의 이야기. throughput 만 보면 일반 NIC + TSO 도 라인레이트 가능.
     - **Workload dependence**: small packet + many conn + CPU bound 일 때 효과 큼. bulk + jumbo 는 효과 작음.
     - **Connection state 유한**: Table full, TIME_WAIT 누적 시 새 연결 거부 가능 → 검증의 핵심 abnormal scenario.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — TOE vs TSO/LRO (Bloom: Apply)"
+    NIC 옵션:
+    - (a) Plain NIC + SW TCP.
+    - (b) NIC + TSO (Segmentation) + LRO (Receive Coalescing) — partial offload.
+    - (c) Full TOE — connection state, retry, timer 모두 HW.
+
+    어느 워크로드에 어느 것?
+
+    ??? success "정답"
+        - **Bulk transfer** (큰 file): (b) TSO/LRO 충분. Full TOE 의 _connection 비용_ 정당화 안 됨.
+        - **Many small connections** (HTTP, RPC): **(c) Full TOE** — 수천 connection 의 _SW overhead_ 가 큼.
+        - **Low CPU budget**: (c) — CPU 점유율 minimize.
+
+        Full TOE 는 _design 복잡_, _interop_ 어려움 → bulk 워크로드에는 보통 (b) 가 cost-effective.
+
+!!! question "🤔 Q2 — Stateful offload 검증 어려움 (Bloom: Analyze)"
+    Stateless offload (TSO) 보다 stateful (TOE) 검증이 _왜 어려운가_?
+
+    ??? success "정답"
+        - **State space 폭발**: connection state (open, established, fin_wait, ...) × 동시 연결 수 × abnormal scenario.
+        - **Interop**: 각 OS / driver / peer 가 다른 TCP 변형. RFC 의 모든 corner 정확.
+        - **Long-tail bug**: 수 시간 운영 후만 보이는 state corruption. 짧은 시뮬에서 _안 잡힘_.
+
+        해법: random workload + long simulation + state coverage cross.
+
+### 7.2 출처
+
+**External**
+- IETF RFC 793 *TCP*, RFC 5681 *TCP Congestion Control*
+- RFC 2018 *SACK*, RFC 1323 *PAWS*
+- *Sockets Direct Protocol* — IBTA WP
+- Chelsio TOE technical specifications
 
 ---
 

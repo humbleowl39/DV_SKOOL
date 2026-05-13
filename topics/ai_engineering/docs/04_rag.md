@@ -43,9 +43,34 @@
 
 ## 1. Why care? — LLM 에 도메인 지식을 넣는 가장 실용적인 경로
 
-LLM 이 도메인 지식을 갖게 만드는 가장 비용·운영 효율 좋은 방법이 RAG 입니다. Fine-tune 은 (1) 비싸고 (2) 느리며 (3) 라이프사이클이 길지만 (재학습마다 일~주 단위), RAG 는 _인덱스만 갱신_ 하면 곧장 반영됩니다 — 사내 IP 가 변경되거나 spec 가 업데이트되어도 임베딩 + 인덱스 재빌드만 거치면 모델 그대로 활용.
+### 1.1 시나리오 — "Spec 이 _매주_ 바뀐다"
+
+당신은 사내 IP RDMA spec 으로 LLM 에 도메인 지식을 넣고 싶습니다. Spec 이 _매주_ 갱신됩니다 (review feedback, bug fix, new feature). 세 옵션:
+
+| 옵션 | 비용 | 갱신 시간 | 운영 |
+|------|-----|---------|------|
+| **(a) Fine-tune** (LoRA 등) | GPU 시간 × N (수 만 USD) | _수일_ | 매주 재학습 → 비용 폭증 |
+| **(b) All-in-context** | 매 호출 200K input | 즉시 (재학습 X) | $0.6/호출, 단 _spec 이 200K 초과_ 시 불가 |
+| **(c) RAG** | 인덱스 빌드 1 회 + 매 호출 $0.006 | **분 단위** (재임베딩만) | 운영 친화적, 사내 spec 갱신마다 자동 |
+
+(c) RAG 가 _spec 갱신 빈도가 높은_ 사내 docs 에 _압도적으로_ 유리. Fine-tune 은 _stable_ knowledge 에만.
+
+또한 _Hallucination 감소_ 효과: LLM 이 "**검색된 chunk 만**" 을 근거로 답변 → 거짓말 줄어듦 (단 _retrieval 이 정확_ 할 때만).
 
 사내 IP / 코드 / 문서를 LLM 으로 활용하려는 거의 모든 프로젝트의 표준 패턴이며, [Module 06](06_strategy_selection.md) 의 "Prompt vs RAG vs Fine-tune" 결정에서 항상 출발점이 됩니다.
+
+!!! question "🤔 잠깐 — RAG 실패 시 _가장 자주_ 깨지는 단계는?"
+    Naive RAG 는 4 단계 (Query → Retrieval → Augmentation → Generation). 운영 RAG 가 실패할 때 _어느 단계_ 가 73% 의 원인 [BigData Boutique, 2026]?
+
+    ??? success "정답"
+        **Step 2: Retrieval** (73%).
+
+        Generation 이 깨지는 게 아니라 _retrieval 이_ 잘못된 chunk 를 가져오면 LLM 이 _아무리 좋아도_ 답이 깨짐. 대표 실패:
+        - **Semantic gap**: 사용자 쿼리 vs 문서가 _다른 어휘_ (예: "TLB flush" vs "TLB invalidation").
+        - **Chunking artifacts**: 고정 크기로 잘린 chunk 가 _문장 중간_ 에서 분리.
+        - **Top-k = 5 인데 정답 chunk 가 rank 7**: silent miss.
+
+        검증 우선순위: _retrieval 정확도_ (Recall@k, MRR) 가 _LLM 답변 품질_ 보다 _먼저_ 측정돼야.
 
 ---
 
@@ -307,6 +332,65 @@ flowchart TB
     **원인**: Retrieval 실패와 성공이 응답 형식에서 구별되지 않으며, `retrieved_context` 가 비었을 때 LLM 에게 "모른다" 고 답하도록 프롬프트로 강제하지 않으면 자연스럽게 hallucination 이 발생한다.
 
     **점검 포인트**: 응답 파이프라인에서 `len(retrieved_docs) == 0` 일 때 별도 분기로 "관련 문서 없음" 메시지를 반환하는지 확인. 평가 시 retrieval recall 과 생성 답변 정확도를 별도 지표로 측정해 검색 실패가 오답의 원인인지 분리 분석.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Retrieval 실패 vs Generation 실패 분리 (Bloom: Analyze)"
+    당신의 RAG 가 _틀린 답_. 어떻게 _retrieval 실패_ 와 _generation 실패_ 를 분리 진단?
+
+    ??? success "정답"
+        2 단계:
+        1. **Retrieved chunks 직접 확인**: top-k chunk 에 _정답이 있는지_ 사람이 검토.
+        2. **있는데 답이 틀림** → generation 실패. 없으면 retrieval 실패.
+
+        Metric:
+        - Context Recall: 정답이 retrieved 안에 있나? (retrieval 만 측정)
+        - Faithfulness: LLM 답이 retrieved chunk 와 일치하나? (generation 만 측정)
+
+        RAGAS / TruLens 같은 framework 가 이 분리를 자동화.
+
+!!! question "🤔 Q2 — Hybrid search 의 score fusion (Bloom: Apply)"
+    BM25 와 dense embedding 의 _score 가 다른 scale_. 어떻게 합치나?
+
+    ??? success "정답"
+        **Reciprocal Rank Fusion (RRF)**:
+        ```
+        score(d) = Σ 1 / (k + rank_i(d))
+        ```
+        - `rank_i(d)` = 검색 시스템 _i_ 에서 문서 d 의 순위.
+        - `k` = 보정 상수 (보통 60).
+
+        장점: _score scale 무관_ — rank 만 사용. BM25 = 5.0, embedding = 0.7 같은 scale 차이 무시.
+
+        대안: Weighted sum (`α * bm25 + (1-α) * dense`) — scale 정규화 필요.
+
+!!! question "🤔 Q3 — RAG vs Fine-tune (Bloom: Evaluate)"
+    사내 SystemVerilog 코딩 컨벤션을 LLM 에 _영구히_ 가르치고 싶다. RAG vs Fine-tune?
+
+    ??? success "정답"
+        **Fine-tune** (LoRA).
+
+        이유:
+        - 컨벤션은 _stable_ knowledge — _매번_ retrieve 안 해도 됨.
+        - 사용 빈도 _매우 높음_ — 매 호출마다 retrieval 비용 발생하면 누적 비용 ↑.
+        - 컨벤션이 _short text_ → fine-tune 학습 시간 짧음 (LoRA 수 시간).
+
+        RAG 가 좋은 경우: spec, RTL 코드, 디자인 문서 같은 _변화하는, 큰_ knowledge.
+
+        하이브리드: Fine-tune (컨벤션) + RAG (실시간 spec). 가장 흔한 운영 패턴.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `5. KV Caching & VectorDB w/ MangoBoost` (id=613187588)
+- `Design Document of Component/System-Level Benchmarking Tool` (id=613482498)
+
+**External**
+- *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks* — Lewis et al., NeurIPS 2020 (원논문)
+- *Seven Failure Points When Engineering a Retrieval Augmented Generation System* — arXiv:2401.05856 (2024)
+- *RAG Production Guide 2026* — Lushbinary, 2026 (73% failure in retrieval)
+- *RAGAS: Automated Evaluation of Retrieval Augmented Generation* — Es et al., EACL 2024
+- *Lost in the Middle* — Liu et al., TACL 2023
 
 ---
 

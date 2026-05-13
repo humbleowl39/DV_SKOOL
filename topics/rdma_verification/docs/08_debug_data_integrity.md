@@ -42,6 +42,26 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — Mismatch _byte 위치_ 가 _가설_ 을 정함
+
+당신의 RDMA write test fail:
+```
+E-SB-WRITE-DATA: 4KB transfer mismatch
+  Expected: 0xDEADBEEF... at offset 0
+  Actual:   0xDEADBEEF... at offset 0  (same first 1024 bytes)
+  Diff start at offset 1024
+```
+
+**byte 1024 = MTU boundary**. 즉:
+- Byte 0-1023: OK → 첫 packet 정상.
+- Byte 1024+: corruption → 두 번째 packet 또는 그 이후.
+
+가설: **WRITE_MIDDLE packet 처리 bug** 또는 **MR 의 page boundary 처리 (1024 = 1 page 일 가능성)** .
+
+Vs byte 0 부터 corruption 이면 _source fetch_ bug. 끝부분만 corruption 이면 _padding/length_ bug.
+
+**Mismatch byte 위치 = 가설 한 가지** 로 _즉시_ 좁힘. 5 단계 절차의 핵심.
+
 Data mismatch 는 RDMA 검증의 가장 빈번하고 까다로운 실패입니다. 원인이 SW 설정 (MR/QP/IOVA), HW 인터페이스 (C2H/H2C), DUT 데이터 경로 모두에 있을 수 있어 단계적 분리 (triangulation) 가 필수입니다.
 
 이 모듈을 건너뛰면 mismatch 로그를 보고 _가장 마지막 단계 (DUT datapath)_ 부터 의심해 시간을 낭비합니다. 5 단계 절차를 따르면 SW → HW → DUT 순으로 좁혀가며 보통 Step 2~3 에서 원인이 잡힙니다.
@@ -331,6 +351,36 @@ mismatch byte 위치
 !!! warning "실무 주의점"
     - 2side mismatch 의 PA 0 은 알려진 이슈 — fsdb 에서 직접 PA.
     - imm compare 의 OPS 경로는 base_addr 설정 점검 필수.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Mismatch byte 위치 해석 (Bloom: Analyze)"
+    4 KB transfer mismatch. _byte 0_ vs _byte 2048_ vs _byte 4095_. 각각 가설?
+
+    ??? success "정답"
+        - **Byte 0**: source fetch bug. Sender 가 _wrong source_ 에서 데이터.
+        - **Byte 2048** (page boundary): MR page table / PTW bug. 두 번째 page 의 PA 잘못.
+        - **Byte 4095** (마지막): length/padding bug. 마지막 byte 의 처리 오류.
+
+        Mismatch 위치가 _가설 직접_ 매핑.
+
+!!! question "🤔 Q2 — 5 단계 절차 (Bloom: Apply)"
+    Data mismatch 디버그 5 단계 _순서_?
+
+    ??? success "정답"
+        SW → HW → DUT 순:
+        1. **SW config**: MR / QP / IOVA 설정 확인.
+        2. **HW interface**: C2H/H2C QID + 방향.
+        3. **DUT data path**: 내부 stage 데이터 비교.
+        4. **Reference model 검증**: scoreboard expected 값 정확?
+        5. **Reproduction**: minimal test case 작성.
+
+        대부분 step 2-3 에서 root cause. 5 단계 마지막까지 가는 경우 드물음.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Data Integrity Error` (id=1336279137)
 
 ---
 

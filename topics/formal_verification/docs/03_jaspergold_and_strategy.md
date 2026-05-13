@@ -42,6 +42,27 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _False PROVEN_
+
+당신은 JasperGold 로 _arbiter fairness_ 증명. 결과 **PROVEN**. Sign-off.
+
+Silicon 후: _starvation bug_. 어떻게?
+
+조사: 당신이 작성한 assume:
+```
+assume property (@(posedge clk) req[0] |=> $past(req[0]));
+```
+의도: "req[0] 가 _계속_ assert 됨" 가정.
+
+실제 의미: **req[0] 가 한 cycle 후 _반드시_ assert** — _너무 강한_ 제약. Real spec: req[0] 가 _가끔만_ assert. 당신의 assume 이 _real world 보다 강한 가정_ 으로 입력 공간 _축소_ → arbiter 의 _real-world starvation 시나리오_ 가 _제외_ → PROVEN.
+
+**이게 _silent false PROVEN_** — 가장 위험한 Formal 함정.
+
+방어:
+- **Assume audit**: 모든 assume 이 _real spec_ 과 _strictly weaker_ or _equal_ 인지 검토.
+- **Cover** for each assume: assume 이 _real 가능한 입력_ 을 _제외하지 않는지_ 검증.
+- **Assume reduction strategy**: 처음엔 약한 assume, BOUNDED 면 단계적 강화.
+
 **Formal 도구 사용은 "PROVEN 받기" 와 다릅니다**. 실무에서 BOUNDED 를 PROVEN 으로 만드는 작업이 시간의 80% 를 차지하고, Assume 작성과 audit 가 검증 신뢰성의 핵심입니다. Module 01/02 에서 본 property 가 처음에는 거의 항상 BOUNDED 또는 false-CEX 로 시작합니다 — 이를 **Convergence 전략** 으로 수렴시키는 것이 Formal 엔지니어의 역량입니다.
 
 또한 잘못된 Assume = silent false PROVEN — 도구가 PROVEN 을 보고하지만 실제로는 spec 보다 강한 가정으로 입력 공간을 너무 좁힌 결과. Sign-off 시 PROVEN/BOUNDED/Cover/Assume audit/COI 5 가지를 같은 비중으로 문서화하지 않으면 silicon 단계에서 사고가 납니다.
@@ -611,6 +632,50 @@ assert property (@(posedge clk) disable iff (rst)
     **원인**: blackbox 는 해당 모듈의 출력에 대한 모든 가정을 제거한다. 즉 tool 은 "blackbox 출력이 어떤 값이든 가질 수 있다" 고 가정하고 worst case 를 찾는다. 실제로 그 출력은 spec 에 의해 제약되지만 그것을 명시하지 않으면 false CEX 가 나온다.
 
     **점검 포인트**: blackbox 사용 시 반드시 그 모듈의 spec 동작을 `assume` 으로 모델링 (예: handshake protocol, output range). Over-constraint 가 되지 않도록 simulation 에서 같은 assume 들이 위반되지 않는지 cross-check. 의심되는 CEX 는 blackbox 입출력 신호의 trace 부터 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Convergence 전략 (Bloom: Apply)"
+    Property BOUNDED. 어떻게 PROVEN?
+
+    ??? success "정답"
+        4 가지 시도 (순서):
+        1. **Helper invariant**: 작은 보조 property → tool 이 _state space 좁힘_ 가능.
+        2. **Blackbox unrelated module**: state explosion 의 원인 module 격리.
+        3. **Cut point**: 특정 신호를 _free input_ 으로 → state 감소.
+        4. **Time bound 조정**: max bound 명시 + sign-off 위험 문서화 (마지막 수단).
+
+        각 시도 후 simulation cross-check (over-constraint 방어).
+
+!!! question "🤔 Q2 — Assume audit (Bloom: Analyze)"
+    Sign-off 시 _모든 assume_ audit 어떻게?
+
+    ??? success "정답"
+        각 assume 마다:
+        1. **Spec 1:1 매핑**: 해당 assume 이 _spec 의 어느 줄_ 과 일치하는지 추적.
+        2. **Cover 짝**: assume 의 condition 이 _real-world 에서 도달 가능_ 한지 cover 로 확인.
+        3. **Simulation cross-check**: simulation 에서 _이 assume 이 위반되지 않는지_ runtime check.
+        4. **Reviewer signature**: spec 작성자가 _내 spec 과 일치_ 확인.
+
+!!! question "🤔 Q3 — Sign-off 5 기준 (Bloom: Evaluate)"
+    Sign-off 시 _어떤 5 가지_ 를 보고서에 포함?
+
+    ??? success "정답"
+        1. **PROVEN list**: 수학적 보장된 property.
+        2. **BOUNDED list**: bound + 그 bound 가 _운영 시간 cover_ 함.
+        3. **Cover hit list**: 모든 assert 의 antecedent _도달_.
+        4. **Assume audit**: 모든 assume _spec 매핑 검증_.
+        5. **COI (Cone of Influence)**: 검증되지 않은 영역 명시.
+
+        5 가지 모두 _문서_ → reviewer 가 _가정 + 결과_ 모두 검토 가능.
+
+### 7.2 출처
+
+**External**
+- Cadence JasperGold User Guide
+- Synopsys VC Formal Reference
+- *Formal Verification Methodology Cookbook* — Cadence
+- ISSCC / DAC formal verification papers
 
 ---
 

@@ -47,9 +47,43 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — TrustZone 자체가 뚫리면?
+
+당신은 TrustZone 으로 결제 모듈을 보호. 안전. 그런데 _2018 Spectre_ 같은 CPU bug 가 발견 — _측면 채널_ 로 NS 가 S 메모리 _읽기 가능_.
+
+**실제 사례** (2017-2023):
+- **2017 CVE-2017-15361** (Infineon): TrustZone 안의 RSA 키 생성 약점.
+- **2018 Spectre/Meltdown**: 캐시 측면 채널로 격리 우회.
+- **2020 SMASH**: TrustZone Rowhammer.
+- **2022 ARMv9 CCA bug**: PSCI handler 의 메모리 corruption.
+
+**TrustZone 만으로 _불충분_**. 가장 중요한 비밀 (예: device root key, biometric template) 은 _별도 hardware_ 에 보관:
+
+**Secure Enclave** — _독립_ 한 작은 processor + 전용 RAM + 자체 boot ROM:
+- Main CPU 와 _상호 불신_ — Main CPU 가 망가져도 Enclave 는 안전.
+- Mailbox 로만 통신 (queue 기반).
+- Secure Channel Protocol (SCP03/SCP11) 로 모든 통신 암호화.
+
+Apple Secure Enclave Processor (SEP), Google Titan M, Samsung Knox 가 이 모델.
+
 Module 01-02 에서 _"TrustZone 이 Secure World 를 격리한다"_ 라고 했지만, **TrustZone 자체가 뚫리면 어떻게 되는가?** 라는 질문에는 답이 없습니다. 실제 사례 — Spectre 류의 캐시 부채널, OP-TEE 의 RCE 취약점, 또는 Trusted OS bug — 가 발생하면 Secure World 의 _모든_ 키와 데이터가 노출됩니다.
 
 이 모듈은 그 한 단계 위 — **TrustZone 도 신뢰하지 않는 별도 보안 계층** 인 Secure Enclave 와, 여러 TEE 가 _상호 불신_ 으로 공존하는 모델을 다룹니다. 이 모델을 이해하면, 마스터 키 같은 _최상위 비밀_ 은 왜 TrustZone 이 아닌 Enclave 에 보관되는지, 그리고 검증 시 Enclave 의 mailbox / 인증 토큰 / Secure Channel Protocol 을 어떻게 다뤄야 하는지가 보입니다.
+
+!!! question "🤔 잠깐 — 왜 Enclave 가 _별도 processor_ 필요?"
+    같은 CPU 의 _별도 모드_ (TrustZone) 가 아닌 _완전 독립 CPU_ 가 필요한 이유?
+
+    ??? success "정답"
+        **공유 자원 = 공유 위험**.
+
+        TrustZone 은 _같은 CPU_ — cache, TLB, branch predictor, prefetcher 가 _공유_. 측면 채널 공격이 이 공유에서 발생.
+
+        Secure Enclave 는 _독립_ CPU:
+        - 자체 cache, 자체 메모리 controller, 자체 인터럽트.
+        - Main CPU 와 _hardware-level isolation_.
+        - 측면 채널 공격 불가 (공유할 자원이 없으므로).
+
+        대가: 면적/전력 증가 + 통신 latency (mailbox 가 SMC 보다 ~10× 느림). 그래서 _가장 critical_ 한 비밀만 Enclave 에 보관.
 
 ---
 
@@ -453,6 +487,48 @@ External Secure Enclave 는 SPI/I2C 같은 외부 버스로 SoC 와 연결됩니
     - Enclave key 는 enclave _밖으로 나간 적이 없어야_ — DV 시 mailbox 응답에 raw key 가 등장하면 _즉시 fail_.
     - DRM Pipeline 은 5 축 (TZPC + TZASC + SMMU + GIC + cache NS-bit) 이 _모두_ 정확해야 — 한 축의 misconfig 가 곧 전체 무력화.
     - External enclave 와의 SPI 통신에서 Secure Channel Protocol (암호화 + MAC + sequence) 이 빠지면, 보드 도청만으로 키 탈취 가능.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Enclave 분리 결정 (Bloom: Apply)"
+    어떤 비밀을 _TrustZone S-EL1_ 에 두고, 어떤 비밀을 _Secure Enclave_ 에 둬야 하나?
+
+    ??? success "정답"
+        - **TrustZone S-EL1** (OP-TEE): DRM key (재발급 가능), session key, biometric template (한 device 의 한 user).
+        - **Secure Enclave**: device root key (영구 anchor), payment master key, attestation key.
+
+        기준: _재발급 가능_ vs _불가능_. 재발급 불가 = Enclave. 더 비싼 격리 정당화.
+
+!!! question "🤔 Q2 — Side-channel 분석 (Bloom: Analyze)"
+    Spectre 같은 cache side-channel 이 _TrustZone 을 깨면_ 어떻게 Enclave 는 안전?
+
+    ??? success "정답"
+        **공유 자원이 _없음_**.
+
+        - TrustZone: CPU/cache 공유 → NS world 가 _cache timing_ 으로 S world 의 access pattern 추론 가능.
+        - Enclave: 독립 CPU, 독립 cache, 독립 메모리 → 공유 자원 0 → side-channel _불가능_.
+
+        Trade-off: 면적/전력 증가. 단 _최상위 비밀_ 에는 정당화.
+
+!!! question "🤔 Q3 — Mailbox 검증 (Bloom: Evaluate)"
+    Enclave-host mailbox 통신. _어떤 보안 속성_ 을 SVA / DV 로 검증?
+
+    ??? success "정답"
+        1. **Confidentiality**: Mailbox 응답에 _raw key_ 가 등장하면 _즉시 fail_ (key 가 enclave 밖으로 나옴).
+        2. **Authenticity**: 모든 메시지에 _MAC_ 첨부, MAC 검증 통과만 처리.
+        3. **Freshness**: Sequence number 증가, 같은 sequence 재사용 시 reject (replay 방어).
+        4. **Atomicity**: Mailbox request 가 _도중 abort_ 되면 enclave state 복원 (transactional).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 secure enclave 디자인 자료
+
+**External**
+- Apple Platform Security guide — Secure Enclave
+- Google Titan M2 white paper
+- GlobalPlatform TEE specifications
+- *Spectre Attacks: Exploiting Speculative Execution* — Kocher et al., S&P 2019
 
 ---
 

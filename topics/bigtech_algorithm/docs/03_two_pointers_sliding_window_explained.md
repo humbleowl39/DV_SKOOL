@@ -42,9 +42,40 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _O(1) 공간_ 의 가치
+
+당신은 면접에서 hash map (O(N) space) 으로 문제 풀었음. 면접관:
+
+> "**O(1) space 로 풀 수 있나요?**"
+
+이 후속 질문에 _답하지 못하면_ — Hash Map _solution 만 외운_ 인상. 답하면 — _패턴 사고_ 가 깊다는 인상.
+
+**Two Pointers** 가 답인 경우 30%:
+- 배열이 _정렬됨_.
+- 두 위치 (start, end) 만 추적 → O(1) extra space.
+- 한 pointer 이동 = O(1), 전체 N 번 이동 = O(N) 시간.
+
+**Sliding Window** 의 가치 (연속 부분 배열 문제):
+- "K-길이 부분 배열" → _하나씩 옮겨_, 새 element 추가 / 빠진 element 제거.
+- _다시 합산 X_, O(1) per step → 전체 O(N).
+
 Two Pointers / Sliding Window 는 **추가 메모리 없이** O(N) 으로 풀리는 강력한 도구입니다. Hash Map 풀이의 30% 는 정렬만 가능하면 Two Pointers 로 _O(1) 공간_ 에 다시 풀 수 있고, "연속 부분 배열 / 부분 문자열" 류 문제는 거의 모두 Sliding Window 로 일반화됩니다.
 
 이 모듈을 건너뛰면 면접에서 "메모리 O(1) 풀이도 가능한가요?" 라는 후속 질문에 막힙니다. 반대로 invariant 로 Window 를 _글로 적는_ 습관이 잡히면, 이후 Stack / DP 의 상태 정의에도 같은 사고방식을 그대로 사용할 수 있습니다.
+
+!!! question "🤔 잠깐 — Two pointers 의 _수렴 보장_?"
+    left=0, right=N-1. 둘이 _영원히_ 안 만날 수도? 어떤 _불변식_ 이 수렴 보장?
+
+    ??? success "정답"
+        **각 step 마다 한 pointer 가 _다른 pointer 방향으로_ 움직임**.
+
+        - sum < K → left++ (오른쪽으로).
+        - sum > K → right-- (왼쪽으로).
+        - 둘 다 안 움직이면 _stuck_ → 무한 루프.
+
+        Invariant: `(right - left)` 가 _strictly 감소_. N step 이면 left == right 도달 → 종료.
+
+        면접 답변 시 명시: "_매 step 마다 window size 줄어드므로 N step 안에 종료_".
 
 ---
 
@@ -521,6 +552,41 @@ endmodule
     - **Off-by-one** 의 주범 = `lo<hi` vs `lo<=hi` 의 의미 차이. 매 문제에 invariant 한 줄 적기.
     - **Left 후퇴 금지** — sliding window 에서 left 가 후퇴하면 O(N²) 함정.
     - **양/음수 혼합 입력** — 정렬 + 부호 혼합이면 abs/sign 고려해 invariant 재검증.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Longest substring without repeat (Bloom: Apply)"
+    "abcabcbb" 의 최장 unique substring. Sliding window 알고리즘?
+
+    ??? success "정답"
+        ```python
+        seen = {}  # char → index
+        left = 0
+        max_len = 0
+        for right, ch in enumerate(s):
+            if ch in seen and seen[ch] >= left:
+                left = seen[ch] + 1
+            seen[ch] = right
+            max_len = max(max_len, right - left + 1)
+        ```
+        O(N). 답: "abc" 길이 **3**.
+
+        Window 가 expand (right++) / shrink (left jump) 만 — left 절대 후퇴 안 함.
+
+!!! question "🤔 Q2 — Sorted array two sum (Bloom: Analyze)"
+    정렬된 배열. Two pointers vs binary search 효율?
+
+    ??? success "정답"
+        - **Two pointers**: O(N) — 각 element 가 _최대 한 번_ visit.
+        - **Binary search**: O(N log N) — 각 element 마다 complement binary search.
+
+        Two pointers 우월. 단 _정렬 안 됨_ + 정렬해야 한다면 O(N log N), 그 후 two pointers 도 가능. Hash map (O(N) + O(N) space) 와 비교.
+
+### 7.2 출처
+
+**External**
+- *Introduction to Algorithms* — CLRS
+- *Cracking the Coding Interview* — Gayle Laakmann McDowell
 
 ---
 

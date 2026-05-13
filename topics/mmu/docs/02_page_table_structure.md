@@ -42,6 +42,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 왜 _4-level_ page table?
+
+48-bit virtual address. _순진하게_ flat page table:
+- 4 KB page = offset 12 bit. VA 48 - 12 = 36 bit index.
+- Table size: 2^36 × 8 byte (PTE) = **512 GB**.
+
+**불가능**. 모든 process 가 512 GB page table 필요.
+
+해법: **Multi-level (sparse) page table**:
+- L0 (top): 9 bit index = 512 entries.
+- L1: 9 bit = 512.
+- L2: 9 bit = 512.
+- L3 (leaf): 9 bit = 512 × 4 KB page.
+- Total: 4 × 9 + 12 = 48 bit. ✓
+
+**Sparse**: 실제 사용 안 하는 L0 entry 는 _NULL_ → 그 sub-tree 의 _수 GB_ table 안 만들어짐. _Process 의 1-10 MB page table_ 로 _entire 48-bit VA space_ 표현.
+
+**Trade-off**: page table walk 이 _4 memory access_. 그래서 _TLB_ 가 필수, _huge page (2 MB / 1 GB)_ 가 _walk depth 감소_, _PWC (Page Walk Cache)_ 가 _intermediate level cache_.
+
 **Page table walk 은 MMU 성능과 fault diagnosis 의 _공통 어휘_** 입니다. 이후 모든 모듈 — TLB invalidate by VA 의 효과, IOMMU Stage 1 + Stage 2, 성능 분석의 PWC, DV 의 reference model — 이 "어느 level 의 어느 PTE 가 어떻게 됐는가" 의 언어로 표현됩니다. 이 모듈의 비트 분할표가 후속 챕터의 _도면_ 입니다.
 
 또한 4-level walk = 최대 4번의 메모리 access 라는 사실이 TLB 의 존재 이유, PWC 의 존재 이유, huge page 의 존재 이유를 모두 한 줄로 설명합니다. 이 _이유 사슬_ 을 잡지 못하면 후속 챕터들이 따로 노는 토픽처럼 느껴집니다.
@@ -552,6 +571,33 @@ TLB Entry:
 - **PWC**: 중간 레벨 PTE 캐싱 → 순차 access 의 walk 비용 40-60% 감소. 단, TLB 와 _별도_ 구조라 invalidation 정책 따로 챙겨야.
 - **COW**: Write fault → OS 가 복사 + PTE update + TLBI. MMU 는 fault 감지 + 후속 walk 정확성 책임.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Granule 선택 (Bloom: Apply)"
+    4 KB / 16 KB / 64 KB 중 어느 _granule_?
+
+    ??? success "정답"
+        - **4 KB**: 표준. Fine grain, walk depth 4. 대부분 OS default.
+        - **16 KB**: macOS / iOS default (Apple Silicon). TLB efficiency ↑.
+        - **64 KB**: HPC / large dataset. Walk depth 3 (level 1 부터). TLB miss penalty ↓ but fragmentation ↑.
+
+        Trade-off: 큰 granule = 빠른 walk + 큰 TLB reach, 작은 granule = fine permission.
+
+!!! question "🤔 Q2 — Block descriptor (Bloom: Analyze)"
+    L2 의 _2 MB block descriptor_ vs L3 의 _4 KB page entry_. 어느 것?
+
+    ??? success "정답"
+        Workload 따라:
+        - **Sequential, large allocation** (예: GPU buffer): 2 MB block. Walk depth 3 (L0-L1-L2 만), TLB 한 entry 가 2 MB cover.
+        - **Sparse / small allocation**: 4 KB page. Block 의 _내부 4 KB_ 각각 다른 PA 필요한 경우 block 사용 불가.
+
+### 7.2 출처
+
+**External**
+- ARM ARM (Architecture Reference Manual) DDI 0487
+- Intel SDM Volume 3 Chapter 4 Paging
+
+---
 ## 다음 단계
 
 - 📝 [**Module 02 퀴즈**](quiz/02_page_table_structure_quiz.md)

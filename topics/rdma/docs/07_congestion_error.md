@@ -43,9 +43,38 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 1000 GPU 가 한 link 에 _동시에_ 보낸다
+
+당신은 1000 GPU 의 _all-to-all_ 통신을 RDMA 로 짭니다. 평소엔 잘 동작합니다. 그런데 _all-reduce ring 의 한 step_ 에서 거의 _모든 GPU_ 가 _하나의 link_ 로 동시에 보내는 incast 가 발생합니다.
+
+다음 세 시나리오를 비교해보세요:
+
+| 시나리오 | Switch buffer | 결과 |
+|---------|-------|------|
+| **A. CC 없음** | overflow → drop | RC 의 retry → Go-Back-N → throughput 폭락 (수 초 단위 stall) |
+| **B. PFC 만** | PAUSE → 상류 link 도 PAUSE → cascading | **Deadlock** (cyclic PAUSE), 또는 head-of-line blocking |
+| **C. ECN+DCQCN 만** | mark CE bit → sender 점진 감속 | 반응 시간 ~ µs, 그동안 일부 drop 가능 |
+| **D. PFC + ECN + DCQCN** | 즉시 PFC 로 막고, ECN 신호로 sender 가 천천히 감속 | _이중 안전망_ — drop 0, deadlock risk 적음 |
+
+**왜 _3 가지 메커니즘이 동시에 필요_ 한가?**
+
+- **PFC** = 즉각성 (ns scale 의 hop PAUSE) — buffer overflow _직전_ 멈춤. 단점: deadlock risk.
+- **ECN** = 신호 (packet 단위 마킹) — sender 가 무엇이 일어났는지 _안다_. 단점: 반응 _이후_.
+- **DCQCN** = 적응형 rate control (µs scale) — sender 의 _점진_ 감속/가속 정책. ECN 없이는 신호가 없음.
+
+세 메커니즘의 _time scale_ 이 모두 다르기 때문에 _하나가 다른 것을 대체할 수 없습니다_. 마치 자동차의 ABS + ESP + 안전벨트 같은 _계층화된 안전망_.
+
 **RDMA 의 검증 가치는 "행복 경로" 가 아니라 "에러 경로"** 에 있습니다. 정상 packet 만 보내면 어떤 구현이든 어느 정도 동작 — 진짜 차이는 (1) congestion 발생 시 fairness 와 throughput 회복, (2) error 발생 시 정확한 status 보고와 QP recovery 입니다. RDMA-TB 의 `error_handling` vplan 이 9 시나리오로 거의 모든 error path 를 커버하는 이유.
 
 또한 디버그 시: WC status + debug flag 의 조합이 **root cause 를 1 step 으로 식별 가능한 형태** 로 보고되도록 설계됐기 때문에, 이 매핑을 알면 fail 시 진단이 압도적으로 빠릅니다.
+
+!!! question "🤔 잠깐 — TCP 는 어떻게 풀었나?"
+    TCP 도 congestion control 을 합니다 (Cubic, BBR). RDMA 가 _TCP 의 CC 를 그대로 못 쓰는_ 이유는?
+
+    ??? success "정답"
+        TCP CC 는 **packet drop 을 _signal 로_ 사용** 합니다 (drop → cwnd 감소). 그런데 RDMA RC 는 _drop = retry 의 비용 폭증_ 이라 drop 을 _signal_ 로 쓸 수 없음. → **drop _전에_ 신호 (ECN) 가 필요**.
+
+        또한 TCP CC 는 _SW_ 가 처리 (RTT 추정, cwnd 관리). RDMA 는 transport offload 가 본질이라 _hardware-level_ 의 빠른 반응 필요 → DCQCN 알고리즘이 hardware-friendly 하게 설계 (probability 기반 rate adjustment).
 
 ---
 
@@ -448,6 +477,120 @@ flowchart TB
     !!! warning "주의"
         spec 의 syndrome 값은 IB Spec 1.4 vs 1.7 에서 일부 reserved → defined 로 변경됨. M03 §8 참조.
 
+### 5.x Fault Classes — Requester / Responder 분류
+
+§4 의 debug tree 가 _"어떤 WC status 가 뜨는가"_ 의 외형이라면, **Fault Class 는 RNIC 내부에서 _어떤 정책으로_ error 를 처리하는가** 의 분류입니다. IBTA 의 §10.x 와 사내 RDMA-IP 설계가 같이 따르는 모델.
+
+#### Requester side — 3 클래스 (A / B / C)
+
+| Class | 의미 | Trigger | 처리 |
+|-------|------|---------|------|
+| **A (Recoverable)** | retry 만 하면 회복 | • PSE NAK (PSN sequence err)<br>• Implied NAK (missing PSN)<br>• Local-ACK timeout<br>• RNR NAK (retry counter 남아있음) | Go-Back-N 으로 outstanding 전체 재전송. QP **= RTS 유지** |
+| **B (Non-recoverable)** | retry 불가 — fatal | • retry_cnt 0 도달<br>• Local protection err (L_Key/R_Key 위반, opcode err)<br>• `IBV_WC_RETRY_EXC_ERR`, `IBV_WC_RNR_RETRY_EXC_ERR`, `IBV_WC_REM_ACCESS_ERR` 류 | **QP → Err**, 모든 outstanding WQE 를 `IBV_WC_WR_FLUSH_ERR` 로 완료. **단** 최초 트리거 WQE 는 본래 status 유지. in-order completion 순서 보존. |
+| **C (Ghost — no impact)** | 받았지만 무시 가능 | • PSN 이 outstanding window 밖인 ACK (지각된 unsolicited credit ACK 일 수 있음) | 패킷 폐기. credit 만 update. retry counter 영향 없음 |
+
+#### Responder side — 5 클래스 (A / B / C / D / J)
+
+| Class | 의미 | Trigger | 처리 |
+|-------|------|---------|------|
+| **A (Local QP error)** | responder 자체의 보호 위반 | • L_Key/MR access 위반 (CONSUME 단계의 RECV WQE 의 sg_list 가 invalid) | 현 RQE 를 ERR 로 complete, 나머지 flush, **QP → Err** (NAK 없음 — 자신의 buf 문제이므로) |
+| **B (Detected on packet, no local impact)** | 들어온 패킷이 잘못 — 그러나 QP 는 살아있음 | • PSN sequence error 상황 (out-of-order or hole)<br>• RNR (RECV WQE 없음) | NAK 송신, **패킷 폐기**, QP **= RTS 유지** |
+| **C (Fatal protocol violation)** | 프로토콜 자체가 깨짐 | • QP flag 위반 (RC 인데 UD 패킷 등)<br>• Atomic VA 가 8B misalign<br>• R_Key 또는 MR flag 위반 (operation 차원)<br>• Opcode sequencing 위반 (LAST 없는 FIRST/MIDDLE) | 현 RQE ERR 로 complete + 나머지 flush, **QP → Err**, NAK 송신 |
+| **D (Ignored/Dropped)** | duplicate 인데 cache 없음 | • duplicate ATOMIC/READ 인데 connection context 에 해당 PSN 안 보임 (`max_dest_rd_atomic` 초과로 evicted) | **Silently drop**. requester 는 timeout 으로 인지 → retry counter 깎임. |
+| **J (Send_w_INV error)** | invalidate 대상 R_Key 가 잘못 | • IETH 의 R_Key 가 invalid 또는 wrong PD/MR | 현 RQE 를 `IBV_WC_MW_BIND_ERR` 로 complete, 나머지 flush, **QP → Err**, NAK 송신 |
+
+#### 한 장 매핑 — 사내 S1~S9 와의 관계
+
+| Class | 사내 vplan S 시나리오 | C-check 매핑 |
+|-------|---------------------|------------|
+| Requester-A | S1 (Local ACK timeout), S2 (PSE), S3 (Implied NAK), S4 (RNR) 의 *retry-내* 영역 | (시나리오 자체는 retry 가 일어남을 확인) |
+| Requester-B | S1~S4 의 **retry 초과**, S5~S8 (REM_ACCESS) | C1 (WC status), C4 (Error CQ CQE), C5 (IRQ) |
+| Requester-C | (직접 시나리오 없음 — coverage 보강 영역) | — |
+| Responder-A | (사내 IP 내부 — sg_list 가 invalid 인 RECV) | scoreboard 의 local-prot trap |
+| Responder-B | S2 (PSE inject), S4 (RNR inject) | wire dump 의 NAK syndrome |
+| Responder-C | S5~S8 (access/range/PD/rkey), S9 (max-rd-atomic 초과) | C2, C3 (debug_flag) |
+| Responder-D | duplicate ATOMIC/READ drop — coverage 항목 | COV4·5 의 outstanding cross |
+| Responder-J | Send_w_INV inject (corner) | `WC_MW_BIND_ERR` 검출 |
+
+!!! note "왜 분류가 양면이 다른가"
+    같은 사건 (예: rkey 위반) 이 양 끝에서 _전혀 다른 의미의 error_ 를 만듭니다.
+    Responder 입장 = **Fatal (C)** — 내 메모리 보호가 깨질 뻔; QP 죽임.
+    Requester 입장 = **Non-recoverable (B)** — 상대가 NAK 으로 알려주면 retry 가 무의미.
+    검증 환경은 양 끝 각각의 처리를 **별도로** 확인해야 합니다 — 한쪽만 보면 false-OK 가 가능.
+
+### 5.y Local-ACK Timer State Machine — requester 시점
+
+§3 의 retry 1-cycle 예시는 ACK timeout 의 _한 trigger_ 만 본 것입니다. 실제 RNIC 의 timer state 는 다음 네 trigger 의 조합으로 움직입니다.
+
+```
+                  ┌─────────┐
+                  │  IDLE   │  outstanding 없음 / 모든 ACK 처리됨
+                  └────┬────┘
+                       │ new outstanding request 발생
+                       │ (SEND/WRITE with AckReq=1, READ, ATOMIC)
+                       ▼
+                  ┌─────────┐  valid ACK 도달 (coalesced 포함)
+                  │ RUNNING │ ────────────────────────┐
+                  │ (timer  │  새 outstanding request │
+                  │  활동)  │ ◀───────────────────────┘  → timer restart
+                  └────┬────┘
+                       │ timer 만료
+                       │ (= local_ack_timeout = 4.096µs × 2^attr.timeout)
+                       ▼
+                  ┌─────────┐  retry_cnt > 0?
+                  │ EXPIRED │
+                  └────┬────┘
+                  ┌────┴────────┐
+                  │ Yes         │ No
+                  ▼             ▼
+        ┌──────────────┐  ┌─────────────────┐
+        │  GO-BACK-N    │  │ RETRY_EXC_ERR  │  → QP=Err, flush
+        │  retransmit   │  │ Class B (req)  │
+        │  retry_cnt--  │  └─────────────────┘
+        │  timer restart│
+        └──────┬────────┘
+               ▼
+              RUNNING (다시)
+```
+
+| Event | Timer 행동 | retry_cnt |
+|-------|----------|-----------|
+| new request 발신 (AckReq=1) | IDLE → RUNNING (start) | 영향 없음 |
+| valid ACK 도착 (coalesced 포함) | RUNNING 유지, **restart** | 영향 없음 |
+| 모든 ack 처리, outstanding=0 | RUNNING → IDLE (stop) | 영향 없음 |
+| NAK / Implied NAK 도착 | (RUNNING 유지, 재전송 발생) | `--` |
+| RNR NAK 도착 | **RNR timer 별도 가동** (AETH timer field 값) | `rnr_retry --` |
+| local_ack_timeout 만료 | RUNNING → EXPIRED → GO-BACK-N | `retry_cnt --` |
+| retry_cnt = 0 도달 | → Err | — |
+
+!!! warning "ACK 가 retry_cnt 를 *복원하지 않음*"
+    spec 상 retry_cnt 는 **단조 감소**. 일부 정상 ACK 으로 회복되지 않으며, QP 가 Err 후 복구해야 reset 됨. 검증 시나리오에서 "잠시 끊겼다 회복" 이 retry_cnt 0 으로 떨어지는 시점을 정확히 잡아야 false PASS 가 안 남.
+
+### 5.z Three-PSN Paradigm (requester 의 PSN 추적)
+
+retry 시 requester 가 _어떤 PSN 부터 재전송할지_ 를 정하려면 한 변수로 부족합니다. 사내 IP 와 IBTA 모델은 세 marker 를 유지합니다.
+
+| Marker | 의미 |
+|--------|------|
+| **OldestUnackedPSN** | 아직 ACK 못 받은 가장 오래된 outstanding PSN |
+| **RetryPSN** | 지금 재전송 중인 PSN (timer-retry 또는 NAK-retry 의 시작점) |
+| **MaxForwardPSN** | 지금까지 보낸 가장 큰 PSN (다음 새 request 의 base) |
+
+```
+   PSN axis →   100  101  102  103  104  105  106  107  108  109  ...
+                ╶─── ACK 받음 ───╴ ╶── outstanding (대기) ──╴ ╶ 보내질 ╴
+                                  ▲                            ▲
+                          OldestUnackedPSN              MaxForwardPSN
+                                  ▲
+                            RetryPSN (NAK 받은 이후 재전송 중)
+```
+
+- `RetryPSN ≥ OldestUnackedPSN` 항상.
+- timer-retry 와 NAK-retry 가 동시에 trigger 되면 (예: 늦은 NAK + 새 timeout) **이미 retry 중인 lower PSN** 을 우선 — `started_retry` flag 로 중첩 재전송 방지.
+- coalesced ACK 가 들어오면 `OldestUnackedPSN` 이 점프 → `RetryPSN` 도 같이 점프 (이미 ACK 된 PSN 은 재전송 무의미).
+
+→ 사내 PPTX 의 "Case 1 (request missing) / Case 2 (response missing) / Case 3 (both missing)" 시나리오는 모두 이 세 marker 와 `started_retry` flag 가 trigger 의 조합에서 어떻게 움직이는지를 확인하는 것입니다.
+
 ### 5.11 Confluence 보강 — CCMAD 와 Adaptive Routing
 
 !!! note "Internal (Confluence: CCMAD Protocol, id=290127949; How to enable Adaptive Routing for CX, id=397967495)"
@@ -515,6 +658,57 @@ flowchart TB
     - DCQCN parameter 는 vendor-specific. RDMA-TB scoreboard 가 algorithm 가정을 hard-code 하면 다른 algorithm DUT 에 적용 불가 — interface 분리 필요.
     - Error CQ 의 IRQ timeout 은 spec 외 deployment-specific. RDMA-TB 의 `ERR_IRQ_TIMEOUT_CYCLES` 가 그 값. 사양 변경 시 같이 조정.
     - Recovery 후 동일 QP 에서 새 traffic 시작 전 cleanup 필요 (in-flight WR 의 잔여 cleanup → 검증).
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — PFC deadlock 분석 (Bloom: Analyze)"
+    당신의 fabric 에서 _PFC storm_ 이 발생. 모든 switch 의 link 가 PAUSE 상태. _왜 deadlock 이 가능한가_? ECN+DCQCN 도 같이 켰는데 왜 deadlock 을 못 막았나?
+
+    ??? success "정답"
+        **Cyclic dependency**: switch A 의 link 가 가득 차서 B 에게 PAUSE → B 의 link 도 가득 차서 A 에게 PAUSE → 서로 못 보냄.
+
+        ECN+DCQCN 은 _sender 의 rate_ 를 줄이지만, _이미 buffer 에 쌓인 패킷_ 이 drain 되기 전엔 PFC PAUSE 는 풀리지 않음. 즉 ECN 신호가 _뒤늦게_ 도착.
+
+        해결:
+        1. **PFC priority class 분리** — 우선순위 다른 트래픽은 독립적 buffer, deadlock 영역 분리.
+        2. **DCQCN 의 빠른 반응** — incast 시작 첫 µs 내 sender 가 감속.
+        3. **Edge switch 의 ECN marking aggressiveness** — buffer 50% 부터 미리 mark.
+
+!!! question "🤔 Q2 — `WC_RETRY_EXC_ERR` 원인 분리 (Bloom: Apply)"
+    Sender 가 `IBV_WC_RETRY_EXC_ERR` 를 받았습니다. 가능한 _세 가지_ 근본 원인을 분리하시오 (transport / receiver / network).
+
+    ??? success "정답"
+        - **Transport 측**: retry_cnt 또는 timeout 너무 작음 → 정상 network jitter 에도 retry exhaust.
+        - **Receiver 측**: ACK 못 보냄 — RNR 후 RECV pre-post 못 받았거나, responder 가 silent drop (P_Key/Q_Key 등).
+        - **Network 측**: incast → PFC storm → ACK packet 자체가 _delayed_ → sender 가 ACK 받기 전 retry 한도 도달.
+
+        디버그 순서: (1) receiver 의 _NAK syndrome_ 확인 → silent drop 인가 NAK 인가, (2) PFC counter 확인 → storm 인가, (3) retry_cnt / timeout 값 확인.
+
+!!! question "🤔 Q3 — RDMA-TB error 시나리오 설계 (Bloom: Evaluate)"
+    당신은 RDMA-TB 의 `error_handling` vplan 을 본다. S1~S9 시나리오가 _모든 fault class_ 를 커버하는지 어떻게 검증하시겠습니까?
+
+    ??? success "정답"
+        Fault class matrix (§5 의 Requester A/B/C + Responder A/B/C/D/J) 를 _세로 축_, S1~S9 를 _가로 축_ 으로 표 작성. 각 (row, col) 셀에 "이 시나리오가 이 fault 를 cover 하나?" 표기.
+
+        - 빈 셀 = vplan hole → 추가 시나리오 제안.
+        - 한 셀에 여러 ✓ = redundant, 정리 가능.
+
+        Coverage 관점: 단순 시나리오 수 (9) 가 아닌 **fault class × scenario 의 product** 가 진짜 metric. RDMA-TB 의 `vplan/error_handling/cov_*.svh` 가 이런 cross-product 를 cov bin 으로 명시.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[RDMA] Drop vs Silent drop` (id=996573316) — packet drop 분류
+- `About CC` (id=976453712) — congestion control 사내 정책
+- `[RDMA] WRITE` (id=989560925) — retry 시나리오
+- `Mango GPUBoost™ 400G RDMA Deployment & Maintenance Guide` (id=989167742) — PFC/ECN tune
+- 사내 `RDMA-TB/error_handling/VPLAN_error_handling.md` — S1~S9
+
+**External**
+- IBTA Spec 1.7, §9.7 RC service / §9.9 Retry mechanism
+- IEEE 802.1Qbb — Priority-based Flow Control (PFC)
+- IETF RFC 3168 — ECN
+- *DCQCN: Data Center Quantized Congestion Notification* — Zhu et al., SIGCOMM 2015
 
 ---
 

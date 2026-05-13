@@ -41,6 +41,41 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _새 scoreboard_ 추가 _$1 줄_
+
+당신은 RDMA-TB 에 _새 검증_ 추가: "WRITE size 분포 통계".
+
+**Naive**: driver 코드에 _hook 추가_:
+```sv
+// driver 안
+task post_send(...);
+  ...
+  this.scoreboard.update_size_stats(item.size);  // hook
+  ...
+endtask
+```
+
+문제:
+- Driver 코드 _변경_ → 다른 test 영향.
+- 새 검증 N 개 → driver 가 N hook 들고 _진흙_ 됨.
+- 다른 사람이 같은 시점 변경 → merge conflict.
+
+해법: **Analysis Port (AP)** — driver 가 _broadcasting_:
+```sv
+// driver 안 (변경 안 됨)
+ap_wqe_issued.write(item);  // broadcast
+```
+
+```sv
+// scoreboard (별도)
+function void write(wqe_t item);
+  update_size_stats(item.size);
+endfunction
+// connect: ap_wqe_issued → scoreboard.ap_imp
+```
+
+새 scoreboard 추가 = **driver 코드 0 변경**. AP topology 알면 _어디에 tap_ 할지 즉답.
+
 RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/handler 가 broadcasting 하는 AP** 를 구독해서 동작합니다. AP 토폴로지를 알면 새 검증 컴포넌트 추가 시 어디에 tap 할지 결정할 수 있고, 디버깅 시 어느 단계에서 데이터가 끊겼는지 거꾸로 추적할 수 있습니다.
 
 이 모듈을 건너뛰면 새 컴포넌트 작성 시 driver 내부에 hook 을 끼워 넣게 되어 [Module 05 4원칙](05_extension_principles.md) 을 동시 위반합니다. AP 5종 + 1 derived 만 외워두면 모든 후속 검증 컴포넌트의 위치가 자연스럽게 결정됩니다.
@@ -338,6 +373,33 @@ drv.qp_reg_ap.connect(this.qp_subscriber.analysis_export);
 !!! warning "실무 주의점"
     - AP connect 는 env 의 connect_phase 에서 — build_phase 에서 시도하면 component 미인스턴스화로 fail.
     - `qp_reg_ap` / `mr_reg_ap` 는 **init_seq** 시점에 발행 — main verb 보다 먼저 도달해야 comparator 의 [node][qp] 키 준비됨.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — AP 5종 활용 (Bloom: Apply)"
+    "Write opcode 의 size 분포 통계" component. 어느 AP subscribe?
+
+    ??? success "정답"
+        **wqe_issued AP** (driver broadcast).
+
+        - WQE 발행 시점에 size 정보 포함.
+        - `qp_reg_ap` / `mr_reg_ap` 는 _registration_ 정보 (size 무관).
+        - Completion AP 는 _완료 후_ — 통계 측정 가능하지만 _delay_.
+
+!!! question "🤔 Q2 — AP race (Bloom: Analyze)"
+    Comparator 가 _[node][qp] key_ 사용. `qp_reg_ap` 가 _main verb 보다 늦게_ 도착 시?
+
+    ??? success "정답"
+        Comparator 의 `[node][qp]` key _NULL_ → access → simulation fatal 또는 잘못된 key.
+
+        대응: `qp_reg_ap` 가 _init_seq phase_ 에 발행 강제 → main_phase 시작 시점에 _key 준비 완료_.
+
+        SVA: `assert property (main_verb |-> qp_key_in_comparator_exists)`.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 AP topology 자료
 
 ---
 

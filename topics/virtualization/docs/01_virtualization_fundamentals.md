@@ -42,6 +42,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Cloud_ 의 _서버 사용률_
+
+당신은 클라우드 사업자. 데이터센터 서버 10000 대. 각 서버에 _1 application_ 만 설치.
+
+평균 CPU 사용률: **15%** (애플리케이션이 idle 한 시간 많음).
+평균 메모리 사용률: **30%**.
+
+즉 _서버 자원의 85%_ 가 idle. _수십억 USD_ 의 낭비.
+
+**해법: 가상화** —
+- 1 서버에 _수십 VM_ 띄움.
+- 각 VM 이 _독립 OS_ + _독립 application_.
+- 서로 _격리_ (다른 사용자 코드 격리).
+- CPU 사용률 _80%+_, 메모리 _90%+_.
+
+결과: 같은 서비스를 _10000 → 2000 대_ 로 제공. 전력/공간/비용 _5×_ 절감.
+
+**가상화 없이는 _현대 클라우드_ 자체 불가능**. AWS, GCP, Azure 모두 _hypervisor_ 위에서 운영.
+
 이후 모든 가상화 모듈은 한 가정에서 출발합니다 — **"하나의 물리 머신 위에 여러 OS 가 동시에, 그러나 서로를 모르는 채 동작한다"**. CPU 가상화의 trap-and-emulate, Memory 가상화의 2-stage translation, I/O 가상화의 SR-IOV 모두 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 VMCS / EPT / IOMMU / VirtIO 가 "왜 그렇게 생겼는지" 가 보이지 않고 그냥 외워야 하는 규칙이 됩니다. 반대로 **3대 자원(CPU/Mem/I/O)** 과 **Popek-Goldberg 3조건** 만 정확히 잡으면, 디테일을 만날 때마다 _이유_ 가 보입니다.
@@ -395,6 +414,36 @@ flowchart TB
     - **Para-virtualization 드라이버 설치 ≠ 빠름**: host 측 vhost backend 도 같이 켜져 있어야 한다. `lsmod | grep vhost` 와 `/sys/bus/virtio/drivers/` 동시 확인.
     - **"VT-x ON" ≠ 격리 보장**: VMCS control field, EPT permission, IOMMU 가 모두 정확해야 격리 성립. SW 정책이 critical.
     - **모든 vCPU 가 native 모드로 실행되는 것은 아니다** — `perf kvm stat` 로 exit 분포를 측정하지 않으면 5% 인 줄 알았던 overhead 가 실제로 30% 일 수 있다.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Popek & Goldberg 3 요건 (Bloom: Analyze)"
+    Equivalence / Resource Control / Efficiency 3 요건 중 _Efficiency_ 가 빠지면 어떤 시스템이 되나?
+    ??? success "정답"
+        Equivalence + Resource Control 만 = _emulator_:
+        - Bochs / QEMU pure mode: 모든 명령을 SW 로 해석 → 정확하지만 100x 느림.
+        - VMware/KVM: HW 지원 (VT-x/SVM) 으로 _native_ 에 가깝게 → Efficiency 충족 → 진정한 가상화.
+        - 결론: HW VT 의 핵심 가치는 "느린 emulator 가 아닌 fast virtualization" — 그래서 Intel 이 2005년에 VT-x 를 silicon 으로 박은 것.
+
+!!! question "🤔 Q2 — VT-x ON 의 _필요_ 조건성 (Bloom: Evaluate)"
+    Hardware VT-x flag 만 켜면 격리가 완성되지 않는 이유?
+    ??? success "정답"
+        VT-x = mechanism, 격리 = policy:
+        - **VMCS** field 설정 (어떤 명령을 trap 할지) 정확해야.
+        - **EPT** (확장 페이지 테이블) 의 permission bit 가 guest 영역만 허용.
+        - **IOMMU** (VT-d) 가 DMA 우회 차단 → VM bypass 방지.
+        - 셋 중 하나만 빠지면 HW flag 가 켜져 있어도 escape 가능 — CVE-2018-12130 (L1TF) 같은 micro-arch 누수도 별도.
+        - 검증 포인트: DV 환경에서 VMCS field permutation × EPT permission × IOMMU on/off 매트릭스 음성 시나리오.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Virtualization Fundamentals` — Popek/Goldberg 정의 + HW VT 매핑
+- `KVM Performance Tuning` — exit 분포 측정 가이드
+
+**External**
+- Popek & Goldberg (1974) *Formal Requirements for Virtualizable Third Generation Architectures*
+- Intel SDM Vol 3C, *VMX Operation* — VMCS / EPT 명세
 
 ---
 

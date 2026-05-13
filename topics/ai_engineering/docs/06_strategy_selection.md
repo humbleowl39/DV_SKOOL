@@ -46,9 +46,41 @@
 
 ## 1. Why care? — "RAG 가 좋아요, fine-tune 이 좋아요?" 에 답하는 법
 
-엔지니어가 가장 자주 받는 질문. 정답은 "둘 다 / 둘 다 아님 / 같이 써야 함" 중 하나이고, **선택 기준** 이 핵심입니다. 잘못 고르면 비용을 5 배 쓰고도 결과가 나빠집니다.
+### 1.1 시나리오 — 잘못된 선택으로 _5 배_ 비용
+
+당신은 사내 SystemVerilog 코딩 어시스턴트를 만들려 합니다. 4 가지 옵션:
+
+| 옵션 | 초기 비용 | 월 운영비 | 정확도 | 유지보수 |
+|------|----------|---------|-------|---------|
+| **(a) Prompt only** | 0 | $200 | 70% | 즉시 |
+| **(b) RAG** | $5K (인덱스) | $300 | 85% | 인덱스 갱신 |
+| **(c) Fine-tune** | $30K (GPU 학습) | $500 | 90% | 매 분기 재학습 |
+| **(d) Prompt + RAG + FT** | $35K | $800 | 95% | 복잡 |
+
+각 case 가 _다른 상황_ 에서 정답:
+- SV 컨벤션이 _stable_ 하고 코드량 적음 → **(a) Prompt** 가 ROI 최고.
+- 사내 spec 이 _자주 변함_ + RTL 코드 base 큼 → **(b) RAG**.
+- 컨벤션이 _stable_ + 사용 빈도 매우 높음 → **(c) Fine-tune** 이 _장기_ 로 ROI 우위.
+- 정확도가 _critical_ + 예산 충분 → **(d) Hybrid**.
+
+**잘못 고르면 비용을 5 배 쓰고도 결과가 나빠집니다**. 예:
+- 컨벤션이 stable 한데 RAG 선택 → 매번 retrieval 비용 + 불필요한 인덱스 운영.
+- Spec 이 매주 바뀌는데 FT 선택 → 매주 재학습 → GPU 시간 누적 폭주.
 
 이 모듈은 [Module 02-05](02_prompt_engineering.md) 까지 따로 배운 4 가지 도구 (prompt / RAG / agent / fine-tune) 를 _하나의 의사결정 트리_ 로 합칩니다. [Module 07](07_dv_application.md) 의 모든 사례도 이 트리로 분류됩니다.
+
+!!! question "🤔 잠깐 — 선택을 _되돌리기_ 의 비용?"
+    각 옵션을 _선택했다가 바꾸려면_ 얼마나 드는가? 의사결정 시 _되돌리기 비용_ 까지 봐야 한다.
+
+    ??? success "정답"
+        | 변경 | 되돌리기 비용 |
+        |------|------------|
+        | Prompt → RAG | 낮음 ($5K, 인덱스 빌드만) |
+        | RAG → Fine-tune | 중간 ($30K, 학습 추가) |
+        | Fine-tune → Prompt | _높음_ (sunk cost $30K 버림) |
+        | Hybrid → 단순화 | 낮음 (일부 컴포넌트 제거) |
+
+        교훈: **단순한 옵션부터 시작** (Prompt → 부족 → RAG → 부족 → FT). 한 번에 Hybrid 부터 시작하면 _복잡성 + sunk cost_ 모두 떠안음.
 
 ---
 
@@ -531,6 +563,50 @@ Fine-tuning 이 비효율적인 경우:
     **원인**: 도메인 데이터만으로 학습하면 기존 가중치가 덮어써지는 Catastrophic Forgetting 이 발생한다. 학습률이 너무 높거나 기반 데이터 혼합 비율이 낮을 때 악화된다.
 
     **점검 포인트**: Fine-tuning 전후로 도메인 태스크 성능(목표) 과 일반 벤치마크(MMLU, HumanEval 등) 성능을 함께 측정. 성능 저하가 허용 범위를 초과하면 학습률을 낮추거나 기반 데이터를 10~20% 혼합(Replay) 하는 방식으로 재학습.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 의사결정 트리 적용 (Bloom: Apply)"
+    "사내 RTL 디버그 어시스턴트". 어떤 전략?
+
+    ??? success "정답"
+        **Prompt + RAG (Agent 형태)**:
+        - RTL 코드 + log 가 _크고 자주 변함_ → RAG 로 검색.
+        - 디버그 = _다단계 추론_ → agent loop.
+        - 컨벤션 fine-tune 은 _ROI 낮음_ (Prompt 으로 충분).
+
+        Fine-tune 은 마지막 옵션 — RTL 디버그처럼 _knowledge 가 변동성 큰_ task 에는 부적합.
+
+!!! question "🤔 Q2 — RAG vs Long-context (Bloom: Evaluate)"
+    Claude Sonnet 200K context. 사내 spec _100K_. RAG 와 long-context 중 무엇?
+
+    ??? success "정답"
+        **둘 다 테스트** 후 결정. 일반 가이드:
+        - **Long-context**: spec 이 _작고_ (50K 이내), 호출 _빈도 낮음_, 정확도 _critical_ → 200K 다 넣기.
+        - **RAG**: spec 이 _커지면_ (100K+), 호출 _자주_, 비용 민감 → 검색 후 일부만.
+
+        100K 라면 _경계_ — A/B test: long-context vs RAG 정확도/비용 비교. 보통 _Lost in the middle_ 때문에 long-context 가 _RAG 보다 정확도 낮은_ 경우도 있음.
+
+!!! question "🤔 Q3 — Hybrid 의 함정 (Bloom: Analyze)"
+    Prompt + RAG + FT 모두 사용. _개별_ 효과가 _합산_ 되지 않는 경우의 이유?
+
+    ??? success "정답"
+        세 가지 함정:
+        1. **FT 가 RAG 와 conflict**: FT 가 "이 도메인 답은 X" 라고 학습 → RAG retrieved chunk 가 "Y" 라고 해도 LLM 이 _FT 학습 분포_ 로 답 (RAG 무시).
+        2. **Prompt 가 RAG retrieved 의 형식과 안 맞음**: prompt 가 "JSON 답" 인데 retrieved chunk 가 markdown table → 형식 충돌로 답 깨짐.
+        3. **개별 평가의 함정**: 각각은 A/B 에서 +5% 이지만 합치면 _interaction_ 으로 -3% 가능. 합산이 아닌 _하나로 평가_ 필요.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 ROI 모델 (RAG vs FT)
+- `Cursor 사용법` (id=935919694) — prompt + tool 의 IDE 통합
+
+**External**
+- *LoRA: Low-Rank Adaptation of Large Language Models* — Hu et al., ICLR 2022
+- *QLoRA: Efficient Finetuning of Quantized LLMs* — Dettmers et al., NeurIPS 2023
+- *RAG vs Fine-tuning* — comparison studies, 2024
+- OpenAI / Anthropic / Google AI fine-tuning best practices
 
 ---
 

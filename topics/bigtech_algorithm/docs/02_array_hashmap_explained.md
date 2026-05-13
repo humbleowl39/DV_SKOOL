@@ -42,9 +42,47 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — Two Sum: O(N²) → O(N)
+
+가장 흔한 면접 문제: "배열에서 합이 K 인 두 수 찾기".
+
+**Naive (O(N²))**:
+```python
+for i in range(N):
+    for j in range(i+1, N):
+        if arr[i] + arr[j] == K:
+            return (i, j)
+```
+N=10⁵ 면 10¹⁰ 연산 → 100 초. 면접에서 _fail_.
+
+**Hash map (O(N))**:
+```python
+seen = {}
+for i, x in enumerate(arr):
+    if K - x in seen:
+        return (seen[K - x], i)
+    seen[x] = i
+```
+N=10⁵ 면 10⁵ 연산 → _수 µs_. _Pass_.
+
+**핵심 통찰**: "이전에 _본 적 있는_ 값을 _O(1)_ 에 확인" — 이게 hash map 의 모든 응용의 _공통 패턴_.
+
 LeetCode Easy / Medium 문제의 **30~40 %** 는 hash map 단 하나로 O(N) 풀이가 가능합니다. "이전에 본 적 있는가?" 라는 질문이 등장하면 거의 항상 hash map 후보 — 면접 첫 풀이를 _시작하는 속도_ 가 hash map 신호 인지에 달려 있습니다.
 
 이 모듈을 건너뛰면 이후 Two Pointers / Sliding Window / DFS+memo 같은 패턴이 등장할 때마다 "hash map 이랑 뭐가 다른가" 를 매번 처음부터 비교해야 합니다. 반대로 hash map 의 _key 설계_ 만 명확히 잡고 나면, 이후 모듈이 "hash map 의 _대안_ 또는 _보완_" 으로 자연스럽게 정렬됩니다.
+
+!!! question "🤔 잠깐 — Hash map 의 _worst-case_ O(1)?"
+    Hash map lookup 이 _평균_ O(1). 그런데 _worst-case_ 는?
+
+    ??? success "정답"
+        **O(N)** — 모든 key 가 _같은 hash bucket_ 에 모일 때 (hash collision 폭주).
+
+        대응:
+        - **C++ unordered_map**: open hashing (chaining). worst O(N) 가능.
+        - **C++ map**: red-black tree. worst O(log N) 보장.
+        - **Java HashMap**: Java 8+ 부터 collision 시 _tree 로 전환_ → worst O(log N).
+
+        면접에서 보통 _amortized O(1)_ 가정. 단 _공격자 입력_ (e.g. DoS) 시나리오면 _treemap_ 사용.
 
 ---
 
@@ -481,6 +519,31 @@ endmodule
     - **Hash-Flooding DoS**: 외부 입력 key 는 randomized hash 또는 입력 검증으로 collision 차단.
     - **Order assumption**: `dict`/`HashMap` 의 순서는 언어별로 다르다. 순서가 필요하면 명시적 자료구조.
     - **메모리 폭발**: N 이 매우 클 때 hash map 은 OOM 의 주범. 정렬 기반 풀이를 _대안_ 으로 항상 떠올려라.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Group Anagrams (Bloom: Apply)"
+    "eat / tea / tan / ate / nat" 그룹화. Hash map key 어떻게?
+
+    ??? success "정답"
+        - **Sorted string**: "aet" (eat, tea, ate 의 정렬) → group key.
+        - **Char count**: tuple `(a:1, e:1, t:1)` → key.
+
+        Time: O(N × K log K) (sort key) 또는 O(N × K) (count key). K = 단어 길이.
+
+!!! question "🤔 Q2 — Hash collision (Bloom: Analyze)"
+    `Map<Integer, V>`. Integer hash 가 _identity hash_ (값 자체). 입력이 _2^17 의 배수_ 만 들어오면?
+
+    ??? success "정답"
+        Hash table size 가 2^N 이면 _모든 key 가 같은 bucket_ → worst case O(N) per access.
+
+        Java HashMap 의 해법: hash 함수가 _high bit_ 도 사용 (`h ^ (h >>> 16)`) → 균등 분포.
+
+### 7.2 출처
+
+**External**
+- *Introduction to Algorithms* — CLRS, Chapter 11 Hash Tables
+- Java HashMap source code (OpenJDK)
 
 ---
 

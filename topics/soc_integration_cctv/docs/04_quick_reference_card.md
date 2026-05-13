@@ -346,6 +346,38 @@ mmu_ko Unit 4:                sysMMU = Common Task의 대표 항목
 
     **점검 포인트**: Config JSON 의 `memory_map` 전체 항목을 정렬하여 인접 범위 `base + size > next_base` 조건 자동 검사. 미할당 주소 DECERR 시나리오와 함께 각 IP 경계 ±4B 접근 테스트를 회귀에 포함.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 5 축 디버그 (Bloom: Apply)"
+    "Frame drop, vsync 정상, NoC backpressure 없음". 5 축 중 어디?
+    ??? success "정답"
+        Memory / IP 내부 우선:
+        - **NoC** OK → 인터커넥트 backpressure 아님.
+        - **Vsync** OK → display side timing 아님.
+        - **남은 후보**: Memory bandwidth saturation, IP 내부 FIFO overflow, clock domain crossing.
+        - **다음 단계**: §5.3 정량 표 (293 MHz / 96.30%) 와 비교 → bandwidth 가 saturate 면 memory; 아니면 IP 내부 trace.
+        - 결론: 5 축 진단은 _배제_ 의 게임 → 1 축씩 OK 표시 → 남는 1–2 축에 집중.
+
+!!! question "🤔 Q2 — Common Task 의 가치 (Bloom: Evaluate)"
+    7 task (memory map / IRQ / clock / reset / power / DFT / AI accel) 가 매번 _공통_ 으로 검증되는 이유?
+    ??? success "정답"
+        Common = SoC 의 _bring-up 의 80% 가 여기서 막힘_:
+        - **Memory map**: 잘못 시 모든 IP register access 실패 → fundament.
+        - **IRQ wiring**: 잘못 시 polling 동작은 OK 지만 interrupt-driven 동작 fail → 늦게 발견.
+        - **Reset/Clock**: 누락 시 IP 동작 자체 안 됨 → 그러나 partial reset 시 silent 오동작.
+        - **결론**: Common Task 가 다른 _기능별_ test 의 _전제_ → 매번 검증 + sign-off 의 first gate.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `CCTV SoC Architecture` — 5 축 + 7 task 매트릭스
+- `Memory Map Verification` — 중첩 / DECERR 검출 사례
+
+**External**
+- ARM *AMBA System Architecture*
+- ARM CoreLink *NIC-400 / NoC Architecture*
+- *SoC Verification Methodology Manual* (Cadence)
+
 ---
 
 ## 코스 마무리

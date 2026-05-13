@@ -42,6 +42,35 @@
 
 ## 1. Why care? — 자극의 품질이 검증 가치를 결정한다
 
+### 1.1 시나리오 — _100 시나리오_ 가 _10 줄_ 로
+
+당신은 SoC 검증. 시나리오:
+- Test 1: AXI write 후 CPU read.
+- Test 2: AXI write + DMA + CPU read.
+- Test 3: AXI write + concurrent reset.
+- ... × 100.
+
+**Naive (sequence 없이)**: 각 test 가 _개별 SV file_, 500 줄씩 = **50000 줄 코드**.
+
+**UVM sequences**:
+- _Base sequence_: `axi_write_seq`, `axi_read_seq`, `dma_seq`, `reset_seq` (각 100 줄).
+- _Virtual sequence_: 위 base 들을 _조합_ 으로 시나리오 구성. **각 test 1-2 줄**.
+
+```
+class test_3 extends base_vseq;
+  task body();
+    fork
+      axi_write_seq::type_id::create().start(env.axi_sqr);
+      reset_seq::type_id::create().start(env.reset_sqr);
+    join
+  endtask
+endclass
+```
+
+총 코드: ~1000 줄 (base) + 100 × 5 줄 (combinations) = **1500 줄** vs naive 50000 줄.
+
+**Sequence 의 핵심 가치**: _조합 가능성_. 시나리오 폭증 시 _코드 폭증 안 함_.
+
 검증 가치의 절반은 **자극의 다양성과 의도성** 에서 나옵니다. Sequence 가 부실하면 coverage 가 안 메워지고 (curated 가 아니라 우연이 채움), 너무 hard-coded 면 재사용이 안 됩니다 (시나리오 1 개당 sequence 1 개의 폭발).
 
 이 모듈을 건너뛰면 이후 모든 검증이 _directed test 의 무한 증식_ 으로 흐릅니다. 반대로 sequence / item / virtual sequence 의 3 계층을 정확히 잡으면, _시나리오 = sequence 조합_ 으로 표현되어 새 시나리오 1 개를 추가할 때 코드가 1~2 줄 늘어나는 환경이 됩니다. Virtual Sequence 는 SoC-level 시나리오의 핵심 — 여러 Agent 를 시간 / 순서로 조율해야 의미 있는 시스템 검증이 됩니다.
@@ -676,6 +705,36 @@ endpackage
     - `start_item` / `finish_item` 을 빼먹은 채 `randomize()` 만 호출하는 패턴 — 시뮬 PASS 인데 coverage 0 인 _가장 조용한_ 버그.
     - `do_compare` / `do_print` 는 새 필드 추가 시 _즉시_ 함께 업데이트.
     - Virtual Sequence 의 sub-sequencer 핸들 대입은 Test 의 `start` 직전. 누락 시 sub_sqr null deref.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Sequence vs Item (Bloom: Analyze)"
+    Sequence 와 Sequence Item 의 _경계_ 를 한 줄로 정의하라.
+    ??? success "정답"
+        **Item = "무엇을" (data), Sequence = "어떻게/언제" (scenario/control)**.
+        - Item: `addr`, `data`, `len` 같은 _필드_ + `do_copy/do_compare/do_print`. Time-less.
+        - Sequence: `start_item` / `finish_item` 호출 _순서_, 분기, 조건부 randomize, sub-sequence 호출. Time-aware (가능).
+        - 안티패턴: Item 안에 `#10ns` 또는 분기 로직 → unrandomizable + 재사용 불가.
+        - 디버깅 단서: Item 에 task 가 있으면 잘못된 분류.
+
+!!! question "🤔 Q2 — Virtual Sequence 의 가치 (Bloom: Evaluate)"
+    Single agent 면 그냥 sequence 면 충분. _Virtual_ Sequence 가 필요한 시점?
+    ??? success "정답"
+        Multi-agent 조율:
+        - **시나리오**: AXI agent + IRQ agent + memory agent 의 _합동_ 시퀀스. AXI write 후 IRQ trigger, memory check.
+        - Virtual sequence 는 _sequencer 없는_ 상위 컨트롤러 — sub-sequencer 핸들을 들고 각각에 `start` 호출.
+        - 대안 (단일 sequence): 3 agent 의 sequencer 를 매번 직접 접근 → 결합 강해짐, 재사용 불가.
+        - **trade-off**: virtual seq 1 개 = test 의 _scenario layer_ , 분리되어야 test 가 깔끔.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Sequence Library Conventions` — Item/Sequence 경계 가이드
+- `Virtual Sequence Patterns` — multi-agent 조율 사례
+
+**External**
+- *UVM 1.2 User's Guide* §8 (Stimulus Generation) — Accellera
+- *UVM Cookbook* (Mentor) — Virtual Sequence Patterns
 
 ---
 

@@ -42,6 +42,26 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Cpl credit 부족_ 으로 _stall_
+
+당신의 PCIe link 가 _link up OK_, 그런데 _throughput 0 Mbps_. Stall.
+
+원인 추적:
+- TLP 발송 시도 → FC credit 부족 → block.
+- Credit 종류: P (Posted), NP (Non-Posted), Cpl (Completion).
+- 각각 _Header (H)_, _Data (D)_ 별도 카운트.
+
+**현재 상태**:
+- PH credit: 100 (충분).
+- NPH credit: 0 (없음). ← 여기.
+- CplH credit: 50.
+
+NP (Memory Read) 보내려는데 _NPH credit 0_ → block.
+
+원인: Peer 가 _FC Update DLLP_ 안 보냄. NP request 처리 후 credit return 안 함.
+
+**FC credit 6 종류 × header/data** 분리는 _부분적 stall_ 진단을 위한 핵심.
+
 **Link 가 동작하지 않을 때 80% 는 DLL 영역의 이슈** (FC credit 부족, ACK/NAK loop, Replay buffer overflow). DLLP 와 FC 의 동작을 정확히 알아야 packet trace 에서 stall 의 원인을 찾을 수 있습니다.
 
 이 모듈의 어휘 — **Sequence# / LCRC / Replay Buffer / FC credit (PH/PD/NPH/NPD/CplH/CplD) / ACK coalescing** — 가 이후 stall debug, AER correctable counter 해석, Gen6 FLIT 의 차이를 이해하는 기반. 한 번 정확히 잡으면 packet trace 만 봐도 _"이건 NP credit 부족"_ 처럼 즉시 분류할 수 있습니다.
@@ -456,6 +476,36 @@ UpdateFC: 현재 credit consumed 의 총합 (modulo) 을 주기적으로 송신.
     - Replay buffer 는 DUT 마다 size 가 다름. RTT 가 큰 retimer 환경에서는 작은 buffer 가 throughput 의 발목.
     - "ACK 가 안 옴" 의 원인 진단: receiver 가 link 가 down (LTSSM 빠짐) / receiver 의 ACK timer 가 너무 길게 설정 / DLLP 자체가 PHY 에서 깨짐.
     - Gen6 FLIT 모드 검증은 기존 ACK/NAK packet trace 도구가 적용 안 될 수 있음 — FLIT-aware analyzer 필요.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — FC credit 계산 (Bloom: Apply)"
+    PCIe Gen4 x16. PH credit 100, PD credit 1000. _Posted TLP 의 최대 outstanding_ MB?
+
+    ??? success "정답"
+        - PH (Header): 100 → 100 TLP outstanding 가능.
+        - PD (Data): 1000 credit × _16 byte/credit_ = 16 KB.
+
+        Min(100 TLP × max payload, 16 KB) = bottleneck.
+
+        Max payload 256 byte 면: 100 × 256 = 25.6 KB, PD bottleneck 16 KB.
+        Max payload 64 byte 면: 100 × 64 = 6.4 KB, PH bottleneck.
+
+!!! question "🤔 Q2 — Replay buffer overflow (Bloom: Analyze)"
+    Replay buffer 16 KB. Link RTT 4 µs @ Gen4 x16. _Outstanding 가능 한도_?
+
+    ??? success "정답"
+        - Gen4 x16 BW = ~31.5 GB/s.
+        - RTT 4 µs → in-flight data = 31.5 × 4 = **126 KB**.
+        - Replay buffer 16 KB → 의미: _16 KB 만_ ACK 전 in-flight 허용.
+
+        실제 throughput: min(Replay buffer, FC credit, BW) — Replay buffer가 _bottleneck_. 늘려야 RTT 큰 link 에서 throughput 만족.
+
+### 7.2 출처
+
+**External**
+- PCIe Specification — DLL chapter
+- Gen6 FLIT mode specification
 
 ---
 

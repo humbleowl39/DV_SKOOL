@@ -379,6 +379,38 @@ mrun clean
 - 한 fail 디버그 시 보통 **2~3 영역만** 보면 됨 (§3 시나리오 A/B/C 참고).
 - 사내 default + RoCEv2 NOT-APPLICABLE 영역은 spec 가정이 아니라는 점 항상 의식.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — RC vs UC 즉답 (Bloom: Apply)"
+    "RC 와 UC 의 _재전송_ 차이?"
+    ??? success "정답"
+        ACK/NAK 의 유무가 핵심:
+        - **RC** (Reliable Connected): ACK/NAK + PSN 단조 + 자동 재전송 → drop 무시 가능.
+        - **UC** (Unreliable Connected): ACK 없음 → drop 시 데이터 손실, 상위가 복구.
+        - **trade-off**: RC 는 retry HW + state machine 비용 ↑, UC 는 throughput ↑ + complexity ↓.
+        - 결론: GPU/storage workload = RC, 일부 collective = UC.
+
+!!! question "🤔 Q2 — RoCEv2 NOT-APPLICABLE 의의 (Bloom: Evaluate)"
+    카드에서 "RoCEv2 영역 NOT-APPLICABLE" 의 _spec 적_ 의미?
+    ??? success "정답"
+        IB 의 일부 기능은 RoCEv2 에서 _대체_ 됨:
+        - **IB SL (Service Level)**: RoCEv2 는 IP DSCP 로 대체 → IB SL field 무의미.
+        - **IB Partition Key (P_Key)**: RoCEv2 는 IP 기반 isolation → P_Key 무의미.
+        - **IB Subnet Manager**: Ethernet 의 표준 L2 (DCBX/PFC) 로 대체.
+        - 결론: "NOT-APPLICABLE" 는 spec 적 답변 ("RoCEv2 에서는 다른 메커니즘으로 대체됨").
+        - 안티패턴: "RoCEv2 가 IB 와 같음" 답변 → follow-up 에서 무너짐.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `RDMA Curriculum` — 모듈 01–08 + 카드 매핑
+- `Site Default Policy` — 사내 default vs spec
+
+**External**
+- IBTA *InfiniBand Architecture Specification Vol 1/2*
+- IBTA *Annex A17 — RoCEv2*
+- IETF RFC 8825 *Transport Mappings* (RoCEv2 의 UDP)
+
 ### 다음 단계
 
 - [용어집](glossary.md) — 핵심 용어 ISO 11179 형식

@@ -303,6 +303,38 @@ Coverage:     Config(CG1) × Verify(CG2) × Attack(CG3) × Fallback(CG4) × Anti
 - **Anti-rollback 의 backing storage 가 _진짜_ OTP/eFuse 인가** 가 critical — emulated 영역이면 우회 가능.
 - **공격 + 방어 매핑** — 6 공격 (FI/RB/SC/JTAG/TOCTOU/Flash) × 방어 매트릭스로 답변.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — RoT 답변 (Bloom: Apply)"
+    "RoT = BootROM 만" 답변의 문제?
+    ??? success "정답"
+        BootROM 만으로는 trust anchor 불완전:
+        - BootROM = trust anchor 의 _코드_ 측.
+        - 키/설정의 _저장_ 측이 없으면 → 어디서 ROTPK 를 읽나? Where to store anti-rollback counter?
+        - **완성 답**: RoT = BootROM (immutable code) + OTP (immutable key/config). PUF 시 PUF 도 추가.
+        - 안티패턴: 한쪽만 답 → follow-up "OTP 없으면 키 어디서?" 시 무너짐.
+
+!!! question "🤔 Q2 — 공격 → 방어 매핑 (Bloom: Analyze)"
+    "Glitch attack 으로 if 분기 우회" — 어떤 방어가 매칭?
+    ??? success "정답"
+        FI (Fault Injection) → 다층 방어:
+        - **Code level**: 이중 검증 (`if A == B && B == A`).
+        - **HW level**: glitch detector (voltage/clock anomaly).
+        - **Flow level**: flow magic — 검증 통과 시 magic register 에 0xDEAD 같은 값 write, 다음 단계 entry 시 그 값 검사.
+        - **Architecture**: TRNG 기반 random delay → glitch timing 정렬 어렵게.
+        - 결론: FI 는 _단일_ 방어로 차단 불가 → defense in depth.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Secure Boot Curriculum` — M01–M07 매핑
+- `Attack/Defense Matrix` — 6 공격 카테고리
+
+**External**
+- NIST SP 800-193 *Platform Firmware Resiliency*
+- ARM *Trusted Board Boot Requirements* (TBBR-CLIENT)
+- Common Criteria *AVA_VAN* — Vulnerability Analysis
+
 ## 다음 단계
 
 - 📝 [**Quick Ref 퀴즈**](quiz/06_quick_reference_card_quiz.md)

@@ -42,6 +42,31 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Pinstrap_ 으로 _Secure Boot 우회_
+
+2018-2019: 다수 SoC 의 secure boot 우회 사례 발견. 패턴:
+
+- **OTP**: Secure Boot ON (강).
+- **Pinstrap**: USB boot mode 선택 시 _BootROM 의 default path_ 변경.
+- **BootROM bug**: USB boot path 에서 _서명 검증 단계 누락_.
+
+결과: 공격자가 _PCB pin 조합_ 만으로 _USB → 임의 image load_. _Secure boot_ 가 켜져 있는데도.
+
+**문제의 본질**:
+- Module 02-03 의 검증은 _"cert + image 가 SRAM 에 있다고 가정"_.
+- 실제로는 _"어디서 어떻게 가져오는가"_ 도 _공격 표면_.
+- _Boot mode × Boot device × OTP fuse_ 의 _모든 조합_ 이 검증돼야 함.
+
+매트릭스:
+
+| Boot mode | NOR | eMMC | USB | UFS |
+|-----------|-----|------|-----|-----|
+| Normal | ✓ verify | ✓ verify | ✓ verify | ✓ verify |
+| Fallback | ✓ verify | ✓ verify | ✓ verify | - |
+| Recovery | ✓ verify | ✓ verify | **누락 가능** | - |
+
+_누락된 한 cell_ = 우회 가능.
+
 Module 02-03 에서는 _cert + image 가 SRAM 에 와 있다고 가정_ 하고 검증 흐름을 봤습니다. 이번 모듈은 그 가정의 _뒷면_ — **누가 어디서 어떻게 cert + image 를 가져오는가**, 그리고 **그 가져오는 path 자체가 공격 surface 가 될 수 있는가**.
 
 이 모듈을 건너뛰면 _서명 검증_ 만 검증하고 _이미지 도달 경로_ 검증을 빠뜨려 — Secure Boot 가 켜진 양산 칩에서 test/debug pin 조합으로 인증 우회되는 사고가 생깁니다 (실제 사례 다수). Boot mode × Boot device × OTP fuse 의 cross matrix 가 Module 07 의 DV coverage 핵심이고, 그 매트릭스의 모양을 이 모듈에서 잡습니다.
@@ -582,6 +607,37 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
     - Secondary boot 의 verify hook 이 primary 와 _문자 그대로 동일_ 한가 — 같은 함수를 호출하는가, 분기마다 별도 사본인가.
     - USB DL 도 verify 강제 — completely closed 보다 verified-allowed 가 양산 brick 회피에 안전.
     - ARC counter 의 backing storage 가 OTP 인지 RPMB 인지 OTP-emulated 인지 — 이름이 같아도 immutability 가 다름.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — OTP > Pinstrap 우선순위 (Bloom: Analyze)"
+    Boot mode 결정 우선순위가 OTP > Pinstrap > Default 인 _보안_ 근거?
+    ??? success "정답"
+        OTP 우선의 보안 이유:
+        - **Pinstrap = 외부 핀**: 공격자가 ROHS jig 또는 fault injection 으로 핀 값 변경 가능 → 신뢰 불가.
+        - **OTP = silicon 내부**: blown fuse 는 칩 분해 + FIB 공격이 필요 → 비용 압도적으로 높음.
+        - **양산 정책**: production lifecycle 진입 후에는 OTP 가 모든 선택을 _override_ → pinstrap 으로 secure → debug 전환 차단.
+        - default 가 최저 우선순위인 이유: bring-up 단계의 fallback 일 뿐, 양산에서는 OTP 가 반드시 양수.
+
+!!! question "🤔 Q2 — RPMB vs OTP counter (Bloom: Evaluate)"
+    Anti-rollback counter 에 RPMB 를 쓰면 OTP fuse 소진을 피할 수 있다. _단점_ 은?
+    ??? success "정답"
+        RPMB counter 의 trade-off:
+        - **HMAC key 의존**: HMAC key 가 침해되면 counter 위조 가능 → key derivation 보안 = anti-rollback 보안.
+        - **eMMC/UFS 펌웨어 침해**: device firmware bug 로 RPMB write counter monotonicity 가 깨지는 사례 존재.
+        - OTP fuse: 물리적 비가역 → 펌웨어 침해와 무관.
+        - 결론: RPMB 는 _대용량_ counter (수십만 개) 에 유리, OTP 는 _최후 anchor_ (수십 개) — 둘은 보완 관계지 대체 관계 아님.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Boot Mode Selection` — OTP/Pinstrap 우선순위 매트릭스
+- `RPMB Anti-Rollback` — HMAC key derivation + counter 관리
+
+**External**
+- JEDEC JESD220 *UFS Specification* — RPMB region 명세
+- JEDEC JESD84-B51 *eMMC Specification* — RPMB partition + Write Counter
+- ARM TBBR-CLIENT — Boot Source + Fallback 정의
 
 ## 다음 단계
 

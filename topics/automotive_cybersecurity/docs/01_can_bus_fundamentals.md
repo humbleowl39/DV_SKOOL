@@ -43,9 +43,40 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 2015 Jeep Cherokee 해킹
+
+2015 년, Charlie Miller 와 Chris Valasek 가 **달리는 Jeep Cherokee 를 원격으로 해킹**. 그들은:
+
+1. **Uconnect 인포테인먼트 시스템** 의 cellular modem 으로 진입 (인터넷에서 직접).
+2. 인포테인먼트 칩의 ARM CPU 의 _firmware_ 를 다시 flash.
+3. 인포테인먼트가 CAN bus 의 _gateway_ 역할 → **CAN bus 에 임의 메시지 송신 가능**.
+4. CAN 으로 _스티어링 / 브레이크 / 가속_ 메시지 위조 → 차량 _원격 조종_.
+
+Chrysler 가 **140만 대 리콜** — 차량 사이버보안의 분수령.
+
+**왜 가능했나?** **CAN bus 는 1983 년 폐쇄 네트워크 가정으로 설계** — 모든 메시지가:
+- **인증 없음**: 누가 보냈는지 _표시조차_ 없음. 모든 ECU 가 _임의 메시지 ID_ 보낼 수 있음.
+- **암호화 없음**: 평문 그대로.
+- **세션 없음**: replay attack 가능.
+
+이 모든 게 _"버스에 꽂힌 모든 ECU 는 신뢰 가능"_ 가정 위에서 안전. 그 가정이 _OBD-II port + 인포테인먼트 + 텔레매틱스 + V2X_ 로 깨지자 모든 보안 가정이 무너짐.
+
 이후 모든 차량 보안 모듈은 한 사실에서 출발합니다 — **"CAN bus 는 1983 년 폐쇄 네트워크 가정으로 설계되었고, 인증 / 암호화 / 세션 / 발신자 식별이 모두 없다"**. 이 한 가정이 깨지는 순간 (OBD-II / 텔레매틱스 / V2X) 부터 차량 내부 통신은 _기본적으로 모든 메시지가 위조 가능_ 한 채널이 됩니다.
 
 이 모듈을 건너뛰면 이후 SecOC, HSM, Gateway, Tesla FSD 탈옥이 _"왜 이런 보안 계층을 추가해야 하는가"_ 를 잃은 채 단순 외워야 할 박스로 보이게 됩니다. 반대로 CAN 의 결함을 정확히 잡으면 다음 모듈의 모든 보안 메커니즘이 **이 결함의 어느 면을 보강하는가** 로 자연스럽게 이어집니다.
+
+!!! question "🤔 잠깐 — CAN bus 를 _완전히 교체_ 못 하나?"
+    Ethernet 으로 가면 표준 IT 보안 (TLS, IPsec) 적용 가능. _왜 자동차는 아직 CAN_?
+
+    ??? success "정답"
+        **레거시 + 안전성 + 비용**.
+
+        - **레거시**: 한 차에 _수십 ECU_, 모두 CAN 인터페이스. 한 번에 바꿀 수 없음.
+        - **안전성 인증**: ISO 26262 의 ASIL-D (Automotive Safety Integrity Level) 인증된 CAN MAC IP 가 _수십 년 검증됨_. Ethernet 의 같은 인증은 _신생_.
+        - **결정성**: CAN 은 _priority-based arbitration_ 으로 _하드 실시간_ 보장 (가장 높은 priority 메시지가 즉시). 일반 Ethernet 은 _ best-effort_.
+        - **비용**: CAN transceiver = $0.5, Ethernet PHY = $5-10. 100 ECU 면 _수백 USD_ 차이.
+
+        해법: **Ethernet + CAN 공존** — backbone 은 Ethernet, edge 는 CAN. 그래서 _CAN 보안_ 이 _아직 critical_.
 
 ---
 
@@ -488,6 +519,43 @@ flowchart TB
     **원인**: OBD-II 는 법적 의무로 항상 접근 가능해야 하므로, Gateway 가 진단 포트 트래픽을 화이트리스트에서 예외 처리하는 구현이 흔하다.
 
     **점검 포인트**: Gateway 화이트리스트에서 `0x7DF` (OBD broadcast), `0x7E0~0x7EF` (ECU 진단 주소) 범위가 내부 도메인으로 무조건 포워딩되는지 확인. 진단 세션 활성화 없이 기능 제어 메시지 (예: 조향, 제동) 가 통과되면 즉시 차단 규칙 추가 필요.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — CAN 4 결함 매핑 (Bloom: Analyze)"
+    SecOC 가 CAN 4 결함 (무인증/무암호화/브로드캐스트/무상태) 중 _어느 것_ 을 _어떻게_ 보강하는가?
+
+    ??? success "정답"
+        - **무인증**: SecOC 의 MAC (truncated 4-8 B) 으로 _발신자 인증_. HSM 키 보유한 ECU 만 valid MAC 생성.
+        - **무상태**: Freshness Value (FV, 2-4 B counter) 로 _replay 방지_ — 같은 메시지 재전송 시 FV 가 outdated → 거부.
+        - **무암호화**: 보강 _안 됨_. SecOC 은 _인증_ 만, _기밀_ 은 아님. 메시지 내용은 여전히 평문.
+        - **브로드캐스트**: 보강 _안 됨_. CANsec (CAN-XL) 이 다룸.
+
+        즉 SecOC = 인증 + replay 만. 다른 결함은 _상위 layer_ (gateway, IDS) 가 보강.
+
+!!! question "🤔 Q2 — Bus-off attack 방어 (Bloom: Apply)"
+    Attacker 가 _victim ECU_ 의 메시지를 _의도적 error_ 로 만들어 TEC 폭주시킴 → victim 이 bus-off → 도로에서 _브레이크 ECU 차단_. 어떻게 방어?
+
+    ??? success "정답"
+        Protocol 레벨 _불가능_ — CAN spec 의 _기본 동작_.
+
+        해법:
+        - **IDS (Intrusion Detection System)**: error frame 의 _패턴_ (특정 ID 만 fail) 감지 → 알람.
+        - **Rate Limiting**: error frame 의 burst 가 _threshold_ 넘으면 게이트웨이가 차단.
+        - **Redundancy**: critical ECU (브레이크) 는 _2 개 ECU_ + 다른 bus → 한 쪽 bus-off 되도 운영.
+        - **CAN-FD/XL**: 새로운 spec 에서 _bus-off 방어_ 메커니즘 (예: error confinement 개선).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- (CAN 관련 사내 문서 — 없으면 ISO 11898)
+
+**External**
+- ISO 11898 *Road vehicles — Controller area network*
+- ISO/SAE 21434 *Road vehicles — Cybersecurity engineering*
+- AUTOSAR *Specification of Secure Onboard Communication* (SecOC)
+- *Remote Exploitation of an Unaltered Passenger Vehicle* — Miller & Valasek, BlackHat 2015 (Jeep 해킹)
+- *Surviving the Sec0C: Bus-Off Attack* — Cho et al., 2016
 
 ---
 

@@ -354,6 +354,37 @@ L0: Physical — OBD 격리, 포트 비활성화, 물리 접근 제어
 
     **점검 포인트**: HSM 내 Monotonic Counter 값이 업데이트 후 증가하는지, 그리고 이전 버전 패키지를 재주입했을 때 ECU 가 거부 (NACK) 하는지 벤치 테스트로 확인. R156 (SUMS) 요구 항목의 "Rollback Prevention" 체크박스가 TARA 에 포함되어 있는지 검토.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 4-layer 스택 적용 (Bloom: Apply)"
+    "OBD-II 포트로 진단 메시지 위조 가능". 4-layer 중 어느 layer 가 빠진 결과?
+    ??? success "정답"
+        L1 (SecOC) 부재:
+        - **SecOC**: CAN message 에 MAC + Freshness Value 추가 → 위조 메시지는 MAC 검증 실패로 drop.
+        - **HSM 만**: ECU 내 키 보호는 되지만 메시지 wire 단계는 무방비.
+        - **Gateway 만**: domain 간 차단은 되지만 같은 domain 내 위조는 통과.
+        - 결론: OBD-II → CAN → critical ECU 의 message wire 자체가 SecOC 로 보호되어야.
+
+!!! question "🤔 Q2 — Tesla 사례 평가 (Bloom: Evaluate)"
+    Tesla 가 외부 (L1, L5) 만 강하고 내부 (L2, L3) 가 약한 _구조적 이유_?
+    ??? success "정답"
+        Internet-first 보안관:
+        - **외부 우선의 이유**: 원격 attack surface (Wi-Fi/Cellular) 가 가장 명확 → 미디어/규제 압박.
+        - **내부 약한 이유**: 한 차에 ECU 50–100 개. 모두 SecOC 적용 = HW HSM 비용 폭증.
+        - **사고 사례**: Pwn2Own 2023 — 외부 Wi-Fi 침투 후 _내부 CAN_ 으로 lateral → infotainment → autopilot 의 일부 노출.
+        - 정답: defense in depth. 외부 _도_ 강함 + 내부 _도_ 강함이 21434 표준의 의도.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `Automotive Threat Model` — 4-layer 매핑
+- `OTA Update Security` — Rollback Prevention 사례
+
+**External**
+- ISO/SAE 21434 *Road vehicles — Cybersecurity engineering*
+- UN R155 (CSMS) / R156 (SUMS)
+- AUTOSAR *Specification of Secure Onboard Communication (SecOC)*
+
 ---
 
 ## 다음 단계

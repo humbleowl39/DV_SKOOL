@@ -42,6 +42,25 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _QID=5_ 가 _뭔지_ 모름
+
+당신은 fsdb 에서 _DMA transaction_ 발견:
+```
+h2c_qid = 5, addr = 0x80000000, size = 64B
+```
+
+이 한 줄로 _어느 subsystem_ 활동인지 _즉시_ 알아야 함:
+- QID 0-3: Requester (송신측 work).
+- QID 4-5: Responder (수신측 work).
+- QID 6: CQE handler.
+- QID 7: Page table walk.
+- QID 8: CC notify.
+- ...
+
+만약 _QID 매핑_ 모름 → fsdb 의 _수천 DMA transaction_ 중 _어느 것이 어느 subsystem_ 인지 _heuristic_ 으로 추측 → 시간 낭비.
+
+매핑 알면 → "QID=5 = Responder = 수신측 데이터 write" 즉시 분류 → 디버그 _10 배 빠름_.
+
 QDMA bypass 인터페이스는 모든 DMA 트랜잭션이 흐르는 단일 지점입니다. QID 만 보면 "지금 DUT 의 어느 서브시스템이 host 와 통신하는가" 를 즉시 알 수 있고, 4 대 디버그 케이스 (M08-M11) 에서 모두 활용됩니다.
 
 이 모듈을 건너뛰면 fsdb 에서 DMA 트랜잭션이 보여도 어느 서브시스템 (Requester / Responder / Recv / Cmd / CQE / Page Walk / CC notify) 인지 모르게 됩니다. 10 종 QID 매트릭스만 외우면 디버그 첫 분기점이 자동화됩니다.
@@ -287,6 +306,35 @@ verdi -fsdbDump <run.fsdb> -nologo &
 !!! warning "실무 주의점"
     - fsdb 검색 시 QID 와 방향 (H2C/C2H) 둘 다 명시 — 같은 숫자가 양 방향에 있음.
     - 복수 채널 디버그 시 채널 0 만 보면 누락 — 4 채널 시간순 merge.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — QID 분류 (Bloom: Apply)"
+    fsdb log: `h2c_qid=7, addr=0x1000, size=8B`. 어느 subsystem?
+
+    ??? success "정답"
+        QID=7 = **Page Walk** (host → device, PTE fetch).
+
+        - 8 byte size = PTE 한 entry.
+        - h2c = host → device → walk request.
+
+        만약 _size=64B_ + h2c_qid=4 면 _Responder Read_ (수신측 데이터 read).
+
+!!! question "🤔 Q2 — 방향 혼동 (Bloom: Analyze)"
+    `qid=5` 만 보고 _어느 subsystem_ 알 수 없는 이유?
+
+    ??? success "정답"
+        **H2C 와 C2H 의 QID 매핑 다름**.
+
+        - H2C qid=5: Responder (수신측이 host 메모리 read).
+        - C2H qid=5: Completer (송신측이 host 메모리 write — CQE).
+
+        같은 숫자 _다른 의미_. 방향 명시 _필수_.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `H2C / C2H QID Reference` (id=1334771791)
 
 ---
 

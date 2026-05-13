@@ -44,9 +44,53 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Power-on 첫 1 ms_ 의 race
+
+당신은 secure boot 를 구현. 부팅 직후 secure UART 에 비밀 데이터를 print. _시뮬은 통과_, 그런데 실제 chip 에서 _가끔_ NS world 에서 그 비밀이 _보임_.
+
+추적 결과:
+
+```
+Time   Event                            TZPC.UART     SCR_EL3.NS
+─────  ───────────────────────────────  ─────────     ──────────
+0 ns   Power-on, BL1 시작 (EL3, NS=0)   default=0     NS=0
+100 ns BL1 → BL2 jump                   default=0     NS=0
+500 ns BL2 → BL31                       default=0     NS=0
+800 ns BL31 의 init                     default=0     NS=0
+850 ns BL31 의 UART print "secret"      default=0     NS=0
+900 ns BL31: TZPC.UART = secure         secure=1      NS=0    ← 너무 늦음!
+1000 ns BL33 (Linux) 시작                secure=1      NS=1
+        → 이미 UART buffer 에 secret 남아 있음
+        → Linux 가 read 가능
+```
+
+**문제**: TZPC lock-down 이 _UART print 후_ 발생. 그 사이에 print 한 _secret 이 NS-readable 한 buffer 에 남음_.
+
 Module 01-02A 에서 말한 _"NS bit 격리, EL3 단일 게이트, TZASC/TZPC/GIC/SMMU 의 5 축"_ 이 **언제부터 작동하는가?** 에 답이 없습니다. 답은 _부팅 시점_ — BL1 (BootROM, EL3) 이 모든 보안 인프라를 _초기화_ 하고, BL31 → BL33 전환 시점에 _NS=1_ 로 toggle 한 후부터입니다.
 
 이 모듈을 건너뛰면 디버그 시 _"NS world 에서 secure 자원이 access 되는데 분명 TZASC 는 잠갔는데 왜?"_ 같은 상황을 만납니다 — 답은 보통 **lock-down 이 BL31 ERET 직전에 끝나지 않았기 때문**. 부팅 단계와 lock-down 시점을 정확히 알면, 첫 secure access 의 timing 만 보고도 어느 BL 단계에 문제가 있는지 좁힐 수 있습니다.
+
+!!! question "🤔 잠깐 — Lock-down 의 _시점 순서_?"
+    BL1 → BL2 → BL31 → BL33 의 어느 _직전/직후_ 에 5 컴포넌트 lock?
+
+    ??? success "정답"
+        **BL31 의 NS world 전환 _직전_ — 즉 BL33 으로 ERET 하기 _직전_**.
+
+        이유:
+        - BL1/BL2/BL31 은 모두 _NS=0 (Secure)_ → secure 자원 자유 access. Lock-down 하면 _BL31 자신_ 도 못 함.
+        - BL33 (Linux) 는 _NS=1_ → 여기에 진입하기 _전에_ 모든 secure 자원 잠가야 NS 가 _건드릴 수 없음_.
+
+        Sequence:
+        ```
+        BL31 마지막 단계:
+          1. TZPC 설정 (peripheral 격리)
+          2. TZASC 설정 (DRAM 영역 격리)
+          3. GIC 설정 (IRQ 격리)
+          4. SMMU 설정 (DMA 격리)
+          5. NS=1 으로 SCR_EL3 변경 + BL33 entry 주소로 ERET
+        ```
+
+        1~4 가 _5 직전_ 에 _다 끝나야_. 하나라도 5 _뒤_ 면 lock-down 전에 NS 가 자원 보임.
 
 ---
 
@@ -610,6 +654,55 @@ c_anti_rollback: cover property (p_anti_rollback);
     - BL31 의 lock-down 시퀀스 (TZPC → TZASC → GIC → SMMU 순서) 는 _ERET 직전에 모두 완료_ 돼야 합니다. SVA 로 `$rose(scr_el3_ns) |-> all_init_done` 강제.
     - OTP fuse 의 _mirror register_ 도 secure-only 로 잠가야 합니다 — 사내 실무 주의점 참조.
     - 복구 / EDL / JTAG 같은 _alternate boot path_ 도 동일한 trust chain 에 포함돼야 — 정상 path 만 검증하는 건 미완.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Lock-down race (Bloom: Analyze)"
+    BL31 의 TZASC lock 이 _NS=1 변경 후_ 발생했다. 어떤 race?
+
+    ??? success "정답"
+        BL31 → NS=1 transition (SCR_EL3.NS write) → BL33 (Linux) 시작 → Linux 가 _TZASC 미설정 영역_ 의 secure DRAM read 가능 → secret 노출.
+
+        그 사이 cycle 수가 _수십~수백 cycle_ 이면 _short window_ 지만 충분히 exploit 가능 (특히 voltage glitch 와 결합).
+
+        SVA: `$rose(scr_el3_ns) |-> $past(tzasc_locked)`. ERET 시점에 _이미 lock 완료_.
+
+!!! question "🤔 Q2 — Measured Boot (Bloom: Apply)"
+    Anti-rollback counter 와 PCR (Platform Configuration Register) 의 차이?
+
+    ??? success "정답"
+        - **Anti-rollback counter**: OTP 의 단조 증가 값. 과거 version image 로드 _차단_.
+        - **PCR**: 각 boot 단계의 _hash_ 를 누적 (extend). _원격 증명_ (attestation) 용 — TPM 같은 외부에 _현재 boot state_ 증명.
+
+        둘 다 _측정 (measure)_ 하지만:
+        - Anti-rollback = _차단_ 메커니즘.
+        - PCR = _증명_ 메커니즘.
+
+        보완적, 둘 다 필요.
+
+!!! question "🤔 Q3 — Alternate path (Bloom: Evaluate)"
+    JTAG / recovery / EDL 같은 alternate boot path 의 trust chain. 어떻게 _검증_?
+
+    ??? success "정답"
+        매트릭스: Boot mode × Boot device × OTP fuse 의 _모든 조합_:
+
+        - 각 조합에서 _서명 검증이 동일하게 enforce_ 되는지.
+        - JTAG enable + Secure Boot ON 시 JTAG가 _제한_ 되는지.
+        - EDL mode 의 image 도 _signed_ image 만 통과하는지.
+
+        Coverage bin: `(boot_mode × boot_device × otp_secure_bit × signature_check_path)` 의 cross. 미커버 cell = 우회 가능 path.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 secure boot 시퀀스 자료
+- `Identity & Access control` (id=998899872)
+
+**External**
+- ARM Trusted Firmware (TF-A) BL31 source
+- ARM, *PSA Trusted Boot and Firmware Update*
+- TCG (Trusted Computing Group) *PCR specifications*
+- NIST SP 800-193 *Platform Firmware Resiliency*
 
 ---
 

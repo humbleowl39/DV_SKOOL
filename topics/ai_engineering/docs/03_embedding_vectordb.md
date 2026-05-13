@@ -44,9 +44,40 @@
 
 ## 1. Why care? — Context window 만으로는 안 되는 이유
 
-LLM 의 context window 만으로는 대규모 문서·코드 베이스를 다룰 수 없습니다. 200K context 라도 사내 IP 스펙 + 코드 + 디자인 문서 _전체_ 를 못 담고, 담더라도 (1) [Module 01](01_llm_fundamentals.md) §5.4 의 KV cache 메모리 폭주, (2) "lost in the middle" 무시 문제, (3) 매 호출마다 200K 의 입력 비용을 부담하게 됩니다.
+### 1.1 시나리오 — 200K context 가 _부족_ 한 이유
 
-**임베딩 + 벡터 DB 가 외부 메모리** 역할을 합니다. 이 두 컴포넌트의 품질이 RAG / Agent 시스템의 _상한선_ 입니다 — 검색이 망가지면 그 위에 어떤 LLM 을 얹어도 답이 깨집니다.
+당신은 Claude Sonnet (200K context) 으로 사내 IP 스펙 + 코드 + 디자인 문서를 다뤄야 합니다. 첫 번째 본능 — "모든 걸 prompt 에 넣자".
+
+세 가지가 동시에 깨집니다:
+
+1. **물리적 한계**: 사내 RDMA-TB 만 해도 ~2M token. RTL 까지 합치면 10M+. 200K 에 _안 들어감_.
+2. **비용 폭주**: 200K 입력 = 약 $0.6/호출 (Claude). 100 호출/day = $60/day = $1800/month. 다중 사용자면 _10×_.
+3. **Lost in the middle**: 같은 200K 라도 _중간_ 의 정보는 모델이 잘 _안 봄_ [Liu et al. 2023]. 가장 좋은 컨텐츠를 끼워 넣어도 답이 깨질 수 있음.
+
+**임베딩 + 벡터 DB 가 외부 메모리** 역할을 합니다. _필요한 chunk 만 골라서_ prompt 에 넣으면:
+
+| 항목 | All-in-context | Embedding + Retrieval |
+|------|----------------|----------------------|
+| 입력 토큰 | 200K | 2K (top-10 chunks) |
+| 비용/호출 | $0.6 | $0.006 |
+| Lost-in-middle | 발생 | 회피 |
+| 사내 docs 전체 처리 가능? | ✗ (10M+) | ✓ |
+
+이 두 컴포넌트의 품질이 RAG / Agent 시스템의 _상한선_ 입니다 — 검색이 망가지면 그 위에 어떤 LLM 을 얹어도 답이 깨집니다.
+
+!!! question "🤔 잠깐 — 왜 _BM25 키워드 검색_ 으로 안 되나?"
+    BM25 (TF-IDF 의 개선) 도 도서관 검색 표준. 왜 _embedding_ 이 필요?
+
+    ??? success "정답"
+        **의미적 매칭**.
+
+        예: 사용자가 _"TLB flush"_ 검색.
+        - **BM25**: "TLB" + "flush" 단어 _그대로_ 포함된 문서만 hit. _"TLB invalidation"_ 라는 다른 표현은 miss.
+        - **Embedding**: "TLB flush" 와 "TLB invalidation" 이 _같은 의미 영역_ 에 살아서 둘 다 hit.
+
+        Embedding 의 단점도 있음: _정확한 키워드 매칭_ 이 BM25 보다 약함 (예: 함수 이름 검색).
+
+        그래서 _프로덕션 RAG_ 는 보통 **hybrid** (BM25 + Embedding 의 score fusion). 단독 사용은 둘 다 부족.
 
 ---
 
@@ -525,6 +556,61 @@ DV 도메인 권장:
     **원인**: 각 Embedding 모델은 고유한 벡터 공간을 가지며, 모델이 다르면 같은 문장도 다른 방향의 벡터로 인코딩된다.
 
     **점검 포인트**: 모델 교체 후 기존 인덱스의 `model_name` 메타데이터와 현재 사용 모델이 일치하는지 확인. Retrieval 정확도 지표(Top-5 Recall) 를 교체 전후 비교하고, 불일치 시 전체 문서에 대해 재임베딩 및 인덱스 재구축 필수.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Chunking 전략 (Bloom: Apply)"
+    당신은 SystemVerilog 코드 base 를 RAG 로 색인. 한 파일 _1000 줄_. 어떻게 chunk?
+
+    ??? success "정답"
+        **AST 기반 chunking** (semantic). 함수/class/module 단위로 분할.
+
+        Naive (고정 크기, 예: 500 token) 의 문제:
+        - 함수 중간에서 잘림 → chunk 하나는 _signature 만_, 다른 하나는 _body 만_ → retrieval 시 어느 것도 충분하지 않음.
+        - Module 의 `begin/end` 가 다른 chunk 로 분리 → 컨텍스트 불완전.
+
+        AST chunking 의 장점: 각 chunk 가 _self-contained_. 단점: 큰 함수가 한 chunk 에 다 안 들어갈 수도 있음 → recursive split 필요.
+
+!!! question "🤔 Q2 — Recall vs Precision (Bloom: Evaluate)"
+    당신의 RAG 가 top-k=10 으로 운영. _Recall_ 은 좋은데 _LLM 답변 품질_ 이 낮다. 무엇을 시도해야 하나?
+
+    ??? success "정답"
+        Top-k=10 이라 _noisy_ chunks 가 LLM context 에 들어감 → "**lost in the middle**" 발생. 시도:
+        1. **Reranker 추가**: top-k=50 으로 retrieve → cross-encoder reranker 로 top-5 만 추림 → LLM 으로.
+        2. **Hybrid search**: BM25 + embedding score fusion → precision 향상.
+        3. **MMR (Maximal Marginal Relevance)**: 다양성 + 관련성 balance.
+
+        모두 _precision_ 을 올리는 방향. Recall 은 _첫 retrieval step_ 에서 충분하면 됨.
+
+!!! question "🤔 Q3 — Embedding 모델 선택 (Bloom: Analyze)"
+    당신은 사내 SystemVerilog/UVM 코드 RAG. 두 옵션:
+    - **(a)** OpenAI `text-embedding-3-large` (API, 3072-dim).
+    - **(b)** 사내 BGE / E5 (로컬, 1024-dim).
+
+    어떤 것을 선택? _3 가지 차원_ 으로 분석.
+
+    ??? success "정답"
+        | 차원 | (a) API | (b) 로컬 |
+        |------|---------|---------|
+        | **보안** | 사내 코드가 외부 API 로 전송 → IP leak risk | 완전 격리 |
+        | **품질** | MTEB 상위, 범용 학습 잘됨 | 도메인 fine-tune 가능, SV/UVM 특화 가능 |
+        | **비용** | $0.13/1M token (운영비) | GPU 1 회성 비용 |
+        | **운영** | 인덱스 재구축 시 시간↑ | offline 처리 가능 |
+
+        보안이 _decisive_ 라면 (b). 보안 OK 면 둘 다 시도 후 _MTEB-DV_ subset 으로 비교.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `5. KV Caching & VectorDB w/ MangoBoost` (id=613187588)
+- `Design Document of Component/System-Level Benchmarking Tool` (id=613482498)
+
+**External**
+- *MTEB: Massive Text Embedding Benchmark* — Muennighoff et al., 2023
+- *Lost in the Middle: How Language Models Use Long Contexts* — Liu et al., TACL 2023
+- *FAISS: A library for efficient similarity search* — Johnson et al., 2017
+- *HNSW: Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs* — Malkov & Yashunin, 2016
+- *BGE M3-Embedding* — Chen et al., 2024
 
 ---
 

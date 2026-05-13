@@ -42,6 +42,23 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Process 격리_ 가 _없으면_?
+
+당신은 OS 설계자. 두 process 가 _동시 실행_:
+- **Process A**: 비밀번호 저장 (메모리 0x1000).
+- **Process B**: 게임. 일반 메모리 사용.
+
+만약 _MMU 없이_ 두 process 가 _직접_ DRAM 사용:
+- B 의 _임의 메모리 read_ (예: 버그, 또는 의도적 공격) → A 의 0x1000 의 비밀번호 _노출_.
+- 동시에 _쓰면_ → 서로 data corruption.
+
+**MMU 의 해법**:
+- 각 process 가 _자신의 VA space_ — 0x1000 이 A 에서는 PA 0x80000000, B 에서는 PA 0x90000000.
+- Page table 이 _VA → PA 매핑_ 을 process 별 관리.
+- 한 process 가 _다른 process 의 메모리_ 자체를 _주소조차_ 모름.
+
+이게 _OS 의 가장 근본적 보안_. UNIX/Linux/Windows/macOS 모두 _MMU 없이는 multi-user system 불가능_.
+
 이 토픽의 모든 후속 모듈은 한 가정에서 시작합니다 — **"CPU 와 device 가 보는 주소(Virtual Address)는 실제 DRAM 주소(Physical Address)가 아니다"**. Page table 이 왜 multi-level 인지, TLB 가 왜 latency-critical 인지, IOMMU 가 왜 SoC 보안의 토대인지 — 모두 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후 검증 시 마주칠 모든 fault, permission error, ASID mismatch, identity-mapping 누락 같은 증상이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이건 process isolation 을 위한 거구나"** 처럼 _이유_ 가 보입니다.
@@ -522,6 +539,37 @@ sequenceDiagram
 - **MMU 3대 기능**: 주소 변환 + 권한 검사 + 캐시 속성 제어. PTE 의 비트 영역이 각각 담당.
 - **MMU 위치**: CPU 내장 (core 단위) vs SoC 레벨 IOMMU/SMMU (DMA 마스터들 격리).
 - **MMU enable 시퀀스**: Page Table 구성 → TTBR → TCR/MAIR → SCTLR.M=1 → ISB. ISB 누락 시 파이프라인 잔여 instr 이 untranslated 로 실행.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — ISB 의 역할 (Bloom: Analyze)"
+    MMU Enable (SCTLR.M=1) 직후 ISB 가 _없으면_ 어떤 일이?
+    ??? success "정답"
+        Pipeline 잔여 명령어가 _untranslated_ 로 실행:
+        - SCTLR write 이전에 fetch 된 instr 들이 이미 pipeline 에 있음 → 그 instr 들은 _SCTLR 변경을 모름_.
+        - ISB 없으면 그 instr 들이 PA = VA 가정으로 실행 → translation 적용 안 됨 → 의도와 다른 메모리 접근.
+        - ISB 는 pipeline 을 flush + context synchronize → 이후 instr 부터 _확정적_ 으로 새 SCTLR 적용.
+        - 검증 단서: MMU Enable 직후 첫 Translation Fault 의 VA 가 enable 이전 영역이면 ISB 누락 의심.
+
+!!! question "🤔 Q2 — TLB 가 캐시하는 것 (Bloom: Evaluate)"
+    TLB 가 _단순히 PA 만_ 캐시한다는 흔한 오해. 무엇이 빠진 설명?
+    ??? success "정답"
+        TLB entry = (VA, ASID, PA, **permission**, **attribute**) 묶음:
+        - **Permission**: AP[2:1] (RW/RO/RWX 등), XN/PXN/UXN (execute never).
+        - **Attribute**: cacheability (NC/WB/WT), shareability (NS/IS/OS).
+        - PA 만 캐시한다면 매 access 마다 PT walk 필요 → TLB 의 의미 없음.
+        - 결과: PTE 의 permission/attribute 변경 시 _TLB invalidate 필수_ → 단순 PA 변경이 아닌 _권한_ 변경에도 stale 발생.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `MMU Fundamentals` — MMU enable 시퀀스 + ISB 의무
+- `TLB Entry Structure` — permission/attribute 캐시 정책
+
+**External**
+- ARM ARM (DDI0487) §D5 *VMSAv8-64 Translation*
+- Intel SDM Vol 3A §4 *Paging*
+- *Hennessy & Patterson — Computer Architecture: A Quantitative Approach* — Memory hierarchy
 
 ## 다음 단계
 

@@ -43,6 +43,28 @@
 
 ## 1. Why care? — UVM 아키텍처가 왜 필요한가
 
+### 1.1 시나리오 — UVM _없는_ 시뮬
+
+당신은 SystemVerilog 만으로 testbench 작성:
+- DUT instance
+- BFM (Bus Functional Model) — task / function 으로
+- Stimulus — initial block 에서
+- Checker — always block 에서 RTL 비교
+
+규모가 작으면 OK. 그런데 _수개월 후_:
+- BFM 이 _이 test 와 저 test 에서 다른 reset 순서_ 필요 → BFM 코드 분기.
+- Checker 가 _stimulus 와 race condition_ — 시작 시점 misalignment.
+- 새 test 추가 시 _BFM 재사용_ 어려움 — 매번 reset / init 직접 작성.
+- 검증 progress 측정 (coverage) _수동_.
+
+**UVM 의 해법**:
+- **Phase 표준화** — build → connect → run → check → report. 모든 component 가 _같은 시점_ 에 같은 일.
+- **Component 재사용** — driver/monitor 한 번 만들면 모든 test 에서.
+- **Sequence layer** — stimulus 가 BFM 과 _decoupled_.
+- **Coverage 통합** — 자동 측정.
+
+결과: testbench _복잡도_ 가 _IP 면적의 선형_ 으로 증가. UVM 없으면 _제곱_ 또는 _exponential_.
+
 이후 모든 UVM 모듈은 한 가정에서 출발합니다 — **"검증 환경의 모든 구성 요소는 동일한 Phase 위에서 같은 순서로 build / connect / run / cleanup 한다"**. Driver / Monitor / Sequencer / Scoreboard 가 어떻게 협력하는지, 왜 build_phase 에서 자식을 만들어야 하고 connect_phase 에서 포트를 잇는지, 시뮬레이션이 왜 어느 시점에 멈추는지 — 전부 이 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후 챕터들의 모든 코드 패턴이 "그냥 외워야 하는 관습" 으로 보입니다. 반대로 Phase 흐름이 머리에 박히면 디버그 중 "이 시점에 무슨 phase 가 도는가" 가 즉시 보이고, build/connect 순서 위반·objection 누락·drain time 부족 — UVM 의 가장 흔한 hang 3종이 한 눈에 분류됩니다.
@@ -584,6 +606,36 @@ endclass
     - 모든 derived test 의 `build_phase` / `connect_phase` 첫 줄에 `super.<phase>(phase)` 호출 — 이걸 빼면 base 가 만든 env / config_db / factory override 가 전부 사라짐.
     - function-phase 에 `#delay` 쓰지 말 것 — 컴파일 에러 또는 무시.
     - Component 생성은 항상 `type_id::create(...)` — `new()` 직접 호출 시 factory override 불가.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Phase 가 9 단계인 이유 (Bloom: Analyze)"
+    `build → connect → end_of_elaboration → start_of_simulation → run → extract → check → report → final`. 5 단계로 줄이지 않고 9 단계로 분리한 _이유_ 1 가지?
+    ??? success "정답"
+        Phase 분리의 핵심:
+        - **선후 보장**: build (top→bottom) 와 connect (bottom→top) 가 _분리_ 되어 있어야 자식이 부모보다 먼저 생성 + 연결은 자식 핸들이 준비된 후.
+        - **function vs task 구분**: build/connect/extract/check/report = function (time 0), run = task (time advance). 같은 phase 에 시간 진행 + 비진행 혼재 시 race.
+        - **report vs final**: report 는 메시지 출력, final 은 dump close — 순서가 뒤집히면 dump 가 잘림.
+        - 5 단계 통합 시: ordering 가정이 어그러져 race 발생, "어디서 죽었는지" 분리 불가.
+
+!!! question "🤔 Q2 — `super.build_phase` 누락 (Bloom: Apply)"
+    Derived test 가 `super.build_phase(phase)` 를 안 부르면 어떤 _증상_ 이 시뮬레이션에서 나타날까?
+    ??? success "정답"
+        Base test 가 생성하는 모든 것이 사라짐:
+        - **env null pointer**: base 의 `env = env_t::type_id::create(...)` 미실행 → derived 에서 `env.scoreboard` 접근 시 NULL dereference FATAL.
+        - **config_db 항목 누락**: base 의 `uvm_config_db#(...)::set(...)` 미실행 → agent 가 vif 못 찾아 FATAL.
+        - **factory override 누락**: base 의 `set_type_override_by_type(...)` 미실행 → custom seq 가 default 로 동작.
+        - 디버그 단서: `phase build_phase` 라인이 정확히 1 줄만 출력 (정상은 base + derived = 2 줄).
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `UVM Phase Mechanics` — 9 단계 ordering + super 호출 규칙
+- `Common UVM Pitfalls` — 누락 증상 매트릭스
+
+**External**
+- *UVM 1.2 User's Guide* §4 (Phasing) — Accellera
+- IEEE 1800.2-2020 *UVM Reference Manual* — phase 정의
 
 ---
 

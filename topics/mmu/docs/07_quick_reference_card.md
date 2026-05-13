@@ -434,6 +434,39 @@ Pseudo-LRU HW 비용 (N-way):
     - 카드의 "이력서 연결" 표는 자기 경험과 맞게 _이름을 바꿔_ 사용. 그대로 인용하면 면접관이 "AI 답변" 의 흔적을 즉시 감지.
     - 카드는 _완주 후_ 의 도구. 1~6 모듈을 안 본 상태에서 카드만 학습하면 _진짜 함정_.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 6 path 분류 (Bloom: Apply)"
+    "TLB miss 후 walk 도 miss, 결국 PTE invalid". 6 path 중 어느 path?
+    ??? success "정답"
+        Fault path:
+        - Hit → 1 cycle, 끝.
+        - Miss → Walk 시작 → cache hit/miss 별로 분기.
+        - Walk → PTE valid 면 TLB fill, **invalid 면 Fault**.
+        - Fault → CPU exception → handler → PTE 갱신 → retry.
+        - 결론: walk miss 후 PTE invalid = "TLB miss + Walk + Fault" 의 3 path 결합.
+        - 검증 포인트: handler 마무리 직전 TLBI 누락 시 stale entry 잔존.
+
+!!! question "🤔 Q2 — 카드 사용 trigger (Bloom: Evaluate)"
+    "MMU performance 가 design budget 미달" — 카드의 어디부터?
+    ??? success "정답"
+        §5.3 수치 표 → §5.6 결정 트리:
+        - **§5.3**: TLB hit rate / walk cycle / IOMMU IOTLB rate 의 현 수치.
+        - **§5.6 결정 트리**: hit rate 낮음 → huge page / ASID / prefetch. walk 느림 → PWC 크기 / nested S1+S2 분리.
+        - 본문 점프: M03 (TLB) 또는 M05 (Performance).
+        - 안티패턴: 카드만 보고 cure 결정 → 진단 없이 huge page enable → fragmentation 폭증.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `MMU Curriculum` — 6 path 모델 + 모듈 매핑
+- `MMU Performance Tuning` — TLB / Walk / IOTLB 최적화
+
+**External**
+- ARM ARM (DDI0487) §D5 *VMSAv8-64*
+- Intel SDM Vol 3A §4 *Paging*
+- *Computer Architecture: A Quantitative Approach* — Memory hierarchy
+
 ---
 
 ## 코스 마무리

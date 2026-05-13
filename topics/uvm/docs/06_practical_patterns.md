@@ -42,6 +42,24 @@
 
 ## 1. Why care? — 처음엔 동작하지만 환경이 커지면 깨지는 패턴들
 
+### 1.1 시나리오 — _God Env_ 의 죽음
+
+당신은 _작은_ TB 시작. `env` 안에 모든 component 직접 instantiate. 작동 OK.
+
+6 개월 후:
+- 새 protocol 추가 → env 에 component 더 추가.
+- 새 sequence 추가 → env 가 sequencer ref 들고 시작.
+- 새 scoreboard → env 가 직접 connect.
+
+1 년 후: **env class 2000 줄**. 모든 component 의 _hidden coupling_:
+- env 에서 a 변경하면 b 도 깨짐 (test 가 그것에 의존).
+- 새 project 포팅 → env 통째로 _copy_ → 많은 변경 → 새 bug.
+
+해법: **Agent 캡슐화**:
+- env 는 _agent들의 컨테이너_ 만.
+- 각 agent 가 _자기 component_ 관리.
+- env 추가/변경이 _다른 agent 에 영향 없음_.
+
 UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading failure** 를 만듭니다. 6 년+ 경력자도 새 프로젝트에서 자주 반복하는 실수가 있고, 코드 리뷰에서 근거 없이 "이건 좀..." 같은 피드백은 무력합니다.
 
 이 모듈은 **재현 가능한 좋은 설계 결정** 을 내리는 어휘를 제공합니다 — Config Object, Base Test 상속, Layered Sequence, Parameterized Agent 의 4 패턴과, God Env / Driver 안 DUT 로직 / Sequence 의 #delay / 다중 곳 Objection / 경로 하드코딩의 5 안티패턴. 이 어휘 위에서 코드 리뷰는 **"이 부분은 God Env 안티패턴 — Agent 로 캡슐화하자"** 처럼 _근거 있는_ 피드백이 됩니다.
@@ -521,6 +539,36 @@ endclass
     - **`new()` 직접 호출 금지** — type_id::create 만 사용해야 factory override 가 적용.
     - **Sequence 의 `#delay` 는 코드 리뷰의 1 차 reject 사유** — 이벤트 / 핸드셰이크로 대체.
     - **Test 외에서 raise/drop 하지 말 것** — 종료 시점이 _분산_ 되면 디버그 어려움.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Sequence `#delay` 금지 (Bloom: Analyze)"
+    `#10ns` 를 sequence 에 쓰면 안 되는 _구조적_ 이유?
+    ??? success "정답"
+        Sequence 는 _시나리오_ 층, 시간 단위 의존은 다른 계층의 책임:
+        - **재사용성**: protocol 의 cycle time 이 바뀌면 (10ns clock → 5ns) sequence 전부 수정 필요. 이벤트 기반이면 무관.
+        - **테스트 환경 변경**: emulator vs sim 의 timing 이 다름 → hard-coded delay 가 _flaky_ 의 주범.
+        - **handshake 인 경우 잘못된 추상화**: driver 가 `ready/valid` 로 자연 동기화하므로 `#10` 은 race 또는 무의미.
+        - **대안**: `wait(event)`, `@posedge vif.clk iff (vif.ready)`, 또는 별도 sync_seq.
+
+!!! question "🤔 Q2 — Objection raise/drop 위치 (Bloom: Evaluate)"
+    Test 의 `run_phase` 만 raise/drop 하라는 규칙. 만약 sequence 안에서 raise 하면?
+    ??? success "정답"
+        분산 종료 = 디버그 지옥:
+        - **증상**: test 가 _이상한 시점_ 에 종료. 어떤 sequence/agent 가 마지막으로 drop 했는지 추적해야 함.
+        - **race**: 여러 sequence 가 동시에 raise/drop 시 ordering 에 따라 매번 다른 종료 시점.
+        - **모범**: test 의 run_phase 에서 raise → fork-join 으로 모든 seq.start → drop. 시작/끝 1 지점.
+        - 예외: long-running monitor 가 끝나야 의미 있는 검사라면 monitor 의 raise 가 정당화될 수 있음 — 단, 문서화 필수.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `UVM Code Review Checklist` — 안티패턴 매트릭스
+- `Objection Management` — raise/drop 위치 규칙
+
+**External**
+- *UVM 1.2 User's Guide* §10 (End of Test) — Accellera
+- *UVM Cookbook* (Mentor) — Common Pitfalls
 
 ---
 

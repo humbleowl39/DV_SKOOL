@@ -43,6 +43,24 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Silent corruption_ 의 비싼 대가
+
+DRAM 검증은 일반 IP DV 와 _근본적으로_ 다릅니다. 일반 IP:
+- Functional test 통과 → silicon 에서도 거의 OK.
+
+DRAM:
+- Functional test 통과 → silicon 에서 _가끔_ 데이터 깨짐. **Silent corruption**.
+
+이유:
+- _수십 개 timing parameter_ (`tRC`, `tRCD`, `tRP`, `tRAS`, `tFAW`, ...).
+- **모든 조합** 이 OK 여야 함. 한 조합만 빠뜨려도 _특정 워크로드_ 에서 fail.
+- ECC injection, refresh, training 같은 _stateful_ 시나리오.
+
+실제 사례:
+- 2018 Intel 의 _Spectre_ 같은 micro-architectural bug.
+- 2014 Rowhammer — _refresh interval_ 이 _공격적으로 짧게_ 설정된 cell 의 _이웃 row_ flip.
+- Silent corruption 발견까지 _수개월_ 또는 _수년_ 걸림.
+
 DRAM 검증은 **타이밍 + 무결성 + 성능 의 동시 검증** 입니다. 일반 IP 처럼 "input/output mapping 만 맞으면 OK" 가 아니라 _수십 개의 timing constraint_ (`tRC`, `tRCD`, `tRP`, `tRAS`, `tFAW`, `tREFI`, `tCCD_S/L`, `tWTR`, `tRTW`, `tRFC` ...) 가 _모든 명령 조합_ 에서 충족되어야 합니다. 게다가 ECC injection / refresh 누락 / training 실패 같은 **silent corruption** 시나리오 — 동작은 하지만 데이터가 깨지는 — 를 빠짐없이 다뤄야 합니다.
 
 이 모듈을 건너뛰면 단위 test 는 통과하는데 silicon 에서 random 워크로드가 실패하는 경험을 하게 됩니다. 반대로 이 모듈의 _3축 검증 + protocol checker + performance reference_ 구조를 잡고 나면 어떤 실패가 들어와도 어느 축 (timing / data / perf) 의 문제인지 즉시 분류 가능합니다.
@@ -613,6 +631,35 @@ Resume:
     - SVA 100% PASS + Scoreboard 100% PASS 로도 _BW 미달_ 은 잡히지 않음. perf reference 를 회귀에 반드시 포함.
     - DRAM model 자체의 신규 feature 누락이 silent corruption 의 근원이 됨 — vendor VIP + behavioral 의 cross-check 가 안전.
     - Coverage 100% 가 검증 완료를 보증하지 않음 — directed stress (ZQ + RD race, refresh storm) 는 cross-coverage 가 잡지 못함.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — 3 축 검증 (Bloom: Apply)"
+    DRAM DV 의 3 축 (Timing / Data / Performance). 각각의 _signal/metric_?
+
+    ??? success "정답"
+        - **Timing**: SVA on tRC/tRCD/tRP/tFAW/... 모든 spec parameter. Violation = fail.
+        - **Data**: Scoreboard 의 read data == write data. ECC injection 시나리오.
+        - **Performance**: BW (GB/s), latency P50/P99, row hit rate, refresh overhead. Reference vs DUT 비교.
+
+        3 축 _모두 pass_ 가 sign-off. 한 축만 보면 false safety.
+
+!!! question "🤔 Q2 — Silent corruption 검증 (Bloom: Evaluate)"
+    Refresh + ECC + Training 의 _복합 silent corruption_. 어떤 시나리오?
+
+    ??? success "정답"
+        - **Refresh skip + drift**: tREFI 일부러 위반 → row 의 _drift bit_ 발생 → ECC correct 까지 시간.
+        - **ECC fail at training boundary**: retraining 중 read → ECC 정정 실패.
+        - **Multi-rank + ECC race**: ODT 미세 변동 + ECC bit flip 동시 발생.
+
+        각 시나리오의 _data integrity_ 추적 — scoreboard 가 silent corruption catch.
+
+### 7.2 출처
+
+**External**
+- JEDEC DDR4/5 spec
+- *DRAM Verification Methodology* — academic/industry
+- Cadence/Synopsys DDR VIP guides
 
 ---
 

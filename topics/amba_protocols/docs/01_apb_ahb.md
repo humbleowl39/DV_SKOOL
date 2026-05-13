@@ -43,9 +43,46 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 왜 _AXI 만_ 안 쓰고 APB/AHB 도 있나?
+
+당신은 SoC 를 설계합니다. CPU + DDR + UART + GPIO + Timer + USB Controller + Crypto + DMA + Ethernet MAC + ...
+
+첫 본능: "**AXI 하나로 통일**". 단순하고 일관성.
+
+실제로 해보면:
+
+| Peripheral | Register 수 | 면적 | AXI master slave 추가 면적 | 면적 오버헤드 |
+|-----------|-----------|-----|---------------------------|-------------|
+| UART | 8 | 5K gates | AXI slave: 20K gates | **400%** |
+| GPIO | 4 | 2K gates | AXI slave: 20K gates | **1000%** |
+| DDR controller | many | 200K gates | AXI master: 30K | 15% |
+| Ethernet MAC | many | 500K gates | AXI master: 30K | 6% |
+
+**UART/GPIO 같은 저속 peripheral 은 _AXI 인터페이스 자체_ 가 IP 본체보다 큼**. 면적/전력 낭비가 큼.
+
+해법: **계층적 bus** —
+- **APB**: 저속 peripheral 용. 게이트 적음, 매우 단순. SETUP/ACCESS 2-phase.
+- **AHB**: 중속 (legacy IP, 일부 메모리). Pipelined address/data.
+- **AXI**: 고속 (DDR, CPU, DMA, 고대역 IP). 5채널, outstanding/OOO.
+
+**APB ↔ AXI bridge** 를 두고 high-speed 영역만 AXI, low-speed 는 APB 로 분리 → 면적 절감 70%+.
+
 이후의 모든 AMBA 모듈은 한 가지 추상에서 출발합니다 — **"한 master 가 한 slave 의 register/memory 에 cycle-deterministic 하게 read/write 한다"**. AXI 의 5채널, AXI-Stream 의 TVALID/TREADY, exclusive monitor, ordering 까지 — 전부 이 가장 단순한 모델 (APB) 과 그 첫 확장 (AHB pipelined) 의 파생입니다.
 
 이 모듈을 건너뛰면 AXI 의 VALID/READY 가 _왜_ 그렇게 정의됐는지 보이지 않습니다. 반대로 APB 의 SETUP/ACCESS 2-phase, AHB 의 address/data 파이프라인을 손으로 한 번 그려 보면 이후 AXI handshake / outstanding / OOO 가 "이미 본 패턴의 확장" 으로 보입니다. **APB = SoC register 접근의 사실상 표준**, **AHB = 레거시 IP 통합과 dual-port memory access 의 이해 모델** 입니다.
+
+!!! question "🤔 잠깐 — APB 의 SETUP 단계가 _왜_ 필요한가?"
+    AXI 는 1 cycle 에 valid + ready 동시 평가. APB 는 _2 phase_ (SETUP → ACCESS). 왜 한 phase 로 끝내지 않나?
+
+    ??? success "정답"
+        **저전력 + 저게이트** 최적화.
+
+        - SETUP phase: PSEL = 1, PENABLE = 0. _주소만_ 안정화 (decode 가능). Slave 가 자기 활성화 결정.
+        - ACCESS phase: PSEL = 1, PENABLE = 1. 데이터 전송.
+
+        왜 분리? **SETUP 동안 _decoder 만_ 동작 → 다른 slave 들은 _clock gated_ 가능 → 전력 절감**. 또한 _주소 decode_ 와 _데이터 처리_ 가 _다른 cycle_ 이라 _critical path 짧음_ → 낮은 클럭 IP 도 사용 가능.
+
+        AXI 가 1 cycle 인 이유는 _throughput_ 이 본질이라 전력보다 처리량 우선. 두 protocol 의 _다른 목표_ 가 _다른 phase 수_ 로 직결.
 
 ---
 
@@ -644,6 +681,41 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
     **원인**: 두 프로토콜 모두 "transfer 완료 신호 (PREADY/HREADY) 가 1 이 될 때까지 모든 신호를 hold" 가 필수 invariant 다. master/slave 어느 쪽이든 wait state 동안 신호를 바꾸면 받는 쪽이 어느 사이클의 값을 sample 할지 정의되지 않는다.
 
     **점검 포인트**: SVA 로 `assert property (@(posedge PCLK) (PSEL && !PREADY) |=> $stable(PADDR) && $stable(PWDATA))` 같은 stable 속성 작성. 리뷰 시 RTL master 의 wait state handling 코드에서 register-update 가 PREADY/HREADY 조건과 묶여 있는지 확인.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — APB vs AHB 선택 (Bloom: Apply)"
+    32 개의 8-bit register 를 가진 control peripheral. APB / AHB 중?
+
+    ??? success "정답"
+        **APB**. 이유:
+        - Register count 적음 (32 × 32-bit = 1 KB) → throughput 불필요.
+        - Wait state 거의 없음 → 단순 2-phase 로 충분.
+        - 면적/전력 절감 ★.
+
+        AHB 는 _legacy memory_ 또는 _DMA target_ 처럼 매 cycle throughput 이 필요한 경우. Control register 에는 over-engineered.
+
+!!! question "🤔 Q2 — SVA stable assertion (Bloom: Analyze)"
+    AHB master 가 `HREADY=0` 인 사이클에 `HADDR` 을 _다른 값_ 으로 바꿈. _시뮬은 통과_ 했는데 실제 chip 에서 random data corruption. 왜?
+
+    ??? success "정답"
+        Slave 가 _어느 cycle_ 의 HADDR 을 sample 할지 _spec 정의 안 됨_:
+        - Slave A: HREADY=0 첫 cycle 의 HADDR sample → 정상 동작.
+        - Slave B: HREADY=1 마지막 cycle 의 HADDR sample → 변경된 (잘못된) HADDR.
+
+        시뮬에서 _slave A 모델_ 이라 통과. 실제 chip 의 slave 가 _slave B_ 같으면 corruption. → **SVA `$stable(HADDR) until HREADY` 로 catch**.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- 사내 AXI / AHB / APB 통합 가이드
+- `[SIRH] SoC-infra Main Branch Release Note` (id=8159663)
+- `HLS design practice in MangoBoost` (id=214663975)
+
+**External**
+- ARM, *AMBA APB Protocol Specification* (IHI 0024C)
+- ARM, *AMBA AHB Protocol Specification* (IHI 0033B)
+- *AXI Handshaking Rules* — ZipCPU blog (2021)
 
 ---
 

@@ -43,6 +43,26 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _Wrong PA_ DMA write
+
+당신의 RDMA test 가 `F-C2H-MATCH` fatal. DUT 가 host 의 _wrong PA_ 에 DMA write.
+
+가능 원인:
+- **PTW bug**: virtual → physical 변환 잘못.
+- **QP routing**: 잘못된 QP 의 MR 사용.
+- **MR page table**: page entry corruption.
+- **Completion FSM**: PA 계산 logic bug.
+
+C2H tracker 의 진단 로그 `W-C2H-MATCH-*`:
+- _Expected_ PA 큐.
+- _Actual_ PA (DUT 가 쓴 것).
+- _Unprocessed_ expected PA (아직 안 와서 대기).
+
+이 3 가지 비교로 _즉시_ 가설:
+- Actual PA 가 _다른 QP 의 expected_ 와 매칭 → **QP routing bug**.
+- Actual PA 가 _어디에도 매칭 안 됨_ → **PTW** 또는 **MR page table** bug.
+- Actual PA 가 _다음 expected_ 와 매칭 (순서 잘못) → **completion FSM ordering bug**.
+
 C2H tracker 는 DUT 가 host 에 쓴 **모든** DMA 가 "기대된 주소 + 기대된 순서 + 기대된 크기" 인지 검증하는 단일 게이트입니다. 매칭 실패는 곧 **DUT 가 host 메모리의 잘못된 위치에 데이터를 쏟았다** 는 신호이므로, root cause 가 PTW / QP routing / MR page table / completion FSM 중 어디인지 빠르게 좁히지 못하면 fsdb 에서 길을 잃습니다.
 
 이 모듈을 건너뛰면 `F-C2H-MATCH-0002` 로그를 보고 "어느 QP 의 PA 인가? expected 와 왜 다른가? 다른 QP 와 우연히 매칭됐는가?" 같은 질문을 매번 처음부터 푸느라 시간을 낭비합니다. 진단 로그 (`W-C2H-MATCH-*`) 를 정확히 해석할 줄 알면 `fatal` 직전 한 줄에서 unprocessed PA 큐를 추출해 1 step 만에 가설 분기가 가능합니다.
@@ -393,6 +413,32 @@ end
     - `W-C2H-MATCH-*` 는 fatal 직전 1 회만 — `head -10` 로 즉시 캡처. cascade 된 fatal 의 W-* 는 의미 없음.
     - OPS/SR QP 의 ordering violation 은 c2h_tracker 의 QP type 인식부터 의심 (TB false-positive 가능).
     - Zero-length transfer 는 `trackCommand` 자체가 skip 될 수 있음 → `F-C2H-MATCH-0005` 의 root cause 가 TB 측일 수도.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Match 가설 분기 (Bloom: Analyze)"
+    `F-C2H-MATCH-0002`. Actual PA 가 _expected 와 다른 PA_. 어디 의심?
+
+    ??? success "정답"
+        Actual PA 와 _다른 QP_ 의 expected 비교:
+        - 다른 QP 의 expected 와 match → **QP routing bug**.
+        - 어디에도 match 안 됨 → **PTW** 또는 **MR page table** bug.
+        - Next expected 와 match (순서 잘못) → **completion FSM ordering bug**.
+
+!!! question "🤔 Q2 — Zero-length corner case (Bloom: Evaluate)"
+    Zero-length WRITE. `F-C2H-MATCH-0005` 발생. TB 측 issue?
+
+    ??? success "정답"
+        가능. `trackCommand` 가 _zero length_ 일 때 skip 또는 단순 처리 → expected queue 에 안 들어감. DUT 가 정상 처리 (no DMA) → tracker 가 mismatch 보고.
+
+        대응:
+        - Zero-length spec 동작 확인 (DUT 가 _no DMA_ 또는 _zero-byte DMA_?).
+        - TB 의 `trackCommand` zero-length 처리 일관성 검토.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `C2H Tracker Error` (id=1335656540)
 
 ---
 

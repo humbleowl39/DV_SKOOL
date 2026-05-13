@@ -42,6 +42,29 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — 두 가지 _모순된_ 요구
+
+당신은 IB 패킷 포맷을 설계해야 합니다. 두 가지 요구가 _동시에_ 떨어졌습니다:
+
+1. **Subnet Manager (SM) 가 토폴로지를 자유롭게 바꿀 수 있어야 한다** → 라우터/스위치는 패킷의 **DLID, VL** 같은 라우팅 필드를 hop 마다 _자유롭게 변경_ 해야 합니다.
+2. **그런데 sender 가 보낸 데이터는 receiver 가 받았을 때 _bit-exact_ 로 같음을 검증할 수 있어야 한다** → 즉 end-to-end 무결성이 hardware-level 로 보장돼야 합니다.
+
+문제: **CRC 한 개로 둘 다 만족하면** — 라우터가 LRH 의 필드 하나만 바꿔도 CRC 가 깨집니다. 그렇다고 **각 hop 마다 CRC 를 재계산** 하면 — sender 의 의도가 _도중에 침해_ 됐는지 receiver 가 확인할 수 없습니다.
+
+**이 모순을 어떻게 풀까?** 이 모듈의 답은 "두 개의 CRC — 변경 가능 영역을 빼고 계산하는 _invariant_ CRC + 전체에 대한 _variant_ CRC" 입니다. 이 발상 하나가 IB 패킷의 _전체 레이아웃_ 을 결정합니다.
+
+!!! question "🤔 잠깐 — TCP/IP 는 어떻게 풀었나?"
+    TCP/IP 패킷도 라우터를 통과합니다. IP TTL 이 hop 마다 줄어듭니다. 그런데 IP 헤더에는 CRC 가 _없습니다_. 어떻게 가능한가요? Ethernet FCS 와 IP checksum 의 역할 차이를 떠올려 보세요.
+
+    ??? success "정답"
+        - **Ethernet FCS** (4 byte) — hop-by-hop, 매 link 마다 재계산. IB 의 VCRC 와 같은 역할.
+        - **IP checksum** (16-bit) — 헤더만 대상, end-to-end. 라우터가 TTL 줄이면 checksum 도 _delta update_ (incremental).
+        - **TCP checksum** — TCP 헤더 + payload, end-to-end.
+
+        결론: TCP/IP 는 _delta update_ 트릭으로 single-checksum 을 hop-by-hop 변경 가능하게 만듦. **하지만 RDMA 는 1 µs latency 목표라 hardware-friendly 한 CRC 가 필요** → delta update 가 아닌 **변경 가능 영역 제외** 방식의 ICRC 를 채택. 이게 IB 와 TCP/IP 의 핵심 분기점.
+
+### 1.2 그래서 이 모듈을 잡아야 한다
+
 **IB Spec 의 모든 protocol rule 은 packet header field 를 기반으로 표현됩니다.** PROTOCOL_RULES.md 의 1079 must-rule 중 대다수가 "이 필드는 이 값이어야 한다" 형태이므로, 각 헤더의 위치/길이/의미를 알지 못하면 규칙도 spec 도 읽기 어렵습니다.
 
 또한 검증의 99% 는 패킷 monitor / scoreboard / assertion — **모두 헤더 필드 비교** 입니다. 즉 이 모듈의 어휘는 이후 **거의 모든 DV 코드 라인** 에 등장합니다.
@@ -93,15 +116,32 @@ flowchart TB
     class S_BTH,S_XTH,S_PAY,S_ICRC,R_BTH,R_XTH,R_PAY,R_ICRC e2e
 ```
 
-### 왜 이 디자인인가 — Design rationale
+### 왜 이 디자인인가 — 두 순진한 시도가 실패한 결과
 
-세 가지 요구가 동시에 풀려야 했습니다.
+§1.1 의 모순 — "라우터는 LRH 를 바꿔야 하는데 무결성도 보장해야 한다" — 을 푸는 두 순진한 접근이 _왜 안 됐는지_ 를 따라가면 ICRC/VCRC 분리의 필연성이 보입니다.
+
+**시도 A — "Single CRC for everything" (TCP/IP 의 1990 년대 식)**
+
+전체 패킷에 한 개의 CRC 를 붙입니다. 결과:
+- 라우터가 DLID 를 rewrite → CRC 깨짐 → 라우터가 CRC 도 _재계산해야_ 함 (delta-update).
+- IPv4 의 incremental checksum trick 처럼 _수학적으로_ 재계산 가능하지만, **CRC32 는 IP checksum 보다 훨씬 복잡** — hardware 로 line-rate 재계산하려면 전체 패킷을 다시 통과시켜야 함.
+- 100 Gbps 스위치에서 패킷당 ~120 ns 안에 CRC32 재계산하려면 거대한 로직 필요 → **port-to-port latency 가 IB 의 100 ns 목표를 깨뜨림**.
+
+**시도 B — "라우터마다 새 CRC, end-to-end 없음"**
+
+각 hop 마다 CRC 를 재계산하고 end-to-end CRC 는 포기. 결과:
+- 라우터 SRAM bit-flip 같은 _라우터 자체_ 의 데이터 corruption 을 receiver 가 감지 못 함.
+- 1995 년 한 대형 supercomputer 에서 실제로 발생한 사례 — 라우터 SRAM 의 single-bit flip 이 수 시간 분량의 계산을 silently 망침. _이후 IB 디자인에서 end-to-end 무결성을 spec 필수로 격상_.
+
+**해법 — 두 CRC 동거**
+
+세 요구가 동시에 풀려야 했습니다:
 
 1. **Subnet 내에서는 Subnet Manager (SM) 가 토폴로지 변경에 따라 LID/VL 매핑을 바꿀 수 있어야** → LRH 가 hop-by-hop rewrite 대상.
 2. **그래도 sender 가 보낸 데이터의 무결성은 receiver 가 end-to-end 로 검증해야** → ICRC 가 변경 가능 영역을 빼고 계산.
 3. **각 link 의 무결성도 hop 마다 보장해야** → VCRC 가 hop 마다 재계산.
 
-이 세 요구의 교집합이 LRH 분리 + ICRC/VCRC 이중 CRC 입니다.
+이 세 요구의 교집합이 LRH 분리 + ICRC/VCRC 이중 CRC 입니다. **두 CRC 의 _계산 범위 경계_ 가 곧 "라우터가 만질 수 있는 영역" 과 "만지면 안 되는 영역" 의 _spec-enforced_ 선언** 입니다.
 
 ---
 
@@ -151,6 +191,18 @@ flowchart TB
 
 1. **변경 가능한 것 (LRH 일부, VCRC) vs 변경 불가능한 것 (BTH, xTH, Payload, ICRC) 의 경계가 존재한다.** 이 경계가 ICRC 의 계산 범위로 명문화돼 있고, 검증의 핵심 invariant 입니다.
 2. **SL 은 절대 안 바뀐다 — VL 은 hop 마다 바뀔 수 있다.** SL 은 application QoS 의 약속, VL 은 각 link 의 자원. SL2VL 표가 그 사이를 매개합니다.
+
+!!! question "🤔 잠깐 — BTH.OpCode 디코딩"
+    BTH.OpCode = `0x06` 을 받았습니다. 이게 어떤 service 의 어떤 operation 인가요?
+
+    힌트: OpCode 는 8 bit. 상위 3 bit 가 service type, 하위 5 bit 가 operation.
+
+    ??? success "정답"
+        `0x06` = `001_00110`.
+        - 상위 3 bit `001` = **RC** (Reliable Connection)
+        - 하위 5 bit `00110` = **SEND_LAST** (멀티 패킷 SEND 의 마지막)
+
+        즉 이 패킷은 RC 의 multi-packet SEND 의 _마지막_ 패킷 → AckReq bit 가 set 됐을 가능성 높음 → responder 는 RECV WQE 를 소비하고 ACK 를 보냄 + CQE 생성. 첫 패킷부터 이 패킷까지 _하나의 메시지_ 로 묶임.
 
 ---
 
@@ -349,6 +401,40 @@ flowchart LR
 
 → **RoCEv2 에서는 VCRC 가 사라지고 Ethernet FCS 가 그 역할을 대체**. ICRC 는 계산 방식이 약간 다르지만 그대로 유지 (Module 03 에서 자세히).
 
+#### 실패 모드 — ICRC 가 깨지면 정확히 무엇이 일어나는가
+
+ICRC fail 은 _silent drop_ 입니다. Spec §9.6 (Confluence id=1349943308 인용):
+
+> "Lower IBA layer 에서 transport layer 로 올라오는 모든 packet 에 대해 packet header validation 을 수행. 못하면 silent drop... ACK 미반환, Receive WQE 미소비, errant request packet 실행 안 됨, 그 이전에 받은 request 들은 정상 실행, Responder 의 expected PSN 변경 없음."
+
+이게 디버그 관점에서 _가장 무서운_ 케이스인 이유:
+
+```
+   sender 측 관측:                    receiver 측 관측:                   네트워크 관측:
+   ─────────────                      ──────────────────                  ────────────────
+   post_send 성공                      RECV WQE 그대로 (소비 안 됨)        wire 에 패킷 _보임_
+   CQE 안 옴 (timeout 까지)            CPU 안 깨움                         FCS / VCRC 통과
+   timeout 후 retry                                                        ICRC 만 fail
+                                                                          (analyzer 가 못 보면 안 보임)
+```
+
+**즉 application 은 "RDMA 가 hang 한 것 처럼" 보임**. 실제 원인은 _라우터/스위치 bug_ 인데, sender 의 timeout 만 보고 sender 의 retry exhaustion 으로 진단되기 쉽습니다. DV 환경에서 ICRC injection 시나리오를 두는 이유.
+
+!!! note "Internal (Confluence: 9.6 Packet Transport Header Validation, id=1349943308)"
+    Spec §9.6 의 silent-drop 정의를 그대로 인용. validation state machine (Figure 85) 은 13 단계 — 어느 단계에서 fail 해도 silent drop 동작이 동일.
+    검증 시 _각 단계_ 마다 fault injection 시나리오를 만들어야 (e.g. BTH.TVer ≠ 0, BTH.QPN 미존재, P_Key mismatch, GRH error, DETH Q_Key error, LID error, Multicast error).
+
+#### 대안 비교 — 왜 incremental checksum 이 아닌가?
+
+| 방식 | 장점 | 단점 | IB 채택? |
+|------|------|------|---------|
+| **Single CRC + delta update** (TCP/IP) | 헤더 1 개 | CRC32 delta 가 복잡, hardware 로 100 ns 안에 어려움 | ✗ — port-port 100 ns 목표 못 맞춤 |
+| **Hop CRC only** | 단순 | end-to-end 무결성 없음 (1995 SRAM bug 사례) | ✗ — 무결성 spec 필수 |
+| **AH (IPsec) 식 hop-by-hop 인증** | 보안 ★ | key management 오버헤드, MAC 계산 시간 | ✗ — RDMA 의 latency 목표와 정면 충돌 |
+| **ICRC + VCRC 분리** (IB) | hardware-친화적, 두 요구 동시 만족 | 헤더 2 개 (4 + 2 byte 오버헤드) | ✓ |
+
+이 비교가 **검증 관점에서도 가치 있는 이유**: scoreboard 에서 ICRC 와 VCRC 를 _서로 다른 영역_ 으로 검사해야 한다는 spec 강제를 _이해_ 하게 됨. 단순 "두 CRC 가 있다" 가 아니라 **두 CRC 가 서로 다른 실패 모드를 잡는다**.
+
 ### 5.5 Virtual Lanes 와 Service Level
 
 #### Virtual Lane (VL)
@@ -510,6 +596,49 @@ stateDiagram-v2
     - PROTOCOL_RULES.md 의 R-001 ~ R-085 (Architecture, Packet Format, Link Layer) 는 RoCEv2 에서 **대부분 NOT-APPLICABLE**. RoCEv2 검증 시 이 영역의 규칙을 그대로 가져오면 false positive 가 발생합니다 → ROCEV2_RULE_APPLICABILITY.md 참고.
     - LRH 의 PktLen 단위가 4-byte word 라서 byte 단위 길이 검사 시 ×4 필수.
     - GRH 의 PayLen 은 GRH 다음 byte 부터 ICRC 끝까지 — IB 와 IPv6 의 PayLen 정의가 미묘하게 다름 (RoCEv2 의 IP PayLen 도 또 다름).
+
+### 7.1 자가 점검 — 이 모듈을 진짜로 이해했는지
+
+!!! question "🤔 Q1 — Switch fault injection (Bloom: Analyze)"
+    Switch 한 대가 _BTH.OpCode_ 의 한 bit 를 잘못 flip 합니다. 다음을 따져 보세요:
+    - **(a)** Switch 가 VCRC 를 재계산 후 다음 link 로 패킷을 보냅니다. Sender/receiver 가 이걸 감지할 수 있는가?
+    - **(b)** 감지 가능하다면 _어떤 메커니즘_ 이? 감지 불가능하다면 _왜_?
+
+    ??? success "정답"
+        - **(a) 감지 가능 — Receiver 의 ICRC 검증에서 fail**.
+        - **(b) BTH 는 ICRC 보호 영역 (변경 가능 영역에서 _빠져있음_)** 이므로 ICRC 계산값이 sender 시점과 receiver 시점에서 달라짐. → ICRC mismatch → §9.6 의 silent drop.
+
+        만약 switch 가 LRH 만 건드렸다면 ICRC 가 통과해서 receiver 가 못 잡습니다. 그래서 _LRH 와 BTH 의 경계_ 가 결정적 — switch 의 "권한 범위" 가 곧 ICRC 계산 범위.
+
+!!! question "🤔 Q2 — RoCEv2 매핑 추론 (Bloom: Apply)"
+    IB 의 LRH/VCRC 는 RoCEv2 에서 무엇으로 대체되었나? GRH 는? 그리고 _ICRC 는 왜 RoCEv2 에서도 유지되나_?
+
+    ??? success "정답"
+        - LRH/VCRC → **Ethernet header + Ethernet FCS** (L2 routing + hop integrity).
+        - GRH → **IPv4/IPv6 header** (L3 routing). GRH 가 _애초에 IPv6 형식_ 이라 매핑이 매우 깔끔.
+        - ICRC 는 RoCEv2 에서도 **유지** — Ethernet FCS 는 hop-by-hop 만 보장, end-to-end 무결성은 여전히 ICRC 가 책임. 다만 계산 범위가 _IP/UDP 헤더의 일부_ 도 포함 (dummy LRH 로 처리) — 자세한 차이는 M03.
+
+!!! question "🤔 Q3 — DV scoreboard 설계 (Bloom: Evaluate)"
+    당신이 IB packet scoreboard 를 설계합니다. _Switch 가 SL 필드를 잘못 변경한 시나리오_ 를 어떻게 감지하시겠습니까? 단순 비교만으로는 안 되는 이유는?
+
+    ??? success "정답"
+        SL 은 **subnet 내 절대 불변** (C7-33 / R-043). 그러므로 _sender LRH.SL == receiver LRH.SL_ 검사를 SVA 로 둠. 단순 packet-by-packet 비교만으로 안 되는 이유는 **VL 은 hop 마다 바뀌므로 LRH 전체 비교는 false positive 가 남**. 따라서 LRH 비교는 _SL/DLID/SLID 만_ 정합 검사 + VL 은 _SL2VL 표를 통한 변환 정합 검사_ 두 step 으로 나누어야 함.
+
+### 7.2 출처
+
+**Internal (Confluence)**
+- `[RDMA] BTH (Base Transport Header)` (id=984907807) — BTH 필드 상세
+- `RDMA headers and header fields` (id=325320853) — 모든 xTH 의 필드와 사내 default
+- `[Study] RDMA Protocols - Presentation` (id=332365851) — 패킷 흐름 schematic
+- `9.6 Packet Transport Header Validation` (id=1349943308) — §5.4 의 silent drop 동작
+- `[RDMA] IB vs RoCE` (id=996966462) — §5.x 의 IB vs RoCE 비유 ("자기부상열차 vs 고속도로 전용 차선")
+- `Infiniband Spec Comparison v1.7 w v1.4` (id=77758684) — 1.4 ↔ 1.7 변경점
+
+**External**
+- IBTA, *InfiniBand Architecture Specification, Volume 1, Release 1.7* — Chapter 7 (Link Layer), Chapter 8 (Network Layer), Chapter 9 (Transport Layer)
+- *Packet CRCs* — O'Reilly *InfiniBand Network Architecture*, ch 25 §7
+- *Introduction to InfiniBand™* — NVIDIA/Mellanox WP IB_Intro_WP_190
+- *InfiniBand QoS* — NVIDIA DOCA SDK, 2025
 
 ---
 

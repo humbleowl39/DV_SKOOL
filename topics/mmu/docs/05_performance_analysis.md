@@ -42,6 +42,22 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _0.1% miss ratio_ 의 SLA 위반
+
+당신은 100 Gbps NIC. _Functional_ 검증 모두 통과. 그런데 _운영_ 시 throughput _100 Gbps_ 가 아닌 _80 Gbps_.
+
+추적:
+- TLB miss ratio: **0.5%** (vs ideal 0.1%).
+- Miss penalty: page walk ~400 ns.
+- 평균: hit 1 ns × 99.5% + miss 400 ns × 0.5% = **3 ns/translation**.
+- 64 byte packet @ 100 Gbps = _150 M translations/sec_.
+- 3 ns/trans → 동시 _3 nsec × 150M = 450 M cycle/sec_ TLB activity.
+- TLB bandwidth 한계 도달 → throughput cap _80 Gbps_.
+
+**0.1% miss ratio** vs **0.5%** 차이가 _20 Gbps_ SLA 위반.
+
+검증 시 _functional pass_ 만 보지 말고 _miss ratio 측정_ + _ideal 대비 비교_ 필수.
+
 **MMU 성능 검증은 functional verification 보다 미묘**합니다. PASS/FAIL 이 아니라 _"Ideal 대비 얼마나 효율적인가"_ 를 정량 분석. 100 Gbps NIC / SmartNIC 가속기는 64 byte packet 기준 **150 M+ translations/sec** 를 요구하고, miss ratio 0.1% 차이가 throughput SLA 를 좌우합니다.
 
 **Dual-Reference Model** (Functional + Ideal) 은 이력서의 시그니처 패턴 — Ideal 을 기준으로 DUT 성능 갭을 _자동_ 측정해 시뮬레이션에서 회귀를 잡습니다. P99 tail latency 는 평균만 봐선 보이지 않는 SLA 위반의 실제 원인. 이 모듈을 못 잡으면 검증이 _"되긴 한다"_ 단계에서 멈추고, _"충분히 빠른가"_ 단계로 못 넘어갑니다.
@@ -546,6 +562,38 @@ MangoBoost MMU IP 맥락:
 - **Bottleneck 분리**: TLB miss / walk depth / memory bandwidth — 각각 측정해 root cause 특정.
 - **UVM Performance Monitor**: trans 별 latency / hit 소스 / walk count 실시간 수집 + histogram + 자동 회귀.
 
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — P99 vs P50 측정 (Bloom: Analyze)"
+    Latency P50 = 5 ns, P99 = 50 ns. 의미는?
+
+    ??? success "정답"
+        - 50% 의 translation 이 _5 ns 이하_ (TLB hit, ~1 cycle).
+        - 99% 의 translation 이 _50 ns 이하_ (TLB miss → 1-2 mem access).
+        - 1% (P100) 이 _50 ns 초과_ → page walk full depth + PWC miss.
+
+        SLA: P99 50 ns 가 _허용_ 이면 OK. _요구 sub-10 ns_ 면 TLB 크기 / 정책 개선 필요.
+
+!!! question "🤔 Q2 — TLB miss penalty 분해 (Bloom: Evaluate)"
+    Penalty 400 ns. 어떻게 분해?
+
+    ??? success "정답"
+        ARMv8 4-level walk:
+        - L0/L1/L2/L3 각각 _1 memory access_ (PWC miss 시) = 4 × 100 ns = 400 ns.
+        - PWC hit 시 (예: L0/L1 cached): 2 × 100 ns = 200 ns.
+
+        Optimization:
+        - **Huge page**: walk depth 3 → 300 ns.
+        - **PWC 크기 ↑**: 더 많은 intermediate cache.
+        - **Memory access latency ↓**: caching, prefetch.
+
+### 7.2 출처
+
+**External**
+- *Performance Implications of Extended Page Tables* — research paper
+- ARM PMU (Performance Monitoring Unit) documentation
+
+---
 ## 다음 단계
 
 - 📝 [**Module 05 퀴즈**](quiz/05_performance_analysis_quiz.md)

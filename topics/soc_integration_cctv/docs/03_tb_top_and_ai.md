@@ -42,6 +42,23 @@
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+### 1.1 시나리오 — _8 개월 vs 1 주_
+
+당신은 SoC 검증. 새 SoC release 마다 TB 작성 _4 주_, 검증 8 개월 → 다음 SoC 시작.
+
+DVCon 2025 데이터 [Cadence / Synopsys]:
+- **Config-driven TB + AI Gap discovery**: 4 주 → _1 주_.
+- 8 개월 검증 사이클을 _1.5 개월_ 단축 가능.
+
+**핵심 패턴**:
+1. **TB Top 의 모든 component 가 _Config 기반_**: JSON 한 파일이 IP list, base address, common task matrix 정의.
+2. **AI Gap discovery**: 새 IP 추가 시 _LLM 이_ 기존 spec → 자동 _Gap candidates_ 제시.
+3. **사람 review + commit**: AI 가 _제안_, 사람이 _승인_.
+
+8 개월 → 1 주 = _32 배 throughput_. 같은 팀 크기로 _8 배_ chip 가능.
+
+이게 modern SoC DV 의 _가장 큰 ROI_ 영역.
+
 Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap 을 _누가 어떤 테스트로 메우는지_ 는 여전히 수동입니다. 새 IP 가 들어오거나 base address 가 바뀌면 TB 의 agent / checker / monitor / coverage 가 _전부 손으로 갱신_ 돼야 하고, 이 과정에서 "TB 작업 4 주 → 검증 시작" 의 병목이 다시 발생합니다.
 
 이 모듈을 건너뛰면 CCTV 가 그저 "한 번 만든 매트릭스" 로 끝나고, _다음 SoC_ 에서는 다시 처음부터 시작하게 됩니다. 반대로 **Config (JSON) 한 파일만 교체하면 모든 layer 가 자동 재구성** 되는 패턴을 잡으면, 8 개월에 한 번 짓던 TB 가 _1 주일_ 만에 release 가능한 상태가 됩니다 — 이게 DVCon 2025 가 정량적으로 보여준 가치입니다.
@@ -869,6 +886,50 @@ AI가 발견한 Gap 목록 (10개):
     **원인**: LLM 은 IP-XACT 구조 정보에서 clock domain 경계를 추론하지 못한다. AI 가 생성한 시퀀스 초안은 단일 클럭 가정 하에 fork/join 패턴을 사용하는 경우가 많아, 리뷰 없이 그대로 적용하면 CDC 무검증 상태가 된다.
 
     **점검 포인트**: AI 생성 시퀀스에서 각 에이전트 `start_item` / `finish_item` 앞에 해당 에이전트의 클럭 도메인을 명시했는지 확인. TB Top Config JSON 의 `clock_domain` 필드가 에이전트 연결과 일치하는지 대조.
+
+### 7.1 자가 점검
+
+!!! question "🤔 Q1 — Config-driven TB 설계 (Bloom: Apply)"
+    JSON config 에 _어떤 필드_ 가 있어야 _TB top 자동 생성_?
+
+    ??? success "정답"
+        - **IP list**: instance name, type, parameters.
+        - **Interface map**: port → bus connections.
+        - **Clock domain**: 각 IP 의 clock_domain field.
+        - **Base address**: BAR / register map.
+        - **Interrupt map**: SPI / MSI number.
+        - **Common Task list**: 각 IP 가 받을 task.
+
+        Generator 가 이 JSON 으로 _UVM agent / scoreboard / connect_ 자동 작성.
+
+!!! question "🤔 Q2 — AI 생성 결과 검증 (Bloom: Analyze)"
+    AI 가 sequence 생성. 어떻게 _human review 효율_?
+
+    ??? success "정답"
+        3-step:
+        1. **Lint**: 문법 / UVM 패턴 / 명명 규칙 자동 체크. 50% reject.
+        2. **Diff**: 기존 sequence 와 비교 — 새로운 부분만 highlight. 인간 부담 ↓.
+        3. **Test pilot**: AI 생성 sequence 를 _short regression_ → fail / pass 로 신뢰도 측정.
+
+        Final human review = _high-confidence_ sequence 만. 시간 _10×_ 단축.
+
+!!! question "🤔 Q3 — AI 자동화 ROI (Bloom: Evaluate)"
+    8 개월 → 1 주. _과대 평가_ 가능성?
+
+    ??? success "정답"
+        Caveats:
+        - **First-time setup**: 자동화 인프라 (Generator, AI prompt template) 구축 _수개월_.
+        - **Maintenance**: spec 변경 시 _Generator update_ 필요.
+        - **Edge case**: 자동 생성된 90% 의 _확장 가능_, 10% 는 _수동_ 작성.
+
+        실제 ROI: 첫 SoC _8 개월_, 두 번째 _3 주_, 세 번째부터 _1 주_. _누적_ 으로 _10×+_ 효과.
+
+### 7.2 출처
+
+**External**
+- DVCon 2025 *AI-assisted Verification* papers
+- Synopsys VC Spyglass AI / Cadence Verisium AI
+- ChipNeMo (NVIDIA), 2023
 
 ---
 
