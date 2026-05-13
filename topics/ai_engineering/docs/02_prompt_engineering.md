@@ -128,39 +128,33 @@ LLM 은 학습 시 _수많은_ "역할 + 형식 + 답변" 패턴을 봤습니다
 
 가장 단순한 시나리오. 동일 LLM 에 동일 RTL 정보를 주고, prompt 만 바꿔서 한 호출씩 응답을 비교합니다.
 
-```mermaid
-flowchart TB
-    subgraph SAME["동일 모델 (Claude Sonnet, T=0)"]
-        direction LR
-        subgraph A["Prompt A — naive"]
-            direction TB
-            A0["'UVM 테스트벤치 만들어줘'"]
-            A1["① tokenize (~6 tok)"]
-            A2["② attention"]
-            A3["③ generate"]
-            A4["④ 일반적 코드, port 추측"]
-            A5["⑤ $display 사용 (금지)"]
-            A6["⑥ factory 등록 누락"]
-            A7["⑦ 컴파일 실패 60%"]
-            A0 --> A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7
-        end
-        subgraph B["Prompt B — 구조화"]
-            direction TB
-            B0["[Role][Context][Task]<br/>[Constraint][Format]"]
-            B1["① tokenize (~150 tok)"]
-            B2["② attention (richer routing)"]
-            B3["③ generate"]
-            B4["④ 정확한 port + 컨벤션 준수"]
-            B5["⑤ `uvm_info 사용"]
-            B6["⑥ factory + config_db get"]
-            B7["⑦ 컴파일 통과 87%"]
-            B0 --> B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7
-        end
-    end
-    classDef bad stroke:#c0392b,stroke-width:2px
-    classDef good stroke:#27ae60,stroke-width:2px
-    class A7 bad
-    class B7 good
+```d2
+direction: down
+
+SAME: "동일 모델 (Claude Sonnet, T=0)" {
+  A: "Prompt A — naive" {
+    A0: "'UVM 테스트벤치 만들어줘'"
+    A1: "① tokenize (~6 tok)"
+    A2: "② attention"
+    A3: "③ generate"
+    A4: "④ 일반적 코드, port 추측"
+    A5: "⑤ display 시스템콜 사용 (UVM에서 금지)"
+    A6: "⑥ factory 등록 누락"
+    A7: "⑦ 컴파일 실패 60%" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+    A0 -> A1 -> A2 -> A3 -> A4 -> A5 -> A6 -> A7
+  }
+  B: "Prompt B — 구조화" {
+    B0: "[Role][Context][Task]\n[Constraint][Format]"
+    B1: "① tokenize (~150 tok)"
+    B2: "② attention (richer routing)"
+    B3: "③ generate"
+    B4: "④ 정확한 port + 컨벤션 준수"
+    B5: "⑤ uvm_info 사용 (백틱 매크로)"
+    B6: "⑥ factory + config_db get"
+    B7: "⑦ 컴파일 통과 87%" { style.stroke: "#27ae60"; style.stroke-width: 2 }
+    B0 -> B1 -> B2 -> B3 -> B4 -> B5 -> B6 -> B7
+  }
+}
 ```
 
 | Step | Prompt A (naive) | Prompt B (구조화) |

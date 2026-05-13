@@ -79,43 +79,36 @@
 
 ### 한 장 그림 — Phase 흐름과 컴포넌트 트리
 
-```mermaid
-flowchart TB
-    subgraph TREE["컴포넌트 트리"]
-        direction TB
-        T["uvm_test (top)"]
-        E["uvm_env"]
-        A["agent"]
-        SB["scoreboard"]
-        DRV["driver"]
-        MON["monitor"]
-        SQR["sequencer"]
-        T --> E
-        E --> A
-        E --> SB
-        A --> DRV
-        A --> MON
-        A --> SQR
-    end
+```d2
+direction: down
 
-    BUILD["<b>build_phase</b><br/>Top → Down (부모가 먼저)<br/>자식을 type_id::create 로 생성"]
-    CONNECT["<b>connect_phase</b><br/>Bottom → Up (자식이 먼저)<br/>TLM 포트 연결"]
-    RUN["<b>run_phase</b> (모든 컴포넌트 병렬)<br/>raise_objection<br/>... 자극 · 관찰 ...<br/>drop_objection<br/>objection count = 0 이 될 때까지 유지"]
-    DRAIN(["drain time (선택)<br/>phase_ready_to_end (선택)"])
-    CLEAN["<b>extract → check → report → final</b><br/>Bottom → Up"]
+TREE: "컴포넌트 트리" {
+  T: "uvm_test (top)"
+  E: uvm_env
+  A: agent
+  SB: scoreboard
+  DRV: driver
+  MON: monitor
+  SQR: sequencer
+  T -> E
+  E -> A
+  E -> SB
+  A -> DRV
+  A -> MON
+  A -> SQR
+}
 
-    TREE -.-> BUILD
-    BUILD --> CONNECT
-    CONNECT --> RUN
-    RUN --> DRAIN
-    DRAIN --> CLEAN
+BUILD: "**build_phase**\nTop → Down (부모가 먼저)\n자식을 type_id::create 로 생성" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CONNECT: "**connect_phase**\nBottom → Up (자식이 먼저)\nTLM 포트 연결" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+RUN: "**run_phase** (모든 컴포넌트 병렬)\nraise_objection\n... 자극 · 관찰 ...\ndrop_objection\nobjection count = 0 이 될 때까지 유지" { style.stroke: "#137333"; style.stroke-width: 3 }
+DRAIN: "drain time (선택)\nphase_ready_to_end (선택)" { shape: oval; style.stroke: "#5f6368"; style.stroke-dash: 4 }
+CLEAN: "**extract → check → report → final**\nBottom → Up" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 
-    classDef phase stroke:#1a73e8,stroke-width:2px
-    classDef run stroke:#137333,stroke-width:3px
-    classDef drain stroke:#5f6368,stroke-dasharray:4 2
-    class BUILD,CONNECT,CLEAN phase
-    class RUN run
-    class DRAIN drain
+TREE -> BUILD: { style.stroke-dash: 4 }
+BUILD -> CONNECT
+CONNECT -> RUN
+RUN -> DRAIN
+DRAIN -> CLEAN
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -267,45 +260,96 @@ UVM_INFO ... [Report Server] PASSED             ← report_phase 출력
 
 ### 4.2 클래스 계층 — UVM 의 6 컴포넌트 + 3 데이터
 
-```mermaid
-flowchart LR
-    VOID["uvm_void"]
-    OBJ["<b>uvm_object</b><br/>데이터 · Phase 없음"]
-    COMP["<b>uvm_component</b><br/>인프라 · Phase 있음"]
+```d2
+direction: right
 
-    TRX["uvm_transaction"]
-    SI["uvm_sequence_item<br/><i>트랜잭션 데이터 (M03)</i>"]
-    SEQ["uvm_sequence<br/><i>자극 시나리오 (M03)</i>"]
-    REG["uvm_reg_block<br/><i>RAL 모델</i>"]
+VOID: uvm_void {
+  style.stroke: "#5f6368"
+  style.stroke-dash: 4
+}
+OBJ: |md
+  **uvm_object**
 
-    MON["uvm_monitor<br/><i>DUT 신호 관찰 → AP (M02)</i>"]
-    DRV["uvm_driver<br/><i>DUT 자극 인가 (M02)</i>"]
-    SQR["uvm_sequencer<br/><i>Sequence ↔ Driver 중개</i>"]
-    AG["uvm_agent<br/><i>위 셋 묶음 (M02)</i>"]
-    SB["uvm_scoreboard<br/><i>결과 비교 (M05)</i>"]
-    ENV["uvm_env<br/><i>Agent + SB 묶음</i>"]
-    TST["uvm_test<br/><i>최상위, 시나리오 선택</i>"]
+  데이터 · Phase 없음
+| {
+  style.stroke: "#1a73e8"
+  style.stroke-width: 2
+}
+COMP: |md
+  **uvm_component**
 
-    VOID --> OBJ
-    VOID --> COMP
-    OBJ --> TRX
-    TRX --> SI
-    OBJ --> SEQ
-    OBJ --> REG
-    COMP --> MON
-    COMP --> DRV
-    COMP --> SQR
-    COMP --> AG
-    COMP --> SB
-    COMP --> ENV
-    COMP --> TST
+  인프라 · Phase 있음
+| {
+  style.stroke: "#137333"
+  style.stroke-width: 2
+}
 
-    classDef root stroke:#5f6368,stroke-width:2px,stroke-dasharray:4 2
-    classDef obj stroke:#1a73e8,stroke-width:2px
-    classDef comp stroke:#137333,stroke-width:2px
-    class VOID root
-    class OBJ obj
-    class COMP comp
+TRX: uvm_transaction
+SI: |md
+  uvm_sequence_item
+
+  _트랜잭션 데이터 (M03)_
+|
+SEQ: |md
+  uvm_sequence
+
+  _자극 시나리오 (M03)_
+|
+REG: |md
+  uvm_reg_block
+
+  _RAL 모델_
+|
+
+MON: |md
+  uvm_monitor
+
+  _DUT 신호 관찰 → AP (M02)_
+|
+DRV: |md
+  uvm_driver
+
+  _DUT 자극 인가 (M02)_
+|
+SQR: |md
+  uvm_sequencer
+
+  _Sequence ↔ Driver 중개_
+|
+AG: |md
+  uvm_agent
+
+  _위 셋 묶음 (M02)_
+|
+SB: |md
+  uvm_scoreboard
+
+  _결과 비교 (M05)_
+|
+ENV: |md
+  uvm_env
+
+  _Agent + SB 묶음_
+|
+TST: |md
+  uvm_test
+
+  _최상위, 시나리오 선택_
+|
+
+VOID -> OBJ
+VOID -> COMP
+OBJ -> TRX
+TRX -> SI
+OBJ -> SEQ
+OBJ -> REG
+COMP -> MON
+COMP -> DRV
+COMP -> SQR
+COMP -> AG
+COMP -> SB
+COMP -> ENV
+COMP -> TST
 ```
 
 이후 모든 모듈에서 이 9 개가 등장합니다. 새 클래스가 나오면 일단 이 9 개 중 하나의 변형/특수화인지 확인하세요.

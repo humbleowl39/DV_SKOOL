@@ -264,39 +264,34 @@ AXI-Stream:
 
 ### 5.5 SoC 내 AMBA 프로토콜 위치
 
-```mermaid
-flowchart TB
-    subgraph SOC["SoC"]
-        direction TB
-        CPU["CPU"]
-        IC["Interconnect"]
-        MC["MC"]
-        DRAM["DRAM"]
-        AXIBR["AXI Bridge"]
-        AHBBR["AHB Bridge"]
-        OTP["APB · OTP"]
-        TMR["APB · Timer"]
-        UART["APB · UART"]
-        TOE["TOE"]
-        DCMAC["DCMAC"]
-        PHY["PHY"]
-        NET(("Network"))
+```d2
+direction: down
 
-        CPU -- "AXI / ACE" --> IC
-        IC -- "AXI" --> MC --> DRAM
-        IC --> AXIBR --> AHBBR
-        AHBBR --> OTP
-        AHBBR --> TMR
-        AHBBR --> UART
-        TOE -- "AXI-Stream" --> DCMAC --> PHY --> NET
-    end
+SOC: SoC {
+  CPU: CPU { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  IC: Interconnect { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  MC: MC { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  DRAM: DRAM { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  AXIBR: AXI Bridge { style.stroke: "#137333"; style.stroke-width: 2 }
+  AHBBR: AHB Bridge { style.stroke: "#137333"; style.stroke-width: 2 }
+  OTP: "APB · OTP" { style.stroke: "#5f6368"; style.stroke-width: 2 }
+  TMR: "APB · Timer" { style.stroke: "#5f6368"; style.stroke-width: 2 }
+  UART: "APB · UART" { style.stroke: "#5f6368"; style.stroke-width: 2 }
+  TOE: TOE { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  DCMAC: DCMAC { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  PHY: PHY
+  NET: Network { shape: circle }
 
-    classDef hi stroke:#1a73e8,stroke-width:2px
-    classDef mid stroke:#137333,stroke-width:2px
-    classDef low stroke:#5f6368,stroke-width:2px
-    class CPU,IC,MC,DRAM,TOE,DCMAC hi
-    class AXIBR,AHBBR mid
-    class OTP,TMR,UART low
+  CPU -> IC: "AXI / ACE"
+  IC -> MC: "AXI"
+  MC -> DRAM
+  IC -> AXIBR -> AHBBR
+  AHBBR -> OTP
+  AHBBR -> TMR
+  AHBBR -> UART
+  TOE -> DCMAC: "AXI-Stream"
+  DCMAC -> PHY -> NET
+}
 ```
 
 ### 5.6 프로토콜 버전 빠른 참조

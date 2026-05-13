@@ -93,39 +93,36 @@
 
 ### 한 장 그림 — IB vs RoCEv2 패킷 구조
 
-```mermaid
-flowchart LR
-    subgraph IB["IB 패킷"]
-        direction TB
-        I_LRH["LRH<br/>link 라우팅"]
-        I_GRH["GRH?<br/>global 라우팅"]
-        I_BTH["BTH"]
-        I_XTH["xTH"]
-        I_PAY["Payload"]
-        I_ICRC["ICRC"]
-        I_VCRC["VCRC<br/>hop FCS"]
-        I_LRH --- I_GRH --- I_BTH --- I_XTH --- I_PAY --- I_ICRC --- I_VCRC
-    end
-    subgraph ROCE["RoCEv2 패킷"]
-        direction TB
-        R_ETH["Eth Hdr<br/>link 라우팅 (MAC)"]
-        R_IP["IP Hdr<br/>global 라우팅"]
-        R_UDP["UDP Hdr<br/>dest port = 4791"]
-        R_BTH["BTH ◀ 동일"]
-        R_XTH["xTH ◀ 동일"]
-        R_PAY["Payload ◀ 동일"]
-        R_ICRC["ICRC ◀ 거의 동일 (mask 차이)"]
-        R_FCS["Eth FCS<br/>hop FCS"]
-        R_ETH --- R_IP --- R_UDP --- R_BTH --- R_XTH --- R_PAY --- R_ICRC --- R_FCS
-    end
-    I_BTH -. "그대로" .-> R_BTH
-    I_XTH -. "그대로" .-> R_XTH
-    I_PAY -. "그대로" .-> R_PAY
-    I_ICRC -. "거의 동일" .-> R_ICRC
-    classDef same stroke:#137333,stroke-width:2px
-    classDef diff stroke:#c0392b,stroke-width:2px
-    class I_BTH,I_XTH,I_PAY,I_ICRC,R_BTH,R_XTH,R_PAY,R_ICRC same
-    class I_LRH,I_GRH,I_VCRC,R_ETH,R_IP,R_UDP,R_FCS diff
+```d2
+direction: right
+
+IB: "IB 패킷" {
+  I_LRH: "LRH\nlink 라우팅" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  I_GRH: "GRH?\nglobal 라우팅" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  I_BTH: BTH { style.stroke: "#137333"; style.stroke-width: 2 }
+  I_XTH: xTH { style.stroke: "#137333"; style.stroke-width: 2 }
+  I_PAY: Payload { style.stroke: "#137333"; style.stroke-width: 2 }
+  I_ICRC: ICRC { style.stroke: "#137333"; style.stroke-width: 2 }
+  I_VCRC: "VCRC\nhop FCS" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  I_LRH -- I_GRH -- I_BTH -- I_XTH -- I_PAY -- I_ICRC -- I_VCRC
+}
+
+ROCE: "RoCEv2 패킷" {
+  R_ETH: "Eth Hdr\nlink 라우팅 (MAC)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  R_IP: "IP Hdr\nglobal 라우팅" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  R_UDP: "UDP Hdr\ndest port = 4791" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  R_BTH: "BTH ◀ 동일" { style.stroke: "#137333"; style.stroke-width: 2 }
+  R_XTH: "xTH ◀ 동일" { style.stroke: "#137333"; style.stroke-width: 2 }
+  R_PAY: "Payload ◀ 동일" { style.stroke: "#137333"; style.stroke-width: 2 }
+  R_ICRC: "ICRC ◀ 거의 동일 (mask 차이)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  R_FCS: "Eth FCS\nhop FCS" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+  R_ETH -- R_IP -- R_UDP -- R_BTH -- R_XTH -- R_PAY -- R_ICRC -- R_FCS
+}
+
+IB.I_BTH -> ROCE.R_BTH: "그대로" { style.stroke-dash: 4 }
+IB.I_XTH -> ROCE.R_XTH: "그대로" { style.stroke-dash: 4 }
+IB.I_PAY -> ROCE.R_PAY: "그대로" { style.stroke-dash: 4 }
+IB.I_ICRC -> ROCE.R_ICRC: "거의 동일" { style.stroke-dash: 4 }
 ```
 
 ### 왜 이렇게 설계했는가 — 세 대안의 비교

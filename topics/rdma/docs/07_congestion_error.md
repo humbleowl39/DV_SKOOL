@@ -241,39 +241,38 @@ QP_A (NODE0) 가 QP_B (NODE1) 의 MR_X 에 RDMA WRITE. 그러나 sender 의 pack
 
 ### 4.2 실무 에러 디버그 트리
 
-```mermaid
-flowchart TB
-    ROOT["WC error 발견<br/>(status?)"]
-    R1["WC_RETRY_EXC_ERR"]
-    R2["WC_RNR_RETRY_EXC_ERR"]
-    R3["WC_REM_ACCESS_ERR"]
-    R4["WC_REM_INV_RD_REQ_ERR"]
-    R1a["ACK 못 받음<br/>(Local ACK timeout)"]
-    R1b["PSN hole (PSE)"]
-    R1c["ACK 의 PSN &gt; ePSN<br/>(Implied NAK)"]
-    R1note["모두 retry_cnt 초과"]
-    R2a["Receiver 가 RECV WR 부족<br/>→ rnr_retry_cnt 초과"]
-    R3a["debug_flag = WC_FLAG_RESP_ACCESS<br/>(access flag)"]
-    R3b["debug_flag = WC_FLAG_RESP_RANGE<br/>(MR bound)"]
-    R3c["debug_flag = WC_FLAG_RESP_PD<br/>(PD mismatch)"]
-    R3d["debug_flag = WC_FLAG_RESP_RKEY<br/>(R-Key invalid)"]
-    R4a["debug_flag = WC_FLAG_RESP_OP<br/>(max read outstanding)"]
-    ROOT --> R1 --> R1a
-    R1 --> R1b
-    R1 --> R1c
-    R1a --> R1note
-    R1b --> R1note
-    R1c --> R1note
-    ROOT --> R2 --> R2a
-    ROOT --> R3 --> R3a
-    R3 --> R3b
-    R3 --> R3c
-    R3 --> R3d
-    ROOT --> R4 --> R4a
-    classDef retry stroke:#b8860b,stroke-width:2px
-    classDef access stroke:#c0392b,stroke-width:2px
-    class R1,R2,R1a,R1b,R1c,R2a retry
-    class R3,R4,R3a,R3b,R3c,R3d,R4a access
+```d2
+direction: down
+
+ROOT: "WC error 발견\n(status?)"
+R1: WC_RETRY_EXC_ERR { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R2: WC_RNR_RETRY_EXC_ERR { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R3: WC_REM_ACCESS_ERR { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R4: WC_REM_INV_RD_REQ_ERR { style.stroke: "#c0392b"; style.stroke-width: 2 }
+
+R1a: "ACK 못 받음\n(Local ACK timeout)" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R1b: "PSN hole (PSE)" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R1c: "ACK 의 PSN > ePSN\n(Implied NAK)" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R1note: "모두 retry_cnt 초과"
+R2a: "Receiver 가 RECV WR 부족\n→ rnr_retry_cnt 초과" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R3a: "debug_flag = WC_FLAG_RESP_ACCESS\n(access flag)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R3b: "debug_flag = WC_FLAG_RESP_RANGE\n(MR bound)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R3c: "debug_flag = WC_FLAG_RESP_PD\n(PD mismatch)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R3d: "debug_flag = WC_FLAG_RESP_RKEY\n(R-Key invalid)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R4a: "debug_flag = WC_FLAG_RESP_OP\n(max read outstanding)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+
+ROOT -> R1 -> R1a
+R1 -> R1b
+R1 -> R1c
+R1a -> R1note
+R1b -> R1note
+R1c -> R1note
+ROOT -> R2 -> R2a
+ROOT -> R3 -> R3a
+R3 -> R3b
+R3 -> R3c
+R3 -> R3d
+ROOT -> R4 -> R4a
 ```
 
 → **Debug flag 만 보면 root cause 가 결정** — 검증이 잘 되면 사용자도 single-glance 디버그 가능.

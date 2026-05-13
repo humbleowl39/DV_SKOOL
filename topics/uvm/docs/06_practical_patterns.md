@@ -74,52 +74,54 @@ UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading
 
 ### 한 장 그림 — 좋은 환경 vs 나쁜 환경
 
-```mermaid
-flowchart TB
-    subgraph GOOD["좋은 환경"]
-        direction TB
-        GT["Test<br/>(시나리오 선택만)"]
-        GE["Env"]
-        GA["Agent_A"]
-        GAD["Driver"]
-        GAM["Monitor"]
-        GAS["Sequencer"]
-        GB["Agent_B (Passive)"]
-        GBM["Monitor"]
-        GSB["Scoreboard"]
-        GCOV["Coverage"]
-        GT --> GE
-        GE --> GA
-        GA --> GAD
-        GA --> GAM
-        GA --> GAS
-        GE --> GB
-        GB --> GBM
-        GE --> GSB
-        GE --> GCOV
-    end
+```d2
+direction: down
 
-    subgraph BAD["나쁜 환경 (God Env)"]
-        direction TB
-        BT["Test"]
-        BE["Env"]
-        BD["Driver (직접 보유)"]
-        BM["Monitor"]
-        BD2["Driver_B (다른 인터페이스도)"]
-        BM2["Monitor_B"]
-        BSB["Scoreboard"]
-        BT --> BE
-        BE --> BD
-        BE --> BM
-        BE --> BD2
-        BE --> BM2
-        BE --> BSB
-    end
+GOOD: "좋은 환경" {
+  style.stroke: "#137333"
+  style.stroke-width: 2
 
-    classDef good stroke:#137333,stroke-width:2px
-    classDef bad stroke:#c5221f,stroke-width:2px
-    class GT,GE,GA,GAD,GAM,GAS,GB,GBM,GSB,GCOV good
-    class BT,BE,BD,BM,BD2,BM2,BSB bad
+  GT: "Test\n(시나리오 선택만)"
+  GE: Env
+  GA: Agent_A
+  GAD: Driver
+  GAM: Monitor
+  GAS: Sequencer
+  GB: "Agent_B (Passive)"
+  GBM: Monitor
+  GSB: Scoreboard
+  GCOV: Coverage
+
+  GT -> GE
+  GE -> GA
+  GA -> GAD
+  GA -> GAM
+  GA -> GAS
+  GE -> GB
+  GB -> GBM
+  GE -> GSB
+  GE -> GCOV
+}
+
+BAD: "나쁜 환경 (God Env)" {
+  style.stroke: "#c5221f"
+  style.stroke-width: 2
+
+  BT: Test
+  BE: Env
+  BD: "Driver (직접 보유)"
+  BM: Monitor
+  BD2: "Driver_B (다른 인터페이스도)"
+  BM2: Monitor_B
+  BSB: Scoreboard
+
+  BT -> BE
+  BE -> BD
+  BE -> BM
+  BE -> BD2
+  BE -> BM2
+  BE -> BSB
+}
 ```
 
 <div class="parallel-grid">

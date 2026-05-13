@@ -121,42 +121,37 @@ flowchart LR
 
 CCTV / 영상 SoC 의 가장 단순한 시나리오. **CMOS image sensor** 가 한 장의 **1920 × 1080 RAW10** frame 을 찍어 → ISP 가 RGB 로 변환 → Video codec (H.264 encoder) 이 압축 → DDR 에 bitstream 적재 → Display IP 가 preview 로 다시 읽어 LCD 로 출력. 이 한 frame 의 여행에서 **IP 간 연결 / 라우팅 / 도메인 경계가 어떻게 동시에 검증되는지** 따라가 봅니다.
 
-```mermaid
-flowchart LR
-    SENSOR["CMOS Sensor"]
-    ISP["ISP"]
-    CODEC["H.264 Encoder"]
-    DDR[("DDR · MC")]
-    DISP["Display IP"]
-    LCD["LCD panel"]
-    GIC["GIC (SPI)<br/>spi[12] · spi[13] · spi[14]"]
-    CPU["CPU (FW)"]
+```d2
+direction: right
 
-    SENSOR -- "MIPI CSI-2<br/>pixel bus" --> ISP
-    ISP -- "AXI-S<br/>RGB888" --> CODEC
-    CODEC -- "AXI-MM<br/>bitstream" --> DDR
-    DDR -- "⑤ AXI-MM read" --> DISP
-    DISP -- "⑥ MIPI DSI" --> LCD
+SENSOR: CMOS Sensor
+ISP: ISP
+CODEC: H.264 Encoder
+DDR: "DDR · MC" { shape: cylinder; style.stroke: "#1a73e8"; style.stroke-width: 3 }
+DISP: Display IP
+LCD: LCD panel
+GIC: "GIC (SPI)\nspi[12] · spi[13] · spi[14]" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+CPU: "CPU (FW)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
 
-    SENSOR -. "① VSYNC irq" .-> GIC
-    ISP -. "② frame_done irq" .-> GIC
-    CODEC -. "③ bs_ready" .-> GIC
-    GIC -- "④ to CPU0" --> CPU
-    CPU -- "reg-config (APB)" --> ISP
-    CPU -. "ISR ack" .-> GIC
+SENSOR -> ISP: "MIPI CSI-2\npixel bus"
+ISP -> CODEC: "AXI-S\nRGB888"
+CODEC -> DDR: "AXI-MM\nbitstream"
+DDR -> DISP: "⑤ AXI-MM read"
+DISP -> LCD: "⑥ MIPI DSI"
 
-    subgraph PWR_CLK["Power / Clock 도메인"]
-        direction TB
-        PD_VIDEO["PD_VIDEO ON · ISP + codec + display"]
-        PD_CORE["PD_CORE ON · CPU + GIC + MC"]
-        PIXCLK["PIXCLK 297 MHz → sensor, ISP"]
-        AXICLK["AXICLK 533 MHz → codec, display, MC"]
-    end
+SENSOR -> GIC: "① VSYNC irq" { style.stroke-dash: 4 }
+ISP -> GIC: "② frame_done irq" { style.stroke-dash: 4 }
+CODEC -> GIC: "③ bs_ready" { style.stroke-dash: 4 }
+GIC -> CPU: "④ to CPU0"
+CPU -> ISP: "reg-config (APB)"
+CPU -> GIC: "ISR ack" { style.stroke-dash: 4 }
 
-    classDef mem stroke:#1a73e8,stroke-width:3px
-    classDef ctrl stroke:#c5221f,stroke-width:2px
-    class DDR mem
-    class GIC,CPU ctrl
+PWR_CLK: "Power / Clock 도메인" {
+  PD_VIDEO: "PD_VIDEO ON · ISP + codec + display"
+  PD_CORE: "PD_CORE ON · CPU + GIC + MC"
+  PIXCLK: "PIXCLK 297 MHz → sensor, ISP"
+  AXICLK: "AXICLK 533 MHz → codec, display, MC"
+}
 ```
 
 ### 단계별 추적
@@ -363,44 +358,38 @@ Reset 순서 예시:
 
 ### 5.3 SoC Top TB 아키텍처 (이력서 연결)
 
-```mermaid
-flowchart TB
-    subgraph EXT["외부 모델 (자극원)"]
-        direction LR
-        CPUM["CPU Model<br/>(C-model / Processor VIP)"]
-        MEMM["External Memory<br/>(DRAM BFM)"]
-        IFM["External IF Model<br/>(UFS / Ethernet)"]
-    end
+```d2
+direction: down
 
-    subgraph DUT["DUT — Full SoC RTL"]
-        direction LR
-        D_CPU["CPU"]
-        D_MC["MC"]
-        D_UFS["UFS"]
-        D_DCMAC["DCMAC"]
-        D_MMU["MMU"]
-        D_OTH["..."]
-    end
+EXT: "외부 모델 (자극원)" {
+  style.stroke: "#1a73e8"; style.stroke-width: 2
+  CPUM: "CPU Model\n(C-model / Processor VIP)"
+  MEMM: "External Memory\n(DRAM BFM)"
+  IFM: "External IF Model\n(UFS / Ethernet)"
+}
 
-    subgraph CHK["Checker / Monitor Layer"]
-        direction TB
-        BUSCHK["Bus Protocol Checker<br/>(AXI / AHB / APB)"]
-        IRQMON["Interrupt Monitor"]
-        MMAPCHK["Memory Map Checker"]
-        PWRMON["Power State Monitor"]
-    end
+DUT: "DUT — Full SoC RTL" {
+  style.stroke: "#137333"; style.stroke-width: 2
+  D_CPU: CPU
+  D_MC: MC
+  D_UFS: UFS
+  D_DCMAC: DCMAC
+  D_MMU: MMU
+  D_OTH: "..."
+}
 
-    CPUM --> DUT
-    MEMM --> DUT
-    IFM --> DUT
-    DUT --> CHK
+CHK: "Checker / Monitor Layer" {
+  style.stroke: "#b8860b"; style.stroke-width: 2
+  BUSCHK: "Bus Protocol Checker\n(AXI / AHB / APB)"
+  IRQMON: "Interrupt Monitor"
+  MMAPCHK: "Memory Map Checker"
+  PWRMON: "Power State Monitor"
+}
 
-    classDef ext stroke:#1a73e8,stroke-width:2px
-    classDef dut stroke:#137333,stroke-width:2px
-    classDef chk stroke:#b8860b,stroke-width:2px
-    class CPUM,MEMM,IFM ext
-    class D_CPU,D_MC,D_UFS,D_DCMAC,D_MMU,D_OTH dut
-    class BUSCHK,IRQMON,MMAPCHK,PWRMON chk
+EXT.CPUM -> DUT
+EXT.MEMM -> DUT
+EXT.IFM -> DUT
+DUT -> CHK
 ```
 
 특징:

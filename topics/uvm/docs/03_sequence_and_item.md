@@ -85,40 +85,32 @@ endclass
 
 ### 한 장 그림 — Sequence 3 계층의 데이터 흐름
 
-```mermaid
-flowchart TB
-    TEST["uvm_test<br/>start vseq"]
-    VSEQ["<b>Virtual Sequence</b><br/>연출가"]
-    SEQA["agentA Sequence<br/>(각본가)"]
-    SEQB["agentB Sequence<br/>(각본가)"]
-    ITA["Item<br/>(대사 한 줄)<br/>rand + constraint"]
-    ITB["Item<br/>(대사 한 줄)<br/>rand + constraint"]
-    SQRA["sequencerA"]
-    SQRB["sequencerB"]
-    DRVA["driverA"]
-    DRVB["driverB"]
-    DUT["DUT"]
+```d2
+direction: down
 
-    TEST --> VSEQ
-    VSEQ --> SEQA
-    VSEQ --> SEQB
-    SEQA -- "body()" --> ITA
-    SEQB -- "body()" --> ITB
-    ITA -- "start_item / finish_item" --> SQRA
-    ITB -- "start_item / finish_item" --> SQRB
-    SQRA --> DRVA
-    SQRB --> DRVB
-    DRVA --> DUT
-    DRVB --> DUT
+TEST: "uvm_test\nstart vseq"
+VSEQ: "**Virtual Sequence**\n연출가" { style.stroke: "#1a73e8"; style.stroke-width: 3 }
+SEQA: "agentA Sequence\n(각본가)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+SEQB: "agentB Sequence\n(각본가)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+ITA: "Item\n(대사 한 줄)\nrand + constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
+ITB: "Item\n(대사 한 줄)\nrand + constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
+SQRA: sequencerA { style.stroke: "#5f6368"; style.stroke-width: 2 }
+SQRB: sequencerB { style.stroke: "#5f6368"; style.stroke-width: 2 }
+DRVA: driverA { style.stroke: "#5f6368"; style.stroke-width: 2 }
+DRVB: driverB { style.stroke: "#5f6368"; style.stroke-width: 2 }
+DUT: DUT
 
-    classDef vseq stroke:#1a73e8,stroke-width:3px
-    classDef seq stroke:#1a73e8,stroke-width:2px
-    classDef item stroke:#137333,stroke-width:2px
-    classDef infra stroke:#5f6368,stroke-width:2px
-    class VSEQ vseq
-    class SEQA,SEQB seq
-    class ITA,ITB item
-    class SQRA,SQRB,DRVA,DRVB infra
+TEST -> VSEQ
+VSEQ -> SEQA
+VSEQ -> SEQB
+SEQA -> ITA: "body()"
+SEQB -> ITB: "body()"
+ITA -> SQRA: "start_item / finish_item"
+ITB -> SQRB: "start_item / finish_item"
+SQRA -> DRVA
+SQRB -> DRVB
+DRVA -> DUT
+DRVB -> DUT
 ```
 
 ### 왜 이 디자인인가 — Design rationale

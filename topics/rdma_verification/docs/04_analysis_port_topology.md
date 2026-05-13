@@ -92,44 +92,40 @@ RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/
 
 ### 한 장 그림 — 5 AP + derived AP
 
-```mermaid
-flowchart LR
-    subgraph DRV["vrdma_driver (방송국) — 5 채널 broadcast"]
-        direction TB
-        AP1["issued_wqe_ap"]
-        AP2["completed_wqe_ap<br/>ErrQP 차단"]
-        AP3["cqe_ap"]
-        AP4["qp_reg_ap"]
-        AP5["mr_reg_ap"]
-    end
-    subgraph CQH["vrdma_cq_handler (derived)"]
-        APD["cqe_validation_cqe_ap"]
-    end
+```d2
+direction: right
 
-    HND["*_handler"]
-    C123["1side / 2side / imm"]
-    CT["c2h_tracker"]
-    SB["data_scoreboard"]
-    CV["cqe_validation_checker"]
-    CC["cqe_cov_collector"]
+DRV: "vrdma_driver (방송국) — 5 채널 broadcast" {
+  AP1: issued_wqe_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  AP2: "completed_wqe_ap\nErrQP 차단" { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  AP3: cqe_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  AP4: qp_reg_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  AP5: mr_reg_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+}
 
-    AP1 --> HND
-    HND --> C123
-    HND --> CT
-    AP2 --> SB
-    AP3 --> C123
-    AP4 --> C123
-    AP4 --> CT
-    AP4 --> SB
-    AP5 --> CT
-    AP5 --> SB
-    APD --> CV
-    APD --> CC
+CQH: "vrdma_cq_handler (derived)" {
+  APD: cqe_validation_cqe_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+}
 
-    classDef ap stroke:#1a73e8,stroke-width:2px
-    classDef gate stroke:#c0392b,stroke-width:3px
-    class AP1,AP3,AP4,AP5,APD ap
-    class AP2 gate
+HND: "*_handler"
+C123: "1side / 2side / imm"
+CT: c2h_tracker
+SB: data_scoreboard
+CV: cqe_validation_checker
+CC: cqe_cov_collector
+
+DRV.AP1 -> HND
+HND -> C123
+HND -> CT
+DRV.AP2 -> SB
+DRV.AP3 -> C123
+DRV.AP4 -> C123
+DRV.AP4 -> CT
+DRV.AP4 -> SB
+DRV.AP5 -> CT
+DRV.AP5 -> SB
+CQH.APD -> CV
+CQH.APD -> CC
 ```
 
 ### 왜 이 디자인인가 — Design rationale
