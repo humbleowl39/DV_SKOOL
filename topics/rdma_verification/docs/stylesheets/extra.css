@@ -1387,3 +1387,130 @@ input, button, select, textarea {
 .chapter-nav {
   margin-top: 3rem !important;
 }
+
+/* ===========================================================
+   Mermaid 가시성 개선 (Tier 1 — CSS only, 372 블록 일괄 적용)
+   - 폰트: Pretendard / system-ui (Material default 와 통일)
+   - Edge label: padding + 반투명 배경 → 라벨 가독성 (최대 효과)
+   - Cluster: 부드러운 brand-tint 배경 + rounded corner
+   - Node: stroke 1.5px, label weight 500
+   - SequenceDiagram: actor/note 가독성
+   - 다크모드 대응 ([data-md-color-scheme="slate"])
+   =========================================================== */
+
+.mermaid {
+  font-family: 'Pretendard Variable', 'Pretendard', system-ui, -apple-system,
+               'Segoe UI', 'Helvetica Neue', sans-serif !important;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.mermaid > svg {
+  max-width: 100%;
+  height: auto;
+  margin: 0.6em auto;
+  display: block;
+}
+
+/* --- Edge label — 라벨 가독성 (가장 큰 가시성 개선 포인트) --- */
+.mermaid .edgeLabel,
+.mermaid .edgeLabel rect {
+  padding: 3px 6px;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  fill: rgba(255, 255, 255, 0.92) !important;
+  border-radius: 3px;
+}
+.mermaid .edgeLabel .label,
+.mermaid .edgeLabel span {
+  font-weight: 500;
+  background-color: transparent !important;
+}
+[data-md-color-scheme="slate"] .mermaid .edgeLabel,
+[data-md-color-scheme="slate"] .mermaid .edgeLabel rect {
+  background-color: rgba(30, 41, 59, 0.92) !important;
+  fill: rgba(30, 41, 59, 0.92) !important;
+}
+[data-md-color-scheme="slate"] .mermaid .edgeLabel .label,
+[data-md-color-scheme="slate"] .mermaid .edgeLabel span {
+  color: #e2e8f0 !important;
+}
+
+/* --- Node 라벨 weight + stroke 또렷하게 --- */
+.mermaid .node .nodeLabel,
+.mermaid .node text,
+.mermaid .label foreignObject div {
+  font-weight: 500;
+}
+.mermaid .node rect,
+.mermaid .node circle,
+.mermaid .node ellipse,
+.mermaid .node polygon,
+.mermaid .node path {
+  stroke-width: 1.5px;
+}
+
+/* --- Cluster (subgraph) — 부드러운 brand-tint 배경 --- */
+.mermaid .cluster rect {
+  fill: rgba(77, 124, 186, 0.05) !important;
+  stroke: var(--dvs-brand-border, rgba(77, 124, 186, 0.22)) !important;
+  stroke-width: 1px !important;
+  rx: 8px;
+  ry: 8px;
+}
+.mermaid .cluster-label .nodeLabel,
+.mermaid .cluster text,
+.mermaid .cluster .label foreignObject div {
+  font-weight: 600;
+  font-size: 13px;
+}
+[data-md-color-scheme="slate"] .mermaid .cluster rect {
+  fill: rgba(122, 94, 192, 0.10) !important;
+  stroke: rgba(122, 94, 192, 0.35) !important;
+}
+
+/* --- Flowchart link (edge) — 살짝 두껍게 --- */
+.mermaid .flowchart-link,
+.mermaid path.flowchart-link {
+  stroke-width: 1.5px !important;
+}
+
+/* --- SequenceDiagram --- */
+.mermaid .actor {
+  font-weight: 600;
+  stroke-width: 1.5px;
+}
+.mermaid .actor-line {
+  stroke-width: 1px;
+  opacity: 0.6;
+}
+.mermaid .messageLine0,
+.mermaid .messageLine1 {
+  stroke-width: 1.5px !important;
+}
+.mermaid .messageText {
+  font-weight: 500;
+}
+.mermaid .note,
+.mermaid .noteText {
+  font-weight: 500;
+}
+.mermaid .note rect {
+  stroke-width: 1px;
+  rx: 4px;
+  ry: 4px;
+}
+
+/* --- StateDiagram --- */
+.mermaid .stateGroup rect {
+  stroke-width: 1.5px;
+  rx: 6px;
+  ry: 6px;
+}
+.mermaid .transition {
+  stroke-width: 1.5px !important;
+}
+
+/* --- Zoom 힌트 (클릭 시 확대 가능하다는 시각 단서) --- */
+.mermaid > svg:hover {
+  cursor: zoom-in;
+}
