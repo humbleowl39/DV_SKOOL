@@ -111,19 +111,21 @@ HCI: "UFS HCI" {
 
 가장 단순한 시나리오. SW 가 slot=5 에 READ 명령을 발행 → HCI 가 처리 → ISR 에서 회수. 한 cycle 의 모든 register / memory transition 을 추적합니다.
 
-```mermaid
-sequenceDiagram
-    participant SW as SW Driver (CPU)
-    participant HCI as HCI engine (HW)
-    Note over SW: 1. UTRD@slot=5 작성 in system memory<br/>(OCS=INVALID 0x0F)
-    Note over SW: 2. mb() + UCD/PRDT fully visible
-    SW->>HCI: 3. UTRLDBR |= (1<<5)  — ring
-    Note over HCI: 4. doorbell sense<br/>5. UTRD DMA fetch (UTRLBA + 5*32B)<br/>6. UCD/PRDT fetch<br/>7. Cmd UPIU 조립 → UniPro TX
-    Note over HCI: 8. Data-In UPIU × N<br/>→ DMA write to PRDT addr
-    Note over HCI: 9. Response UPIU<br/>→ UTRD.OCS 갱신
-    Note over HCI: 10. UTRLDBR[5] = 0 + IS[UTRCS] = 1
-    HCI-->>SW: 11. IRQ
-    Note over SW: 12. ISR: read IS<br/>→ check UTRLDBR<br/>→ read UTRD.OCS<br/>→ IS 에 W1C<br/>→ buffer 반환
+```d2
+shape: sequence_diagram
+
+SW: "SW Driver (CPU)"
+HCI: "HCI engine (HW)"
+
+# Note over SW: 1. UTRD@slot=5 작성 in system memory\n(OCS=INVALID 0x0F)
+# Note over SW: 2. mb() + UCD/PRDT fully visible
+# Note over HCI: 4. doorbell sense\n5. UTRD DMA fetch (UTRLBA + 5*32B)\n6. UCD/PRDT fetch\n7. Cmd UPIU 조립 → UniPro TX
+# Note over HCI: 8. Data-In UPIU × N\n→ DMA write to PRDT addr
+# Note over HCI: 9. Response UPIU\n→ UTRD.OCS 갱신
+# Note over HCI: 10. UTRLDBR[5] = 0 + IS[UTRCS] = 1
+# Note over SW: 12. ISR: read IS\n→ check UTRLDBR\n→ read UTRD.OCS\n→ IS 에 W1C\n→ buffer 반환
+SW -> HCI: "3. UTRLDBR |= (1<<5)  — ring"
+HCI -> SW: "11. IRQ" { style.stroke-dash: 4 }
 ```
 
 ### 단계별 추적 표
@@ -408,11 +410,18 @@ MCQ (UFS 4.0):
 
 ```
 
-```mermaid
-flowchart LR
-    SQ0["SQ 0 (Core 0)"] --> CQ0["CQ 0"]
-    SQ1["SQ 1 (Core 1)"] --> CQ1["CQ 1"]
-    SQN["SQ N (Core N)"] --> CQN["CQ N"]
+```d2
+direction: right
+
+SQ0: "SQ 0 (Core 0)"
+CQ0: "CQ 0"
+SQ0 -> CQ0
+SQ1: "SQ 1 (Core 1)"
+CQ1: "CQ 1"
+SQ1 -> CQ1
+SQN: "SQ N (Core N)"
+CQN: "CQ N"
+SQN -> CQN
 ```
 
 ```

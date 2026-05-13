@@ -77,23 +77,32 @@ assume property (@(posedge clk) req[0] |=> $past(req[0]));
 
 ### 한 장 그림 — Property 한 개의 운명 흐름
 
-```mermaid
-flowchart TB
-    P["property P"] -- "prove -all" --> R{"결과"}
-    R --> PV["PROVEN"]
-    R --> BD["BOUNDED"]
-    R --> CX["CEX"]
-    PV --> Q1{"cover 짝 covered?"}
-    Q1 -- "YES" --> SO["sign-off 후보"]
-    Q1 -- "NO" --> VC["Vacuous<br/>(Module 02)"]
-    BD --> CONV["Convergence 6 종<br/>① Blackbox<br/>② Abstraction<br/>③ Helper<br/>④ Assume<br/>⑤ Split<br/>⑥ accept bounded<br/>(Module 03 핵심)"]
-    CX --> Q2{"실제 버그?"}
-    Q2 -- "Yes" --> RTL["RTL 수정"]
-    Q2 -- "No" --> ASM["assume 추가"]
-    classDef good stroke:#27ae60,stroke-width:3px
-    classDef warn stroke:#c0392b,stroke-width:2px
-    class SO good
-    class VC warn
+```d2
+direction: down
+
+P: "property P"
+R: "결과" { shape: diamond }
+P -> R: "prove -all"
+PV: "PROVEN"
+R -> PV
+BD: "BOUNDED"
+R -> BD
+CX: "CEX"
+R -> CX
+Q1: "cover 짝 covered?" { shape: diamond }
+PV -> Q1
+SO: "sign-off 후보" { style.stroke: "#27ae60"; style.stroke-width: 3 }
+Q1 -> SO: "YES"
+VC: "Vacuous\n(Module 02)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+Q1 -> VC: "NO"
+CONV: "Convergence 6 종\n① Blackbox\n② Abstraction\n③ Helper\n④ Assume\n⑤ Split\n⑥ accept bounded\n(Module 03 핵심)"
+BD -> CONV
+Q2: "실제 버그?" { shape: diamond }
+CX -> Q2
+RTL: "RTL 수정"
+Q2 -> RTL: "Yes"
+ASM: "assume 추가"
+Q2 -> ASM: "No"
 ```
 
 §3 에서는 BOUNDED → Helper invariant → PROVEN 의 한 사이클을, §5 에서는 6 가지 Convergence 기법과 5 가지 Sign-off 기준을 다룹니다.
@@ -339,14 +348,18 @@ JasperGold 에서 모듈을 블랙박스로 처리:
 
 파이프라인의 중간 단계를 자유 입력으로 교체 → 앞단과 뒷단을 독립적으로 검증 가능.
 
-```mermaid
-flowchart LR
-    IN["입력"] --> S1["Stage 1"]
-    S1 --> CP["[Cut Point]<br/>자유 입력"]
-    CP --> S2["Stage 2"]
-    S2 --> OUT["출력"]
-    classDef cut stroke:#c0392b,stroke-width:3px,stroke-dasharray:4 4
-    class CP cut
+```d2
+direction: right
+
+IN: "입력"
+S1: "Stage 1"
+IN -> S1
+CP: "[Cut Point]\n자유 입력" { style.stroke: "#c0392b"; style.stroke-width: 3; style.stroke-dash: 4 }
+S1 -> CP
+S2: "Stage 2"
+CP -> S2
+OUT: "출력"
+S2 -> OUT
 ```
 
 - **Stage1 검증**: 입력 → Stage1 출력이 스펙과 일치?

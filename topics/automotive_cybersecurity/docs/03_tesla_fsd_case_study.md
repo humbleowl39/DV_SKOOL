@@ -129,24 +129,25 @@ Tesla 의 설계 가정 (추론):
 
 가장 단순한 한 사이클. €500 동글이 OBD-II 로 연결되어 _GPS CAN 프레임 한 개_ 를 위조 주입하는 과정.
 
-```mermaid
-sequenceDiagram
-    participant OBD as OBD-II Port<br/>(Pin 6 CAN-H · Pin 14 CAN-L · Pin 16 +12V)
-    participant DON as 탈옥 동글<br/>(MCU + MCP2515, €500~€2,000)
-    participant BUS as CAN Bus
-    participant FSD as FSD SoC (HW3/HW4)
+```d2
+shape: sequence_diagram
 
-    OBD->>DON: +12V 공급, CAN-H/L 연결
-    BUS->>DON: ① CAN sniff
-    DON->>DON: ② 정상 GPS frame 식별<br/>ID=0x318 [37.5665, 126.9780] Seoul
-    DON->>DON: ③ Frame RE (DBC 매핑 추정)<br/>byte 0..3=lat, byte 4..7=lon
-    DON->>DON: ④ 위조 frame 생성<br/>ID=0x318 [37.3861, -122.0839] CA US
-    DON->>BUS: ⑤ 50 ms 주기로 위조 송신<br/>(정상 100 ms 보다 고빈도)
-    Note over BUS: ⑥ 두 ID=0x318 frame 공존
-    BUS->>FSD: ⑦ frame 수신<br/>(MAC/FV 검증 없음)
-    FSD->>FSD: ⑧ GPS state ← 위조 frame (CA 좌표)
-    FSD->>FSD: ⑨ geofence_check(CA)<br/>→ '승인 지역' → FSD 활성화
-    FSD->>FSD: ⑩ 비승인 지역에서<br/>자율주행 동작 시작
+OBD: "OBD-II Port\n(Pin 6 CAN-H · Pin 14 CAN-L · Pin 16 +12V)"
+DON: "탈옥 동글\n(MCU + MCP2515, €500~€2,000)"
+BUS: "CAN Bus"
+FSD: "FSD SoC (HW3/HW4)"
+
+# Note over BUS: ⑥ 두 ID=0x318 frame 공존
+OBD -> DON: "+12V 공급, CAN-H/L 연결"
+BUS -> DON: "① CAN sniff"
+DON -> DON: "② 정상 GPS frame 식별\nID=0x318 [37.5665, 126.9780] Seoul"
+DON -> DON: "③ Frame RE (DBC 매핑 추정)\nbyte 0..3=lat, byte 4..7=lon"
+DON -> DON: "④ 위조 frame 생성\nID=0x318 [37.3861, -122.0839] CA US"
+DON -> BUS: "⑤ 50 ms 주기로 위조 송신\n(정상 100 ms 보다 고빈도)"
+BUS -> FSD: "⑦ frame 수신\n(MAC/FV 검증 없음)"
+FSD -> FSD: "⑧ GPS state ← 위조 frame (CA 좌표)"
+FSD -> FSD: "⑨ geofence_check(CA)\n→ '승인 지역' → FSD 활성화"
+FSD -> FSD: "⑩ 비승인 지역에서\n자율주행 동작 시작"
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

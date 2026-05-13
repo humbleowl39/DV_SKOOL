@@ -451,26 +451,30 @@ flowchart TB
 
 ##### (1) IOMMU (가장 중요한 전환점)
 
-```mermaid
-flowchart LR
-    subgraph S5["단계 5 (IOMMU 없음)"]
-        direction LR
-        A1["HW Accel"]
-        A2["PA"]
-        A3["DRAM"]
-        A1 -- "직접 물리 접근" --> A2 --> A3
-    end
-    subgraph S6["단계 6 (IOMMU 있음)"]
-        direction LR
-        B1["HW Accel"]
-        B2["VA"]
-        B3["IOMMU<br/>페이지 단위 주소 변환<br/>+ 접근 권한 검사"]
-        B4["PA"]
-        B5["DRAM"]
-        B1 -- "가상 주소" --> B2 --> B3 --> B4 --> B5
-    end
-    classDef pivot stroke:#1a73e8,stroke-width:2px
-    class B3 pivot
+```d2
+direction: right
+
+S5: "단계 5 (IOMMU 없음)" {
+  direction: right
+  # unparsed: A1["HW Accel"]
+  # unparsed: A2["PA"]
+  # unparsed: A3["DRAM"]
+  A1 -> A2: "직접 물리 접근"
+  A2 -> A3
+}
+S6: "단계 6 (IOMMU 있음)" {
+  direction: right
+  # unparsed: B1["HW Accel"]
+  # unparsed: B2["VA"]
+  # unparsed: B3["IOMMU<br/>페이지 단위 주소 변환<br/>+ 접근 권한 검사"]
+  # unparsed: B4["PA"]
+  # unparsed: B5["DRAM"]
+  B3 { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  B1 -> B2: "가상 주소"
+  B2 -> B3
+  B3 -> B4
+  B4 -> B5
+}
 ```
 
 | IOMMU 이전 | IOMMU 이후 |

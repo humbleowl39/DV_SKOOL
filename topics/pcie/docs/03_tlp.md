@@ -100,21 +100,23 @@ SW -> RX
 
 ### 단계별 추적
 
-```mermaid
-sequenceDiagram
-    participant RC as Requester (RC, 00:00.0)
-    participant SW as Switch
-    participant EP as Completer (EP, 01:00.0)
-    RC->>SW: ① MRd 4DW (Type=00000, Length=128 DW=512 B,<br/>TC=0, ReqID=00:00.0, Tag=0x05,<br/>Addr=0x80001000, Cat=NP)
-    SW->>EP: Address routing<br/>(Addr 가 EP 의 BAR 범위)
-    EP->>EP: ② MRd 수신 → ③ memory read 실행
-    EP->>SW: ④ CplD #1 (Tag=5, ByteCount=512, LowAddr=0x00, payload 128 B)
-    SW->>RC: ID routing (DestID=ReqID)
-    EP->>RC: ⑤ CplD #2 (Tag=5, ByteCount=384, LowAddr=0x80, 128 B)
-    EP->>RC: ⑥ CplD #3 (Tag=5, ByteCount=256, LowAddr=0x100, 128 B)
-    EP->>RC: ⑦ CplD #4 (Tag=5, ByteCount=128, LowAddr=0x180, 128 B)
-    Note over EP: ⑧ 모든 split 송신 완료
-    Note over RC: ⑨ 4 packet 모두 수신 + Tag=5 매칭 → read 완료
+```d2
+shape: sequence_diagram
+
+RC: "Requester (RC, 00:00.0)"
+SW: "Switch"
+EP: "Completer (EP, 01:00.0)"
+
+# Note over EP: ⑧ 모든 split 송신 완료
+# Note over RC: ⑨ 4 packet 모두 수신 + Tag=5 매칭 → read 완료
+RC -> SW: "① MRd 4DW (Type=00000, Length=128 DW=512 B,\nTC=0, ReqID=00:00.0, Tag=0x05,\nAddr=0x80001000, Cat=NP)"
+SW -> EP: "Address routing\n(Addr 가 EP 의 BAR 범위)"
+EP -> EP: "② MRd 수신 → ③ memory read 실행"
+EP -> SW: "④ CplD #1 (Tag=5, ByteCount=512, LowAddr=0x00, payload 128 B)"
+SW -> RC: "ID routing (DestID=ReqID)"
+EP -> RC: "⑤ CplD #2 (Tag=5, ByteCount=384, LowAddr=0x80, 128 B)"
+EP -> RC: "⑥ CplD #3 (Tag=5, ByteCount=256, LowAddr=0x100, 128 B)"
+EP -> RC: "⑦ CplD #4 (Tag=5, ByteCount=128, LowAddr=0x180, 128 B)"
 ```
 
 ### 단계별 의미
@@ -324,18 +326,20 @@ SW -> EP: "Bus N+1"
 
 ### 5.5 Memory Read 흐름 (Tag matching)
 
-```mermaid
-sequenceDiagram
-    participant REQ as Requester EP
-    participant CMP as Completer (RC 또는 다른 EP)
-    REQ->>CMP: MRd Tag=5, Length=16, Addr=0x1000
-    Note over CMP: memory read 수행<br/>512 byte / 64 byte payload size<br/>→ 8 packet 으로 split 가능
-    CMP-->>REQ: CplD Tag=5, ByteCount=512, LowAddr=0x00, 64 B
-    CMP-->>REQ: CplD Tag=5, ByteCount=448, LowAddr=0x40, 64 B
-    CMP-->>REQ: CplD Tag=5, ByteCount=384, LowAddr=0x80, 64 B
-    Note over REQ,CMP: …
-    CMP-->>REQ: CplD Tag=5, ByteCount=64, LowAddr=0x1C0, 64 B
-    Note over REQ: 모든 Completion 받으면 read 완료
+```d2
+shape: sequence_diagram
+
+REQ: "Requester EP"
+CMP: "Completer (RC 또는 다른 EP)"
+
+# Note over CMP: memory read 수행\n512 byte / 64 byte payload size\n→ 8 packet 으로 split 가능
+# Note over REQ: …
+# Note over REQ: 모든 Completion 받으면 read 완료
+REQ -> CMP: "MRd Tag=5, Length=16, Addr=0x1000"
+CMP -> REQ: "CplD Tag=5, ByteCount=512, LowAddr=0x00, 64 B" { style.stroke-dash: 4 }
+CMP -> REQ: "CplD Tag=5, ByteCount=448, LowAddr=0x40, 64 B" { style.stroke-dash: 4 }
+CMP -> REQ: "CplD Tag=5, ByteCount=384, LowAddr=0x80, 64 B" { style.stroke-dash: 4 }
+CMP -> REQ: "CplD Tag=5, ByteCount=64, LowAddr=0x1C0, 64 B" { style.stroke-dash: 4 }
 ```
 
 | 필드 | 의미 |

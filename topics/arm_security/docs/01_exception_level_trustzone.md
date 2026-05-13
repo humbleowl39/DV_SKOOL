@@ -141,26 +141,26 @@ flowchart TB
 
 가장 단순한 시나리오. 사용자가 결제 버튼을 누르면, 앱 (NS-EL0) 이 OS (NS-EL1) 의 syscall 을 거쳐 EL3 monitor 를 경유해 OP-TEE (S-EL1) 의 결제 TA (S-EL0) 까지 도달하고, 결과가 역순으로 반환됩니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant App as NS-EL0<br/>결제 앱
-    participant Linux as NS-EL1<br/>Linux kernel
-    participant BL31 as EL3<br/>BL31 monitor
-    participant OPTEE as S-EL1<br/>OP-TEE
-    participant TA as S-EL0<br/>결제 TA
+```d2
+shape: sequence_diagram
 
-    App->>Linux: SVC #0 (결제 요청)
-    Linux->>BL31: SMC #0
-    Note over BL31: NS context save<br/>SCR_EL3.NS = 0<br/>S context restore
-    BL31->>OPTEE: ERET (S-EL1)
-    OPTEE->>TA: TA dispatch
-    Note over TA: 결제 키 사용<br/>결과 생성
-    TA-->>OPTEE: 결과 반환
-    OPTEE->>BL31: SMC (S→NS 복귀)
-    Note over BL31: S context save<br/>SCR_EL3.NS = 1<br/>NS context restore
-    BL31-->>Linux: ERET (NS-EL1)
-    Linux-->>App: 결제 결과
+App: "NS-EL0\n결제 앱"
+Linux: "NS-EL1\nLinux kernel"
+BL31: "EL3\nBL31 monitor"
+OPTEE: "S-EL1\nOP-TEE"
+TA: "S-EL0\n결제 TA"
+
+# Note over BL31: NS context save\nSCR_EL3.NS = 0\nS context restore
+# Note over TA: 결제 키 사용\n결과 생성
+# Note over BL31: S context save\nSCR_EL3.NS = 1\nNS context restore
+App -> Linux: "SVC #0 (결제 요청)"
+Linux -> BL31: "SMC #0"
+BL31 -> OPTEE: "ERET (S-EL1)"
+OPTEE -> TA: "TA dispatch"
+TA -> OPTEE: "결과 반환" { style.stroke-dash: 4 }
+OPTEE -> BL31: "SMC (S→NS 복귀)"
+BL31 -> Linux: "ERET (NS-EL1)" { style.stroke-dash: 4 }
+Linux -> App: "결제 결과" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -305,20 +305,20 @@ flowchart LR
 
 모든 버스 트랜잭션에 NS (Non-Secure) 비트 추가:
 
-```mermaid
-flowchart LR
-    M["Master"] --> BUS["Bus transaction<br/>{NS, ADDR, DATA}"]
-    BUS -- "NS=0 (Secure)" --> SEC["Secure 메모리/디바이스<br/>접근 허용"]
-    BUS -- "NS=1 (Non-Secure)" --> CHK{"Secure 영역?"}
-    CHK -- yes --> ERR["버스 에러 — 차단"]
-    CHK -- no --> NOK["Non-Secure 영역<br/>접근 허용"]
+```d2
+direction: right
 
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef ns stroke:#1a73e8,stroke-width:2px
-    classDef err stroke:#b8860b,stroke-width:2px,stroke-dasharray:4 2
-    class SEC sec
-    class NOK ns
-    class ERR err
+M: "Master"
+BUS: "Bus transaction\n{NS, ADDR, DATA}"
+M -> BUS
+SEC: "Secure 메모리/디바이스\n접근 허용" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+BUS -> SEC: "NS=0 (Secure)"
+CHK: "Secure 영역?" { shape: diamond }
+BUS -> CHK: "NS=1 (Non-Secure)"
+ERR: "버스 에러 — 차단" { style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
+CHK -> ERR: "yes"
+NOK: "Non-Secure 영역\n접근 허용" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CHK -> NOK: "no"
 ```
 
 - NS 비트는 HW 가 강제 — SW 로 조작 불가능.

@@ -144,42 +144,33 @@ CQH.APD -> CC
 
 `RDMAWrite` 한 번이 발행될 때 5 AP 의 어느 채널이 어느 시점에 어디로 가는지.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant DRV as driver
-    participant CQH as cq_handler
-    participant C1 as 1side_compare
-    participant CT as c2h_tracker
-    participant SB as data_scoreboard
-    participant CV as cqe_validation_checker
+```d2
+shape: sequence_diagram
 
-    Note over DRV: T0 — init_seq 시점
-    DRV->>C1: qp_reg_ap.write(qp_obj)<br/>[node][qp] 키 생성
-    DRV->>CT: qp_reg_ap → m_qp_tracker 슬롯 준비
+DRV: "driver"
+CQH: "cq_handler"
+C1: "1side_compare"
+CT: "c2h_tracker"
+SB: "data_scoreboard"
+CV: "cqe_validation_checker"
 
-    Note over DRV: T1 — init_seq 시점
-    DRV->>CT: mr_reg_ap.write(mr_obj)<br/>expected PA 사전 준비
-    DRV->>SB: mr_reg_ap → lkey/rkey 테이블 갱신
-
-    Note over DRV: T2 — verb 발행
-    DRV->>C1: issued_wqe_ap → write_handler<br/>→ 1side_compare.write_queue
-    DRV->>CT: issued_wqe_ap → write_handler<br/>→ c2h_tracker.write_pa_queue
-
-    Note over CT: T3 — DUT 패킷 송신<br/>C2H DMA 매칭 (M10)
-
-    Note over CQH: T4 — CQE 도착
-    CQH->>CV: cqe_validation_cqe_ap<br/>(decoded CQE)
-
-    Note over DRV: T5 — cqe broadcast
-    DRV->>C1: cqe_ap.write(cqe)<br/>cmd 매칭
-
-    Note over DRV: T6 — outstanding 정리<br/>ErrQP 게이트
-    alt !isErrQP()
-        DRV->>SB: completed_wqe_ap.write<br/>정상 완료 카운트
-    else isErrQP()
-        DRV-->>SB: skip — 검증 제외
-    end
+# Note over DRV: T0 — init_seq 시점
+# Note over DRV: T1 — init_seq 시점
+# Note over DRV: T2 — verb 발행
+# Note over CT: T3 — DUT 패킷 송신\nC2H DMA 매칭 (M10)
+# Note over CQH: T4 — CQE 도착
+# Note over DRV: T5 — cqe broadcast
+# Note over DRV: T6 — outstanding 정리\nErrQP 게이트
+DRV -> C1: "qp_reg_ap.write(qp_obj)\n[node][qp] 키 생성"
+DRV -> CT: "qp_reg_ap → m_qp_tracker 슬롯 준비"
+DRV -> CT: "mr_reg_ap.write(mr_obj)\nexpected PA 사전 준비"
+DRV -> SB: "mr_reg_ap → lkey/rkey 테이블 갱신"
+DRV -> C1: "issued_wqe_ap → write_handler\n→ 1side_compare.write_queue"
+DRV -> CT: "issued_wqe_ap → write_handler\n→ c2h_tracker.write_pa_queue"
+CQH -> CV: "cqe_validation_cqe_ap\n(decoded CQE)"
+DRV -> C1: "cqe_ap.write(cqe)\ncmd 매칭"
+DRV -> SB: "completed_wqe_ap.write\n정상 완료 카운트"
+DRV -> SB: "skip — 검증 제외" { style.stroke-dash: 4 }
 ```
 
 ### 단계별 의미

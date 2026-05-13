@@ -94,31 +94,35 @@ LeetCode Easy / Medium 문제의 **30~40 %** 는 hash map 단 하나로 O(N) 풀
 
 ### 한 장 그림 — Brute Force vs Hash Map
 
-```mermaid
-flowchart LR
-    subgraph BF["Brute Force — O(n²)"]
-        direction TB
-        B1["for i in 0..n"]
-        B2["for j in i+1..n<br/>(내부 루프가 매번 검색)"]
-        B3["nums[i] + nums[j] == target ?"]
-        B1 --> B2 --> B3
-        B3 -- "총 비용 n × n" --> Bcost["= O(n²)"]
-    end
-    subgraph HM["Hash Map — O(n)"]
-        direction TB
-        H1["seen = {}"]
-        H2["for i in 0..n<br/>complement 계산"]
-        H3{"seen.exists(c) ?<br/>O(1) lookup"}
-        H4["답 반환"]
-        H5["seen[v] = i"]
-        H1 --> H2 --> H3
-        H3 -- YES --> H4
-        H3 -- NO --> H5
-        H5 --> H2
-        H4 --> Hcost["총 비용 n × O(1)<br/>= O(n)"]
-    end
-    classDef hot stroke-width:3px
-    class B2,H3 hot
+```d2
+direction: right
+
+BF: "Brute Force — O(n²)" {
+  direction: down
+  # unparsed: B1["for i in 0..n"]
+  # unparsed: B2["for j in i+1..n<br/>(내부 루프가 매번 검색)"]
+  # unparsed: B3["nums[i] + nums[j] == target ?"]
+  B2 { style.stroke-width: 3 }
+  B1 -> B2
+  B2 -> B3
+  Bcost: "= O(n²)"
+  B3 -> Bcost: "총 비용 n × n"
+}
+HM: "Hash Map — O(n)" {
+  direction: down
+  H1: "seen = {}"
+  # unparsed: H2["for i in 0..n<br/>complement 계산"]
+  H3: "seen.exists(c) ?\nO(1) lookup" { shape: diamond; style.stroke-width: 3 }
+  # unparsed: H4["답 반환"]
+  # unparsed: H5["seen[v] = i"]
+  H1 -> H2
+  H2 -> H3
+  H3 -> H4: "YES"
+  H3 -> H5: "NO"
+  H5 -> H2
+  Hcost: "총 비용 n × O(1)\n= O(n)"
+  H4 -> Hcost
+}
 ```
 
 핵심 변환: **"내부 루프의 검색"** 을 **"hash map 의 O(1) lookup"** 으로 바꾼 것이 전부입니다.

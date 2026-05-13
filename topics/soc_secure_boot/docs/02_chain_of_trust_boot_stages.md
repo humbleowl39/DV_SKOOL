@@ -109,25 +109,25 @@ BL2 -> BL33
 
 가장 단순한 시나리오. POR 직후 BL1 이 BL2 image 한 개와 BL2 cert 한 개를 Flash 에서 SRAM 으로 로드한 뒤, 검증 후 BL2 entry 로 점프하는 1 cycle.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant F as Flash (외부)
-    participant S as Internal SRAM
-    participant B as BootROM (BL1, EL3)
+```d2
+shape: sequence_diagram
 
-    Note over B: ① POR → reset vector
-    Note over B: ② boot device 결정
-    B->>F: ③ DMA: Flash → SRAM 요청
-    F->>S: BL2 image (e.g. 2 MB)<br/>BL2 cert (~ 1 KB)
-    Note over B: ④ cert parse → cert.PK 추출
-    Note over B: ⑤ SHA-256(cert.PK) 계산
-    B->>B: ⑥ OTP[ROTPK_HASH] 읽기
-    Note over B: ⑦ ⑤ == ⑥ ? (PK 인증)<br/>NO → halt / YES → next
-    Note over B: ⑧ Verify(cert.sig, cert.PK)<br/>NO → halt<br/>YES → cert.BL2_hash 신뢰
-    B->>S: ⑨ SHA-256(BL2 image) 계산
-    Note over B: ⑩ ⑨ == cert.BL2_hash ?<br/>NO → halt / YES → ⑪
-    Note over B: ⑪ jump BL2_entry ★<br/>(이 시점 BL2 = trusted)
+F: "Flash (외부)"
+S: "Internal SRAM"
+B: "BootROM (BL1, EL3)"
+
+# Note over B: ① POR → reset vector
+# Note over B: ② boot device 결정
+# Note over B: ④ cert parse → cert.PK 추출
+# Note over B: ⑤ SHA-256(cert.PK) 계산
+# Note over B: ⑦ ⑤ == ⑥ ? (PK 인증)\nNO → halt / YES → next
+# Note over B: ⑧ Verify(cert.sig, cert.PK)\nNO → halt\nYES → cert.BL2_hash 신뢰
+# Note over B: ⑩ ⑨ == cert.BL2_hash ?\nNO → halt / YES → ⑪
+# Note over B: ⑪ jump BL2_entry ★\n(이 시점 BL2 = trusted)
+B -> F: "③ DMA: Flash → SRAM 요청"
+F -> S: "BL2 image (e.g. 2 MB)\nBL2 cert (~ 1 KB)"
+B -> B: "⑥ OTP[ROTPK_HASH] 읽기"
+B -> S: "⑨ SHA-256(BL2 image) 계산"
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -352,15 +352,16 @@ OS (Linux)     → Measured Boot (IMA/TPM으로 런타임 측정)
 
 #### Remote Attestation — 원격 신뢰 판단
 
-```mermaid
-sequenceDiagram
-    participant D as 디바이스
-    participant V as 검증 서버 (Verifier)
+```d2
+shape: sequence_diagram
 
-    V->>D: 1. Attestation 요청
-    Note over D: 2. TPM 이 PCR 값에 서명 (AIK 키 사용)<br/>Quote = Sign(PCR[0..7], Nonce)
-    D->>V: 3. Quote 전송
-    Note over V: 4. 서버가 PCR 값을 기대 값과 비교<br/>일치 → "이 디바이스는 정상 부팅"<br/>불일치 → 서비스 접근 거부
+D: "디바이스"
+V: "검증 서버 (Verifier)"
+
+# Note over D: 2. TPM 이 PCR 값에 서명 (AIK 키 사용)\nQuote = Sign(PCR[0..7], Nonce)
+# Note over V: 4. 서버가 PCR 값을 기대 값과 비교\n일치 → "이 디바이스는 정상 부팅"\n불일치 → 서비스 접근 거부
+V -> D: "1. Attestation 요청"
+D -> V: "3. Quote 전송"
 ```
 
 #### DICE (Device Identifier Composition Engine) — 경량 대안

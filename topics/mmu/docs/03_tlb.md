@@ -447,21 +447,22 @@ ISB                // 파이프라인 플러시
 
 #### 문제: Page Table 변경 시 TLB 불일치
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant CPU
-    participant TLB
-    participant OS
-    participant PT as Page Table
-    Note over TLB: T1: VA=0x1000 → PA=0x8000 캐싱
-    OS->>PT: T2: VA=0x1000 매핑을<br/>PA=0xA000 으로 변경
-    CPU->>TLB: T3: VA=0x1000 접근
-    TLB-->>CPU: Hit → PA=0x8000 ← Stale!
-    Note over OS,TLB: 해결: T2 후 반드시<br/>TLBI VAE1, 0x1000<br/>DSB ISH; ISB
-    CPU->>TLB: VA=0x1000 재접근
-    TLB->>PT: Miss → Page Walk
-    PT-->>CPU: PA=0xA000 (올바른 값)
+```d2
+shape: sequence_diagram
+
+CPU
+TLB
+OS
+PT: "Page Table"
+
+# Note over TLB: T1: VA=0x1000 → PA=0x8000 캐싱
+# Note over OS: 해결: T2 후 반드시\nTLBI VAE1, 0x1000\nDSB ISH; ISB
+OS -> PT: "T2: VA=0x1000 매핑을\nPA=0xA000 으로 변경"
+CPU -> TLB: "T3: VA=0x1000 접근"
+TLB -> CPU: "Hit → PA=0x8000 ← Stale!" { style.stroke-dash: 4 }
+CPU -> TLB: "VA=0x1000 재접근"
+TLB -> PT: "Miss → Page Walk"
+PT -> CPU: "PA=0xA000 (올바른 값)" { style.stroke-dash: 4 }
 ```
 
 #### 멀티코어 환경에서의 TLB Coherency
@@ -483,34 +484,36 @@ TLB Shootdown = 한 코어가 다른 코어들의 TLB 를 원격 무효화하는
 
 **x86 방식 (SW Shootdown — IPI 기반)**:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C0 as Core 0
-    participant Cn as Core 1..N
-    C0->>C0: Page Table 변경
-    C0->>C0: 자신의 TLB Invalidation
-    C0->>Cn: IPI (Inter-Processor<br/>Interrupt) 전송
-    Cn->>Cn: TLB Invalidation Handler 실행
-    Cn-->>C0: 완료 ACK
-    C0->>C0: 모든 ACK 수신 후 진행
+```d2
+shape: sequence_diagram
+
+C0: "Core 0"
+Cn: "Core 1..N"
+
+C0 -> C0: "Page Table 변경"
+C0 -> C0: "자신의 TLB Invalidation"
+C0 -> Cn: "IPI (Inter-Processor\nInterrupt) 전송"
+Cn -> Cn: "TLB Invalidation Handler 실행"
+Cn -> C0: "완료 ACK" { style.stroke-dash: 4 }
+C0 -> C0: "모든 ACK 수신 후 진행"
 ```
 
 > 코어 수에 비례하여 지연 증가 (scalability 문제).
 
 **ARM 방식 (HW Broadcast — TLBI + IS)**:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C0 as Core 0
-    participant IC as HW Interconnect
-    participant Cn as Core 1..N
-    C0->>IC: TLBI VAE1IS, Xt
-    IC->>Cn: broadcast invalidate
-    Cn-->>Cn: TLB 자동 무효화
-    C0->>IC: DSB ISH (완료 대기)
-    IC-->>C0: 모든 코어 완료
+```d2
+shape: sequence_diagram
+
+C0: "Core 0"
+IC: "HW Interconnect"
+Cn: "Core 1..N"
+
+C0 -> IC: "TLBI VAE1IS, Xt"
+IC -> Cn: "broadcast invalidate"
+Cn -> Cn: "TLB 자동 무효화" { style.stroke-dash: 4 }
+C0 -> IC: "DSB ISH (완료 대기)"
+IC -> C0: "모든 코어 완료" { style.stroke-dash: 4 }
 ```
 
 > SW 개입 최소 (IPI 불필요), 더 빠름.

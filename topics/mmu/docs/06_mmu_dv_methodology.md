@@ -116,24 +116,24 @@ SB -> COV
 
 ### 단계별 추적
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant SEQ as Sequence<br/>(mmu_basic_trans_seq)
-    participant DRV as Driver
-    participant DUT as DUT (MMU IP, RTL)
-    participant MON as Monitor (passive)
-    participant SB as Dual Scoreboard
+```d2
+shape: sequence_diagram
 
-    Note over SEQ: T0: tr.randomize()<br/>va=0x4000_1000, asid=5, READ
-    SEQ->>DRV: uvm_seq_item_pull
-    Note over DRV: T1: AXI-S 구동<br/>tdata={va,asid,READ}<br/>tvalid=1, wait(tready)
-    DRV->>DUT: req
-    Note over DUT: T2:<br/>① TLB lookup → miss<br/>② Page Walk (4 mem read)<br/>③ Permission OK → PA=0x9_2000<br/>④ TLB fill<br/>⑤ resp_valid, lat=42
-    DUT->>MON: AXI-S response
-    Note over MON: T3: capture req/resp<br/>→ analysis_port
-    MON->>SB: analysis_port_write
-    Note over SB: T4: 3-axis check<br/>① observed.pa == ref_pa? PASS<br/>② lat ≤ ideal × K(2.0)?<br/>   42 ≤ 16? FAIL → uvm_warning<br/>③ handshake (SVA bind)<br/>coverage.sample → CG1/CG2/CG4
+SEQ: "Sequence\n(mmu_basic_trans_seq)"
+DRV: "Driver"
+DUT: "DUT (MMU IP, RTL)"
+MON: "Monitor (passive)"
+SB: "Dual Scoreboard"
+
+# Note over SEQ: T0: tr.randomize()\nva=0x4000_1000, asid=5, READ
+# Note over DRV: T1: AXI-S 구동\ntdata={va,asid,READ}\ntvalid=1, wait(tready)
+# Note over DUT: T2:\n① TLB lookup → miss\n② Page Walk (4 mem read)\n③ Permission OK → PA=0x9_2000\n④ TLB fill\n⑤ resp_valid, lat=42
+# Note over MON: T3: capture req/resp\n→ analysis_port
+# Note over SB: T4: 3-axis check\n① observed.pa == ref_pa? PASS\n② lat ≤ ideal × K(2.0)?\n   42 ≤ 16? FAIL → uvm_warning\n③ handshake (SVA bind)\ncoverage.sample → CG1/CG2/CG4
+SEQ -> DRV: "uvm_seq_item_pull"
+DRV -> DUT: "req"
+DUT -> MON: "AXI-S response"
+MON -> SB: "analysis_port_write"
 ```
 
 ### 단계별 의미

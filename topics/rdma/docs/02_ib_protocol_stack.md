@@ -500,15 +500,17 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
 
 ### 5.8 Link 상태 머신
 
-```mermaid
-stateDiagram-v2
-    [*] --> Down
-    Down --> Initialize: PortInfo<br/>NoStateChange
-    Initialize --> Arm: FC packet exchange
-    Arm --> Active: Mgmt cmd
-    Active --> Down: error / PortInfo Down
-    Initialize --> Down: error
-    Arm --> Down: error
+```d2
+direction: right
+
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> Down
+Down -> Initialize: "PortInfo\nNoStateChange"
+Initialize -> Arm: "FC packet exchange"
+Arm -> Active: "Mgmt cmd"
+Active -> Down: "error / PortInfo Down"
+Initialize -> Down: "error"
+Arm -> Down: "error"
 ```
 
 - **Down** → 물리 링크 없음

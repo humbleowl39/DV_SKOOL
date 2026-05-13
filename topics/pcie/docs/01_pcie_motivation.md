@@ -128,18 +128,20 @@ PCIE: "PCIe serial (2003~) — point-to-point" {
 
 가장 단순한 시나리오. CPU 가 NVMe device (x4 Gen3 EP) 에 **64 byte** Memory Write 를 한 번 발행합니다.
 
-```mermaid
-sequenceDiagram
-    participant CPU as CPU Core
-    participant RC as Root Complex<br/>(Root Port)
-    participant EP as NVMe EP<br/>(PHY + DLL)
-    CPU->>RC: ① store 64B to MMIO
-    RC->>RC: ② TLP MWr 생성 (TL)
-    RC->>RC: ③ Seq# + LCRC + Replay Buf (DLL)
-    RC->>EP: ④ STP framing + 128b/130b + scramble<br/>→ lane 0..3 stripe → SerDes → wire
-    EP->>EP: ⑤ LCRC 검증 OK
-    EP-->>RC: ⑥ ACK DLLP (lane × 4)
-    RC->>RC: ⑦ Replay Buffer entry retire
+```d2
+shape: sequence_diagram
+
+CPU: "CPU Core"
+RC: "Root Complex\n(Root Port)"
+EP: "NVMe EP\n(PHY + DLL)"
+
+CPU -> RC: "① store 64B to MMIO"
+RC -> RC: "② TLP MWr 생성 (TL)"
+RC -> RC: "③ Seq# + LCRC + Replay Buf (DLL)"
+RC -> EP: "④ STP framing + 128b/130b + scramble\n→ lane 0..3 stripe → SerDes → wire"
+EP -> EP: "⑤ LCRC 검증 OK"
+EP -> RC: "⑥ ACK DLLP (lane × 4)" { style.stroke-dash: 4 }
+RC -> RC: "⑦ Replay Buffer entry retire"
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

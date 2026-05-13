@@ -56,30 +56,29 @@ MMU 6 모듈을 끝까지 읽고 나면 머릿속에 _path 6개_ (Hit / Miss / W
 
 ### 한 장 그림 — VA → PA 6 path
 
-```mermaid
-flowchart LR
-    REQ["VA + ASID"]
-    TLB["TLB lookup"]
-    PWC["PWC"]
-    PWE["Page Walk Engine"]
-    HIT["① Hit → PA (1 cycle) ★"]
-    OK["③ Walk OK<br/>→ TLB fill → PA"]
-    TF["④ Translation fault<br/>→ Page Fault"]
-    PF["⑤ Permission fault<br/>→ Page Fault"]
-    S2["⑥ Stage 1 done → IPA<br/>→ Stage 2 (VTTBR_EL2) → PA<br/>(가상화 환경에서만)"]
+```d2
+direction: right
 
-    REQ --> TLB
-    TLB -- "① Hit" --> HIT
-    TLB -- "② Miss" --> PWC --> PWE
-    PWE --> OK
-    PWE --> TF
-    PWE --> PF
-    TLB -- "S1 done" --> S2
-
-    classDef fast stroke:#27ae60,stroke-width:3px
-    classDef fault stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
-    class HIT fast
-    class TF,PF fault
+# unparsed: REQ["VA + ASID"]
+# unparsed: TLB["TLB lookup"]
+# unparsed: PWC["PWC"]
+# unparsed: PWE["Page Walk Engine"]
+# unparsed: HIT["① Hit → PA (1 cycle) ★"]
+# unparsed: OK["③ Walk OK<br/>→ TLB fill → PA"]
+# unparsed: TF["④ Translation fault<br/>→ Page Fault"]
+# unparsed: PF["⑤ Permission fault<br/>→ Page Fault"]
+# unparsed: S2["⑥ Stage 1 done → IPA<br/>→ Stage 2 (VTTBR_EL2) → PA<br/>(가상화 환경에서만)"]
+REQ -> TLB
+HIT { style.stroke: "#27ae60"; style.stroke-width: 3 }
+TLB -> HIT: "① Hit"
+TLB -> PWC: "② Miss"
+PWC -> PWE
+PWE -> OK
+TF { style.stroke: "#c0392b"; style.stroke-width: 2; style.stroke-dash: 4 }
+PWE -> TF
+PF { style.stroke: "#c0392b"; style.stroke-width: 2; style.stroke-dash: 4 }
+PWE -> PF
+TLB -> S2: "S1 done"
 ```
 
 > ⑦ **ASID 변경 시**: 다른 ASID 의 entry 와 공존 (Flush 안 함) — 컨텍스트 스위치 핵심.<br>

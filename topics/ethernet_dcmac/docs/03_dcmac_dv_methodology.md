@@ -116,23 +116,23 @@ DCMAC 은 **양방향 + 프로토콜 + 통계 + 흐름제어 + reg** 가 모두 
 
 가장 단순한 시나리오. **smoke test**: TOE 모델이 single 64-byte frame 을 TX 에 넣고, line-loopback 으로 다시 RX 로 들어오게 해서 scoreboard 가 byte-level 동일성과 FCS good 을 확인. (line-loopback 은 Segmented IF 두 끝을 wire connect.)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant TXSEQ as tx_seq
-    participant TXDRV as tx_drv
-    participant DUTTX as DUT (TX)
-    participant DUTRX as DUT (RX)
-    participant RXMON as rx_mon
-    participant SB as scoreboard
+```d2
+shape: sequence_diagram
 
-    TXSEQ->>TXDRV: ① post item<br/>(64-byte frame)
-    TXDRV->>DUTTX: ② AXI-S beats
-    TXDRV-->>SB: analysis (tx in port)
-    DUTTX->>DUTRX: ③ Preamble + FCS + IFG<br/>(line loopback)
-    DUTRX->>RXMON: ④ Preamble strip + FCS check<br/>AXI-S, tuser=good
-    RXMON-->>SB: ⑤ analysis port (rx in port)
-    Note over SB: ⑥ compare<br/>byte-eq + tuser good
+TXSEQ: "tx_seq"
+TXDRV: "tx_drv"
+DUTTX: "DUT (TX)"
+DUTRX: "DUT (RX)"
+RXMON: "rx_mon"
+SB: "scoreboard"
+
+# Note over SB: ⑥ compare\nbyte-eq + tuser good
+TXSEQ -> TXDRV: "① post item\n(64-byte frame)"
+TXDRV -> DUTTX: "② AXI-S beats"
+TXDRV -> SB: "analysis (tx in port)" { style.stroke-dash: 4 }
+DUTTX -> DUTRX: "③ Preamble + FCS + IFG\n(line loopback)"
+DUTRX -> RXMON: "④ Preamble strip + FCS check\nAXI-S, tuser=good"
+RXMON -> SB: "⑤ analysis port (rx in port)" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

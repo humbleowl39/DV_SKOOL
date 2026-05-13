@@ -119,27 +119,31 @@
 
 가장 단순한 시나리오. **8-entry FIFO** 의 `wr_en && full` (overflow attempt) property 한 개를 SVA 로 작성 → bind → JasperGold 에 로드 → PROVEN 까지 전체 사이클을 따라가 봅시다.
 
-```mermaid
-flowchart TB
-    subgraph DUT["DUT — fifo_8entry"]
-        direction LR
-        IN["wr_en / wr_data<br/>rd_en"]
-        ST["count [3:0]<br/>buf [7:0][N]"]
-        OUT["full / empty"]
-        IN --> ST --> OUT
-    end
-    subgraph SVA["SVA bind"]
-        direction TB
-        A["assert<br/>!(wr_en && full)"]
-        C["cover<br/>(wr_en && count == N-1)"]
-    end
-    DUT -- "bind" --> SVA
-    SVA --> EL["elaborate (JG)"]
-    EL --> PR["prove -all<br/>Engine: SAT/SMT<br/>Induction"]
-    PR --> CEX["CEX (FAILED)<br/>count overflow path 발견"]
-    PR --> PV["PROVEN<br/>모든 cycle 안전<br/>(목표)"]
-    classDef goal stroke:#27ae60,stroke-width:3px
-    class PV goal
+```d2
+direction: down
+
+DUT: "DUT — fifo_8entry" {
+  direction: right
+  # unparsed: IN["wr_en / wr_data<br/>rd_en"]
+  # unparsed: ST["count [3:0]<br/>buf [7:0][N]"]
+  # unparsed: OUT["full / empty"]
+  IN -> ST
+  ST -> OUT
+}
+SVA: "SVA bind" {
+  direction: down
+  # unparsed: A["assert<br/>!(wr_en && full)"]
+  # unparsed: C["cover<br/>(wr_en && count == N-1)"]
+}
+DUT -> SVA: "bind"
+EL: "elaborate (JG)"
+SVA -> EL
+PR: "prove -all\nEngine: SAT/SMT\nInduction"
+EL -> PR
+CEX: "CEX (FAILED)\ncount overflow path 발견"
+PR -> CEX
+PV: "PROVEN\n모든 cycle 안전\n(목표)" { style.stroke: "#27ae60"; style.stroke-width: 3 }
+PR -> PV
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -348,11 +352,16 @@ SVA 로 Property 작성 → Formal Engine (SAT/SMT) 이 증명
 
 워크플로:
 
-```mermaid
-flowchart LR
-    A["RTL 로드"] --> B["SVA 로드"]
-    B --> C["Engine 실행<br/>prove -all"]
-    C --> D["결과 분석<br/>PROVEN / FAILED / BOUNDED"]
+```d2
+direction: right
+
+A: "RTL 로드"
+B: "SVA 로드"
+A -> B
+C: "Engine 실행\nprove -all"
+B -> C
+D: "결과 분석\nPROVEN / FAILED / BOUNDED"
+C -> D
 ```
 
 #### 5.3.2 Equivalence Checking (동등성 검증)
@@ -367,13 +376,19 @@ flowchart LR
 
 **핵심 개념 — Miter Circuit**
 
-```mermaid
-flowchart LR
-    IN["같은 입력"] --> SA["Spec A"]
-    IN --> IB["Impl B"]
-    SA -- "out_A" --> X(("XOR"))
-    IB -- "out_B" --> X
-    X --> R["0 = 동일<br/>1 = 차이 발견"]
+```d2
+direction: right
+
+IN: "같은 입력"
+SA: "Spec A"
+IN -> SA
+IB: "Impl B"
+IN -> IB
+X: "XOR" { shape: circle }
+SA -> X: "out_A"
+IB -> X: "out_B"
+R: "0 = 동일\n1 = 차이 발견"
+X -> R
 ```
 
 같은 입력에 대해 두 설계의 출력이 항상 동일한지 수학적으로 증명.
@@ -423,15 +438,15 @@ Formal 의 근본 한계:
 
 예: 데이터 경로 (곱셈기, ALU) 를 블랙박스로 → 제어 FSM 만 검증.
 
-```mermaid
-flowchart LR
-    subgraph DUT["DUT"]
-        FSM["FSM<br/>(검증)"]
-        MUL["곱셈기 (32-bit)<br/>(블랙박스 — 내부 상태 제거)"]
-        FSM <--> MUL
-    end
-    classDef bb stroke:#c0392b,stroke-width:3px,stroke-dasharray:4 4
-    class MUL bb
+```d2
+direction: right
+
+DUT: "DUT" {
+  # unparsed: FSM["FSM<br/>(검증)"]
+  # unparsed: MUL["곱셈기 (32-bit)<br/>(블랙박스 — 내부 상태 제거)"]
+  MUL { style.stroke: "#c0392b"; style.stroke-width: 3; style.stroke-dash: 4 }
+  FSM <-> MUL
+}
 ```
 
 주의: 블랙박스 출력은 자유 (unconstrained) 가 됨 → 필요시 assume 으로 출력 범위 제한.
@@ -463,12 +478,19 @@ flowchart LR
 
 큰 설계를 작은 블록으로 분할하여 각각 Formal 적용.
 
-```mermaid
-flowchart LR
-    subgraph SoC["대규모 SoC"]
-        direction LR
-        A["블록 A"] --> B["블록 B"] --> C["블록 C"] --> D["블록 D"]
-    end
+```d2
+direction: right
+
+SoC: "대규모 SoC" {
+  direction: right
+  A: "블록 A"
+  B: "블록 B"
+  C: "블록 C"
+  D: "블록 D"
+  A -> B
+  B -> C
+  C -> D
+}
 ```
 
 각 블록을 독립적으로 Formal 검증:

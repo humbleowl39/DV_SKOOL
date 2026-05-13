@@ -112,24 +112,24 @@ S3 -> S4
 
 가장 단순한 시나리오. FAISS 인덱스가 이미 빌드돼 있고, 사용자가 한 쿼리를 보내 LLM 이 답하는 한 사이클을 추적합니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as User
-    participant R as RAG Server
-    participant E as Embed (BGE-large)
-    participant F as FAISS Index<br/>(ip_spec.ivf)
-    participant L as LLM<br/>(Claude Sonnet, T=0)
+```d2
+shape: sequence_diagram
 
-    U->>R: ① HTTPS POST /rag/query<br/>'sysMMU 의 TLB invalidation 검증 시나리오는?'
-    R->>E: ② embed(query)
-    E-->>R: q ∈ ℝ¹⁰²⁴
-    R->>F: ③ search(q, k=5), nprobe=10
-    F-->>R: ④ top-5 chunks + metadata<br/>[c₂₃] TLBI ALL command (sysMMU_spec.pdf §4.2)<br/>[c₅₆] TLB invalidation timing (sysMMU_spec.pdf §4.5)<br/>[c₈₇] TLB security check (sysMMU_spec.pdf §7.3)<br/>[c₉₂] tlb_inv_all (vplan.md)<br/>[c₉₃] tlb_inv_by_va (vplan.md)
-    R->>R: ⑤ Prompt 조립<br/>System: '검증 아키텍트, 아래 자료만 근거'<br/>Context: [c₂₃ ... c₉₃]<br/>User: 원 쿼리
-    R->>L: ⑥ LLM call
-    L-->>R: '1. TLBI ALL + DMA race [c₂₃, c₅₆]<br/>2. TLBI by VA [c₂₃]<br/>3. Security DMA 격리 [c₈₇]<br/>기존 cover: 1,2 / 누락: 3<br/>mrun test --test_name dma_sec_check'
-    R-->>U: ⑦ 답변 + citation list<br/>(클릭 가능한 출처 링크)
+U: "User"
+R: "RAG Server"
+E: "Embed (BGE-large)"
+F: "FAISS Index\n(ip_spec.ivf)"
+L: "LLM\n(Claude Sonnet, T=0)"
+
+U -> R: "① HTTPS POST /rag/query\n'sysMMU 의 TLB invalidation 검증 시나리오는?'"
+R -> E: "② embed(query)"
+E -> R: "q ∈ ℝ¹⁰²⁴" { style.stroke-dash: 4 }
+R -> F: "③ search(q, k=5), nprobe=10"
+F -> R: "④ top-5 chunks + metadata\n[c₂₃] TLBI ALL command (sysMMU_spec.pdf §4.2)\n[c₅₆] TLB invalidation timing (sysMMU_spec.pdf §4.5)\n[c₈₇] TLB security check (sysMMU_spec.pdf §7.3)\n[c₉₂] tlb_inv_all (vplan.md)\n[c₉₃] tlb_inv_by_va (vplan.md)" { style.stroke-dash: 4 }
+R -> R: "⑤ Prompt 조립\nSystem: '검증 아키텍트, 아래 자료만 근거'\nContext: [c₂₃ ... c₉₃]\nUser: 원 쿼리"
+R -> L: "⑥ LLM call"
+L -> R: "'1. TLBI ALL + DMA race [c₂₃, c₅₆]\n2. TLBI by VA [c₂₃]\n3. Security DMA 격리 [c₈₇]\n기존 cover: 1,2 / 누락: 3\nmrun test --test_name dma_sec_check'" { style.stroke-dash: 4 }
+R -> U: "⑦ 답변 + citation list\n(클릭 가능한 출처 링크)" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

@@ -118,36 +118,31 @@ GATES -> CLEANUP
 
 가장 단순한 시나리오 — 에러 시나리오 시퀀스가 끝나고 QP 를 명시적으로 에러 destroy.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Test as test seq
-    participant DRV as driver
-    participant C1 as 1side_compare
-    participant C2 as 2side_compare
-    participant CI as imm_compare
-    participant CT as c2h_tracker
-    participant SQ as sequencer
+```d2
+shape: sequence_diagram
 
-    Note over Test,DRV: T0 — destroy 요청
-    Test->>DRV: RDMAQPDestroy(qp=5, .err(1))
+Test: "test seq"
+DRV: "driver"
+C1: "1side_compare"
+C2: "2side_compare"
+CI: "imm_compare"
+CT: "c2h_tracker"
+SQ: "sequencer"
 
-    Note over DRV: T0+1 — driver.RDMASQDestroy 진입
-    DRV->>DRV: destroy_qp.setErrState(1)<br/>qp[5].state = SQErr<br/>(per-QP gate ON)
-
-    Note over DRV: T0+2 — 후속 cmd_X(qp_num=5)
-    DRV-->>DRV: chkSQErrQP → isErrQP()==1<br/>skip + warning
-
-    Note over DRV: T0+3 — CQE 도착 중<br/>completed_wqe_ap 차단
-
-    Note over DRV: T0+4 — deregister chain
-    DRV->>C1: deregisterQP(5)<br/>→ flushQP(5)
-    DRV->>C2: deregisterQP(5)<br/>→ flushQP(5)
-    DRV->>CI: deregisterQP(5)<br/>→ flushQP(5)
-    DRV->>CT: deregisterQP(5)<br/>is_err_qp_registered[node][5]=1<br/>(이후 매칭 실패 skip)
-
-    Note over Test,SQ: T0+5 — cleanup
-    Test->>SQ: clearErrorStatus(5)<br/>wc_error_status[5].clear()
+# Note over Test: T0 — destroy 요청
+# Note over DRV: T0+1 — driver.RDMASQDestroy 진입
+# Note over DRV: T0+2 — 후속 cmd_X(qp_num=5)
+# Note over DRV: T0+3 — CQE 도착 중\ncompleted_wqe_ap 차단
+# Note over DRV: T0+4 — deregister chain
+# Note over Test: T0+5 — cleanup
+Test -> DRV: "RDMAQPDestroy(qp=5, .err(1))"
+DRV -> DRV: "destroy_qp.setErrState(1)\nqp[5].state = SQErr\n(per-QP gate ON)"
+DRV -> DRV: "chkSQErrQP → isErrQP()==1\nskip + warning" { style.stroke-dash: 4 }
+DRV -> C1: "deregisterQP(5)\n→ flushQP(5)"
+DRV -> C2: "deregisterQP(5)\n→ flushQP(5)"
+DRV -> CI: "deregisterQP(5)\n→ flushQP(5)"
+DRV -> CT: "deregisterQP(5)\nis_err_qp_registered[node][5]=1\n(이후 매칭 실패 skip)"
+Test -> SQ: "clearErrorStatus(5)\nwc_error_status[5].clear()"
 ```
 
 ### 단계별 의미

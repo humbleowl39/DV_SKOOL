@@ -275,20 +275,21 @@ SC -> IC
 
 ### 4.4 start_item / finish_item 흐름
 
-```mermaid
-sequenceDiagram
-    participant S as Sequence
-    participant Q as Sequencer
-    participant D as Driver
+```d2
+shape: sequence_diagram
 
-    S->>Q: start_item(item)<br/>Sequencer 에 요청
-    Q->>D: grant<br/>(Driver 준비됨)
-    Note over S: randomize here
-    S->>Q: finish_item(item)<br/>(item 전달)
-    Q->>D: get_next_item<br/>(item 전달)
-    D->>D: drive(item)
-    D-->>Q: item_done
-    Q-->>S: 반환
+S: "Sequence"
+Q: "Sequencer"
+D: "Driver"
+
+# Note over S: randomize here
+S -> Q: "start_item(item)\nSequencer 에 요청"
+Q -> D: "grant\n(Driver 준비됨)"
+S -> Q: "finish_item(item)\n(item 전달)"
+Q -> D: "get_next_item\n(item 전달)"
+D -> D: "drive(item)"
+D -> Q: "item_done" { style.stroke-dash: 4 }
+Q -> S: "반환" { style.stroke-dash: 4 }
 ```
 
 ---
@@ -515,19 +516,20 @@ endclass
 
 #### Response 흐름
 
-```mermaid
-sequenceDiagram
-    participant S as Sequence
-    participant Q as Sequencer
-    participant D as Driver
+```d2
+shape: sequence_diagram
 
-    S->>Q: start_item(req)
-    S->>Q: finish_item(req)
-    Q->>D: get_next_item
-    D->>D: drive(req)
-    D-->>Q: put_response(rsp)
-    D-->>Q: item_done
-    Q-->>S: get_response(rsp)<br/>rsp.data 사용
+S: "Sequence"
+Q: "Sequencer"
+D: "Driver"
+
+S -> Q: "start_item(req)"
+S -> Q: "finish_item(req)"
+Q -> D: "get_next_item"
+D -> D: "drive(req)"
+D -> Q: "put_response(rsp)" { style.stroke-dash: 4 }
+D -> Q: "item_done" { style.stroke-dash: 4 }
+Q -> S: "get_response(rsp)\nrsp.data 사용" { style.stroke-dash: 4 }
 ```
 
 !!! note "핵심"

@@ -129,20 +129,20 @@ D4 -> Q3: "적재" { style.stroke-dash: 4 }
 
 가장 단순한 시나리오. 사내 IP 스펙 1000 청크가 이미 인덱싱돼 있고, `"TLB flush"` 라는 쿼리 한 개를 던져 top-3 청크가 나오기까지를 추적합니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as Online Query<br/>query='TLB flush'
-    participant E as Embedding 모델
-    participant F as FAISS Index<br/>(offline 적재)
+```d2
+shape: sequence_diagram
 
-    U->>E: ① embed(query)
-    E-->>U: q ∈ ℝ⁷⁶⁸<br/>[0.11, -0.43, 0.80, ...]
-    U->>F: ② IVF probe<br/>nprobe=10
-    Note over F: Cluster 0..99 (K-means)<br/>chunk₁ v₁=[0.12, -0.45, ...]<br/>chunk₂₃ v₂₃=[0.11, -0.43, 0.80, ...]<br/>chunk₈₇ v₈₇=[0.55, 0.22, ...]
-    F->>F: ③ cosine sim 비교<br/>(10개 클러스터 안만)
-    F-->>U: ④ top-3 반환<br/>chunk₂₃: 0.95<br/>chunk₅₆: 0.88<br/>chunk₈₇: 0.42
-    U->>U: ⑤ chunk text + metadata 회수<br/>'TLBI ALL: 전체 TLB 무효화...' (chunk₂₃)
+U: "Online Query\nquery='TLB flush'"
+E: "Embedding 모델"
+F: "FAISS Index\n(offline 적재)"
+
+# Note over F: Cluster 0..99 (K-means)\nchunk₁ v₁=[0.12, -0.45, ...]\nchunk₂₃ v₂₃=[0.11, -0.43, 0.80, ...]\nchunk₈₇ v₈₇=[0.55, 0.22, ...]
+U -> E: "① embed(query)"
+E -> U: "q ∈ ℝ⁷⁶⁸\n[0.11, -0.43, 0.80, ...]" { style.stroke-dash: 4 }
+U -> F: "② IVF probe\nnprobe=10"
+F -> F: "③ cosine sim 비교\n(10개 클러스터 안만)"
+F -> U: "④ top-3 반환\nchunk₂₃: 0.95\nchunk₅₆: 0.88\nchunk₈₇: 0.42" { style.stroke-dash: 4 }
+U -> U: "⑤ chunk text + metadata 회수\n'TLBI ALL: 전체 TLB 무효화...' (chunk₂₃)"
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

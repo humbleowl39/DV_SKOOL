@@ -129,23 +129,24 @@ TEE -> L4 { style.stroke-dash: 4 }
 
 가장 단순한 시나리오. 새 ECU 가 OEM 공장 라인에 들어와 HSM 에 SecOC 마스터 키 `K_master` 가 주입되는 한 사이클을 끝까지 따라갑니다.
 
-```mermaid
-sequenceDiagram
-    participant KMS as Key Mgmt Server<br/>(KMS)
-    participant TOOL as Provisioning Tool
-    participant HSM as ECU HSM<br/>(on test jig)
+```d2
+shape: sequence_diagram
 
-    Note over KMS,HSM: OEM 공장 (Secure Room)
-    HSM->>KMS: ① VIN, ECU serial
-    KMS->>KMS: ② KDF(K_OEM_root, VIN‖ESN)<br/>→ K_dev (16 B)
-    KMS->>TOOL: ③ TLS over JTAG/SWD
-    TOOL->>TOOL: ④ Wrap(K_dev, K_kek_factory)
-    TOOL->>HSM: wrapped K_dev<br/>via HSM JTAG/SWD path
-    HSM->>HSM: ⑤ 내부 unwrap
-    HSM->>HSM: ⑥ K_dev → eFuse/OTP<br/>(이후 변경 X)
-    HSM->>HSM: ⑦ Lifecycle: OPEN → SECURED
-    HSM->>HSM: ⑧ JTAG/SWD 영구 disable
-    HSM-->>KMS: ⑨ Attestation cert
+KMS: "Key Mgmt Server\n(KMS)"
+TOOL: "Provisioning Tool"
+HSM: "ECU HSM\n(on test jig)"
+
+# Note over KMS: OEM 공장 (Secure Room)
+HSM -> KMS: "① VIN, ECU serial"
+KMS -> KMS: "② KDF(K_OEM_root, VIN‖ESN)\n→ K_dev (16 B)"
+KMS -> TOOL: "③ TLS over JTAG/SWD"
+TOOL -> TOOL: "④ Wrap(K_dev, K_kek_factory)"
+TOOL -> HSM: "wrapped K_dev\nvia HSM JTAG/SWD path"
+HSM -> HSM: "⑤ 내부 unwrap"
+HSM -> HSM: "⑥ K_dev → eFuse/OTP\n(이후 변경 X)"
+HSM -> HSM: "⑦ Lifecycle: OPEN → SECURED"
+HSM -> HSM: "⑧ JTAG/SWD 영구 disable"
+HSM -> KMS: "⑨ Attestation cert" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 왜 (보안 의미) |
@@ -324,37 +325,40 @@ HSMBOX -> NOTE { style.stroke-dash: 4 }
 
 ### 5.5 SecOC — AUTOSAR CAN 메시지 인증
 
-```mermaid
-flowchart LR
-    subgraph TX["송신 ECU"]
-        direction TB
-        TXA["App Data"]
-        TXS["SecOC Module"]
-        TXH["HSM<br/>MAC 생성 요청<br/>(Key ID + Data + FV)"]
-        TXF["Freshness Value 생성<br/>(카운터 / 타임스탬프)"]
-        TXP["Secured PDU<br/>= Data + Truncated MAC + FV"]
-        TXA --> TXS --> TXH
-        TXS --> TXF
-        TXH --> TXP
-        TXF --> TXP
-    end
-    subgraph RX["수신 ECU"]
-        direction TB
-        RXP["Secured PDU 수신"]
-        RXS["SecOC Module"]
-        RXH["HSM<br/>MAC 검증 요청<br/>(Key ID + Data + FV + MAC)"]
-        RXF["Freshness Value 검증<br/>(허용 범위 내?)"]
-        RXOK{인증 성공?}
-        RX_YES["App 전달"]
-        RX_NO["폐기 + 에러 보고"]
-        RXP --> RXS --> RXH
-        RXS --> RXF
-        RXH --> RXOK
-        RXF --> RXOK
-        RXOK -->|Yes| RX_YES
-        RXOK -->|No| RX_NO
-    end
-    TXP -- "CAN-FD 프레임" --> RXP
+```d2
+direction: right
+
+TX: "송신 ECU" {
+  direction: down
+  # unparsed: TXA["App Data"]
+  # unparsed: TXS["SecOC Module"]
+  # unparsed: TXH["HSM<br/>MAC 생성 요청<br/>(Key ID + Data + FV)"]
+  # unparsed: TXF["Freshness Value 생성<br/>(카운터 / 타임스탬프)"]
+  # unparsed: TXP["Secured PDU<br/>= Data + Truncated MAC + FV"]
+  TXA -> TXS
+  TXS -> TXH
+  TXS -> TXF
+  TXH -> TXP
+  TXF -> TXP
+}
+RX: "수신 ECU" {
+  direction: down
+  # unparsed: RXP["Secured PDU 수신"]
+  # unparsed: RXS["SecOC Module"]
+  # unparsed: RXH["HSM<br/>MAC 검증 요청<br/>(Key ID + Data + FV + MAC)"]
+  # unparsed: RXF["Freshness Value 검증<br/>(허용 범위 내?)"]
+  RXOK: "인증 성공?" { shape: diamond }
+  # unparsed: RX_YES["App 전달"]
+  # unparsed: RX_NO["폐기 + 에러 보고"]
+  RXP -> RXS
+  RXS -> RXH
+  RXS -> RXF
+  RXH -> RXOK
+  RXF -> RXOK
+  RXOK -> RX_YES: "Yes"
+  RXOK -> RX_NO: "No"
+}
+TXP -> RXP: "CAN-FD 프레임"
 ```
 
 ### 5.6 SecOC PDU 구조 + Truncated MAC 선택
@@ -394,13 +398,16 @@ SecOC 적용 CAN-FD 프레임 (64 B payload):
 
 #### Edge case 1: Cold Start Problem
 
-```mermaid
-flowchart LR
-    PWR["ECU 전원 ON"] --> RTOS["RTOS 부팅"] --> INIT["SecOC 초기화"] --> SYNC["Freshness 동기화"]
-    INIT -.취약 구간.-> GAP["수백 ms ~ 수 초<br/>FV 를 아직 모름<br/>MAC 검증 불가"]
+```d2
+direction: right
+PWR: "ECU 전원 ON"
+RTOS: "RTOS 부팅"
+INIT: "SecOC 초기화"
+SYNC: "Freshness 동기화"
+GAP: "수백 ms ~ 수 초\nFV 를 아직 모름\nMAC 검증 불가" { style.stroke-dash: 4; style.stroke-width: 2 }
 
-    classDef gap stroke-dasharray:4 4,stroke-width:2px
-    class GAP gap
+PWR -> RTOS -> INIT -> SYNC
+INIT -> GAP: "취약 구간" { style.stroke-dash: 4 }
 ```
 
 **대응 옵션:**
@@ -472,18 +479,16 @@ L2 -- BUS
 
 ### 5.9 Tesla FSD 탈옥에 SecOC 가 있었다면? (Module 03 미리보기)
 
-```mermaid
-flowchart LR
-    DONGLE["탈옥 동글"]
-    BUS(["CAN Bus"])
-    INJ["GPS 위조 프레임 주입<br/>(MAC 없음)"]
-    SECOC["FSD SoC 의<br/>SecOC 모듈"]
-    DROP["프레임 폐기<br/>(MAC 검증 실패 — 키 없음)"]
+```d2
+direction: right
+DONGLE: "탈옥 동글" { style.stroke-dash: 6; style.stroke-width: 2 }
+BUS: "CAN Bus" { shape: oval }
+INJ: "GPS 위조 프레임 주입\n(MAC 없음)"
+SECOC: "FSD SoC 의\nSecOC 모듈"
+DROP: "프레임 폐기\n(MAC 검증 실패 — 키 없음)"
 
-    DONGLE -- OBD-II --> BUS --> INJ --> SECOC --> DROP
-
-    classDef attacker stroke-width:2px,stroke-dasharray:6 3
-    class DONGLE attacker
+DONGLE -> BUS: OBD-II
+BUS -> INJ -> SECOC -> DROP
 ```
 
 **결론**: SecOC 만으로도 탈옥 동글의 위조 프레임을 완전 차단할 수 있다.

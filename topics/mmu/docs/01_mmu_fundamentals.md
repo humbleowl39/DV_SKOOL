@@ -458,21 +458,22 @@ SMMU2 -> TZASC
 
 #### Page Fault 처리 흐름
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant CPU
-    participant MMU
-    participant Handler as OS Fault Handler
-    CPU->>MMU: VA 접근 시도
-    MMU->>MMU: TLB Miss → Page Walk
-    Note over MMU: PTE 없거나 권한 위반
-    MMU->>CPU: Page Fault Exception
-    CPU->>Handler: Page Fault Handler 호출
-    Handler->>Handler: 원인 분석<br/>페이지 할당/로드<br/>권한 업데이트
-    Handler->>CPU: 복귀 → 원래 명령어 재실행
-    CPU->>MMU: VA 재접근
-    MMU-->>CPU: 정상 변환 성공
+```d2
+shape: sequence_diagram
+
+CPU
+MMU
+Handler: "OS Fault Handler"
+
+# Note over MMU: PTE 없거나 권한 위반
+CPU -> MMU: "VA 접근 시도"
+MMU -> MMU: "TLB Miss → Page Walk"
+MMU -> CPU: "Page Fault Exception"
+CPU -> Handler: "Page Fault Handler 호출"
+Handler -> Handler: "원인 분석\n페이지 할당/로드\n권한 업데이트"
+Handler -> CPU: "복귀 → 원래 명령어 재실행"
+CPU -> MMU: "VA 재접근"
+MMU -> CPU: "정상 변환 성공" { style.stroke-dash: 4 }
 ```
 
 **DV 관점**: Page Fault 발생 → Exception → Handler → 재실행의 전체 흐름이 올바르게 동작하는지, 특히 Fault 발생 시 MMU 상태(TLB, Page Walk Engine)가 정확히 유지되는지 검증해야 한다.

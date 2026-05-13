@@ -122,21 +122,21 @@ VT: "Virtualization" {
 
 가장 단순한 시나리오. Linux Guest 안에서 컨텍스트 스위치가 일어나 **새 page table base 를 CR3 에 쓰는** 단 한 줄이 어떻게 trap → emulate → resume 1 사이클이 되는지 추적합니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant G as Guest (VMX non-root)<br/>Linux 스케줄러
-    participant HW as HW (VT-x)
-    participant H as Hypervisor (VMX root)
+```d2
+shape: sequence_diagram
 
-    Note over G: 다음 task 로 switch
-    G->>HW: ① MOV CR3, RAX<br/>(특권 명령)
-    HW->>H: ② VM Exit (reason=CR_ACCESS)<br/>Guest state save · VMCS 에 IP/RAX 등
-    H->>H: ③ Exit reason 분기
-    H->>H: ④ shadow / EPT 갱신<br/>또는 검증 후 통과
-    H->>H: ⑤ VMCS update<br/>(Guest CR3 ← new_pt)
-    H->>HW: ⑥ VMRESUME
-    HW->>G: 다음 instruction 실행<br/>(직접 HW 에 쓴 것처럼 보임)
+G: "Guest (VMX non-root)\nLinux 스케줄러"
+HW: "HW (VT-x)"
+H: "Hypervisor (VMX root)"
+
+# Note over G: 다음 task 로 switch
+G -> HW: "① MOV CR3, RAX\n(특권 명령)"
+HW -> H: "② VM Exit (reason=CR_ACCESS)\nGuest state save · VMCS 에 IP/RAX 등"
+H -> H: "③ Exit reason 분기"
+H -> H: "④ shadow / EPT 갱신\n또는 검증 후 통과"
+H -> H: "⑤ VMCS update\n(Guest CR3 ← new_pt)"
+H -> HW: "⑥ VMRESUME"
+HW -> G: "다음 instruction 실행\n(직접 HW 에 쓴 것처럼 보임)"
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

@@ -115,24 +115,26 @@ H_PHY -> D_PHY: "TX lane"
 
 가장 단순한 시나리오. Host 가 LUN 0, LBA = 0x1000 에서 **4 KB (8 block × 512 B)** 를 READ 합니다. UFS 3.1, HS-G3 × 2-lane, MTU(UniPro DL frame) = 256 B 가정.
 
-```mermaid
-sequenceDiagram
-    participant App as App
-    participant Drv as Driver
-    participant HCI as HCI
-    participant Dev as UFS Device
-    App->>Drv: 1. read(fd, buf, 4096)
-    Note over Drv: 2. UTRD@slot=5 작성<br/>+ Cmd UPIU (16B CDB)<br/>+ PRDT (1 entry, 4 KB)
-    Drv->>HCI: 3. UTRLDBR |= (1<<5)<br/>doorbell ring
-    Note over HCI: 4. UTRD DMA fetch<br/>5. Cmd UPIU 조립
-    HCI->>Dev: 6/7. DL frame × 16<br/>(SOF/Hdr/UPIU/CRC-16/EOF)
-    Note over Dev: UTP 디코드<br/>8. NAND read
-    Dev-->>HCI: 9. Data-In UPIU × N<br/>(DL frame 16 개)
-    Note over HCI: 10. PRDT 주소에 DMA write
-    Dev-->>HCI: 11. Response UPIU<br/>Status=GOOD, Resid=0
-    Note over HCI: 12. UTRD.OCS = SUCCESS<br/>13. UTRLDBR[5]=0 + IRQ
-    HCI-->>Drv: IRQ
-    Drv->>App: 14. ISR → buf 반환 → app 복귀
+```d2
+shape: sequence_diagram
+
+App
+Drv: "Driver"
+HCI
+Dev: "UFS Device"
+
+# Note over Drv: 2. UTRD@slot=5 작성\n+ Cmd UPIU (16B CDB)\n+ PRDT (1 entry, 4 KB)
+# Note over HCI: 4. UTRD DMA fetch\n5. Cmd UPIU 조립
+# Note over Dev: UTP 디코드\n8. NAND read
+# Note over HCI: 10. PRDT 주소에 DMA write
+# Note over HCI: 12. UTRD.OCS = SUCCESS\n13. UTRLDBR[5]=0 + IRQ
+App -> Drv: "1. read(fd, buf, 4096)"
+Drv -> HCI: "3. UTRLDBR |= (1<<5)\ndoorbell ring"
+HCI -> Dev: "6/7. DL frame × 16\n(SOF/Hdr/UPIU/CRC-16/EOF)"
+Dev -> HCI: "9. Data-In UPIU × N\n(DL frame 16 개)" { style.stroke-dash: 4 }
+Dev -> HCI: "11. Response UPIU\nStatus=GOOD, Resid=0" { style.stroke-dash: 4 }
+HCI -> Drv: "IRQ" { style.stroke-dash: 4 }
+Drv -> App: "14. ISR → buf 반환 → app 복귀"
 ```
 
 ### 단계별 역할

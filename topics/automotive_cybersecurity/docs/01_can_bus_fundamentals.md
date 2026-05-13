@@ -125,26 +125,27 @@ ECU 4 대가 동일한 wired-AND 버스를 공유하고, **OBD-II 포트가 그 
 
 가장 단순한 시나리오. 노드 **TX-ECU** 가 brake-status 메시지를 노드 **RX-ECU** 에게 SecOC 로 인증해서 전송합니다. CAN-FD 64 B payload 한 프레임.
 
-```mermaid
-sequenceDiagram
-    participant TXA as TX-app<br/>(브레이크)
-    participant TXS as TX-SecOC
-    participant TXH as TX-HSM<br/>K_secoc
-    participant BUS as CAN-FD<br/>(ID=0x201, BRS=1)
-    participant RXS as RX-SecOC
-    participant RXH as RX-HSM<br/>K_secoc
-    participant RXA as RX-app<br/>(Body)
+```d2
+shape: sequence_diagram
 
-    TXA->>TXS: ① payload=8B<br/>status=0x42
-    TXS->>TXS: ② FV++ → 0x000A
-    TXS->>TXH: ③ AES-CMAC req<br/>(ID‖Data‖FV)
-    TXH-->>TXS: ④ MAC=0xDEADBEEF<br/>(truncated 4B)
-    TXS->>BUS: [Data 8 ‖ MAC 4 ‖ FV 2]
-    BUS->>RXS: ⑤ frame 수신
-    RXS->>RXS: ⑥ FV check<br/>prev=0x0009<br/>recv=0x000A → OK
-    RXS->>RXH: ⑦ MAC verify req
-    RXH-->>RXS: verify OK
-    RXS->>RXA: ⑧ deliver<br/>status=0x42
+TXA: "TX-app\n(브레이크)"
+TXS: "TX-SecOC"
+TXH: "TX-HSM\nK_secoc"
+BUS: "CAN-FD\n(ID=0x201, BRS=1)"
+RXS: "RX-SecOC"
+RXH: "RX-HSM\nK_secoc"
+RXA: "RX-app\n(Body)"
+
+TXA -> TXS: "① payload=8B\nstatus=0x42"
+TXS -> TXS: "② FV++ → 0x000A"
+TXS -> TXH: "③ AES-CMAC req\n(ID‖Data‖FV)"
+TXH -> TXS: "④ MAC=0xDEADBEEF\n(truncated 4B)" { style.stroke-dash: 4 }
+TXS -> BUS: "[Data 8 ‖ MAC 4 ‖ FV 2]"
+BUS -> RXS: "⑤ frame 수신"
+RXS -> RXS: "⑥ FV check\nprev=0x0009\nrecv=0x000A → OK"
+RXS -> RXH: "⑦ MAC verify req"
+RXH -> RXS: "verify OK" { style.stroke-dash: 4 }
+RXS -> RXA: "⑧ deliver\nstatus=0x42"
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -234,22 +235,22 @@ bit    A   B   C   bus     판정
 
 각 ECU 는 **TEC** (Transmit Error Counter), **REC** (Receive Error Counter) 두 카운터를 유지하고 세 상태를 오갑니다.
 
-```mermaid
-stateDiagram-v2
-    direction LR
-    [*] --> ErrorActive
-    ErrorActive: Error Active<br/>정상 동작<br/>Active Error Flag (6 dom)<br/>→ 다른 노드 transmission 강제 abort
-    ErrorPassive: Error Passive<br/>송신 가능<br/>Passive Error Flag (6 rec)<br/>→ 다른 노드 방해 안 함
-    BusOff: Bus-Off<br/>통신 완전 차단<br/>128 × 11 rec 관찰 후 복귀
+```d2
+direction: right
 
-    ErrorActive --> ErrorPassive: TEC/REC ≥ 128
-    ErrorPassive --> BusOff: TEC > 255
-    ErrorPassive --> ErrorActive: TEC/REC < 128
-    BusOff --> ErrorActive: 복귀 시퀀스
-    note right of ErrorActive
-        error 시 +8 / success 시 −1
-        → 12.5% 만 넘어도 단조 증가
-    end note
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> ErrorActive
+# unparsed: ErrorActive: Error Active<br/>정상 동작<br/>Active Error Flag (6 dom)<br/>→ 다른 노드 transmission 강제 abort
+# unparsed: ErrorPassive: Error Passive<br/>송신 가능<br/>Passive Error Flag (6 rec)<br/>→ 다른 노드 방해 안 함
+# unparsed: BusOff: Bus-Off<br/>통신 완전 차단<br/>128 × 11 rec 관찰 후 복귀
+ErrorActive -> ErrorPassive: "TEC/REC ≥ 128"
+ErrorPassive -> BusOff: "TEC > 255"
+ErrorPassive -> ErrorActive: "TEC/REC < 128"
+BusOff -> ErrorActive: "복귀 시퀀스"
+# unparsed: note right of ErrorActive
+# unparsed: error 시 +8 / success 시 −1
+# unparsed: → 12.5% 만 넘어도 단조 증가
+# unparsed: end note
 ```
 
 **핵심 비대칭**: error 시 +8, success 시 -1 → **에러 비율이 12.5 % 만 넘어도 카운터 단조 증가**. 이 비대칭이 Bus-Off attack 의 수학적 기반입니다.
@@ -334,18 +335,19 @@ CANsec = CAN-XL 의 Layer 2 보안
 
 **Step 2 — 동시 송신으로 비트 충돌 유발**:
 
-```mermaid
-sequenceDiagram
-    participant ATK as 공격자
-    participant BRK as 브레이크 ECU
-    participant BUS as CAN Bus
+```d2
+shape: sequence_diagram
 
-    BRK->>BUS: ID 0x101 정상 송신 시작
-    ATK->>BUS: 같은 ID 0x101, 다른 data 송신
-    BUS-->>BRK: 데이터 필드에서 비트 충돌
-    BUS-->>ATK: Error Frame
-    BUS-->>BRK: Error Frame
-    Note over ATK,BRK: TEC: 양쪽 +8
+ATK: "공격자"
+BRK: "브레이크 ECU"
+BUS: "CAN Bus"
+
+# Note over ATK: TEC: 양쪽 +8
+BRK -> BUS: "ID 0x101 정상 송신 시작"
+ATK -> BUS: "같은 ID 0x101, 다른 data 송신"
+BUS -> BRK: "데이터 필드에서 비트 충돌" { style.stroke-dash: 4 }
+BUS -> ATK: "Error Frame" { style.stroke-dash: 4 }
+BUS -> BRK: "Error Frame" { style.stroke-dash: 4 }
 ```
 
 **Step 3 — 비대칭 누적**:

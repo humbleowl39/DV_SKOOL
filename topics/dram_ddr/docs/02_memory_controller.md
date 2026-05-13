@@ -483,18 +483,20 @@ DDR5 초기화 차이:
 
 ### 5.10 Power Management — 전력 상태 머신
 
-```mermaid
-stateDiagram-v2
-    [*] --> Active
-    Active --> PowerDown: CKE LOW
-    PowerDown --> Active: CKE HIGH
-    Active --> Idle: PRE all
-    Idle --> SelfRefresh: CKE LOW + SRE
-    SelfRefresh --> Idle: SRX
-    note right of Active: 정상 동작
-    note right of PowerDown: Power-Down (PD)
-    note left of Idle: 모든 Bank precharged
-    note left of SelfRefresh: Self-Refresh (SR)
+```d2
+direction: right
+
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> Active
+Active -> PowerDown: "CKE LOW"
+PowerDown -> Active: "CKE HIGH"
+Active -> Idle: "PRE all"
+Idle -> SelfRefresh: "CKE LOW + SRE"
+SelfRefresh -> Idle: "SRX"
+# unparsed: note right of Active: 정상 동작
+# unparsed: note right of PowerDown: Power-Down (PD)
+# unparsed: note left of Idle: 모든 Bank precharged
+# unparsed: note left of SelfRefresh: Self-Refresh (SR)
 ```
 
 각 상태 설명:

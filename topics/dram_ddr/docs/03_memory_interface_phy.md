@@ -333,12 +333,17 @@ DDR5 ODT 변경점:
 
 목적: 내부 클럭과 외부 CK의 위상을 정렬. 원리: 지연(delay)을 조절하여 피드백 클럭과 기준 클럭의 위상을 맞춤.
 
-```mermaid
-flowchart LR
-    CKIN["외부 CK"] --> VD["Variable Delay"]
-    VD --> CKOUT["내부 CK<br/>(DQS 생성용)"]
-    CKOUT -- "피드백" --> PD["Phase Detector<br/>(지연 증가/감소)"]
-    PD --> VD
+```d2
+direction: right
+
+CKIN: "외부 CK"
+VD: "Variable Delay"
+CKIN -> VD
+CKOUT: "내부 CK\n(DQS 생성용)"
+VD -> CKOUT
+PD: "Phase Detector\n(지연 증가/감소)"
+CKOUT -> PD: "피드백"
+PD -> VD
 ```
 
 DLL이 하는 일:
@@ -351,14 +356,21 @@ DLL이 하는 일:
 
 목적: 시스템 클럭에서 DDR 클럭과 그 분주/배수 클럭 생성. 원리: VCO(전압제어발진기)의 주파수를 조절하여 기준 주파수에 Lock.
 
-```mermaid
-flowchart LR
-    SYS["System CLK"] --> PFD["PFD"]
-    PFD --> LF["Loop Filter"]
-    LF --> VCO["VCO"]
-    VCO --> CKOUT["CK 출력"]
-    VCO --> DIV["Divider (÷N)"]
-    DIV --> PFD
+```d2
+direction: right
+
+SYS: "System CLK"
+PFD: "PFD"
+SYS -> PFD
+LF: "Loop Filter"
+PFD -> LF
+VCO: "VCO"
+LF -> VCO
+CKOUT: "CK 출력"
+VCO -> CKOUT
+DIV: "Divider (÷N)"
+VCO -> DIV
+DIV -> PFD
 ```
 
 PLL이 하는 일:

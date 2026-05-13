@@ -200,34 +200,32 @@ status_t verify_rotpk(const uint8_t *cert_pk, size_t pk_len) {
 
 칩은 제조부터 폐기까지 보안 상태가 단계적으로 변화. **각 전환은 비가역적 (OTP blow)** 이므로 되돌릴 수 없습니다.
 
-```mermaid
-stateDiagram-v2
-    [*] --> DEVELOPMENT
-    DEVELOPMENT --> PROVISIONING : OTP Blow
-    PROVISIONING --> PRODUCTION : OTP Blow (비가역)
-    PRODUCTION --> END_OF_LIFE : OTP Blow
+```d2
+direction: right
 
-    DEVELOPMENT : DEVELOPMENT
-    DEVELOPMENT : - Secure Boot OFF
-    DEVELOPMENT : - JTAG 오픈
-    DEVELOPMENT : - 모든 Boot Mode
-    DEVELOPMENT : - 디버그 자유
-
-    PROVISIONING : PROVISIONING
-    PROVISIONING : - ROTPK 해시 기록
-    PROVISIONING : - 보안 설정 기록
-    PROVISIONING : - 테스트 키 → 양산 키 전환
-
-    PRODUCTION : PRODUCTION
-    PRODUCTION : - Secure Boot ON
-    PRODUCTION : - JTAG Locked
-    PRODUCTION : - Boot Mode 고정
-    PRODUCTION : - Anti-RB 활성
-
-    END_OF_LIFE : END-OF-LIFE
-    END_OF_LIFE : - 키 전부 폐기
-    END_OF_LIFE : - 기능 영구 차단
-    END_OF_LIFE : - 칩 재사용 불가
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> DEVELOPMENT
+DEVELOPMENT -> PROVISIONING: "OTP Blow"
+PROVISIONING -> PRODUCTION: "OTP Blow (비가역)"
+PRODUCTION -> END_OF_LIFE: "OTP Blow"
+# unparsed: DEVELOPMENT : DEVELOPMENT
+# unparsed: DEVELOPMENT : - Secure Boot OFF
+# unparsed: DEVELOPMENT : - JTAG 오픈
+# unparsed: DEVELOPMENT : - 모든 Boot Mode
+# unparsed: DEVELOPMENT : - 디버그 자유
+# unparsed: PROVISIONING : PROVISIONING
+# unparsed: PROVISIONING : - ROTPK 해시 기록
+# unparsed: PROVISIONING : - 보안 설정 기록
+# unparsed: PROVISIONING : - 테스트 키 → 양산 키 전환
+# unparsed: PRODUCTION : PRODUCTION
+# unparsed: PRODUCTION : - Secure Boot ON
+# unparsed: PRODUCTION : - JTAG Locked
+# unparsed: PRODUCTION : - Boot Mode 고정
+# unparsed: PRODUCTION : - Anti-RB 활성
+# unparsed: END_OF_LIFE : END-OF-LIFE
+# unparsed: END_OF_LIFE : - 키 전부 폐기
+# unparsed: END_OF_LIFE : - 기능 영구 차단
+# unparsed: END_OF_LIFE : - 칩 재사용 불가
 ```
 
 | 상태 | Secure Boot | JTAG | Boot Mode | OTP 상태 |

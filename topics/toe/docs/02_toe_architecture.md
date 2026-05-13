@@ -315,18 +315,39 @@ TOE 가 수백만 TCP 연결을 관리할 때, 각 연결별 RTO 타이머를 HW
 
 핵심 아이디어: 시간을 슬롯으로 나누고, 만료 시점에 해당하는 슬롯에 연결을 등록.
 
-```mermaid
-flowchart LR
-    PTR(["현재 시각 포인터<br/>tick 마다 1칸 전진"])
-    S0["[0]"] --> CA["conn_A"] --> CD["conn_D"] --> N0["NULL"]
-    S1["[1]"] --> CB["conn_B"] --> N1["NULL"]
-    S2["[2]"] --> N2["NULL"]
-    S3["[3]"] --> CC["conn_C"] --> CE["conn_E"] --> N3["NULL"]
-    SX["[...]"]
-    S255["[255]"] --> CF["conn_F"] --> N255["NULL"]
-    PTR -.-> S0
-    classDef slot stroke:#1a73e8,stroke-width:2px
-    class S0,S1,S2,S3,S255,SX slot
+```d2
+direction: right
+
+# unparsed: PTR(["현재 시각 포인터<br/>tick 마다 1칸 전진"])
+S0: "[0]" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CA: "conn_A"
+CD: "conn_D"
+N0: "NULL"
+S0 -> CA
+CA -> CD
+CD -> N0
+S1: "[1]" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CB: "conn_B"
+N1: "NULL"
+S1 -> CB
+CB -> N1
+S2: "[2]" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+N2: "NULL"
+S2 -> N2
+S3: "[3]" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CC: "conn_C"
+CE: "conn_E"
+N3: "NULL"
+S3 -> CC
+CC -> CE
+CE -> N3
+# unparsed: SX["[...]"]
+S255: "[255]" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CF: "conn_F"
+N255: "NULL"
+S255 -> CF
+CF -> N255
+PTR -> S0 { style.stroke-dash: 4 }
 ```
 
 Timer Wheel 구조 예: 256 슬롯, 1 ms 해상도.

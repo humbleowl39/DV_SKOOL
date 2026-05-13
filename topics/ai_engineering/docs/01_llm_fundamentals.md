@@ -93,35 +93,38 @@
 
 ### 한 장 그림 — RNN/LSTM 시대 vs Transformer 시대
 
-```mermaid
-flowchart LR
-    subgraph RNN["RNN/LSTM (~2017) — 순차 처리"]
-        direction LR
-        R1["tok₁"]
-        R2["tok₂"]
-        R3["tok₃"]
-        R4["tokₙ"]
-        R1 -- "hidden state" --> R2
-        R2 -- "hidden state" --> R3
-        R3 -- "..." --> R4
-        RL["vanish/explode gradient<br/>GPU 병렬화 불가<br/>→ 장거리 의존성 손실"]
-    end
-    subgraph TX["Transformer (2017~) — 모든 쌍 직접 연결"]
-        direction LR
-        T1["tok₁"]
-        T2["tok₂"]
-        T3["tok₃"]
-        T4["tokₙ"]
-        T1 <--> T2
-        T1 <--> T3
-        T1 <--> T4
-        T2 <--> T3
-        T2 <--> T4
-        T3 <--> T4
-        TL["Q@Kᵀ 한 번에<br/>모든 쌍 점수 계산<br/>→ 완전 병렬 + 장거리 직접 참조"]
-    end
-    classDef cost stroke:#c0392b,stroke-width:3px
-    class R1,R2,R3,R4 cost
+```d2
+direction: right
+
+RNN: "RNN/LSTM (~2017) — 순차 처리" {
+  direction: right
+  # unparsed: R1["tok₁"]
+  # unparsed: R2["tok₂"]
+  # unparsed: R3["tok₃"]
+  # unparsed: R4["tokₙ"]
+  R1 { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  R2 { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  R1 -> R2: "hidden state"
+  R3 { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  R2 -> R3: "hidden state"
+  R4 { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  R3 -> R4: "..." { style.stroke-dash: 4 }
+  # unparsed: RL["vanish/explode gradient<br/>GPU 병렬화 불가<br/>→ 장거리 의존성 손실"]
+}
+TX: "Transformer (2017~) — 모든 쌍 직접 연결" {
+  direction: right
+  # unparsed: T1["tok₁"]
+  # unparsed: T2["tok₂"]
+  # unparsed: T3["tok₃"]
+  # unparsed: T4["tokₙ"]
+  T1 <-> T2
+  T1 <-> T3
+  T1 <-> T4
+  T2 <-> T3
+  T2 <-> T4
+  T3 <-> T4
+  # unparsed: TL["Q@Kᵀ 한 번에<br/>모든 쌍 점수 계산<br/>→ 완전 병렬 + 장거리 직접 참조"]
+}
 ```
 
 세 개의 빨간 원이 Transformer 에서는 모두 사라지고, 대신 **attention 행렬** 이 토큰 쌍의 관계를 직접 잡습니다.
@@ -488,26 +491,27 @@ DV 관점:
 기존 (Dense Model): 모든 입력이 모든 파라미터를 통과 → 파라미터 수 = 연산량 (비례).
 MoE: 입력마다 일부 Expert 만 활성화 (Sparse Activation) → 총 파라미터는 크지만 토큰당 연산량은 적음.
 
-```mermaid
-flowchart TB
-    IN["입력 토큰"]
-    R["Router (Gate Network)<br/>어떤 Expert 를 선택할지 결정<br/>Top-K (보통 K=2)"]
-    E1["Expert 1<br/>(FFN)"]
-    E2["Expert 2<br/>(FFN)"]
-    E3["Expert 3<br/>(FFN)"]
-    E4["..."]
-    E8["Expert 8<br/>(FFN)"]
-    OUT["Weighted Sum → 출력"]
-    IN --> R
-    R -. "선택 안 됨" .-> E1
-    R ==> E2
-    R ==> E3
-    R -. "선택 안 됨" .-> E4
-    R -. "선택 안 됨" .-> E8
-    E2 --> OUT
-    E3 --> OUT
-    classDef active stroke:#27ae60,stroke-width:3px
-    class E2,E3 active
+```d2
+direction: down
+
+# unparsed: IN["입력 토큰"]
+# unparsed: R["Router (Gate Network)<br/>어떤 Expert 를 선택할지 결정<br/>Top-K (보통 K=2)"]
+# unparsed: E1["Expert 1<br/>(FFN)"]
+# unparsed: E2["Expert 2<br/>(FFN)"]
+# unparsed: E3["Expert 3<br/>(FFN)"]
+# unparsed: E4["..."]
+# unparsed: E8["Expert 8<br/>(FFN)"]
+# unparsed: OUT["Weighted Sum → 출력"]
+IN -> R
+R -> E1: "선택 안 됨" { style.stroke-dash: 4 }
+E2 { style.stroke: "#27ae60"; style.stroke-width: 3 }
+R -> E2
+E3 { style.stroke: "#27ae60"; style.stroke-width: 3 }
+R -> E3
+R -> E4: "선택 안 됨" { style.stroke-dash: 4 }
+R -> E8: "선택 안 됨" { style.stroke-dash: 4 }
+E2 -> OUT
+E3 -> OUT
 ```
 
 → 8개 Expert 중 2개만 활성화 = 파라미터 8x, 연산 ~2x.

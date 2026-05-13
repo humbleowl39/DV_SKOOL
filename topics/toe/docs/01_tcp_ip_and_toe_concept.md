@@ -119,23 +119,23 @@ TOE: "TOE — HW offload" {
 
 가장 단순한 시나리오. 웹 서버가 클라이언트에게 **1 MB HTTP 응답** 을 보냅니다. 연결은 이미 ESTABLISHED 상태, MSS = 1460 byte 라고 가정.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant App as Server App
-    participant TOE as TOE Engine
-    participant MAC as MAC / wire
-    participant Peer as Client NIC
+```d2
+shape: sequence_diagram
 
-    App->>TOE: ① descriptor post (1 MB, 단 1회)
-    Note over TOE: ② HW Segmentation<br/>1 MB → 720 seg (MSS=1460)<br/>③ HW header build (TCP/IP)<br/>④ HW Checksum<br/>⑤ Retx buffer + RTO arm
-    TOE->>MAC: seg1, seg2, ..., seg720
-    MAC->>Peer: wire
-    Peer-->>MAC: ⑥ ACK(ack=N×1460)
-    MAC-->>TOE: ACK
-    Note over TOE: ⑦ HW ACK 처리<br/>retx buffer 해제<br/>⑧ Window slide<br/>다음 seg burst
-    Note over TOE: ⑨ 모든 byte ACK 완료
-    TOE-->>App: descriptor done IRQ<br/>(write() return)
+App: "Server App"
+TOE: "TOE Engine"
+MAC: "MAC / wire"
+Peer: "Client NIC"
+
+# Note over TOE: ② HW Segmentation\n1 MB → 720 seg (MSS=1460)\n③ HW header build (TCP/IP)\n④ HW Checksum\n⑤ Retx buffer + RTO arm
+# Note over TOE: ⑦ HW ACK 처리\nretx buffer 해제\n⑧ Window slide\n다음 seg burst
+# Note over TOE: ⑨ 모든 byte ACK 완료
+App -> TOE: "① descriptor post (1 MB, 단 1회)"
+TOE -> MAC: "seg1, seg2, ..., seg720"
+MAC -> Peer: "wire"
+Peer -> MAC: "⑥ ACK(ack=N×1460)" { style.stroke-dash: 4 }
+MAC -> TOE: "ACK" { style.stroke-dash: 4 }
+TOE -> App: "descriptor done IRQ\n(write() return)" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -207,29 +207,43 @@ CP: "Control Path (SW) — 낮은 빈도, ms 단위 허용" {
 
 ### 4.3 DMA / TSO / TOE / RDMA — 한 그림
 
-```mermaid
-flowchart LR
-    subgraph SW["SW TCP"]
-        direction LR
-        SW1["App"] -- "copy · CPU" --> SW2["sk_buff"]
-        SW2 -- "stack · CPU" --> SW3["NIC"]
-        SW3 -- "DMA" --> SW4["wire"]
-    end
-    subgraph TSO["TSO"]
-        direction LR
-        T1["App"] -- "copy · CPU" --> T2["sk_buff (big)"]
-        T2 -- "NIC TSO<br/>(HW segment)" --> T3["wire"]
-    end
-    subgraph TOE["TOE"]
-        direction LR
-        O1["App"] -- "DMA" --> O2["TOE buf"]
-        O2 -- "HW seg+chksum+retx<br/>(전부 HW)" --> O3["wire"]
-    end
-    subgraph RDMA["RDMA — TCP 자체 우회"]
-        direction LR
-        R1["App buffer"] -- "MR<br/>(사전 등록)" --> R2["HCA"]
-        R2 -- "DMA<br/>(kernel bypass)" --> R3["wire"]
-    end
+```d2
+direction: right
+
+SW: "SW TCP" {
+  direction: right
+  SW1: "App"
+  SW2: "sk_buff"
+  SW1 -> SW2: "copy · CPU"
+  SW3: "NIC"
+  SW2 -> SW3: "stack · CPU"
+  SW4: "wire"
+  SW3 -> SW4: "DMA"
+}
+TSO: "TSO" {
+  direction: right
+  T1: "App"
+  T2: "sk_buff (big)"
+  T1 -> T2: "copy · CPU"
+  T3: "wire"
+  T2 <-> T3: "NIC TSO\n(HW segment)"
+}
+TOE: "TOE" {
+  direction: right
+  O1: "App"
+  O2: "TOE buf"
+  O1 -> O2: "DMA"
+  O3: "wire"
+  O2 <-> O3: "HW seg+chksum+retx\n(전부 HW)"
+}
+RDMA: "RDMA — TCP 자체 우회" {
+  direction: right
+  R1: "App buffer"
+  R2: "HCA"
+  R1 <-> R2: "MR\n(사전 등록)"
+  R3: "wire"
+  R2 <-> R3: "DMA\n(kernel bypass)"
+}
 ```
 
 오른쪽으로 갈수록 CPU 개입이 줄지만, _기존 socket API 호환성_ 도 같이 줄어듭니다 — RDMA 는 별도 verbs API. TOE 는 **socket API 를 유지하면서 가장 많은 cycle 을 줄이는 지점**.
@@ -267,25 +281,24 @@ UDP 는 헤더 8 B + 상태 관리 없음 → **CPU 부하가 작아 offload 효
 
 ### 5.3 TCP 연결 수명 주기
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
+```d2
+shape: sequence_diagram
 
-    Note over C,S: 연결 수립 — 3-Way Handshake
-    C->>S: SYN
-    S->>C: SYN+ACK
-    C->>S: ACK
+C: "Client"
+S: "Server"
 
-    Note over C,S: 데이터 전송
-    C->>S: DATA (seq=100, len=500)
-    S->>C: ACK (ack=600)
-
-    Note over C,S: 연결 해제 — 4-Way Handshake (또는 RST)
-    C->>S: FIN
-    S->>C: ACK
-    S->>C: FIN
-    C->>S: ACK
+# Note over C: 연결 수립 — 3-Way Handshake
+# Note over C: 데이터 전송
+# Note over C: 연결 해제 — 4-Way Handshake (또는 RST)
+C -> S: "SYN"
+S -> C: "SYN+ACK"
+C -> S: "ACK"
+C -> S: "DATA (seq=100, len=500)"
+S -> C: "ACK (ack=600)"
+C -> S: "FIN"
+S -> C: "ACK"
+S -> C: "FIN"
+C -> S: "ACK"
 ```
 
 → **연결 setup/teardown 은 연결당 1 회**. 데이터 전송은 packet 당 발생 → 빈도 격차가 100 만 배 이상. 이 비대칭이 HW/SW 분리의 근거.

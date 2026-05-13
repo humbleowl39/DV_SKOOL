@@ -118,28 +118,28 @@ M -> P4 { style.stroke-dash: 4 }
 
 ### 단계별 추적
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant UVM as UVM
-    participant Test as test
-    participant Env as top_env
-    participant Init as vrdma_init_seq
-    participant TopSeq as my_top_seq
-    participant Seqr0 as seqr[0]
-    participant CQH as cq_handler
+```d2
+shape: sequence_diagram
 
-    Note over Env: build_phase<br/>env.node[0..1] 생성<br/>agent/driver/sequencer/handler<br/>default_sequence 등록
-    Note over Env: connect_phase<br/>AP wiring<br/>(M04 토폴로지)
-    Note over Env: reset_phase<br/>DUT reset, host mem clear
-    Note over Env: configure_phase<br/>RAL: BAR / MMU / link
-    UVM->>Init: post_configure_phase (자동)
-    Init->>Seqr0: RDMAQPCreate / RDMAMRRegister / RDMACQCreate
-    Test->>TopSeq: main_phase: start(top_vseqr)
-    TopSeq->>Seqr0: RDMAWrite — start_item / finish_item<br/>(.sequencer=seqr[0])
-    TopSeq->>CQH: RDMACQPoll(seqr[0]) 직접 호출
-    Note over Env: shutdown_phase<br/>잔존 outstanding 마무리<br/>error_cq drain
-    Note over Env: check_phase<br/>잔존 outstanding 검사
+UVM
+Test: "test"
+Env: "top_env"
+Init: "vrdma_init_seq"
+TopSeq: "my_top_seq"
+Seqr0: "seqr[0]"
+CQH: "cq_handler"
+
+# Note over Env: build_phase\nenv.node[0..1] 생성\nagent/driver/sequencer/handler\ndefault_sequence 등록
+# Note over Env: connect_phase\nAP wiring\n(M04 토폴로지)
+# Note over Env: reset_phase\nDUT reset, host mem clear
+# Note over Env: configure_phase\nRAL: BAR / MMU / link
+# Note over Env: shutdown_phase\n잔존 outstanding 마무리\nerror_cq drain
+# Note over Env: check_phase\n잔존 outstanding 검사
+UVM -> Init: "post_configure_phase (자동)"
+Init -> Seqr0: "RDMAQPCreate / RDMAMRRegister / RDMACQCreate"
+Test -> TopSeq: "main_phase: start(top_vseqr)"
+TopSeq -> Seqr0: "RDMAWrite — start_item / finish_item\n(.sequencer=seqr[0])"
+TopSeq -> CQH: "RDMACQPoll(seqr[0]) 직접 호출"
 ```
 
 ### 단계별 의미

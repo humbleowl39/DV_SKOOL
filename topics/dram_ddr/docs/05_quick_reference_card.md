@@ -57,24 +57,31 @@ DRAM 4 모듈을 끝까지 읽으면 머릿속에 _세 묶음_ 이 남습니다 
 
 ### 한 장 그림 — Row 접근 3 결말 + 명령 흐름
 
-```mermaid
-flowchart LR
-    REQ["요청"] --> CHK["Bank N 상태 검사"]
-    CHK --> HIT["① Row HIT<br/>(open row 와 같음)<br/>→ tCL 만<br/>★ 가장 빠름"]
-    CHK --> MISS["② Row MISS<br/>(열린 row 없음)<br/>→ ACT(tRCD) → RD(tCL)"]
-    CHK --> CONF["③ Row CONFLICT<br/>(다른 row 가 open)<br/>→ PRE(tRP) → ACT(tRCD) → RD(tCL)<br/>★ 가장 느림"]
-    classDef fast stroke-width:3px
-    classDef slow stroke-width:3px,stroke-dasharray:4 2
-    class HIT fast
-    class CONF slow
+```d2
+direction: right
+
+REQ: "요청"
+CHK: "Bank N 상태 검사"
+REQ -> CHK
+HIT: "① Row HIT\n(open row 와 같음)\n→ tCL 만\n★ 가장 빠름" { style.stroke-width: 3 }
+CHK -> HIT
+MISS: "② Row MISS\n(열린 row 없음)\n→ ACT(tRCD) → RD(tCL)"
+CHK -> MISS
+CONF: "③ Row CONFLICT\n(다른 row 가 open)\n→ PRE(tRP) → ACT(tRCD) → RD(tCL)\n★ 가장 느림" { style.stroke-width: 3; style.stroke-dash: 4 }
+CHK -> CONF
 ```
 
-```mermaid
-flowchart LR
-    ACT["ACT"] -- "tRCD" --> RW["RD/WR"]
-    RW -- "tCL" --> PRE["PRE"]
-    PRE -- "tRP" --> ACT
-    REF["REF (주기적)"] -. "tRFC" .-> ACT
+```d2
+direction: right
+
+ACT: "ACT"
+RW: "RD/WR"
+ACT -> RW: "tRCD"
+PRE: "PRE"
+RW -> PRE: "tCL"
+PRE -> ACT: "tRP"
+REF: "REF (주기적)"
+REF -> ACT: "tRFC" { style.stroke-dash: 4 }
 ```
 
 - **윈도우 게이트**: tFAW (4 ACT / window), tREFI (refresh 주기)

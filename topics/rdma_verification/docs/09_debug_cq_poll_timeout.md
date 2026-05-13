@@ -300,26 +300,28 @@ grep -E "c2h_tracker.*active" run.log | tail -20
 
 ### 5.7 폴링 동작 한 줄 흐름
 
-```mermaid
-flowchart TB
-    A["RDMACQPoll(cq_num, try_once=0)"]
-    B["vrdma_cq_poll_command<br/>(timeout_count=10000)"]
-    C["driver.run_phase 의 cq polling 루프"]
-    D["CQ phase bit 주소 read"]
-    E{"phase 일치?"}
-    F["CQE 처리 (cq_handler)"]
-    G["try_cnt++"]
-    H{"try_cnt > limit<br/>AND<br/>!c2h_tracker::active?"}
-    I["exceptionTimeout()<br/>E-DRV-TBERR-0001/0002<br/>uvm_shutdown_phase"]
+```d2
+direction: down
 
-    A --> B --> C --> D --> E
-    E -- yes --> F
-    E -- no --> G --> H
-    H -- no --> D
-    H -- yes --> I
-
-    classDef fatal stroke:#c0392b,stroke-width:3px
-    class I fatal
+# unparsed: A["RDMACQPoll(cq_num, try_once=0)"]
+# unparsed: B["vrdma_cq_poll_command<br/>(timeout_count=10000)"]
+# unparsed: C["driver.run_phase 의 cq polling 루프"]
+# unparsed: D["CQ phase bit 주소 read"]
+E: "phase 일치?" { shape: diamond }
+# unparsed: F["CQE 처리 (cq_handler)"]
+# unparsed: G["try_cnt++"]
+H: "try_cnt > limit\nAND\n!c2h_tracker::active?" { shape: diamond }
+# unparsed: I["exceptionTimeout()<br/>E-DRV-TBERR-0001/0002<br/>uvm_shutdown_phase"]
+A -> B
+B -> C
+C -> D
+D -> E
+E -> F: "yes"
+E -> G: "no"
+G -> H
+H -> D: "no"
+I { style.stroke: "#c0392b"; style.stroke-width: 3 }
+H -> I: "yes"
 ```
 
 ---

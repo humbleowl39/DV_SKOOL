@@ -427,15 +427,16 @@ BootROM 의 보안 핸드셰이크 (특히 인터칩 키 교환) 는 HW + FW 협
 
 #### 인터칩 키 교환 프로토콜 (Meta/Apple 협업)
 
-```mermaid
-sequenceDiagram
-    participant H as Host SoC (BootROM)
-    participant P as Partner Chip
+```d2
+shape: sequence_diagram
 
-    H->>P: 1. Challenge 생성/전송
-    P->>H: 2. Response 수신
-    Note over H: 3. 키 도출 + 검증<br/>(HW Crypto + FW 로직)
-    Note over H,P: 검증 방법<br/>- DPI-C 로 C Reference Model 이<br/>  동일 Challenge 에 대한 기대 Response 계산<br/>- Scoreboard 에서 DUT 출력과 비트 단위 비교<br/>- 키 도출 결과까지 End-to-End 검증
+H: "Host SoC (BootROM)"
+P: "Partner Chip"
+
+# Note over H: 3. 키 도출 + 검증\n(HW Crypto + FW 로직)
+# Note over H: 검증 방법\n- DPI-C 로 C Reference Model 이\n  동일 Challenge 에 대한 기대 Response 계산\n- Scoreboard 에서 DUT 출력과 비트 단위 비교\n- 키 도출 결과까지 End-to-End 검증
+H -> P: "1. Challenge 생성/전송"
+P -> H: "2. Response 수신"
 ```
 
 자세한 DPI-C 아키텍처는 [Module 07 (DV 방법론)](07_bootrom_dv_methodology.md) 에서 다룹니다.

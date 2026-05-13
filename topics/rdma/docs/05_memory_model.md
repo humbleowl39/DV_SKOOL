@@ -266,20 +266,22 @@ S5 -> S6: "ok"
 
 ### 5.1 Memory Registration 흐름 상세
 
-```mermaid
-sequenceDiagram
-    participant U as User-space
-    participant K as Kernel
-    participant H as HCA / RNIC
-    U->>K: ibv_reg_mr(pd, addr,<br/>length, access_flags)
-    K->>K: 1) get_user_pages_pin<br/>pin pages → PA list
-    K->>K: 2) build IOVA mapping
-    K->>H: 3) PCIe MMIO<br/>push descriptor
-    H->>H: 4) ATS table<br/>IOVA→PA 등록
-    H->>H: 5) PD lookup<br/>PD 와 묶기
-    H->>H: 6) Key table<br/>L/R Key 발급
-    H-->>K: (lkey, rkey)
-    K-->>U: (lkey, rkey)
+```d2
+shape: sequence_diagram
+
+U: "User-space"
+K: "Kernel"
+H: "HCA / RNIC"
+
+U -> K: "ibv_reg_mr(pd, addr,\nlength, access_flags)"
+K -> K: "1) get_user_pages_pin\npin pages → PA list"
+K -> K: "2) build IOVA mapping"
+K -> H: "3) PCIe MMIO\npush descriptor"
+H -> H: "4) ATS table\nIOVA→PA 등록"
+H -> H: "5) PD lookup\nPD 와 묶기"
+H -> H: "6) Key table\nL/R Key 발급"
+H -> K: "(lkey, rkey)" { style.stroke-dash: 4 }
+K -> U: "(lkey, rkey)" { style.stroke-dash: 4 }
 ```
 
 각 단계에서 발생할 수 있는 검증 포인트:

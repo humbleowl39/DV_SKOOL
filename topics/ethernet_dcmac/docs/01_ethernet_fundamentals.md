@@ -98,24 +98,24 @@ PMD -> NET: "light / electrical pulses"
 
 가장 단순한 시나리오. TOE 가 **1500-byte IPv4 payload** 를 만들어 DCMAC 의 AXI-S TX 인터페이스에 1518-byte Ethernet frame 으로 흘려보냅니다 (DA 6 + SA 6 + Type 2 + Payload 1500 + FCS 4 = 1518).
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant TOE as TOE
-    participant TX as DCMAC TX
-    participant PCS as PCS
-    participant SD as SerDes
+```d2
+shape: sequence_diagram
 
-    TOE->>TX: ① AXI-S beats<br/>(Dst..Payload)
-    TX->>TX: ② prepend Preamble+SFD<br/>(8 byte: 0xAA..0xAB)
-    TX->>TX: ③ FCS = CRC32(DA..Payload)<br/>→ append 4 byte
-    TX->>TX: ④ IFG ≥ 12 byte enforce<br/>(다음 frame 시작 전)
-    TX->>PCS: XLGMII / CGMII
-    PCS->>PCS: ⑤ 64b/66b encode + scramble
-    PCS->>PCS: ⑥ RS-FEC parity (100G+ 만)
-    PCS->>PCS: ⑦ lane distrib + AM insert
-    PCS->>SD: lane data
-    SD->>SD: ⑧ NRZ / PAM4
+TOE
+TX: "DCMAC TX"
+PCS
+SD: "SerDes"
+
+TOE -> TX: "① AXI-S beats\n(Dst..Payload)"
+TX -> TX: "② prepend Preamble+SFD\n(8 byte: 0xAA..0xAB)"
+TX -> TX: "③ FCS = CRC32(DA..Payload)\n→ append 4 byte"
+TX -> TX: "④ IFG ≥ 12 byte enforce\n(다음 frame 시작 전)"
+TX -> PCS: "XLGMII / CGMII"
+PCS -> PCS: "⑤ 64b/66b encode + scramble"
+PCS -> PCS: "⑥ RS-FEC parity (100G+ 만)"
+PCS -> PCS: "⑦ lane distrib + AM insert"
+PCS -> SD: "lane data"
+SD -> SD: "⑧ NRZ / PAM4"
 ```
 
 | Step | 누가 | 무엇을 | 왜 |

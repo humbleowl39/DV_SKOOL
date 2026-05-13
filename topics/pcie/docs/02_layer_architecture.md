@@ -383,20 +383,22 @@ OS -> WIRE: "analog signal"
 
 위 §3 의 시나리오를 시간 축으로 다시:
 
-```mermaid
-sequenceDiagram
-    participant Core as Device Core
-    participant TX as Sender (TL/DLL/PL)
-    participant RX as Receiver (PL/DLL/TL)
-    Core->>TX: host PA 0x10000 에 64 B write 요청
-    TX->>TX: TL — MWr TLP 생성, FC credit 차감, ECRC 옵션
-    TX->>TX: DLL — Seq# + LCRC + Replay Buffer
-    TX->>TX: PL — Framing + 128b/130b + scramble<br/>+ lane stripe → SerDes
-    TX->>RX: wire
-    RX->>RX: PL — CDR, decode, descramble, framing detect
-    RX->>RX: DLL — LCRC 검증 OK
-    RX-->>TX: ACK DLLP
-    RX->>RX: TL — FC credit 반환, memory write 적용
+```d2
+shape: sequence_diagram
+
+Core: "Device Core"
+TX: "Sender (TL/DLL/PL)"
+RX: "Receiver (PL/DLL/TL)"
+
+Core -> TX: "host PA 0x10000 에 64 B write 요청"
+TX -> TX: "TL — MWr TLP 생성, FC credit 차감, ECRC 옵션"
+TX -> TX: "DLL — Seq# + LCRC + Replay Buffer"
+TX -> TX: "PL — Framing + 128b/130b + scramble\n+ lane stripe → SerDes"
+TX -> RX: "wire"
+RX -> RX: "PL — CDR, decode, descramble, framing detect"
+RX -> RX: "DLL — LCRC 검증 OK"
+RX -> TX: "ACK DLLP" { style.stroke-dash: 4 }
+RX -> RX: "TL — FC credit 반환, memory write 적용"
 ```
 
 ### 5.6 수신 측 ACK/NAK 의 layer 분리

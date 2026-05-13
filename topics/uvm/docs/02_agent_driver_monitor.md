@@ -114,28 +114,28 @@ MON -> SB: "ap.write(item)"
 
 ### 단계별 다이어그램
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant SEQ as Sequence<br/>(in test)
-    participant SQR as Sequencer
-    participant DRV as Driver<br/>(run_phase)
-    participant VIF as vif (DUT)
-    participant MON as Monitor<br/>(run_phase)
-    participant SB as Scoreboard /<br/>Coverage
+```d2
+shape: sequence_diagram
 
-    SEQ->>SQR: ① start_item(req)
-    SEQ->>SEQ: ② randomize() with {...}
-    SEQ->>SQR: ③ finish_item(req)
-    SQR->>DRV: grant
-    DRV->>SQR: ④ get_next_item(req)
-    DRV->>VIF: ⑤ vif.valid<=1<br/>vif.data<=req.data
-    VIF-->>DRV: ⑥ wait(vif.ready)
-    DRV->>VIF: ⑦ vif.valid<=0
-    DRV->>SQR: ⑧ item_done()
-    VIF->>VIF: ⑨ DUT 가 1 cycle 후<br/>결과 도착
-    VIF-->>MON: ⑩ @posedge clk<br/>if (valid && ready)
-    MON->>SB: ⑪ item.data <= vif.data<br/>ap.write(item)
+SEQ: "Sequence\n(in test)"
+SQR: "Sequencer"
+DRV: "Driver\n(run_phase)"
+VIF: "vif (DUT)"
+MON: "Monitor\n(run_phase)"
+SB: "Scoreboard /\nCoverage"
+
+SEQ -> SQR: "① start_item(req)"
+SEQ -> SEQ: "② randomize() with {...}"
+SEQ -> SQR: "③ finish_item(req)"
+SQR -> DRV: "grant"
+DRV -> SQR: "④ get_next_item(req)"
+DRV -> VIF: "⑤ vif.valid<=1\nvif.data<=req.data"
+VIF -> DRV: "⑥ wait(vif.ready)" { style.stroke-dash: 4 }
+DRV -> VIF: "⑦ vif.valid<=0"
+DRV -> SQR: "⑧ item_done()"
+VIF -> VIF: "⑨ DUT 가 1 cycle 후\n결과 도착"
+VIF -> MON: "⑩ @posedge clk\nif (valid && ready)" { style.stroke-dash: 4 }
+MON -> SB: "⑪ item.data <= vif.data\nap.write(item)"
 ```
 
 ### 단계별 의미
@@ -377,17 +377,18 @@ endclass
 
 #### Response 흐름 다이어그램
 
-```mermaid
-sequenceDiagram
-    participant S as Sequence
-    participant D as Sequencer / Driver
+```d2
+shape: sequence_diagram
 
-    S->>D: start_item(req)
-    S->>D: finish_item(req)
-    Note over D: DUT 구동
-    D-->>S: put_response(rsp)<br/>← DUT 응답
-    S->>S: get_response(rsp)
-    D-->>S: item_done()
+S: "Sequence"
+D: "Sequencer / Driver"
+
+# Note over D: DUT 구동
+S -> D: "start_item(req)"
+S -> D: "finish_item(req)"
+D -> S: "put_response(rsp)\n← DUT 응답" { style.stroke-dash: 4 }
+S -> S: "get_response(rsp)"
+D -> S: "item_done()" { style.stroke-dash: 4 }
 ```
 
 !!! warning "set_id_info 가 없으면"

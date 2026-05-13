@@ -107,21 +107,23 @@ ENV: "UFS HCI UVM Env" {
 
 가장 단순한 시나리오 한 개를 _시퀀스 → 모니터 캡처 → scoreboard 비교 → SVA → coverage_ 로 끝까지 끌고 갑니다. 시나리오: **Interrupt Aggregation** (UFS 3.x 의 IACR/IATC 설정으로 N 개 완료를 1 IRQ 로 묶음). 32 슬롯에 READ 를 깔고, IACR=4 일 때 IRQ 가 8 번만 발생해야 함.
 
-```mermaid
-sequenceDiagram
-    participant HA as Host Agent
-    participant DUT as DUT (HCI)
-    participant DA as Device Agent
-    Note over HA: 1. IACR=4, IATC=10<br/>IE[UTRCS]=1
-    Note over HA: 2. 32 READ 동시 발행 (slot 0..31)<br/>UTRLDBR = 0xFFFFFFFF
-    HA->>DUT: doorbell
-    DUT->>DA: 3. 32 Cmd UPIU
-    Note over DA: 32 read 처리<br/>응답 생성 (랜덤 순서)
-    DA-->>DUT: 4. Data-In × N (for each slot)
-    DA-->>DUT: 5. Resp UPIU<br/>(completion counter += 1)
-    Note over DUT: counter == 4 마다 IS[UTRCS]=1 + IRQ
-    DUT-->>HA: 6. IRQ (총 8회)
-    Note over HA: 7. ISR: UTRLDBR read → done 4<br/>UTRD.OCS read<br/>IS W1C
+```d2
+shape: sequence_diagram
+
+HA: "Host Agent"
+DUT: "DUT (HCI)"
+DA: "Device Agent"
+
+# Note over HA: 1. IACR=4, IATC=10\nIE[UTRCS]=1
+# Note over HA: 2. 32 READ 동시 발행 (slot 0..31)\nUTRLDBR = 0xFFFFFFFF
+# Note over DA: 32 read 처리\n응답 생성 (랜덤 순서)
+# Note over DUT: counter == 4 마다 IS[UTRCS]=1 + IRQ
+# Note over HA: 7. ISR: UTRLDBR read → done 4\nUTRD.OCS read\nIS W1C
+HA -> DUT: "doorbell"
+DUT -> DA: "3. 32 Cmd UPIU"
+DA -> DUT: "4. Data-In × N (for each slot)" { style.stroke-dash: 4 }
+DA -> DUT: "5. Resp UPIU\n(completion counter += 1)" { style.stroke-dash: 4 }
+DUT -> HA: "6. IRQ (총 8회)" { style.stroke-dash: 4 }
 ```
 
 ### 검증 인프라 매핑

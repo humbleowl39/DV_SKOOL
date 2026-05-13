@@ -283,17 +283,14 @@ EXT -- STO
 
 ### 5.5 핵심: TrustZone 과 Secure Enclave 의 상호 불신
 
-```mermaid
-flowchart TB
-    TZ["TrustZone<br/>(Secure World)"]
-    INT["Internal Secure Enclave"]
-    EXT["External Secure Enclave"]
-    TZ -. "서로 신뢰하지 않음<br/>(mutually distrusting)" .- INT
-    TZ -. "서로 신뢰하지 않음" .- EXT
-    INT -. "서로 신뢰하지 않음" .- EXT
-
-    classDef dom stroke:#c5221f,stroke-width:2px
-    class TZ,INT,EXT dom
+```d2
+direction: down
+TZ: "TrustZone\n(Secure World)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+INT: "Internal Secure Enclave" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+EXT: "External Secure Enclave" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+TZ -- INT: "서로 신뢰하지 않음\n(mutually distrusting)" { style.stroke-dash: 4 }
+TZ -- EXT: "서로 신뢰하지 않음" { style.stroke-dash: 4 }
+INT -- EXT: "서로 신뢰하지 않음" { style.stroke-dash: 4 }
 ```
 
 ### 5.6 Module 02 개념과의 매핑

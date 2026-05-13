@@ -81,69 +81,57 @@ Task Tag lifecycle 의 정확한 _spec compliance_ + DV scoreboard 의 _per-Tag 
 
 === "READ (data path)"
 
-    ```mermaid
-    sequenceDiagram
-        participant H as Host
-        participant D as Device
-        H->>D: Command UPIU
-        D-->>H: Data-In UPIU × N
-        D-->>H: Response UPIU
-        Note over H,D: 같은 Task Tag 로 묶임 (single tag)
-    ```
+    ```d2
+shape: sequence_diagram
 
-=== "WRITE (data path)"
+H: "Host"
+D: "Device"
+H: "Host"
+D: "Device"
+H: "Host"
+D: "Device"
+H: "Host"
+D: "Device"
 
-    ```mermaid
-    sequenceDiagram
-        participant H as Host
-        participant D as Device
-        H->>D: Command UPIU
-        D-->>H: RTT (buffer ready 알림)
-        H->>D: Data-Out UPIU × N1
-        D-->>H: RTT (next chunk)
-        H->>D: Data-Out UPIU × N2
-        D-->>H: Response UPIU
-        Note over H,D: single tag, RTT 가 buffer 협상
-    ```
-
-=== "QUERY (control path)"
-
-    ```mermaid
-    sequenceDiagram
-        participant H as Host
-        participant D as Device
-        H->>D: Query Request UPIU
-        D-->>H: Query Response UPIU
-        Note over H,D: Tag 는 Q-Resp 매칭용
-    ```
-
-=== "ABORT (task mgmt)"
-
-    ```mermaid
-    sequenceDiagram
-        participant H as Host
-        participant D as Device
-        H->>D: TM Request UPIU<br/>(UTMRD, UTMRLDBR)
-        D-->>H: TM Response UPIU
-        Note over H,D: Task Tag = abort 대상
-    ```
-
-### 왜 이 디자인인가 — Design rationale
-
-세 가지 패턴이 동시에 풀려야 했습니다.
-
-1. **고정 길이 header + 가변 length payload** — Cmd (16 B CDB), Response (sense), Data (~MTU), Query (parameter), TM (control) 이 모두 같은 12 B header 로 시작 → driver / HCI 가 _Transaction Type_ 만 보고 디스패치.
-2. **Multi-packet 메시지** (READ 4 KB → Data-In × N) 의 식별 — Task Tag 가 모든 fragment 에 동일하게 붙어 reassembly 가능.
-3. **Data path 와 Task Mgmt 의 분리** — Abort / Reset 이 _별도 list (UTMRL)_ 과 _별도 doorbell (UTMRLDBR)_ 로 가야 Transfer 가 stuck 됐을 때도 control 가능.
-
-이 셋의 교집합이 **공통 12 B UPIU header + Transaction Type 디스패치 + Task Tag lifecycle + Transfer/Task-Mgmt 분리** 의 디자인입니다.
-
----
-
-## 3. 작은 예 — Task Mgmt Abort Task 한 사이클
-
-가장 단순한 시나리오. slot=5 의 READ 명령이 device 에서 응답 없이 stuck. SW 가 30 ms timeout 후 **Abort Task** 를 발행 → device 가 해당 task 를 취소 → Transfer slot 이 정리. 이 한 사이클의 두 list / 두 doorbell / 두 IRQ 흐름을 추적합니다.
-
+# Note over H: 같은 Task Tag 로 묶임 (single tag)
+# Note over H: single tag, RTT 가 buffer 협상
+# Note over H: Tag 는 Q-Resp 매칭용
+# Note over H: Task Tag = abort 대상
+H -> D: "Command UPIU"
+D -> H: "Data-In UPIU × N" { style.stroke-dash: 4 }
+D -> H: "Response UPIU" { style.stroke-dash: 4 }
+# unparsed: ```
+# unparsed: === "WRITE (data path)"
+# unparsed: ```mermaid
+# unparsed: sequenceDiagram
+H -> D: "Command UPIU"
+D -> H: "RTT (buffer ready 알림)" { style.stroke-dash: 4 }
+H -> D: "Data-Out UPIU × N1"
+D -> H: "RTT (next chunk)" { style.stroke-dash: 4 }
+H -> D: "Data-Out UPIU × N2"
+D -> H: "Response UPIU" { style.stroke-dash: 4 }
+# unparsed: ```
+# unparsed: === "QUERY (control path)"
+# unparsed: ```mermaid
+# unparsed: sequenceDiagram
+H -> D: "Query Request UPIU"
+D -> H: "Query Response UPIU" { style.stroke-dash: 4 }
+# unparsed: ```
+# unparsed: === "ABORT (task mgmt)"
+# unparsed: ```mermaid
+# unparsed: sequenceDiagram
+H -> D: "TM Request UPIU\n(UTMRD, UTMRLDBR)"
+D -> H: "TM Response UPIU" { style.stroke-dash: 4 }
+# unparsed: ```
+# unparsed: ### 왜 이 디자인인가 — Design rationale
+# unparsed: 세 가지 패턴이 동시에 풀려야 했습니다.
+# unparsed: 1. **고정 길이 header + 가변 length payload** — Cmd (16 B CDB), Response (sense), Data (~MTU), Query (parameter), TM (control) 이 모두 같은 12 B header 로 시작 → driver / HCI 가 _Transaction Type_ 만 보고 디스패치.
+# unparsed: 2. **Multi-packet 메시지** (READ 4 KB → Data-In × N) 의 식별 — Task Tag 가 모든 fragment 에 동일하게 붙어 reassembly 가능.
+# unparsed: 3. **Data path 와 Task Mgmt 의 분리** — Abort / Reset 이 _별도 list (UTMRL)_ 과 _별도 doorbell (UTMRLDBR)_ 로 가야 Transfer 가 stuck 됐을 때도 control 가능.
+# unparsed: 이 셋의 교집합이 **공통 12 B UPIU header + Transaction Type 디스패치 + Task Tag lifecycle + Transfer/Task-Mgmt 분리** 의 디자인입니다.
+# unparsed: ---
+# unparsed: ## 3. 작은 예 — Task Mgmt Abort Task 한 사이클
+# unparsed: 가장 단순한 시나리오. slot=5 의 READ 명령이 device 에서 응답 없이 stuck. SW 가 30 ms timeout 후 **Abort Task** 를 발행 → device 가 해당 task 를 취소 → Transfer slot 이 정리. 이 한 사이클의 두 list / 두 doorbell / 두 IRQ 흐름을 추적합니다.
 ```mermaid
 sequenceDiagram
     participant SW as SW (Driver)
@@ -238,17 +226,19 @@ hci_writel(BIT(5), UTRLCLR);        // transfer slot cleanup
 
 ### 4.3 Task Tag lifecycle
 
-```mermaid
-stateDiagram-v2
-    [*] --> FREE
-    FREE --> SUBMITTED: 1. UTRD 작성 + UTRLDBR set
-    SUBMITTED --> IN_FLIGHT: 2. HCI 가 Cmd UPIU 송신
-    IN_FLIGHT --> COMPLETED: 3. Response UPIU 수신<br/>(또는 ABORTED OCS)
-    COMPLETED --> FREE: 4. OCS 읽고 SW 가 free 처리
-    note right of COMPLETED
-        재사용 가능 시점 = 4 이후
-        3 만으로는 부족 — race
-    end note
+```d2
+direction: right
+
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> FREE
+FREE -> SUBMITTED: "1. UTRD 작성 + UTRLDBR set"
+SUBMITTED -> IN_FLIGHT: "2. HCI 가 Cmd UPIU 송신"
+IN_FLIGHT -> COMPLETED: "3. Response UPIU 수신\n(또는 ABORTED OCS)"
+COMPLETED -> FREE: "4. OCS 읽고 SW 가 free 처리"
+# unparsed: note right of COMPLETED
+# unparsed: 재사용 가능 시점 = 4 이후
+# unparsed: 3 만으로는 부족 — race
+# unparsed: end note
 ```
 
 **핵심 invariant**: 같은 Task Tag 가 동시에 두 명령에 할당되면 안 된다. Response 가 먼저 도착한 명령 / 나중 도착한 명령을 구분 못 함 → silent corruption.

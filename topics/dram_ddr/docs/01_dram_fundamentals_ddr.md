@@ -89,18 +89,18 @@
 
 ### 한 장 그림 — DRAM access 의 세 가지 결말
 
-```mermaid
-flowchart TB
-    REQ["요청 도착<br/>(Bank N, Row R)"]
-    BANK["Bank N<br/>Row Buffer = 현재 open 된 Row (예: Row 5)"]
-    REQ --> BANK
-    BANK --> HIT["① R == open Row<br/><b>Row HIT</b><br/>tCL 만 기다리면 데이터 나감<br/>★ 가장 빠름"]
-    BANK --> MISS["② open Row 없음<br/><b>Row MISS</b><br/>ACT(tRCD) → RD(tCL)"]
-    BANK --> CONF["③ 다른 R 이 open<br/><b>Row CONFLICT</b><br/>PRE(tRP) → ACT(tRCD) → RD(tCL)<br/>★ 가장 느림"]
-    classDef fast stroke-width:3px
-    classDef slow stroke-width:3px,stroke-dasharray:4 2
-    class HIT fast
-    class CONF slow
+```d2
+direction: down
+
+# unparsed: REQ["요청 도착<br/>(Bank N, Row R)"]
+# unparsed: BANK["Bank N<br/>Row Buffer = 현재 open 된 Row (예: Row 5)"]
+REQ -> BANK
+HIT: "① R == open Row\n**Row HIT**\ntCL 만 기다리면 데이터 나감\n★ 가장 빠름" { style.stroke-width: 3 }
+BANK -> HIT
+MISS: "② open Row 없음\n**Row MISS**\nACT(tRCD) → RD(tCL)"
+BANK -> MISS
+CONF: "③ 다른 R 이 open\n**Row CONFLICT**\nPRE(tRP) → ACT(tRCD) → RD(tCL)\n★ 가장 느림" { style.stroke-width: 3; style.stroke-dash: 4 }
+BANK -> CONF
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -219,16 +219,18 @@ Row Conflict: 다른 Row가 열려 있음     → PRE + ACT  → tRP + tRCD + tC
 
 ### 4.3 명령 FSM — Bank 별 상태 머신
 
-```mermaid
-stateDiagram-v2
-    [*] --> POWERUP
-    POWERUP --> IDLE: MRS / ZQ / Init
-    IDLE --> ACTIVE: ACT (tRCD)
-    ACTIVE --> ACTIVE: RD / WR<br/>(tCL / tCWL,<br/>tCCD 간격)
-    ACTIVE --> IDLE: PRE (tRP)<br/>tRAS 만족 후
-    IDLE --> IDLE: REF (tRFC)<br/>모든 bank IDLE
-    note right of IDLE: precharged
-    note right of ACTIVE: row open
+```d2
+direction: right
+
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> POWERUP
+POWERUP -> IDLE: "MRS / ZQ / Init"
+IDLE -> ACTIVE: "ACT (tRCD)"
+ACTIVE -> ACTIVE: "RD / WR\n(tCL / tCWL,\ntCCD 간격)"
+ACTIVE -> IDLE: "PRE (tRP)\ntRAS 만족 후"
+IDLE -> IDLE: "REF (tRFC)\n모든 bank IDLE"
+# unparsed: note right of IDLE: precharged
+# unparsed: note right of ACTIVE: row open
 ```
 
 ### 4.4 DDR4 vs DDR5 — 무엇이 바뀌었나

@@ -83,46 +83,54 @@
 
 **① SEND (two-sided)** — sender → recv WQE 소비, RECV CQE + SEND CQE 둘 다
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as receiver
-    S->>R: SEND (recv RQ 의 WR 소비)
-    R-->>S: ACK
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "receiver"
+
+S -> R: "SEND (recv RQ 의 WR 소비)"
+R -> S: "ACK" { style.stroke-dash: 4 }
 ```
 
 **② RDMA WRITE (one-sided)** — sender → 원격 메모리 직접 write, SEND CQE 만 (recv 측 CPU 안 깨움)
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as receiver (CPU 안 깨움)
-    S->>R: WRITE + RETH<br/>(원격 메모리)
-    R-->>S: ACK
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "receiver (CPU 안 깨움)"
+
+S -> R: "WRITE + RETH\n(원격 메모리)"
+R -> S: "ACK" { style.stroke-dash: 4 }
 ```
 
 **③ RDMA READ (one-sided, 양방향)** — sender 가 원격에서 읽어옴
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as responder
-    S->>R: READ_REQ
-    Note over R: responder fetches
-    R-->>S: READ_RESP
-    R-->>S: READ_RESP (multi-packet)
-    R-->>S: READ_RESP
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "responder"
+
+# Note over R: responder fetches
+S -> R: "READ_REQ"
+R -> S: "READ_RESP" { style.stroke-dash: 4 }
+R -> S: "READ_RESP (multi-packet)" { style.stroke-dash: 4 }
+R -> S: "READ_RESP" { style.stroke-dash: 4 }
 ```
 
 **④ ATOMIC (one-sided, 8B 단위)** — sender 가 원격에서 atomic 연산
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as responder
-    S->>R: CMP_SWAP
-    Note over R: atomic at responder
-    R-->>S: ATOMIC_ACK
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "responder"
+
+# Note over R: atomic at responder
+S -> R: "CMP_SWAP"
+R -> S: "ATOMIC_ACK" { style.stroke-dash: 4 }
 ```
 
 ### 왜 이렇게 설계했는가 — Design rationale
@@ -211,16 +219,18 @@ A → B 로 8 KB RDMA WRITE. MTU = 4 KB 라 2 packet 으로 나뉨.
 
 ### 4.2 Multi-packet message 의 일관성
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as receiver
-    Note over S,R: RC SEND of 12 KB, MTU = 4 KB
-    S->>R: PSN=N · SEND_FIRST · payload 4 KB
-    S->>R: PSN=N+1 · SEND_MIDDLE · payload 4 KB
-    S->>R: PSN=N+2 · SEND_LAST · payload 4 KB · A=1
-    Note over S: ↑ ACK 요청
-    R-->>S: ACK PSN=N+2
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "receiver"
+
+# Note over S: RC SEND of 12 KB, MTU = 4 KB
+# Note over S: ↑ ACK 요청
+S -> R: "PSN=N · SEND_FIRST · payload 4 KB"
+S -> R: "PSN=N+1 · SEND_MIDDLE · payload 4 KB"
+S -> R: "PSN=N+2 · SEND_LAST · payload 4 KB · A=1"
+R -> S: "ACK PSN=N+2" { style.stroke-dash: 4 }
 ```
 
 | 일관성 | Spec 근거 |
@@ -488,34 +498,38 @@ RC SEND 가 도착했는데 receiver 의 RQ 에 사용가능한 RECV WR 이 없�
 - sender 는 RNR 만큼 기다린 뒤 retransmit
 - `rnr_retry` 횟수 (0..7, 7 = infinite) 초과 시 QP → Err + `IBV_WC_RNR_RETRY_EXC_ERR`
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as receiver
-    S->>R: SEND PSN=N
-    Note over R: RQ 비어있음
-    R-->>S: AETH RNR (timer 5)
-    Note over S: wait ...
-    S->>R: SEND PSN=N (retry)
-    Note over R: 이번에 RQ 에 WR 있음
-    R-->>S: ACK PSN=N
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "receiver"
+
+# Note over R: RQ 비어있음
+# Note over S: wait ...
+# Note over R: 이번에 RQ 에 WR 있음
+S -> R: "SEND PSN=N"
+R -> S: "AETH RNR (timer 5)" { style.stroke-dash: 4 }
+S -> R: "SEND PSN=N (retry)"
+R -> S: "ACK PSN=N" { style.stroke-dash: 4 }
 ```
 
 → **WRITE/READ 는 RNR 안 일어남** (RECV WR 필요 없음).
 
 ### 5.4 RDMA READ — 양방향 흐름
 
-```mermaid
-sequenceDiagram
-    participant Q as requester
-    participant P as responder
-    Note over Q: Post WR: RDMA_READ_REQUEST
-    Q->>P: PSN=N · READ_REQUEST<br/>RETH(remote_va, len, rkey)
-    Note over P: rkey 검증, IOVA 변환,<br/>local memory 읽기<br/>len &gt; MTU 면 multi-packet 응답 생성
-    P-->>Q: PSN=N · READ_RESP_FIRST<br/>AETH(ACK) + payload
-    P-->>Q: PSN=N+1 · READ_RESP_MIDDLE<br/>+ payload
-    P-->>Q: PSN=N+2 · READ_RESP_LAST<br/>AETH(ACK) + payload
-    Note over Q: 모든 응답 받으면 WC 생성
+```d2
+shape: sequence_diagram
+
+Q: "requester"
+P: "responder"
+
+# Note over Q: Post WR: RDMA_READ_REQUEST
+# Note over P: rkey 검증, IOVA 변환,\nlocal memory 읽기\nlen > MTU 면 multi-packet 응답 생성
+# Note over Q: 모든 응답 받으면 WC 생성
+Q -> P: "PSN=N · READ_REQUEST\nRETH(remote_va, len, rkey)"
+P -> Q: "PSN=N · READ_RESP_FIRST\nAETH(ACK) + payload" { style.stroke-dash: 4 }
+P -> Q: "PSN=N+1 · READ_RESP_MIDDLE\n+ payload" { style.stroke-dash: 4 }
+P -> Q: "PSN=N+2 · READ_RESP_LAST\nAETH(ACK) + payload" { style.stroke-dash: 4 }
 ```
 
 #### 핵심 attribute
@@ -540,13 +554,15 @@ sequenceDiagram
      compare_data      (8B)
 ```
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as responder
-    S->>R: CMP_SWAP PSN=N<br/>AtomicETH(VA, rkey, swap, cmp)
-    Note over R: responder 가 atomically:<br/>old = mem[VA]<br/>if old == cmp: mem[VA] = swap
-    R-->>S: ATOMIC_ACK PSN=N<br/>AETH + AtomicAckETH(orig_data)
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "responder"
+
+# Note over R: responder 가 atomically:\nold = mem[VA]\nif old == cmp: mem[VA] = swap
+S -> R: "CMP_SWAP PSN=N\nAtomicETH(VA, rkey, swap, cmp)"
+R -> S: "ATOMIC_ACK PSN=N\nAETH + AtomicAckETH(orig_data)" { style.stroke-dash: 4 }
 ```
 
 #### 일관성

@@ -104,36 +104,36 @@ ENV: "TOE UVM Verification Env" {
 
 가장 단순한 시나리오. 테스트가 active open (DUT 가 client) 으로 새 TCP 연결을 만듭니다. peer (Network agent) 가 응답.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Seq as Test (UVM Sequence)
-    participant HA as Host Agent
-    participant DUT as DUT (TOE)
-    participant NA as Network Agent<br/>(Monitor + Responder)
-    participant Ref as Reference Model<br/>(DPI-C)
-    participant SB as Scoreboard
-    participant Cov as Coverage / SVA
+```d2
+shape: sequence_diagram
 
-    Seq->>HA: ① start_item:<br/>tcp_connect_seq (dst_ip, dst_port)
-    HA->>DUT: descriptor write
-    Note over DUT: ② TX path: SYN packet build<br/>Conn Table 에 LISTEN entry 생성<br/>SYN_SENT 로 전이
-    DUT->>NA: AXI-S SYN
-    Note over NA: ③ Monitor 가 SYN 캡처<br/>→ analysis_port 로<br/>SB 와 Reference 에 전달
-    NA->>Ref: SYN (analysis)
-    Note over Ref: ④ 기대 SYN-ACK 의<br/>seq/ack/win 계산<br/>peer FSM: LISTEN → SYN_RCVD
-    NA->>SB: DUT SYN
-    Ref->>SB: Reference SYN
-    Note over SB: ⑥ field-by-field 비교<br/>seq == ISN(host)?<br/>flags == SYN?<br/>options[MSS], Window Scale?
-    Note over NA: ⑤ Responder<br/>자동으로 SYN-ACK 생성<br/>(rand: 정상 or error 주입)
-    NA->>DUT: AXI-S SYN-ACK
-    Note over DUT: ⑦ RX path: SYN-ACK 수신<br/>Conn Table: SYN_SENT → ESTABLISHED<br/>rcv_nxt = peer.isn + 1
-    DUT->>NA: AXI-S ACK
-    NA->>Cov: ⑧ cp_state=ESTABLISHED hit<br/>cp_transition=SYN_SENT→ESTABLISHED hit
-    NA->>SB: DUT ACK
-    Ref->>SB: Reference ACK
-    Note over SB: ⑨ ack == peer.isn + 1?
-    Note over Cov: ⑩ SVA: syn_gets_synack<br/>fired & passed<br/>cover property hit (non-vacuous)
+Seq: "Test (UVM Sequence)"
+HA: "Host Agent"
+DUT: "DUT (TOE)"
+NA: "Network Agent\n(Monitor + Responder)"
+Ref: "Reference Model\n(DPI-C)"
+SB: "Scoreboard"
+Cov: "Coverage / SVA"
+
+# Note over DUT: ② TX path: SYN packet build\nConn Table 에 LISTEN entry 생성\nSYN_SENT 로 전이
+# Note over NA: ③ Monitor 가 SYN 캡처\n→ analysis_port 로\nSB 와 Reference 에 전달
+# Note over Ref: ④ 기대 SYN-ACK 의\nseq/ack/win 계산\npeer FSM: LISTEN → SYN_RCVD
+# Note over SB: ⑥ field-by-field 비교\nseq == ISN(host)?\nflags == SYN?\noptions[MSS], Window Scale?
+# Note over NA: ⑤ Responder\n자동으로 SYN-ACK 생성\n(rand: 정상 or error 주입)
+# Note over DUT: ⑦ RX path: SYN-ACK 수신\nConn Table: SYN_SENT → ESTABLISHED\nrcv_nxt = peer.isn + 1
+# Note over SB: ⑨ ack == peer.isn + 1?
+# Note over Cov: ⑩ SVA: syn_gets_synack\nfired & passed\ncover property hit (non-vacuous)
+Seq -> HA: "① start_item:\ntcp_connect_seq (dst_ip, dst_port)"
+HA -> DUT: "descriptor write"
+DUT -> NA: "AXI-S SYN"
+NA -> Ref: "SYN (analysis)"
+NA -> SB: "DUT SYN"
+Ref -> SB: "Reference SYN"
+NA -> DUT: "AXI-S SYN-ACK"
+DUT -> NA: "AXI-S ACK"
+NA -> Cov: "⑧ cp_state=ESTABLISHED hit\ncp_transition=SYN_SENT→ESTABLISHED hit"
+NA -> SB: "DUT ACK"
+Ref -> SB: "Reference ACK"
 ```
 
 | Step | TB 컴포넌트 | 무엇을 | 왜 |

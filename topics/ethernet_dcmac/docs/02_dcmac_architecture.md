@@ -483,17 +483,18 @@ DV 관점:
 
 **MangoBoost Data Path:** Host ↔ TOE ↔ DCMAC ↔ PHY ↔ Network
 
-```mermaid
-flowchart LR
-    HOST(("Host"))
-    TOE["TOE"]
-    DCMAC["DCMAC"]
-    PHY["PHY / SerDes"]
-    NET(("Network"))
+```d2
+direction: right
+HOST: Host { shape: circle }
+TOE: TOE
+DCMAC: DCMAC
+PHY: "PHY / SerDes"
+NET: Network { shape: circle }
 
-    HOST <--> TOE
-    TOE <-- "AXI-S (512-bit)<br/>tdata · tvalid · tready<br/>tlast · tkeep · tuser" --> DCMAC
-    DCMAC <--> PHY <--> NET
+HOST <-> TOE
+TOE <-> DCMAC: "AXI-S (512-bit)\ntdata · tvalid · tready\ntlast · tkeep · tuser"
+DCMAC <-> PHY
+PHY <-> NET
 ```
 
 ```

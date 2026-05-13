@@ -74,32 +74,36 @@
 
 ### 한 장 그림 — DMA path 의 IOMMU 통과
 
-```mermaid
-flowchart TB
-    DEV["Device (GPU / NIC / DMA / Accel)<br/>DMA req: (StreamID, SubstreamID, IOVA, R/W)"]
-    subgraph SMMU["SMMU v3"]
-        STEP1["① StreamID → Stream Table<br/>→ STE (config)"]
-        STEP2["② SubstreamID →<br/>Context Descriptor (S1 PT base)"]
-        STEP3["③ IOTLB lookup"]
-        STEP4["④ Stage 1 walk (S1 PT) → IPA"]
-        STEP5["⑤ Stage 2 walk (S2 PT, hypervisor) → PA"]
-        STEP6["⑥ Permission check"]
-        STEP7["⑦ IOTLB fill"]
-        OUT["PA + perm"]
-        CMDQ["Command Queue<br/>(SW → SMMU 명령)"]
-        EVTQ["Event Queue<br/>(SMMU → SW: fault, PRI, etc.)"]
-    end
-    BUS["Bus Fabric<br/>→ Memory Controller → DRAM"]
+```d2
+direction: down
 
-    DEV --> STEP1 --> STEP2 --> STEP3
-    STEP3 -- "hit" --> OUT
-    STEP3 -- "miss" --> STEP4 --> STEP5 --> STEP6 --> STEP7 --> OUT
-    OUT -- "PA + AT=Translated (옵션)" --> BUS
-
-    classDef fast stroke:#27ae60,stroke-width:3px
-    classDef slow stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
-    class STEP3 fast
-    class STEP4,STEP5 slow
+# unparsed: DEV["Device (GPU / NIC / DMA / Accel)<br/>DMA req: (StreamID, SubstreamID, IOVA, R/W)"]
+SMMU: "SMMU v3" {
+  # unparsed: STEP1["① StreamID → Stream Table<br/>→ STE (config)"]
+  # unparsed: STEP2["② SubstreamID →<br/>Context Descriptor (S1 PT base)"]
+  # unparsed: STEP3["③ IOTLB lookup"]
+  # unparsed: STEP4["④ Stage 1 walk (S1 PT) → IPA"]
+  # unparsed: STEP5["⑤ Stage 2 walk (S2 PT, hypervisor) → PA"]
+  # unparsed: STEP6["⑥ Permission check"]
+  # unparsed: STEP7["⑦ IOTLB fill"]
+  # unparsed: OUT["PA + perm"]
+  # unparsed: CMDQ["Command Queue<br/>(SW → SMMU 명령)"]
+  # unparsed: EVTQ["Event Queue<br/>(SMMU → SW: fault, PRI, etc.)"]
+}
+# unparsed: BUS["Bus Fabric<br/>→ Memory Controller → DRAM"]
+STEP3 { style.stroke: "#27ae60"; style.stroke-width: 3 }
+DEV -> STEP1
+STEP1 -> STEP2
+STEP2 -> STEP3
+STEP3 -> OUT: "hit"
+STEP4 { style.stroke: "#c0392b"; style.stroke-width: 2; style.stroke-dash: 4 }
+STEP5 { style.stroke: "#c0392b"; style.stroke-width: 2; style.stroke-dash: 4 }
+STEP3 -> STEP4: "miss"
+STEP4 -> STEP5
+STEP5 -> STEP6
+STEP6 -> STEP7
+STEP7 -> OUT
+OUT -> BUS: "PA + AT=Translated (옵션)"
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -186,17 +190,17 @@ flowchart TB
 
 **IOMMU 없이**:
 
-```mermaid
-flowchart LR
-    CPU["CPU"]
-    MMU["CPU MMU"]
-    DMA["DMA"]
-    DRAM[("DRAM")]
-    CPU -- "VA" --> MMU -- "PA" --> DRAM
-    DMA -- "PA 직접 접근" --> DRAM
+```d2
+direction: right
 
-    classDef risk stroke:#c0392b,stroke-width:3px,stroke-dasharray: 4 2
-    class DMA risk
+# unparsed: CPU["CPU"]
+# unparsed: MMU["CPU MMU"]
+# unparsed: DMA["DMA"]
+# unparsed: DRAM[("DRAM")]
+CPU -> MMU: "VA"
+MMU -> DRAM: "PA"
+DMA { style.stroke: "#c0392b"; style.stroke-width: 3; style.stroke-dash: 4 }
+DMA -> DRAM: "PA 직접 접근"
 ```
 
 문제:
@@ -231,18 +235,22 @@ IOMMU -> DRAM
 
 ### 4.2 ARM SMMU v3 구조
 
-```mermaid
-flowchart TB
-    DEV["Device"]
-    subgraph SMMU["SMMU v3"]
-        ST["Stream Table<br/>→ STE (Stream Table Entry)"]
-        S1["Stage 1 Config<br/>(Device VA → IPA)"]
-        S2["Stage 2 Config<br/>(IPA → PA, Hypervisor)"]
-        IOTLB["IOTLB"]
-        CMDQ["Command Queue<br/>(SW → SMMU 명령)"]
-        EVTQ["Event Queue<br/>(SMMU → SW 에러/이벤트 보고)"]
-    end
-    DEV -- "StreamID" --> ST --> S1 --> S2 --> IOTLB
+```d2
+direction: down
+
+# unparsed: DEV["Device"]
+SMMU: "SMMU v3" {
+  # unparsed: ST["Stream Table<br/>→ STE (Stream Table Entry)"]
+  # unparsed: S1["Stage 1 Config<br/>(Device VA → IPA)"]
+  # unparsed: S2["Stage 2 Config<br/>(IPA → PA, Hypervisor)"]
+  # unparsed: IOTLB["IOTLB"]
+  # unparsed: CMDQ["Command Queue<br/>(SW → SMMU 명령)"]
+  # unparsed: EVTQ["Event Queue<br/>(SMMU → SW 에러/이벤트 보고)"]
+}
+DEV -> ST: "StreamID"
+ST -> S1
+S1 -> S2
+S2 -> IOTLB
 ```
 
 ### 4.3 핵심 데이터 구조
@@ -314,18 +322,19 @@ Stage 2 (Hypervisor 관리):
 
 **해결**: ATS — 디바이스 자체에 Translation Cache (ATC) 를 두어 IOMMU 우회.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant DEV as Device (+ATC)
-    participant IOMMU
-    participant MEM as Memory
-    DEV->>IOMMU: Translation Request (VA + StreamID)
-    Note over IOMMU: Page Walk
-    IOMMU-->>DEV: Translation Response (PA)
-    Note over DEV: ATC 에 저장
-    DEV->>MEM: DMA (PA, AT=Translated)
-    Note over IOMMU,MEM: IOTLB Walk 건너뜀<br/>Permission 재확인은 수행
+```d2
+shape: sequence_diagram
+
+DEV: "Device (+ATC)"
+IOMMU
+MEM: "Memory"
+
+# Note over IOMMU: Page Walk
+# Note over DEV: ATC 에 저장
+# Note over IOMMU: IOTLB Walk 건너뜀\nPermission 재확인은 수행
+DEV -> IOMMU: "Translation Request (VA + StreamID)"
+IOMMU -> DEV: "Translation Response (PA)" { style.stroke-dash: 4 }
+DEV -> MEM: "DMA (PA, AT=Translated)"
 ```
 
 **ATS 흐름**:
@@ -346,20 +355,21 @@ sequenceDiagram
 
 **해결**: PRI — 디바이스가 OS 에 "이 페이지를 준비해달라" 요청.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant DEV as Device
-    participant IOMMU
-    participant OS
-    DEV->>IOMMU: DMA (VA)
-    IOMMU-->>IOMMU: Page Fault (페이지 없음)
-    IOMMU->>OS: Event Queue 에 Page Request 기록
-    OS->>OS: 페이지 할당 / Swap-in<br/>Page Table 업데이트
-    OS->>IOMMU: Command Queue 에 Page Response
-    IOMMU->>DEV: 완료 통지
-    DEV->>IOMMU: DMA 재시도
-    IOMMU-->>DEV: 성공
+```d2
+shape: sequence_diagram
+
+DEV: "Device"
+IOMMU
+OS
+
+DEV -> IOMMU: "DMA (VA)"
+IOMMU -> IOMMU: "Page Fault (페이지 없음)" { style.stroke-dash: 4 }
+IOMMU -> OS: "Event Queue 에 Page Request 기록"
+OS -> OS: "페이지 할당 / Swap-in\nPage Table 업데이트"
+OS -> IOMMU: "Command Queue 에 Page Response"
+IOMMU -> DEV: "완료 통지"
+DEV -> IOMMU: "DMA 재시도"
+IOMMU -> DEV: "성공" { style.stroke-dash: 4 }
 ```
 
 **핵심**: DMA 실패 대신 "잠시 대기 후 재시도" → 디바이스와 OS 간 협력. SVM (Shared Virtual Memory) 구현의 전제 조건.

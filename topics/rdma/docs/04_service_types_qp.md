@@ -91,20 +91,22 @@ QP FSM 은 시스템 검증의 **bring-up 시퀀스의 뼈대** 입니다. RAL �
 
 ### 한 장 그림 — Service type × QP FSM
 
-```mermaid
-stateDiagram-v2
-    [*] --> Reset
-    Reset --> Init: Modify(Init)
-    Init --> RTR: Modify(RTR)
-    RTR --> RTS: Modify(RTS)
-    RTS --> Err: async error<br/>WC error
-    RTR --> Err: error
-    Init --> Err: error
-    Err --> Reset: Modify(Reset)
-    note right of Err
-        모든 in-flight WR
-        flush 됨
-    end note
+```d2
+direction: right
+
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> Reset
+Reset -> Init: "Modify(Init)"
+Init -> RTR: "Modify(RTR)"
+RTR -> RTS: "Modify(RTS)"
+RTS -> Err: "async error\nWC error"
+RTR -> Err: "error"
+Init -> Err: "error"
+Err -> Reset: "Modify(Reset)"
+# unparsed: note right of Err
+# unparsed: 모든 in-flight WR
+# unparsed: flush 됨
+# unparsed: end note
 ```
 
 **Service 별 차이 (단계별 attribute 만 다름)**:
@@ -248,49 +250,58 @@ A 노드의 QPN = `0x0123`, B 노드의 QPN = `0x0456`. RC service 로 양방향
 
 ### 5.2 Service type 선택 가이드
 
-```mermaid
-flowchart TB
-    Q1{"메시지 &lt; MTU<br/>+ 1:N 멀티캐스트?"} -- Yes --> UD["UD"]
-    Q1 -- No --> Q2{"Reliable + connection<br/>+ 4 opcode 다 필요?"}
-    Q2 -- Yes --> RC["RC"]
-    Q2 -- No --> Q3{"Throughput 만 중요,<br/>drop OK?"}
-    Q3 -- Yes --> UC["UC"]
-    Q3 -- No --> Q4{"여러 sender 가<br/>RQ 공유?"}
-    Q4 -- Yes --> XRC["XRC"]
-    Q4 -- No --> Q5{"WAN / 대륙간?"}
-    Q5 -- Yes --> TCP["TCP 권장"]
-    classDef pick stroke:#137333,stroke-width:2px
-    classDef other stroke:#b8860b,stroke-width:2px
-    class UD,RC,UC,XRC pick
-    class TCP other
+```d2
+direction: down
+
+Q1: "메시지 < MTU\n+ 1:N 멀티캐스트?" { shape: diamond }
+UD: "UD" { style.stroke: "#137333"; style.stroke-width: 2 }
+Q1 -> UD: "Yes"
+Q2: "Reliable + connection\n+ 4 opcode 다 필요?" { shape: diamond }
+Q1 -> Q2: "No"
+RC: "RC" { style.stroke: "#137333"; style.stroke-width: 2 }
+Q2 -> RC: "Yes"
+Q3: "Throughput 만 중요,\ndrop OK?" { shape: diamond }
+Q2 -> Q3: "No"
+UC: "UC" { style.stroke: "#137333"; style.stroke-width: 2 }
+Q3 -> UC: "Yes"
+Q4: "여러 sender 가\nRQ 공유?" { shape: diamond }
+Q3 -> Q4: "No"
+XRC: "XRC" { style.stroke: "#137333"; style.stroke-width: 2 }
+Q4 -> XRC: "Yes"
+Q5: "WAN / 대륙간?" { shape: diamond }
+Q4 -> Q5: "No"
+TCP: "TCP 권장" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+Q5 -> TCP: "Yes"
 ```
 
 ### 5.3 QP State Machine 상세
 
-```mermaid
-stateDiagram-v2
-    [*] --> Reset
-    Reset --> Init: Modify(Init)
-    Init --> RTR: Modify(RTR)
-    note right of RTR
-        Ready To Receive
-        RX 가능, TX 불가
-    end note
-    RTR --> RTS: Modify(RTS)
-    RTS --> SQD: Modify(SQD)
-    SQD --> RTS: Modify(RTS)
-    RTS --> SQErr: async error<br/>WC error
-    RTS --> Err: Local Work Queue Error
-    Init --> Err: error
-    RTR --> Err: error
-    SQD --> Err: error
-    SQErr --> Err: fatal
-    Err --> Reset: Modify(Reset)
-    SQErr --> Reset: Modify(Reset)
-    note right of Err
-        Modify(Reset) 으로만
-        빠져나옴
-    end note
+```d2
+direction: right
+
+INITIAL { shape: circle; style.fill: "#333" }
+INITIAL -> Reset
+Reset -> Init: "Modify(Init)"
+Init -> RTR: "Modify(RTR)"
+# unparsed: note right of RTR
+# unparsed: Ready To Receive
+# unparsed: RX 가능, TX 불가
+# unparsed: end note
+RTR -> RTS: "Modify(RTS)"
+RTS -> SQD: "Modify(SQD)"
+SQD -> RTS: "Modify(RTS)"
+RTS -> SQErr: "async error\nWC error"
+RTS -> Err: "Local Work Queue Error"
+Init -> Err: "error"
+RTR -> Err: "error"
+SQD -> Err: "error"
+SQErr -> Err: "fatal"
+Err -> Reset: "Modify(Reset)"
+SQErr -> Reset: "Modify(Reset)"
+# unparsed: note right of Err
+# unparsed: Modify(Reset) 으로만
+# unparsed: 빠져나옴
+# unparsed: end note
 ```
 
 | State | 의미 | RX | TX |
@@ -318,18 +329,20 @@ stateDiagram-v2
 
 ### 5.5 RC 의 신뢰성 메커니즘 요약
 
-```mermaid
-sequenceDiagram
-    participant S as sender
-    participant R as receiver
-    S->>R: PSN=N · data
-    S->>R: PSN=N+1 · data
-    S->>R: PSN=N+2 · data (A=1)
-    R-->>S: ACK PSN=N+2<br/>(coalesced)
-    Note over S: PSN=N+2 까지<br/>SQ 에서 retire
-    Note over S,R: timeout 안에 ACK 못 받으면
-    S->>R: PSN=N · retransmit
-    R-->>S: ACK PSN=N (다시)
+```d2
+shape: sequence_diagram
+
+S: "sender"
+R: "receiver"
+
+# Note over S: PSN=N+2 까지\nSQ 에서 retire
+# Note over S: timeout 안에 ACK 못 받으면
+S -> R: "PSN=N · data"
+S -> R: "PSN=N+1 · data"
+S -> R: "PSN=N+2 · data (A=1)"
+R -> S: "ACK PSN=N+2\n(coalesced)" { style.stroke-dash: 4 }
+S -> R: "PSN=N · retransmit"
+R -> S: "ACK PSN=N (다시)" { style.stroke-dash: 4 }
 ```
 
 | 항목 | 값/의미 |

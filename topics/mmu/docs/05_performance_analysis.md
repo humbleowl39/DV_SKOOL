@@ -455,33 +455,33 @@ Scoreboard에서 자동 성능 비교:
 
 ### 5.5 성능 병목 진단 프로세스
 
-```mermaid
-flowchart TB
-    M1["① TLB Miss Ratio 측정"]
-    M1H["3C 분석<br/>(Compulsory? Capacity? Conflict?)"]
-    M1C["Capacity<br/>→ Huge Page, TLB 크기"]
-    M1F["Conflict<br/>→ Associativity 확인"]
+```d2
+direction: down
 
-    M2["② Page Walk Latency 측정"]
-    M2H["메모리 대역폭 경쟁?<br/>Walk Engine 파이프라인 깊이?"]
-    M2B["대역폭<br/>→ PWC 확인"]
-    M2P["파이프라인<br/>→ Walk Engine 병렬도"]
-
-    M3["③ Throughput 측정"]
-    M3H["이론치 대비 낮음<br/>입력 큐 백프레셔?<br/>출력 대기?"]
-    M3I["백프레셔<br/>→ 요청 큐 깊이<br/>+ 메모리 대역폭"]
-    M3O["출력 대기<br/>→ 다운스트림 병목"]
-
-    M4["④ Latency P99 / 최악 측정"]
-    M4H["평균 대비 P99 ↑<br/>TLB Miss 집중? Lock 경쟁?"]
-
-    M1 -- "높음" --> M1H --> M1C
-    M1H --> M1F
-    M2 -- "높음" --> M2H --> M2B
-    M2H --> M2P
-    M3 -- "낮음" --> M3H --> M3I
-    M3H --> M3O
-    M4 -- "P99 ≫ avg" --> M4H
+# unparsed: M1["① TLB Miss Ratio 측정"]
+# unparsed: M1H["3C 분석<br/>(Compulsory? Capacity? Conflict?)"]
+# unparsed: M1C["Capacity<br/>→ Huge Page, TLB 크기"]
+# unparsed: M1F["Conflict<br/>→ Associativity 확인"]
+# unparsed: M2["② Page Walk Latency 측정"]
+# unparsed: M2H["메모리 대역폭 경쟁?<br/>Walk Engine 파이프라인 깊이?"]
+# unparsed: M2B["대역폭<br/>→ PWC 확인"]
+# unparsed: M2P["파이프라인<br/>→ Walk Engine 병렬도"]
+# unparsed: M3["③ Throughput 측정"]
+# unparsed: M3H["이론치 대비 낮음<br/>입력 큐 백프레셔?<br/>출력 대기?"]
+# unparsed: M3I["백프레셔<br/>→ 요청 큐 깊이<br/>+ 메모리 대역폭"]
+# unparsed: M3O["출력 대기<br/>→ 다운스트림 병목"]
+# unparsed: M4["④ Latency P99 / 최악 측정"]
+# unparsed: M4H["평균 대비 P99 ↑<br/>TLB Miss 집중? Lock 경쟁?"]
+M1 -> M1H: "높음"
+M1H -> M1C
+M1H -> M1F
+M2 -> M2H: "높음"
+M2H -> M2B
+M2H -> M2P
+M3 -> M3H: "낮음"
+M3H -> M3I
+M3H -> M3O
+M4 -> M4H: "P99 ≫ avg"
 ```
 
 ### 5.6 서버급 HW 가속기의 성능 요구사항 (이력서 연결)

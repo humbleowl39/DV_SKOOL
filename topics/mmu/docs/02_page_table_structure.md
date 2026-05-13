@@ -366,21 +366,22 @@ DV 검증:
 
 COW = `fork()` 시 물리 메모리 복사를 지연하는 최적화. `fork()` 전후와 Write 시 흐름:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Parent
-    participant MMU
-    participant OS as OS COW Handler
-    Note over Parent,MMU: fork() 전<br/>Parent: VA 0x1000 → PA 0x8000 (RW)
-    Note over Parent,MMU: fork() 직후<br/>Parent/Child: VA 0x1000 → PA 0x8000 (RO 공유)
-    Parent->>MMU: Write VA 0x1000
-    MMU-->>Parent: Permission Fault (PTE = RO)
-    Parent->>OS: Fault handler 호출
-    OS->>OS: 1. 새 물리 페이지 할당 (PA 0xC000)<br/>2. PA 0x8000 → PA 0xC000 복사<br/>3. Parent PTE 업데이트<br/>   VA 0x1000 → PA 0xC000 (RW)<br/>4. TLB Invalidation (stale RO 제거)
-    OS-->>Parent: 복귀 → Write 재실행
-    Parent->>MMU: Write VA 0x1000 (재실행)
-    MMU-->>Parent: 성공 (PA 0xC000, RW)
+```d2
+shape: sequence_diagram
+
+Parent
+MMU
+OS: "OS COW Handler"
+
+# Note over Parent: fork() 전\nParent: VA 0x1000 → PA 0x8000 (RW)
+# Note over Parent: fork() 직후\nParent/Child: VA 0x1000 → PA 0x8000 (RO 공유)
+Parent -> MMU: "Write VA 0x1000"
+MMU -> Parent: "Permission Fault (PTE = RO)" { style.stroke-dash: 4 }
+Parent -> OS: "Fault handler 호출"
+OS -> OS: "1. 새 물리 페이지 할당 (PA 0xC000)\n2. PA 0x8000 → PA 0xC000 복사\n3. Parent PTE 업데이트\n   VA 0x1000 → PA 0xC000 (RW)\n4. TLB Invalidation (stale RO 제거)"
+OS -> Parent: "복귀 → Write 재실행" { style.stroke-dash: 4 }
+Parent -> MMU: "Write VA 0x1000 (재실행)"
+MMU -> Parent: "성공 (PA 0xC000, RW)" { style.stroke-dash: 4 }
 ```
 
 **MMU/TLB 관점**:

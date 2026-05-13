@@ -80,19 +80,22 @@ cover property (@(posedge clk) (VALID && !READY));  // 실제 발생?
 
 ### 한 장 그림 — assert / assume / cover 의 역할 분담
 
-```mermaid
-flowchart TB
-    P["Property P<br/>(어떤 시간 관계의 명제:<br/>req |-> ##[1:3] ack)"]
-    P --> AS["assert P<br/>'P 가 항상 참인지 검증하라'"]
-    P --> AM["assume P<br/>'P 를 입력에서 참이라고 가정하라'"]
-    P --> CV["cover P<br/>'P 가 실제로 도달 가능한가'"]
-    AS --> AS_R["Sim: 위반 시 error<br/>FV: 증명 대상"]
-    AM --> AM_R["Sim: 검사 안 함<br/>FV: 입력 제약<br/>⚠ 과도하면 False PROVEN"]
-    CV --> CV_R["Sim: 도달 카운트<br/>FV: 도달성 확인<br/>⭐ assert 의 Vacuous 방지"]
-    classDef warn stroke:#c0392b,stroke-width:2px
-    classDef good stroke:#27ae60,stroke-width:2px
-    class AM_R warn
-    class CV_R good
+```d2
+direction: down
+
+# unparsed: P["Property P<br/>(어떤 시간 관계의 명제:<br/>req |-> ##[1:3] ack)"]
+AS: "assert P\n'P 가 항상 참인지 검증하라'"
+P -> AS
+AM: "assume P\n'P 를 입력에서 참이라고 가정하라'"
+P -> AM
+CV: "cover P\n'P 가 실제로 도달 가능한가'"
+P -> CV
+AS_R: "Sim: 위반 시 error\nFV: 증명 대상"
+AS -> AS_R
+AM_R: "Sim: 검사 안 함\nFV: 입력 제약\n⚠ 과도하면 False PROVEN" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+AM -> AM_R
+CV_R: "Sim: 도달 카운트\nFV: 도달성 확인\n⭐ assert 의 Vacuous 방지" { style.stroke: "#27ae60"; style.stroke-width: 2 }
+CV -> CV_R
 ```
 
 세 directive 의 역할이 서로 다르므로, **한 property 는 보통 (assert + cover) 짝**, 또는 **(assume + cover) 짝** 으로 쓰입니다. assume 단독은 위험합니다.

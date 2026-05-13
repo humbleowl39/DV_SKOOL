@@ -109,27 +109,27 @@ PRIMARY -> FALLBACK: "하나라도 실패\n→ Secondary 로 fallback"
 
 가장 단순한 시나리오. OTP[BOOT_DEV_CFG] = SPI_NOR, primary 부팅 성공의 1 cycle.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant F as SPI NOR Flash (외부)
-    participant S as Internal SRAM
-    participant B as BootROM (BL1)
+```d2
+shape: sequence_diagram
 
-    Note over B: ① POR
-    Note over B: ② OTP read<br/>BOOT_MODE = NORMAL<br/>BOOT_DEV = SPI_NOR
-    Note over B: ③ SPI ctrl init
-    B->>F: RDID (0x9F)
-    F->>B: ④ JEDEC ID
-    B->>F: ⑤ READ (0x03) + addr 0x0
-    F->>S: Boot Header (4 KB)
-    Note over B: ⑥ Boot Header parse<br/>Magic == 0xAA640001 ?<br/>YES → FIP 위치 확보
-    F->>S: FIP ToC (1 KB)
-    Note over B: ⑦ FIP ToC read<br/>UUID = BL2 ?<br/>YES → entry.offset/size
-    F->>S: ⑧ BL2 image (2 MB) DMA → SRAM<br/>(Boot LU / partition)
-    F->>S: ⑨ BL2 cert (~1 KB) DMA → SRAM
-    Note over B: ⑩ Module 02-03 검증<br/>PK / sig / image hash
-    Note over B: ⑪ jump BL2_entry ★
+F: "SPI NOR Flash (외부)"
+S: "Internal SRAM"
+B: "BootROM (BL1)"
+
+# Note over B: ① POR
+# Note over B: ② OTP read\nBOOT_MODE = NORMAL\nBOOT_DEV = SPI_NOR
+# Note over B: ③ SPI ctrl init
+# Note over B: ⑥ Boot Header parse\nMagic == 0xAA640001 ?\nYES → FIP 위치 확보
+# Note over B: ⑦ FIP ToC read\nUUID = BL2 ?\nYES → entry.offset/size
+# Note over B: ⑩ Module 02-03 검증\nPK / sig / image hash
+# Note over B: ⑪ jump BL2_entry ★
+B -> F: "RDID (0x9F)"
+F -> B: "④ JEDEC ID"
+B -> F: "⑤ READ (0x03) + addr 0x0"
+F -> S: "Boot Header (4 KB)"
+F -> S: "FIP ToC (1 KB)"
+F -> S: "⑧ BL2 image (2 MB) DMA → SRAM\n(Boot LU / partition)"
+F -> S: "⑨ BL2 cert (~1 KB) DMA → SRAM"
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -214,29 +214,29 @@ Boot Mode 결정 (BootROM 초기 단계)
 
 ### 4.2 Fallback 그래프
 
-```mermaid
-flowchart TB
-    PRI["Primary: UFS"]
-    PRIQ{UFS 초기화 성공?}
-    UBL2[BL2 로드]
-    UVRF{검증 PASS?}
-    BOOT["Boot"]
-    SEC["Secondary: eMMC"]
-    SECQ{eMMC 초기화 성공?}
-    EBL2["BL2 로드 → 검증"]
-    TER["Tertiary: USB DL Mode<br/>USB Enumeration 대기<br/>(무한 대기 또는 타임아웃)"]
+```d2
+direction: down
 
-    PRI --> PRIQ
-    PRIQ -- YES --> UBL2 --> UVRF
-    UVRF -- PASS --> BOOT
-    UVRF -- FAIL --> SEC
-    PRIQ -- "NO (장치 없음/에러)" --> SEC
-    SEC --> SECQ
-    SECQ -- YES --> EBL2
-    SECQ -- NO --> TER
-
-    NOTE["주의: Fallback 순서/허용 여부는 OTP 에 설정됨<br/>Secure Boot 는 USB DL 자체를 차단할 수도 있음"]
-    TER -.-> NOTE
+# unparsed: PRI["Primary: UFS"]
+PRIQ: "UFS 초기화 성공?" { shape: diamond }
+# unparsed: UBL2[BL2 로드]
+UVRF: "검증 PASS?" { shape: diamond }
+# unparsed: BOOT["Boot"]
+# unparsed: SEC["Secondary: eMMC"]
+SECQ: "eMMC 초기화 성공?" { shape: diamond }
+# unparsed: EBL2["BL2 로드 → 검증"]
+# unparsed: TER["Tertiary: USB DL Mode<br/>USB Enumeration 대기<br/>(무한 대기 또는 타임아웃)"]
+PRI -> PRIQ
+PRIQ -> UBL2: "YES"
+UBL2 -> UVRF
+UVRF -> BOOT: "PASS"
+UVRF -> SEC: "FAIL"
+PRIQ -> SEC: "NO (장치 없음/에러)"
+SEC -> SECQ
+SECQ -> EBL2: "YES"
+SECQ -> TER: "NO"
+# unparsed: NOTE["주의: Fallback 순서/허용 여부는 OTP 에 설정됨<br/>Secure Boot 는 USB DL 자체를 차단할 수도 있음"]
+TER -> NOTE { style.stroke-dash: 4 }
 ```
 
 **치명적 OTP 설계 포인트**: OTP 는 양산 후 변경 불가. Fallback 경로가 OTP 에 사전 프로그래밍되지 않은 상태에서 Primary 부팅 장치가 실패하면 → 죽은 장치 (brick). 모든 실패 시나리오가 OTP 프로그래밍 _이전에_ 고려되어야 함.

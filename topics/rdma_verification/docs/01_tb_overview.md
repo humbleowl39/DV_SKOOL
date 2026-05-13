@@ -122,34 +122,34 @@ flowchart TB
 
 가장 단순한 시나리오 — `rdma_basic_test` 가 `num_nodes=2` 로 실행되고 `node[0]` 이 `node[1]` 에 1 KB RDMA WRITE 를 합니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant TS as top_seq
-    participant DRV0 as node[0].driver
-    participant WH as write_handler
-    participant C1 as 1side_compare
-    participant CT as c2h_tracker
-    participant DUT0 as DUT IP_0
-    participant PM as pkt_monitor<br/>(ntw_env)
-    participant DUT1 as DUT IP_1
-    participant MEM1 as host mem[1]
-    participant CQH as cq_handler
-    participant SB as data_scoreboard
+```d2
+shape: sequence_diagram
 
-    TS->>DRV0: RDMAWrite(.t_seqr=seqr[0])
-    DRV0->>WH: issued_wqe_ap.write(cmd)
-    WH->>C1: write 큐에 enqueue
-    WH->>CT: expected PA 계산
-    DRV0->>DUT0: doorbell
-    DUT0->>PM: pkt
-    PM->>DUT1: pkt
-    DUT1->>MEM1: payload DMA
-    DUT1->>CT: C2H 매칭
-    MEM1->>C1: mem[0] vs mem[1] 비교
-    DUT1-->>CQH: pkt 도착 / completion
-    CQH-->>DRV0: cqe_ap
-    DRV0->>SB: completed_wqe_ap.write(cmd)
+TS: "top_seq"
+DRV0: "node[0].driver"
+WH: "write_handler"
+C1: "1side_compare"
+CT: "c2h_tracker"
+DUT0: "DUT IP_0"
+PM: "pkt_monitor\n(ntw_env)"
+DUT1: "DUT IP_1"
+MEM1: "host mem[1]"
+CQH: "cq_handler"
+SB: "data_scoreboard"
+
+TS -> DRV0: "RDMAWrite(.t_seqr=seqr[0])"
+DRV0 -> WH: "issued_wqe_ap.write(cmd)"
+WH -> C1: "write 큐에 enqueue"
+WH -> CT: "expected PA 계산"
+DRV0 -> DUT0: "doorbell"
+DUT0 -> PM: "pkt"
+PM -> DUT1: "pkt"
+DUT1 -> MEM1: "payload DMA"
+DUT1 -> CT: "C2H 매칭"
+MEM1 -> C1: "mem[0] vs mem[1] 비교"
+DUT1 -> CQH: "pkt 도착 / completion" { style.stroke-dash: 4 }
+CQH -> DRV0: "cqe_ap" { style.stroke-dash: 4 }
+DRV0 -> SB: "completed_wqe_ap.write(cmd)"
 ```
 
 | Step | 누가 | 무엇을 | 왜 |
