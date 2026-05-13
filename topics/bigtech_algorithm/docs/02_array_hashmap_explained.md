@@ -193,21 +193,20 @@ def two_sum(nums, target):
 
 ### 4.1 신호 → Hash Map 결정 트리
 
-```mermaid
-flowchart TB
-    Q1{"'이 값을 이전에 본 적 있는가?'<br/>라는 lookup 이 있나?"}
-    NO["Hash Map 후보 아님<br/>(Two Pointers / DP / 다른 패턴)"]
-    Q2{"무엇을 추적하나?"}
-    U1["① 존재 여부<br/>Key=값, Value=index/1"]
-    U2["② 빈도 (count)<br/>Key=값, Value=count"]
-    U3["③ 그룹<br/>Key=불변식, Value=목록"]
-    Q1 -- NO --> NO
-    Q1 -- YES --> Q2
-    Q2 --> U1
-    Q2 --> U2
-    Q2 --> U3
-    classDef pick stroke-width:3px
-    class U1,U2,U3 pick
+```d2
+direction: down
+
+Q1: "'이 값을 이전에 본 적 있는가?'\n라는 lookup 이 있나?" { shape: diamond }
+NO: "Hash Map 후보 아님\n(Two Pointers / DP / 다른 패턴)"
+Q2: "무엇을 추적하나?" { shape: diamond }
+U1: "① 존재 여부\nKey=값, Value=index/1"
+U2: "② 빈도 (count)\nKey=값, Value=count"
+U3: "③ 그룹\nKey=불변식, Value=목록"
+Q1 -> NO: "NO"
+Q1 -> Q2: "YES"
+Q2 -> U1
+Q2 -> U2
+Q2 -> U3
 ```
 
 ### 4.2 세 가지 용법 요약

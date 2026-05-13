@@ -166,33 +166,34 @@ return BL_data;                                  // ⑦
 
 ### 4.1 DRAM 주소 계층
 
-```mermaid
-flowchart TB
-    DRAM["DRAM Device"]
-    R0["Rank 0"]
-    R1["Rank 1"]
-    BG0["BG0"]
-    BG1["BG1"]
-    BG2["BG2"]
-    BG3["BG3"]
-    B0["Bank 0"]
-    B1["Bank 1"]
-    B2["Bank 2"]
-    B3["Bank 3"]
-    ROW["Row 0 .. Row 65535"]
-    COL["Column 0 .. Column 1023"]
-    DRAM --> R0
-    DRAM --> R1
-    R0 --> BG0
-    R0 --> BG1
-    R0 --> BG2
-    R0 --> BG3
-    BG0 --> B0
-    BG0 --> B1
-    BG0 --> B2
-    BG0 --> B3
-    B0 --> ROW
-    ROW --> COL
+```d2
+direction: down
+
+DRAM: "DRAM Device"
+R0: "Rank 0"
+R1: "Rank 1"
+BG0: "BG0"
+BG1: "BG1"
+BG2: "BG2"
+BG3: "BG3"
+B0: "Bank 0"
+B1: "Bank 1"
+B2: "Bank 2"
+B3: "Bank 3"
+ROW: "Row 0 .. Row 65535"
+COL: "Column 0 .. Column 1023"
+DRAM -> R0
+DRAM -> R1
+R0 -> BG0
+R0 -> BG1
+R0 -> BG2
+R0 -> BG3
+BG0 -> B0
+BG0 -> B1
+BG0 -> B2
+BG0 -> B3
+B0 -> ROW
+ROW -> COL
 ```
 
 DDR4 예시 (8Gb): 2 Rank · 4 Bank Group · 4 Bank/Group (총 16 Bank) · 65536 Row/Bank · 1024 Column/Row.
@@ -246,13 +247,14 @@ stateDiagram-v2
 
 ### 4.5 Prefetch + Bank Group 의 결합 — 대역폭의 두 축
 
-```mermaid
-flowchart TB
-    CELL["내부 cell 어레이<br/>(느림, ~수백 MHz)"]
-    BUF["Row Buffer / I/O sense"]
-    DQ["DQ pin<br/>(빠름, 수 GHz)"]
-    CELL -- "① Prefetch n bit (BL = n)" --> BUF
-    BUF -- "② Bank Group 별 독립 I/O<br/>같은 BG: tCCD_L (느림)<br/>다른 BG: tCCD_S (빠름)" --> DQ
+```d2
+direction: down
+
+CELL: "내부 cell 어레이\n(느림, ~수백 MHz)"
+BUF: "Row Buffer / I/O sense"
+DQ: "DQ pin\n(빠름, 수 GHz)"
+CELL -> BUF: "① Prefetch n bit (BL = n)"
+BUF -> DQ: "② Bank Group 별 독립 I/O\n같은 BG: tCCD_L (느림)\n다른 BG: tCCD_S (빠름)"
 ```
 
 - 한 번의 column access 가 BL beat 의 데이터 전송으로 변환되고,

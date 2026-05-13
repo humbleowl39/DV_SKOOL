@@ -197,24 +197,22 @@ def is_valid(s):
 
 ### 4.1 Stack 신호 매핑
 
-```mermaid
-flowchart TB
-    K["문제의 키워드<br/>· '가장 최근'<br/>· '매칭 쌍 / 중첩'<br/>· '되돌리기 (undo)'<br/>· '다음으로 큰/작은 원소'<br/>· '히스토그램 / 빗물'"]
-    P["Stack 또는<br/>Monotonic Stack 후보"]
-    K --> P
-    classDef pick stroke-width:3px
-    class P pick
+```d2
+direction: down
+
+K: "문제의 키워드\n· '가장 최근'\n· '매칭 쌍 / 중첩'\n· '되돌리기 (undo)'\n· '다음으로 큰/작은 원소'\n· '히스토그램 / 빗물'"
+P: "Stack 또는\nMonotonic Stack 후보"
+K -> P
 ```
 
 ### 4.2 Binary Search 신호 매핑
 
-```mermaid
-flowchart TB
-    K["문제의 키워드<br/>· '정렬됨'<br/>· '삽입 위치'<br/>· '조건 만족 최소/최대'<br/>· 'rotated 정렬 배열'<br/>· 'answer ≥ X 가능?' (parametric)"]
-    P["Binary Search 후보<br/>(정렬이 아닌 <i>단조성</i>이 핵심)"]
-    K --> P
-    classDef pick stroke-width:3px
-    class P pick
+```d2
+direction: down
+
+K: "문제의 키워드\n· '정렬됨'\n· '삽입 위치'\n· '조건 만족 최소/최대'\n· 'rotated 정렬 배열'\n· 'answer ≥ X 가능?' (parametric)"
+P: "Binary Search 후보\n(정렬이 아닌 _단조성_이 핵심)"
+K -> P
 ```
 
 ### 4.3 두 패턴의 공통점 — "선택적 폐기"

@@ -247,31 +247,24 @@ endclass
 
 ### 4.3 Virtual Sequence — 멀티 Agent 시나리오
 
-```mermaid
-flowchart TB
-    TEST["uvm_test"]
-    VSEQ["<b>Virtual Sequence</b><br/>(시나리오 조합)"]
-    SA["Agent_A Sequence<br/><i>OTP 설정</i>"]
-    SB["Agent_B Sequence<br/><i>UFS 이미지 로드</i>"]
-    SC["Agent_C Sequence<br/><i>보안 공격</i>"]
-    IA["Sequence Item<br/><i>OTP 필드 값</i>"]
-    IB["Sequence Item<br/><i>UFS 명령/데이터</i>"]
-    IC["Sequence Item<br/><i>공격 유형/타이밍</i>"]
+```d2
+direction: down
 
-    TEST --> VSEQ
-    VSEQ --> SA
-    VSEQ --> SB
-    VSEQ --> SC
-    SA --> IA
-    SB --> IB
-    SC --> IC
-
-    classDef vseq stroke:#1a73e8,stroke-width:3px
-    classDef seq stroke:#1a73e8,stroke-width:2px
-    classDef item stroke:#137333,stroke-width:2px
-    class VSEQ vseq
-    class SA,SB,SC seq
-    class IA,IB,IC item
+TEST: "uvm_test"
+VSEQ: "**Virtual Sequence**\n(시나리오 조합)"
+SA: "Agent_A Sequence\n_OTP 설정_"
+SB: "Agent_B Sequence\n_UFS 이미지 로드_"
+SC: "Agent_C Sequence\n_보안 공격_"
+IA: "Sequence Item\n_OTP 필드 값_"
+IB: "Sequence Item\n_UFS 명령/데이터_"
+IC: "Sequence Item\n_공격 유형/타이밍_"
+TEST -> VSEQ
+VSEQ -> SA
+VSEQ -> SB
+VSEQ -> SC
+SA -> IA
+SB -> IB
+SC -> IC
 ```
 
 **장점**:

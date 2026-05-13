@@ -74,38 +74,37 @@
 
 ### 한 장 그림 — SW TCP path vs TOE path
 
-```mermaid
-flowchart LR
-    subgraph SW["Software TCP — CPU 풀로드"]
-        direction TB
-        S1["App"]
-        S2["user buf"]
-        S3["socket buf<br/>(sk_buff)"]
-        S4["NIC → wire"]
-        S5["socket buf"]
-        S6["App"]
-        S1 --> S2
-        S2 -- "copy_from_user · CPU" --> S3
-        S3 -- "header build / chksum<br/>segmentation / retx · CPU" --> S4
-        S4 -- "ksoftirqd / IRQ · CPU" --> S5
-        S5 -- "reassembly / copy_to_user · CPU" --> S6
-    end
-    subgraph TOE["TOE — HW offload"]
-        direction TB
-        T1["App"]
-        T2["user buf"]
-        T3["TOE TX queue"]
-        T4["MAC → wire"]
-        T5["TOE RX queue"]
-        T6["App"]
-        T1 --> T2
-        T2 -- "DMA descriptor" --> T3
-        T3 -- "HW segmentation<br/>HW checksum<br/>HW header build<br/>HW RTO timer" --> T4
-        T4 -- "HW ACK process" --> T5
-        T5 -- "HW reassembly<br/>DMA" --> T6
-    end
-    classDef cost stroke:#c0392b,stroke-width:3px
-    class S2,S3,S5 cost
+```d2
+direction: right
+
+SW: "Software TCP — CPU 풀로드" {
+  direction: down
+  S1: "App"
+  S2: "user buf"
+  S3: "socket buf\n(sk_buff)"
+  S4: "NIC → wire"
+  S5: "socket buf"
+  S6: "App"
+  S1 -> S2
+  S2 -> S3: "copy_from_user · CPU"
+  S3 -> S4: "header build / chksum\nsegmentation / retx · CPU"
+  S4 -> S5: "ksoftirqd / IRQ · CPU"
+  S5 -> S6: "reassembly / copy_to_user · CPU"
+}
+TOE: "TOE — HW offload" {
+  direction: down
+  T1: "App"
+  T2: "user buf"
+  T3: "TOE TX queue"
+  T4: "MAC → wire"
+  T5: "TOE RX queue"
+  T6: "App"
+  T1 -> T2
+  T2 -> T3: "DMA descriptor"
+  T3 -> T4: "HW segmentation\nHW checksum\nHW header build\nHW RTO timer"
+  T4 -> T5: "HW ACK process"
+  T5 -> T6: "HW reassembly\nDMA"
+}
 ```
 
 빨간 박스가 SW TCP 에서는 packet 마다 발생하지만, TOE 에서는 모두 **HW pipeline** 안에서 처리됩니다. CPU 는 `connect()` / `accept()` / `close()` 같은 **연결당 1~2 회** 의 control path 만 담당.
@@ -179,32 +178,29 @@ ssize_t n = write(socket_fd, buf, 1024 * 1024);   // 1 MB
 
 ### 4.2 데이터 패스 vs 컨트롤 패스 — 분리의 원칙
 
-```mermaid
-flowchart LR
-    subgraph DP["Data Path (HW) — 높은 빈도, ns~µs latency"]
-        direction TB
-        D1["Checksum"]
-        D2["Segmentation"]
-        D3["Header build"]
-        D4["ACK process"]
-        D5["RTO retransmit"]
-        D6["Window slide"]
-        D7["Cong control update"]
-    end
-    subgraph CP["Control Path (SW) — 낮은 빈도, ms 단위 허용"]
-        direction TB
-        C1["socket() / bind()"]
-        C2["connect() / accept()"]
-        C3["close() / shutdown()"]
-        C4["setsockopt()"]
-        C5["Routing table update"]
-        C6["ARP resolution"]
-        C7["Statistics polling"]
-    end
-    classDef hot stroke:#c0392b,stroke-width:2px
-    classDef cold stroke:#5f6368,stroke-dasharray:4 2
-    class D1,D2,D3,D4,D5,D6,D7 hot
-    class C1,C2,C3,C4,C5,C6,C7 cold
+```d2
+direction: right
+
+DP: "Data Path (HW) — 높은 빈도, ns~µs latency" {
+  direction: down
+  D1: "Checksum"
+  D2: "Segmentation"
+  D3: "Header build"
+  D4: "ACK process"
+  D5: "RTO retransmit"
+  D6: "Window slide"
+  D7: "Cong control update"
+}
+CP: "Control Path (SW) — 낮은 빈도, ms 단위 허용" {
+  direction: down
+  C1: "socket() / bind()"
+  C2: "connect() / accept()"
+  C3: "close() / shutdown()"
+  C4: "setsockopt()"
+  C5: "Routing table update"
+  C6: "ARP resolution"
+  C7: "Statistics polling"
+}
 ```
 
 **원칙**: "자주 발생하는 Data Path 는 HW 로, 드문 Control Path 는 SW 로." 이 한 줄이 TOE architecture 모든 결정의 근거입니다.
@@ -244,15 +240,16 @@ flowchart LR
 
 ### 5.1 TCP/IP 4 계층 모델
 
-```mermaid
-flowchart TB
-    L4["<b>4. Application Layer</b><br/>HTTP, FTP, SSH, NVMe-oF<br/><i>(사용자 데이터)</i>"]
-    L3["<b>3. Transport Layer</b><br/>TCP, UDP<br/><i>(신뢰성, 흐름 제어)</i><br/>← TOE 가 Offload 하는 영역"]
-    L2["<b>2. Internet Layer</b><br/>IP, ICMP, ARP<br/><i>(라우팅, 주소)</i><br/>← 일부 Offload (checksum, fragment)"]
-    L1["<b>1. Network Access Layer</b><br/>Ethernet (MAC + PHY)<br/><i>(물리 전송)</i><br/>← NIC / DCMAC 이 처리"]
-    L4 --- L3 --- L2 --- L1
-    classDef toe stroke:#c0392b,stroke-width:3px
-    class L3 toe
+```d2
+direction: down
+
+L4: "**4. Application Layer**\nHTTP, FTP, SSH, NVMe-oF\n_(사용자 데이터)_"
+L3: "**3. Transport Layer**\nTCP, UDP\n_(신뢰성, 흐름 제어)_\n← TOE 가 Offload 하는 영역"
+L2: "**2. Internet Layer**\nIP, ICMP, ARP\n_(라우팅, 주소)_\n← 일부 Offload (checksum, fragment)"
+L1: "**1. Network Access Layer**\nEthernet (MAC + PHY)\n_(물리 전송)_\n← NIC / DCMAC 이 처리"
+L4 -- L3
+L3 -- L2
+L2 -- L1
 ```
 
 ### 5.2 TCP 의 핵심 기능 (UDP 와의 차이)

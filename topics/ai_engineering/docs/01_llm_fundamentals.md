@@ -226,20 +226,25 @@ mask = cumulative <= top_p
 
 ### 4.1 Transformer 블록의 골격
 
-```mermaid
-flowchart TB
-    IN["입력: 'The cat sat on the'"]
-    TE["Token Embedding<br/>'The' → [0.1, -0.3, ...] (d_model 차원)"]
-    PE["Positional Encoding<br/>Token Emb + Position Emb<br/>(Transformer 는 순서를 모름)"]
-    subgraph TB1["Transformer Block × N (32 / 80 / 128 ...)"]
-        direction TB
-        MHA["Multi-Head Self-Attention<br/>(각 토큰이 다른 모든 토큰 참조)"]
-        FFN["Feed-Forward Network (FFN)<br/>(비선형 변환)"]
-        RES["+ Residual Connection + LayerNorm"]
-        MHA --> FFN --> RES
-    end
-    OH["Output Head<br/>벡터 → 어휘 크기 확률 분포<br/>argmax → 'mat'"]
-    IN --> TE --> PE --> TB1 --> OH
+```d2
+direction: down
+
+IN: "입력: 'The cat sat on the'"
+TE: "Token Embedding\n'The' → [0.1, -0.3, ...] (d_model 차원)"
+PE: "Positional Encoding\nToken Emb + Position Emb\n(Transformer 는 순서를 모름)"
+TB1: "Transformer Block × N (32 / 80 / 128 ...)" {
+  direction: down
+  MHA: "Multi-Head Self-Attention\n(각 토큰이 다른 모든 토큰 참조)"
+  FFN: "Feed-Forward Network (FFN)\n(비선형 변환)"
+  RES: "+ Residual Connection + LayerNorm"
+  MHA -> FFN
+  FFN -> RES
+}
+OH: "Output Head\n벡터 → 어휘 크기 확률 분포\nargmax → 'mat'"
+IN -> TE
+TE -> PE
+PE -> TB1
+TB1 -> OH
 ```
 
 ### 4.2 Self-Attention 의 핵심 수식

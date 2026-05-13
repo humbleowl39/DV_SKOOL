@@ -78,27 +78,20 @@ TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard
 
 ### 한 장 그림 — Monitor 한 곳에서 N 곳으로 fan-out
 
-```mermaid
-flowchart LR
-    DUT["DUT"]
-    MON["<b>Monitor</b><br/>run_phase<br/>ap.write(item)"]
-    SB1["<b>Scoreboard.write</b><br/>(analysis_imp)<br/>expected_queue 와 비교"]
-    SB2["<b>Scoreboard.actual_fifo</b><br/>(analysis_fifo)<br/>run_phase task get<br/>시간 소비 가능 비교"]
-    COV["<b>Coverage.write</b><br/>(uvm_subscriber)<br/>cg.sample()"]
-    LOG["Logger /<br/>Protocol Checker<br/><i>(선택)</i>"]
+```d2
+direction: right
 
-    DUT -- "vif sampling" --> MON
-    MON -- "1:N broadcast" --> SB1
-    MON --> SB2
-    MON --> COV
-    MON -.-> LOG
-
-    classDef pub stroke:#1a73e8,stroke-width:3px
-    classDef sub stroke:#137333,stroke-width:2px
-    classDef opt stroke:#5f6368,stroke-dasharray:4 2
-    class MON pub
-    class SB1,SB2,COV sub
-    class LOG opt
+DUT: "DUT"
+MON: "**Monitor**\nrun_phase\nap.write(item)"
+SB1: "**Scoreboard.write**\n(analysis_imp)\nexpected_queue 와 비교"
+SB2: "**Scoreboard.actual_fifo**\n(analysis_fifo)\nrun_phase task get\n시간 소비 가능 비교"
+COV: "**Coverage.write**\n(uvm_subscriber)\ncg.sample()"
+LOG: "Logger /\nProtocol Checker\n_(선택)_"
+DUT -> MON: "vif sampling"
+MON -> SB1: "1:N broadcast"
+MON -> SB2
+MON -> COV
+MON -> LOG { style.stroke-dash: 4 }
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -119,22 +112,16 @@ flowchart LR
 
 ### 단계별 다이어그램
 
-```mermaid
-flowchart TB
-    MON["<b>Monitor</b><br/>@posedge vif.clk<br/>if (valid && ready)<br/>  item.addr / item.data 채움<br/>① ap.write(item)"]
+```d2
+direction: down
 
-    SB_IMP["<b>Scoreboard</b><br/>analysis_imp.write(item)<br/>② queue pop<br/>compare(exp, act)<br/>mismatch → `uvm_error"]
-    SB_FIFO["<b>Scoreboard</b><br/>actual_fifo.write(item)<br/>(큐에 push)<br/>run_phase task:<br/>④ get(actual)<br/>get(expected)<br/>compare"]
-    COV["<b>Coverage</b><br/>subscriber.write(item)<br/>③ cg.sample()<br/>covergroup bin 카운트 ↑<br/>⑤ cross-bin 카운트 ↑"]
-
-    MON -- "fan-out (1:N broadcast)" --> SB_IMP
-    MON --> SB_FIFO
-    MON --> COV
-
-    classDef pub stroke:#1a73e8,stroke-width:3px
-    classDef sub stroke:#137333,stroke-width:2px
-    class MON pub
-    class SB_IMP,SB_FIFO,COV sub
+MON: "**Monitor**\n@posedge vif.clk\nif (valid && ready)\n  item.addr / item.data 채움\n① ap.write(item)"
+SB_IMP: "**Scoreboard**\nanalysis_imp.write(item)\n② queue pop\ncompare(exp, act)\nmismatch → `uvm_error"
+SB_FIFO: "**Scoreboard**\nactual_fifo.write(item)\n(큐에 push)\nrun_phase task:\n④ get(actual)\nget(expected)\ncompare"
+COV: "**Coverage**\nsubscriber.write(item)\n③ cg.sample()\ncovergroup bin 카운트 ↑\n⑤ cross-bin 카운트 ↑"
+MON -> SB_IMP: "fan-out (1:N broadcast)"
+MON -> SB_FIFO
+MON -> COV
 ```
 
 ### 단계별 의미
@@ -252,30 +239,23 @@ endfunction
 
 ### 4.2 analysis_imp vs analysis_fifo
 
-```mermaid
-flowchart LR
-    subgraph IMP["uvm_analysis_imp"]
-        direction LR
-        M1["Monitor"]
-        S1["Scoreboard"]
-        M1 -- "write()<br/>(function)" --> S1
-    end
+```d2
+direction: right
 
-    subgraph FIFO["uvm_tlm_analysis_fifo"]
-        direction LR
-        M2["Monitor"]
-        F["FIFO"]
-        S2["Scoreboard"]
-        M2 -- "write()<br/>(function)" --> F
-        F -- "get()<br/>(task)" --> S2
-    end
-
-    classDef pub stroke:#1a73e8,stroke-width:2px
-    classDef sub stroke:#137333,stroke-width:2px
-    classDef buf stroke:#b8860b,stroke-width:2px
-    class M1,M2 pub
-    class S1,S2 sub
-    class F buf
+IMP: "uvm_analysis_imp" {
+  direction: right
+  M1: "Monitor"
+  S1: "Scoreboard"
+  M1 -> S1: "write()\n(function)"
+}
+FIFO: "uvm_tlm_analysis_fifo" {
+  direction: right
+  M2: "Monitor"
+  F: "FIFO"
+  S2: "Scoreboard"
+  M2 -> F: "write()\n(function)"
+  F -> S2: "get()\n(task)"
+}
 ```
 
 **`uvm_analysis_imp`**

@@ -71,37 +71,44 @@ Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지
 
 ### 한 장 그림 — MC 가 만드는 변환
 
-```mermaid
-flowchart LR
-    subgraph HOST["input side (host)"]
-        direction TB
-        CPU["CPU"]
-        GPU["GPU"]
-        DMA["DMA"]
-        DISP["Display"]
-        ISP["ISP"]
-    end
-    subgraph MC["Memory Controller"]
-        direction TB
-        MC1["1. AXI request 수집 (RQ)"]
-        MC2["2. 주소 → R/BG/B/Row/Col 디코드"]
-        MC3["3. Row buffer state 추적"]
-        MC4["4. timing constraint 체크"]
-        MC5["5. FR-FCFS 등 정책으로 재배치"]
-        MC6["6. Refresh 끼워넣기"]
-        MC7["7. Write batching / R/W turn"]
-        MC8["8. ACT/RD/WR/PRE/REF 발행"]
-        MC1 --> MC2 --> MC3 --> MC4 --> MC5 --> MC6 --> MC7 --> MC8
-    end
-    subgraph DRAM["output side (DRAM)"]
-        DEV["DRAM device(s)"]
-    end
-    CPU --> MC1
-    GPU --> MC1
-    DMA --> MC1
-    DISP --> MC1
-    ISP --> MC1
-    MC8 -- "DDR phy / CA bus" --> DEV
+```d2
+direction: right
+
+HOST: "input side (host)" {
+  direction: down
+  CPU: "CPU"
+  GPU: "GPU"
+  DMA: "DMA"
+  DISP: "Display"
+  ISP: "ISP"
+}
+MC: "Memory Controller" {
+  direction: down
+  MC1: "1. AXI request 수집 (RQ)"
+  MC2: "2. 주소 → R/BG/B/Row/Col 디코드"
+  MC3: "3. Row buffer state 추적"
+  MC4: "4. timing constraint 체크"
+  MC5: "5. FR-FCFS 등 정책으로 재배치"
+  MC6: "6. Refresh 끼워넣기"
+  MC7: "7. Write batching / R/W turn"
+  MC8: "8. ACT/RD/WR/PRE/REF 발행"
+  MC1 -> MC2
+  MC2 -> MC3
+  MC3 -> MC4
+  MC4 -> MC5
+  MC5 -> MC6
+  MC6 -> MC7
+  MC7 -> MC8
+}
+DRAM: "output side (DRAM)" {
+  DEV: "DRAM device(s)"
+}
+CPU -> MC1
+GPU -> MC1
+DMA -> MC1
+DISP -> MC1
+ISP -> MC1
+MC8 -> DEV: "DDR phy / CA bus"
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -221,23 +228,25 @@ function command_t mc_pick_next() {
 
 ### 5.1 MC 블록 다이어그램
 
-```mermaid
-flowchart TB
-    AXI["AXI/ACE Interface"]
-    subgraph MC["Memory Controller"]
-        direction TB
-        RQ["Request Queue (RQ)<br/>· AXI Read/Write 요청 수신<br/>· 주소 → Rank/BG/Bank/Row/Col 디코딩"]
-        ADM["Address Mapper (Interleaving)<br/>Row:Bank:Col / Row:BG:Bank:Col 등"]
-        CS["Command Scheduler<br/>· Row Buffer 상태 관리 (Open/Closed per Bank)<br/>· 타이밍 제약 검사 (tRCD, tRP, tCCD, tRAS, ...)<br/>· 스케줄링 정책 (FR-FCFS, Open/Close Page, ...)<br/>· Bank-level Parallelism 활용"]
-        REF["Refresh Engine<br/>· Periodic REF<br/>· Postpone/Pull<br/>· Per-bank (DDR5)"]
-        PM["Power Manager<br/>· CKE 제어<br/>· Self-Refresh<br/>· Power-Down"]
-        PHY["PHY Interface<br/>· CA Bus 구동<br/>· DQ/DQS 데이터 버스 제어<br/>· Training 시퀀스 제어"]
-        RQ --> ADM --> CS
-        CS --> REF
-        CS --> PM
-        CS --> PHY
-    end
-    AXI --> RQ
+```d2
+direction: down
+
+AXI: "AXI/ACE Interface"
+MC: "Memory Controller" {
+  direction: down
+  RQ: "Request Queue (RQ)\n· AXI Read/Write 요청 수신\n· 주소 → Rank/BG/Bank/Row/Col 디코딩"
+  ADM: "Address Mapper (Interleaving)\nRow:Bank:Col / Row:BG:Bank:Col 등"
+  CS: "Command Scheduler\n· Row Buffer 상태 관리 (Open/Closed per Bank)\n· 타이밍 제약 검사 (tRCD, tRP, tCCD, tRAS, ...)\n· 스케줄링 정책 (FR-FCFS, Open/Close Page, ...)\n· Bank-level Parallelism 활용"
+  REF: "Refresh Engine\n· Periodic REF\n· Postpone/Pull\n· Per-bank (DDR5)"
+  PM: "Power Manager\n· CKE 제어\n· Self-Refresh\n· Power-Down"
+  PHY: "PHY Interface\n· CA Bus 구동\n· DQ/DQS 데이터 버스 제어\n· Training 시퀀스 제어"
+  RQ -> ADM
+  ADM -> CS
+  CS -> REF
+  CS -> PM
+  CS -> PHY
+}
+AXI -> RQ
 ```
 
 ### 5.2 Command Scheduler — 정책별 비교

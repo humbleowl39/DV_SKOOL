@@ -72,12 +72,14 @@
 
 ### 한 장 그림 — TLP 포맷과 Switch 의 라우팅
 
-```mermaid
-flowchart TB
-    TX["Sender TLP<br/>[ Header (12/16 B) | Payload (0..4096) | ECRC (opt) ]<br/>Fmt + Type + Length + Address + Tag + RequesterID …"]
-    SW["Switch (PCIe routing)<br/>· Address routing : Header.Address → port<br/>· ID routing : Header.DestID → port<br/>· Implicit : Type[2:0] (Msg) → 정의된 경로<br/>━━━<br/>ECRC 그대로 보존 (end-to-end)<br/>LCRC 는 매 hop 새로 계산 (Module 02, 04)"]
-    RX["Receiver TLP<br/>(Header / Payload 그대로)"]
-    TX --> SW --> RX
+```d2
+direction: down
+
+TX: "Sender TLP\n[ Header (12/16 B) | Payload (0..4096) | ECRC (opt) ]\nFmt + Type + Length + Address + Tag + RequesterID …"
+SW: "Switch (PCIe routing)\n· Address routing : Header.Address → port\n· ID routing : Header.DestID → port\n· Implicit : Type[2:0] (Msg) → 정의된 경로\n━━━\nECRC 그대로 보존 (end-to-end)\nLCRC 는 매 hop 새로 계산 (Module 02, 04)"
+RX: "Receiver TLP\n(Header / Payload 그대로)"
+TX -> SW
+SW -> RX
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -305,13 +307,14 @@ void send_cpld(uint8_t tag, uint16_t total_remaining, uint8_t low_addr_7b,
 
 ### 5.4 Routing 상세 — Type 0 vs Type 1 Configuration TLP
 
-```mermaid
-flowchart TB
-    RC["RC"]
-    SW["Switch (Bus N)"]
-    EP["EP (Bus N+1, Dev 0)"]
-    RC -- "Bus N" --> SW
-    SW -- "Bus N+1" --> EP
+```d2
+direction: down
+
+RC: "RC"
+SW: "Switch (Bus N)"
+EP: "EP (Bus N+1, Dev 0)"
+RC -> SW: "Bus N"
+SW -> EP: "Bus N+1"
 ```
 
 - **RC → Switch 자기 자신 config 접근**: `CfgRd0` (Type 0, target = same bus).

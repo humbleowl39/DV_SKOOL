@@ -92,19 +92,18 @@
 
 ### 한 장 그림 — 무엇을 변경하는가
 
-```mermaid
-flowchart TB
-    W["LLM 가중치 (W)"]
-    P["Prompt 변경<br/>입력 분포 (instruction)<br/>비용: 추론만<br/>갱신: 즉시<br/>유연성: 최고<br/>보안: context"]
-    R["RAG 변경<br/>외부 지식 (검색 chunk)<br/>비용: 인프라 + 추론<br/>갱신: 인덱스만<br/>유연성: 높음<br/>보안: 로컬 DB OK"]
-    F["FT 변경<br/>가중치 W' (재학습)<br/>비용: GPU 학습 + 인프라<br/>갱신: 재학습 (시간 / 비용)<br/>유연성: 낮음<br/>보안: 모델에 영구 저장 (위험)"]
-    W --> P
-    W --> R
-    W --> F
-    P -. "한계 시" .-> R
-    R -. "한계 시" .-> F
-    classDef esc stroke:#3498db,stroke-width:2px,stroke-dasharray: 4 2
-    class P,R,F esc
+```d2
+direction: down
+
+W: "LLM 가중치 (W)"
+P: "Prompt 변경\n입력 분포 (instruction)\n비용: 추론만\n갱신: 즉시\n유연성: 최고\n보안: context"
+R: "RAG 변경\n외부 지식 (검색 chunk)\n비용: 인프라 + 추론\n갱신: 인덱스만\n유연성: 높음\n보안: 로컬 DB OK"
+F: "FT 변경\n가중치 W' (재학습)\n비용: GPU 학습 + 인프라\n갱신: 재학습 (시간 / 비용)\n유연성: 낮음\n보안: 모델에 영구 저장 (위험)"
+W -> P
+W -> R
+W -> F
+P -> R: "한계 시" { style.stroke-dash: 4 }
+R -> F: "한계 시" { style.stroke-dash: 4 }
 ```
 
 ★ 항상 Prompt → RAG → FT 순서로 escalation.

@@ -195,19 +195,16 @@ flowchart TB
 
 ### 4.1 3 실패 유형 — 첫 분기
 
-```mermaid
-flowchart TB
-    ROOT["어느 실패인가?"]
-    F1["① PA 매칭 실패<br/>F-C2H-MATCH-0001/0002<br/>━━━━━━━━━━<br/>expected PA 큐에<br/>없는 주소에 DUT 가 씀<br/>root cause:<br/>PTW / QP routing /<br/>MR page table"]
-    F2["② Ordering 위반<br/>E-C2H-MATCH-0001<br/>━━━━━━━━━━<br/>RC 인데 idx≠0 의 PA<br/>가 먼저 도착<br/>root cause:<br/>DUT RC OoO 처리<br/>(OPS/SR 는 idx 범위 내<br/>OoO 정상)"]
-    F3["③ 크기 초과<br/>F-C2H-MATCH-0003/0004/0005<br/>━━━━━━━━━━<br/>DUT 가 transfer_size<br/>보다 더 많이 씀<br/>root cause:<br/>DUT length 누적 /<br/>padding 오류"]
+```d2
+direction: down
 
-    ROOT --> F1
-    ROOT --> F2
-    ROOT --> F3
-
-    classDef fail stroke:#c0392b,stroke-width:2px
-    class F1,F2,F3 fail
+ROOT: "어느 실패인가?"
+F1: "① PA 매칭 실패\nF-C2H-MATCH-0001/0002\n━━━━━━━━━━\nexpected PA 큐에\n없는 주소에 DUT 가 씀\nroot cause:\nPTW / QP routing /\nMR page table"
+F2: "② Ordering 위반\nE-C2H-MATCH-0001\n━━━━━━━━━━\nRC 인데 idx≠0 의 PA\n가 먼저 도착\nroot cause:\nDUT RC OoO 처리\n(OPS/SR 는 idx 범위 내\nOoO 정상)"
+F3: "③ 크기 초과\nF-C2H-MATCH-0003/0004/0005\n━━━━━━━━━━\nDUT 가 transfer_size\n보다 더 많이 씀\nroot cause:\nDUT length 누적 /\npadding 오류"
+ROOT -> F1
+ROOT -> F2
+ROOT -> F3
 ```
 
 ### 4.2 5 단계 디버그 절차

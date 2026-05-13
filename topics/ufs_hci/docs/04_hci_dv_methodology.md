@@ -73,20 +73,21 @@ Dual-side scoreboard 가 _양방향 변환_ 의 silent corruption 잡음.
 
 ### 한 장 그림 — Env 구조
 
-```mermaid
-flowchart TB
-    subgraph ENV["UFS HCI UVM Env"]
-        direction TB
-        HA["<b>Host Agent</b><br/>(SW Driver 모델)<br/>· UTRD 작성<br/>· Doorbell 셋<br/>· ISR 처리<br/>· Register R/W"]
-        DA["<b>Device Agent</b><br/>(UFS Device 모델)<br/>· UPIU 응답 생성<br/>· RTT 제어<br/>· 에러 주입<br/>· UniPro IF"]
-        DUT["<b>DUT (UFS HCI IP)</b>"]
-        SCB["<b>Scoreboard</b><br/>· UTRD → UPIU 변환 정확성<br/>· DMA 데이터 무결성 (PRDT)<br/>· 레지스터 상태 정확성<br/>· 명령 완료 순서 / 상태"]
-        COV["<b>Functional Coverage</b>"]
-        HA -- "AHB/AXI" --> DUT
-        DA -- "UniPro" --> DUT
-        DUT --> SCB
-        SCB --> COV
-    end
+```d2
+direction: down
+
+ENV: "UFS HCI UVM Env" {
+  direction: down
+  HA: "**Host Agent**\n(SW Driver 모델)\n· UTRD 작성\n· Doorbell 셋\n· ISR 처리\n· Register R/W"
+  DA: "**Device Agent**\n(UFS Device 모델)\n· UPIU 응답 생성\n· RTT 제어\n· 에러 주입\n· UniPro IF"
+  DUT: "**DUT (UFS HCI IP)**"
+  SCB: "**Scoreboard**\n· UTRD → UPIU 변환 정확성\n· DMA 데이터 무결성 (PRDT)\n· 레지스터 상태 정확성\n· 명령 완료 순서 / 상태"
+  COV: "**Functional Coverage**"
+  HA -> DUT: "AHB/AXI"
+  DA -> DUT: "UniPro"
+  DUT -> SCB
+  SCB -> COV
+}
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -324,17 +325,18 @@ HCI 초기화 시퀀스는 엄격한 순서를 요구 — 검증 필수
 계층 구조:
 ```
 
-```mermaid
-flowchart TB
-    VSEQ["<b>Virtual Sequence (vseq)</b><br/>· 여러 Agent의 Sequence를 조율<br/>· 시나리오 단위:<br/>'32개 READ 후 Abort 2개 동시 주입'"]
-    HSEQ["Host Sequence"]
-    DSEQ["Device Sequence"]
-    HDRV["Host Driver"]
-    DDRV["Device Driver"]
-    VSEQ --> HSEQ
-    VSEQ --> DSEQ
-    HSEQ --> HDRV
-    DSEQ --> DDRV
+```d2
+direction: down
+
+VSEQ: "**Virtual Sequence (vseq)**\n· 여러 Agent의 Sequence를 조율\n· 시나리오 단위:\n'32개 READ 후 Abort 2개 동시 주입'"
+HSEQ: "Host Sequence"
+DSEQ: "Device Sequence"
+HDRV: "Host Driver"
+DDRV: "Device Driver"
+VSEQ -> HSEQ
+VSEQ -> DSEQ
+HSEQ -> HDRV
+DSEQ -> DDRV
 ```
 
 ```
@@ -406,13 +408,14 @@ endclass
 
 Scoreboard의 핵심 역할: Host 측 명령과 Device 측 UPIU의 정합성 검증
 
-```mermaid
-flowchart TB
-    HM["<b>Host Monitor</b><br/>(AHB/AXI 관찰)"]
-    DM["<b>Device Monitor</b><br/>(UniPro IF 관찰)"]
-    SCB["<b>Scoreboard</b><br/>1. UTRD → UPIU 변환 검증<br/>&nbsp;&nbsp;&nbsp;Host UTRD 캡처 → 예상 UPIU 생성<br/>&nbsp;&nbsp;&nbsp;Device 실제 UPIU 캡처 → 비교<br/>&nbsp;&nbsp;&nbsp;(Task Tag, LUN, CDB, Data Length)<br/><br/>2. DMA 데이터 무결성<br/>&nbsp;&nbsp;&nbsp;WRITE: Host PRDT 데이터 ↔ Data-Out UPIU<br/>&nbsp;&nbsp;&nbsp;READ: Data-In UPIU ↔ Host PRDT DMA<br/><br/>3. 완료 상태 정합성<br/>&nbsp;&nbsp;&nbsp;Response Status == UTRD OCS<br/>&nbsp;&nbsp;&nbsp;Doorbell 비트 클리어 / IS[UTRCS] 발생<br/><br/>4. 순서 검증<br/>&nbsp;&nbsp;&nbsp;같은 LUN 순서 보장 / 다른 LUN Out-of-Order"]
-    HM -- "utrd_ap (analysis port)" --> SCB
-    DM -- "upiu_ap (analysis port)" --> SCB
+```d2
+direction: down
+
+HM: "**Host Monitor**\n(AHB/AXI 관찰)"
+DM: "**Device Monitor**\n(UniPro IF 관찰)"
+SCB: "**Scoreboard**\n1. UTRD → UPIU 변환 검증\n&nbsp;&nbsp;&nbsp;Host UTRD 캡처 → 예상 UPIU 생성\n&nbsp;&nbsp;&nbsp;Device 실제 UPIU 캡처 → 비교\n&nbsp;&nbsp;&nbsp;(Task Tag, LUN, CDB, Data Length)\n\n2. DMA 데이터 무결성\n&nbsp;&nbsp;&nbsp;WRITE: Host PRDT 데이터 ↔ Data-Out UPIU\n&nbsp;&nbsp;&nbsp;READ: Data-In UPIU ↔ Host PRDT DMA\n\n3. 완료 상태 정합성\n&nbsp;&nbsp;&nbsp;Response Status == UTRD OCS\n&nbsp;&nbsp;&nbsp;Doorbell 비트 클리어 / IS[UTRCS] 발생\n\n4. 순서 검증\n&nbsp;&nbsp;&nbsp;같은 LUN 순서 보장 / 다른 LUN Out-of-Order"
+HM -> SCB: "utrd_ap (analysis port)"
+DM -> SCB: "upiu_ap (analysis port)"
 ```
 
 ```systemverilog

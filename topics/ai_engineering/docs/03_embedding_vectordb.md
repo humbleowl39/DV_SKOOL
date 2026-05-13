@@ -89,27 +89,34 @@
 
 ### 한 장 그림 — Embedding + ANN 검색의 전체 구조
 
-```mermaid
-flowchart LR
-    subgraph OFF["Offline — Indexing"]
-        direction TB
-        D1["IP spec / 코드 / 문서"]
-        D2["Chunking<br/>[chunk₁, chunk₂, ...]"]
-        D3["Embedding<br/>v₁, v₂, v₃, ... ∈ ℝᵈ"]
-        D4[("Vector DB<br/>FAISS index")]
-        D1 --> D2 --> D3 --> D4
-    end
-    subgraph ON["Online — Query"]
-        direction TB
-        Q1["사용자 쿼리<br/>'TLB flush'"]
-        Q2["embed<br/>q ∈ ℝᵈ"]
-        Q3[("Vector DB<br/>FAISS / IVF / HNSW / PQ")]
-        Q4["top-k<br/>chunk₁₂, chunk₃₇"]
-        Q5["LLM"]
-        Q6["답변 + 출처"]
-        Q1 --> Q2 --> Q3 --> Q4 --> Q5 --> Q6
-    end
-    D4 -. "적재" .-> Q3
+```d2
+direction: right
+
+OFF: "Offline — Indexing" {
+  direction: down
+  D1: "IP spec / 코드 / 문서"
+  D2: "Chunking\n[chunk₁, chunk₂, ...]"
+  D3: "Embedding\nv₁, v₂, v₃, ... ∈ ℝᵈ"
+  D4: "Vector DB\nFAISS index" { shape: cylinder }
+  D1 -> D2
+  D2 -> D3
+  D3 -> D4
+}
+ON: "Online — Query" {
+  direction: down
+  Q1: "사용자 쿼리\n'TLB flush'"
+  Q2: "embed\nq ∈ ℝᵈ"
+  Q3: "Vector DB\nFAISS / IVF / HNSW / PQ" { shape: cylinder }
+  Q4: "top-k\nchunk₁₂, chunk₃₇"
+  Q5: "LLM"
+  Q6: "답변 + 출처"
+  Q1 -> Q2
+  Q2 -> Q3
+  Q3 -> Q4
+  Q4 -> Q5
+  Q5 -> Q6
+}
+D4 -> Q3: "적재" { style.stroke-dash: 4 }
 ```
 
 ### 왜 이 구조인가 — Design rationale

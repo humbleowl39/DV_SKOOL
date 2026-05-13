@@ -86,38 +86,37 @@
 
 ### 한 장 그림 — TCP path vs RDMA path
 
-```mermaid
-flowchart LR
-    subgraph TCP["TCP/IP — 3 copies + interrupt"]
-        direction TB
-        T1["App"]
-        T2["user buf"]
-        T3["socket buf"]
-        T4["NIC"]
-        T5["NIC (수신)"]
-        T6["socket buf"]
-        T7["App"]
-        T1 --> T2
-        T2 -- "copy_from_user · CPU" --> T3
-        T3 -- "TCP/IP stack · CPU" --> T4
-        T4 -- "wire" --> T5
-        T5 -- "IRQ → ksoftirqd · CPU" --> T6
-        T6 -- "copy_to_user · CPU" --> T7
-    end
-    subgraph RDMA["RDMA — 0 copies, no IRQ"]
-        direction TB
-        R1["App"]
-        R2["user buf<br/>(= MR, 등록만 해 두면 끝)"]
-        R3["HCA"]
-        R4["HCA (peer)"]
-        R5["peer MR"]
-        R1 --> R2
-        R2 -- "MMIO doorbell" --> R3
-        R3 -- "DMA → wire" --> R4
-        R4 -- "rkey 검증 후<br/>직접 DMA write<br/>(peer CPU 안 깨움)" --> R5
-    end
-    classDef cost stroke:#c0392b,stroke-width:3px
-    class T2,T3,T5,T6 cost
+```d2
+direction: right
+
+TCP: "TCP/IP — 3 copies + interrupt" {
+  direction: down
+  T1: "App"
+  T2: "user buf"
+  T3: "socket buf"
+  T4: "NIC"
+  T5: "NIC (수신)"
+  T6: "socket buf"
+  T7: "App"
+  T1 -> T2
+  T2 -> T3: "copy_from_user · CPU"
+  T3 -> T4: "TCP/IP stack · CPU"
+  T4 -> T5: "wire"
+  T5 -> T6: "IRQ → ksoftirqd · CPU"
+  T6 -> T7: "copy_to_user · CPU"
+}
+RDMA: "RDMA — 0 copies, no IRQ" {
+  direction: down
+  R1: "App"
+  R2: "user buf\n(= MR, 등록만 해 두면 끝)"
+  R3: "HCA"
+  R4: "HCA (peer)"
+  R5: "peer MR"
+  R1 -> R2
+  R2 -> R3: "MMIO doorbell"
+  R3 -> R4: "DMA → wire"
+  R4 -> R5: "rkey 검증 후\n직접 DMA write\n(peer CPU 안 깨움)"
+}
 ```
 
 세 개의 빨간 원이 RDMA 에서는 모두 사라지고, 대신 **HCA hardware** 가 PSN, ACK, 재전송, 무결성 검사를 처리합니다.
@@ -289,30 +288,25 @@ flowchart LR
 
 ### 4.3 Verbs 6 객체 — 협력 관계
 
-```mermaid
-flowchart TB
-    PD["<b>PD</b> · Protection Domain<br/>같은 PD 안에서만 cross-access 허용"]
-    MR["<b>MR</b> · Memory Region<br/>DMA 가능 영역 + access flag<br/>lkey / rkey"]
-    QP["<b>QP</b> · Queue Pair<br/>service: RC / UC / UD / XRC"]
-    SQ["<b>SQ</b> · Send Queue"]
-    RQ["<b>RQ</b> · Recv Queue"]
-    CQ["<b>CQ</b> · Completion Queue"]
-    WQE(["WQE — operation 디스크립터"])
-    WC(["WC — 처리 결과"])
+```d2
+direction: down
 
-    PD --> MR
-    PD --> QP
-    QP --> SQ
-    QP --> RQ
-    WQE -- "post_send" --> SQ
-    WQE -- "post_recv" --> RQ
-    QP -. 완료 통지 .-> CQ
-    CQ -- "poll_cq" --> WC
-
-    classDef obj stroke:#1a73e8,stroke-width:2px
-    classDef inner stroke:#5f6368,stroke-dasharray:4 2
-    class PD,MR,QP,CQ obj
-    class SQ,RQ inner
+PD: "**PD** · Protection Domain\n같은 PD 안에서만 cross-access 허용"
+MR: "**MR** · Memory Region\nDMA 가능 영역 + access flag\nlkey / rkey"
+QP: "**QP** · Queue Pair\nservice: RC / UC / UD / XRC"
+SQ: "**SQ** · Send Queue"
+RQ: "**RQ** · Recv Queue"
+CQ: "**CQ** · Completion Queue"
+WQE: "WQE — operation 디스크립터" { shape: oval }
+WC: "WC — 처리 결과" { shape: oval }
+PD -> MR
+PD -> QP
+QP -> SQ
+QP -> RQ
+WQE -> SQ: "post_send"
+WQE -> RQ: "post_recv"
+QP -> CQ: "완료 통지" { style.stroke-dash: 4 }
+CQ -> WC: "poll_cq"
 ```
 
 <div class="parallel-grid">
@@ -356,25 +350,22 @@ WQE 처리 결과 (status, byte count, opcode, source QP 등). CQ 에서 polling
 
 ### 5.1 TCP/IP 가 가진 세 가지 비용 (RDMA 가 제거하는 것)
 
-```mermaid
-flowchart TB
-    AppS["Application (송신)"]
-    SBS["Socket buffer"]
-    NICS["NIC"]
-    NET(("Network"))
-    NICR["NIC"]
-    SBR["Socket buffer"]
-    AppR["Application (수신)"]
+```d2
+direction: down
 
-    AppS -- "<b>(1)</b> copy_from_user<br/><i>CPU cycle</i>" --> SBS
-    SBS -- "<b>(2)</b> TCP/IP, checksum, retransmit<br/><i>CPU cycle + cache pollution</i>" --> NICS
-    NICS --> NET
-    NET --> NICR
-    NICR -- "Interrupt → ksoftirqd" --> SBR
-    SBR -- "<b>(3)</b> copy_to_user<br/><i>CPU cycle</i>" --> AppR
-
-    classDef cost stroke:#b8860b,stroke-width:3px
-    class SBS,SBR,NICR cost
+AppS: "Application (송신)"
+SBS: "Socket buffer"
+NICS: "NIC"
+NET: "Network" { shape: circle }
+NICR: "NIC"
+SBR: "Socket buffer"
+AppR: "Application (수신)"
+AppS -> SBS: "**(1)** copy_from_user\n_CPU cycle_"
+SBS -> NICS: "**(2)** TCP/IP, checksum, retransmit\n_CPU cycle + cache pollution_"
+NICS -> NET
+NET -> NICR
+NICR -> SBR: "Interrupt → ksoftirqd"
+SBR -> AppR: "**(3)** copy_to_user\n_CPU cycle_"
 ```
 
 | 비용 | 발생 위치 | RDMA 의 해결 |
@@ -387,24 +378,16 @@ flowchart TB
 
 ### 5.2 RDMA 의 세 가지 변형 — IB / iWARP / RoCE
 
-```mermaid
-flowchart TB
-    ROOT["RDMA 패밀리"]
-    IB["<b>InfiniBand (IB)</b><br/>━━━━━━━━━━━━<br/>IB Link / Net Layer<br/>IB SerDes (1x..12x)<br/>HPC, 전용 Fabric<br/><i>IBTA Vol1</i>"]
-    IW["<b>iWARP</b><br/>━━━━━━━━━━━━<br/>TCP/IP 위에 RDMA<br/>표준 IP 인프라<br/>느림 (TCP overhead)<br/>Long-distance, WAN<br/><i>IETF spec</i>"]
-    ROCE["<b>RoCE (v1, v2)</b><br/>━━━━━━━━━━━━<br/>Ethernet 위에 RDMA<br/>v1: Eth L2 직결<br/>v2: IP/UDP(4791) + BTH<br/>데이터센터 표준<br/><i>IBTA Annex A16/A17</i>"]
-    ROOT --> IB
-    ROOT --> IW
-    ROOT --> ROCE
+```d2
+direction: down
 
-    classDef root stroke:#1a73e8,stroke-width:3px
-    classDef ib stroke:#1a73e8,stroke-width:2px
-    classDef iw stroke:#b8860b,stroke-width:2px
-    classDef rc stroke:#137333,stroke-width:2px
-    class ROOT root
-    class IB ib
-    class IW iw
-    class ROCE rc
+ROOT: "RDMA 패밀리"
+IB: "**InfiniBand (IB)**\n━━━━━━━━━━━━\nIB Link / Net Layer\nIB SerDes (1x..12x)\nHPC, 전용 Fabric\n_IBTA Vol1_"
+IW: "**iWARP**\n━━━━━━━━━━━━\nTCP/IP 위에 RDMA\n표준 IP 인프라\n느림 (TCP overhead)\nLong-distance, WAN\n_IETF spec_"
+ROCE: "**RoCE (v1, v2)**\n━━━━━━━━━━━━\nEthernet 위에 RDMA\nv1: Eth L2 직결\nv2: IP/UDP(4791) + BTH\n데이터센터 표준\n_IBTA Annex A16/A17_"
+ROOT -> IB
+ROOT -> IW
+ROOT -> ROCE
 ```
 
 | 항목 | InfiniBand | iWARP | RoCEv1 | RoCEv2 |
@@ -423,24 +406,17 @@ flowchart TB
 
 ### 5.3 Verbs API — Control path vs Data path
 
-```mermaid
-flowchart TB
-    APP["User application"]
-    LIB["<b>libibverbs</b> (Verbs)<br/><i>OFED user-space lib</i>"]
-    KER["<b>ib_uverbs / rdma_cm</b><br/><i>kernel module</i>"]
-    HW["HCA / RNIC"]
+```d2
+direction: down
 
-    APP --> LIB
-    LIB -- "ioctl / uverbs<br/>(control path)" --> KER
-    KER -- "MMIO + DMA" --> HW
-    LIB -. "data path: MMIO doorbell<br/>(kernel bypass)" .-> HW
-
-    classDef user stroke:#1a73e8,stroke-width:2px
-    classDef kernel stroke:#c5221f,stroke-width:2px
-    classDef hw stroke:#137333,stroke-width:2px
-    class APP,LIB user
-    class KER kernel
-    class HW hw
+APP: "User application"
+LIB: "**libibverbs** (Verbs)\n_OFED user-space lib_"
+KER: "**ib_uverbs / rdma_cm**\n_kernel module_"
+HW: "HCA / RNIC"
+APP -> LIB
+LIB -> KER: "ioctl / uverbs\n(control path)"
+KER -> HW: "MMIO + DMA"
+LIB -> HW: "data path: MMIO doorbell\n(kernel bypass)" { style.stroke-dash: 4 }
 ```
 
 !!! note "Internal (Confluence: RDMA Verbs (basic), id=32178388)"

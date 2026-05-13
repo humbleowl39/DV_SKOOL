@@ -84,28 +84,26 @@
 
 ### 한 장 그림 — AXI 와 AXI-Stream 의 골격 차이
 
-```mermaid
-flowchart LR
-    subgraph AXI["AXI (memory-mapped)<br/>채널 5개, ADDR 있음, R/W"]
-        direction LR
-        AX_M["Master"]
-        AX_S["Slave"]
-        AX_M -- "AW" --> AX_S
-        AX_M -- "W"  --> AX_S
-        AX_S -- "B"  --> AX_M
-        AX_M -- "AR" --> AX_S
-        AX_S -- "R"  --> AX_M
-    end
-    subgraph AXIS["AXI-Stream (point-to-point)<br/>채널 1개, 주소 없음, 단방향"]
-        direction LR
-        ST_M["Master"]
-        ST_S["Slave"]
-        ST_M -- "TDATA / TVALID / TLAST<br/>TKEEP / TUSER" --> ST_S
-        ST_S -- "TREADY" --> ST_M
-    end
+```d2
+direction: right
 
-    classDef ep stroke:#1a73e8,stroke-width:2px
-    class AX_M,AX_S,ST_M,ST_S ep
+AXI: "AXI (memory-mapped)\n채널 5개, ADDR 있음, R/W" {
+  direction: right
+  AX_M: "Master"
+  AX_S: "Slave"
+  AX_M -> AX_S: "AW"
+  AX_M -> AX_S: "W"
+  AX_S -> AX_M: "B"
+  AX_M -> AX_S: "AR"
+  AX_S -> AX_M: "R"
+}
+AXIS: "AXI-Stream (point-to-point)\n채널 1개, 주소 없음, 단방향" {
+  direction: right
+  ST_M: "Master"
+  ST_S: "Slave"
+  ST_M -> ST_S: "TDATA / TVALID / TLAST\nTKEEP / TUSER"
+  ST_S -> ST_M: "TREADY"
+}
 ```
 
 - AXI: `transaction = (AW,W) → B` 또는 `AR → R`. memory read/write.
@@ -282,25 +280,20 @@ Continuous Stream (오디오 DAC):
 - **TID**: 스트림 식별 — "이 데이터가 어떤 스트림에 속하는가?"
 - **TDEST**: 라우팅 목적지 — "이 데이터가 어디로 가야 하는가?"
 
-```mermaid
-flowchart LR
-    MA["Master A"]
-    MB["Master B"]
-    IC["Interconnect<br/>TDEST 라우팅 +<br/>TID 인터리브"]
-    S0["Slave 0<br/>(포트 0)"]
-    S1["Slave 1<br/>(포트 1)"]
+```d2
+direction: right
 
-    MA -- "TDEST=0, TID=0" --> IC
-    MA -- "TDEST=1, TID=0" --> IC
-    MB -- "TDEST=0, TID=1" --> IC
-    MB -- "TDEST=1, TID=1" --> IC
-    IC -- "TDEST=0" --> S0
-    IC -- "TDEST=1" --> S1
-
-    classDef ep stroke:#1a73e8,stroke-width:2px
-    classDef ic stroke:#137333,stroke-width:2px
-    class MA,MB,S0,S1 ep
-    class IC ic
+MA: "Master A"
+MB: "Master B"
+IC: "Interconnect\nTDEST 라우팅 +\nTID 인터리브"
+S0: "Slave 0\n(포트 0)"
+S1: "Slave 1\n(포트 1)"
+MA -> IC: "TDEST=0, TID=0"
+MA -> IC: "TDEST=1, TID=0"
+MB -> IC: "TDEST=0, TID=1"
+MB -> IC: "TDEST=1, TID=1"
+IC -> S0: "TDEST=0"
+IC -> S1: "TDEST=1"
 ```
 
 - `TDEST=0` 인 패킷 → Slave 0 으로 라우팅

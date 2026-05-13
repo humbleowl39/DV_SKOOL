@@ -96,26 +96,26 @@ endclass
 
 ### 한 장 그림 — 같은 모델이 prompt 만으로 출력이 바뀌는 구조
 
-```mermaid
-flowchart TB
-    M["같은 LLM (가중치 동결)"]
-    PA["Prompt A<br/>'코드 짜줘'"]
-    PB["Prompt B<br/>Role + Context + Task + Format"]
-    PC["Prompt C<br/>Few-shot + CoT"]
-    OA["generic<br/>(low quality)"]
-    OB["구체적<br/>(mid)"]
-    OC["단계 추론 + 일관 형식<br/>(high quality, ↑ tokens)"]
-    NOTE["가중치 동일, 입력 분포만 변경<br/>→ 출력 분포가 달라짐"]
-    M --> PA --> OA
-    M --> PB --> OB
-    M --> PC --> OC
-    OA -.-> NOTE
-    OB -.-> NOTE
-    OC -.-> NOTE
-    classDef bad stroke:#c0392b,stroke-width:2px
-    classDef good stroke:#27ae60,stroke-width:2px
-    class OA bad
-    class OC good
+```d2
+direction: down
+
+M: "같은 LLM (가중치 동결)"
+PA: "Prompt A\n'코드 짜줘'"
+PB: "Prompt B\nRole + Context + Task + Format"
+PC: "Prompt C\nFew-shot + CoT"
+OA: "generic\n(low quality)"
+OB: "구체적\n(mid)"
+OC: "단계 추론 + 일관 형식\n(high quality, ↑ tokens)"
+NOTE: "가중치 동일, 입력 분포만 변경\n→ 출력 분포가 달라짐"
+M -> PA
+PA -> OA
+M -> PB
+PB -> OB
+M -> PC
+PC -> OC
+OA -> NOTE { style.stroke-dash: 4 }
+OB -> NOTE { style.stroke-dash: 4 }
+OC -> NOTE { style.stroke-dash: 4 }
 ```
 
 ### 왜 작동하는가 — Design rationale
@@ -336,12 +336,14 @@ CoT 프롬프트:
 
 ### 5.5 System Prompt vs User Prompt
 
-```mermaid
-flowchart TB
-    SP["System Prompt (시스템 프롬프트)<br/>- 모델의 역할, 규칙, 출력 형식 정의<br/>- 모든 대화에 걸쳐 유지<br/>- 예: '당신은 DV 엔지니어 어시스턴트…'"]
-    UP["User Prompt (사용자 프롬프트)<br/>- 구체적 작업 요청<br/>- 매 턴마다 변경 가능<br/>- 예: '이 로그를 분석해줘: …'"]
-    LR["LLM Response"]
-    SP --> UP --> LR
+```d2
+direction: down
+
+SP: "System Prompt (시스템 프롬프트)\n- 모델의 역할, 규칙, 출력 형식 정의\n- 모든 대화에 걸쳐 유지\n- 예: '당신은 DV 엔지니어 어시스턴트…'"
+UP: "User Prompt (사용자 프롬프트)\n- 구체적 작업 요청\n- 매 턴마다 변경 가능\n- 예: '이 로그를 분석해줘: …'"
+LR: "LLM Response"
+SP -> UP
+UP -> LR
 ```
 
 DV 적용 예시:

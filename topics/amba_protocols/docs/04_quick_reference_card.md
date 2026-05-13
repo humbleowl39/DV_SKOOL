@@ -66,19 +66,16 @@
 
 ### 한 장 그림 — AMBA family 와 SoC 내 위치
 
-```mermaid
-flowchart LR
-    APB["<b>APB</b><br/>2-phase<br/>register · peripheral"]
-    AHB["<b>AHB</b><br/>pipelined<br/>legacy IP · DMA"]
-    AXI["<b>AXI</b><br/>5채널 + OoO<br/>CPU↔MC · NoC · Accel"]
-    AXIS["<b>AXI-Stream / CHI / ACE</b><br/>스트리밍 · coherent<br/>AI · DSP · Network packet"]
+```d2
+direction: right
 
-    APB --> AHB --> AXI --> AXIS
-
-    classDef low stroke:#5f6368,stroke-width:2px
-    classDef hi stroke:#1a73e8,stroke-width:2px
-    class APB,AHB low
-    class AXI,AXIS hi
+APB: "**APB**\n2-phase\nregister · peripheral"
+AHB: "**AHB**\npipelined\nlegacy IP · DMA"
+AXI: "**AXI**\n5채널 + OoO\nCPU↔MC · NoC · Accel"
+AXIS: "**AXI-Stream / CHI / ACE**\n스트리밍 · coherent\nAI · DSP · Network packet"
+APB -> AHB
+AHB -> AXI
+AXI -> AXIS
 ```
 
 > 한 줄 요약: APB(레지스터) → AHB(중간, 파이프라인) → AXI(고성능, 5채널, OoO) → AXI-S(스트리밍, 주소 없음). 왼쪽이 저속 / 게이트 작은 쪽, 오른쪽이 고속 / 처리량 큰 쪽.

@@ -73,30 +73,18 @@ Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap
 
 ### 한 장 그림 — Config → Generator → UVM Env → AI Gap loop
 
-```mermaid
-flowchart TB
-    CFGA["Project A · Config_A (JSON)"]
-    CFGB["Project B · Config_B (JSON)"]
+```d2
+direction: down
 
-    GEN["TB Top Generator (공통 코드)<br/>· parse Config<br/>· foreach ip in ip_list<br/>&nbsp;&nbsp;· spawn agent (APB/AXI 자동 판별)<br/>&nbsp;&nbsp;· register region in mmap_checker<br/>&nbsp;&nbsp;· bind interrupt monitor to irq_map<br/>&nbsp;&nbsp;· update CCTV ignore_bins from common_tasks<br/>· generate reset_seq SVA, power monitor, RAL"]
-
-    ENV["UVM Env (자동 구성, 프로젝트별 동일 구조)<br/>Agents · Checkers · Monitors · CCTV Coverage · Scoreboard"]
-
-    AI["AI Gap Detection Pipeline (DVCon 2025)<br/>IP-XACT (구조) + Spec (시맨틱) → IP profile<br/>→ FAISS 유사 IP 검색<br/>→ LLM Gap detection<br/>→ mrun 명령 + V-Plan bin 자동 생성"]
-
-    CFGA -- "ip_list, mmap, irq_map, pd,<br/>reset_seq + common_tasks per IP" --> GEN
-    CFGB -- "ip_list, mmap, irq_map, pd,<br/>reset_seq + common_tasks per IP" --> GEN
-    GEN --> ENV
-    ENV -- "regression 결과 + V-Plan" --> AI
-
-    classDef cfg stroke:#1a73e8,stroke-width:2px
-    classDef gen stroke:#137333,stroke-width:2px
-    classDef env stroke:#b8860b,stroke-width:2px
-    classDef ai stroke:#c0392b,stroke-width:2px
-    class CFGA,CFGB cfg
-    class GEN gen
-    class ENV env
-    class AI ai
+CFGA: "Project A · Config_A (JSON)"
+CFGB: "Project B · Config_B (JSON)"
+GEN: "TB Top Generator (공통 코드)\n· parse Config\n· foreach ip in ip_list\n&nbsp;&nbsp;· spawn agent (APB/AXI 자동 판별)\n&nbsp;&nbsp;· register region in mmap_checker\n&nbsp;&nbsp;· bind interrupt monitor to irq_map\n&nbsp;&nbsp;· update CCTV ignore_bins from common_tasks\n· generate reset_seq SVA, power monitor, RAL"
+ENV: "UVM Env (자동 구성, 프로젝트별 동일 구조)\nAgents · Checkers · Monitors · CCTV Coverage · Scoreboard"
+AI: "AI Gap Detection Pipeline (DVCon 2025)\nIP-XACT (구조) + Spec (시맨틱) → IP profile\n→ FAISS 유사 IP 검색\n→ LLM Gap detection\n→ mrun 명령 + V-Plan bin 자동 생성"
+CFGA -> GEN: "ip_list, mmap, irq_map, pd,\nreset_seq + common_tasks per IP"
+CFGB -> GEN: "ip_list, mmap, irq_map, pd,\nreset_seq + common_tasks per IP"
+GEN -> ENV
+ENV -> AI: "regression 결과 + V-Plan"
 ```
 
 ### 왜 이 구조인가 — Design rationale
@@ -115,28 +103,22 @@ flowchart TB
 
 가장 단순한 시나리오. 영상 SoC 에 _새로운 NPU (Neural Processing Unit) IP_ 가 추가됨 — AXI master, DMA, sysMMU 사용, irq_out, PD_AI 도메인. 이 한 IP 가 TB Top 에 _자동 통합되는_ 1 cycle 을 추적합니다.
 
-```mermaid
-flowchart TB
-    T0["<b>T0</b> · NPU IP 의 IP-XACT + Spec 도착<br/>· regs (control, status)<br/>· AXI Master, irq_out<br/>· 'uses sysMMU for weights' (Spec 키워드)<br/>· 'DVFS supported, 2 OPP'"]
-    T1["<b>T1</b> · Config_v2.json 갱신 (1 line edit per field)<br/>+ ip_list[].name='NPU'<br/>+ base_addr='0x15000000', size='0x10000'<br/>+ bus_if='AXI', has_dma=true, has_sysmmu=true<br/>+ irq_spi=70, power_domain='PD_AI'<br/>+ common_tasks=[SYSMMU,SECURITY,DVFS,CLK_GATE,POWER,RESET,IRQ]"]
-    T2["<b>T2</b> · TB Top Generator 재실행<br/>· axi_agent::create('axi_NPU', env) — Agent 자동<br/>· mmap_checker.add_region(NPU, 0x15000000, 64K) — MMAP 자동<br/>· irq_monitor.bind(NPU, spi=70) — IRQ 자동<br/>· cctv_cov add row IP_NPU — CCTV 자동"]
-    T3["<b>T3</b> · AI Gap Pipeline<br/>IP profile(NPU) → FAISS 검색 → 유사 IP = GPU<br/>LLM: 'NPU 에 sysMMU bypass→enable 검증 필요'<br/>'GPU 와 동일 패턴으로 추론, priority=HIGH'"]
-    T4["<b>T4</b> · Gap Report<br/>NPU × SYSMMU_bypass_enable = NOT_TESTED<br/>→ mrun test --test_name npu_sysmmu_test<br/>NPU × DVFS_transition = NOT_TESTED<br/>→ mrun test --test_name npu_dvfs_test"]
-    T5["<b>T5</b> · 엔지니어 리뷰 (15 분)<br/>· NPU 는 weight 캐시 때문에 DVFS race 심함 → priority HIGH 확인<br/>· sysMMU 는 GPU 와 동일 패턴 적용 가능 → True Positive"]
-    T6["<b>T6</b> · mrun 실행 → PASS<br/>cctv.record_result(IP_NPU, TASK_*, RESULT_PASS)<br/>매트릭스 NPU row 의 cell 들이 ✅ 로 채워짐"]
+```d2
+direction: down
 
-    T0 --> T1 --> T2 --> T3 --> T4 --> T5 --> T6
-
-    classDef input stroke:#1a73e8,stroke-width:2px
-    classDef auto stroke:#137333,stroke-width:2px
-    classDef ai stroke:#c0392b,stroke-width:2px
-    classDef human stroke:#b8860b,stroke-width:2px
-    classDef done stroke:#137333,stroke-width:3px
-    class T0,T1 input
-    class T2 auto
-    class T3,T4 ai
-    class T5 human
-    class T6 done
+T0: "**T0** · NPU IP 의 IP-XACT + Spec 도착\n· regs (control, status)\n· AXI Master, irq_out\n· 'uses sysMMU for weights' (Spec 키워드)\n· 'DVFS supported, 2 OPP'"
+T1: "**T1** · Config_v2.json 갱신 (1 line edit per field)\n+ ip_list[].name='NPU'\n+ base_addr='0x15000000', size='0x10000'\n+ bus_if='AXI', has_dma=true, has_sysmmu=true\n+ irq_spi=70, power_domain='PD_AI'\n+ common_tasks=[SYSMMU,SECURITY,DVFS,CLK_GATE,POWER,RESET,IRQ]"
+T2: "**T2** · TB Top Generator 재실행\n· axi_agent::create('axi_NPU', env) — Agent 자동\n· mmap_checker.add_region(NPU, 0x15000000, 64K) — MMAP 자동\n· irq_monitor.bind(NPU, spi=70) — IRQ 자동\n· cctv_cov add row IP_NPU — CCTV 자동"
+T3: "**T3** · AI Gap Pipeline\nIP profile(NPU) → FAISS 검색 → 유사 IP = GPU\nLLM: 'NPU 에 sysMMU bypass→enable 검증 필요'\n'GPU 와 동일 패턴으로 추론, priority=HIGH'"
+T4: "**T4** · Gap Report\nNPU × SYSMMU_bypass_enable = NOT_TESTED\n→ mrun test --test_name npu_sysmmu_test\nNPU × DVFS_transition = NOT_TESTED\n→ mrun test --test_name npu_dvfs_test"
+T5: "**T5** · 엔지니어 리뷰 (15 분)\n· NPU 는 weight 캐시 때문에 DVFS race 심함 → priority HIGH 확인\n· sysMMU 는 GPU 와 동일 패턴 적용 가능 → True Positive"
+T6: "**T6** · mrun 실행 → PASS\ncctv.record_result(IP_NPU, TASK_*, RESULT_PASS)\n매트릭스 NPU row 의 cell 들이 ✅ 로 채워짐"
+T0 -> T1
+T1 -> T2
+T2 -> T3
+T3 -> T4
+T4 -> T5
+T5 -> T6
 ```
 
 ### 단계별 추적
@@ -175,20 +157,14 @@ def generate_tb_top(config):
 
 ### 4.1 TB Top 의 3 층 구조
 
-```mermaid
-flowchart TB
-    L1["<b>Layer 1 : Config</b> (project-specific)<br/>JSON — ip_list, mmap, irq_map, pd, reset<br/>common_tasks per IP"]
-    L2["<b>Layer 2 : Generator</b> (project-agnostic)<br/>parse Config → spawn Agents / Checkers / RAL<br/>emit reset_seq SVA, power monitor<br/>propagate config_db"]
-    L3["<b>Layer 3 : UVM Env</b> (runtime)<br/>Agents · Common Task Checker Layer · CCTV<br/>Scoreboard · Coverage · Virtual Sequencer"]
+```d2
+direction: down
 
-    L1 --> L2 --> L3
-
-    classDef l1 stroke:#1a73e8,stroke-width:3px
-    classDef l2 stroke:#137333,stroke-width:2px
-    classDef l3 stroke:#b8860b,stroke-width:2px
-    class L1 l1
-    class L2 l2
-    class L3 l3
+L1: "**Layer 1 : Config** (project-specific)\nJSON — ip_list, mmap, irq_map, pd, reset\ncommon_tasks per IP"
+L2: "**Layer 2 : Generator** (project-agnostic)\nparse Config → spawn Agents / Checkers / RAL\nemit reset_seq SVA, power monitor\npropagate config_db"
+L3: "**Layer 3 : UVM Env** (runtime)\nAgents · Common Task Checker Layer · CCTV\nScoreboard · Coverage · Virtual Sequencer"
+L1 -> L2
+L2 -> L3
 ```
 
 > 프로젝트 교체 ⇔ Layer 1 만 교체 (Layer 2, 3 는 불변)
@@ -242,35 +218,23 @@ Phase 3: LLM Gap Detection + Test Generation
 
 ### 5.1 TB Top 환경 설계 (이력서 직결)
 
-```mermaid
-flowchart TB
-    CFGDB["<b>Config DB</b> (JSON / CSV)<br/>· IP 목록, Base Address, Interrupt Map<br/>· Memory Map, Power Domain<br/>· Common Task 적용 목록"]
-    GEN["<b>TB Top Generator</b><br/>· Config 기반 자동 인스턴스화<br/>· IP별 Agent 자동 연결<br/>· Checker / Monitor 자동 배치"]
+```d2
+direction: down
 
-    subgraph STIM["자극원 (External Models)"]
-        direction LR
-        CPUM["CPU Model / AXI Master VIP"]
-        MEMM["Memory Model"]
-        IFM["External IF Models"]
-    end
-
-    DUT["<b>DUT</b> (SoC RTL)"]
-
-    CHK["<b>Common Task Checker Layer</b><br/>· Connectivity Checker (Formal / Sim)<br/>· Memory Map Checker (주소 접근 → 응답)<br/>· Interrupt Monitor (발생 → GIC → CPU)<br/>· Power / Clock Monitor (상태 전이)<br/>· CCTV Coverage Collector"]
-
-    CFGDB --> GEN
-    GEN --> STIM
-    STIM --> DUT
-    DUT --> CHK
-
-    classDef cfg stroke:#1a73e8,stroke-width:2px
-    classDef gen stroke:#137333,stroke-width:2px
-    classDef dut stroke:#c0392b,stroke-width:2px
-    classDef chk stroke:#b8860b,stroke-width:2px
-    class CFGDB cfg
-    class GEN gen
-    class DUT dut
-    class CHK chk
+CFGDB: "**Config DB** (JSON / CSV)\n· IP 목록, Base Address, Interrupt Map\n· Memory Map, Power Domain\n· Common Task 적용 목록"
+GEN: "**TB Top Generator**\n· Config 기반 자동 인스턴스화\n· IP별 Agent 자동 연결\n· Checker / Monitor 자동 배치"
+STIM: "자극원 (External Models)" {
+  direction: right
+  CPUM: "CPU Model / AXI Master VIP"
+  MEMM: "Memory Model"
+  IFM: "External IF Models"
+}
+DUT: "**DUT** (SoC RTL)"
+CHK: "**Common Task Checker Layer**\n· Connectivity Checker (Formal / Sim)\n· Memory Map Checker (주소 접근 → 응답)\n· Interrupt Monitor (발생 → GIC → CPU)\n· Power / Clock Monitor (상태 전이)\n· CCTV Coverage Collector"
+CFGDB -> GEN
+GEN -> STIM
+STIM -> DUT
+DUT -> CHK
 ```
 
 재사용 핵심:
@@ -467,32 +431,25 @@ JSON Config
 
 ### 5.4 AI 기반 CCTV 자동화 파이프라인
 
-```mermaid
-flowchart TB
-    subgraph IN["입력"]
-        direction LR
-        IPXACT["IP-XACT<br/>(구조)"]
-        SPEC["IP Spec<br/>(시맨틱)"]
-        VPLAN["기존<br/>V-Plan"]
-    end
+```d2
+direction: down
 
-    P1["<b>Phase 1 : IP 프로파일 생성</b><br/>IP-XACT → 레지스터, 버스, 메모리맵<br/>IP Spec → 기능, 보안, 동작 모드<br/>결합 → IP별 '필요 Common Task 목록'"]
-    P2["<b>Phase 2 : Gap Detection</b><br/>IP별 필요 Task vs 기존 V-Plan 항목<br/>차이 = Gap (누락)<br/>FAISS 검색: 유사 IP 검증 이력 참조"]
-    P3["<b>Phase 3 : Test Generation</b><br/>Gap별 테스트 명령어 자동 생성 (mrun)<br/>V-Plan bin 자동 생성<br/>우선순위 분류 (보안 > 기능 > 성능)"]
-
-    OUT["<b>CCTV Gap Report</b><br/>· IP별 누락 항목 목록<br/>· 테스트 실행 명령어<br/>· V-Plan 추가 항목<br/>· 우선순위별 정렬"]
-
-    IPXACT --> P1
-    SPEC --> P1
-    VPLAN --> P2
-    P1 --> P2 --> P3 --> OUT
-
-    classDef inp stroke:#1a73e8,stroke-width:2px
-    classDef phase stroke:#137333,stroke-width:2px
-    classDef out stroke:#c0392b,stroke-width:3px
-    class IPXACT,SPEC,VPLAN inp
-    class P1,P2,P3 phase
-    class OUT out
+IN: "입력" {
+  direction: right
+  IPXACT: "IP-XACT\n(구조)"
+  SPEC: "IP Spec\n(시맨틱)"
+  VPLAN: "기존\nV-Plan"
+}
+P1: "**Phase 1 : IP 프로파일 생성**\nIP-XACT → 레지스터, 버스, 메모리맵\nIP Spec → 기능, 보안, 동작 모드\n결합 → IP별 '필요 Common Task 목록'"
+P2: "**Phase 2 : Gap Detection**\nIP별 필요 Task vs 기존 V-Plan 항목\n차이 = Gap (누락)\nFAISS 검색: 유사 IP 검증 이력 참조"
+P3: "**Phase 3 : Test Generation**\nGap별 테스트 명령어 자동 생성 (mrun)\nV-Plan bin 자동 생성\n우선순위 분류 (보안 > 기능 > 성능)"
+OUT: "**CCTV Gap Report**\n· IP별 누락 항목 목록\n· 테스트 실행 명령어\n· V-Plan 추가 항목\n· 우선순위별 정렬"
+IPXACT -> P1
+SPEC -> P1
+VPLAN -> P2
+P1 -> P2
+P2 -> P3
+P3 -> OUT
 ```
 
 #### Gap Report 예시
@@ -645,23 +602,20 @@ Hybrid (IP-XACT + Spec + FAISS + LLM):
 
 ### 5.6 Gap Report → V-Plan 반영 실무 워크플로우
 
-```mermaid
-flowchart TB
-    S1["<b>Step 1 · CCTV Gap Report 생성</b> (AI 파이프라인)<br/>DMA × sysMMU_bypass_enable = NOT_TESTED<br/>GPU × Security_TZPC = NOT_TESTED<br/>USB × DVFS_transition = NOT_TESTED<br/>Total: 12 gaps"]
-    S2["<b>Step 2 · 우선순위 분류</b> (자동)<br/>HIGH (보안/안정성): GPU × Security_TZPC,<br/>&nbsp;&nbsp;DMA × sysMMU_bypass_enable<br/>MEDIUM (기능): USB × DVFS_transition · ...<br/>LOW (성능): ..."]
-    S3["<b>Step 3 · V-Plan bin 자동 생성</b><br/>vplan_additions.json:<br/>{ feature: 'DMA.common_task.sysMMU',<br/>&nbsp;&nbsp;bin: 'bypass_enable_transition',<br/>&nbsp;&nbsp;test: 'dma_sysmmu_bypass_test',<br/>&nbsp;&nbsp;priority: 'HIGH' }, ..."]
-    S4["<b>Step 4 · 테스트 명령어 자동 생성</b><br/>mrun test --test_name dma_sysmmu_bypass_test --sys_name soc_top<br/>mrun test --test_name gpu_security_tzpc_test --sys_name soc_top"]
-    S5["<b>Step 5 · IP 담당 엔지니어 배포</b><br/>담당자별 Gap 목록 + 테스트 명령어 + 우선순위"]
-    S6["<b>Step 6 · 실행 후 CCTV 매트릭스 갱신</b><br/>cctv_cov.record_result(IP_DMA, TASK_SYSMMU, RESULT_PASS)<br/>→ Coverage 재집계 → Gap 감소 확인"]
+```d2
+direction: down
 
-    S1 --> S2 --> S3 --> S4 --> S5 --> S6
-
-    classDef auto stroke:#137333,stroke-width:2px
-    classDef human stroke:#b8860b,stroke-width:2px
-    classDef done stroke:#1a73e8,stroke-width:3px
-    class S1,S2,S3,S4 auto
-    class S5 human
-    class S6 done
+S1: "**Step 1 · CCTV Gap Report 생성** (AI 파이프라인)\nDMA × sysMMU_bypass_enable = NOT_TESTED\nGPU × Security_TZPC = NOT_TESTED\nUSB × DVFS_transition = NOT_TESTED\nTotal: 12 gaps"
+S2: "**Step 2 · 우선순위 분류** (자동)\nHIGH (보안/안정성): GPU × Security_TZPC,\n&nbsp;&nbsp;DMA × sysMMU_bypass_enable\nMEDIUM (기능): USB × DVFS_transition · ...\nLOW (성능): ..."
+S3: "**Step 3 · V-Plan bin 자동 생성**\nvplan_additions.json:\n{ feature: 'DMA.common_task.sysMMU',\n&nbsp;&nbsp;bin: 'bypass_enable_transition',\n&nbsp;&nbsp;test: 'dma_sysmmu_bypass_test',\n&nbsp;&nbsp;priority: 'HIGH' }, ..."
+S4: "**Step 4 · 테스트 명령어 자동 생성**\nmrun test --test_name dma_sysmmu_bypass_test --sys_name soc_top\nmrun test --test_name gpu_security_tzpc_test --sys_name soc_top"
+S5: "**Step 5 · IP 담당 엔지니어 배포**\n담당자별 Gap 목록 + 테스트 명령어 + 우선순위"
+S6: "**Step 6 · 실행 후 CCTV 매트릭스 갱신**\ncctv_cov.record_result(IP_DMA, TASK_SYSMMU, RESULT_PASS)\n→ Coverage 재집계 → Gap 감소 확인"
+S1 -> S2
+S2 -> S3
+S3 -> S4
+S4 -> S5
+S5 -> S6
 ```
 
 ### 5.7 TB Top Release 프로세스 상세

@@ -186,15 +186,14 @@ asm volatile("smc #0"
 
 ### 4.1 월드 전환의 3 단계
 
-```mermaid
-flowchart LR
-    A["<b>Stage A — Trap</b><br/>SMC instruction<br/>PSTATE → SPSR_EL3<br/>PC → ELR_EL3<br/>PC ← VBAR_EL3 + 0x400"]
-    B["<b>Stage B — Switch</b><br/>SCR_EL3.NS toggle<br/>Context save (current world)<br/>Context restore (target world)<br/>모든 GPR / FP / sysreg"]
-    C["<b>Stage C — Resume</b><br/>ERET to target EL<br/>SPSR_EL3 → PSTATE<br/>ELR_EL3 → PC<br/>outgoing transaction<br/>NS attribute 갱신"]
-    A --> B --> C
+```d2
+direction: right
 
-    classDef stage stroke:#1a73e8,stroke-width:2px
-    class A,B,C stage
+A: "**Stage A — Trap**\nSMC instruction\nPSTATE → SPSR_EL3\nPC → ELR_EL3\nPC ← VBAR_EL3 + 0x400"
+B: "**Stage B — Switch**\nSCR_EL3.NS toggle\nContext save (current world)\nContext restore (target world)\n모든 GPR / FP / sysreg"
+C: "**Stage C — Resume**\nERET to target EL\nSPSR_EL3 → PSTATE\nELR_EL3 → PC\noutgoing transaction\nNS attribute 갱신"
+A -> B
+B -> C
 ```
 
 | Stage | 핵심 register | 누락 시 결과 |
@@ -220,16 +219,16 @@ flowchart LR
 - **TZASC** = "어느 PA 가 secure 인가?" (모든 master 공통)
 - **SMMU** = "어느 master 가 어느 PA 에 가도 되는가?"
 
-```mermaid
-flowchart LR
-    GPU["GPU master"]
-    SMMUb["SMMU<br/>stream id check<br/>+ Stage1/2 translation"]
-    TZASCb["TZASC<br/>region check"]
-    DRAM["DRAM"]
-    GPU --> SMMUb --> TZASCb --> DRAM
+```d2
+direction: right
 
-    classDef axis stroke:#1a73e8,stroke-width:2px
-    class SMMUb,TZASCb axis
+GPU: "GPU master"
+SMMUb: "SMMU\nstream id check\n+ Stage1/2 translation"
+TZASCb: "TZASC\nregion check"
+DRAM: "DRAM"
+GPU -> SMMUb
+SMMUb -> TZASCb
+TZASCb -> DRAM
 ```
 
 둘 다 통과해야 access 성공 — 한쪽만 잘못 설정돼도 다른 쪽이 차단.
@@ -351,23 +350,22 @@ DRAM 영역을 Secure/Non-Secure로 분할:
 
 GICv3 = Distributor + Redistributor + CPU Interface.
 
-```mermaid
-flowchart LR
-    SPI["SPI (공유)"]
-    LPI["LPI (MSI)"]
-    SGIPPI["SGI/PPI (코어별)"]
-    GICD["Distributor<br/>(GICD)"]
-    GICR["Redistributor<br/>(GICR, 코어별)"]
-    CPUIF["CPU Interface"]
-    CORE["Core"]
-    SPI --> GICD
-    LPI --> GICD
-    GICD --> GICR
-    SGIPPI --> GICR
-    GICR --> CPUIF --> CORE
+```d2
+direction: right
 
-    classDef block stroke:#1a73e8,stroke-width:2px
-    class GICD,GICR,CPUIF block
+SPI: "SPI (공유)"
+LPI: "LPI (MSI)"
+SGIPPI: "SGI/PPI (코어별)"
+GICD: "Distributor\n(GICD)"
+GICR: "Redistributor\n(GICR, 코어별)"
+CPUIF: "CPU Interface"
+CORE: "Core"
+SPI -> GICD
+LPI -> GICD
+GICD -> GICR
+SGIPPI -> GICR
+GICR -> CPUIF
+CPUIF -> CORE
 ```
 
 **Distributor (GICD)**:
@@ -411,18 +409,16 @@ flowchart LR
 
 SMMU 해결: 디바이스의 DMA 트랜잭션에 주소 변환 + 접근 제어 적용.
 
-```mermaid
-flowchart LR
-    GPU["GPU (DMA)"]
-    DSP["DSP (DMA)"]
-    SMMUb["SMMU"]
-    DRAM["DRAM"]
-    GPU --> SMMUb
-    DSP --> SMMUb
-    SMMUb --> DRAM
+```d2
+direction: right
 
-    classDef axis stroke:#1a73e8,stroke-width:2px
-    class SMMUb axis
+GPU: "GPU (DMA)"
+DSP: "DSP (DMA)"
+SMMUb: "SMMU"
+DRAM: "DRAM"
+GPU -> SMMUb
+DSP -> SMMUb
+SMMUb -> DRAM
 ```
 
 **동작 원리**:

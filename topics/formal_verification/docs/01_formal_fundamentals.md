@@ -263,25 +263,24 @@ Induction 실패 원인과 대응:
 
 ### 4.4 Formal 적합/부적합 — 한 장 결정 트리
 
-```mermaid
-flowchart TB
-    Q0["이 IP/블록에 Formal 을 적용할까?"]
-    Q1{"상태 공간이<br/>관리 가능한가?<br/>(레지스터 수, 메모리 크기)"}
-    Q2{"기능 명세가<br/>Property 로 표현 가능한가?"}
-    Q3{"시뮬레이션으로 놓치기 쉬운<br/>코너 케이스가 있는가?"}
-    S1["시뮬레이션<br/>(또는 Abstraction 후 Formal)"]
-    S2["시뮬레이션<br/>(E2E 데이터 비교)"]
-    S3["시뮬레이션으로 충분"]
-    F["Formal 강력 추천 ✓"]
-    Q0 --> Q1
-    Q1 -- "NO" --> S1
-    Q1 -- "YES" --> Q2
-    Q2 -- "NO" --> S2
-    Q2 -- "YES" --> Q3
-    Q3 -- "NO" --> S3
-    Q3 -- "YES" --> F
-    classDef pick stroke:#27ae60,stroke-width:3px
-    class F pick
+```d2
+direction: down
+
+Q0: "이 IP/블록에 Formal 을 적용할까?"
+Q1: "상태 공간이\n관리 가능한가?\n(레지스터 수, 메모리 크기)" { shape: diamond }
+Q2: "기능 명세가\nProperty 로 표현 가능한가?" { shape: diamond }
+Q3: "시뮬레이션으로 놓치기 쉬운\n코너 케이스가 있는가?" { shape: diamond }
+S1: "시뮬레이션\n(또는 Abstraction 후 Formal)"
+S2: "시뮬레이션\n(E2E 데이터 비교)"
+S3: "시뮬레이션으로 충분"
+F: "Formal 강력 추천 ✓"
+Q0 -> Q1
+Q1 -> S1: "NO"
+Q1 -> Q2: "YES"
+Q2 -> S2: "NO"
+Q2 -> Q3: "YES"
+Q3 -> S3: "NO"
+Q3 -> F: "YES"
 ```
 
 ---

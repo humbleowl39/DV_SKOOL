@@ -76,19 +76,19 @@
 
 ### 한 장 그림 — Power-on 직후 trust 가 시작되는 자리
 
-```mermaid
-flowchart TB
-    POR["Power-On Reset"]
-    subgraph ROT["HW RoT (변경 불가 영역)"]
-        direction LR
-        BROM["BootROM<br/>Mask ROM (제조 layout 고정)<br/>- reset vector<br/>- HW init / crypto enable<br/>- boot mode 결정<br/>- BL2 image load + verify<br/>- sign-fail → halt / fallback"]
-        OTP["OTP / eFuse<br/>ROTPK Hash (32 B)<br/>Secure Boot Enable<br/>JTAG Lock<br/>Anti-Rollback Counter<br/>Boot Device Config<br/>AES Root Key (선택)"]
-        BROM -- read --> OTP
-    end
-    NEXT["BL2 jump (검증 통과 시)<br/>→ chain of trust 의 다음 link"]
+```d2
+direction: down
 
-    POR --> ROT
-    ROT --> NEXT
+POR: "Power-On Reset"
+ROT: "HW RoT (변경 불가 영역)" {
+  direction: right
+  BROM: "BootROM\nMask ROM (제조 layout 고정)\n- reset vector\n- HW init / crypto enable\n- boot mode 결정\n- BL2 image load + verify\n- sign-fail → halt / fallback"
+  OTP: "OTP / eFuse\nROTPK Hash (32 B)\nSecure Boot Enable\nJTAG Lock\nAnti-Rollback Counter\nBoot Device Config\nAES Root Key (선택)"
+  BROM -> OTP: "read"
+}
+NEXT: "BL2 jump (검증 통과 시)\n→ chain of trust 의 다음 link"
+POR -> ROT
+ROT -> NEXT
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -107,28 +107,36 @@ flowchart TB
 
 가장 단순한 시나리오. ROTPK 한 슬롯이 (1) 제조 라인에서 OTP 에 박히고, (2) 첫 부팅 시 BootROM 이 그 슬롯을 읽어 BL2 인증서 검증에 사용하는 1 cycle 을 따라갑니다.
 
-```mermaid
-flowchart LR
-    subgraph PROV["Provisioning (양산 라인, 1회)"]
-        direction TB
-        P1["① 빌드 서버: ROTPK_pub 생성"]
-        P2["② SHA-256(ROTPK_pub) = h_rotpk (32 B)"]
-        P3["③ OTP write tool<br/>blow(OTP[ROTPK_HASH], h_rotpk)<br/>blow(OTP[SECURE_BOOT_EN], 1)"]
-        P4["④ ROTPK_HASH 영역 → READ-ONLY 잠금<br/>(이후 OTP write block)"]
-        P1 --> P2 --> P3 --> P4
-    end
-    subgraph BOOT["매 부팅 (현장)"]
-        direction TB
-        B5["⑤ POR → BootROM 진입"]
-        B6["⑥ Flash 에서 BL2 + cert 를 SRAM 으로 로드"]
-        B7["⑦ cert 안의 PK 추출"]
-        B8["⑧ SHA-256(PK) 계산"]
-        B9["⑨ OTP[ROTPK_HASH] 읽기"]
-        B10["⑩ 두 값 == 비교"]
-        B11["⑪ 일치 → cert.sig 검증<br/>불일치 → halt / abort"]
-        B5 --> B6 --> B7 --> B8 --> B9 --> B10 --> B11
-    end
-    PROV -.-> BOOT
+```d2
+direction: right
+
+PROV: "Provisioning (양산 라인, 1회)" {
+  direction: down
+  P1: "① 빌드 서버: ROTPK_pub 생성"
+  P2: "② SHA-256(ROTPK_pub) = h_rotpk (32 B)"
+  P3: "③ OTP write tool\nblow(OTP[ROTPK_HASH], h_rotpk)\nblow(OTP[SECURE_BOOT_EN], 1)"
+  P4: "④ ROTPK_HASH 영역 → READ-ONLY 잠금\n(이후 OTP write block)"
+  P1 -> P2
+  P2 -> P3
+  P3 -> P4
+}
+BOOT: "매 부팅 (현장)" {
+  direction: down
+  B5: "⑤ POR → BootROM 진입"
+  B6: "⑥ Flash 에서 BL2 + cert 를 SRAM 으로 로드"
+  B7: "⑦ cert 안의 PK 추출"
+  B8: "⑧ SHA-256(PK) 계산"
+  B9: "⑨ OTP[ROTPK_HASH] 읽기"
+  B10: "⑩ 두 값 == 비교"
+  B11: "⑪ 일치 → cert.sig 검증\n불일치 → halt / abort"
+  B5 -> B6
+  B6 -> B7
+  B7 -> B8
+  B8 -> B9
+  B9 -> B10
+  B10 -> B11
+}
+PROV -> BOOT { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |
@@ -237,16 +245,20 @@ stateDiagram-v2
 
 ### 5.1 BootROM 의 책임과 제약
 
-```mermaid
-flowchart TB
-    POR["Power-On Reset"]
-    S1["1. CPU/보안 HW 초기화<br/>- Crypto Engine 활성화<br/>- Security Perimeter 설정<br/>- Watchdog 타이머 시작"]
-    S2["2. Boot Mode 결정<br/>- Boot Pinstrap 읽기<br/>- OTP Boot Config 읽기"]
-    S3["3. BL2 이미지 로드<br/>- Boot Device에서 읽기<br/>- Internal SRAM에 적재"]
-    S4["4. BL2 서명 검증<br/>- OTP에서 ROTPK 해시 읽기<br/>- 인증서의 공개키 검증<br/>- BL2 이미지 해시 검증<br/>- 실패 → 차순위 Boot Mode"]
-    S5["5. BL2로 Jump"]
+```d2
+direction: down
 
-    POR --> S1 --> S2 --> S3 --> S4 --> S5
+POR: "Power-On Reset"
+S1: "1. CPU/보안 HW 초기화\n- Crypto Engine 활성화\n- Security Perimeter 설정\n- Watchdog 타이머 시작"
+S2: "2. Boot Mode 결정\n- Boot Pinstrap 읽기\n- OTP Boot Config 읽기"
+S3: "3. BL2 이미지 로드\n- Boot Device에서 읽기\n- Internal SRAM에 적재"
+S4: "4. BL2 서명 검증\n- OTP에서 ROTPK 해시 읽기\n- 인증서의 공개키 검증\n- BL2 이미지 해시 검증\n- 실패 → 차순위 Boot Mode"
+S5: "5. BL2로 Jump"
+POR -> S1
+S1 -> S2
+S2 -> S3
+S3 -> S4
+S4 -> S5
 ```
 
 #### BootROM 코드의 제약
@@ -330,16 +342,16 @@ OTP/Secure SRAM 내 패치 영역:
 
 #### 동작 원리: HW Comparator 방식
 
-```mermaid
-flowchart TB
-    PC["CPU 가 PC = 0x0000_1234 를 fetch"]
-    CMP["HW Address Comparator<br/>(패치 테이블의 Match Address 와<br/>PC 를 HW 적으로 비교 — 매 fetch 마다)"]
-    YES["Redirect → Patch Code<br/>(0x2000_0100)"]
-    NO["정상 ROM 코드 실행"]
+```d2
+direction: down
 
-    PC --> CMP
-    CMP -- "Match? YES" --> YES
-    CMP -- "Match? NO" --> NO
+PC: "CPU 가 PC = 0x0000_1234 를 fetch"
+CMP: "HW Address Comparator\n(패치 테이블의 Match Address 와\nPC 를 HW 적으로 비교 — 매 fetch 마다)"
+YES: "Redirect → Patch Code\n(0x2000_0100)"
+NO: "정상 ROM 코드 실행"
+PC -> CMP
+CMP -> YES: "Match? YES"
+CMP -> NO: "Match? NO"
 ```
 
 **HW Comparator 의 장점**: SW 분기문이 아닌 HW 레벨 리다이렉션이므로, ROM 코드 자체를 수정하지 않고도 특정 함수 진입점을 가로챌 수 있습니다.
@@ -365,23 +377,25 @@ flowchart TB
 
 PUF 는 반도체 제조 과정의 **미세한 물리적 편차** (process variation) 를 이용하여 칩마다 고유한 "디지털 지문" 을 생성하는 기술입니다. 키를 **저장** 하는 eFuse/OTP 와 달리, PUF 는 키를 **생성** 합니다.
 
-```mermaid
-flowchart LR
-    subgraph EFUSE["eFuse/OTP 방식: 키를 저장"]
-        direction LR
-        EF["eFuse (OTP)<br/>KEY = 0xDEAD_BEEF_CAFE_1234<br/>(칩에 물리적으로 기록됨)"]
-        EFNOTE["취약: 고급 물리 공격<br/>(FIB, 전자현미경) 으로 읽기 가능"]
-        EF -.-> EFNOTE
-    end
-    subgraph PUF["PUF 방식: 키를 생성"]
-        direction LR
-        PC["PUF Circuit"]
-        KD["Key Derivation<br/>+ Error Correction"]
-        KOUT["KEY = 0xDEAD_BEEF_CAFE_1234<br/>(전원 켤 때마다 동일한 키 생성<br/>칩 안에 키가 저장되어 있지 않음)"]
-        PNOTE["강점: 물리 공격으로<br/>eFuse 를 읽어도 키가 없음"]
-        PC --> KD --> KOUT
-        KOUT -.-> PNOTE
-    end
+```d2
+direction: right
+
+EFUSE: "eFuse/OTP 방식: 키를 저장" {
+  direction: right
+  EF: "eFuse (OTP)\nKEY = 0xDEAD_BEEF_CAFE_1234\n(칩에 물리적으로 기록됨)"
+  EFNOTE: "취약: 고급 물리 공격\n(FIB, 전자현미경) 으로 읽기 가능"
+  EF -> EFNOTE { style.stroke-dash: 4 }
+}
+PUF: "PUF 방식: 키를 생성" {
+  direction: right
+  PC: "PUF Circuit"
+  KD: "Key Derivation\n+ Error Correction"
+  KOUT: "KEY = 0xDEAD_BEEF_CAFE_1234\n(전원 켤 때마다 동일한 키 생성\n칩 안에 키가 저장되어 있지 않음)"
+  PNOTE: "강점: 물리 공격으로\neFuse 를 읽어도 키가 없음"
+  PC -> KD
+  KD -> KOUT
+  KOUT -> PNOTE { style.stroke-dash: 4 }
+}
 ```
 
 #### PUF 의 유형
@@ -405,35 +419,39 @@ flowchart LR
 
 #### PUF 의 한계 — 노이즈와 Fuzzy Extractor
 
-```mermaid
-flowchart LR
-    PUF["PUF<br/>(노이즈)<br/>부팅 1회차: 0xA3F7_2B91<br/>부팅 2회차: 0xA3F7_2B90 (1비트 차이)<br/>부팅 3회차: 0xA3F7_2B91"]
-    FE["Fuzzy Extractor<br/>+ Helper Data"]
-    KEY["안정된 키<br/>(매번 동일)"]
-    NOTE["Helper Data 는 공개 가능<br/>(키 자체는 노출되지 않음)"]
+```d2
+direction: right
 
-    PUF --> FE --> KEY
-    FE -.-> NOTE
+PUF: "PUF\n(노이즈)\n부팅 1회차: 0xA3F7_2B91\n부팅 2회차: 0xA3F7_2B90 (1비트 차이)\n부팅 3회차: 0xA3F7_2B91"
+FE: "Fuzzy Extractor\n+ Helper Data"
+KEY: "안정된 키\n(매번 동일)"
+NOTE: "Helper Data 는 공개 가능\n(키 자체는 노출되지 않음)"
+PUF -> FE
+FE -> KEY
+FE -> NOTE { style.stroke-dash: 4 }
 ```
 
 #### HW RoT 에서의 PUF 적용
 
-```mermaid
-flowchart LR
-    subgraph NORMAL["일반 SoC 의 HW RoT 구조"]
-        direction TB
-        N1["BootROM + OTP(eFuse)"]
-        N2["OTP 에 ROTPK 해시 저장<br/>OTP 에 AES Root Key 저장"]
-        N3["키가 eFuse 에 있음<br/>→ 물리 공격으로 추출 가능"]
-        N1 --> N2 --> N3
-    end
-    subgraph WITHPUF["PUF 결합 시"]
-        direction TB
-        P1["BootROM + PUF + OTP(보안 설정만)"]
-        P2["PUF 가 칩 고유 키 생성<br/>→ OTP 에 키를 저장할 필요 없음"]
-        P3["키가 어디에도 없음<br/>→ 물리 공격으로 추출 불가"]
-        P1 --> P2 --> P3
-    end
+```d2
+direction: right
+
+NORMAL: "일반 SoC 의 HW RoT 구조" {
+  direction: down
+  N1: "BootROM + OTP(eFuse)"
+  N2: "OTP 에 ROTPK 해시 저장\nOTP 에 AES Root Key 저장"
+  N3: "키가 eFuse 에 있음\n→ 물리 공격으로 추출 가능"
+  N1 -> N2
+  N2 -> N3
+}
+WITHPUF: "PUF 결합 시" {
+  direction: down
+  P1: "BootROM + PUF + OTP(보안 설정만)"
+  P2: "PUF 가 칩 고유 키 생성\n→ OTP 에 키를 저장할 필요 없음"
+  P3: "키가 어디에도 없음\n→ 물리 공격으로 추출 불가"
+  P1 -> P2
+  P2 -> P3
+}
 ```
 
 #### 업계 적용 사례

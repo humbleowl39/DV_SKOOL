@@ -76,30 +76,26 @@
 
 ### 한 장 그림 — MMU UVM Verification Env
 
-```mermaid
-flowchart TB
-    subgraph ENV["MMU UVM Verification Env"]
-        REQ["Translation Req Agent<br/>- Random VA gen<br/>- Traffic pattern<br/>  (Seq / Rand / Hot)<br/>- Burst / Single"]
-        PT["Page Table Memory Model<br/>- Multi-level PT<br/>- PTE 동적 변경<br/>- Fault injection<br/>  (Invalid PTE)"]
-        VSEQ["Virtual Sequence<br/>(시나리오 조합)<br/>예: Random VA + Huge Page<br/>+ TLB Full + Page Fault"]
-        DUT["DUT (MMU IP)"]
-        THIN["Custom Thin VIP (AXI-S)<br/>- tdata/valid/ready 만<br/>- 경량 메모리"]
-        MEM["Memory Response Model<br/>- Page Walk 응답<br/>- 지연 모델링<br/>- 에러 주입"]
-        SB["Dual Scoreboard<br/>① DUT.PA == FuncModel.PA?<br/>② DUT.Latency vs IdealModel.Latency<br/>③ AXI-S handshake compliance"]
-        COV["Functional Coverage<br/>- Translation × Page size × TLB state<br/>- Miss Ratio × Traffic pattern<br/>- Fault type × Recovery"]
-    end
-    REQ --> VSEQ
-    PT --> VSEQ
-    VSEQ --> DUT
-    DUT --> THIN
-    DUT --> MEM
-    THIN --> SB
-    SB --> COV
+```d2
+direction: down
 
-    classDef thin stroke:#27ae60,stroke-width:3px
-    classDef gold stroke:#2980b9,stroke-width:2px
-    class THIN thin
-    class SB gold
+ENV: "MMU UVM Verification Env" {
+  REQ: "Translation Req Agent\n- Random VA gen\n- Traffic pattern\n  (Seq / Rand / Hot)\n- Burst / Single"
+  PT: "Page Table Memory Model\n- Multi-level PT\n- PTE 동적 변경\n- Fault injection\n  (Invalid PTE)"
+  VSEQ: "Virtual Sequence\n(시나리오 조합)\n예: Random VA + Huge Page\n+ TLB Full + Page Fault"
+  DUT: "DUT (MMU IP)"
+  THIN: "Custom Thin VIP (AXI-S)\n- tdata/valid/ready 만\n- 경량 메모리"
+  MEM: "Memory Response Model\n- Page Walk 응답\n- 지연 모델링\n- 에러 주입"
+  SB: "Dual Scoreboard\n① DUT.PA == FuncModel.PA?\n② DUT.Latency vs IdealModel.Latency\n③ AXI-S handshake compliance"
+  COV: "Functional Coverage\n- Translation × Page size × TLB state\n- Miss Ratio × Traffic pattern\n- Fault type × Recovery"
+}
+REQ -> VSEQ
+PT -> VSEQ
+VSEQ -> DUT
+DUT -> THIN
+DUT -> MEM
+THIN -> SB
+SB -> COV
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -168,12 +164,14 @@ sequenceDiagram
 
 ### 4.1 계층적 검증 — TLB 서브모듈 → MMU Top
 
-```mermaid
-flowchart LR
-    L1["Level 1: TLB Unit TB<br/>- TLB Hit/Miss<br/>- Replacement<br/>- Invalidation<br/>- ASID/VMID<br/>- Multi-size page"]
-    L2["Level 2: PWE Unit TB<br/>- Multi-level walk<br/>- Block Descriptor<br/>- Walk error<br/>- Concurrent walks"]
-    L3["Level 3: MMU Top TB<br/>- End-to-End flow<br/>- TLB + PWE 통합<br/>- 성능 측정<br/>- Stress test<br/>- Error recovery"]
-    L1 --> L2 --> L3
+```d2
+direction: right
+
+L1: "Level 1: TLB Unit TB\n- TLB Hit/Miss\n- Replacement\n- Invalidation\n- ASID/VMID\n- Multi-size page"
+L2: "Level 2: PWE Unit TB\n- Multi-level walk\n- Block Descriptor\n- Walk error\n- Concurrent walks"
+L3: "Level 3: MMU Top TB\n- End-to-End flow\n- TLB + PWE 통합\n- 성능 측정\n- Stress test\n- Error recovery"
+L1 -> L2
+L2 -> L3
 ```
 
 ### 4.2 각 레벨의 검증 초점

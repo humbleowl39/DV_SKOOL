@@ -75,25 +75,20 @@ CQ polling 타임아웃은 "DUT 가 내가 보낸 work 를 처리하긴 했나?"
 
 ### 한 장 그림 — 두 조건 + 디버그 분기
 
-```mermaid
-flowchart TB
-    POLL["CQ Polling 진행 중"]
-    Q1{"try_cnt > limit?"}
-    Q2{"c2h_tracker::active?"}
-    WAIT["기다리기<br/>(10us 마다 로그)"]
-    HOLD["무한 지연<br/>(DUT DMA 살아있음)"]
-    EXC["exceptionTimeout()<br/>E-DRV-TBERR-0001/0002<br/>uvm_shutdown_phase (graceful)"]
+```d2
+direction: down
 
-    POLL --> Q1
-    Q1 -- no --> WAIT
-    Q1 -- yes --> Q2
-    Q2 -- yes --> HOLD
-    Q2 -- no --> EXC
-
-    classDef gate stroke:#b8860b,stroke-width:2px
-    classDef fatal stroke:#c0392b,stroke-width:3px
-    class Q1,Q2 gate
-    class EXC fatal
+POLL: "CQ Polling 진행 중"
+Q1: "try_cnt > limit?" { shape: diamond }
+Q2: "c2h_tracker::active?" { shape: diamond }
+WAIT: "기다리기\n(10us 마다 로그)"
+HOLD: "무한 지연\n(DUT DMA 살아있음)"
+EXC: "exceptionTimeout()\nE-DRV-TBERR-0001/0002\nuvm_shutdown_phase (graceful)"
+POLL -> Q1
+Q1 -> WAIT: "no"
+Q1 -> Q2: "yes"
+Q2 -> HOLD: "yes"
+Q2 -> EXC: "no"
 ```
 
 디버그 분기 (4 분기점):

@@ -90,32 +90,31 @@ DP 는 면접관이 _reasoning depth_ 를 가장 좋아하는 패턴입니다. *
 
 **Brute Force (재귀, 중복 계산) — O(2ⁿ)**
 
-```mermaid
-flowchart TB
-    F5["fib(5)"]
-    F4["fib(4)"]
-    F3a["fib(3)"]
-    F3b["fib(3)"]
-    F2a["fib(2)"]
-    F2b["fib(2)"]
-    F2c["fib(2)"]
-    F1a["fib(1)"]
-    F1b["fib(1)"]
-    F1c["fib(1)"]
-    F1d["fib(1)"]
-    F0a["fib(0)"]
-    F5 --> F4
-    F5 --> F3b
-    F4 --> F3a
-    F4 --> F2b
-    F3a --> F2a
-    F3a --> F1b
-    F3b --> F2c
-    F3b --> F1c
-    F2a --> F1a
-    F2a --> F0a
-    classDef dup stroke-width:3px,stroke-dasharray:4 2
-    class F3b,F2b,F2c,F1b,F1c dup
+```d2
+direction: down
+
+F5: "fib(5)"
+F4: "fib(4)"
+F3a: "fib(3)"
+F3b: "fib(3)"
+F2a: "fib(2)"
+F2b: "fib(2)"
+F2c: "fib(2)"
+F1a: "fib(1)"
+F1b: "fib(1)"
+F1c: "fib(1)"
+F1d: "fib(1)"
+F0a: "fib(0)"
+F5 -> F4
+F5 -> F3b
+F4 -> F3a
+F4 -> F2b
+F3a -> F2a
+F3a -> F1b
+F3b -> F2c
+F3b -> F1c
+F2a -> F1a
+F2a -> F0a
 ```
 
 → `fib(3)`, `fib(2)` 가 **여러 번 재계산** (점선 표시) → 시간 O(2ⁿ).

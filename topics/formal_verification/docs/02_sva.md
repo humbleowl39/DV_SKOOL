@@ -109,18 +109,22 @@ flowchart TB
 
 SVA property 의 life cycle:
 
-```mermaid
-flowchart TB
-    S1["① Spec 읽기<br/>'valid==1 && ready==0<br/>→ 다음 cycle 도 valid==1 + data 동일'"]
-    S2["② SVA 작성<br/>ap_axi_stable: assert property (...)<br/>(valid && !ready) |=> (valid && $stable(data))"]
-    S3["③ Cover 짝<br/>cp_stall: cover (valid && !ready)<br/>cp_stall_chain: cover ((valid && !ready)[*3])"]
-    S4["④ Bind<br/>bind axi_master axi_sva u_sva (.*)<br/>(DUT RTL 무수정)"]
-    S5["⑤ JG 실행<br/>analyze → elaborate → clock/reset → prove -all"]
-    S6["⑥ 결과 분류<br/>ap_axi_stable: PROVEN / BOUNDED / CEX<br/>cp_stall: covered (trace 1)<br/>cp_stall_chain: covered (trace 1)"]
-    S7["⑦ Sign-off<br/>PROVEN + 모든 cover covered<br/>→ 의미 있는 증명"]
-    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
-    classDef goal stroke:#27ae60,stroke-width:3px
-    class S7 goal
+```d2
+direction: down
+
+S1: "① Spec 읽기\n'valid==1 && ready==0\n→ 다음 cycle 도 valid==1 + data 동일'"
+S2: "② SVA 작성\nap_axi_stable: assert property (...)\n(valid && !ready) |=> (valid && \$stable(data))"
+S3: "③ Cover 짝\ncp_stall: cover (valid && !ready)\ncp_stall_chain: cover ((valid && !ready)[*3])"
+S4: "④ Bind\nbind axi_master axi_sva u_sva (.*)\n(DUT RTL 무수정)"
+S5: "⑤ JG 실행\nanalyze → elaborate → clock/reset → prove -all"
+S6: "⑥ 결과 분류\nap_axi_stable: PROVEN / BOUNDED / CEX\ncp_stall: covered (trace 1)\ncp_stall_chain: covered (trace 1)"
+S7: "⑦ Sign-off\nPROVEN + 모든 cover covered\n→ 의미 있는 증명"
+S1 -> S2
+S2 -> S3
+S3 -> S4
+S4 -> S5
+S5 -> S6
+S6 -> S7
 ```
 
 | Step | 누가 | 무엇을 | 왜 |

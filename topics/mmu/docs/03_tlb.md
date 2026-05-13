@@ -69,29 +69,24 @@ OS 의 _가장 자주 발생하는 bug_ 중 하나 — Linux 커널 history 에 
 
 ### 한 장 그림 — TLB 의 latency 게임
 
-```mermaid
-flowchart TB
-    REQ["request(VA, ASID, EL)"]
-    UTLB["μTLB (L1)<br/>~32-64 ent<br/>fully-assoc<br/>total: ~1 cycle"]
-    L2TLB["L2 TLB<br/>~512-2048<br/>4-8 way SA<br/>total: ~3-5 cycles"]
-    PWE["Page Walk Engine<br/>L0/L1/L2/L3 read<br/>(PWC 가 끼면 단축)<br/>total: ~수십~수백 cycles<br/>(4 mem access)"]
-    BUS["bus access<br/>PA + perm + attr"]
-    CHIT["L1 cache hit<br/>~3 cycles"]
-    CMISS["L1 cache miss<br/>→ DRAM"]
+```d2
+direction: down
 
-    REQ --> UTLB
-    UTLB -- "hit" --> BUS
-    UTLB -- "miss" --> L2TLB
-    L2TLB -- "hit (μTLB 재캐싱)" --> BUS
-    L2TLB -- "miss" --> PWE
-    PWE -- "TLB fill" --> BUS
-    BUS --> CHIT
-    BUS --> CMISS
-
-    classDef fast stroke:#27ae60,stroke-width:3px
-    classDef slow stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
-    class UTLB fast
-    class PWE slow
+REQ: "request(VA, ASID, EL)"
+UTLB: "μTLB (L1)\n~32-64 ent\nfully-assoc\ntotal: ~1 cycle"
+L2TLB: "L2 TLB\n~512-2048\n4-8 way SA\ntotal: ~3-5 cycles"
+PWE: "Page Walk Engine\nL0/L1/L2/L3 read\n(PWC 가 끼면 단축)\ntotal: ~수십~수백 cycles\n(4 mem access)"
+BUS: "bus access\nPA + perm + attr"
+CHIT: "L1 cache hit\n~3 cycles"
+CMISS: "L1 cache miss\n→ DRAM"
+REQ -> UTLB
+UTLB -> BUS: "hit"
+UTLB -> L2TLB: "miss"
+L2TLB -> BUS: "hit (μTLB 재캐싱)"
+L2TLB -> PWE: "miss"
+PWE -> BUS: "TLB fill"
+BUS -> CHIT
+BUS -> CMISS
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -215,13 +210,14 @@ Size = Page 크기 (4KB/2MB/1GB)
 
 ### 4.3 일반적인 2-Level TLB
 
-```mermaid
-flowchart LR
-    L1["L1 TLB (μTLB)"]
-    L2["L2 TLB (Main)"]
-    PWE["Page Walk Engine"]
-    L1 -- "miss" --> L2
-    L2 -- "miss" --> PWE
+```d2
+direction: right
+
+L1: "L1 TLB (μTLB)"
+L2: "L2 TLB (Main)"
+PWE: "Page Walk Engine"
+L1 -> L2: "miss"
+L2 -> PWE: "miss"
 ```
 
 **L1 TLB (μTLB)**:
@@ -247,13 +243,14 @@ flowchart LR
 
 디바이스(GPU, DMA, NIC) 의 주소 변환용 TLB:
 
-```mermaid
-flowchart LR
-    DEV["Device<br/>Request"]
-    IOTLB["IOTLB"]
-    PWE["Page Walk<br/>(메모리)"]
-    DEV --> IOTLB
-    IOTLB -- "miss" --> PWE
+```d2
+direction: right
+
+DEV: "Device\nRequest"
+IOTLB: "IOTLB"
+PWE: "Page Walk\n(메모리)"
+DEV -> IOTLB
+IOTLB -> PWE: "miss"
 ```
 
 **특징**:
@@ -268,13 +265,14 @@ flowchart LR
 
 **방식 1: Split TLB (Instruction + Data 분리)**
 
-```mermaid
-flowchart TB
-    ITLB["I-TLB<br/>(48 ent)"]
-    DTLB["D-TLB<br/>(64 ent)"]
-    L2["L2 TLB (Unified)<br/>(1024)"]
-    ITLB --> L2
-    DTLB --> L2
+```d2
+direction: down
+
+ITLB: "I-TLB\n(48 ent)"
+DTLB: "D-TLB\n(64 ent)"
+L2: "L2 TLB (Unified)\n(1024)"
+ITLB -> L2
+DTLB -> L2
 ```
 
 - 장점: I-Fetch 와 D-Access 가 동시에 TLB 접근 가능 (병렬성)
@@ -282,9 +280,10 @@ flowchart TB
 
 **방식 2: Unified TLB**
 
-```mermaid
-flowchart LR
-    UTLB["Unified TLB<br/>(112 entries)<br/>I/D 구분 없이 공유"]
+```d2
+direction: right
+
+UTLB: "Unified TLB\n(112 entries)\nI/D 구분 없이 공유"
 ```
 
 - 장점: 엔트리 활용 효율 높음

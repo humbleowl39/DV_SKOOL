@@ -78,29 +78,24 @@
 
 VA[63:48] sign-ext (TTBR0 vs TTBR1 결정), VA[47:39] = L0 idx, VA[38:30] = L1 idx, VA[29:21] = L2 idx, VA[20:12] = L3 idx, VA[11:0] = page offset (변환 X).
 
-```mermaid
-flowchart TB
-    TTBR["TTBR0_EL1"]
-    L0["L0 Table<br/>(4 KB, 512×8B PTE)<br/>idx → L0 PTE"]
-    L1["L1 Table<br/>idx → L1 PTE"]
-    L2["L2 Table<br/>idx → L2 PTE"]
-    L3["L3 Table<br/>idx → L3 PTE<br/>= Page descriptor"]
-    GB["1 GB block 종료<br/>PA[47:30] || VA[29:0]"]
-    MB["2 MB block 종료<br/>PA[47:21] || VA[20:0]"]
-    KB["4 KB page (정상 종료)<br/>PA[47:12] || VA[11:0]"]
+```d2
+direction: down
 
-    TTBR --> L0
-    L0 -- "Table desc" --> L1
-    L1 -- "Table desc" --> L2
-    L1 -- "Block desc (1 GB)" --> GB
-    L2 -- "Table desc" --> L3
-    L2 -- "Block desc (2 MB)" --> MB
-    L3 --> KB
-
-    classDef ok stroke:#27ae60,stroke-width:2px
-    classDef shortcut stroke:#e67e22,stroke-width:2px,stroke-dasharray: 4 2
-    class KB ok
-    class GB,MB shortcut
+TTBR: "TTBR0_EL1"
+L0: "L0 Table\n(4 KB, 512×8B PTE)\nidx → L0 PTE"
+L1: "L1 Table\nidx → L1 PTE"
+L2: "L2 Table\nidx → L2 PTE"
+L3: "L3 Table\nidx → L3 PTE\n= Page descriptor"
+GB: "1 GB block 종료\nPA[47:30] || VA[29:0]"
+MB: "2 MB block 종료\nPA[47:21] || VA[20:0]"
+KB: "4 KB page (정상 종료)\nPA[47:12] || VA[11:0]"
+TTBR -> L0
+L0 -> L1: "Table desc"
+L1 -> L2: "Table desc"
+L1 -> GB: "Block desc (1 GB)"
+L2 -> L3: "Table desc"
+L2 -> MB: "Block desc (2 MB)"
+L3 -> KB
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -235,27 +230,24 @@ L2 PTE 가 Table descriptor 였다면 L3 까지 한 번 더 read → 총 4 mem a
 
 ### 4.4 Walk 흐름 (4단계)
 
-```mermaid
-flowchart TB
-    TTBR["TTBR<br/>(Translation Table Base Register)<br/>= Level 0 테이블의 물리 주소"]
-    L0E["Level 0 Table<br/>Entry[L0 Index]"]
-    L1E["Level 1 Table<br/>Entry[L1 Index]"]
-    L2E["Level 2 Table<br/>Entry[L2 Index]"]
-    L3E["Level 3 Table<br/>Entry[L3 Index]"]
-    GB1["1 GB Block<br/>(Block Descriptor)"]
-    MB2["2 MB Block<br/>(Block Descriptor)"]
-    PPN["4 KB Page 의<br/>물리 주소 (PPN)"]
+```d2
+direction: down
 
-    TTBR --> L0E
-    L0E -- "Level 1 테이블 주소" --> L1E
-    L1E -- "Level 2 테이블 주소" --> L2E
-    L1E -. "Block desc" .-> GB1
-    L2E -- "Level 3 테이블 주소" --> L3E
-    L2E -. "Block desc" .-> MB2
-    L3E --> PPN
-
-    classDef shortcut stroke:#e67e22,stroke-width:2px,stroke-dasharray: 4 2
-    class GB1,MB2 shortcut
+TTBR: "TTBR\n(Translation Table Base Register)\n= Level 0 테이블의 물리 주소"
+L0E: "Level 0 Table\nEntry[L0 Index]"
+L1E: "Level 1 Table\nEntry[L1 Index]"
+L2E: "Level 2 Table\nEntry[L2 Index]"
+L3E: "Level 3 Table\nEntry[L3 Index]"
+GB1: "1 GB Block\n(Block Descriptor)"
+MB2: "2 MB Block\n(Block Descriptor)"
+PPN: "4 KB Page 의\n물리 주소 (PPN)"
+TTBR -> L0E
+L0E -> L1E: "Level 1 테이블 주소"
+L1E -> L2E: "Level 2 테이블 주소"
+L1E -> GB1: "Block desc" { style.stroke-dash: 4 }
+L2E -> L3E: "Level 3 테이블 주소"
+L2E -> MB2: "Block desc" { style.stroke-dash: 4 }
+L3E -> PPN
 ```
 
 > 총 **4번** 의 메모리 접근 필요 → 이것이 TLB 가 필수적인 이유.

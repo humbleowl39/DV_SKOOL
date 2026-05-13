@@ -208,18 +208,18 @@ flowchart LR
 
 **IOMMU 있을 때**:
 
-```mermaid
-flowchart LR
-    CPU["CPU"]
-    MMU["CPU MMU"]
-    DMA["DMA"]
-    IOMMU["IOMMU<br/>VA→PA 변환<br/>+ 권한 검사<br/>+ 디바이스 격리"]
-    DRAM[("DRAM")]
-    CPU --> MMU --> DRAM
-    DMA --> IOMMU --> DRAM
+```d2
+direction: right
 
-    classDef guard stroke:#27ae60,stroke-width:3px
-    class IOMMU guard
+CPU: "CPU"
+MMU: "CPU MMU"
+DMA: "DMA"
+IOMMU: "IOMMU\nVA→PA 변환\n+ 권한 검사\n+ 디바이스 격리"
+DRAM: "DRAM" { shape: cylinder }
+CPU -> MMU
+MMU -> DRAM
+DMA -> IOMMU
+IOMMU -> DRAM
 ```
 
 | 문제 | IOMMU 의 해결 |
@@ -522,16 +522,20 @@ Device B (GPU): StreamID = 7 → Page Table B → 자신의 VRAM/버퍼만 접�
 
 SoC 내부 IP 구성:
 
-```mermaid
-flowchart LR
-    IPA["IP_A<br/>(예: DMA)"]
-    IPB["IP_B<br/>(예: GPU)"]
-    SMA["sysMMU<br/>(A용)"]
-    SMB["sysMMU<br/>(B용)"]
-    BUS["Bus Fabric"]
-    MEM[("Memory")]
-    IPA --> SMA --> BUS --> MEM
-    IPB --> SMB --> BUS
+```d2
+direction: right
+
+IPA: "IP_A\n(예: DMA)"
+IPB: "IP_B\n(예: GPU)"
+SMA: "sysMMU\n(A용)"
+SMB: "sysMMU\n(B용)"
+BUS: "Bus Fabric"
+MEM: "Memory" { shape: cylinder }
+IPA -> SMA
+SMA -> BUS
+BUS -> MEM
+IPB -> SMB
+SMB -> BUS
 ```
 
 특징:

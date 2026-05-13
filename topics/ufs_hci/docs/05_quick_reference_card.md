@@ -62,29 +62,30 @@
 
 ### 한 장 그림 — 전체 stack 한 장에
 
-```mermaid
-flowchart LR
-    SW["<b>[SW driver]</b><br/>read(fd, buf)"]
-    UTRD["UTRD(slot)"]
-    UCD["UCD / PRDT<br/>memory layout"]
-    DB["UTRLDBR ring"]
-    CMD["Cmd UPIU"]
-    NAND["<b>[UFS device]</b><br/>NAND"]
-    DIN["Data-In × N"]
-    DMA["DMA"]
-    RSP["Resp UPIU"]
-    DONE["UTRLDBR clear<br/>+ IS[UTRCS]<br/>+ IRQ"]
-    ISR["ISR"]
-    SW --> UTRD
-    UTRD --> UCD
-    UTRD --> DB
-    DB --> CMD
-    CMD --> NAND
-    NAND --> DIN
-    DIN --> DMA
-    DIN --> RSP
-    RSP --> DONE
-    DONE --> ISR
+```d2
+direction: right
+
+SW: "**[SW driver]**\nread(fd, buf)"
+UTRD: "UTRD(slot)"
+UCD: "UCD / PRDT\nmemory layout"
+DB: "UTRLDBR ring"
+CMD: "Cmd UPIU"
+NAND: "**[UFS device]**\nNAND"
+DIN: "Data-In × N"
+DMA: "DMA"
+RSP: "Resp UPIU"
+DONE: "UTRLDBR clear\n+ IS[UTRCS]\n+ IRQ"
+ISR: "ISR"
+SW -> UTRD
+UTRD -> UCD
+UTRD -> DB
+DB -> CMD
+CMD -> NAND
+NAND -> DIN
+DIN -> DMA
+DIN -> RSP
+RSP -> DONE
+DONE -> ISR
 ```
 
 이 그림이 곧 _UFS HCI 의 모든 시나리오의 골격_. 어떤 명령도 (Query / TM / NOP / Abort 포함) 이 그림의 변형.

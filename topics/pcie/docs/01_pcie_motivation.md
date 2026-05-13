@@ -80,32 +80,31 @@
 
 ### 한 장 그림 — PCI 공유 버스 vs PCIe 직렬 fabric
 
-```mermaid
-flowchart LR
-    subgraph PCI["PCI parallel (1992~) — shared bus 33/66 MHz"]
-        direction TB
-        BUS["shared 32 data + addr + clk<br/>half-duplex · multi-drop · arbitration"]
-        DA["Dev A"]
-        DB["Dev B"]
-        DC["Dev C"]
-        DA --- BUS
-        DB --- BUS
-        DC --- BUS
-    end
-    subgraph PCIE["PCIe serial (2003~) — point-to-point"]
-        direction TB
-        RC["Root Complex<br/>(Root Port)"]
-        SW["Switch"]
-        EP1["EP (NVMe)"]
-        EP2["EP (NIC)"]
-        EP3["EP (GPU)"]
-        RC -- "lane × N" --> SW
-        RC -- "lane × N" --> EP1
-        SW --> EP2
-        SW --> EP3
-    end
-    classDef bottleneck stroke:#c0392b,stroke-width:3px
-    class BUS bottleneck
+```d2
+direction: right
+
+PCI: "PCI parallel (1992~) — shared bus 33/66 MHz" {
+  direction: down
+  BUS: "shared 32 data + addr + clk\nhalf-duplex · multi-drop · arbitration"
+  DA: "Dev A"
+  DB: "Dev B"
+  DC: "Dev C"
+  DA -- BUS
+  DB -- BUS
+  DC -- BUS
+}
+PCIE: "PCIe serial (2003~) — point-to-point" {
+  direction: down
+  RC: "Root Complex\n(Root Port)"
+  SW: "Switch"
+  EP1: "EP (NVMe)"
+  EP2: "EP (NIC)"
+  EP3: "EP (GPU)"
+  RC -> SW: "lane × N"
+  RC -> EP1: "lane × N"
+  SW -> EP2
+  SW -> EP3
+}
 ```
 
 - **PCI**: 한 device 만 송신, 공유 bus 부하 ↑ → 속도 ↓, 32-line skew 가 freq 상한 (~533 MHz).
@@ -184,19 +183,20 @@ sequenceDiagram
 
 ### 4.2 토폴로지 4 객체
 
-```mermaid
-flowchart TB
-    CPU["CPU"]
-    RC["Root Complex<br/>(CPU ↔ PCIe gateway)"]
-    RP["Root Port<br/>(Type 1)"]
-    SW["Switch<br/>(upstream × 1 + downstream × N)"]
-    EP1["Endpoint<br/>(Type 0)<br/>NVMe / GPU / NIC"]
-    BR["PCI-PCI Bridge<br/>(PCIe ↔ legacy PCI)"]
-    CPU --- RC
-    RC --- RP
-    RP --> SW
-    SW --> EP1
-    SW --> BR
+```d2
+direction: down
+
+CPU: "CPU"
+RC: "Root Complex\n(CPU ↔ PCIe gateway)"
+RP: "Root Port\n(Type 1)"
+SW: "Switch\n(upstream × 1 + downstream × N)"
+EP1: "Endpoint\n(Type 0)\nNVMe / GPU / NIC"
+BR: "PCI-PCI Bridge\n(PCIe ↔ legacy PCI)"
+CPU -- RC
+RC -- RP
+RP -> SW
+SW -> EP1
+SW -> BR
 ```
 
 - **Enumeration**: DFS traversal (§5, Module 06).
@@ -227,17 +227,18 @@ flowchart TB
 
 ### 5.1 PCI parallel 의 한계 (PCIe 가 해결한 문제)
 
-```mermaid
-flowchart LR
-    DA["Device A"]
-    DB["Device B"]
-    DC["Device C"]
-    DD["Device D"]
-    BUS["PCI 32-bit bus (33/66 MHz)<br/>32 data + addr + control + clock<br/>같은 clock 에 모든 device 가 align"]
-    DA --- BUS
-    DB --- BUS
-    DC --- BUS
-    DD --- BUS
+```d2
+direction: right
+
+DA: "Device A"
+DB: "Device B"
+DC: "Device C"
+DD: "Device D"
+BUS: "PCI 32-bit bus (33/66 MHz)\n32 data + addr + control + clock\n같은 clock 에 모든 device 가 align"
+DA -- BUS
+DB -- BUS
+DC -- BUS
+DD -- BUS
 ```
 
 | 한계 | 설명 |
@@ -275,23 +276,24 @@ flowchart LR
 
 ### 5.3 Topology 4 객체 상세
 
-```mermaid
-flowchart TB
-    CPU["CPU"]
-    RC["Root Complex<br/>(RC)"]
-    SW["Switch"]
-    NVMe["EP<br/>(NVMe)"]
-    GPU["EP<br/>(GPU)"]
-    NIC["EP<br/>(NIC)"]
-    BR["PCI-PCI<br/>Bridge"]
-    PDEV["legacy PCI<br/>device"]
-    CPU --- RC
-    RC --> SW
-    RC --> NVMe
-    RC --> GPU
-    SW --> NIC
-    SW --> BR
-    BR -- "legacy PCI" --> PDEV
+```d2
+direction: down
+
+CPU: "CPU"
+RC: "Root Complex\n(RC)"
+SW: "Switch"
+NVMe: "EP\n(NVMe)"
+GPU: "EP\n(GPU)"
+NIC: "EP\n(NIC)"
+BR: "PCI-PCI\nBridge"
+PDEV: "legacy PCI\ndevice"
+CPU -- RC
+RC -> SW
+RC -> NVMe
+RC -> GPU
+SW -> NIC
+SW -> BR
+BR -> PDEV: "legacy PCI"
 ```
 
 | 컴포넌트 | 역할 |

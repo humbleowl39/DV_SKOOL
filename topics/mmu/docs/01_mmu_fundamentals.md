@@ -232,31 +232,30 @@ ARMv8 Exception Level 별 Translation:
 
 ### 4.4 MMU 의 위치 — CPU 내장 vs SoC 레벨
 
-```mermaid
-flowchart LR
-    subgraph SoC["SoC"]
-        CPU["CPU"]
-        GPU["GPU"]
-        DMA["DMA"]
-        ACC["NIC / Accel"]
-        MMU["MMU<br/>(CPU 전용)"]
-        SMMU["SMMU"]
-        IOMMU["IOMMU"]
-        SYSMMU["sysMMU"]
-        MC["Memory<br/>Controller"]
-    end
-    DRAM[("DRAM")]
+```d2
+direction: right
 
-    CPU --> MMU --> MC
-    GPU --> SMMU --> MC
-    DMA --> IOMMU --> MC
-    ACC --> SYSMMU --> MC
-    MC --> DRAM
-
-    classDef cpuPath stroke:#2980b9,stroke-width:2px
-    classDef devPath stroke:#8e44ad,stroke-width:2px,stroke-dasharray: 4 2
-    class CPU,MMU cpuPath
-    class GPU,DMA,ACC,SMMU,IOMMU,SYSMMU devPath
+SoC: "SoC" {
+  CPU: "CPU"
+  GPU: "GPU"
+  DMA: "DMA"
+  ACC: "NIC / Accel"
+  MMU: "MMU\n(CPU 전용)"
+  SMMU: "SMMU"
+  IOMMU: "IOMMU"
+  SYSMMU: "sysMMU"
+  MC: "Memory\nController"
+}
+DRAM: "DRAM" { shape: cylinder }
+CPU -> MMU
+MMU -> MC
+GPU -> SMMU
+SMMU -> MC
+DMA -> IOMMU
+IOMMU -> MC
+ACC -> SYSMMU
+SYSMMU -> MC
+MC -> DRAM
 ```
 
 > CPU → MMU (CPU 전용, 보통 CPU 내부) <br>
@@ -400,26 +399,22 @@ ARMv8에서 Exception Level별 Translation Regime:
 
 ### 5.7 Secure vs Non-secure — TrustZone 과 MMU
 
-```mermaid
-flowchart LR
-    subgraph Normal["Normal World"]
-        NOS["Normal OS<br/>(Android / Linux)"]
-        NMMU["Normal MMU<br/>(TTBR_EL1)"]
-        NOS --> NMMU
-    end
-    subgraph Secure["Secure World"]
-        SOS["Trusted OS<br/>(OP-TEE 등)"]
-        SMMU2["Secure MMU<br/>(TTBR_EL1_S)"]
-        SOS --> SMMU2
-    end
-    TZASC["TZASC<br/>(TrustZone Address<br/>Space Controller)"]
-    NMMU --> TZASC
-    SMMU2 --> TZASC
+```d2
+direction: right
 
-    classDef sec stroke:#c0392b,stroke-width:3px
-    classDef nor stroke:#27ae60,stroke-width:2px
-    class SOS,SMMU2 sec
-    class NOS,NMMU nor
+Normal: "Normal World" {
+  NOS: "Normal OS\n(Android / Linux)"
+  NMMU: "Normal MMU\n(TTBR_EL1)"
+  NOS -> NMMU
+}
+Secure: "Secure World" {
+  SOS: "Trusted OS\n(OP-TEE 등)"
+  SMMU2: "Secure MMU\n(TTBR_EL1_S)"
+  SOS -> SMMU2
+}
+TZASC: "TZASC\n(TrustZone Address\nSpace Controller)"
+NMMU -> TZASC
+SMMU2 -> TZASC
 ```
 
 **물리 주소 공간 분리**:

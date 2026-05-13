@@ -68,17 +68,18 @@ DCMAC 검증의 모든 트랜잭션은 **Ethernet frame 1 개** 단위로 출발
 
 ### 한 장 그림 — Frame 한 개가 wire 까지 가는 길
 
-```mermaid
-flowchart TB
-    APP["Application (e.g. TOE)<br/>L4 / IP layer 위"]
-    MAC["MAC engine (DCMAC)<br/>1) Preamble + SFD prepend<br/>2) Pad to ≥ 46B if needed<br/>3) Compute FCS over (DA..Payload)<br/>4) Insert IFG (≥ 12B)"]
-    PCS["PCS<br/>64b/66b encode + scramble<br/>RS-FEC parity (100G+)<br/>Lane distribute + AM insert"]
-    PMD["PMA / PMD<br/>SerDes lane (e.g. 4 × 25G NRZ or 4 × 53G PAM4)"]
-    NET(("Network"))
-    APP -- "bytes (Dst MAC ~ Payload)" --> MAC
-    MAC --> PCS
-    PCS --> PMD
-    PMD -- "light / electrical pulses" --> NET
+```d2
+direction: down
+
+APP: "Application (e.g. TOE)\nL4 / IP layer 위"
+MAC: "MAC engine (DCMAC)\n1) Preamble + SFD prepend\n2) Pad to ≥ 46B if needed\n3) Compute FCS over (DA..Payload)\n4) Insert IFG (≥ 12B)"
+PCS: "PCS\n64b/66b encode + scramble\nRS-FEC parity (100G+)\nLane distribute + AM insert"
+PMD: "PMA / PMD\nSerDes lane (e.g. 4 × 25G NRZ or 4 × 53G PAM4)"
+NET: "Network" { shape: circle }
+APP -> MAC: "bytes (Dst MAC ~ Payload)"
+MAC -> PCS
+PCS -> PMD
+PMD -> NET: "light / electrical pulses"
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -150,21 +151,18 @@ sequenceDiagram
 
 ### 4.1 4 계층 분담
 
-```mermaid
-flowchart TB
-    MAC["<b>MAC (Media Access Control)</b><br/>frame 생성/파싱, FCS<br/>흐름 제어 (Pause/PFC)<br/>← DCMAC 이 이 계층"]
-    PCS["<b>PCS (Physical Coding Sublayer)</b><br/>인코딩 (64b/66b), Scrambling, Alignment<br/>RS-FEC (100G+), Lane Distribution"]
-    PMA["<b>PMA (Physical Medium Attachment)</b><br/>SerDes, CDR, Signal Conditioning"]
-    PMD["<b>PMD (Physical Medium Dependent)</b><br/>광모듈 (QSFP, SFP), 전기 인터페이스"]
-    MED(("Physical Medium<br/>광섬유 / 구리"))
+```d2
+direction: down
 
-    MAC -- "MII / XGMII / CGMII / Segmented" --> PCS
-    PCS -- "PMA Service Interface" --> PMA
-    PMA -- "PMD" --> PMD
-    PMD --> MED
-
-    classDef hl stroke:#1a73e8,stroke-width:2px
-    class MAC hl
+MAC: "**MAC (Media Access Control)**\nframe 생성/파싱, FCS\n흐름 제어 (Pause/PFC)\n← DCMAC 이 이 계층"
+PCS: "**PCS (Physical Coding Sublayer)**\n인코딩 (64b/66b), Scrambling, Alignment\nRS-FEC (100G+), Lane Distribution"
+PMA: "**PMA (Physical Medium Attachment)**\nSerDes, CDR, Signal Conditioning"
+PMD: "**PMD (Physical Medium Dependent)**\n광모듈 (QSFP, SFP), 전기 인터페이스"
+MED: "Physical Medium\n광섬유 / 구리" { shape: circle }
+MAC -> PCS: "MII / XGMII / CGMII / Segmented"
+PCS -> PMA: "PMA Service Interface"
+PMA -> PMD: "PMD"
+PMD -> MED
 ```
 
 **DV 관점**: MAC 검증은 **MAC ↔ PCS 경계 (MII/Segmented)** 와 **MAC ↔ 상위 계층 (AXI-S)** 두 경계에서 수행합니다. 각 경계에서 신호 의미가 어떻게 다른지가 핵심.

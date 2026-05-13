@@ -186,25 +186,20 @@ void isp_isr(void) {
 
 §3 의 frame path 시나리오에서 등장한 _연결 / 클럭 / 리셋 / 인터럽트 / 메모리맵 / 전원_ 을 일반화하면 SoC Top 검증의 **5 축** 이 됩니다.
 
-```mermaid
-flowchart TB
-    ROOT["SoC Top 결함"]
-    CONN["Connectivity<br/>(signal mis-route)"]
-    MMAP["Memory Map<br/>(decoder mismatch)"]
-    CR["Clock / Reset<br/>(CDC, deassert order)"]
-    IRQ["Interrupt Routing<br/>(wrong SPI / type)"]
-    PWR["Power Domain<br/>(isolation, sequence)"]
+```d2
+direction: down
 
-    ROOT --> CONN
-    ROOT --> MMAP
-    ROOT --> CR
-    ROOT --> IRQ
-    IRQ --> PWR
-
-    classDef root stroke:#1a73e8,stroke-width:3px
-    classDef axis stroke:#5f6368,stroke-width:2px
-    class ROOT root
-    class CONN,MMAP,CR,IRQ,PWR axis
+ROOT: "SoC Top 결함"
+CONN: "Connectivity\n(signal mis-route)"
+MMAP: "Memory Map\n(decoder mismatch)"
+CR: "Clock / Reset\n(CDC, deassert order)"
+IRQ: "Interrupt Routing\n(wrong SPI / type)"
+PWR: "Power Domain\n(isolation, sequence)"
+ROOT -> CONN
+ROOT -> MMAP
+ROOT -> CR
+ROOT -> IRQ
+IRQ -> PWR
 ```
 
 | 축 | 결함 형태 | IP 검증으로 못 잡는 이유 |

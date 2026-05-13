@@ -195,17 +195,20 @@ def binary_search(nums, target):
 
 ### 4.2 패턴 사고법 — 5 단계 표준 절차
 
-```mermaid
-flowchart TB
-    P0["문제 받음"]
-    P1["① 입력 / 제약 적기<br/>N 범위 · 자료형 · 정렬 여부"]
-    P2["② 목표 복잡도 역산<br/>N=10⁵ → O(N log N) 이하"]
-    P3["③ 후보 패턴 매핑<br/>Hash Map / Two Pointers / DP / ..."]
-    P4["④ Brute Force 부터<br/>먼저 O(N²) 풀이 말로 설명"]
-    P5["⑤ 비효율 분석 → 최적화<br/>'내부 루프의 검색을 O(1) 로?'"]
-    P0 --> P1 --> P2 --> P3 --> P4 --> P5
-    classDef key stroke-width:3px
-    class P3,P5 key
+```d2
+direction: down
+
+P0: "문제 받음"
+P1: "① 입력 / 제약 적기\nN 범위 · 자료형 · 정렬 여부"
+P2: "② 목표 복잡도 역산\nN=10⁵ → O(N log N) 이하"
+P3: "③ 후보 패턴 매핑\nHash Map / Two Pointers / DP / ..."
+P4: "④ Brute Force 부터\n먼저 O(N²) 풀이 말로 설명"
+P5: "⑤ 비효율 분석 → 최적화\n'내부 루프의 검색을 O(1) 로?'"
+P0 -> P1
+P1 -> P2
+P2 -> P3
+P3 -> P4
+P4 -> P5
 ```
 
 ### 4.3 입력 크기 → 허용 복잡도 (역산표)

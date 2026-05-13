@@ -248,25 +248,26 @@ TLB Miss Ratio = TLB Miss 횟수 / 전체 변환 요청 수
 
 #### 모델 구조
 
-```mermaid
-flowchart TB
-    REQ["Translation Request<br/>(VA, size, type)"]
-    DUT["DUT (RTL)"]
-    FUNC["Functional Model"]
-    IDEAL["Ideal Perf Model"]
-    OUT_D["PA + Latency"]
-    OUT_F["PA (Golden)"]
-    OUT_I["PA + Min Latency"]
-    SB["Scoreboard<br/>① DUT.PA == Functional.PA? (정확성)<br/>② DUT.Latency ≤ Ideal.Latency × K? (성능)<br/>③ DUT.MissRatio vs Ideal.MissRatio (효율)"]
+```d2
+direction: down
 
-    REQ --> DUT --> OUT_D --> SB
-    REQ --> FUNC --> OUT_F --> SB
-    REQ --> IDEAL --> OUT_I --> SB
-
-    classDef golden stroke:#27ae60,stroke-width:3px
-    classDef bound stroke:#2980b9,stroke-width:2px,stroke-dasharray: 4 2
-    class FUNC golden
-    class IDEAL bound
+REQ: "Translation Request\n(VA, size, type)"
+DUT: "DUT (RTL)"
+FUNC: "Functional Model"
+IDEAL: "Ideal Perf Model"
+OUT_D: "PA + Latency"
+OUT_F: "PA (Golden)"
+OUT_I: "PA + Min Latency"
+SB: "Scoreboard\n① DUT.PA == Functional.PA? (정확성)\n② DUT.Latency ≤ Ideal.Latency × K? (성능)\n③ DUT.MissRatio vs Ideal.MissRatio (효율)"
+REQ -> DUT
+DUT -> OUT_D
+OUT_D -> SB
+REQ -> FUNC
+FUNC -> OUT_F
+OUT_F -> SB
+REQ -> IDEAL
+IDEAL -> OUT_I
+OUT_I -> SB
 ```
 
 #### Functional Model vs Ideal Performance Model

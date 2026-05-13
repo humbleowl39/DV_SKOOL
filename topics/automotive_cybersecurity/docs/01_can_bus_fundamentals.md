@@ -87,33 +87,28 @@ Chrysler 가 **140만 대 리콜** — 차량 사이버보안의 분수령.
 
 ### 한 장 그림 — CAN Bus 와 외부 진입점
 
-```mermaid
-flowchart TB
-    ASSUME["1983 설계 가정<br/>'버스 위는 신뢰'"]
-    ECU_A["ECU-A<br/>엔진"]
-    ECU_B["ECU-B<br/>브레이크"]
-    ECU_C["ECU-C<br/>ADAS"]
-    GW["GW<br/>게이트웨이"]
-    BUS(["CAN Bus<br/>shared · broadcast · no auth"])
-    OBD["OBD-II Port<br/>법적 의무 · Pin 6/14"]
-    EXT_TOOL["외부 진단 도구"]
-    EXT_DONGLE["악성 동글"]
-    EXT_SW["정비소 SW"]
+```d2
+direction: down
 
-    ASSUME -.기반.-> BUS
-    ECU_A --- BUS
-    ECU_B --- BUS
-    ECU_C --- BUS
-    GW --- BUS
-    BUS --- OBD
-    OBD --> EXT_TOOL
-    OBD --> EXT_DONGLE
-    OBD --> EXT_SW
-
-    classDef assume stroke-dasharray:4 4,stroke-width:2px
-    classDef attacker stroke-width:2px,stroke-dasharray:6 3
-    class ASSUME assume
-    class EXT_DONGLE attacker
+ASSUME: "1983 설계 가정\n'버스 위는 신뢰'"
+ECU_A: "ECU-A\n엔진"
+ECU_B: "ECU-B\n브레이크"
+ECU_C: "ECU-C\nADAS"
+GW: "GW\n게이트웨이"
+BUS: "CAN Bus\nshared · broadcast · no auth" { shape: oval }
+OBD: "OBD-II Port\n법적 의무 · Pin 6/14"
+EXT_TOOL: "외부 진단 도구"
+EXT_DONGLE: "악성 동글"
+EXT_SW: "정비소 SW"
+ASSUME -> BUS: "기반" { style.stroke-dash: 4 }
+ECU_A -- BUS
+ECU_B -- BUS
+ECU_C -- BUS
+GW -- BUS
+BUS -- OBD
+OBD -> EXT_TOOL
+OBD -> EXT_DONGLE
+OBD -> EXT_SW
 ```
 
 ECU 4 대가 동일한 wired-AND 버스를 공유하고, **OBD-II 포트가 그 버스에 직결** 됩니다. 외부 장치가 어떤 ID 로도 메시지를 송신할 수 있고, 모든 ECU 가 그 메시지를 수신·처리합니다 — 발신자가 누군지 _구별할 방법이 프로토콜 내부에 없음_.
@@ -401,51 +396,45 @@ sequenceDiagram
 
 #### Tesla FSD 탈옥에서의 역할 (Module 03 미리보기)
 
-```mermaid
-flowchart LR
-    DONGLE["탈옥 동글"]
-    BUS(["CAN Bus"])
-    GPS["GPS 좌표 위조<br/>CAN 프레임 주입"]
-    REGION["Region Code<br/>프레임 변조"]
-    FLAG["Feature Flag<br/>프레임 위조"]
-    FSD["FSD SoC<br/>위조 프레임을 정상으로 수용<br/>(CAN 메시지 인증 부재)"]
+```d2
+direction: right
 
-    DONGLE -- OBD-II --> BUS
-    BUS --> GPS
-    BUS --> REGION
-    BUS --> FLAG
-    GPS --> FSD
-    REGION --> FSD
-    FLAG --> FSD
-
-    classDef attacker stroke-width:2px,stroke-dasharray:6 3
-    class DONGLE attacker
+DONGLE: "탈옥 동글"
+BUS: "CAN Bus" { shape: oval }
+GPS: "GPS 좌표 위조\nCAN 프레임 주입"
+REGION: "Region Code\n프레임 변조"
+FLAG: "Feature Flag\n프레임 위조"
+FSD: "FSD SoC\n위조 프레임을 정상으로 수용\n(CAN 메시지 인증 부재)"
+DONGLE -> BUS: "OBD-II"
+BUS -> GPS
+BUS -> REGION
+BUS -> FLAG
+GPS -> FSD
+REGION -> FSD
+FLAG -> FSD
 ```
 
 ### 5.9 구조적 취약점 요약 — 한 장
 
-```mermaid
-flowchart TB
-    ASSUME["1980 년대 설계 가정<br/>'버스에 연결된 노드는 모두 신뢰 가능'"]
-    FLAW1["1. 무인증<br/>발신자 검증 없음"]
-    FLAW2["2. 무암호화<br/>평문 전송"]
-    FLAW3["3. 브로드캐스트<br/>전체 노드에 전파"]
-    FLAW4["4. 무상태<br/>세션/시퀀스 관리 없음"]
-    R1["OBD-II 로 외부 장치가<br/>CAN 에 접근"]
-    R2["위조 메시지와 정상 메시지를<br/>구별할 방법 없음"]
-    R3["GPS / 속도 / 기능 플래그 등<br/>모든 데이터 조작 가능"]
+```d2
+direction: down
 
-    ASSUME --> FLAW1
-    ASSUME --> FLAW2
-    ASSUME --> FLAW3
-    ASSUME --> FLAW4
-    FLAW1 --> R2
-    FLAW2 --> R3
-    FLAW3 --> R1
-    FLAW4 --> R2
-
-    classDef assume stroke-dasharray:4 4,stroke-width:2px
-    class ASSUME assume
+ASSUME: "1980 년대 설계 가정\n'버스에 연결된 노드는 모두 신뢰 가능'"
+FLAW1: "1. 무인증\n발신자 검증 없음"
+FLAW2: "2. 무암호화\n평문 전송"
+FLAW3: "3. 브로드캐스트\n전체 노드에 전파"
+FLAW4: "4. 무상태\n세션/시퀀스 관리 없음"
+R1: "OBD-II 로 외부 장치가\nCAN 에 접근"
+R2: "위조 메시지와 정상 메시지를\n구별할 방법 없음"
+R3: "GPS / 속도 / 기능 플래그 등\n모든 데이터 조작 가능"
+ASSUME -> FLAW1
+ASSUME -> FLAW2
+ASSUME -> FLAW3
+ASSUME -> FLAW4
+FLAW1 -> R2
+FLAW2 -> R3
+FLAW3 -> R1
+FLAW4 -> R2
 ```
 
 ### 5.10 Automotive Ethernet 과의 비교

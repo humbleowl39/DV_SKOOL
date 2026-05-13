@@ -74,31 +74,28 @@ DCMAC 검증의 핵심 어려움은 두 가지가 **동시에** 일어난다는 
 
 ### 한 장 그림 — Env 구조 + 신호 흐름
 
-```mermaid
-flowchart TB
-    subgraph ENV["DCMAC UVM ENV"]
-        direction TB
-        AXIS_TX["AXI-S TX agent<br/>sequencer + driver + monitor"]
-        LINE_RX_AGT["Line agent<br/>line driver / mon (Segmented IF)"]
-        DUT["DUT (DCMAC)"]
-        AXIS_RX["AXI-S RX agent<br/>(RX monitor)"]
-        LINE_TX_AGT["Line agent<br/>(TX line monitor)"]
-        SB["Scoreboard<br/>TX path : AXI-S in → Line out (Preamble/FCS 추가)<br/>RX path : Line in → AXI-S out (Preamble/FCS 검증)<br/>통계    : RAL 카운터 == 실제 frame 개수"]
-        AUX["Functional Coverage + SVA bind + RAL"]
+```d2
+direction: down
 
-        AXIS_TX -- "host side" --> DUT
-        LINE_RX_AGT --> DUT
-        DUT -- "host side" --> AXIS_RX
-        DUT --> LINE_TX_AGT
-        AXIS_RX --> SB
-        LINE_TX_AGT --> SB
-        AXIS_TX -. analysis .-> SB
-        LINE_RX_AGT -. analysis .-> SB
-        SB --> AUX
-    end
-
-    classDef dut stroke:#1a73e8,stroke-width:3px
-    class DUT dut
+ENV: "DCMAC UVM ENV" {
+  direction: down
+  AXIS_TX: "AXI-S TX agent\nsequencer + driver + monitor"
+  LINE_RX_AGT: "Line agent\nline driver / mon (Segmented IF)"
+  DUT: "DUT (DCMAC)"
+  AXIS_RX: "AXI-S RX agent\n(RX monitor)"
+  LINE_TX_AGT: "Line agent\n(TX line monitor)"
+  SB: "Scoreboard\nTX path : AXI-S in → Line out (Preamble/FCS 추가)\nRX path : Line in → AXI-S out (Preamble/FCS 검증)\n통계    : RAL 카운터 == 실제 frame 개수"
+  AUX: "Functional Coverage + SVA bind + RAL"
+  AXIS_TX -> DUT: "host side"
+  LINE_RX_AGT -> DUT
+  DUT -> AXIS_RX: "host side"
+  DUT -> LINE_TX_AGT
+  AXIS_RX -> SB
+  LINE_TX_AGT -> SB
+  AXIS_TX -> SB: "analysis" { style.stroke-dash: 4 }
+  LINE_RX_AGT -> SB: "analysis" { style.stroke-dash: 4 }
+  SB -> AUX
+}
 ```
 
 ### 왜 이 구조 — Design rationale
@@ -178,29 +175,26 @@ endtask
 
 ### 4.2 환경 구조 — 4 agent + scoreboard + RAL + SVA + coverage
 
-```mermaid
-flowchart TB
-    subgraph ENV2["DCMAC Subsystem UVM Env"]
-        direction TB
-        TX_GEN["TX Traffic Gen (Host Side)<br/>- 프레임 생성<br/>- 크기 랜덤화<br/>- VLAN / PFC 태그"]
-        RX_GEN["RX Traffic Gen (Line Side)<br/>- Ethernet Frame<br/>- FCS 정상 / 오류<br/>- Runt / Oversize"]
-        DUT2["DUT (DCMAC IP)"]
-        RX_MON2["RX Monitor + Checker"]
-        TX_MON2["TX Monitor + Checker"]
-        SB2["Scoreboard<br/>TX: 입력 데이터 == Line 출력? (FCS 추가 확인)<br/>RX: Line 입력 == AXI-S 출력? (FCS 결과)<br/>통계 카운터 일치?"]
-        COV["Functional Coverage"]
+```d2
+direction: down
 
-        TX_GEN -- "AXI-S TX" --> DUT2
-        RX_GEN -- "Line IF" --> DUT2
-        DUT2 -- "AXI-S RX" --> RX_MON2
-        DUT2 -- "Line IF" --> TX_MON2
-        RX_MON2 --> SB2
-        TX_MON2 --> SB2
-        SB2 --> COV
-    end
-
-    classDef dut stroke:#1a73e8,stroke-width:3px
-    class DUT2 dut
+ENV2: "DCMAC Subsystem UVM Env" {
+  direction: down
+  TX_GEN: "TX Traffic Gen (Host Side)\n- 프레임 생성\n- 크기 랜덤화\n- VLAN / PFC 태그"
+  RX_GEN: "RX Traffic Gen (Line Side)\n- Ethernet Frame\n- FCS 정상 / 오류\n- Runt / Oversize"
+  DUT2: "DUT (DCMAC IP)"
+  RX_MON2: "RX Monitor + Checker"
+  TX_MON2: "TX Monitor + Checker"
+  SB2: "Scoreboard\nTX: 입력 데이터 == Line 출력? (FCS 추가 확인)\nRX: Line 입력 == AXI-S 출력? (FCS 결과)\n통계 카운터 일치?"
+  COV: "Functional Coverage"
+  TX_GEN -> DUT2: "AXI-S TX"
+  RX_GEN -> DUT2: "Line IF"
+  DUT2 -> RX_MON2: "AXI-S RX"
+  DUT2 -> TX_MON2: "Line IF"
+  RX_MON2 -> SB2
+  TX_MON2 -> SB2
+  SB2 -> COV
+}
 ```
 
 ### 4.3 시퀀스 / 시나리오 계층

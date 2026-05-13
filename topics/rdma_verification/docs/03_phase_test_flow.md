@@ -72,33 +72,32 @@ RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 
 
 ### 한 장 그림 — phase 와 시퀀스 패턴
 
-```mermaid
-flowchart LR
-    B["build<br/>(func)<br/>env 인스턴스화<br/>AP/export"]
-    C["connect<br/>(func)"]
-    R["reset<br/>(task)<br/>DUT reset"]
-    CFG["configure<br/>(task)<br/>RAL/BAR 설정"]
-    PC["post_configure<br/>(task)<br/>init_seq 자동<br/>(default sequence)"]
-    M["main<br/>(task)<br/>test seq 실행"]
-    SD["shutdown<br/>(task)<br/>outstanding 마무리"]
-    CK["check<br/>(func)<br/>잔존 검증"]
+```d2
+direction: right
 
-    B --> C --> R --> CFG --> PC --> M --> SD --> CK
-
-    P1["패턴 1<br/>default seq"]
-    P2["패턴 2<br/>start_item / finish_item<br/>.sequencer(t_seqr)"]
-    P3["패턴 3<br/>cq_handler.RDMACQPoll"]
-    P4["패턴 4<br/>my_top_seq.start(top_vseqr)"]
-
-    PC -. 자동 .-> P1
-    M -.-> P2
-    M -.-> P3
-    M -.-> P4
-
-    classDef phase stroke:#1a73e8,stroke-width:2px
-    classDef phaseHi stroke:#1a73e8,stroke-width:3px
-    class B,C,R,CFG,SD,CK phase
-    class PC,M phaseHi
+B: "build\n(func)\nenv 인스턴스화\nAP/export"
+C: "connect\n(func)"
+R: "reset\n(task)\nDUT reset"
+CFG: "configure\n(task)\nRAL/BAR 설정"
+PC: "post_configure\n(task)\ninit_seq 자동\n(default sequence)"
+M: "main\n(task)\ntest seq 실행"
+SD: "shutdown\n(task)\noutstanding 마무리"
+CK: "check\n(func)\n잔존 검증"
+B -> C
+C -> R
+R -> CFG
+CFG -> PC
+PC -> M
+M -> SD
+SD -> CK
+P1: "패턴 1\ndefault seq"
+P2: "패턴 2\nstart_item / finish_item\n.sequencer(t_seqr)"
+P3: "패턴 3\ncq_handler.RDMACQPoll"
+P4: "패턴 4\nmy_top_seq.start(top_vseqr)"
+PC -> P1: "자동" { style.stroke-dash: 4 }
+M -> P2 { style.stroke-dash: 4 }
+M -> P3 { style.stroke-dash: 4 }
+M -> P4 { style.stroke-dash: 4 }
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -175,25 +174,18 @@ sequenceDiagram
 
 ### 4.2 Sequencer 계층
 
-```mermaid
-flowchart TB
-    TVS["top_vseqr<br/>(vrdma_top_virtual_sequencer)"]
-    HV0["host_vseqr[0]<br/>(vrdma_host_virtual_sequencer)"]
-    HV1["host_vseqr[1]<br/>(vrdma_host_virtual_sequencer)"]
-    RS0["rdma_seqr[0]<br/>(vrdma_sequencer)<br/>node 0 verb queue"]
-    RS1["rdma_seqr[1]<br/>(vrdma_sequencer)<br/>node 1 verb queue"]
+```d2
+direction: down
 
-    TVS --> HV0
-    TVS --> HV1
-    HV0 --> RS0
-    HV1 --> RS1
-
-    classDef top stroke:#1a73e8,stroke-width:3px
-    classDef host stroke:#1a73e8,stroke-width:2px
-    classDef seqr stroke:#137333,stroke-width:2px
-    class TVS top
-    class HV0,HV1 host
-    class RS0,RS1 seqr
+TVS: "top_vseqr\n(vrdma_top_virtual_sequencer)"
+HV0: "host_vseqr[0]\n(vrdma_host_virtual_sequencer)"
+HV1: "host_vseqr[1]\n(vrdma_host_virtual_sequencer)"
+RS0: "rdma_seqr[0]\n(vrdma_sequencer)\nnode 0 verb queue"
+RS1: "rdma_seqr[1]\n(vrdma_sequencer)\nnode 1 verb queue"
+TVS -> HV0
+TVS -> HV1
+HV0 -> RS0
+HV1 -> RS1
 ```
 
 핵심 규칙:

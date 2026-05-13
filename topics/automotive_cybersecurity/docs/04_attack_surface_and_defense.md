@@ -88,29 +88,26 @@
 
 ### 한 장 그림 — 차량 공격 표면 전체 맵
 
-```mermaid
-flowchart TB
-    CLOUD["Cloud / OTA<br/>(OEM Server)"]
-    V2X["V2X (RSU)"]
-    TCU["Telematics<br/>Control Unit"]
-    APP["Mobile App"]
-    GW["Central Gateway"]
-    PT["Powertrain Domain<br/>엔진 ECU · 변속기 ECU"]
-    CH["Chassis / ADAS<br/>ADAS SoC · 브레이크 · 조향"]
-    IN["Infotainment Domain<br/>디스플레이 · USB / BT · OBD-II"]
-    PHY["물리 접근<br/>(OBD-II / USB / BT)"]
+```d2
+direction: down
 
-    CLOUD -- "Cellular / WiFi" --> TCU
-    V2X -- DSRC --> TCU
-    APP -- BT --> TCU
-    TCU --> GW
-    GW --> PT
-    GW --> CH
-    GW --> IN
-    PHY -.-> IN
-
-    classDef attack stroke-width:2px,stroke-dasharray:6 3
-    class PHY attack
+CLOUD: "Cloud / OTA\n(OEM Server)"
+V2X: "V2X (RSU)"
+TCU: "Telematics\nControl Unit"
+APP: "Mobile App"
+GW: "Central Gateway"
+PT: "Powertrain Domain\n엔진 ECU · 변속기 ECU"
+CH: "Chassis / ADAS\nADAS SoC · 브레이크 · 조향"
+IN: "Infotainment Domain\n디스플레이 · USB / BT · OBD-II"
+PHY: "물리 접근\n(OBD-II / USB / BT)"
+CLOUD -> TCU: "Cellular / WiFi"
+V2X -> TCU: "DSRC"
+APP -> TCU: "BT"
+TCU -> GW
+GW -> PT
+GW -> CH
+GW -> IN
+PHY -> IN { style.stroke-dash: 4 }
 ```
 
 3 축 진입: (1) Cloud / 무선 (Cellular, V2X, BT), (2) 물리 (OBD, JTAG, USB), (3) 공급망 (FW 빌드 시스템, OTA 서버).

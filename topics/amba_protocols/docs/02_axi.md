@@ -103,32 +103,30 @@ CPU read 100 lines (RAM)        GPU write 200 lines (frame buffer)
 
 ### 한 장 그림 — AXI 5채널 구조
 
-```mermaid
-flowchart LR
-    subgraph M["Master"]
-        direction TB
-        M_AW["AW · Write Addr"]
-        M_W["W · Write Data"]
-        M_B["B · Write Resp"]
-        M_AR["AR · Read Addr"]
-        M_R["R · Read Data"]
-    end
-    subgraph S["Slave"]
-        direction TB
-        S_AW["AW · Write Addr"]
-        S_W["W · Write Data"]
-        S_B["B · Write Resp"]
-        S_AR["AR · Read Addr"]
-        S_R["R · Read Data"]
-    end
-    M_AW -- "Write Address Channel" --> S_AW
-    M_W  -- "Write Data Channel"    --> S_W
-    S_B  -- "Write Response Channel"--> M_B
-    M_AR -- "Read Address Channel"  --> S_AR
-    S_R  -- "Read Data Channel"     --> M_R
+```d2
+direction: right
 
-    classDef ch stroke:#1a73e8,stroke-width:2px
-    class M_AW,M_W,M_B,M_AR,M_R,S_AW,S_W,S_B,S_AR,S_R ch
+M: "Master" {
+  direction: down
+  M_AW: "AW · Write Addr"
+  M_W: "W · Write Data"
+  M_B: "B · Write Resp"
+  M_AR: "AR · Read Addr"
+  M_R: "R · Read Data"
+}
+S: "Slave" {
+  direction: down
+  S_AW: "AW · Write Addr"
+  S_W: "W · Write Data"
+  S_B: "B · Write Resp"
+  S_AR: "AR · Read Addr"
+  S_R: "R · Read Data"
+}
+M_AW -> S_AW: "Write Address Channel"
+M_W -> S_W: "Write Data Channel"
+S_B -> M_B: "Write Response Channel"
+M_AR -> S_AR: "Read Address Channel"
+S_R -> M_R: "Read Data Channel"
 ```
 
 각 채널이 독립 → Read와 Write 동시 가능 = Full-Duplex. 한 채널의 stall (`xVALID && !xREADY`) 이 다른 채널을 막지 않음.

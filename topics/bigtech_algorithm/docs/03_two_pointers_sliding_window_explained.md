@@ -185,21 +185,20 @@ def two_sum_sorted(nums, target):
 
 ### 4.1 신호 매핑
 
-```mermaid
-flowchart TB
-    P0["문제 받음"]
-    S1{"정렬된 배열 +<br/>두 값의 관계 (합/차/곱) ?"}
-    TP["Two Pointers (양방향)<br/>양 끝에서 좁힘"]
-    S2{"연속 부분 배열 /<br/>부분 문자열 ?"}
-    SW1["Fixed-size Sliding Window<br/>(크기 k → 합/평균)"]
-    SW2["Variable-size Sliding Window<br/>(조건 만족 최장/최단 길이)"]
-    P0 --> S1
-    S1 -- YES --> TP
-    S1 -- NO --> S2
-    S2 -- "고정 크기 k" --> SW1
-    S2 -- "가변 크기" --> SW2
-    classDef pick stroke-width:3px
-    class TP,SW1,SW2 pick
+```d2
+direction: down
+
+P0: "문제 받음"
+S1: "정렬된 배열 +\n두 값의 관계 (합/차/곱) ?" { shape: diamond }
+TP: "Two Pointers (양방향)\n양 끝에서 좁힘"
+S2: "연속 부분 배열 /\n부분 문자열 ?" { shape: diamond }
+SW1: "Fixed-size Sliding Window\n(크기 k → 합/평균)"
+SW2: "Variable-size Sliding Window\n(조건 만족 최장/최단 길이)"
+P0 -> S1
+S1 -> TP: "YES"
+S1 -> S2: "NO"
+S2 -> SW1: "고정 크기 k"
+S2 -> SW2: "가변 크기"
 ```
 
 ### 4.2 키워드 → 패턴

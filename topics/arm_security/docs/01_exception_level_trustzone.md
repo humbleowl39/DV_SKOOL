@@ -199,24 +199,24 @@ asm volatile("smc #0" : "+r"(x0), "+r"(x1));
     - **Exception Level (EL)**: ARMv8 PE (Processing Element) 의 권한 계층 (`EL0` < `EL1` < `EL2` < `EL3`) 으로, 각 level 이 system register / 메모리 매핑 / 명령어 사용 권한 범위를 결정한다.
     - **Security State (NS bit)**: PE 의 1-bit 상태로, 현재 instruction 이 Secure World 에서 실행되는지 (`NS=0`) Non-Secure World 에서 실행되는지 (`NS=1`) 를 표시하며, 모든 outgoing bus transaction 의 보안 attribute 로 전파된다.
 
-```mermaid
-flowchart LR
-    subgraph V["EL — 수직 (권한)"]
-        direction TB
-        E3["EL3 — Secure Monitor"]
-        E2["EL2 — Hypervisor"]
-        E1["EL1 — OS kernel"]
-        E0["EL0 — Application"]
-        E3 --- E2 --- E1 --- E0
-    end
-    subgraph H["NS — 수평 (월드)"]
-        direction TB
-        NS0["NS=0 · Secure (TEE)"]
-        NS1["NS=1 · Non-Secure (Rich OS)"]
-    end
+```d2
+direction: right
 
-    classDef axis stroke:#1a73e8,stroke-width:2px
-    class E3,E2,E1,E0,NS0,NS1 axis
+V: "EL — 수직 (권한)" {
+  direction: down
+  E3: "EL3 — Secure Monitor"
+  E2: "EL2 — Hypervisor"
+  E1: "EL1 — OS kernel"
+  E0: "EL0 — Application"
+  E3 -- E2
+  E2 -- E1
+  E1 -- E0
+}
+H: "NS — 수평 (월드)" {
+  direction: down
+  NS0: "NS=0 · Secure (TEE)"
+  NS1: "NS=1 · Non-Secure (Rich OS)"
+}
 ```
 
 핵심: 두 축은 **독립** 입니다. EL3 만 항상 NS=0 으로 고정되고 (전환 게이트), 나머지 EL 은 (S, NS) 둘 다 가능. 그래서 표면상 4 × 2 = 8 mode 가 존재합니다.
@@ -248,20 +248,16 @@ flowchart LR
 
 ### 5.1 Exception Level (EL0 ~ EL3)
 
-```mermaid
-flowchart TB
-    EL3["<b>EL3 — Secure Monitor</b><br/>ATF/BL31, BootROM/BL1<br/>최고 권한 · 월드 전환 관리<br/>SMC 로 진입 · 항상 Secure"]
-    EL2["<b>EL2 — Hypervisor</b><br/>VM 관리<br/>S-EL2 (ARMv8.4+) · NS-EL2 (KVM)"]
-    EL1["<b>EL1 — OS Kernel</b><br/>S-EL1: TEE OS (OP-TEE, Trusty)<br/>NS-EL1: Linux, Android"]
-    EL0["<b>EL0 — Application</b><br/>S-EL0: Trusted App (결제, DRM, 생체)<br/>NS-EL0: 일반 앱"]
-    EL3 --> EL2 --> EL1 --> EL0
+```d2
+direction: down
 
-    classDef high stroke:#c5221f,stroke-width:3px
-    classDef mid stroke:#1a73e8,stroke-width:2px
-    classDef low stroke:#5f6368,stroke-width:1px
-    class EL3 high
-    class EL2,EL1 mid
-    class EL0 low
+EL3: "**EL3 — Secure Monitor**\nATF/BL31, BootROM/BL1\n최고 권한 · 월드 전환 관리\nSMC 로 진입 · 항상 Secure"
+EL2: "**EL2 — Hypervisor**\nVM 관리\nS-EL2 (ARMv8.4+) · NS-EL2 (KVM)"
+EL1: "**EL1 — OS Kernel**\nS-EL1: TEE OS (OP-TEE, Trusty)\nNS-EL1: Linux, Android"
+EL0: "**EL0 — Application**\nS-EL0: Trusted App (결제, DRM, 생체)\nNS-EL0: 일반 앱"
+EL3 -> EL2
+EL2 -> EL1
+EL1 -> EL0
 ```
 
 #### 각 EL 의 핵심 역할
@@ -453,25 +449,23 @@ ERET 실행 (복귀):
 
 #### Stage 1 vs Stage 2 Translation (EL2 의 핵심)
 
-```mermaid
-flowchart LR
-    subgraph BM["EL2 없을 때 (베어메탈)"]
-        direction LR
-        VA1["VA<br/>(가상 주소)"]
-        PA1["PA<br/>(물리 주소)"]
-        VA1 -- "Stage 1" --> PA1
-    end
-    subgraph VZ["EL2 있을 때 (가상화)"]
-        direction LR
-        VA2["VA"]
-        IPA["IPA<br/>(중간 물리 주소)"]
-        PA2["PA"]
-        VA2 -- "Stage 1<br/>Guest OS (EL1) 관리" --> IPA
-        IPA -- "Stage 2<br/>Hypervisor (EL2) 관리" --> PA2
-    end
+```d2
+direction: right
 
-    classDef stage stroke:#1a73e8,stroke-width:2px
-    class VA1,PA1,VA2,IPA,PA2 stage
+BM: "EL2 없을 때 (베어메탈)" {
+  direction: right
+  VA1: "VA\n(가상 주소)"
+  PA1: "PA\n(물리 주소)"
+  VA1 -> PA1: "Stage 1"
+}
+VZ: "EL2 있을 때 (가상화)" {
+  direction: right
+  VA2: "VA"
+  IPA: "IPA\n(중간 물리 주소)"
+  PA2: "PA"
+  VA2 -> IPA: "Stage 1\nGuest OS (EL1) 관리"
+  IPA -> PA2: "Stage 2\nHypervisor (EL2) 관리"
+}
 ```
 
 - **Stage 1**: Guest OS (EL1) 가 관리 — VM 내부 매핑.
@@ -483,22 +477,16 @@ flowchart LR
 
 EL3 = Secure Monitor = 보안 월드 전환의 유일한 게이트.
 
-```mermaid
-flowchart LR
-    NSEL1["NS-EL1 (Linux)"]
-    EL3M["EL3 (Secure Monitor)"]
-    SEL1["S-EL1 (OP-TEE)"]
-    NSEL1 -- "SMC 호출 (결제 요청)" --> EL3M
-    EL3M -- "ERET → Secure" --> SEL1
-    SEL1 -- "결제 처리 후<br/>SMC 반환" --> EL3M
-    EL3M -- "ERET → Non-Secure" --> NSEL1
+```d2
+direction: right
 
-    classDef ns stroke:#1a73e8,stroke-width:2px
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef gate stroke:#b8860b,stroke-width:3px
-    class NSEL1 ns
-    class SEL1 sec
-    class EL3M gate
+NSEL1: "NS-EL1 (Linux)"
+EL3M: "EL3 (Secure Monitor)"
+SEL1: "S-EL1 (OP-TEE)"
+NSEL1 -> EL3M: "SMC 호출 (결제 요청)"
+EL3M -> SEL1: "ERET → Secure"
+SEL1 -> EL3M: "결제 처리 후\nSMC 반환"
+EL3M -> NSEL1: "ERET → Non-Secure"
 ```
 
 만약 EL3 가 Non-Secure 가 될 수 있다면 Normal World 에서 EL3 를 장악 → 보안 전환 조작 → TrustZone 전체 무력화. 따라서 EL3 는 항상 Secure — ARM 아키텍처 수준에서 강제.
@@ -514,32 +502,26 @@ ARMv8.4 이전:
 
 ARMv8.4+: Secure EL2 추가 → Secure Hypervisor 가 복수의 Secure Partition (SP) 을 격리 → FF-A (Firmware Framework for Arm) 표준으로 통신.
 
-```mermaid
-flowchart TB
-    subgraph SW["Secure side"]
-        SP0["SP0 (TEE)"]
-        SP1["SP1 (DRM)"]
-        SP2["SP2 (...)"]
-        SEL2["<b>S-EL2</b><br/>Secure Partition Manager"]
-        SP0 --> SEL2
-        SP1 --> SEL2
-        SP2 --> SEL2
-    end
-    subgraph NW["Non-Secure side"]
-        VM["NS-VM (Linux)"]
-        NSEL2["<b>NS-EL2</b><br/>KVM"]
-        VM --> NSEL2
-    end
-    EL3M["<b>EL3 — Secure Monitor</b>"]
-    SEL2 --> EL3M
-    NSEL2 --> EL3M
+```d2
+direction: down
 
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef ns stroke:#1a73e8,stroke-width:2px
-    classDef gate stroke:#b8860b,stroke-width:3px
-    class SP0,SP1,SP2,SEL2 sec
-    class VM,NSEL2 ns
-    class EL3M gate
+SW: "Secure side" {
+  SP0: "SP0 (TEE)"
+  SP1: "SP1 (DRM)"
+  SP2: "SP2 (...)"
+  SEL2: "**S-EL2**\nSecure Partition Manager"
+  SP0 -> SEL2
+  SP1 -> SEL2
+  SP2 -> SEL2
+}
+NW: "Non-Secure side" {
+  VM: "NS-VM (Linux)"
+  NSEL2: "**NS-EL2**\nKVM"
+  VM -> NSEL2
+}
+EL3M: "**EL3 — Secure Monitor**"
+SEL2 -> EL3M
+NSEL2 -> EL3M
 ```
 
 #### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준
@@ -578,28 +560,20 @@ SPM (Secure Partition Manager):
 
 ### 5.10 전환 흐름 종합 예시 — 실제 결제 경로
 
-```mermaid
-flowchart TB
-    NSEL0["NS-EL0 (앱)"]
-    NSEL1["NS-EL1 (Linux Kernel)<br/>optee_driver"]
-    EL3F["EL3 (ATF / BL31) — VBAR_EL3 + 0x400<br/>① NS context save<br/>② SCR_EL3.NS = 0<br/>③ S context restore<br/>④ ERET → S-EL1"]
-    SEL1["S-EL1 (OP-TEE)<br/>결제 TA 호출"]
-    SEL0["S-EL0 (결제 Trusted App)<br/>결제 처리"]
-    BACK["S-EL1 → EL3 → NS-EL1 → NS-EL0<br/>(역순 복귀)"]
+```d2
+direction: down
 
-    NSEL0 -- "SVC #0" --> NSEL1
-    NSEL1 -- "SMC #0" --> EL3F
-    EL3F --> SEL1
-    SEL1 --> SEL0
-    SEL0 --> BACK
-
-    classDef ns stroke:#1a73e8,stroke-width:2px
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef gate stroke:#b8860b,stroke-width:3px
-    class NSEL0,NSEL1 ns
-    class SEL1,SEL0 sec
-    class EL3F gate
-    class BACK ns
+NSEL0: "NS-EL0 (앱)"
+NSEL1: "NS-EL1 (Linux Kernel)\noptee_driver"
+EL3F: "EL3 (ATF / BL31) — VBAR_EL3 + 0x400\n① NS context save\n② SCR_EL3.NS = 0\n③ S context restore\n④ ERET → S-EL1"
+SEL1: "S-EL1 (OP-TEE)\n결제 TA 호출"
+SEL0: "S-EL0 (결제 Trusted App)\n결제 처리"
+BACK: "S-EL1 → EL3 → NS-EL1 → NS-EL0\n(역순 복귀)"
+NSEL0 -> NSEL1: "SVC #0"
+NSEL1 -> EL3F: "SMC #0"
+EL3F -> SEL1
+SEL1 -> SEL0
+SEL0 -> BACK
 ```
 
 총 EL 전환: 6 회 (상향 3 + 하향 3).

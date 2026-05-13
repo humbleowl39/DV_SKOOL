@@ -337,17 +337,18 @@ sequenceDiagram
 
 #### HW 재전송 엔진
 
-```mermaid
-flowchart TB
-    ENG["<b>Retransmission Engine</b>"]
-    B1["<b>1. 재전송 버퍼</b><br/>전송한 세그먼트 사본 보관<br/>ACK 수신 시 해당 범위 해제"]
-    B2["<b>2. RTO 타이머</b><br/>연결별 독립 타이머<br/>RTT 기반 동적 계산<br/>타이머 만료 → 재전송"]
-    B3["<b>3. Fast Retransmit</b><br/>Duplicate ACK 3 개 감지<br/>타이머 만료 전에 즉시 재전송"]
-    B4["<b>4. SACK 처리</b><br/>손실된 세그먼트만 선택적 재전송<br/>불필요한 재전송 방지"]
-    ENG --> B1
-    ENG --> B2
-    ENG --> B3
-    ENG --> B4
+```d2
+direction: down
+
+ENG: "**Retransmission Engine**"
+B1: "**1. 재전송 버퍼**\n전송한 세그먼트 사본 보관\nACK 수신 시 해당 범위 해제"
+B2: "**2. RTO 타이머**\n연결별 독립 타이머\nRTT 기반 동적 계산\n타이머 만료 → 재전송"
+B3: "**3. Fast Retransmit**\nDuplicate ACK 3 개 감지\n타이머 만료 전에 즉시 재전송"
+B4: "**4. SACK 처리**\n손실된 세그먼트만 선택적 재전송\n불필요한 재전송 방지"
+ENG -> B1
+ENG -> B2
+ENG -> B3
+ENG -> B4
 ```
 
 #### RTO 계산 — Jacobson/Karn's Algorithm (RFC 6298)

@@ -236,18 +236,14 @@ assign PENABLE = (state == S_ACCESS);
 
 ### 4.4 AHB-to-APB Bridge — 두 패턴의 접점
 
-```mermaid
-flowchart LR
-    CPU["CPU"]
-    BR["AHB-APB Bridge"]
-    SL["APB slave"]
-    CPU -- "AHB (pipeline)" --> BR
-    BR -- "APB (2-phase)" --> SL
+```d2
+direction: right
 
-    classDef ep stroke:#1a73e8,stroke-width:2px
-    classDef br stroke:#137333,stroke-width:2px
-    class CPU,SL ep
-    class BR br
+CPU: "CPU"
+BR: "AHB-APB Bridge"
+SL: "APB slave"
+CPU -> BR: "AHB (pipeline)"
+BR -> SL: "APB (2-phase)"
 ```
 
 **Bridge 의 책임**

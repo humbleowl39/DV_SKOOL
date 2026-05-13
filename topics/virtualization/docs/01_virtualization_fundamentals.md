@@ -75,32 +75,35 @@
 
 ### 한 장 그림 — Bare metal vs Virtualization
 
-```mermaid
-flowchart TB
-    subgraph BM["Bare metal"]
-        direction TB
-        BM_APP["Application"]
-        BM_OS["OS"]
-        BM_HW["Hardware"]
-        BM_APP --> BM_OS --> BM_HW
-    end
-    subgraph VT["Virtualization"]
-        direction TB
-        VT_A["App A"]
-        VT_B["App B"]
-        VT_C["App C"]
-        VT_GA["Guest A (OS)"]
-        VT_GB["Guest B (OS)"]
-        VT_GC["Guest C (OS)"]
-        VT_HV["Hypervisor (VMM)<br/>trap · schedule · isolate"]
-        VT_HW["Hardware"]
-        VT_A --> VT_GA --> VT_HV
-        VT_B --> VT_GB --> VT_HV
-        VT_C --> VT_GC --> VT_HV
-        VT_HV --> VT_HW
-    end
-    classDef emph stroke:#1a73e8,stroke-width:3px
-    class VT_HV emph
+```d2
+direction: down
+
+BM: "Bare metal" {
+  direction: down
+  BM_APP: "Application"
+  BM_OS: "OS"
+  BM_HW: "Hardware"
+  BM_APP -> BM_OS
+  BM_OS -> BM_HW
+}
+VT: "Virtualization" {
+  direction: down
+  VT_A: "App A"
+  VT_B: "App B"
+  VT_C: "App C"
+  VT_GA: "Guest A (OS)"
+  VT_GB: "Guest B (OS)"
+  VT_GC: "Guest C (OS)"
+  VT_HV: "Hypervisor (VMM)\ntrap · schedule · isolate"
+  VT_HW: "Hardware"
+  VT_A -> VT_GA
+  VT_GA -> VT_HV
+  VT_B -> VT_GB
+  VT_GB -> VT_HV
+  VT_C -> VT_GC
+  VT_GC -> VT_HV
+  VT_HV -> VT_HW
+}
 ```
 
 세 가지 일이 Hypervisor 에서 동시에 일어납니다.
@@ -166,17 +169,16 @@ static inline void load_new_mm_cr3(pgd_t *pgdir) {
 
 하드웨어는 크게 3 가지 자원으로 구성되고, 각각 다른 방식으로 가상화됩니다.
 
-```mermaid
-flowchart TB
-    V["Virtualization"]
-    CPU["<b>CPU 가상화</b><br/>특권 명령어<br/>trap / emulate<br/>HW assist (VT-x, ARM)"]
-    MEM["<b>Memory 가상화</b><br/>주소 공간<br/>2-stage 변환<br/>shadow PT<br/>(EPT, NPT)"]
-    IO["<b>I/O 가상화</b><br/>디바이스 접근<br/>emulation / passthrough<br/>(SR-IOV, VFIO)"]
-    V --> CPU
-    V --> MEM
-    V --> IO
-    classDef root stroke:#1a73e8,stroke-width:3px
-    class V root
+```d2
+direction: down
+
+V: "Virtualization"
+CPU: "**CPU 가상화**\n특권 명령어\ntrap / emulate\nHW assist (VT-x, ARM)"
+MEM: "**Memory 가상화**\n주소 공간\n2-stage 변환\nshadow PT\n(EPT, NPT)"
+IO: "**I/O 가상화**\n디바이스 접근\nemulation / passthrough\n(SR-IOV, VFIO)"
+V -> CPU
+V -> MEM
+V -> IO
 ```
 
 | 자원 | 가상화 대상 | 핵심 과제 |
@@ -247,82 +249,88 @@ Efficiency   ──── 대부분의 Guest 명령은 HW 직접 실행 — trap
 
 ### 5.2 추상화 계층 — 일반 시스템 vs 가상화 시스템
 
-```mermaid
-flowchart TB
-    subgraph N["일반 시스템"]
-        direction TB
-        N_APP["Application"]
-        N_OS["OS"]
-        N_HW["Hardware"]
-        N_APP --> N_OS --> N_HW
-    end
-    subgraph V["가상화 시스템"]
-        direction TB
-        V_A["App A"]
-        V_B["App B"]
-        V_C["App C"]
-        V_OA["OS A (Guest)"]
-        V_OB["OS B (Guest)"]
-        V_OC["OS C (Guest)"]
-        V_HV["Hypervisor (VMM)"]
-        V_HW["Hardware"]
-        V_A --> V_OA --> V_HV
-        V_B --> V_OB --> V_HV
-        V_C --> V_OC --> V_HV
-        V_HV --> V_HW
-    end
-    classDef emph stroke:#1a73e8,stroke-width:3px
-    class V_HV emph
+```d2
+direction: down
+
+N: "일반 시스템" {
+  direction: down
+  N_APP: "Application"
+  N_OS: "OS"
+  N_HW: "Hardware"
+  N_APP -> N_OS
+  N_OS -> N_HW
+}
+V: "가상화 시스템" {
+  direction: down
+  V_A: "App A"
+  V_B: "App B"
+  V_C: "App C"
+  V_OA: "OS A (Guest)"
+  V_OB: "OS B (Guest)"
+  V_OC: "OS C (Guest)"
+  V_HV: "Hypervisor (VMM)"
+  V_HW: "Hardware"
+  V_A -> V_OA
+  V_OA -> V_HV
+  V_B -> V_OB
+  V_OB -> V_HV
+  V_C -> V_OC
+  V_OC -> V_HV
+  V_HV -> V_HW
+}
 ```
 
 **핵심**: Hypervisor 가 HW 와 Guest OS 사이에 위치하여 (1) HW 자원을 분할, (2) Guest OS 의 특권 명령어를 가로채서 처리, (3) VM A 가 VM B 의 메모리에 접근 불가.
 
 ### 5.3 Privileged vs Sensitive Instructions
 
-```mermaid
-flowchart TB
-    ROOT["모든 CPU 명령어"]
-    PLAIN["<b>일반 명령어</b><br/>(ADD, SUB, MOV, ...)<br/>어떤 권한 레벨이든 실행 가능<br/>Hypervisor 개입 불필요"]
-    SENS["<b>Sensitive 명령어</b><br/>HW 상태를 변경/읽는 명령어"]
-    PRIV["<b>Privileged (특권)</b><br/>비특권 모드에서 실행 시<br/>자동 trap (예외)<br/>예: MSR 쓰기, HLT, ERET"]
-    NONPRIV["<b>Non-privileged Sensitive</b> (문제!)<br/>비특권 모드에서도 trap 없이 실행<br/>HW 상태에 영향<br/>가상화 어려움 (x86 의 역사적 문제)<br/>예: POPF, SGDT (VT-x 이전)"]
-    ROOT --> PLAIN
-    ROOT --> SENS
-    SENS --> PRIV
-    SENS --> NONPRIV
-    classDef issue stroke:#c0392b,stroke-width:3px
-    class NONPRIV issue
+```d2
+direction: down
+
+ROOT: "모든 CPU 명령어"
+PLAIN: "**일반 명령어**\n(ADD, SUB, MOV, ...)\n어떤 권한 레벨이든 실행 가능\nHypervisor 개입 불필요"
+SENS: "**Sensitive 명령어**\nHW 상태를 변경/읽는 명령어"
+PRIV: "**Privileged (특권)**\n비특권 모드에서 실행 시\n자동 trap (예외)\n예: MSR 쓰기, HLT, ERET"
+NONPRIV: "**Non-privileged Sensitive** (문제!)\n비특권 모드에서도 trap 없이 실행\nHW 상태에 영향\n가상화 어려움 (x86 의 역사적 문제)\n예: POPF, SGDT (VT-x 이전)"
+ROOT -> PLAIN
+ROOT -> SENS
+SENS -> PRIV
+SENS -> NONPRIV
 ```
 
 이 마지막 칸의 존재 때문에 VMware 가 1998 년 **Binary Translation** 을 발명했고, Intel 이 2005 년 VT-x 로 **모든 sensitive 명령을 HW trap 대상** 으로 확장했습니다.
 
 ### 5.4 Trap-and-Emulate 메커니즘 (§3 의 형식적 일반화)
 
-```mermaid
-flowchart TB
-    G1["Guest OS (EL1) 가 특권 명령어 실행"]
-    TRAP["TRAP<br/>(HW 가 자동으로 예외 발생)"]
-    H1["Hypervisor (EL2) 가 예외를 받음"]
-    H2["명령어 분석 + 에뮬레이션"]
-    H3["VM 상태 업데이트"]
-    ERET["ERET (Guest OS 로 복귀)"]
-    G2["Guest OS 계속 실행<br/>(trap 이 일어난 줄 모름)"]
-    G1 --> TRAP --> H1 --> H2 --> H3 --> ERET --> G2
+```d2
+direction: down
+
+G1: "Guest OS (EL1) 가 특권 명령어 실행"
+TRAP: "TRAP\n(HW 가 자동으로 예외 발생)"
+H1: "Hypervisor (EL2) 가 예외를 받음"
+H2: "명령어 분석 + 에뮬레이션"
+H3: "VM 상태 업데이트"
+ERET: "ERET (Guest OS 로 복귀)"
+G2: "Guest OS 계속 실행\n(trap 이 일어난 줄 모름)"
+G1 -> TRAP
+TRAP -> H1
+H1 -> H2
+H2 -> H3
+H3 -> ERET
+ERET -> G2
 ```
 
 **핵심**: Guest OS 는 자기가 직접 HW 를 제어한다고 생각하지만, 실제로는 Hypervisor 가 대신 처리하고 결과만 돌려줍니다 — Equivalence 의 구현.
 
 ### 5.5 x86 Protection Ring 과 가상화 충돌
 
-```mermaid
-flowchart TB
-    subgraph R3["Ring 3 (User) — 일반 애플리케이션"]
-        direction TB
-        R0["Ring 0 (Kernel) — OS 커널 (최고 권한)"]
-    end
-    classDef ring0 stroke:#c0392b,stroke-width:2px
-    classDef ring3 stroke:#5f6368,stroke-width:2px,stroke-dasharray:4 2
-    class R0 ring0
+```d2
+direction: down
+
+R3: "Ring 3 (User) — 일반 애플리케이션" {
+  direction: down
+  R0: "Ring 0 (Kernel) — OS 커널 (최고 권한)"
+}
 ```
 
 - **Ring 0**: 모든 HW 자원 접근 가능 (특권 명령어 실행 가능).

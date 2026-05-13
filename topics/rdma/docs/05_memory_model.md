@@ -87,37 +87,33 @@
 
 ### 한 장 그림 — 객체 묶음 + 검증 chain
 
-```mermaid
-flowchart TB
-    PD["<b>PD</b> 보호 도메인"]
-    MR["<b>MR</b><br/>(lkey, rkey, [iova, len], access_flags)<br/>pages pinned + IOVA→PA mapping in HCA's ATS"]
-    QP["<b>QP</b><br/>같은 PD 안에서만 MR 사용 가능"]
-    PD -- owns --> MR
-    PD -- owns --> QP
+```d2
+direction: down
 
-    WR["incoming RDMA WRITE"]
-    V1{"rkey 일치?<br/>(key table)"}
-    V2{"access?<br/>(remote_w?)"}
-    V3{"PD 같음?<br/>qp.pd == mr.pd"}
-    V4{"range 안?<br/>[va, va+len] ⊆ MR"}
-    V5{"IOVA→PA?<br/>TLB hit? else PTW"}
-    OK["DMA write"]
-    NAK["NAK"]
-    WR --> V1
-    V1 -- Yes --> V2
-    V2 -- Yes --> V3
-    V3 -- Yes --> V4
-    V4 -- Yes --> V5
-    V5 -- Yes --> OK
-    V1 -- No --> NAK
-    V2 -- No --> NAK
-    V3 -- No --> NAK
-    V4 -- No --> NAK
-    V5 -- No --> NAK
-    classDef bad stroke:#c0392b,stroke-width:2px
-    classDef good stroke:#137333,stroke-width:2px
-    class NAK bad
-    class OK good
+PD: "**PD** 보호 도메인"
+MR: "**MR**\n(lkey, rkey, [iova, len], access_flags)\npages pinned + IOVA→PA mapping in HCA's ATS"
+QP: "**QP**\n같은 PD 안에서만 MR 사용 가능"
+PD -> MR: "owns"
+PD -> QP: "owns"
+WR: "incoming RDMA WRITE"
+V1: "rkey 일치?\n(key table)" { shape: diamond }
+V2: "access?\n(remote_w?)" { shape: diamond }
+V3: "PD 같음?\nqp.pd == mr.pd" { shape: diamond }
+V4: "range 안?\n[va, va+len] ⊆ MR" { shape: diamond }
+V5: "IOVA→PA?\nTLB hit? else PTW" { shape: diamond }
+OK: "DMA write"
+NAK: "NAK"
+WR -> V1
+V1 -> V2: "Yes"
+V2 -> V3: "Yes"
+V3 -> V4: "Yes"
+V4 -> V5: "Yes"
+V5 -> OK: "Yes"
+V1 -> NAK: "No"
+V2 -> NAK: "No"
+V3 -> NAK: "No"
+V4 -> NAK: "No"
+V5 -> NAK: "No"
 ```
 
 ### 왜 이렇게 설계했는가 — Design rationale
@@ -231,35 +227,32 @@ flowchart TB
 
 ### 4.2 5-step 검증 체인 (responder)
 
-```mermaid
-flowchart TB
-    IN["incoming RDMA WRITE (PSN=N)<br/>RETH: remote_va, len, rkey"]
-    S1["1) rkey 로 MR 찾기"]
-    S2["2) MR 의 access flag 검증"]
-    S3["3) MR 의 PD 와 QP 의 PD 비교"]
-    S4["4) [remote_va, remote_va+len] 가<br/>MR 영역 안에 있는지"]
-    S5["5) IOVA → PA 변환 (TLB/PTW)"]
-    S6["6) DMA write 수행"]
-    NAK1["NAK Remote Access Error"]
-    NAK2["NAK"]
-    NAK3["NAK"]
-    NAK4["NAK"]
-    NAK5["NAK"]
-    IN --> S1
-    S1 -- 미일치 --> NAK1
-    S1 -- match --> S2
-    S2 -- "Remote Write 없음" --> NAK2
-    S2 -- ok --> S3
-    S3 -- 다름 --> NAK3
-    S3 -- 같음 --> S4
-    S4 -- 범위 벗어남 --> NAK4
-    S4 -- 안 --> S5
-    S5 -- 변환 실패 --> NAK5
-    S5 -- ok --> S6
-    classDef bad stroke:#c0392b,stroke-width:2px
-    classDef good stroke:#137333,stroke-width:2px
-    class NAK1,NAK2,NAK3,NAK4,NAK5 bad
-    class S6 good
+```d2
+direction: down
+
+IN: "incoming RDMA WRITE (PSN=N)\nRETH: remote_va, len, rkey"
+S1: "1) rkey 로 MR 찾기"
+S2: "2) MR 의 access flag 검증"
+S3: "3) MR 의 PD 와 QP 의 PD 비교"
+S4: "4) [remote_va, remote_va+len] 가\nMR 영역 안에 있는지"
+S5: "5) IOVA → PA 변환 (TLB/PTW)"
+S6: "6) DMA write 수행"
+NAK1: "NAK Remote Access Error"
+NAK2: "NAK"
+NAK3: "NAK"
+NAK4: "NAK"
+NAK5: "NAK"
+IN -> S1
+S1 -> NAK1: "미일치"
+S1 -> S2: "match"
+S2 -> NAK2: "Remote Write 없음"
+S2 -> S3: "ok"
+S3 -> NAK3: "다름"
+S3 -> S4: "같음"
+S4 -> NAK4: "범위 벗어남"
+S4 -> S5: "안"
+S5 -> NAK5: "변환 실패"
+S5 -> S6: "ok"
 ```
 
 → **모든 단계에서 fail 시 NAK + WC error** (`IBV_WC_REM_ACCESS_ERR` 류).
@@ -326,25 +319,22 @@ sequenceDiagram
 
 ### 5.3 IOVA, ATS, PTW, TLB
 
-```mermaid
-flowchart TB
-    PKT["RDMA packet → BTH → RETH<br/>(rkey, IOVA, len)"]
-    subgraph HCA["HCA"]
-        direction TB
-        ATS["ATS / TLB<br/>(변환 캐시)"]
-        PTW["PTW · Page Table Walker<br/>(page table walk)"]
-        DMA["PCIe DMA"]
-        ATS -- TLB miss --> PTW
-        PTW -- PA --> DMA
-        ATS -- TLB hit · PA --> DMA
-    end
-    HOST["host memory"]
-    PKT --> ATS
-    DMA --> HOST
-    classDef cache stroke:#1a73e8,stroke-width:2px
-    classDef walk stroke:#b8860b,stroke-width:2px
-    class ATS cache
-    class PTW walk
+```d2
+direction: down
+
+PKT: "RDMA packet → BTH → RETH\n(rkey, IOVA, len)"
+HCA: "HCA" {
+  direction: down
+  ATS: "ATS / TLB\n(변환 캐시)"
+  PTW: "PTW · Page Table Walker\n(page table walk)"
+  DMA: "PCIe DMA"
+  ATS -> PTW: "TLB miss"
+  PTW -> DMA: "PA"
+  ATS -> DMA: "TLB hit · PA"
+}
+HOST: "host memory"
+PKT -> ATS
+DMA -> HOST
 ```
 
 RDMA-TB 의 sub-IP 검증 환경은 이 변환 chain 을 직접 검증:

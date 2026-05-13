@@ -99,33 +99,31 @@
 
 **Error handling 측면 — 2 클래스**:
 
-```mermaid
-flowchart TB
-    subgraph RETRY["Transport retry class (4)"]
-        direction TB
-        T1["Local ACK timeout"]
-        T2["Packet Sequence Error"]
-        T3["Implied NAK"]
-        T4["RNR (Receiver Not Ready)"]
-    end
-    subgraph ACCESS["Remote access class (6)"]
-        direction TB
-        A1["Access flag violation"]
-        A2["MR bound violation"]
-        A3["PD violation"]
-        A4["R-Key violation"]
-        A5["Invalid Op (illegal opcode)"]
-        A6["Max read outstanding"]
-    end
-    RX["retry_cnt 초과"]
-    QPE["QP → Err state<br/>WC status (sender)"]
-    NAKE["responder NAK + WC<br/>+ Error CQ + IRQ<br/>debug flag 가 정확한<br/>root cause 1줄로 보고"]
-    RETRY --> RX --> QPE
-    ACCESS --> NAKE
-    classDef retry stroke:#b8860b,stroke-width:2px
-    classDef access stroke:#c0392b,stroke-width:2px
-    class T1,T2,T3,T4 retry
-    class A1,A2,A3,A4,A5,A6 access
+```d2
+direction: down
+
+RETRY: "Transport retry class (4)" {
+  direction: down
+  T1: "Local ACK timeout"
+  T2: "Packet Sequence Error"
+  T3: "Implied NAK"
+  T4: "RNR (Receiver Not Ready)"
+}
+ACCESS: "Remote access class (6)" {
+  direction: down
+  A1: "Access flag violation"
+  A2: "MR bound violation"
+  A3: "PD violation"
+  A4: "R-Key violation"
+  A5: "Invalid Op (illegal opcode)"
+  A6: "Max read outstanding"
+}
+RX: "retry_cnt 초과"
+QPE: "QP → Err state\nWC status (sender)"
+NAKE: "responder NAK + WC\n+ Error CQ + IRQ\ndebug flag 가 정확한\nroot cause 1줄로 보고"
+RETRY -> RX
+RX -> QPE
+ACCESS -> NAKE
 ```
 
 ### 왜 이렇게 설계했는가 — Design rationale
@@ -391,19 +389,20 @@ CNP/ECN 신호에 따른 **sender 의 rate 조절 알고리즘**:
 
 ### 5.6 QP Recovery 흐름
 
-```mermaid
-flowchart TB
-    E["에러 발생"]
-    ERR["QP → Err state<br/>(in-flight WR 모두 flush, WC error)"]
-    POLL["사용자가 Error CQ poll, status 확인"]
-    RST["Modify(QP, Reset)<br/>QP 를 리셋"]
-    BRINGUP["Modify(Init / RTR / RTS)<br/>단계 재진입"]
-    IO["다시 정상 IO"]
-    E --> ERR --> POLL --> RST --> BRINGUP --> IO
-    classDef bad stroke:#c0392b,stroke-width:2px
-    classDef good stroke:#137333,stroke-width:2px
-    class ERR bad
-    class IO good
+```d2
+direction: down
+
+E: "에러 발생"
+ERR: "QP → Err state\n(in-flight WR 모두 flush, WC error)"
+POLL: "사용자가 Error CQ poll, status 확인"
+RST: "Modify(QP, Reset)\nQP 를 리셋"
+BRINGUP: "Modify(Init / RTR / RTS)\n단계 재진입"
+IO: "다시 정상 IO"
+E -> ERR
+ERR -> POLL
+POLL -> RST
+RST -> BRINGUP
+BRINGUP -> IO
 ```
 
 `min_rnr_timer`, `retry_cnt`, `timeout` 등 attribute 도 새로 set 가능 — recovery 시 parameter 튜닝의 기회.
