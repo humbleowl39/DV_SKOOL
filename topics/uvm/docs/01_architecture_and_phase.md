@@ -129,35 +129,25 @@ DRAIN -> CLEAN
 
 ### 단계별 다이어그램
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant K as UVM kernel
-    participant T as test
-    participant E as env
-    participant D as drv
+```d2
+shape: sequence_diagram
 
-    Note over K,D: build (top → down)
-    K->>T: ① test 생성 + build
-    T->>E: ② env = create("env")
-    E->>D: ③ drv = create("drv")
+K: UVM kernel
+T: test
+E: env
+D: drv
 
-    Note over K,D: connect (bottom → up)
-    D-->>E: ⑤ drv.connect (NOP)
-    E-->>T: ④ env.connect / test.connect (NOP)
-
-    Note over K,D: run (parallel)
-    T->>T: ⑥ raise_objection<br/>run 본문 시작
-    par 병렬 실행
-        E->>E: ⑦ env.run (NOP)
-    and
-        D->>D: ⑧ drv.run_phase<br/>"DRV: run start"<br/>#100ns<br/>"DRV: run end"
-    end
-    T->>T: ⑨ #500ns 시나리오 종료
-    T->>T: ⑩ drop_objection<br/>drain 200ns
-
-    Note over K,D: cleanup (bottom → up)
-    K->>K: ⑪ extract → check → report → final
+K -> T: "① test 생성 + build (top→down)"
+T -> E: "② env = create('env')"
+E -> D: "③ drv = create('drv')"
+D -> E: "⑤ drv.connect (NOP) (bottom→up)" { style.stroke-dash: 4 }
+E -> T: "④ env.connect / test.connect (NOP)" { style.stroke-dash: 4 }
+T -> T: "⑥ raise_objection — run 본문 시작"
+E -> E: "⑦ env.run (NOP) — 병렬"
+D -> D: "⑧ drv.run_phase\n'DRV: run start' → #100ns → 'DRV: run end'"
+T -> T: "⑨ #500ns 시나리오 종료"
+T -> T: "⑩ drop_objection — drain 200ns"
+K -> K: "⑪ extract → check → report → final (bottom→up)"
 ```
 
 ### 단계별 의미

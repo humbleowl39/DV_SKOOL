@@ -131,30 +131,27 @@ DRVB -> DUT
 
 ### 단계별 다이어그램
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant SEQ as write_read_seq.body
-    participant SQR as Sequencer
-    participant DRV as Driver
-    participant DUT as DUT
+```d2
+shape: sequence_diagram
 
-    Note over SEQ: Write 단계
-    SEQ->>SEQ: ① wr_item = type_id::create("wr_item")
-    SEQ->>SQR: ② start_item(wr_item)
-    SQR-->>SEQ: grant
-    SEQ->>SEQ: ③ wr_item.randomize() with<br/>{ wr_rd==1; addr==X; data==D }
-    SEQ->>SQR: ④ finish_item(wr_item)
-    SQR->>DRV: forward
-    DRV->>DUT: vif.valid<=1<br/>vif.data<=D<br/>vif.addr<=X<br/>(write 인가)
+SEQ: "write_read_seq.body"
+SQR: Sequencer
+DRV: Driver
+DUT: DUT
 
-    Note over SEQ: Read 단계
-    SEQ->>SEQ: ⑤ rd_item = type_id::create("rd_item")
-    SEQ->>SQR: ⑥ start_item(rd_item)
-    SEQ->>SEQ: ⑦ rd_item.randomize() with<br/>{ wr_rd==0; addr==X }
-    SEQ->>SQR: ⑧ finish_item(rd_item)
-    SQR->>DRV: forward
-    DRV->>DUT: read 인가 → DUT 응답 받기
+SEQ -> SEQ: "[Write 단계] ① wr_item = type_id::create('wr_item')"
+SEQ -> SQR: "② start_item(wr_item)"
+SQR -> SEQ: "grant" { style.stroke-dash: 4 }
+SEQ -> SEQ: "③ wr_item.randomize() with\n{ wr_rd==1; addr==X; data==D }"
+SEQ -> SQR: "④ finish_item(wr_item)"
+SQR -> DRV: "forward"
+DRV -> DUT: "vif.valid<=1\nvif.data<=D\nvif.addr<=X\n(write 인가)"
+SEQ -> SEQ: "[Read 단계] ⑤ rd_item = type_id::create('rd_item')"
+SEQ -> SQR: "⑥ start_item(rd_item)"
+SEQ -> SEQ: "⑦ rd_item.randomize() with\n{ wr_rd==0; addr==X }"
+SEQ -> SQR: "⑧ finish_item(rd_item)"
+SQR -> DRV: "forward"
+DRV -> DUT: "read 인가 → DUT 응답 받기"
 ```
 
 ### 단계별 의미

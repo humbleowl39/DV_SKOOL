@@ -199,21 +199,22 @@ hsm_status_t hsm_burn_efuse_key(uint8_t slot,
 
 ### 4.2 HSM ↔ Secure Boot — 같은 원리의 두 화신
 
-```mermaid
-flowchart LR
-    subgraph SB["Secure Boot"]
-        direction TB
-        SB_ROT["BootROM + OTP<br/>부팅 체인의 신뢰 기반"]
-        SB_KEY["ROTPK → BL 서명 검증<br/>비대칭 (RSA / ECDSA)"]
-        SB_ROT --> SB_KEY
-    end
-    subgraph COMM["Automotive Comms"]
-        direction TB
-        C_ROT["HSM + Secure Key Store<br/>통신 체인의 신뢰 기반"]
-        C_KEY["K_secoc → CAN 메시지 MAC<br/>대칭 (AES-CMAC / GCM)"]
-        C_ROT --> C_KEY
-    end
-    SB -.같은 원리.- COMM
+```d2
+direction: right
+
+SB: "Secure Boot" {
+  SB_ROT: "BootROM + OTP\n부팅 체인의 신뢰 기반"
+  SB_KEY: "ROTPK → BL 서명 검증\n비대칭 (RSA / ECDSA)"
+  SB_ROT -> SB_KEY
+}
+
+COMM: "Automotive Comms" {
+  C_ROT: "HSM + Secure Key Store\n통신 체인의 신뢰 기반"
+  C_KEY: "K_secoc → CAN 메시지 MAC\n대칭 (AES-CMAC / GCM)"
+  C_ROT -> C_KEY
+}
+
+SB -- COMM: "같은 원리" { style.stroke-dash: 4 }
 ```
 
 → 부팅 체인이 BL1→BL2→BL3 모든 단계 검증을 요구하듯, 통신 체인 (SecOC) 도 _모든 노드가 동일 root 에서 파생된 키로 인증_ 해야 의미가 있습니다.
@@ -519,36 +520,37 @@ BUS -> NOTE { style.stroke-dash: 4 }
 
 **현대적 Domain Gateway**:
 
-```mermaid
-flowchart TB
-    subgraph GW["Central Gateway SoC (NXP S32G)"]
-        direction LR
-        G_HSM["HSM"]
-        G_IDS["IDS"]
-        G_FW["FW"]
-        G_RT["Route"]
-    end
-    subgraph PT["Powertrain Domain<br/>CAN Bus"]
-        ENG["엔진 ECU"]
-    end
-    subgraph CH["Chassis/Safety Domain<br/>CAN-FD"]
-        ADAS["ADAS"]
-        ABS["ABS"]
-    end
-    subgraph IN["Infotainment Domain<br/>Ethernet"]
-        DISP["디스플레이"]
-        OBD["OBD-II"]
-    end
-    GW --- PT
-    GW --- CH
-    GW --- IN
-    OBD -. 통과 .-> DISP
-    OBD -- 차단 --x ADAS
-    OBD -- 차단 --x ABS
-    OBD -- 차단 --x ENG
+```d2
+direction: down
 
-    classDef blocked stroke-width:2px,stroke-dasharray:6 3
-    class OBD blocked
+GW: "Central Gateway SoC (NXP S32G)" {
+  G_HSM: HSM
+  G_IDS: IDS
+  G_FW: FW
+  G_RT: Route
+}
+
+PT: "Powertrain Domain\nCAN Bus" {
+  ENG: "엔진 ECU"
+}
+
+CH: "Chassis/Safety Domain\nCAN-FD" {
+  ADAS: ADAS
+  ABS: ABS
+}
+
+IN: "Infotainment Domain\nEthernet" {
+  DISP: 디스플레이
+  OBD: "OBD-II" { style.stroke-dash: 6; style.stroke-width: 2 }
+}
+
+GW -- PT
+GW -- CH
+GW -- IN
+IN.OBD -> IN.DISP: "통과" { style.stroke-dash: 4 }
+IN.OBD -> CH.ADAS: "차단 ✗" { style.stroke: "#c0392b" }
+IN.OBD -> CH.ABS: "차단 ✗" { style.stroke: "#c0392b" }
+IN.OBD -> PT.ENG: "차단 ✗" { style.stroke: "#c0392b" }
 ```
 
 → OBD-II 는 Infotainment 까지만, Chassis/Safety 도메인 접근 차단.

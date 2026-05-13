@@ -258,30 +258,30 @@ ibv_poll_cq(cq, 1, &wc);              // ⑧ 까지 끝나면 status=SUCCESS
     - **DMA**: CPU 의 직접 개입 없이 디바이스가 호스트 메모리를 직접 read/write 하는 메커니즘.
     - **RDMA**: 네트워크의 양 끝에서 DMA 가 동시에 일어나, **원격** 노드의 메모리를 read/write 하는 메커니즘.
 
-```mermaid
-flowchart LR
-    subgraph DMAg["Local DMA"]
-        direction LR
-        LD_CPU["CPU"]
-        LD_MEM["memory"]
-        LD_DISK["disk"]
-        LD_CPU -.- LD_MEM
-        LD_MEM <-- DMA --> LD_DISK
-    end
-    subgraph RDMAg["RDMA"]
-        direction LR
-        R_CPU1["CPU₁"]
-        R_MEM1["mem₁"]
-        R_HCA1["HCA₁"]
-        R_HCA2["HCA₂"]
-        R_MEM2["mem₂"]
-        R_CPU2["CPU₂"]
-        R_CPU1 -.- R_MEM1
-        R_CPU2 -.- R_MEM2
-        R_MEM1 <-- DMA --> R_HCA1
-        R_HCA1 <-- "R_Key + VA" --> R_HCA2
-        R_HCA2 <-- DMA --> R_MEM2
-    end
+```d2
+direction: right
+
+DMAg: "Local DMA" {
+  LD_CPU: CPU
+  LD_MEM: memory
+  LD_DISK: disk
+  LD_CPU -- LD_MEM: { style.stroke-dash: 4 }
+  LD_MEM <-> LD_DISK: "DMA"
+}
+
+RDMAg: "RDMA" {
+  R_CPU1: "CPU₁"
+  R_MEM1: "mem₁"
+  R_HCA1: "HCA₁"
+  R_HCA2: "HCA₂"
+  R_MEM2: "mem₂"
+  R_CPU2: "CPU₂"
+  R_CPU1 -- R_MEM1: { style.stroke-dash: 4 }
+  R_CPU2 -- R_MEM2: { style.stroke-dash: 4 }
+  R_MEM1 <-> R_HCA1: "DMA"
+  R_HCA1 <-> R_HCA2: "R_Key + VA"
+  R_HCA2 <-> R_MEM2: "DMA"
+}
 ```
 
 핵심: RDMA 는 "원격 노드의 메모리 주소" 를 (1) 사전 등록(Memory Registration), (2) 보호 키 (R_Key) 와 함께 노출, (3) 양 끝의 NIC 가 그 주소를 인식해 DMA 를 수행.

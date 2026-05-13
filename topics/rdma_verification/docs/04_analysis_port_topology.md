@@ -220,27 +220,38 @@ uvm_analysis_export #(vrdma_mr)           mr_reg_ap;        //MR Register
 
 ### 4.3 Subscriber 매핑
 
-```mermaid
-flowchart LR
-  DRV[vrdma_driver]
-  CQH[vrdma_cq_handler]
-  SH[*_handler<br/>send/recv/write/read]
-  C1[vrdma_1side_compare]
-  C2[vrdma_2side_compare]
-  CI[vrdma_imm_compare]
-  CT[vrdma_c2h_tracker]
-  SB[vrdma_data_scoreboard]
-  CV[vrdma_cqe_validation_checker]
-  CC[vrdma_cqe_cov_collector]
+```d2
+direction: right
 
-  DRV -->|issued_wqe_ap| SH
-  SH -->|forward| C1 & C2 & CI & CT
-  DRV -->|completed_wqe_ap| SB
-  DRV -->|cqe_ap| C1 & C2 & CI
-  CQH -->|cqe_validation_cqe_ap| CV
-  CQH --> CC
-  DRV -->|qp_reg_ap| C1 & C2 & CI & CT & SB
-  DRV -->|mr_reg_ap| CT & SB
+DRV: vrdma_driver
+CQH: vrdma_cq_handler
+SH: "*_handler\nsend/recv/write/read"
+C1: vrdma_1side_compare
+C2: vrdma_2side_compare
+CI: vrdma_imm_compare
+CT: vrdma_c2h_tracker
+SB: vrdma_data_scoreboard
+CV: vrdma_cqe_validation_checker
+CC: vrdma_cqe_cov_collector
+
+DRV -> SH: "issued_wqe_ap"
+SH -> C1: "forward"
+SH -> C2: "forward"
+SH -> CI: "forward"
+SH -> CT: "forward"
+DRV -> SB: "completed_wqe_ap"
+DRV -> C1: "cqe_ap"
+DRV -> C2: "cqe_ap"
+DRV -> CI: "cqe_ap"
+CQH -> CV: "cqe_validation_cqe_ap"
+CQH -> CC
+DRV -> C1: "qp_reg_ap"
+DRV -> C2: "qp_reg_ap"
+DRV -> CI: "qp_reg_ap"
+DRV -> CT: "qp_reg_ap"
+DRV -> SB: "qp_reg_ap"
+DRV -> CT: "mr_reg_ap"
+DRV -> SB: "mr_reg_ap"
 ```
 
 이 그림이 디버깅의 지도입니다:

@@ -174,21 +174,20 @@ GPU 는 행렬곱에 최적화되어 있습니다. 토큰을 "순차" 로 처리
 
 가장 단순한 시나리오. 사용자 입력 `"Write a UVM"` 을 받아 LLM 이 다음 토큰 하나 (`" test"`) 를 예측해 응답하는 한 사이클을 8단계로 추적합니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Client<br/>(app + tokenizer)
-    participant S as Inference Server<br/>(GPU)
+```d2
+shape: sequence_diagram
 
-    C->>S: ① "Write a UVM"<br/>(raw text)
-    S->>S: ② BPE 토크나이즈<br/>[W, rite, ' ', a, ' ', U, VM]
-    S->>S: ③ embedding lookup<br/>[v₁, v₂, ..., v₇] (d_model)
-    S->>S: ④ + RoPE position 주입
-    S->>S: ⑤ N × Transformer block<br/>(Q@Kᵀ → softmax → @V)
-    Note over S: hidden state h₇<br/>(마지막 위치)
-    S->>S: ⑥ output head<br/>vocab_size 확률 분포
-    S->>S: ⑦ argmax / sampling<br/>next_token = " test"
-    S-->>C: ⑧ " test" 반환<br/>(K₁..K₇, V₁..V₇ KV cache 보관)
+C: "Client\n(app + tokenizer)"
+S: "Inference Server\n(GPU)"
+
+C -> S: "① 'Write a UVM'\n(raw text)"
+S -> S: "② BPE 토크나이즈\n[W, rite, ' ', a, ' ', U, VM]"
+S -> S: "③ embedding lookup\n[v₁, v₂, ..., v₇] (d_model)"
+S -> S: "④ + RoPE position 주입"
+S -> S: "⑤ N × Transformer block\n(Q@Kᵀ → softmax → @V)\n→ hidden state h₇ (마지막 위치)"
+S -> S: "⑥ output head\nvocab_size 확률 분포"
+S -> S: "⑦ argmax / sampling\nnext_token = ' test'"
+S -> C: "⑧ ' test' 반환\n(K₁..K₇, V₁..V₇ KV cache 보관)" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

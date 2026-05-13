@@ -71,37 +71,32 @@ RDMA 검증은 본질적으로 **두 노드 간 통신** 의 검증입니다. �
 
 ### 한 장 그림 — Top env 의 5-부 구조
 
-```mermaid
-flowchart TB
-    subgraph TOP["vrdmatb_top_env"]
-        direction TB
-        subgraph N0["node[0] (vrdma_node_env)"]
-            direction TB
-            N0H["host mem"]
-            N0I["ip shell"]
-            N0A["agent<br/>driver / sequencer / handlers"]
-        end
-        subgraph CROSS["횡단 검증 (cross-node)"]
-            direction TB
-            DATA["data_env<br/>memory compare"]
-            DMA["dma_env<br/>c2h_tracker"]
-            NTW["ntw_env<br/>packet monitor"]
-        end
-        subgraph N1["node[1] (vrdma_node_env)"]
-            direction TB
-            N1H["host mem"]
-            N1I["ip shell"]
-            N1A["agent<br/>driver / sequencer / handlers"]
-        end
-    end
-    N0A -- "AP" --> CROSS
-    N1A -- "AP" --> CROSS
-    N0I <-- "network<br/>RDMA packet flow" --> N1I
-    NTW -. "monitor" .-> N0I
-    NTW -. "monitor" .-> N1I
+```d2
+direction: down
 
-    classDef cross stroke:#1a73e8,stroke-width:2px
-    class DATA,DMA,NTW cross
+TBTOP: "vrdmatb_top_env" {
+  N0: "node[0] (vrdma_node_env)" {
+    N0H: "host mem"
+    N0I: "ip shell"
+    N0A: "agent\ndriver / sequencer / handlers"
+  }
+  CROSS: "횡단 검증 (cross-node)" {
+    DATA: "data_env\nmemory compare" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+    DMA: "dma_env\nc2h_tracker" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+    NTW: "ntw_env\npacket monitor" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  }
+  N1: "node[1] (vrdma_node_env)" {
+    N1H: "host mem"
+    N1I: "ip shell"
+    N1A: "agent\ndriver / sequencer / handlers"
+  }
+}
+
+TBTOP.N0.N0A -> TBTOP.CROSS: "AP"
+TBTOP.N1.N1A -> TBTOP.CROSS: "AP"
+TBTOP.N0.N0I <-> TBTOP.N1.N1I: "network\nRDMA packet flow"
+TBTOP.CROSS.NTW -> TBTOP.N0.N0I: "monitor" { style.stroke-dash: 4 }
+TBTOP.CROSS.NTW -> TBTOP.N1.N1I: "monitor" { style.stroke-dash: 4 }
 ```
 
 > 횡단 env 는 `[node][qp]` 키로 모든 트랜잭션을 추적합니다.
@@ -181,26 +176,32 @@ DRV0 -> SB: "completed_wqe_ap.write(cmd)"
 
 ### 4.2 노드 간 통신 모델
 
-```mermaid
-flowchart LR
-  subgraph Node0[Node 0]
-    H0[Host Mem 0]
-    IP0[IP Shell 0]
-    H0 <--> IP0
-  end
-  subgraph Node1[Node 1]
-    H1[Host Mem 1]
-    IP1[IP Shell 1]
-    H1 <--> IP1
-  end
-  IP0 <-->|Network| IP1
+```d2
+direction: right
 
-  IP0 -.->|monitor| Net[ntw_env]
-  IP1 -.->|monitor| Net
-  H0 -.-> Data[data_env<br/>1side/2side/imm compare]
-  H1 -.-> Data
-  IP0 -.->|C2H DMA| Dma[dma_env<br/>c2h_tracker]
-  IP1 -.->|C2H DMA| Dma
+Node0: "Node 0" {
+  H0: "Host Mem 0"
+  IP0: "IP Shell 0"
+  H0 <-> IP0
+}
+
+Node1: "Node 1" {
+  H1: "Host Mem 1"
+  IP1: "IP Shell 1"
+  H1 <-> IP1
+}
+
+Net: "ntw_env"
+Data: "data_env\n1side/2side/imm compare"
+Dma: "dma_env\nc2h_tracker"
+
+Node0.IP0 <-> Node1.IP1: "Network"
+Node0.IP0 -> Net: "monitor" { style.stroke-dash: 4 }
+Node1.IP1 -> Net: "monitor" { style.stroke-dash: 4 }
+Node0.H0 -> Data: { style.stroke-dash: 4 }
+Node1.H1 -> Data: { style.stroke-dash: 4 }
+Node0.IP0 -> Dma: "C2H DMA" { style.stroke-dash: 4 }
+Node1.IP1 -> Dma: "C2H DMA" { style.stroke-dash: 4 }
 ```
 
 - **data_env** — 양 노드의 호스트 메모리 영역을 비교 (write/read/send/recv 정합성)

@@ -551,21 +551,18 @@ MHU <-> SW
 
 상세는 Module 03 참조.
 
-```mermaid
-flowchart LR
-    BL1["BL1<br/>(EL3/S)"]
-    BL2["BL2<br/>(S-EL1/S)"]
-    BL31["BL31<br/>(EL3/S, 상주)"]
-    BL33["BL33<br/>(NS-EL1/NS)"]
-    Linux["Linux<br/>(NS-EL1/NS)"]
-    BL1 --> BL2 --> BL31 --> BL33 --> Linux
+```d2
+direction: right
+BL1: "BL1\n(EL3/S)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+BL2: "BL2\n(S-EL1/S)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+BL31: "BL31\n(EL3/S, 상주)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+BL33: "BL33\n(NS-EL1/NS)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+Linux: "Linux\n(NS-EL1/NS)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef ns stroke:#1a73e8,stroke-width:2px
-    classDef turn stroke:#b8860b,stroke-width:3px
-    class BL1,BL2,BL31 sec
-    class BL33,Linux ns
-    linkStyle 2 stroke:#b8860b,stroke-width:3px
+BL1 -> BL2
+BL2 -> BL31
+BL31 -> BL33: "SCR_EL3.NS\n0→1" { style.stroke: "#b8860b"; style.stroke-width: 3 }
+BL33 -> Linux
 ```
 
 핵심 전환점은 BL31 → BL33 의 `SCR_EL3.NS = 0 → 1`.

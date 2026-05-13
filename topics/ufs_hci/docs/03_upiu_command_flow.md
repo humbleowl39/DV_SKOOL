@@ -132,28 +132,24 @@ D -> H: "TM Response UPIU" { style.stroke-dash: 4 }
 # unparsed: ---
 # unparsed: ## 3. 작은 예 — Task Mgmt Abort Task 한 사이클
 # unparsed: 가장 단순한 시나리오. slot=5 의 READ 명령이 device 에서 응답 없이 stuck. SW 가 30 ms timeout 후 **Abort Task** 를 발행 → device 가 해당 task 를 취소 → Transfer slot 이 정리. 이 한 사이클의 두 list / 두 doorbell / 두 IRQ 흐름을 추적합니다.
-```mermaid
-sequenceDiagram
-    participant SW as SW (Driver)
-    participant HCI as HCI
-    participant Dev as Device
-    SW->>HCI: 1. READ@slot=5  UTRLDBR[5]=1
-    HCI->>Dev: Cmd UPIU (tag=5)
-    Note over Dev: NAND read ... pending
-    Note over SW: 30 ms 대기, Data-In 안 옴
-    Note over SW: 2. timeout 결정<br/>pending_tag[5] = ABORT_PENDING
-    Note over SW: 3. UTMRD@slot=0 작성<br/>(TM Function = ABORT TASK,<br/>target Task Tag = 5, LUN = 0)
-    SW->>HCI: 4. UTMRLDBR[0] = 1
-    HCI->>Dev: 5. TM-Req UPIU
-    Note over Dev: 6. Abort tag=5 — pending list에서 제거
-    Dev-->>HCI: 7. TM-Resp (Func Cmpl)
-    Note over HCI: 8. UTMRD 업데이트
-    HCI-->>SW: 9. IS[UTMRCS] + doorbell clear
-    Note over SW: 10. ISR: TM 완료, OCS 확인
-    SW->>HCI: 11. UTRLCLR[5] = 1 (slot=5 정리)
-    Note over HCI: slot 5 가 aborted<br/>→ UTRLDBR[5] = 0<br/>+ OCS = ABORTED
-    HCI-->>SW: 12. IS[UTRCS]
-    Note over SW: pending_tag[5] = FREE
+```d2
+shape: sequence_diagram
+
+SW: "SW (Driver)"
+HCI: HCI
+Dev: Device
+
+SW -> HCI: "1. READ@slot=5  UTRLDBR[5]=1"
+HCI -> Dev: "Cmd UPIU (tag=5)\n[Dev] NAND read ... pending\n[SW] 30 ms 대기, Data-In 안 옴"
+SW -> SW: "2. timeout 결정\npending_tag[5] = ABORT_PENDING\n3. UTMRD@slot=0 작성\n(TM Function = ABORT TASK, tag=5, LUN=0)"
+SW -> HCI: "4. UTMRLDBR[0] = 1"
+HCI -> Dev: "5. TM-Req UPIU\n6. Abort tag=5 — pending list에서 제거"
+Dev -> HCI: "7. TM-Resp (Func Cmpl)" { style.stroke-dash: 4 }
+HCI -> SW: "8. UTMRD 업데이트\n9. IS[UTMRCS] + doorbell clear" { style.stroke-dash: 4 }
+SW -> SW: "10. ISR: TM 완료, OCS 확인"
+SW -> HCI: "11. UTRLCLR[5] = 1 (slot=5 정리)"
+HCI -> SW: "12. IS[UTRCS]\nslot 5 aborted → UTRLDBR[5]=0\nOCS = ABORTED" { style.stroke-dash: 4 }
+SW -> SW: "pending_tag[5] = FREE"
 ```
 
 ### 단계별 추적

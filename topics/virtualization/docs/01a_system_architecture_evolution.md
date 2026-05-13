@@ -177,16 +177,14 @@ hw_set_dma_addr(accel, dma_addr);
 
 ### 4.1 모든 단계 전이의 공통 구조
 
-```mermaid
-flowchart LR
-    L["현 단계의<br/>결정적 한계"]
-    A["HW/SW<br/>추가물"]
-    N["다음 단계"]
-    K["한계의 종류 (4 가지 반복)<br/>① 유연성 부족 (1→2)<br/>② 성능 부족 (2→3, 5→6 PE)<br/>③ 자원 관리 / 보호 부재<br/>   (3→4, 4→5, 5→6 IOMMU)<br/>④ 격리 부재 (6→7)"]
-    L --> A --> N
-    L -.- K
-    classDef note stroke:#5f6368,stroke-dasharray:4 2
-    class K note
+```d2
+direction: right
+L: "현 단계의\n결정적 한계"
+A: "HW/SW\n추가물"
+N: "다음 단계"
+K: "한계의 종류 (4 가지 반복)\n① 유연성 부족 (1→2)\n② 성능 부족 (2→3, 5→6 PE)\n③ 자원 관리 / 보호 부재\n   (3→4, 4→5, 5→6 IOMMU)\n④ 격리 부재 (6→7)" { style.stroke: "#5f6368"; style.stroke-dash: 4 }
+L -> A -> N
+L -- K: { style.stroke-dash: 4 }
 ```
 
 이 4 가지 한계의 _순환_ 이 진화 과정 자체입니다. **격리 부재** 의 답이 가상화이고, 가상화는 다시 **자원 관리 부재** (live migration / over-commit) 를 만들고, 그게 또 microVM / DPU offload 같은 다음 진화를 부릅니다.
@@ -415,36 +413,36 @@ SI -> RAM
 
 ### 5.6 단계 6: 현대 SoC — IOMMU + PEs + LLC + HW Coherency
 
-```mermaid
-flowchart TB
-    FLASH["Flash"]
-    subgraph PROC["Processor (OS) — ex) ARM-A"]
-        CACHE["Cache"]
-        MMU["MMU"]
-    end
-    subgraph PES["PEs — GPU, DSP, NPU, DPU"]
-        PE_MMU["MMU"]
-    end
-    subgraph ACC["HW Accelerator (VA)<br/>per-page translation"]
-        IOMMU["IOMMU"]
-    end
-    LLC["Last Level Cache"]
-    SI["System Interconnect<br/>+ HW Coherency"]
-    DRAM1["DRAM"]
-    DRAM2["DRAM"]
-    RAM["RAM"]
-    FLASH --> PROC
-    PROC <-- "mailbox" --> PES
-    PROC -- "interrupt ctrlr" --> ACC
-    PROC --> LLC
-    PES --> LLC
-    ACC --> LLC
-    LLC --> SI
-    SI --> DRAM1
-    SI --> DRAM2
-    SI --> RAM
-    classDef pivot stroke:#1a73e8,stroke-width:2px
-    class IOMMU,LLC pivot
+```d2
+direction: down
+
+FLASH: Flash
+PROC: "Processor (OS) — ex) ARM-A" {
+  CACHE: Cache
+  MMU: MMU
+}
+PES: "PEs — GPU, DSP, NPU, DPU" {
+  PE_MMU: MMU
+}
+ACC: "HW Accelerator (VA)\nper-page translation" {
+  IOMMU: IOMMU { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+}
+LLC: "Last Level Cache" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+SI: "System Interconnect\n+ HW Coherency"
+DRAM1: DRAM
+DRAM2: DRAM
+RAM: RAM
+
+FLASH -> PROC
+PROC <-> PES: "mailbox"
+PROC -> ACC: "interrupt ctrlr"
+PROC -> LLC
+PES -> LLC
+ACC -> LLC
+LLC -> SI
+SI -> DRAM1
+SI -> DRAM2
+SI -> RAM
 ```
 
 #### 4 대 핵심 추가 요소
@@ -625,17 +623,15 @@ HV -> VMx: "3. 어떤 VM 의 인터럽트인지\n판단 후 전달"
 
 #### 메모리 가상화: IOMMU 2-Stage Translation
 
-```mermaid
-flowchart LR
-    S1["<b>Stage 1</b><br/>VA → IPA<br/>(VMx OS 관리)"]
-    S2["<b>Stage 2</b><br/>IPA → PA<br/>(Hypervisor 관리)"]
-    DRAM["DRAM"]
-    S1 --> S2 --> DRAM
-    AX["AxUSER 신호<br/>AXI 트랜잭션에 SW 엔티티 식별 정보 운반<br/>→ 올바른 Stage 1/2 PT 선택"]
-    AX -.- S1
-    AX -.- S2
-    classDef note stroke:#5f6368,stroke-dasharray:4 2
-    class AX note
+```d2
+direction: right
+S1: "**Stage 1**\nVA → IPA\n(VMx OS 관리)"
+S2: "**Stage 2**\nIPA → PA\n(Hypervisor 관리)"
+DRAM: DRAM
+S1 -> S2 -> DRAM
+AX: "AxUSER 신호\nAXI 트랜잭션에 SW 엔티티 식별 정보 운반\n→ 올바른 Stage 1/2 PT 선택" { style.stroke: "#5f6368"; style.stroke-dash: 4 }
+AX -- S1: { style.stroke-dash: 4 }
+AX -- S2: { style.stroke-dash: 4 }
 ```
 
 VMx OS 입장: VA → IPA 를 관리 (IPA 가 PA 라고 생각함).

@@ -96,33 +96,30 @@ ARM 의 해법: **TrustZone** — _같은 CPU 안에 두 세계_:
 
 ### 한 장 그림 — EL × NS 매트릭스 + 단일 게이트 EL3
 
-```mermaid
-flowchart TB
-    subgraph NS["Non-Secure World"]
-        direction TB
-        NS0["NS-EL0 일반 앱<br/>(브라우저, 게임)"]
-        NS1["NS-EL1 Linux / Android"]
-        NS2["NS-EL2 KVM / Xen"]
-        NS0 --- NS1 --- NS2
-    end
-    subgraph S["Secure World"]
-        direction TB
-        S0["S-EL0 Trusted App<br/>(결제 / DRM / 생체)"]
-        S1["S-EL1 OP-TEE"]
-        S2["S-EL2 SPM (v8.4+)"]
-        S0 --- S1 --- S2
-    end
-    EL3["<b>EL3 — Secure Monitor (ATF / BL31)</b><br/>유일한 월드 전환 게이트 · 항상 Secure"]
-    NS2 -- "SMC" --> EL3
-    S2 -- "SMC" --> EL3
-    EL3 -. "직접 NS-EL1 ↔ S-EL1 전환 불가" .- NS1
+```d2
+direction: down
 
-    classDef ns stroke:#1a73e8,stroke-width:2px
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef gate stroke:#b8860b,stroke-width:3px
-    class NS0,NS1,NS2 ns
-    class S0,S1,S2 sec
-    class EL3 gate
+NS: "Non-Secure World" {
+  NS0: "NS-EL0 일반 앱\n(브라우저, 게임)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  NS1: "NS-EL1 Linux / Android" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  NS2: "NS-EL2 KVM / Xen" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  NS0 -- NS1
+  NS1 -- NS2
+}
+
+S: "Secure World" {
+  S0: "S-EL0 Trusted App\n(결제 / DRM / 생체)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  S1: "S-EL1 OP-TEE" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  S2: "S-EL2 SPM (v8.4+)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  S0 -- S1
+  S1 -- S2
+}
+
+EL3: "**EL3 — Secure Monitor (ATF / BL31)**\n유일한 월드 전환 게이트 · 항상 Secure" { style.stroke: "#b8860b"; style.stroke-width: 3 }
+
+NS.NS2 -> EL3: "SMC"
+S.S2 -> EL3: "SMC"
+EL3 -- NS.NS1: "직접 NS-EL1 ↔ S-EL1 전환 불가" { style.stroke-dash: 4 }
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -277,26 +274,24 @@ EL1 -> EL0
 
 문제: 일반 OS 가 해킹되면 OS 커널 권한 탈취 → 모든 메모리/디바이스 접근 → 결제 정보, 암호 키, 생체 데이터 노출.
 
-```mermaid
-flowchart LR
-    subgraph S["Secure World (TEE)"]
-        S1["결제 처리"]
-        S2["암호 키 저장"]
-        S3["생체 인증"]
-        S4["DRM 복호화"]
-    end
-    subgraph N["Normal World"]
-        N1["일반 앱"]
-        N2["브라우저"]
-        N3["게임"]
-        N4["OS (Linux)"]
-    end
-    N -. "HW 강제 격리<br/>Normal → Secure 메모리 접근 불가" .- S
+```d2
+direction: right
 
-    classDef sec stroke:#c5221f,stroke-width:2px
-    classDef norm stroke:#1a73e8,stroke-width:2px
-    class S1,S2,S3,S4 sec
-    class N1,N2,N3,N4 norm
+S: "Secure World (TEE)" {
+  S1: "결제 처리" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  S2: "암호 키 저장" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  S3: "생체 인증" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  S4: "DRM 복호화" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+}
+
+N: "Normal World" {
+  N1: "일반 앱" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  N2: "브라우저" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  N3: "게임" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  N4: "OS (Linux)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+}
+
+N -- S: "HW 강제 격리\nNormal → Secure 메모리 접근 불가" { style.stroke-dash: 4 }
 ```
 
 → OS 가 해킹되어도 Secure World 의 키/데이터는 안전.

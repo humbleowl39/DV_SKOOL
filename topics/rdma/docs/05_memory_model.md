@@ -200,21 +200,17 @@ A 가 1 MB buffer 를 등록하고, B 가 그 영역에 1 KB RDMA WRITE.
 
 ### 4.1 객체 계층
 
-```mermaid
-flowchart TB
-    PD["<b>PD</b><br/>Protection Domain (보호 경계)"]
-    MR["<b>MR</b> (region)"]
-    QPSRQ["QP / SRQ"]
-    LK["L_Key"]
-    RK["R_Key"]
-    PD -- owns --> MR
-    MR <-- pairs --> QPSRQ
-    MR -- has --> LK
-    MR -- has --> RK
-    classDef pd stroke:#1a73e8,stroke-width:2px
-    classDef key stroke:#137333,stroke-width:2px
-    class PD pd
-    class LK,RK key
+```d2
+direction: down
+PD: "**PD**\nProtection Domain (보호 경계)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+MR: "**MR** (region)"
+QPSRQ: "QP / SRQ"
+LK: "L_Key" { style.stroke: "#137333"; style.stroke-width: 2 }
+RK: "R_Key" { style.stroke: "#137333"; style.stroke-width: 2 }
+PD -> MR: "owns"
+MR <-> QPSRQ: "pairs"
+MR -> LK: "has"
+MR -> RK: "has"
 ```
 
 | 객체 | 정의 (ISO 11179) |

@@ -448,15 +448,15 @@ DP: "Data Path — HW (TOE)" {
 
 ### 5.7 TOE 와 DCMAC 연동 (이력서 연결)
 
-```mermaid
-flowchart LR
-    HOST["Host<br/>(CPU)"]
-    TOE["TOE Engine"]
-    DCMAC["DCMAC<br/>(AMD MAC)"]
-    ETH["Ethernet<br/>100 Gbps+"]
-    HOST <--> TOE
-    TOE <-- "AXI-Stream" --> DCMAC
-    DCMAC <--> ETH
+```d2
+direction: right
+HOST: "Host\n(CPU)"
+TOE: "TOE Engine"
+DCMAC: "DCMAC\n(AMD MAC)"
+ETH: "Ethernet\n100 Gbps+"
+HOST <-> TOE
+TOE <-> DCMAC: "AXI-Stream"
+DCMAC <-> ETH
 ```
 
 DCMAC (AMD):

@@ -125,24 +125,21 @@ INT -> EXT: "SPI Secure Channel\n(암호화 + MAC)"
 
 가장 직관적인 시나리오. OP-TEE (S-EL1) 가 RCE 로 장악된 상태에서, 공격자가 결제 마스터 키를 탈취하려 합니다. 마스터 키는 Internal Secure Enclave 의 Key Box 에 있고, S-EL1 은 키를 _직접_ 읽을 수 없으며 Mailbox 로만 _서명 결과_ 를 요청할 수 있습니다.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant A as 공격자 (S-EL1, OP-TEE 장악)
-    participant M as Enclave Mailbox driver<br/>(S-EL1 측)
-    participant E as Internal Secure Enclave<br/>(전용 processor)
-    participant C as Crypto Accelerator<br/>(Enclave 내부)
+```d2
+shape: sequence_diagram
 
-    A->>M: "마스터 키 줘"
-    M->>E: mbox_write({op=GET_KEY, ...})<br/>인증 토큰 없음
-    Note over E: 토큰 검증 → 실패
-    E-->>M: ENCLAVE_ERR_AUTH (거부)
+A: "공격자 (S-EL1, OP-TEE 장악)"
+M: "Enclave Mailbox driver\n(S-EL1 측)"
+E: "Internal Secure Enclave\n(전용 processor)"
+C: "Crypto Accelerator\n(Enclave 내부)"
 
-    Note over E,C: 정상 토큰 경로 (참고)
-    E->>C: key_box[idx] 사용 (내부 wire)
-    C-->>E: AES/RSA ciphertext
-    E-->>M: 결과 (서명/암호문) 만 반환
-    Note over A,E: 키 자체는 enclave 밖으로 나간 적 없음
+A -> M: "'마스터 키 줘'"
+M -> E: "mbox_write({op=GET_KEY, ...})\n인증 토큰 없음"
+E -> E: "토큰 검증 → 실패"
+E -> M: "ENCLAVE_ERR_AUTH (거부)" { style.stroke-dash: 4 }
+E -> C: "[정상 경로 참고] key_box[idx] 사용 (내부 wire)"
+C -> E: "AES/RSA ciphertext" { style.stroke-dash: 4 }
+E -> M: "결과 (서명/암호문) 만 반환\n키 자체는 enclave 밖으로 나간 적 없음" { style.stroke-dash: 4 }
 ```
 
 | Step | 누가 | 무엇을 | 의미 |

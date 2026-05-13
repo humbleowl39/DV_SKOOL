@@ -72,37 +72,31 @@ Silicon 부팅: **fail**. 추적:
 
 ### 한 장 그림 — IP 검증 vs Top 검증의 결함 영역
 
-```mermaid
-flowchart LR
-    subgraph IPDV["IP-level DV 가 catch 하는 영역"]
-        direction TB
-        IPA["IP_A<br/>FSM · FIFO · Reg · Protocol"]
-        IPNOTE["단일 IP 기능<br/>Register / FIFO / FSM<br/>Protocol compliance<br/>→ IP 단독 TB 로 충분"]
-        IPA --- IPNOTE
-    end
-    subgraph TOPDV["Top-level DV 가 catch 하는 영역"]
-        direction TB
-        TA["IP_A"]
-        TB["IP_B"]
-        TC["IP_C"]
-        FAB["Bus Fabric<br/>(AXI / AHB / APB)"]
-        IRQ["IRQ → GIC SPI[?]<br/>(라우팅)"]
-        PWR["Power off 경계<br/>(isolation)"]
-        TA <--> TB
-        TB <--> TC
-        TA --- FAB
-        TB --- FAB
-        TC --- FAB
-        TA -. irq .-> IRQ
-        FAB -. domain .-> PWR
-    end
+```d2
+direction: right
 
-    classDef ipnote stroke:#1a73e8,stroke-width:2px
-    classDef topfab stroke:#c0392b,stroke-width:3px
-    classDef topcost stroke:#b8860b,stroke-width:2px,stroke-dasharray:4 2
-    class IPNOTE ipnote
-    class FAB topfab
-    class IRQ,PWR topcost
+IPDV: "IP-level DV 가 catch 하는 영역" {
+  IPA: "IP_A\nFSM · FIFO · Reg · Protocol"
+  IPNOTE: "단일 IP 기능\nRegister / FIFO / FSM\nProtocol compliance\n→ IP 단독 TB 로 충분" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  IPA -- IPNOTE
+}
+
+TOPDV: "Top-level DV 가 catch 하는 영역" {
+  TA: IP_A
+  TB: IP_B
+  TC: IP_C
+  FAB: "Bus Fabric\n(AXI / AHB / APB)" { style.stroke: "#c0392b"; style.stroke-width: 3 }
+  IRQ: "IRQ → GIC SPI[?]\n(라우팅)" { style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
+  PWR: "Power off 경계\n(isolation)" { style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
+
+  TA <-> TB
+  TB <-> TC
+  TA -- FAB
+  TB -- FAB
+  TC -- FAB
+  TA -> IRQ: "irq" { style.stroke-dash: 4 }
+  FAB -> PWR: "domain" { style.stroke-dash: 4 }
+}
 ```
 
 ### 왜 두 단계가 모두 필요한가 — Design rationale

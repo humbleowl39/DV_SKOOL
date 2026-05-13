@@ -73,33 +73,29 @@
 
 ### 한 장 그림 — VA → PA 흐름
 
-```mermaid
-flowchart TB
-    APP["App / Driver<br/>load r0, [VA=0x4000_1234]"]
-    TLB["① TLB lookup<br/>(ASID, VPN)"]
-    PWE["② Page Walk Engine<br/>L0 → L1 → L2 → L3 PTE read<br/>(4 mem access, ~400 ns)"]
-    PERM["③ Permission check<br/>R/W/X, EL0/EL1, AF"]
-    FILL["④ TLB fill<br/>(PA, ASID, attrs)"]
-    BUS["⑤ Bus access"]
-    CACHE["attr=Cacheable<br/>→ cache line"]
-    MMIO["attr=Device<br/>→ strict-ordered MMIO"]
-    FAULT["Page Fault<br/>→ OS Handler"]
-    HIT["Hit path<br/>(1 cycle)<br/>PA + perm + attr"]
+```d2
+direction: down
 
-    APP --> TLB
-    TLB -- "Hit" --> HIT
-    TLB -- "Miss" --> PWE
-    PWE -- "done" --> PERM
-    PERM -- "위반" --> FAULT
-    PERM -- "ok" --> FILL
-    FILL --> BUS
-    BUS --> CACHE
-    BUS --> MMIO
+APP: "App / Driver\nload r0, [VA=0x4000_1234]"
+TLB: "① TLB lookup\n(ASID, VPN)"
+PWE: "② Page Walk Engine\nL0 → L1 → L2 → L3 PTE read\n(4 mem access, ~400 ns)" { style.stroke: "#c0392b"; style.stroke-width: 2; style.stroke-dash: 4 }
+PERM: "③ Permission check\nR/W/X, EL0/EL1, AF"
+TFILL: "④ TLB fill\n(PA, ASID, attrs)"
+BUS: "⑤ Bus access"
+CACHE: "attr=Cacheable\n→ cache line"
+MMIO: "attr=Device\n→ strict-ordered MMIO"
+FAULT: "Page Fault\n→ OS Handler" { style.stroke: "#c0392b"; style.stroke-width: 2; style.stroke-dash: 4 }
+HIT: "Hit path\n(1 cycle)\nPA + perm + attr" { style.stroke: "#27ae60"; style.stroke-width: 3 }
 
-    classDef fast stroke:#27ae60,stroke-width:3px
-    classDef slow stroke:#c0392b,stroke-width:2px,stroke-dasharray: 4 2
-    class HIT fast
-    class PWE,FAULT slow
+APP -> TLB
+TLB -> HIT: "Hit"
+TLB -> PWE: "Miss"
+PWE -> PERM: "done"
+PERM -> FAULT: "위반"
+PERM -> TFILL: "ok"
+TFILL -> BUS
+BUS -> CACHE
+BUS -> MMIO
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
