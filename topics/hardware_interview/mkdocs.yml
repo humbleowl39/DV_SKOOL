@@ -1,0 +1,117 @@
+site_name: Hardware Interview Prep
+site_description: 하드웨어 엔지니어 인터뷰 준비 — Digital RTL, DV, Embedded, Computer Architecture, Analog/Mixed-Signal, Physical Design
+site_url: https://humbleowl39.github.io/DV_SKOOL/hardware_interview/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/hardware_interview/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+nav:
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 학습 모듈":
+      - "Unit 1: Digital Design / RTL": 01_digital_rtl.md
+      - "Unit 2: Design Verification": 02_design_verification.md
+      - "Unit 3: Embedded / Firmware": 03_embedded_firmware.md
+      - "Unit 4: Computer Architecture": 04_computer_architecture.md
+      - "Unit 5: Analog / Mixed-Signal": 05_analog_mixed_signal.md
+      - "Unit 6: Physical Design": 06_physical_design.md
+  - "📖 용어집": glossary.md
+  - "❓ 퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
+      - "Unit 1 퀴즈": quiz/01_digital_rtl_quiz.md
+      - "Unit 2 퀴즈": quiz/02_design_verification_quiz.md
+      - "Unit 3 퀴즈": quiz/03_embedded_firmware_quiz.md
+      - "Unit 4 퀴즈": quiz/04_computer_architecture_quiz.md
+      - "Unit 5 퀴즈": quiz/05_analog_mixed_signal_quiz.md
+      - "Unit 6 퀴즈": quiz/06_physical_design_quiz.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  homepage: https://humbleowl39.github.io/DV_SKOOL/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — 학습용 자료
