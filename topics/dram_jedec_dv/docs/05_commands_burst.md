@@ -407,21 +407,260 @@ LPDDR5의 *CAS* 명령은 WCK Sync 비트를 *함께* 인코딩 — WCK가 CK와
 
 ---
 
-## 10. 핵심 정리 (Key Takeaways)
+## 10. PDF 정밀 인용 — DDR5 §4.1 Command Truth Table
+
+> 출처: JESD79-5C.01 v1.31 §4.1, Table 30 (Command Truth Table)
+
+### 10.1 Truth Table 구조 — §4.1 원문 설명
+
+> §4.1 원문 인용:
+> "To improve command decode time, the table has been **optimized to orient all 1-cycle commands together and all 2-cycle commands together**; **allowing CA1 to be used to identify the difference between a 1-cycle and a 2-cycle command**."
+
+핵심:
+- DDR5의 명령은 *1-cycle*과 *2-cycle*로 나뉨
+- **CA1 비트**가 1-cycle vs 2-cycle 식별자
+- 1-cycle 명령들이 한 블록, 2-cycle 명령들이 한 블록으로 정렬
+
+명령 약어:
+- BG = Bank Group Address
+- BA = Bank Address
+- R = Row Address
+- C = Column Address
+- MRA = Mode Register Address
+- OP = Op Code
+- CID = Chip ID
+- CW = Control Word
+- X = Don't Care
+- V = Valid (H or L, defined logic level)
+
+### 10.2 Table 30 — 핵심 명령 인코딩 정밀 인용
+
+각 명령은 *CS_n*과 *CA[13:0]* 으로 인코딩됨. **L = LOW, H = HIGH, V = Valid (defined), X = Don't Care**.
+
+**Activate (ACT) — 2-cycle 명령**
+
+| CS_n | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| L (1st cycle) | L | L | R0 | R1 | R2 | R3 | BA0 | BA1 | BG0 | BG1 | BG2 | CID0 | CID1 | CID2 |
+| H (2nd cycle) | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14 | R15 | R16 | CID3/R17 |
+
+→ ACT는 BG, BA, ROW 비트를 2 cycle에 걸쳐 인코딩. CID0~CID3는 3DS stacking 식별.
+
+**Mode Register Write (MRW) — 2-cycle**
+
+| CS_n | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| L | H | L | H | L | H | MRA0 | MRA1 | MRA2 | MRA3 | MRA4 | MRA5 | MRA6 | MRA7 | V |
+| H | OP0 | OP1 | OP2 | OP3 | OP4 | OP5 | OP6 | OP7 | V | V | CW | V | V | V |
+
+→ MRA0~MRA7 (8-bit MR 주소) + OP0~OP7 (8-bit payload) + CW (Control Word for RCD).
+
+**Mode Register Read (MRR) — 2-cycle**
+
+| CS_n | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| L | H | L | H | L | H | MRA0 | MRA1 | MRA2 | MRA3 | MRA4 | MRA5 | MRA6 | MRA7 | V |
+| H | V | V | V | V | V | V | V | V | V | V | CW | V | V | V |
+
+**Write (WR) — 2-cycle**
+
+| CS_n | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| L | H | L | H | H | L | BL*=L | BA0 | BA1 | BG0 | BG1 | BG2 | CID0 | CID1 | CID2 |
+| H | V | C3 | C4 | C5 | C6 | C7 | C8 | C9 | C10 | V | **H** (AP=H, no auto-pre) | WR Partial=L | V | CID3 |
+
+> NOTE 15: "If CA5:BL*=L, the command places the DRAM into the alternate Burst mode described by MR0[1:0] instead of the default Burst Length 16 mode."
+
+**Write w/ Auto-Precharge (WRA) — 2-cycle**
+
+cycle 2의 CA10 위치에 **AP=L** (Auto-Precharge 활성). 나머지는 WR과 동일.
+
+**Read (RD) — 2-cycle**
+
+WR과 유사하지만 cycle 1의 CA0~CA4 = `H L H H H` (RD identifier 다름) + cycle 2의 *WR Partial 위치* 가 *Read DRFM=L* (Refresh Management Indication).
+
+**Precharge (PREpb / PREsb / PREab) — 1-cycle**
+
+| Function | CS_n | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **PREab** (All) | L | H | H | L | H | L | CID3 | V | V | V | V | L | CID0 | CID1 | CID2 |
+| **PREsb** (Same Bank) | L | H | H | L | H | L | CID3 | BA0 | BA1 | V | V | H | CID0 | CID1 | CID2 |
+| **PREpb** (Per-Bank) | L | H | H | L | H | H | CID3 or DRFM=L | BA0 | BA1 | BG0 | BG1 | BG2 | CID0 | CID1 | CID2 |
+
+**Refresh (REFab / REFsb / RFMab / RFMsb) — 1-cycle**
+
+| Function | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **REFab** | H | H | L | H | L | V or RIR | V or H | H | CID3 | CID0 | CID1 | CID2 | | |
+| **RFMab** | H | H | H | L | L | CID3 or DRFM=L | V or RIR | V or H | H | CID0 | CID1 | CID2 | | |
+| **REFsb** | H | H | L | H | H | CID3 | BA0 | BA1 | V or H | V or H | H | CID0 | CID1 | CID2 |
+| **RFMsb** | H | H | H | L | H | CID3 or DRFM=L | BA0 | BA1 | V or H | H | CID0 | CID1 | CID2 | |
+
+> NOTE 23: "When the Refresh Management Required bit is '0' (MR58 OP[0]=0), CA9 is only required to be valid ('V') for a REF command, and the DRAM will treat a RFM command as a REF command. If MR58 OP[0]=1, a REF command requires CA9=H."
+
+**Self Refresh Entry / Power Down Entry — 1-cycle**
+
+| Function | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11 | CA12 | CA13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **SRE** | H | H | H | H | L | V | V | V | V | **H** (CKE-related) | L | V | V | V |
+| **SREF** w/ Freq Change | H | H | H | H | H | V | V | V | V | H | L | V | V | V |
+| **PDE** | H | H | H | L | H | V | V | V | V | V | V | V | V | V (ODT=L) |
+
+### 10.3 §4.1.1 — 2-Cycle Command Cancel (정밀 인용)
+
+> §4.1.1 원문 인용:
+> "DDR5 DRAM commands **ACT, WRP, WRPA and MRW are 2-cycle commands without associated ODT control requirements**. The DRAM will not execute these 2-cycle commands if the CS_n is LOW on the 2nd cycle (command cancel)."
+>
+> "If the RCD detects a parity error on the 2nd cycle of two-cycle command, the CS_n will remain LOW for both 1st and 2nd cycle of the command. **If the command is either Read, Write or MRR**, then it will be converted to **non-target termination command** in the DRAM. **If the command is either ACT, WRP, WRPA or MRW**, then the erroneous command will be **canceled** in the DRAM."
+>
+> "Command cancel is not intended by the host rather it is a result of CA parity error detected by the RCD. So the relationship between canceled command and the next valid command shall not be illegal. For example, MRR cannot be issued after canceled ACT even with tCMD_cancel satisfied. **In that case, the host is supposed to issue PRE first before issuing MRR**."
+
+**Table 31 — Command Cancel Timing**
+
+| Parameter | Symbol | DDR5 3200~6400 (Min/Max) | DDR5 6800~8800 (Min/Max) | Unit |
+|---|---|---|---|---|
+| Command cancel timing for ACT, WRP, WRPA, MRW when CS_n is low on 2nd cycle | **tCMD_cancel** | **8 nCK** / - | **8 nCK** / - | nCK |
+
+DV 적용 — 2-cycle cancel SVA:
+```systemverilog
+// 출처: JESD79-5C.01 §4.1.1 Table 31
+// 2-cycle 명령의 1st cycle 후 2nd cycle CS_n이 LOW면 cancel
+// cancel 후 *tCMD_cancel* 이상 지나야 다음 valid 명령 가능
+property p_cmd_cancel_recovery;
+    @(posedge clk)
+    (cs_n_2cycle_cmd_cancel_detected) |->
+        ##[`TCMD_CANCEL_NCK : $]
+        first_match(cmd_decoded != CMD_NOP && cmd_decoded != CMD_DES);
+endproperty
+a_cmd_cancel: assert property (p_cmd_cancel_recovery);
+
+// 위반 케이스: ACT cancel 후 PRE 없이 MRR 발급
+covergroup cmd_cancel_cg with function sample (
+    ddr5_cmd_e canceled_cmd, ddr5_cmd_e next_cmd
+);
+    cp_cancel: coverpoint canceled_cmd {
+        bins act = {CMD_ACT};
+        bins wrp = {CMD_WRP};
+        bins mrw = {CMD_MRW};
+    }
+    cp_next: coverpoint next_cmd {
+        bins pre  = {CMD_PRE};       // recommended
+        bins mrr  = {CMD_MRR};       // illegal after canceled ACT
+        bins desn = {CMD_NOP, CMD_DES};
+    }
+    cx: cross cp_cancel, cp_next;
+endgroup
+```
+
+### 10.4 §4.2 — Burst Type and Order (정밀 인용)
+
+> §4.2 원문 인용:
+> "Accesses within a given burst is currently **limited to only sequential, interleaved is not supported**. The ordering of accesses within a burst is determined by the burst length and the starting column address as shown in Table . The burst length is defined by bits OP[1:0] of Mode Register MR0. Burst length options include **BC8 OTF, BL16, BL32 (optional) and BL32 OTF**."
+
+→ **DDR5는 sequential 만 지원**. DDR4의 interleaved option 폐기.
+
+### 10.5 Table 32 — Burst Order for READ (BL16, BC8)
+
+> 출처: JESD79-5C.01 §4.2 Table 32
+
+**BC8 SEQ**:
+
+| Burst Length | C3 | C2 | C1 | C0 | Cycle 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9~16 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| BC8 | 0 | 0 | V | V | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | T (RTT_PARK) |
+| BC8 | 0 | 1 | V | V | 4 | 5 | 6 | 7 | 0 | 1 | 2 | 3 | T |
+| BC8 | 1 | 0 | V | V | 8 | 9 | A | B | C | D | E | F | T |
+| BC8 | 1 | 1 | V | V | C | D | E | F | 8 | 9 | A | B | T |
+
+**BL16 SEQ**:
+
+| Burst Length | C3 | C2 | C1 | C0 | Cycle 1 | 2 | 3 | ... | 16 |
+|---|---|---|---|---|---|---|---|---|---|
+| BL16 | 0 | 0 | V | V | 0 | 1 | 2 | ... | F |
+| BL16 | 0 | 1 | V | V | 4 | 5 | 6 | 7 | 0 1 2 3 C D E F 8 9 A B |
+| BL16 | 1 | 0 | V | V | 8 | 9 | A | ... | 7 |
+| BL16 | 1 | 1 | V | V | C | D | E | F | 8 9 A B 4 5 6 7 0 1 2 3 |
+
+> NOTE 1: T = Output driver for data and strobes are in RTT_PARK.
+> NOTE 2: V = A valid logic level (0 or 1), but respective buffer input ignores level on input pins.
+
+핵심 통찰:
+- **Starting column address (C3, C2)** 가 burst order의 *block ordering*을 결정
+- C1, C0는 *Don't care* (V) — DDR5는 16-byte aligned burst만
+- BL16의 모든 데이터를 4-block (0~3, 4~7, 8~B, C~F) 단위로 *rotation*
+
+### 10.6 Table 36 — Precharge Encodings
+
+> 출처: JESD79-5C.01 §4.3.1
+
+| Function | Abbrev | CS_n | CA0 | CA1 | CA2 | CA3 | CA4 | CA5 | CA6 | CA7 | CA8 | CA9 | CA10 | CA11~13 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Precharge All** | PREab | L | H | H | L | H | L | CID3 | V | V | V | V | L | CID0/1/2 |
+| **Precharge Same Bank** | PREsb | L | H | H | L | H | L | CID3 | BA0 | BA1 | V | V | H | CID0/1/2 |
+| **Precharge** (Per-Bank) | PREpb | L | H | H | L | H | H | CID3 | BA0 | BA1 | BG0 | BG1 | BG2 | CID0/1/2 |
+
+DDR5의 **3가지 Precharge mode**:
+1. **PREab (All)**: 모든 bank group의 모든 bank precharge
+2. **PREsb (Same Bank)**: 모든 bank group에서 *같은 bank number* 만 precharge
+3. **PREpb (Per-Bank)**: 정확히 하나의 bank 만 precharge
+
+→ DV는 *3가지 PRE mode 모두* cover해야 함. PREsb는 DDR4에 없던 신기능 — 동기적 precharge 필요할 때.
+
+### 10.7 §4.3 — Precharge Behavior (원문 인용)
+
+> §4.3 원문 인용:
+> "The PRECHARGE command is used to deactivate the open row in a particular bank or the open row in all banks. The bank(s) shall be available for a subsequent row activation a specified time (tRP) after the PRECHARGE command is issued."
+>
+> "If CA10 on the 2nd pulse of a Read or Write command is LOW, (shown as AP=L in the command truth table) then the **auto-precharge function is engaged**. This feature allows the precharge operation to be partially or completely hidden during burst read cycles (dependent upon CAS latency) thus improving system performance for random data access."
+>
+> "**The precharge to precharge delay is defined by tPPD** in the core timing tables. tPPD applies to any combination of precharge commands (PREab, PREsb, PREpb). tPPD also applies to any combination of precharge commands to a different die in a 3DS DDR5 SDRAM."
+
+DV 적용:
+```systemverilog
+// tPPD — precharge to precharge minimum delay
+property p_tppd;
+    @(posedge clk)
+    (cmd_decoded inside {CMD_PREab, CMD_PREsb, CMD_PREpb}) |->
+        ##[`TPPD_NCK : $]
+        first_match(cmd_decoded inside {CMD_PREab, CMD_PREsb, CMD_PREpb});
+endproperty
+a_tppd: assert property (p_tppd);
+```
+
+### 10.8 핵심 NOTE 인용 (Table 30 — 안전 관련)
+
+- **NOTE 7**: "The Precharge command applies to a single bank as specified by bank address and bank group bits."
+- **NOTE 9**: "The SRE command places the DRAM in self refresh state."
+- **NOTE 10**: "The PDE command places the DRAM in power down state."
+- **NOTE 11**: "Two cycle commands with no ODT control (ACT, MRW, WRP). **DRAM does not execute the command if it receives CS as LOW on 2nd cycle**." → 2-cycle cancel mechanism
+- **NOTE 12**: "WR command with WR_Partial (WR_P) = Low indicates a partial write command. This is to help DRAM start an internal read for 'read modify write'."
+- **NOTE 13**: "If CW=Low during the MRW command then DRAM should execute the command, Mode Register will be written. **If CW=HIGH then DRAM ignores the MRW command, and the Mode Register is not changed**." → RCD Control Word 분기
+- **NOTE 26**: "Unlike DES, **NOP is considered a *valid command***, and timing from a preceding valid command must satisfy any associated command timings."
+
+→ DV 시사점:
+- **NOP ≠ DES**: NOP는 *valid 명령*으로 *timing 제약*에 포함됨. DES는 *non-command* (idle).
+- **CW (Control Word)**: MRW의 마지막 cycle CA10에서 `CW=H` 면 DRAM은 명령 무시 (RCD만 처리).
+- **WR_Partial = L**: read-modify-write 모드. internal read 발생.
+
+## 11. 핵심 정리 (Key Takeaways)
 
 - DRAM 명령은 본질적으로 7개 (ACT/RD/WR/PRE/REF/MRW/MRR) + 보조 (ZQ, NOP, DES, PDE/PDX).
-- DDR5는 *2-cycle command* — CA[6:0]에 2 클럭에 걸쳐 인코딩. CS_n의 *2-cycle 윈도우*가 핵심.
-- BL16이 default, BL32는 옵션 (sequential 대량 전송 시 유리).
-- Command coverage는 *opcode 단순 cover* + *sequence (transition) cover* + *BL × cmd cross* 의 3축.
-- SVA로 *불법 명령 순서* (ACT→ACT without PRE, tRP 위반 등) 즉시 catch.
-- Scoreboard의 burst order 계산은 *MR0/MR1 설정에 의존* — burst order MR 변경 시 scoreboard 로직도 따라가야 함.
+- DDR5는 *2-cycle command* — CA[13:0]에 2 클럭에 걸쳐 인코딩. **CA1 비트가 1-cycle vs 2-cycle 식별자**. CS_n의 *2-cycle 윈도우*가 핵심.
+- BL16이 default, BL32는 옵션 (sequential 대량 전송 시 유리). **DDR5는 sequential burst 만 지원** (interleaved 폐기).
+- DDR5의 **3 PRE 모드**: PREab (All), PREsb (Same Bank), PREpb (Per-Bank). DDR4의 PREsb는 신규.
+- **2-Cycle Command Cancel**: ACT/WRP/WRPA/MRW는 2nd cycle CS_n LOW면 cancel. **tCMD_cancel = 8 nCK** 이후에 다음 명령. 단, cancel 후 *legal sequence*는 host가 보장 (예: ACT cancel 후 PRE 없이 MRR 불가).
+- **NOP vs DES**: NOP는 valid 명령 (timing 제약 적용), DES는 non-command.
+- **CW (Control Word)**: MRW에서 CW=H면 DRAM 무시 — RCD만 처리.
+- Command coverage는 *opcode + sequence + BL × cmd cross + cancel scenario* 의 다축.
+- SVA로 *불법 명령 순서* + *2-cycle cancel timing* + *tPPD* + *Refresh Required 처리 (MR58 OP[0])* 모두 catch.
 
-## 11. Further Reading
+## 12. Further Reading
 
 - 이전: [Ch04. Mode Register 깊이 분석](04_mode_registers.md)
 - 다음: [Ch06. Timing·Preamble·Postamble](06_timing_preamble.md)
 - 부록 C: [SVA / Coverage 예제 모음](appendix_c_sva_coverage_examples.md)
 - 퀴즈: [Ch05 퀴즈](quiz/ch05_quiz.md)
+- 추가: JESD79-5C.01 §4.1 Table 30 — 모든 명령 인코딩 (이 챕터는 *주요 명령 발췌*)
 
 <div class="chapter-nav">
   <a class="nav-prev" href="../04_mode_registers/">

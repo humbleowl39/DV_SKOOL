@@ -406,17 +406,274 @@ endgroup
 
 ---
 
-## 9. 핵심 정리 (Key Takeaways)
+## 9. PDF 정밀 인용 — DDR5 MR3 (DQS Training) + MR5/MR6
+
+> 출처: JESD79-5C.01 v1.31 §3.5.5 (MR3), §3.5.7 (MR5), §3.5.8 (MR6)
+
+### 9.1 MR3 (MA[7:0]=03H) — DQS Training 정밀 비트 매핑
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| Write Leveling Internal Cycle Alignment — **Upper Byte** [OP7:4] | ← | ← | ← | Write Leveling Internal Cycle Alignment — **Lower Byte** [OP3:0] | ← | ← | ← |
+
+**OP[3:0] (Lower Byte WL Internal Cycle Alignment) — R/W**:
+
+| OP[3:0] | tCK Offset |
+|---|---|
+| `0000B` | **0 tCK (Default)** |
+| `0001B` | -1 tCK |
+| `0010B` | -2 tCK |
+| `0011B` | -3 tCK |
+| `0100B` | -4 tCK |
+| `0101B` | -5 tCK |
+| `0110B` | -6 tCK |
+| `0111B` | -7 tCK (Optional) |
+| `1000B` | -8 tCK (Optional) |
+| ... | ... |
+| `1110B` | -14 tCK (Optional) |
+| `1111B` | -15 tCK (Optional) |
+
+**OP[7:4] (Upper Byte WL Internal Cycle Alignment) — R/W**: Same encoding (0 ~ -15 tCK).
+
+> NOTE 1 (인용): "This is set during WL Training, after the host DQS has been aligned to the ideal External WL timings. **The Internal Write Timing is enabled and the WL Internal Timing Alignment is set to ensure the internal Write Enable aligns within tDQS2CK of the external WL Trained location**. When Internal Write Timing is Disabled, the WL Internal Cycle Alignment setting does not change the behavior of the write timings."
+>
+> NOTE 2: "The DRAM implementation may optionally have the same behavior when the Internal Write Timing is enabled vs disabled. This would mean that the CK and DQS timing paths remain matched internally. The WL Internal Cycle Alignment setting must still support pulling the Internal WL Pulse earlier so that the same WL Training Flow will produce the correct result."
+>
+> NOTE 3: "Lower Byte WL Internal Cycle Alignment is intended for **x4, x8, and x16 configurations**."
+>
+> NOTE 4: "Upper Byte WL Internal Cycle Alignment is intended for **x16 configuration only**. Although training of the Lower and Upper Bytes is independent, **contact the DRAM vendor regarding recommendations for setting the WICA values to the same offset**."
+>
+> NOTE 5: Optional OPcode may be needed for certain speed bins.
+
+핵심 통찰:
+- MR3은 **Write Leveling의 결과**를 저장 — Lower Byte (x4/8/16) + Upper Byte (x16 only)
+- *Negative offset only* (0 ~ -15 tCK) — *internal WL pulse를 앞당기는* 방향만 지원
+- x16 device에서 *Upper/Lower byte 독립 training* 가능하지만 spec은 *동일 offset* 권장
+- Internal Write Timing disabled여도 동작은 동일 (Note 2)
+
+### 9.2 MR5 (MA[7:0]=05H) — IO Settings 정밀 비트 매핑
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| Pull-Down Output Driver Impedance [OP7:6] | ← | DM Enable | TDQS Enable | PODTM Support | Pull-up Output Driver Impedance [OP2:1] | ← | Data Output Disable |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| **Data Output Disable** | W | OP[0] | `0B`: Normal Operation (Default)<br>`1B`: Outputs Disabled |
+| **Pull-up Output Driver Impedance** | R/W | OP[2:1] | `00B`: **RZQ/7 (34 Ω)**<br>`01B`: **RZQ/6 (40 Ω)**<br>`10B`: **RZQ/5 (48 Ω)**<br>`11B`: RFU |
+| **Package Output Driver Test Mode Supported (PODTM)** | R | OP[3] | `0B`: Function Not Supported<br>`1B`: Function Supported |
+| **TDQS Enable** | R/W | OP[4] | `0B`: Disable (Default)<br>`1B`: Enable |
+| **DM Enable** | R/W | OP[5] | `0B`: Disable (Default)<br>`1B`: Enable |
+| **Pull-Down Output Driver Impedance** | R/W | OP[7:6] | `00B`: **RZQ/7 (34 Ω)**<br>`01B`: **RZQ/6 (40 Ω)**<br>`10B`: **RZQ/5 (48 Ω)**<br>`11B`: RFU |
+
+> RZQ = External ZQ resistor = 240 Ω. RZQ/7 ≈ 34.3 Ω, RZQ/6 = 40 Ω, RZQ/5 = 48 Ω.
+
+DV 시사점:
+- **Output impedance**: 34/40/48 Ω 중 선택 — system signal integrity에 따라 dynamic 설정.
+- **TDQS Enable**: **x8 only** (MR5:OP[4]=1). x4/x16 device에서 이 비트 1로 set 시 *spec violation*.
+- **DM Enable**: **x8 only** (MR5:OP[5]=1). x4 device에서 이 비트 1로 set 시 *spec violation*.
+- TDQS + DM 동시 enable 시 *상호 배타* (TDQS는 DM pin 자리 사용).
+
+```systemverilog
+// MR5 검증 — x4 device에서 DM/TDQS 둘 다 disabled 강제
+property p_x4_no_dm_tdqs;
+    @(posedge clk) (dram_organization == ORG_X4) |->
+        (ral.MR5.dm_enable.value == 1'b0) &&
+        (ral.MR5.tdqs_enable.value == 1'b0);
+endproperty
+a_x4_no_dm_tdqs: assert property (p_x4_no_dm_tdqs)
+    else `uvm_error("MR5_VIOL", "x4 device must not enable DM or TDQS")
+```
+
+### 9.3 MR6 (MA[7:0]=06H) — Write Recovery Time / tRTP 정밀 nCK 값
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| tRTP [OP7:4] | ← | ← | ← | Write Recovery Time [OP3:0] | ← | ← | ← |
+
+**OP[3:0] — Write Recovery Time (Legacy / PRAC)** R/W:
+
+| OP[3:0] | Legacy (nCK) | PRAC (nCK) |
+|---|---|---|
+| `0000B` | **48** (default) | **16** |
+| `0001B` | 54 | 18 |
+| `0010B` | 60 | 20 |
+| `0011B` | 66 | 22 |
+| `0100B` | 72 | 24 |
+| `0101B` | 78 | 26 |
+| `0110B` | 84 | 28 |
+| `0111B` | 90 | 30 |
+| `1000B` | 96 | 32 |
+| `1001B` | 102 | 34 |
+| `1010B` | 108 | 36 |
+| `1011B` | 114 | 38 |
+| `1100B` | 120 | 40 |
+| `1101B` | 126 | 42 |
+| `1110B` | 132 | 44 |
+| `1111B` | RFU | RFU |
+
+**OP[7:4] — tRTP (Legacy / PRAC)** R/W:
+
+| OP[7:4] | Legacy (nCK) | PRAC (nCK) |
+|---|---|---|
+| `0000B` | **12** (default) | **8** |
+| `0001B` | 14 | 9 |
+| `0010B` | 15 | 10 |
+| `0011B` | 17 | 11 |
+| `0100B` | 18 | 12 |
+| `0101B` | 20 | 13 |
+| `0110B` | 21 | 14 |
+| `0111B` | 23 | 15 |
+| `1000B` | 24 | 16 |
+| `1001B` | 26 | 17 |
+| `1010B` | 27 | 18 |
+| `1011B` | 29 | 19 |
+| `1100B` | 30 | 20 |
+| `1101B` | 32 | 21 |
+| `1110B` | 33 | 22 |
+| `1111B` | RFU | RFU |
+
+> NOTE 1: tWR,min is defined in the "Timing Parameters" tables (Table 330 - Table 332). Host must operate with MR settings resulting in tCK × MR6:OP[3:0] ≥ tWR,min.
+> NOTE 2: tRTP,min is defined in the "Timing Parameters" tables (Table 328 - Table 330). Host must operate with MR settings resulting in tCK × MR6:OP[7:4] ≥ tRTP,min.
+> NOTE 3: All nCK conversions require rounding algorithm consideration.
+
+**Legacy vs PRAC**:
+- *Legacy*: 기존 DDR5 mode — 더 긴 tWR/tRTP (안전 마진 큼)
+- *PRAC (Per Row Activation Counting)*: 더 *aggressive* nCK 값 — high-speed signaling 보상 + RAA counter와 통합 동작. *PRAC mode (MR70~MR75 활성화)* 시 이 값 적용.
+
+DV 시사점:
+- Controller가 *MR6 설정과 실제 사용 timing이 일치*하는지 검증
+- *MR6 변경* 시 SVA `a_twr` / `a_trtp` 의 threshold도 *동적 update* 필요
+
+```systemverilog
+// MR6 값에 따른 dynamic timing check
+int twr_nck_current;
+int trtp_nck_current;
+
+always @(ral.MR6.write_recovery_time.value or ral.MR6.trtp.value or prac_mode) begin
+    case (ral.MR6.write_recovery_time.value)
+        4'b0000: twr_nck_current = prac_mode ? 16 : 48;
+        4'b0001: twr_nck_current = prac_mode ? 18 : 54;
+        // ... 모든 case ...
+        default: twr_nck_current = 48;
+    endcase
+    case (ral.MR6.trtp.value)
+        4'b0000: trtp_nck_current = prac_mode ? 8 : 12;
+        // ... 모든 case ...
+        default: trtp_nck_current = 12;
+    endcase
+end
+
+property p_twr_dynamic;
+    @(posedge clk)
+    (last_wr_burst_end) |-> ##[twr_nck_current : $] (cmd_decoded == CMD_PRE || cmd_decoded == CMD_PREab);
+endproperty
+a_twr_dynamic: assert property (p_twr_dynamic);
+```
+
+### 9.4 §3.5.6 MR4 — Refresh Settings 정밀 비트 매핑 (보강)
+
+> Ch04 §10.1 의 학습용 모형 대신 *spec 원문 인용*:
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| TUF | RFU | Wide Range (Optional) | Refresh tRFC Mode | Refresh Interval Rate Indicator | Minimum Refresh Rate [OP2:0] | ← | ← |
+
+**OP[2:0] — Minimum Refresh Rate (R)**:
+
+| OP[2:0] | If Wide Range NOT supported (OP[5]=0) | If Wide Range supported (OP[5]=1) |
+|---|---|---|
+| `000B` | RFU | tREFI x1 (1x), **<75°C** nominal |
+| `001B` | tREFI x1 (1x), **<80°C** nominal | tREFI x1 (1x), **75-80°C** nominal |
+| `010B` | tREFI x1 (1x), **80-85°C** nominal | tREFI x1 (1x), **80-85°C** nominal |
+| `011B` | tREFI /2 (2x), **85-90°C** nominal | tREFI /2 (2x), **85-90°C** nominal |
+| `100B` | tREFI /2 (2x), **90-95°C** nominal | tREFI /2 (2x), **90-95°C** nominal |
+| `101B` | tREFI /2 (2x), **>95°C** nominal | tREFI /2 (2x), **95-100°C** nominal |
+| `110B` | RFU | tREFI /2 (2x), **>100°C** nominal |
+| `111B` | RFU | RFU |
+
+**OP[3] — Refresh Interval Rate Indicator (SR/W)**:
+- Status Read: `0B`= Not implemented (Default), `1B`= Implemented
+- Host Write: `0B`= Disabled (Default), `1B`= Enabled
+
+**OP[4] — Refresh tRFC Mode (R/W)**:
+- `0B`= **Normal Refresh Mode (tRFC1)**
+- `1B`= **Fine Granularity Refresh Mode (tRFC2)**
+
+**OP[5] — Wide Range (Optional, R)**:
+- `0B`= Wide range not supported
+- `1B`= Wide range supported (extended temperature)
+
+**OP[7] — TUF (Temperature Update Flag, R)**:
+- `0B`= No change in OP[2:0] since last MR4 read (default)
+- `1B`= Change in OP[2:0] since last MR4 read
+
+> NOTE 3 (인용): "DRAM vendors must report all of the possible settings over the operating temperature range of the device. Each vendor guarantees that their device will work at any temperature within the range when the system refresh interval follows there guidelines: **Threshold ≤ 85°C: tREFI x1 (1x Refresh Rate) or faster may be used. Threshold > 85°C: tREFI /2 (2x Refresh Rate) or faster is required. Data integrity at thresholds >95°C is not assured regardless of refresh rate**."
+>
+> NOTE 4: "The **2x Refresh Rate must be provided by the system before the DRAM Tj has gone up by more than 2°C** (Temperature Margin) since the first report out of OP[2:0]=011B. This condition is reset when OP[2:0] is equal to 010B."
+
+DV 시사점 — TUF flag 동작 검증:
+```systemverilog
+// MR4 TUF 비트는 controller가 *MRR로 읽을 때* OP[2:0] 변경 발생 시 set
+// MR4 read 후 TUF는 *clear*되어야 함
+property p_tuf_clear_after_read;
+    @(posedge clk) (mr4_read_completed) |=> (ral.MR4.tuf.get() == 1'b0);
+endproperty
+a_tuf_clear: assert property (p_tuf_clear_after_read);
+
+// Temperature transition 시나리오
+class ddr5_thermal_transition_seq extends uvm_sequence;
+    `uvm_object_utils(ddr5_thermal_transition_seq)
+
+    virtual task body();
+        // 80°C → 85°C 천천히 올림. MR4 read해서 변경 감지
+        set_dram_temperature(80);
+        run_traffic(1000);
+        check_mr4_setting();
+
+        set_dram_temperature(86);
+        run_traffic(500);
+        wait_for_tuf_set();        // TUF=1 detect
+        do_mr4_read();              // controller가 MR4 readback
+        verify_refresh_rate_transition();  // tREFI/2로 전환 확인
+    endtask
+endclass
+```
+
+### 9.5 Training Step별 정확한 MR 매핑 정리
+
+| Training Step | 사용 MR | 핵심 OP |
+|---|---|---|
+| CS Training | MR2 OP[4] (CS Assertion Duration MPC), MR13 (CS Geardown) | — |
+| CA Training | MR2 OP[4] | — |
+| ZQ Calibration | (명령 기반: ZQCS/ZQCL) | — |
+| Write Leveling | **MR3** (WL Internal Cycle Alignment Upper/Lower), MR2 OP[1] (WL Training enable), MR7 (WL Internal +0.5tCK Alignment Offset) | OP[3:0]/OP[7:4] |
+| Read Preamble Training | MR2 OP[0] (Read Preamble Training), MR8 OP[2:0] (Read Preamble) | — |
+| DQ Vref Training | MR10 (VrefDQ Value) | OP[6:0] |
+| CA Vref Training | MR11 (VrefCA Value) | OP[6:0] |
+| CS Vref Training | MR12 (VrefCS Value) | OP[6:0] |
+| Read Training Mode | MR25 (Read Training Mode Settings), MR26~MR31 (Read Pattern Data/Invert/LFSR) | — |
+| DCA Training (per DQ) | MR42~MR48 (DCA group), MR103~MR254 (per-DQ DCA + VrefDQ offset) | — |
+| DCM (Duty Cycle Monitor) | (LPDDR5 §4.2.8) | — |
+| DFE Training | MR21 (Rx CTLE), MR70~MR75 (DFE Global), MR111 (DFE Global Settings), MR112~MR248 (per-DQ DFE Tap1~4 Gain Bias) | — |
+
+> 정확한 MR70~MR75 (PRAC enable), MR111 (Global Enable + Tap-1~4 Enable), MR112~MR248 (Gain Bias Step 0~7, Sign bit) 의 비트 매핑은 JESD79-5C.01 §3.5.71~§3.5.86 참조.
+
+## 10. 핵심 정리 (Key Takeaways)
 
 - High-speed signaling (≥3.2 GT/s)에서 *training은 필수* — sampling timing/Vref/duty/equalizer를 *initial로 calibrate*.
 - DDR4 training: Write Leveling + MPR-based DQ training + DQ Vref Training (3가지 핵심).
 - DDR5 training: 위 + *CS Training*, *Read Training Mode (MR25~MR31)*, *DCA Training*, *DFE Training*.
+- **DDR5 MR3 정밀**: WL Internal Cycle Alignment **Upper Byte (OP[7:4])** + **Lower Byte (OP[3:0])**. *0 ~ -15 tCK negative offset only*. x4/x8은 Lower만, x16은 Upper+Lower 독립 training.
+- **MR5 IO Settings**: Pull-up/Pull-Down Output Driver Impedance **RZQ/7 (34Ω), RZQ/6 (40Ω), RZQ/5 (48Ω)** 중 선택. DM Enable / TDQS Enable은 **x8 only**.
+- **MR6 정밀 nCK**: tWR Legacy `48~132 nCK` / PRAC `16~44 nCK`. tRTP Legacy `12~33 nCK` / PRAC `8~22 nCK`. **PRAC mode**는 RAA counter와 통합 동작.
+- **MR4 Refresh Settings**: Wide Range (OP[5]) 지원 시 95~100°C, >100°C 범위 추가. **TUF (OP[7])**는 temperature change 감지 — MRR로 clear.
 - LPDDR4 training: CBT (x16/x8 모드) + CA VREF + DQ VREF + Write Leveling + RD/DQS Training.
 - LPDDR5 training: *16+ 단계*. CBT Mode1/2, *WCK2CK Leveling*, *DCA + DCM*, *WCK-DQ Training*.
 - DV는 training FSM 을 *모델링*하고, *모든 step coverage* + *failure injection coverage* + *retry timeout* 을 검증.
 - Failure injection은 *각 training step* 에서 *의도적*으로 fail을 만들어 *controller recovery*를 검증.
 
-## 10. Further Reading
+## 11. Further Reading
 
 - 이전: [Ch07. Refresh·RFM](07_refresh_rfm.md)
 - 다음: [Ch09. 신뢰성·ECC·CRC·PPR](09_reliability_ecc_crc.md)

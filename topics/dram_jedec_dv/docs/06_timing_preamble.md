@@ -313,17 +313,226 @@ endgroup
 
 ---
 
-## 8. 핵심 정리 (Key Takeaways)
+## 8. PDF 정밀 인용 — DDR5 §4.4 Programmable Preamble/Postamble
+
+> 출처: JESD79-5C.01 v1.31 §4.4, Tables 37~38
+
+### 8.1 Read Preamble — MR8:OP[2:0] 인코딩 (정밀)
+
+> §4.4.1 원문 인용:
+> "DDR5 supports a programmable read preamble and postamble. **Read Preamble is configured as 1tCK, 2tCK (two unique modes), 3tCK and 4tCK via MR8:OP[2:0]**."
+
+| MR8:OP[2:0] | 모드 | Pattern |
+|---|---|---|
+| `000B` | **1 tCK** | `10` Pattern |
+| `001B` | **2 tCK** | `0010` Pattern |
+| `010B` | **2 tCK** (DDR4 Style) | `1110` Pattern |
+| `011B` | **3 tCK** | `000010` Pattern |
+| `100B` | **4 tCK** | `00001010` Pattern |
+| `101B` | Reserved | |
+| `110B` | Reserved | |
+| `111B` | Reserved | |
+
+**Read Postamble**: 0.5tCK 또는 1.5tCK via **MR8:OP[6]**
+
+### 8.2 Write Preamble — MR8:OP[4:3] 인코딩
+
+> §4.4.2 원문 인용:
+> "Write Preamble is configured as **2tCK, 3tCK, and 4tCK via MR8:OP[4:3]**"
+> "Write Postamble is configured as **0.5tCK or 1.5tCK via MR8:OP[7]**"
+
+| MR8:OP[4:3] | 모드 |
+|---|---|
+| `00B` | 2 tCK Write Preamble |
+| `01B` | 3 tCK Write Preamble |
+| `10B` | 4 tCK Write Preamble |
+| `11B` | Reserved |
+
+### 8.3 Table 37 — Preamble/Postamble Timing (DDR5-3200~4800)
+
+> 출처: JESD79-5C.01 §4.4.3 Table 37 (단위: tCK(avg))
+
+| Parameter | Symbol | DDR5-3200~3600 (Min) | DDR5-4000~4400 (Min) | DDR5-4800 (Min) |
+|---|---|---|---|---|
+| 1tCK Read Preamble | `tRPRE1` | **0.900** | — | — |
+| 2tCK Read Preamble | `tRPRE2` | **1.800** | 1.800 | 1.800 |
+| 2tCK DDR4-style Read Preamble | `tRPRE2_D4` | 1.800 | 1.800 | 1.800 |
+| 3tCK Read Preamble | `tRPRE3` | — | **2.700** | 2.700 |
+| 4tCK Read Preamble | `tRPRE4` | — | — | — |
+| 0.5tCK Read Postamble | `tRPST0.5` | **0.450** | 0.450 | 0.450 |
+| 1.5tCK Read Postamble | `tRPST1.5` | **1.200** | 1.200 | 1.200 |
+| 2tCK Write Preamble | `tWPRE2` | **1.800** | 1.800 | 1.800 |
+| 3tCK Write Preamble | `tWPRE3` | — | 2.700 | 2.700 |
+| 4tCK Write Preamble | `tWPRE4` | — | **3.600** | 3.600 |
+| 0.5tCK Write Postamble | `tWPST0.5` | **0.45** | 0.45 | 0.45 |
+| 1.5tCK Write Postamble | `tWPST1.5` | — | **1.20** | 1.20 |
+| DQS high toggle pulse (Write Preamble) | `tDQSH_pre` | 0.395~0.605 | 0.395~0.605 | 0.430~0.570 |
+| DQS low toggle pulse (Write Preamble) | `tDQSL_pre` | 0.395~0.605 | 0.395~0.605 | 0.430~0.570 |
+
+### 8.4 Table 38 — Preamble/Postamble Timing (DDR5-5200~8800)
+
+> 출처: JESD79-5C.01 §4.4.3 Table 38
+
+| Parameter | Symbol | DDR5-5200~6400 | DDR5-6800~7200 | DDR5-7600~8800 |
+|---|---|---|---|---|
+| 2tCK DDR4-style Read Preamble | `tRPRE2_D4` | **2.700** | — | — |
+| 3tCK Read Preamble | `tRPRE3` | **2.700** | — | — |
+| 4tCK Read Preamble | `tRPRE4` | **3.600** | 3.600 | 3.600 |
+| 1.5tCK Read Postamble | `tRPST1.5` | 1.200 | 1.200 | **1.300** |
+| 3tCK Write Preamble | `tWPRE3` | 2.700 | — | — |
+| 4tCK Write Preamble | `tWPRE4` | 3.600 | 3.600 | 3.600 |
+| 1.5tCK Write Postamble | `tWPST1.5` | 1.200 | 1.200 | 1.200 |
+| `tDQSH_pre`/`tDQSL_pre` | | 0.430~0.570 | 0.450~0.550 | 0.450~0.550 |
+
+핵심:
+- 고속 (DDR5-5200 이상)에서는 **2tCK preamble 미지원** → 3tCK/4tCK 필수
+- DDR5-7600 이상에서 tRPST1.5 가 1.300으로 *살짝 증가*
+- tDQSH_pre/tDQSL_pre 범위가 *고속에서 좁아짐* — 더 정확한 duty cycle 필요
+
+### 8.5 §4.4.3 — Preamble/Postamble Timing (원문 인용)
+
+> §4.4.3 원문 인용:
+> "During Read and Write operations, the input receiver strobe shall be aligned with the DQ according to the Preamble and Postamble settings, and the strobe shall meet the specified timing requirements to guarantee enough timing margin by setting the window for the strobe during the Preamble and Postamble time frame. **When the DRE is enabled, the DQs shall be high for a minimum of 4-UI prior to the first Write data bit to ensure proper DFE synchronization**."
+
+→ **DRE (DQ Reset Enable / DFE Reset)** enabled 시 *4-UI minimum DQ HIGH*. DV는 이 prep 시간을 별도 SVA로 검증.
+
+### 8.6 §4.5 — Interamble (원문 인용)
+
+> §4.5 원문 인용:
+> "The DQS strobe for the device requires a preamble prior to the first latching edge (the rising edge of DQS_t with data valid), and it requires a postamble after the last latching edge."
+>
+> "Additionally, the postamble and preamble configured size shall **NOT force the HOST to add command gaps in the command interval just to satisfy postamble or preamble settings**. (i.e., Preamble=4tCK + Postamble=1.5tCK shall NOT force tCCD+5)."
+>
+> "In Read to Read operations with **tCCD=BL/2, postamble for 1st command and preamble for 2nd command shall disappear** to create consecutive DQS latching edge for seamless burst operations."
+
+핵심:
+- **Interamble**: 연속 burst 사이의 *postamble + preamble overlap*
+- tCCD=BL/2 (= 8 nCK for BL16) 면 *seamless* — postamble/preamble 사라짐
+- tCCD > BL/2 면 *gap* 발생, preamble/postamble 모두 보임
+- preamble/postamble 설정이 *additional command gap*을 *강제하지 않음* — RTL 설계 자유도 보장
+
+DV 적용 — 연속 Read 시 interamble 동작 검증:
+```systemverilog
+// RD-RD interval 별 DQS pattern
+typedef enum {INTERAMBLE_SEAMLESS, INTERAMBLE_TOUCH, INTERAMBLE_OVERLAP, INTERAMBLE_GAP} interamble_e;
+
+covergroup interamble_cg with function sample (int tccd_excess, int post_tck, int pre_tck);
+    cp_tccd: coverpoint tccd_excess {
+        bins seamless     = {0};         // tCCD = BL/2
+        bins min_plus_1   = {1};
+        bins min_plus_2   = {2};
+        bins min_plus_3   = {3};
+        bins min_plus_4   = {4};
+        bins min_plus_5plus = {[5:$]};
+    }
+    cp_post: coverpoint post_tck {
+        bins p_05 = {1};   // 0.5tCK encoded as 1 (half-tCK)
+        bins p_15 = {3};   // 1.5tCK
+    }
+    cp_pre: coverpoint pre_tck {
+        bins p_1 = {1}; bins p_2 = {2}; bins p_3 = {3}; bins p_4 = {4};
+    }
+    cx: cross cp_tccd, cp_post, cp_pre;
+endgroup
+```
+
+### 8.7 Preamble pattern 정확 인식 — Monitor SVA
+
+```systemverilog
+// 2tCK Read Preamble (DDR5 default) — pattern "0010"
+// 출처: JESD79-5C.01 §4.4.1
+sequence s_2tck_preamble_pattern;
+    (dqs_t == 1'b0) ##1 (dqs_t == 1'b0) ##1 (dqs_t == 1'b1) ##1 (dqs_t == 1'b0);
+        // 4 half-cycles = 2 tCK
+endsequence
+
+property p_2tck_read_preamble;
+    @(posedge half_clk)
+    rd_preamble_start |-> s_2tck_preamble_pattern ##1 burst_starts;
+endproperty
+a_2tck_read_preamble: assert property (p_2tck_read_preamble);
+
+// 1tCK Read Preamble — pattern "10"
+sequence s_1tck_preamble_pattern;
+    (dqs_t == 1'b1) ##1 (dqs_t == 1'b0);
+endsequence
+
+// 3tCK — "000010"
+sequence s_3tck_preamble_pattern;
+    (dqs_t == 1'b0) ##1 (dqs_t == 1'b0) ##1 (dqs_t == 1'b0) ##1
+    (dqs_t == 1'b0) ##1 (dqs_t == 1'b1) ##1 (dqs_t == 1'b0);
+endsequence
+
+// 4tCK — "00001010"
+sequence s_4tck_preamble_pattern;
+    (dqs_t == 1'b0) ##1 (dqs_t == 1'b0) ##1 (dqs_t == 1'b0) ##1 (dqs_t == 1'b0) ##1
+    (dqs_t == 1'b1) ##1 (dqs_t == 1'b0) ##1 (dqs_t == 1'b1) ##1 (dqs_t == 1'b0);
+endsequence
+```
+
+> 위 SVA는 *개념 예시* — 실제로는 DQS_t/DQS_c differential, half-tCK granularity, *positive/negative edge 별도 sampling* 등 시뮬레이터 환경에 맞게 다듬어야 합니다.
+
+### 8.8 MR40:OP[2:0] — Read DQS Offset (정밀 보충)
+
+> §4.4.1 NOTE: "DQS shall have an option to drive early by x-tCK to accommodate different HOST receiver designs as controlled by the Read DQS Offset in MR40:OP[2:0]."
+
+| MR40:OP[2:0] | Read DQS Offset |
+|---|---|
+| `000B` | 0 (no offset, default) |
+| `001B` | 1 tCK early |
+| `010B` | 2 tCK early |
+| `011B` | 3 tCK early |
+| ... | (spec 참조) |
+
+→ host receiver design이 *늦은 DQS edge sampling*을 못 하는 경우, DRAM이 DQS를 *미리 driving*. DV는 offset값 별 cover.
+
+### 8.9 §4.4.4 — tWPRE/tRPRE 측정 방법 (원문 인용)
+
+> §4.4.4 원문 인용:
+> "tWPRE and tRPRE are measured **from a starting point at VswM HIGH or LOW** (as defined in the table below) **to the differential crossing point of DQS_t/DQS_c corresponding to the first burst bit of data** as the ending point. The method is applicable for all programmable Preamble durations."
+
+**Table 39 — VswM Reference Voltages**
+
+| Measured Parameter | Reference | Unit |
+|---|---|---|
+| VswM HIGH | VIHdiffDQS | mV |
+| VswM LOW | VILdiffDQS | mV |
+
+§4.4.5 — tWPST/tRPST 측정:
+> "tWPST and tRPST are measured from a starting point at **the differential crossing point of DQS_t/DQS_c corresponding to the last burst bit of data** to the VswM LOW ending point."
+
+### 8.10 §4.5 Read Interamble Timing Diagrams (개요)
+
+§4.5.1 인용:
+> "In Read to Read operations with tCCD=BL/2, postamble for 1st command and preamble for 2nd command shall disappear to create consecutive DQS latching edge for **seamless burst operations**."
+
+| tCCD intervals | DQS pattern between bursts |
+|---|---|
+| `BL/2` (= 8 nCK for BL16) | Seamless (no postamble/preamble visible) |
+| `Min+1` | 1 nCK gap |
+| `Min+2` | 2 nCK gap, postamble/preamble *touches* or *overlaps* (config 따라) |
+| `Min+3` | 3 nCK gap |
+| `Min+4` | 4 nCK gap, full postamble + full preamble visible |
+| `Min+5` | 5 nCK gap, *toggles take precedence over static preambles* (overlap 시) |
+
+DV — interamble cover:
+- 위 각 spacing 마다 *DQS pattern* 정확히 model
+- Scoreboard가 RD burst data를 *interamble 영향 받지 않게* 추출
+
+## 9. 핵심 정리 (Key Takeaways)
 
 - 핵심 timing 9개를 외워야 함: tRCD/tRP/tRAS/tRC/tWR/tRTP/tRRD_L/S/tFAW/tCCD_L/S.
 - DDR5는 *tCK가 짧으므로* 동일 절대 시간에 *더 많은 nCK*. `tCCD_L_WR2` 같은 세분화 timing 추가.
-- Preamble은 *DDR5에서 더 길어짐* (2~3 tCK) — high-speed signaling 보상.
+- Preamble은 *DDR5에서 더 길어짐* (1tCK/2tCK/3tCK/4tCK 옵션) — **MR8:OP[2:0]** (Read), **MR8:OP[4:3]** (Write) 로 설정. high-speed (5200+ MT/s)는 *2tCK 미지원*, 3tCK/4tCK 필수.
+- Postamble: 0.5tCK or 1.5tCK via **MR8:OP[6]** (Read), **MR8:OP[7]** (Write).
+- Preamble pattern은 *spec 정의 비트 시퀀스* (1tCK=`10`, 2tCK=`0010`, 3tCK=`000010`, 4tCK=`00001010`) — monitor가 pattern 자체 검증.
 - SVA로 *모든* major timing 위반을 catch — tRCD/tRP/tFAW/tCCD_L 가 필수.
 - tFAW는 *sliding window* checker로 구현 — 큐에 timestamp 저장 + 4개 초과 시 fail.
-- Coverage는 *corner timing bin* (min_spec, normal, long_idle) × 파라미터 cross.
+- **Interamble** (RD-RD 사이): tCCD=BL/2 면 *seamless* (preamble/postamble 사라짐). 그 외는 spacing별 distinct pattern.
+- Coverage는 *corner timing bin* (min_spec, normal, long_idle) × 파라미터 cross + *preamble length × postamble length* cross.
 - Burst order는 *MR0/MR1*에 의존 — scoreboard 가 *MR 변경을 추적*.
 
-## 9. Further Reading
+## 10. Further Reading
 
 - 이전: [Ch05. Command·Burst](05_commands_burst.md)
 - 다음: [Ch07. Refresh·tREFI/tRFC·RFM](07_refresh_rfm.md)

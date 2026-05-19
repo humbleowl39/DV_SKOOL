@@ -404,7 +404,221 @@ endgroup
 - **PASR / PARC**: self-refresh 시 일부만 refresh (전력 절약).
 - DV 검증 핵심: refresh budget checker, RFM coverage, Rowhammer aggressor stim, RAA threshold cross coverage.
 
-## 10. Further Reading
+## 10. PDF 정밀 인용 — DDR5 §3.5.59 MR58, §3.5.60 MR59 (RFM)
+
+> 출처: JESD79-5C.01 v1.31 §3.5.59~§3.5.61
+
+### 10.1 MR58 (MA[7:0]=3AH) — Refresh Management 정밀 비트 매핑
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| RAAMMT[2:0] | ← | ← | RAAIMT[3:0] | ← | ← | ← | RFM Required |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| **RFM Required** | R | OP[0] | `0B`: Refresh Management not required<br>`1B`: Refresh Management required |
+| **RAAIMT** (Rolling Accumulated ACT Initial Management Threshold) | R | OP[4:1] | `0000B`-`0011B`: RFU<br>`0100B`: **32 (Normal), 16 (FGR)**<br>`0101B`: **40 (Normal), 20 (FGR)**<br>...<br>`1001B`: **72 (Normal), 36 (FGR)**<br>`1010B`: **80 (Normal), 40 (FGR)**<br>`1011B`-`1111B`: RFU |
+| **RAAMMT** (Rolling Accumulated ACT Maximum Management Threshold) | R | OP[7:5] | `000B`-`010B`: RFU<br>`011B`: **3x (Normal), 6x (FGR)**<br>`100B`: **4x (Normal), 8x (FGR)**<br>`101B`: **5x (Normal), 10x (FGR)**<br>`110B`: **6x (Normal), 12x (FGR)**<br>`111B`: RFU |
+
+> NOTE 1: Refresh Management settings are **vendor specific by the MR settings**.
+> NOTE 2: Only applicable if **MR58 OP[0]=1** (Refresh Management Required).
+
+핵심 정리:
+- **RAAIMT (Initial Threshold)** = host가 *RFM 발급 의무* 가지는 ACT count 임계
+- **RAAMMT (Maximum Threshold)** = RAAIMT의 *배수* — 이 값 도달 전 *반드시* RFM 발급 완료. multiplier `3x`~`6x` (Normal mode) 또는 `6x`~`12x` (FGR mode).
+- **Normal vs FGR**: Fine Granularity Refresh mode에서는 *2배 더 작은 threshold* (refresh 자주 발생하므로).
+- **Refresh Management Required = 0** (MR58 OP[0]=0): RFM 비활성. RFM 명령은 *REF처럼 동작*.
+- **Refresh Management Required = 1**: RFM 명령이 *실제 RFM*으로 동작. CA9=H 필수 (Table 30 NOTE 23 참조).
+
+### 10.2 MR59 (MA[7:0]=3BH) — DRFM, ARFM, RFM RAA Counter 정밀 매핑
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| RFM RAA Counter | ← | ARFM | ← | BRC Support Level | Bounded Refresh Configuration | ← | DRFE |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| **DRFE** (DRFM Enable) | SR/W | OP[0] | Status Read (SR): `0B` = DRFM not implemented (Default), `1B` = DRFM implemented<br>Host Write (W): `0B` = DRFM disable (Default), `1B` = DRFM enable |
+| **BRC** (Bounded Refresh Configuration) | R/W | OP[2:1] | `00B`: **BRC 2** (default)<br>`01B`: **BRC 3**<br>`10B`: **BRC 4**<br>`11B`: RFU |
+| **BRC Support Level** | R | OP[3] | `0B`: **BRC2, 3, 4** (Default)<br>`1B`: **BRC2 Only** |
+| **ARFM** (Adaptive RFM) | R/W | OP[5:4] | `00B`: **Default** — RAAIMT, RAAMMT, RAADEC<br>`01B`: **Level A** — RAAIMT-A, RAAMMT-A, RAADEC-A<br>`10B`: **Level B** — RAAIMT-B, RAAMMT-B, RAADEC-B<br>`11B`: **Level C** — RAAIMT-C, RAAMMT-C, RAADEC-C |
+| **RAA Counter Decrement per REF Command** | R | OP[7:6] | `00B`: **RAAIMT** (full decrement)<br>`01B`: **RAAIMT * 0.5** (half decrement)<br>`10B`: RFU<br>`11B`: RFU |
+
+> NOTE 1: Refresh Management settings are **vendor specific** by the MR settings.
+> NOTE 2: Only applicable if **MR58 OP[0]=1**.
+> NOTE 3: Only applicable if the **DRFM function is supported** (Status Read MR59:OP[0]=1).
+
+### 10.3 핵심 개념 — RAA Counter 동작 의미
+
+DRAM은 *내부적*으로 *각 row의 ACT count*를 추적합니다 (또는 group-level). 추적 단위:
+
+- **RAA (Rolling Accumulated ACT)** counter: ACT 발생 시 *증가*, REF 발생 시 *감소*.
+- **Decrement per REF**: MR59:OP[7:6] 설정. `00B`이면 REF 한 번에 *RAAIMT 만큼* counter 감소. `01B`이면 *절반만* 감소 (= RFM 발급 빈도 ↑).
+- **RAAIMT 도달 시**: host가 *RFM 발급 의무*. 발급 안 하면 RAA 가 계속 증가해 *RAAMMT 도달 위험*.
+- **RAAMMT 도달 시**: spec 위반 — DRAM의 *Rowhammer 보호 보장 X*. silicon에서 *bit flip 가능*.
+
+### 10.4 ARFM (Adaptive RFM) — Level별 동작
+
+ARFM은 *Refresh interval에 따라 threshold가 변경*되는 메커니즘:
+
+| Level | 의미 |
+|---|---|
+| Default | 기본 RAAIMT/RAAMMT/RAADEC |
+| Level A | 조금 더 strict (RAAIMT-A 등) |
+| Level B | 더 strict |
+| Level C | 가장 strict |
+
+→ Workload가 *Rowhammer-prone* (지속적인 reactivation) 하면 Level B/C로 *상향*. 메모리 controller가 *런타임에 ARFM level 변경* 가능.
+
+### 10.5 DRFM (Directed RFM) — 명시적 row 지정
+
+DRFM enabled (MR59:OP[0]=1) 시:
+- Controller가 *target row 주소*를 *DRFM 명령*에 인코딩
+- DRAM이 *지정된 row 주변*만 refresh (전체 RFM보다 정밀)
+
+Table 30 (Command Truth Table)의 REFsb/RFMsb 행에서 *CA5*의 "CID3 or DRFM=L" 표기 확인 — DRFM enabled 시 CID3 자리가 *DRFM target 주소*로 활용.
+
+### 10.6 MR60 (PASR) — DEPRECATED 알림
+
+> §3.5.61 원문 인용:
+> "**PASR has been deprecated starting with spec working revision 1.90, JESD79-5C-v1.30**. All MR60 bits will behave as RFU on devices that do not support PASR."
+
+→ DDR5 의 PASR는 *공식적으로 deprecated*. 기존 DDR4/LPDDR4 의 PASR과 다름. DV는 *PASR 시나리오 검증*을 *legacy device*에만 적용.
+
+> 본 학습 자료의 [§5.5 PASR](#5-lpddr5-refresh-arfm-drfm-optimized-refresh) 는 *LPDDR5의 PASR/PARC* 기준이며 *DDR5에서는 deprecated*임에 유의.
+
+### 10.7 DV 적용 — MR58/MR59 정밀 RAL + RFM coverage
+
+```systemverilog
+// 출처: JESD79-5C.01 §3.5.59 MR58, §3.5.60 MR59
+class ddr5_reg_MR58 extends uvm_reg;
+    `uvm_object_utils(ddr5_reg_MR58)
+    rand uvm_reg_field rfm_required;   // OP[0]
+    rand uvm_reg_field raaimt;          // OP[4:1]
+    rand uvm_reg_field raammt;          // OP[7:5]
+
+    function new(string name = "ddr5_reg_MR58");
+        super.new(name, 8, UVM_NO_COVERAGE);
+    endfunction
+    virtual function void build();
+        rfm_required = uvm_reg_field::type_id::create("rfm_required");
+        rfm_required.configure(this, 1, 0, "RO", 0, 1'b0, 1, 1, 0);
+
+        raaimt = uvm_reg_field::type_id::create("raaimt");
+        raaimt.configure(this, 4, 1, "RO", 0, 4'b0000, 1, 1, 0);
+
+        raammt = uvm_reg_field::type_id::create("raammt");
+        raammt.configure(this, 3, 5, "RO", 0, 3'b000, 1, 1, 0);
+    endfunction
+endclass
+
+class ddr5_reg_MR59 extends uvm_reg;
+    `uvm_object_utils(ddr5_reg_MR59)
+    rand uvm_reg_field drfe;             // OP[0]
+    rand uvm_reg_field brc;               // OP[2:1]
+    rand uvm_reg_field brc_support;       // OP[3]
+    rand uvm_reg_field arfm;              // OP[5:4]
+    rand uvm_reg_field raa_decrement;     // OP[7:6]
+
+    function new(string name = "ddr5_reg_MR59");
+        super.new(name, 8, UVM_NO_COVERAGE);
+    endfunction
+    virtual function void build();
+        drfe = uvm_reg_field::type_id::create("drfe");
+        drfe.configure(this, 1, 0, "RW", 0, 1'b0, 1, 1, 0);
+
+        brc = uvm_reg_field::type_id::create("brc");
+        brc.configure(this, 2, 1, "RW", 0, 2'b00, 1, 1, 0);
+
+        brc_support = uvm_reg_field::type_id::create("brc_support");
+        brc_support.configure(this, 1, 3, "RO", 0, 1'b0, 1, 1, 0);
+
+        arfm = uvm_reg_field::type_id::create("arfm");
+        arfm.configure(this, 2, 4, "RW", 0, 2'b00, 1, 1, 0);
+
+        raa_decrement = uvm_reg_field::type_id::create("raa_decrement");
+        raa_decrement.configure(this, 2, 6, "RO", 0, 2'b00, 1, 1, 0);
+    endfunction
+endclass
+
+// Coverage — RFM/ARFM/DRFM 모든 조합
+covergroup mr58_mr59_cg with function sample (
+    bit         rfm_req,
+    bit [3:0]   raaimt,
+    bit [2:0]   raammt,
+    bit         drfe,
+    bit [1:0]   arfm
+);
+    cp_rfm_req: coverpoint rfm_req;
+    cp_raaimt: coverpoint raaimt {
+        bins valid[] = {[4'b0100 : 4'b1010]};   // 0100B~1010B (defined)
+        bins rfu     = default;
+    }
+    cp_raammt: coverpoint raammt {
+        bins valid[] = {[3'b011 : 3'b110]};      // 011B~110B (defined)
+        bins rfu     = default;
+    }
+    cp_drfe: coverpoint drfe;
+    cp_arfm: coverpoint arfm {
+        bins default_level = {2'b00};
+        bins level_a       = {2'b01};
+        bins level_b       = {2'b10};
+        bins level_c       = {2'b11};
+    }
+    cx_rfm_drfm: cross cp_rfm_req, cp_drfe;
+    cx_arfm_drfe: cross cp_arfm, cp_drfe;
+    cx_threshold: cross cp_raaimt, cp_raammt;
+endgroup
+```
+
+### 10.8 RAAIMT 수치적 의미 — 검증 예시
+
+예: `RAAIMT = 0100B` → 32 (Normal mode), 16 (FGR mode)
+
+- *Normal mode (1x refresh)*: ACT 32회 발생할 때마다 RFM 발급 필요
+- *FGR mode (2x/4x refresh)*: ACT 16회 (절반)마다 RFM 발급 필요 — refresh가 더 자주 일어나니까 threshold도 비례 축소
+
+만약 `RAAMMT = 100B` (4x)이면 *RAAIMT의 4배* (32 × 4 = 128) 가 max threshold. host는 *RAA가 128에 도달하기 전*에 RFM 발급 완료.
+
+### 10.9 DV 시나리오 — Adaptive RFM Level 전환
+
+```systemverilog
+// ARFM Level 전환 시퀀스 — 다양한 traffic 부하에 따른 controller 적응 검증
+class ddr5_arfm_level_switch_seq extends uvm_sequence;
+    `uvm_object_utils(ddr5_arfm_level_switch_seq)
+
+    virtual task body();
+        // 1. Default level로 일반 traffic
+        run_traffic_with_arfm(2'b00, /*duration*/1000);
+
+        // 2. Level A로 변경 — heavy reactivation
+        do_mr59_write(.arfm(2'b01));
+        run_heavy_reactivation_traffic(2000);
+
+        // 3. Level C로 변경 — 가장 strict
+        do_mr59_write(.arfm(2'b11));
+        run_traffic_with_arfm(2'b11, 2000);
+
+        // 4. Default 복귀
+        do_mr59_write(.arfm(2'b00));
+        run_traffic_with_arfm(2'b00, 1000);
+    endtask
+endclass
+```
+
+## 11. 핵심 정리 (Key Takeaways)
+
+- Refresh는 *cap leakage 보상* — destructive read의 ACT 동작을 *주기적으로* 모든 row에 적용.
+- tREFI / tRFC 가 핵심 timing — overhead ≈ tRFC/tREFI ≈ 4.5% (normal), 9% (extended temp).
+- DDR4 *FGR* (Fine Granularity Refresh): 1x/2x/4x mode.
+- DDR5 **RFM** (Refresh Management): RAA counter 추적, 임계치 도달 시 RFM 명령. Rowhammer 표준 대응.
+- **MR58 정밀**: OP[0] = RFM Required, OP[4:1] = RAAIMT (32~80 Normal / 16~40 FGR), OP[7:5] = RAAMMT multiplier (3x~6x Normal / 6x~12x FGR).
+- **MR59 정밀**: OP[0] = DRFE (DRFM Enable, SR/W), OP[2:1] = BRC (Bounded Refresh Config), OP[5:4] = ARFM Level (Default/A/B/C), OP[7:6] = RAA Decrement (full / half).
+- **PASR (MR60)**: DDR5에서 **deprecated** since v1.30. LPDDR5의 PASR/PARC만 유효.
+- LPDDR5 **ARFM** (Adaptive) vs **DRFM** (Directed): adaptive는 DRAM hint 기반, directed는 controller 명시.
+- DV 검증 핵심: refresh budget checker, RFM coverage, Rowhammer aggressor stim, RAA threshold cross coverage + **MR58/MR59 모든 ARFM level 시나리오**.
+
+## 12. Further Reading
 
 - 이전: [Ch06. Timing·Preamble](06_timing_preamble.md)
 - 다음: [Ch08. Training](08_training.md)
