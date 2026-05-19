@@ -890,18 +890,442 @@ endgroup
 
 ---
 
-## 11.10 핵심 정리 (Key Takeaways)
+## 11.10 PDF 정밀 인용 — DDR5 spec 기반 UVM 컴포넌트 보강
+
+### 11.10.1 DDR5 Interface 정의 (spec 핀 100% 매핑)
+
+> 출처: JESD79-5C.01 §2.6 Table 3 (Pinout Description)
+
+```systemverilog
+// 파일: ddr5_if.sv
+// 출처: JESD79-5C.01 §2.6 Table 3 — DDR5 Pinout Description
+interface ddr5_if #(
+    parameter int DATA_WIDTH = 8,    // x4, x8, x16
+    parameter int CA_WIDTH   = 14    // CA[13:0]
+)(
+    input bit clk,
+    input bit clk_n
+);
+    // === Clock & Control ===
+    logic               ck_t;        // Differential clock t
+    logic               ck_c;        // Differential clock c
+    logic               cs_n;        // Chip Select (active LOW)
+    logic               reset_n;     // Async reset (active LOW, 80%~20% VDDQ)
+
+    // === Command/Address ===
+    logic [CA_WIDTH-1:0] ca;         // CA[13:0] — 2-cycle command
+
+    // === Data ===
+    logic [DATA_WIDTH-1:0] dq;       // Data bus (bidirectional)
+    logic               dqs_t;       // Data Strobe (differential)
+    logic               dqs_c;
+    // x16 only — Upper/Lower DQS
+    logic               dqsu_t, dqsu_c;
+    logic               dqsl_t, dqsl_c;
+
+    // === Mask / Termination ===
+    logic               dm_n;        // Data Mask (x8 only, MR5:OP[5]=1)
+    logic               tdqs_t;      // Termination DQS (x8 only, MR5:OP[4]=1)
+    logic               tdqs_c;
+
+    // === System Signals ===
+    logic               alert_n;     // CRC error / CA Parity error
+    logic               ten;         // Connectivity Test Enable
+    logic               mir;         // Mirrored mode strap
+    logic               cai;         // CA inversion strap
+    logic               ca_odt;      // ODT strap (Group A/B)
+    logic               zq;          // ZQ Calibration ref (240Ω RZQ)
+
+    // === Loopback ===
+    logic               lbdq;        // Loopback Data Output
+    logic               lbdqs;       // Loopback Strobe
+
+    // === Power Supplies (model용 only — RTL에선 미연결) ===
+    logic               vdd;         // 1.1V Core
+    logic               vddq;        // 1.1V DQ
+    logic               vpp;         // 1.8V Activate
+    logic               vss;         // GND
+
+    // === Driver clocking block ===
+    clocking drv_cb @(posedge clk);
+        default input #1ns output #1ns;
+        output cs_n, ca, reset_n;
+        // ... data signals via separate clocking ...
+    endclocking
+
+    // === Monitor clocking block ===
+    clocking mon_cb @(posedge clk);
+        default input #1ps output #1ps;
+        input cs_n, ca, alert_n, dq;
+    endclocking
+
+    // === Modports ===
+    modport DRIVER  (clocking drv_cb, output reset_n, output cs_n, output ca,
+                     inout dq, inout dqs_t, inout dqs_c);
+    modport MONITOR (clocking mon_cb, input dq, input dqs_t, input dqs_c);
+endinterface
+```
+
+### 11.10.2 ddr5_transaction (spec 100% 매핑)
+
+```systemverilog
+// 파일: ddr5_transaction.sv — Ch05 Table 30 + Ch06 timing parameters
+class ddr5_transaction extends uvm_sequence_item;
+    `uvm_object_utils_begin(ddr5_transaction)
+        `uvm_field_enum(ddr5_cmd_e, cmd, UVM_ALL_ON)
+        `uvm_field_int(bg, UVM_ALL_ON)
+        `uvm_field_int(ba, UVM_ALL_ON)
+        `uvm_field_int(row, UVM_ALL_ON)
+        `uvm_field_int(col, UVM_ALL_ON)
+        `uvm_field_int(ap, UVM_ALL_ON)
+        `uvm_field_int(bl, UVM_ALL_ON)
+        `uvm_field_int(mr_num, UVM_ALL_ON)
+        `uvm_field_int(mr_data, UVM_ALL_ON)
+        `uvm_field_int(cid, UVM_ALL_ON)
+        `uvm_field_int(rfm_required, UVM_ALL_ON)
+        `uvm_field_int(timestamp, UVM_ALL_ON | UVM_NOCOMPARE)
+    `uvm_object_utils_end
+
+    // Command type
+    rand ddr5_cmd_e   cmd;
+
+    // Address (Ch02 §9 — 8 Gb~64 Gb addressing)
+    rand bit [2:0]    bg;      // BG0~BG2 (x4/x8); BG0~BG1 (x16)
+    rand bit [1:0]    ba;      // BA0~BA1
+    rand bit [17:0]   row;     // R0~R17 (64 Gb), R0~R16 (24/32 Gb), R0~R15 (8/16 Gb)
+    rand bit [10:0]   col;     // C0~C10 (x4), C0~C9 (x8/x16)
+    rand bit          ap;      // Auto-Precharge (CA10 on 2nd cycle = AP)
+    rand bit [3:0]    cid;     // 3DS Chip ID (CID0~3)
+
+    // Burst
+    rand int          bl;
+    rand bit [127:0]  data[];
+
+    // MR access
+    rand bit [7:0]    mr_num;     // MA[7:0]
+    rand bit [7:0]    mr_data;    // OP[7:0]
+    rand bit          cw;         // Control Word (RCD)
+
+    // CRC / Error injection flags
+    rand bit          corrupt_crc;
+    rand int          inject_error_bits;   // 0=no error, 1=SBE, 2+=MBE
+
+    // RFM / DRFM
+    rand bit          rfm_required;
+    rand bit          drfm_target_valid;
+
+    // Captured by monitor
+    bit [63:0]        timestamp;
+    bit               ecc_error_reported;
+    bit               alert_n_toggled;
+    bit               crc_pass;
+
+    // Constraints (Ch05 + Ch02)
+    constraint c_bl { bl inside {8, 16, 32}; }
+    constraint c_bg { bg < 8; }
+    constraint c_ba { ba < 4; }
+    constraint c_cid { cid < 16; }
+
+    // 24 Gb non-binary constraint (Ch02 §9.3 NOTE 1)
+    bit [17:0] density_max_row;
+    constraint c_nonbinary_24gb {
+        if (density == DENSITY_24Gb) {
+            // 1/4 of row space invalid: MSB HIGH 시 MSB-1 LOW
+            !(row[16] && row[15]);
+        }
+    }
+
+    function new(string name = "ddr5_transaction");
+        super.new(name);
+    endfunction
+
+    virtual function string convert2string();
+        return $sformatf("cmd=%s bg=%0d ba=%0d row=0x%05x col=0x%03x bl=%0d ap=%0d",
+                         cmd.name(), bg, ba, row, col, bl, ap);
+    endfunction
+endclass
+```
+
+### 11.10.3 ddr5_memory_model — Functional + spec compliance
+
+```systemverilog
+// 파일: ddr5_memory_model.sv
+// Functional (mem[addr]=data) + 핵심 spec violation 거부
+class ddr5_memory_model extends uvm_object;
+    `uvm_object_utils(ddr5_memory_model)
+
+    // Memory storage (sparse — 사용된 addr만 hash로)
+    bit [127:0] mem [longint];
+
+    // Per-bank state — Table 21 (MRR/MRW require All Banks Idle)
+    typedef enum {BANK_IDLE, BANK_ACTIVE, BANK_REFRESH, BANK_PD, BANK_SR} bank_state_e;
+    bank_state_e bank_st[256];           // rank × BG × BA flat
+    bit [17:0]   bank_open_row[256];
+
+    // RAA counter (Ch07 §3.3)
+    int raa_counter[32];                  // per bank
+
+    // ETC counter for ECS (Ch09 §12.2)
+    int ecs_error_count;
+    bit [17:0] max_err_row;
+    bit [2:0]  max_err_bg;
+    bit [1:0]  max_err_ba;
+    int        max_err_count_in_row;
+
+    // MR mirror values (RAL과 별도, model 내부)
+    bit [7:0] mr_mirror[256];
+
+    function new(string name = "ddr5_memory_model");
+        super.new(name);
+        foreach (bank_st[i]) bank_st[i] = BANK_IDLE;
+        // MR defaults (Ch03 §10.1 Table 9)
+        mr_mirror[0]  = 8'b0000_1000;   // MR0: BL16, CL=26 (00010 for OP[6:2])
+        mr_mirror[4]  = 8'h00;
+        mr_mirror[10] = 8'b0010_1101;   // VrefDQ 75%
+        mr_mirror[11] = 8'b0010_1101;
+        mr_mirror[12] = 8'b0010_1101;
+        mr_mirror[15] = 8'h03;          // ETC = 256
+        mr_mirror[23] = 8'h00;
+        // ... 나머지 ...
+    endfunction
+
+    function int bank_idx(int cid, int bg, int ba);
+        return (cid * 64) + (bg * 4) + ba;
+    endfunction
+
+    // ===== ACT =====
+    function void do_act(int cid, int bg, int ba, bit [17:0] row);
+        int idx = bank_idx(cid, bg, ba);
+        if (bank_st[idx] != BANK_IDLE) begin
+            `uvm_error("MEM_MODEL",
+                $sformatf("ACT to non-idle bank (cid=%0d bg=%0d ba=%0d state=%s)",
+                          cid, bg, ba, bank_st[idx].name()))
+            return;
+        end
+        bank_st[idx]       = BANK_ACTIVE;
+        bank_open_row[idx] = row;
+        raa_counter[idx]++;
+
+        // Check RAAIMT threshold (Ch07 §10.1 MR58)
+        int raaimt_setting = (mr_mirror[58] >> 1) & 4'hF;
+        int raaimt_thr = raaimt_to_threshold(raaimt_setting);
+        if (raa_counter[idx] >= raaimt_thr)
+            `uvm_warning("RFM_NEEDED",
+                $sformatf("Bank idx=%0d RAA=%0d ≥ RAAIMT=%0d — RFM should be issued",
+                          idx, raa_counter[idx], raaimt_thr))
+    endfunction
+
+    // ===== PRE =====
+    function void do_pre_pb(int cid, int bg, int ba);
+        int idx = bank_idx(cid, bg, ba);
+        if (bank_st[idx] != BANK_ACTIVE) begin
+            `uvm_warning("MEM_MODEL",
+                $sformatf("PRE to non-active bank (state=%s)", bank_st[idx].name()))
+        end
+        bank_st[idx] = BANK_IDLE;
+    endfunction
+
+    function void do_pre_ab(int cid);
+        // All-bank precharge
+        for (int bg = 0; bg < 8; bg++)
+            for (int ba = 0; ba < 4; ba++)
+                do_pre_pb(cid, bg, ba);
+    endfunction
+
+    function void do_pre_sb(int cid, int ba);
+        // Same-bank precharge — 모든 BG의 ba
+        for (int bg = 0; bg < 8; bg++)
+            do_pre_pb(cid, bg, ba);
+    endfunction
+
+    // ===== WR / RD =====
+    function void do_wr(longint addr, bit [127:0] data);
+        mem[addr] = data;
+    endfunction
+
+    function bit [127:0] do_rd(longint addr);
+        if (!mem.exists(addr)) return 'x;
+        return mem[addr];
+    endfunction
+
+    // ===== MR access (Table 21 — All Banks Idle 요구) =====
+    function void do_mrw(bit [7:0] mr_num, bit [7:0] mr_data);
+        if (!all_banks_idle())
+            `uvm_error("MR_VIOL", "MRW issued while at least one bank is active")
+        mr_mirror[mr_num] = mr_data;
+
+        // MR23 mutual exclusion check (Ch09 §12.8 NOTE 1)
+        if (mr_num == 8'h17) begin
+            if ($countones(mr_data[4:0]) > 1)
+                `uvm_error("MR23_VIOL",
+                    $sformatf("MR23 multi-bit enable: 0x%02x", mr_data))
+        end
+    endfunction
+
+    function bit [7:0] do_mrr(bit [7:0] mr_num);
+        if (!all_banks_idle())
+            `uvm_error("MR_VIOL", "MRR issued while at least one bank is active")
+
+        // MR4 TUF auto-clear (Ch08 §9.4)
+        if (mr_num == 8'h04) begin
+            bit [7:0] val = mr_mirror[4];
+            mr_mirror[4][7] = 1'b0;   // Clear TUF
+            return val;
+        end
+        return mr_mirror[mr_num];
+    endfunction
+
+    function bit all_banks_idle();
+        foreach (bank_st[i])
+            if (bank_st[i] != BANK_IDLE) return 1'b0;
+        return 1'b1;
+    endfunction
+
+    // ===== RFM =====
+    function void do_rfm(int cid);
+        // Reset RAA counter for this rank (vendor specific — 단순화)
+        for (int i = cid*64; i < (cid+1)*64; i++)
+            raa_counter[i] = 0;
+        `uvm_info("RFM", $sformatf("RFM issued for cid=%0d, RAA reset", cid), UVM_HIGH)
+    endfunction
+
+    // ===== Helpers =====
+    function int raaimt_to_threshold(int raaimt_op);
+        case (raaimt_op)
+            4'h4: return 32;
+            4'h5: return 40;
+            4'h6: return 48;
+            4'h7: return 56;
+            4'h8: return 64;
+            4'h9: return 72;
+            4'hA: return 80;
+            default: return 32;
+        endcase
+    endfunction
+endclass
+```
+
+### 11.10.4 ddr5_protocol_check (SVA bind 모듈 — 완전판)
+
+```systemverilog
+// 파일: ddr5_protocol_check.sv
+// 출처: Ch05 + Ch06 + Ch07 + Ch08 + Ch09 통합
+module ddr5_protocol_check #(
+    parameter int TRCD_NCK      = 28,
+    parameter int TRP_NCK       = 28,
+    parameter int TRAS_NCK      = 56,
+    parameter int TRC_NCK       = 84,
+    parameter int TRRD_L_NCK    = 8,
+    parameter int TRRD_S_NCK    = 4,
+    parameter int TFAW_PS       = 13000,
+    parameter int TCCD_L_NCK    = 8,
+    parameter int TCCD_S_NCK    = 4,
+    parameter int TWTR_L_NCK    = 12,
+    parameter int TWTR_S_NCK    = 4,
+    parameter int TRTW_NCK      = 4,
+    parameter int TCMD_CANCEL_NCK = 8,    // Ch05 §10.3
+    parameter int TPPD_NCK      = 4,
+    parameter int TMRW_NCK      = 8,
+    parameter int TMRD_NCK      = 16,
+    parameter int TZQINIT_PS    = 512000,
+    parameter int TREFI_PS      = 7800000
+)(
+    input bit clk,
+    input bit reset_n,
+    input bit cs_n,
+    input bit cke,
+    input ddr5_cmd_e cmd_decoded,
+    input bit [2:0]  bg_decoded,
+    input bit [1:0]  ba_decoded,
+    input bit [3:0]  cid_decoded,
+    input bit [17:0] row_decoded,
+    input bit [7:0]  mr_num_decoded,
+    input bit [7:0]  mr_data_decoded,
+    input bit        all_banks_idle
+);
+    // === C.1 Timing ===
+    `include "sva_timing_checks.svh"
+    // === C.2 Command order ===
+    `include "sva_command_order.svh"
+    // === C.3 Training protocol ===
+    `include "sva_training_protocol.svh"
+    // === NEW: MR23 mutual exclusion (Ch09 §12.8) ===
+    property p_mr23_excl;
+        @(posedge clk) disable iff (!reset_n)
+        (cmd_decoded == CMD_MRW && mr_num_decoded == 8'h17 && mr_data_decoded != 8'h00) |->
+            $countones(mr_data_decoded[4:0]) == 1;
+    endproperty
+    a_mr23_excl: assert property (p_mr23_excl)
+        else `uvm_error("SVA_MR23", "MR23 multi-bit enable violation")
+
+    // === NEW: MR/MR access requires All Banks Idle (Ch09 Table 21) ===
+    property p_mr_access_idle;
+        @(posedge clk) disable iff (!reset_n)
+        (cmd_decoded inside {CMD_MRW, CMD_MRR}) |-> all_banks_idle;
+    endproperty
+    a_mr_access_idle: assert property (p_mr_access_idle);
+
+    // === NEW: 2-cycle Command Cancel timing (Ch05 §10.3) ===
+    bit waiting_after_cancel;
+    time cancel_time;
+    always @(posedge clk) begin
+        if (cs_n_2cycle_cmd_cancel_detected) begin
+            waiting_after_cancel <= 1'b1;
+            cancel_time <= $time;
+        end
+        if (waiting_after_cancel &&
+            ($time - cancel_time) < (TCMD_CANCEL_NCK * tCK_ps) &&
+            (cmd_decoded != CMD_NOP && cmd_decoded != CMD_DES))
+            `uvm_error("SVA_CMD_CANCEL",
+                $sformatf("Command issued before tCMD_cancel after cancel"))
+        if (($time - cancel_time) >= (TCMD_CANCEL_NCK * tCK_ps))
+            waiting_after_cancel <= 1'b0;
+    end
+
+    // === NEW: PRE-then-MRR after cancel (Ch05 §10.3 — spec 명시) ===
+    // ACT cancel 후 *PRE 없이* MRR 발급 금지
+    bit canceled_act;
+    always @(posedge clk) begin
+        if (cancelled_act_detected) canceled_act <= 1'b1;
+        if (canceled_act && cmd_decoded == CMD_MRR && !pre_seen_after_cancel)
+            `uvm_error("SVA_CANCEL", "MRR after canceled ACT without PRE")
+        if (cmd_decoded == CMD_PRE && canceled_act) begin
+            canceled_act <= 1'b0;
+        end
+    end
+endmodule
+```
+
+### 11.10.5 시나리오 라이브러리 — 시퀀스 8종 (확장)
+
+| Test name | 시나리오 | 검증 포인트 |
+|---|---|---|
+| `test_init` | Init sequence (Ch03 정확) | tINIT0~5, MR default 일치, CS training 진입 |
+| `test_command_walk` | 모든 명령 발급 | ACT/PRE3/RD/WR/REF2/RFM2/MRW/MRR/ZQ/PDE/SRE |
+| `test_mr_walk` | 우선순위 MR 25개 walk | MR0~24 + MR58/59 read/write 매트릭스 |
+| `test_timing_corner` | 모든 timing min_spec | tRCD/tRP/tFAW/tCCD_L corner |
+| `test_2cycle_cancel` | 2-cycle command cancel | tCMD_cancel + PRE-then-MRR 강제 |
+| `test_refresh_full` | normal + extended temp + RFM | tREFI/2 전환, RAA threshold, ARFM Level transitions |
+| `test_training_full_with_fail` | All training steps + fail inject | ZQ/CBT/Vref/WL/DQ/DQS/DCA/DFE retry |
+| `test_ecc_comprehensive` | SBE + MBE + ECS + MR readback | MR16~20 통계 verify, MR15 ETC threshold cross |
+| `test_ppr_with_guard_key` | hPPR + sPPR + Undo/Lock + mPPR + wrong key | MR23 mutual excl + MR24 sequence |
+| `test_rowhammer_drfm` | aggressor + RFM observation + DRFM target | victim integrity + RAA tracking |
+| `test_lpddr5_dvfs` (LPDDR5 only) | FSP 전환 시퀀스 | 모든 transition + Link ECC + DBI |
+
+## 11.11 핵심 정리 (Key Takeaways)
 
 - DRAM 검증 프로젝트는 *Verification Plan → TB → Sequence → SVA → Sign-off*의 5단계.
 - TB skeleton은 *agent (driver/monitor/seqr) + scoreboard + reference model + coverage + SVA bind*.
 - SVA `bind` 패턴으로 RTL 수정 없이 protocol checker 부착.
-- 시나리오 라이브러리: Init / Traffic / Refresh stress / Training fail / ECC inject / Rowhammer (최소).
+- 시나리오 라이브러리: Init / Traffic / Refresh stress / Training fail / ECC inject / Rowhammer + **MR walk + 2-cycle cancel + PPR guard key + DVFS** (확장).
 - Coverage closure는 3-Tier: smoke → constrained-random → hole-filling directed.
 - LPDDR5 변형은 *parameterize*해 동일 framework 재사용 + WCK/DVFS/Link ECC 추가.
-- ECC error injection은 *force/release backdoor* + *scoreboard의 ECC report flag 추적* + *MR mirror verify*.
+- ECC error injection은 *force/release backdoor* + *scoreboard의 ECC report flag 추적* + *MR16~20 통계 verify*.
+- **Memory model의 spec compliance**: ACT to non-idle bank, MR23 mutual excl, MR access during active 등 *내부 SVA-equivalent 검증* 포함.
+- **Negative testing**: 의도적 spec violation 시퀀스로 SVA + model 동작 확인.
 - Sign-off는 *체크리스트 기반* — 모든 항목 명시적 *pass 또는 documented waive*.
 
-## 11.11 Further Reading
+## 11.12 Further Reading
 
 - 이전: [Ch10. DV Methodology 통합](10_dv_methodology.md)
 - 코스 홈: [JEDEC Deep-Dive 코스 홈](index.md)

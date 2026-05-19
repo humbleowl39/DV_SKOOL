@@ -485,7 +485,7 @@ Table 30 (Command Truth Table)의 REFsb/RFMsb 행에서 *CA5*의 "CID3 or DRFM=L
 
 → DDR5 의 PASR는 *공식적으로 deprecated*. 기존 DDR4/LPDDR4 의 PASR과 다름. DV는 *PASR 시나리오 검증*을 *legacy device*에만 적용.
 
-> 본 학습 자료의 [§5.5 PASR](#5-lpddr5-refresh-arfm-drfm-optimized-refresh) 는 *LPDDR5의 PASR/PARC* 기준이며 *DDR5에서는 deprecated*임에 유의.
+> 본 학습 자료의 §5.5 PASR (이 챕터 위쪽) 는 *LPDDR5의 PASR/PARC* 기준이며 *DDR5에서는 deprecated*임에 유의.
 
 ### 10.7 DV 적용 — MR58/MR59 정밀 RAL + RFM coverage
 

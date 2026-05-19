@@ -459,17 +459,386 @@ endgroup
 
 ---
 
-## 12. 핵심 정리 (Key Takeaways)
+## 12. PDF 정밀 인용 — DDR5 §3.5.16~§3.5.26 (Transparency ECC + PPR)
+
+> 출처: JESD79-5C.01 v1.31 §3.5.16~§3.5.26
+
+### 12.1 MR14 (MA[7:0]=0EH) — Transparency ECC Configuration
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| ECS Mode | Reset ECS Counter | Row Mode / Code Word Mode | RFU | CID3 | CID2 | CID1 | CID0 |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| **ECS Error Register Index / MBIST Rank Select** | R/W | OP[3:0] | CID[3:0] — 3DS stack 내 어느 slice를 reference |
+| **Code Word / Row Count** | R/W | OP[5] | `0B`: ECS counts **Rows** with errors<br>`1B`: ECS counts **Code words** with errors |
+| **ECS Reset Counter** | W | OP[6] | `0B`: Normal (Default)<br>`1B`: Reset ECC Counter |
+| **ECS Mode** | R/W | OP[7] | `0B`: Manual ECS Mode **Disabled** (Default)<br>`1B`: Manual ECS Mode **Enabled** |
+
+> NOTE 1: "MR14:OP[3:0] must be setup by MRW to indicate which slice in the 3DS-DDR5 stack is referenced by the MRR for MR14~MR20 ECS transparency data, MR22 MBIST transparency data, and MR54-MR57 hPPR resource availability."
+>
+> NOTE 4: "ECS stands for **Error Check Scrub operation**."
+
+### 12.2 MR15 (MA[7:0]=0FH) — Transparency ECC Threshold per Gb + Auto ECS in Self Refresh
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| x4 Writes | ECS Writeback | RFU | RFU | Automatic ECS in Self Refresh | ECS Error Threshold Count (ETC) [OP2:0] | ← | ← |
+
+**OP[2:0] — ECS Error Threshold Count (ETC) R/W**:
+
+| OP[2:0] | Threshold |
+|---|---|
+| `000B` | 4 |
+| `001B` | 16 |
+| `010B` | 64 |
+| `011B` (Default) | **256** |
+| `100B` | 1024 |
+| `101B` | 4096 |
+| `110B`-`111B` | RFU |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| Automatic ECS in Self Refresh | W | OP[3] | `0B`: Disabled in Manual ECS mode (default)<br>`1B`: Enabled in Manual ECS mode |
+| ECS Writeback | R/W | OP[6] | `0B`: Do not suppress writeback of Data and ECC Check Bits (Default)<br>`1B`: Suppress writeback (Optional) |
+| x4 Writes | R/W | OP[7] | `0B`: Do not suppress writeback of Data during RMW (Default)<br>`1B`: Suppress writeback of Data during RMW (Optional) |
+
+DV 시사점:
+- **ETC = 256 default** → 누적 error count가 256 도달 시 *통계 update* (controller가 MR20 read로 감지 가능)
+- **ECS Writeback suppress** = ECC 정정한 결과를 *cell에 다시 write 하지 않음* — soft error 누적 위험 ↑ 그러나 다른 시스템 효과 (예: power 절약)
+- **x4 Writes suppress** = RMW (Read-Modify-Write) 시 *partial data writeback 억제*
+
+### 12.3 MR16/17/18 — Row Address with Max Errors (Read-Only)
+
+> §3.5.18~3.5.20
+
+**MR16 (MA[7:0]=10H)** — Max Row Error Address R[7:0]:
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| R7 | R6 | R5 | R4 | R3 | R2 | R1 | R0 |
+
+**MR17 (MA[7:0]=11H)** — Max Row Error Address R[15:8]:
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| R15 | R14 | R13 | R12 | R11 | R10 | R9 | R8 |
+
+**MR18 (MA[7:0]=12H)** — Max Row Error Address (BG, BA, R17/R16):
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| RFU | BG2 | BG1 | BG0 | BA1 | BA0 | R17 | R16 |
+
+> NOTE 2 (MR18): BG2 is don't care for x16.
+> NOTE 3: BA1 is don't care for 8 Gb.
+> NOTE 4: R16 is don't care for 8 Gb and 16 Gb.
+> NOTE 5: R17 is don't care for 8 Gb, 16 Gb, 24 Gb, and 32 Gb.
+
+DV 시사점:
+- MR16+MR17+MR18 = **완전한 BG/BA/Row 주소** of *가장 많은 error 발생한 row*
+- Controller는 *3개의 MRR* 명령으로 *전체 주소* 회수 → repair 또는 monitoring
+- Density별 don't care 비트 다름 — RAL register model이 density-aware
+
+### 12.4 MR19 (MA[7:0]=13H) — Max Row Error Count (R)
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| PASR | RFU | REC5 | REC4 | REC3 | REC2 | REC1 | REC0 |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| **Max Row Error Count REC[5:0]** | R | OP[5:0] | Contains number of errors within the row with the most errors (0~63) |
+| RFU | RFU | OP[6] | |
+| **PASR support indicator** | R | OP[7] | `0` = PASR not supported, `1` = PASR supported |
+
+> NOTE 2: Support of **PASR has been deprecated starting with spec working revision 1.90 of JESD79-5C-v1.30**.
+
+### 12.5 MR20 (MA[7:0]=14H) — Error Count (EC, R)
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| EC7 | EC6 | EC5 | EC4 | EC3 | EC2 | EC1 | EC0 |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| Error Count EC[7:0] | R | OP[7:0] | Contains the **error count range data** |
+
+> EC[7:0] = 8-bit error count "range" (실제 count보다는 *range/bucket* 표현 — vendor specific 가능)
+
+### 12.6 MR21 (MA[7:0]=15H) — Rx CTLE Control Setting (DQS)
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| RFU | RFU | RFU | RFU | RFU | Rx DQS CTLE Control (Optional) [OP2:0] | ← | ← |
+
+| OP[2:0] | Setting |
+|---|---|
+| `000B` (Default) | Vendor Optimized Setting |
+| `001B` ~ `111B` | Vendor defined |
+
+> NOTE 1: "Rx CTLE is an optional feature on DDR5. It may be needed for DRAMs that operate at **≥6000 Mbps**. MR22:OP[3] indicates host whether Rx CTLE is supported or not."
+>
+> NOTE 5: "MR21:OP[2:0] controls **both upper and lower DQS** (U/LDQS) for X16 DRAMs."
+
+→ Rx CTLE (Continuous Time Linear Equalizer) 는 *DFE와 별도의 receiver-side equalizer*. 6000 Mbps 이상 device에서 typically 필요.
+
+### 12.7 MR22 (MA[7:0]=16H) — MBIST/mPPR Transparency, Rx CTLE Control
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| Rx CS_n CTLE Control [OP7:6] | ← | Rx CA CTLE Control [OP5:4] | ← | Rx CTLE Support | MBIST/mPPR Transparency [OP2:0] | ← | ← |
+
+**OP[2:0] — MBIST/mPPR Transparency (R)**:
+
+| Code | 의미 |
+|---|---|
+| `000B` (Default) | MBIST hasn't run since INIT OR no fails remain after most recent run |
+| `001B` | Fails remain |
+| `010B` | **Unrepairable fails remain** |
+| `011B` | MBIST should be run again |
+| `100B`-`111B` | Reserved |
+
+**OP[3] — Rx CTLE Support (R)**: 0B not supported, 1B supported
+
+**OP[5:4] — Rx CA CTLE Control (R/W)**: 00B Vendor Optimized (Default), 01B/10B/11B Vendor defined
+
+**OP[7:6] — Rx CS_n CTLE Control (R/W)**: same encoding
+
+### 12.8 MR23 (MA[7:0]=17H) — MBIST/PPR Settings (핵심)
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| RFU | RFU | MBIST (Optional) | mPPR (Optional) | sPPR Undo/Lock | sPPR | hPPR | (note) |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| **hPPR** | R/W | OP[0] | `0B`: Disable<br>`1B`: Enable |
+| **sPPR** | R/W | OP[1] | `0B`: Disable<br>`1B`: Enable (See OP[2] for sPPR Undo/Lock) |
+| **sPPR Undo/Lock** | SR/W | OP[2] | SR: `0B`= Not Implemented (Default), `1B`= sPPR Undo/Lock Implemented<br>Host Write (W) for OP[2:1]: `00B`= Disabled (Normal), `01B`= sPPR Enabled, `10B`= sPPR Undo Enabled, `11B`= sPPR Lock Enabled |
+| **mPPR** | W | OP[3] | `0B`: Disable<br>`1B`: Enable (Optional) |
+| **MBIST** | SR/W | OP[4] | SR: `0B`= No MBIST/mPPR Support, `1B`= Supports MBIST/mPPR (Optional)<br>Host Write (W): `0B`= MBIST Disabled, `1B`= MBIST Enable |
+
+> NOTE 1: "**Only one of these opcode bits may be programmed by the host to 1 at any given time**. If any one of these opcode bits are enabled, the remaining bits must be programmed to 0."
+>
+> NOTE 2: "DRAM will automatically write to 0 when MBIST completes."
+>
+> NOTE 3: "For 3DS-DDR5 devices, MBIST Enable (MR23:OP[4]=1) is only enabled on the target logical rank designated by CID[3:0] and programmed by MRW via MR14:OP[3:0]."
+
+→ **PPR / MBIST 상호 배타**: hPPR / sPPR / sPPR Undo / sPPR Lock / mPPR / MBIST 중 *동시에 단 하나*만 enabled. 다른 비트는 0 강제. DV는 SVA로 위반 검증.
+
+```systemverilog
+property p_mr23_mutually_exclusive;
+    @(posedge clk) (ral.MR23.value != 8'h00) |->
+        $countones(ral.MR23.value[4:0]) == 1;
+endproperty
+a_mr23_excl: assert property (p_mr23_mutually_exclusive)
+    else `uvm_error("MR23_VIOL", "Multiple PPR/MBIST bits set simultaneously")
+```
+
+### 12.9 MR24 (MA[7:0]=18H) — PPR Guard Key
+
+| OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|
+| PPR Guard Key [OP7:0] | ← | ← | ← | ← | ← | ← | ← |
+
+| Function | Type | Operand | Data |
+|---|---|---|---|
+| PPR Guard Key | W | OP[7:0] | See PPR Section for Sequence |
+
+> **PPR Guard Key 시퀀스**: PPR (hPPR/sPPR) 발급 *전에* 정해진 sequence로 *Guard Key 값들*을 MR24에 write. 잘못된 key 시퀀스 시 PPR은 *발급되지 않음* (안전장치).
+
+### 12.10 DV 통합 — ECC error injection + MR mirror verify
+
+```systemverilog
+// 출처: JESD79-5C.01 §3.5.17~22
+// ECC injection + 모든 통계 MR readback 확인
+class ddr5_full_ecc_verify_seq extends uvm_sequence;
+    `uvm_object_utils(ddr5_full_ecc_verify_seq)
+
+    rand int n_errors;        // 주입할 error 개수
+    rand bit [16:0] target_row;
+    constraint c_errors { n_errors inside {[1:300]}; }
+                          // ETC=256 threshold 넘는 cases 포함
+
+    virtual task body();
+        uvm_status_e status;
+        bit [7:0] mr_val;
+
+        // 1. ETC threshold 설정 (256 default)
+        ral.MR15.ecs_threshold.set(3'b011);
+        ral.MR15.update(status);
+
+        // 2. Auto ECS in Self Refresh 활성화
+        ral.MR15.auto_ecs_sref.set(1'b1);
+        ral.MR15.update(status);
+
+        // 3. ECS Mode 활성화 + Counter Reset
+        ral.MR14.ecs_mode.set(1'b1);
+        ral.MR14.reset_ecs_counter.set(1'b1);
+        ral.MR14.update(status);
+
+        // 4. N errors 주입 (backdoor force in target row)
+        for (int i = 0; i < n_errors; i++) begin
+            inject_single_bit_error(target_row, i);  // 다른 col마다
+        end
+
+        // 5. Self Refresh 진입 → Auto ECS 실행
+        do_self_refresh_with_duration(.duration_us(10000));
+
+        // 6. Self Refresh 종료 후 모든 통계 MR readback
+        ral.MR16.read(status, mr_val, UVM_FRONTDOOR);  // R[7:0]
+        bit [17:0] err_row;
+        err_row[7:0] = mr_val;
+        ral.MR17.read(status, mr_val, UVM_FRONTDOOR);  // R[15:8]
+        err_row[15:8] = mr_val;
+        ral.MR18.read(status, mr_val, UVM_FRONTDOOR);  // R[17:16] + BG + BA
+        err_row[17:16] = mr_val[1:0];
+
+        if (err_row != target_row)
+            `uvm_error("ECC_ROW_MISMATCH",
+                $sformatf("MR16/17/18 row=0x%x, expected=0x%x", err_row, target_row))
+
+        ral.MR19.read(status, mr_val, UVM_FRONTDOOR);  // Max Row Error Count
+        if (mr_val[5:0] < n_errors && n_errors < 64)
+            `uvm_warning("ECC_REC", "REC less than expected n_errors")
+
+        ral.MR20.read(status, mr_val, UVM_FRONTDOOR);  // Error Count range
+        `uvm_info("ECC_EC", $sformatf("MR20 EC=0x%x for %0d errors", mr_val, n_errors), UVM_MEDIUM)
+    endtask
+
+    extern task inject_single_bit_error(bit [16:0] row, int col);
+    extern task do_self_refresh_with_duration(int duration_us);
+endclass
+```
+
+### 12.11 PPR sequence — Guard Key 활용
+
+```systemverilog
+// 출처: JESD79-5C.01 §3.5.25, §3.5.26 + PPR section
+class ddr5_hppr_with_guard_key_seq extends uvm_sequence;
+    `uvm_object_utils(ddr5_hppr_with_guard_key_seq)
+
+    rand bit [16:0] fail_row;
+    rand bit [2:0]  fail_bg;
+    rand bit [1:0]  fail_ba;
+
+    // Guard Key sequence (vendor specific — example only)
+    // 실제 sequence는 DRAM vendor spec 참조
+    bit [7:0] guard_keys[$] = '{8'hA5, 8'h5A, 8'h3C, 8'hC3};
+
+    virtual task body();
+        uvm_status_e status;
+        bit [7:0] mr23_val;
+
+        // 1. Guard Key 시퀀스 — MR24에 정해진 값들 순차 write
+        foreach (guard_keys[i]) begin
+            ral.MR24.guard_key.set(guard_keys[i]);
+            ral.MR24.update(status);
+            `uvm_info("PPR_KEY", $sformatf("Guard key #%0d = 0x%x", i, guard_keys[i]), UVM_HIGH)
+        end
+
+        // 2. hPPR enable (MR23:OP[0]=1, 다른 비트 = 0)
+        ral.MR23.hppr.set(1'b1);
+        ral.MR23.sppr.set(1'b0);
+        ral.MR23.sppr_undo_lock.set(1'b0);
+        ral.MR23.mppr.set(1'b0);
+        ral.MR23.mbist.set(1'b0);
+        ral.MR23.update(status);
+
+        // 3. ACT fail_row → WRA에 *모두 1로* write (PPR 발급 시그널)
+        do_act(fail_bg, fail_ba, fail_row);
+        do_wra_with_all_ones(fail_bg, fail_ba, 'h0);
+
+        // 4. tPGM (program time) 대기 — hPPR은 길음 (~ms 단위)
+        # `THPGM_MS;
+
+        // 5. hPPR disable
+        ral.MR23.hppr.set(1'b0);
+        ral.MR23.update(status);
+
+        // 6. Verify — 같은 row에 RD해서 모두 1인지 확인 (spare row 활성)
+        do_act(fail_bg, fail_ba, fail_row);
+        do_rd(fail_bg, fail_ba, 'h0);
+        // ... scoreboard에서 data==all-1 확인 ...
+    endtask
+endclass
+
+// Negative test — wrong guard key
+class ddr5_hppr_wrong_key_seq extends ddr5_hppr_with_guard_key_seq;
+    `uvm_object_utils(ddr5_hppr_wrong_key_seq)
+    virtual task body();
+        // 의도적으로 *잘못된 key* 사용
+        guard_keys = '{8'hFF, 8'h00, 8'hFF, 8'h00};   // wrong sequence
+
+        // ... 같은 절차 ...
+        // 결과: PPR이 *발급 안 됨*. fail_row가 그대로.
+        // scoreboard에서 *fail data*가 read되는지 확인 (PPR 실패 시 정상 동작)
+    endtask
+endclass
+```
+
+### 12.12 ECC + PPR 통합 Coverage
+
+```systemverilog
+covergroup ddr5_ecc_ppr_cg with function sample (
+    int          ecs_threshold,        // MR15:OP[2:0]
+    bit          auto_ecs_sref,        // MR15:OP[3]
+    bit          ecs_writeback_supp,   // MR15:OP[6]
+    int          ecs_mode,             // MR14:OP[7]
+    int          n_errors,             // 주입된 error 개수
+    bit [5:0]    rec_value,            // MR19:OP[5:0]
+    ppr_type_e   ppr_type,
+    bit          guard_key_valid,
+    bit          ppr_success
+);
+    cp_threshold: coverpoint ecs_threshold {
+        bins thr_4   = {0};
+        bins thr_16  = {1};
+        bins thr_64  = {2};
+        bins thr_256 = {3};       // default
+        bins thr_1k  = {4};
+        bins thr_4k  = {5};
+    }
+    cp_auto_sref: coverpoint auto_ecs_sref;
+    cp_n_errors: coverpoint n_errors {
+        bins few     = {[1:9]};
+        bins medium  = {[10:99]};
+        bins many    = {[100:255]};
+        bins over_thresh = {[256:$]};
+    }
+    cp_ppr_type: coverpoint ppr_type;
+    cp_guard: coverpoint guard_key_valid;
+    cp_ppr_pass: coverpoint ppr_success;
+
+    cx_thresh_errors: cross cp_threshold, cp_n_errors;
+    cx_ppr_full: cross cp_ppr_type, cp_guard, cp_ppr_pass {
+        ignore_bins illegal_bypass = binsof(cp_guard) intersect {0} &&
+                                     binsof(cp_ppr_pass) intersect {1};
+    }
+endgroup
+```
+
+## 13. 핵심 정리 (Key Takeaways)
 
 - 신뢰성 보호는 *두 영역*: 셀 내부(on-die ECC), 링크(Link ECC / CRC).
-- **DDR5 Transparency ECC** — controller에게 *투명*하지만 MR20 등으로 *통계 조회* 가능.
+- **DDR5 Transparency ECC** — controller에게 *투명*하지만 MR14~MR22로 *통계 조회* 가능.
+- **MR14 정밀**: ECS Mode (OP[7]), Reset Counter (OP[6]), Row/CodeWord Count Mode (OP[5]), CID[3:0] (OP[3:0]) for 3DS.
+- **MR15 정밀**: ETC threshold (OP[2:0], default=256), Auto ECS in Self Refresh (OP[3]), ECS Writeback Suppress (OP[6]), x4 Writes Suppress (OP[7]).
+- **MR16+MR17+MR18**: 가장 많은 error row의 *완전한 BG/BA/Row 주소* (3개 MRR로 회수).
+- **MR19**: Max Row Error Count REC[5:0] + PASR support 표시 (deprecated).
+- **MR20**: Error Count range EC[7:0].
+- **MR21/MR22**: Rx CTLE (≥6000 Mbps device에서 사용) + MBIST/mPPR Transparency 상태.
+- **MR23 PPR/MBIST**: hPPR/sPPR/sPPR_Undo_Lock/mPPR/MBIST 중 *동시 단 하나*만 enable. SVA로 위반 검증.
+- **MR24 Guard Key**: PPR 발급 전 *정해진 sequence*로 key write. 잘못된 key 시 PPR 무시 (안전장치).
+- **ECS (Error Check Scrub)**: Self Refresh 중 background에서 cell scan + correct + writeback. ETC threshold 도달 시 *통계 update*.
 - **LPDDR5 Link ECC** — 링크 신호 무결성 보호. DBI와의 *순서*가 중요.
 - **CRC** — write data만 보호. 검증 시 ALERT_n 토글로 응답.
-- **PPR** (hard / soft) — fail row redirect. *Guard Key* 가 안전장치.
-- DV는 *ECC syndrome injection*, *CRC error injection*, *PPR sequence* 를 *별도 testcase*로 검증.
-- Scoreboard는 *원본 data*, *MR error count mirror*, *ECC report flag* 를 *모두* 추적해야 함.
+- DV는 *ECC syndrome injection*, *CRC error injection*, *PPR sequence (정확한 guard key 포함)* 를 *별도 testcase*로 검증.
+- Scoreboard는 *원본 data*, *MR16~MR20 통계 mirror*, *ECC report flag* 를 *모두* 추적해야 함.
 
-## 13. Further Reading
+## 14. Further Reading
 
 - 이전: [Ch08. Training](08_training.md)
 - 다음: [Ch10. DV Methodology 통합](10_dv_methodology.md)
