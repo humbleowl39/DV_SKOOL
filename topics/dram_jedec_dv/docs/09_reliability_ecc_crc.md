@@ -1,7 +1,7 @@
 # Ch09. 신뢰성·ECC·CRC·PPR
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 09</span>
 </div>
@@ -477,11 +477,11 @@ endgroup
 - 퀴즈: [Ch09 퀴즈](quiz/ch09_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="08_training.md">
+  <a class="nav-prev" href="08_training/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch08. Training</div>
   </a>
-  <a class="nav-next" href="10_dv_methodology.md">
+  <a class="nav-next" href="10_dv_methodology/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch10. DV Methodology 통합</div>
   </a>

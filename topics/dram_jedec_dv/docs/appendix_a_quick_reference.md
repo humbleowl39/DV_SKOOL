@@ -1,7 +1,7 @@
 # 부록 A. JEDEC Spec 빠른 참조 (Quick Reference)
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">부록 A</span>
 </div>
@@ -241,11 +241,11 @@
 ---
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="11_dv_project_endtoend.md">
+  <a class="nav-prev" href="11_dv_project_endtoend/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch11. DV 프로젝트 End-to-End</div>
   </a>
-  <a class="nav-next" href="appendix_b_glossary.md">
+  <a class="nav-next" href="appendix_b_glossary/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">부록 B. Glossary</div>
   </a>

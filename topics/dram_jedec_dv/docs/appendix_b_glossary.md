@@ -1,7 +1,7 @@
 # Appendix B. Glossary
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">APP B (EN)</span>
 </div>
@@ -16,7 +16,7 @@
 <p class="glossary-field"><strong>Source.</strong> Common DV usage; JESD79-5C.01 §1.</p>
 <p class="glossary-field"><strong>Related.</strong> [[SDRAM]], [[Refresh]], [[DDR]]</p>
 <p class="glossary-field"><strong>Example.</strong> A DDR5 SDRAM device with 16 Gb density.</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="01_dram_jedec_landscape.md#2-dram의-셀의-본질-1t1c와-destructive-read">Ch01 §2</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="01_dram_jedec_landscape/#2-dram의-셀의-본질-1t1c와-destructive-read">Ch01 §2</a></p>
 </div>
 
 <div class="glossary-term">
@@ -24,7 +24,7 @@
 <p class="glossary-field"><strong>Definition.</strong> A DRAM variant that synchronizes all data and command interfaces to an external clock signal.</p>
 <p class="glossary-field"><strong>Source.</strong> Common DV usage.</p>
 <p class="glossary-field"><strong>Related.</strong> [[DRAM]], [[DDR]]</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="01_dram_jedec_landscape.md">Ch01</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="01_dram_jedec_landscape/">Ch01</a></p>
 </div>
 
 <div class="glossary-term">
@@ -40,7 +40,7 @@
 <p class="glossary-field"><strong>Definition.</strong> A DDR variant optimized for low power consumption, defined by the JESD209-* standards family, primarily used in mobile and embedded systems.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD209-* family.</p>
 <p class="glossary-field"><strong>Related.</strong> [[DDR]]</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="01_dram_jedec_landscape.md#3-jedec-표준-패밀리-두-갈래의-진화">Ch01 §3</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="01_dram_jedec_landscape/#3-jedec-표준-패밀리-두-갈래의-진화">Ch01 §3</a></p>
 </div>
 
 <div class="glossary-term">
@@ -48,7 +48,7 @@
 <p class="glossary-field"><strong>Definition.</strong> An independently addressable array of DRAM cells within a DRAM device that can have one row active at any time, while other banks may operate in parallel.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 §3.1.</p>
 <p class="glossary-field"><strong>Related.</strong> [[Bank Group]], [[Row]], [[Column]]</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="02_package_pinout_addressing.md">Ch02</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="02_package_pinout_addressing/">Ch02</a></p>
 </div>
 
 <div class="glossary-term">
@@ -92,7 +92,7 @@
 <p class="glossary-field"><strong>Definition.</strong> A periodic operation that restores the capacitor charge in every DRAM row to prevent data loss from leakage, executed via REF commands at an average interval of tREFI.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 §3.1; JESD79-4D §4.26.</p>
 <p class="glossary-field"><strong>Related.</strong> [[tREFI]], [[tRFC]], [[RFM]], [[Self Refresh]]</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="07_refresh_rfm.md">Ch07</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="07_refresh_rfm/">Ch07</a></p>
 </div>
 
 <div class="glossary-term">
@@ -128,7 +128,7 @@
 <p class="glossary-field"><strong>Definition.</strong> A sliding time window within which no more than four ACT commands may be issued to the same rank, limiting peak current consumption.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-4D §13.</p>
 <p class="glossary-field"><strong>Related.</strong> [[ACT]], [[tRRD_L]], [[tRRD_S]]</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="06_timing_preamble.md#5-dv-적용-timing-checker-sva">Ch06 §5.2</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="06_timing_preamble/#5-dv-적용-timing-checker-sva">Ch06 §5.2</a></p>
 </div>
 
 <div class="glossary-term">
@@ -151,7 +151,7 @@
 <p class="glossary-field"><strong>Definition.</strong> A DDR5 mechanism in which the memory controller tracks per-row activation counts (RAA) and issues RFM commands when thresholds are crossed, mitigating Rowhammer-type disturbances.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 §3.5.59 (MR58).</p>
 <p class="glossary-field"><strong>Related.</strong> [[RAA Counter]], [[Rowhammer]], [[DRFM]], [[ARFM]]</p>
-<p class="glossary-field"><strong>See also.</strong> <a href="07_refresh_rfm.md#3-ddr5-의-refresh-rfm의-등장">Ch07 §3</a></p>
+<p class="glossary-field"><strong>See also.</strong> <a href="07_refresh_rfm/#3-ddr5-의-refresh-rfm의-등장">Ch07 §3</a></p>
 </div>
 
 <div class="glossary-term">
@@ -495,11 +495,11 @@
 ---
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="appendix_a_quick_reference.md">
+  <a class="nav-prev" href="appendix_a_quick_reference/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">부록 A. Quick Reference</div>
   </a>
-  <a class="nav-next" href="appendix_b_glossary_ko.md">
+  <a class="nav-next" href="appendix_b_glossary_ko/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">부록 B. 용어집 (KO)</div>
   </a>

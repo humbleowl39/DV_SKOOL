@@ -1,7 +1,7 @@
 # Ch05. Command·Truth Table·Burst Operation
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 05</span>
 </div>
@@ -424,11 +424,11 @@ LPDDR5의 *CAS* 명령은 WCK Sync 비트를 *함께* 인코딩 — WCK가 CK와
 - 퀴즈: [Ch05 퀴즈](quiz/ch05_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="04_mode_registers.md">
+  <a class="nav-prev" href="04_mode_registers/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch04. Mode Register</div>
   </a>
-  <a class="nav-next" href="06_timing_preamble.md">
+  <a class="nav-next" href="06_timing_preamble/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch06. Timing·Preamble</div>
   </a>

@@ -1,7 +1,7 @@
 # Ch04. Mode Register 깊이 분석
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 04</span>
 </div>
@@ -355,11 +355,11 @@ DV는 CBT 시퀀스 동안 *physical MR 접근 vs logical MR 접근*을 구별�
 - 퀴즈: [Ch04 퀴즈](quiz/ch04_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="03_init_reset_power.md">
+  <a class="nav-prev" href="03_init_reset_power/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch03. 초기화·Reset·Power</div>
   </a>
-  <a class="nav-next" href="05_commands_burst.md">
+  <a class="nav-next" href="05_commands_burst/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch05. Command·Burst</div>
   </a>

@@ -1,7 +1,7 @@
 # Ch10. DV Methodology 통합 — Spec → TB → Coverage
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 10</span>
 </div>
@@ -440,11 +440,11 @@ LPDDR5 검증 시 DDR5의 위 체크리스트 + 다음 추가:
 - 퀴즈: [Ch10 퀴즈](quiz/ch10_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="09_reliability_ecc_crc.md">
+  <a class="nav-prev" href="09_reliability_ecc_crc/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch09. 신뢰성·ECC·CRC</div>
   </a>
-  <a class="nav-next" href="11_dv_project_endtoend.md">
+  <a class="nav-next" href="11_dv_project_endtoend/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch11. DV 프로젝트 End-to-End</div>
   </a>

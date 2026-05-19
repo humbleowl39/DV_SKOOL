@@ -1,7 +1,7 @@
 # Ch11 퀴즈 — DV 프로젝트 End-to-End
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">CH 11</span>
 </div>
@@ -135,11 +135,11 @@
 ---
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="ch10_quiz.md">
+  <a class="nav-prev" href="ch10_quiz/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch10 퀴즈</div>
   </a>
-  <a class="nav-next" href="../index.md">
+  <a class="nav-next" href="../">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">🏠 코스 홈</div>
   </a>

@@ -1,7 +1,7 @@
 # Ch08. Training — CA / DQ / DQS / Read DQ Calibration
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 08</span>
 </div>
@@ -424,11 +424,11 @@ endgroup
 - 퀴즈: [Ch08 퀴즈](quiz/ch08_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="07_refresh_rfm.md">
+  <a class="nav-prev" href="07_refresh_rfm/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch07. Refresh·RFM</div>
   </a>
-  <a class="nav-next" href="09_reliability_ecc_crc.md">
+  <a class="nav-next" href="09_reliability_ecc_crc/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch09. 신뢰성·ECC·CRC</div>
   </a>

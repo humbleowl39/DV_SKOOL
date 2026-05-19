@@ -1,7 +1,7 @@
 # Ch01. DRAM 기본 원리와 JEDEC 표준 지형도
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 01</span>
 </div>
@@ -278,7 +278,7 @@ DDR_CTRL (parameterized)
 
 <div class="chapter-nav">
   <span></span>
-  <a class="nav-next" href="02_package_pinout_addressing.md">
+  <a class="nav-next" href="02_package_pinout_addressing/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch02. 패키지·핀아웃·어드레싱</div>
   </a>

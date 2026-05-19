@@ -1,7 +1,7 @@
 # 퀴즈 인덱스
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="../index.md"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">퀴즈</span>
 </div>
