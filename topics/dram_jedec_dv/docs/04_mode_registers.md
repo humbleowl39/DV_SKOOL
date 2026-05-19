@@ -338,16 +338,269 @@ DV는 CBT 시퀀스 동안 *physical MR 접근 vs logical MR 접근*을 구별�
 
 ---
 
-## 8. 핵심 정리 (Key Takeaways)
+## 8. PDF 정밀 인용 — DDR5 MR 비트 매핑 + MRR/MRW 동작
 
-- DDR5의 MR은 *MR0~MR254*까지 확장 — 카테고리(기본/ODT/DCA/DFE/ECC 등)로 묶어 이해.
+> 출처: JESD79-5C.01 v1.31 §3.4 (MRR, MRW), §3.5 (Mode Registers), Tables 14~24
+
+### 8.1 DDR5 MR 인코딩 방식의 변화 (§3.5 원문)
+
+> JESD79-5C.01 §3.5 인용:
+>
+> "With DDR5, the utilization and programming method shall change from the traditional addressing scheme found in DDR3 and DDR4, and **shall move to the method used by LPDDR, where the Mode Register Addresses (MRA) and Payload placed in Op Codes (OP) are all packed in the command bus encoding method**. Please refer to the Command Truth Table 30 for Mode Register Read (MRR) and Mode Register Write (MRW) command protocol."
+>
+> "For DDR5, the SDRAM shall support **up to 8 MRA's, each with a byte-wide payload. Allowing for up to 256 byte-wide registers**."
+
+핵심:
+- MR addressing 방식이 *DDR3/4 스타일* → *LPDDR 스타일* 로 변경
+- *8-bit MRA* (Mode Register Address) + *8-bit OP* (Op Code = payload)
+- 최대 *256개의 byte-wide MR* 지원 (MR0~MR255 이론상)
+
+### 8.2 MR 비트 정의 규약 (§3.5.1)
+
+> §3.5.1 원문 인용:
+> "Each bit in a register byte (MR#) is denoted as **'R'** if it can be read but not written, **'W'** if it can be written but reads shall always produce a ZERO for those specific bits, and **'R/W'** if it can be read and written. Additionally, a DRAM read-only bit combined with a Host write-only bit is denoted as a **'SR/W'** bit. This bit allows the DRAM to return a defined status during a read of that bit (SR = Status Read), independent of what the Host may have written to the bit."
+
+| 비트 종류 | 의미 |
+|---|---|
+| `R` | Read only — host가 write 시도 시 결과 미정 |
+| `W` | Write only — host read는 항상 0 |
+| `R/W` | Read/Write 모두 가능 |
+| `SR/W` | Read-only (DRAM이 status 반환) + Write-only (host write 가능, but read는 status) |
+
+**RFU (Reserved For Future Use)**:
+- *RFU bit*: write 시 host는 0 write 필수. DRAM은 그 bit의 동작을 *보장 X*. read 시 항상 0.
+- *RFU MR (entire byte)*: read/write 모두 don't care. 일부 device는 *unsupported* 가능.
+
+**Device-specific MR**:
+- x16용 MR이 *x4/x8 device에서는 RFU*로 간주 — don't care.
+- 다른 density/config 용 bit field는 host가 write/read 가능하지만 *동작 영향 X*.
+
+### 8.3 Table 24 — DDR5 MR Assignment (MR0~MR7 정확한 비트 매핑)
+
+> 출처: JESD79-5C.01 §3.5.1, Table 24 (정확 인용)
+
+| MR# | OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
+|---|---|---|---|---|---|---|---|---|
+| **MR0** | RFU | CAS Latency (RL) [OP6:2] | ← | ← | ← | ← | Burst Length [OP1:0] | ← |
+| **MR1** | PDA Select ID [OP7:5] | ← | ← | PDA Enumerate ID [OP4:0] | ← | ← | ← | ← |
+| **MR2** | Internal Write Timing | Reserved | Device 15 MPSM | CS Assertion Duration (MPC) | Max Power Saving Mode (MPSM) | 2N Mode | Write Leveling Training | Read Preamble Training |
+| **MR3** | Write Leveling Internal Cycle Alignment — Upper Byte [OP7:4] | ← | ← | ← | Write Leveling Internal Cycle Alignment — Lower Byte [OP3:0] | ← | ← | ← |
+| **MR4** | TUF | RFU | Wide Range (Optional) | Refresh tRFC Mode | Refresh Interval Rate Indicator | Minimum Refresh Rate [OP2:0] | ← | ← |
+| **MR5** | Pull-Down Output Driver Impedance [OP7:5] | ← | ← | DM Enable | TDQS Enable | PODTM Support | Pull-up Output Driver Impedance / Data Output Disable [OP3:0] | ← |
+| **MR6** | tRTP [OP7:4] | ← | ← | ← | Write Recovery Time [OP3:0] | ← | ← | ← |
+| **MR7** | RFU [OP7:2] | ← | ← | ← | ← | ← | (Optional) Write Leveling Internal +0.5tCK Alignment Offset — Upper Byte | Lower Byte |
+
+> 주의: 위 표의 일부 cell 그룹은 *spec 원본의 merged cell*을 줄 단위로 표현. *실제 비트 폭 (단일 비트 vs 다중 비트)* 은 spec 원본을 확인.
+
+### 8.4 핵심 MR 의 OP 인코딩 (default 값 기반)
+
+> 출처: JESD79-5C.01 §3.3 Table 9 + §3.5.2 (MR0)
+
+**MR0 — CAS Latency (CL) / Burst Length**
+
+| OP[1:0] (Burst Length) | 의미 |
+|---|---|
+| `00B` (default) | BL16 |
+| `01B` | BC8 OTF (optional) |
+| `10B` | BL32 (optional) |
+| `11B` | BL32 OTF (optional) |
+
+| OP[6:2] (CAS Latency RL) | 값 (DDR5-3200 기준) |
+|---|---|
+| `00000B` | RL=22 |
+| `00001B` | RL=24 |
+| `00010B` (default) | **RL=26** |
+| `00011B` | RL=28 |
+| `00100B` | RL=30 |
+| ... | (speed bin에 따라) |
+
+> Default `00010B` = RL=26 @ DDR5-3200. 더 높은 speed bin일수록 RL nCK 값 증가.
+
+**MR6 — Write Recovery Time / tRTP**
+
+| OP[3:0] (WR) | nCK @ DDR5-3200 |
+|---|---|
+| `0000B` (default) | **48 nCK or 30 ns** |
+| ... | (speed bin별) |
+
+| OP[7:4] (tRTP) | nCK @ DDR5-3200 |
+|---|---|
+| `0000B` (default) | **12 nCK or 7.5 ns** |
+| ... | (speed bin별) |
+
+### 8.5 MRR/MRW 동작 — §3.4.1, §3.4.2 원문 인용
+
+> §3.4.1 MRR (원문 인용):
+> "The Mode Register Read (MRR) command is used to read configuration and status data from the DDR5-SDRAM registers. The MRR command is initiated with **CS_n and CA[13:0] in the proper state as defined by the Command Truth Table**. The mode register address operands (MA[7:0]) allow the user to select one of **256 registers**. The mode register contents are available **on the second 8 UI's of the burst** and are repeated across all DQ's after the CL following the MRR command."
+>
+> "DQS is toggled for the duration of the MRR burst. **The MRR has a command burst length 16** regardless of the MR0 setting, the training mode or the mode register address."
+
+> §3.4.2 MRW (원문 인용):
+> "The Mode Register Write (MRW) command is used to write configuration data to the mode registers. The MRW command is initiated with CS_n and CA[13:0] in the proper state as defined by the Command Truth Table. The mode register address and the data written to the mode registers is contained in CA[13:0] according to the Command Truth Table. **The MRW command period is defined by tMRW**."
+>
+> "MRW commands require **all banks to be idle on the DRAM**. For 3DS, MRW commands are broadcast across all logical ranks, requiring all banks to be idle on all logical ranks."
+
+### 8.6 Table 14 — MRR DQ Output Mapping (x4 Device)
+
+> 출처: JESD79-5C.01 §3.4.1, Table 14 인용
+
+| BL | 0~7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+|---|---|---|---|---|---|---|---|---|---|
+| DQ0 | 0 | OP0 | OP1 | OP2 | OP3 | OP4 | OP5 | OP6 | OP7 |
+| DQ1 | 1 | !OP0 | !OP1 | !OP2 | !OP3 | !OP4 | !OP5 | !OP6 | !OP7 |
+| DQ2 | 0 | OP0 | OP1 | OP2 | OP3 | OP4 | OP5 | OP6 | OP7 |
+| DQ3 | 1 | !OP0 | !OP1 | !OP2 | !OP3 | !OP4 | !OP5 | !OP6 | !OP7 |
+
+핵심:
+- **BL0~7**: marker pattern (짝수 DQ = 0, 홀수 DQ = 1). worst-case data pattern 방지 목적.
+- **BL8~15**: MR의 OP[0]~OP[7] 출력
+- 홀수 DQ는 *inverted output* — receiver가 differential pair처럼 활용 가능 (signal integrity)
+- 출처 인용: "To avoid a potentially worst-case pattern, **every odd DQ bit (represented with !) shall have its contents inverted**."
+
+### 8.7 Table 20 — Mode Register Read/Write AC Timing (정확 수치)
+
+> 출처: JESD79-5C.01 §3.4.4, Table 20
+
+| Parameter | Symbol | Min/Max | Value | Unit |
+|---|---|---|---|---|
+| Mode Register Read command period | `tMRR` | Min | **max(14ns, 16 nCK)** | nCK |
+| MRR Pattern to MRR Pattern Command spacing | `tMRR_p` | Min | **8 nCK** | nCK |
+| Mode Register Write command period | `tMRW` | Min | **max(5ns, 8 nCK)** | nCK |
+| Mode Register Set command delay | `tMRD` | Min | **max(14ns, 16 nCK)** | nCK |
+| DFE Mode Register Write Update Delay Time | `tDFE` | Min | **80 ns** | ns |
+
+> Note 1: MRR and MRW commands require all banks idle.
+> Note 2: tDFE applies to MR112~MR248 (DFE registers) — *settling time before a new DFE setting is active*.
+
+### 8.8 Table 22 — MRR/MRW Timing Constraints (DQ ODT Disable)
+
+> 출처: JESD79-5C.01 §3.4.4, Table 22
+
+| From | To | Minimum Delay | Note |
+|---|---|---|---|
+| MRR | MRR | `tMRR / tMRR_p` | Read Training 시 tMRR_p 적용 |
+| MRR | MRW | `CL + BL/2 + max[1, ODTLoff_RD_NT_Offset]` (tCK) | |
+| MRR | MPC | `CL + BL/2 + max[1, ODTLoff_RD_NT_Offset]` (tCK) | |
+| MRR | VrefCA/VrefCS | `CL + BL/2 + max[1, ODTLoff_RD_NT_Offset]` (tCK) | |
+| MRR | Any other valid command | `tMRD` | |
+| MRW | MRW | `tMRW` | |
+| MRW | Any other valid command | `tMRD` | |
+| WRA | MRR/MRW | `CWL + BL/2 + tWR + tRP` | Auto-precharge 후 |
+| RDA | MRR/MRW | `tRTP + tRP` | |
+| PRE | MRR/MRW | `tRP` | |
+| REF | MRR/MRW | `tRFC` | |
+
+!!! tip "DV 적용 — MRR/MRW timing SVA"
+    ```systemverilog
+    // 출처: JESD79-5C.01 §3.4.4 Table 22
+    property p_mrr_to_mrw_delay;
+        @(posedge clk)
+        (cmd_decoded == CMD_MRR) |->
+            ##[CL_NCK + BL/2 + 1 : $]
+            first_match(cmd_decoded == CMD_MRW);
+    endproperty
+    a_mrr_to_mrw: assert property (p_mrr_to_mrw_delay);
+
+    property p_mrw_to_mrw_delay;
+        @(posedge clk)
+        (cmd_decoded == CMD_MRW) |->
+            ##[TMRW_NCK : $]
+            first_match(cmd_decoded == CMD_MRW);
+    endproperty
+    a_mrw_to_mrw: assert property (p_mrw_to_mrw_delay);
+
+    // PRE → MRR 도 tRP 이상 보장
+    property p_pre_to_mrr_trp;
+        @(posedge clk)
+        (cmd_decoded == CMD_PRE) |->
+            ##[TRP_NCK : $]
+            first_match(cmd_decoded == CMD_MRR);
+    endproperty
+    a_pre_to_mrr: assert property (p_pre_to_mrr_trp);
+    ```
+
+### 8.9 Table 21 — MRR/MRW Truth Table (State 전이)
+
+> 출처: JESD79-5C.01 §3.4.4, Table 21
+
+| Current State (SDRAM) | Command | Intermediate State | Next State |
+|---|---|---|---|
+| All Banks Idle | MRR | Mode Register Reading (All Banks Idle) | All Banks Idle |
+| All Banks Idle | MRW | Mode Register Writing (All Banks Idle) | All Banks Idle |
+
+> Note 1: For 3DS, both MRR and MRW require all banks idle on all logical ranks.
+
+DV 시사점:
+- MRR/MRW 는 *idle state*에서만 발급. *active bank가 있는 상태*에서 발급은 *spec violation*.
+- 3DS DRAM (Through-Silicon Via stacked) 의 경우 *모든 logical rank*가 idle 해야 함.
+
+```systemverilog
+// 출처: Table 21 — MRR/MRW require All Banks Idle
+property p_mrr_mrw_only_in_idle;
+    @(posedge clk) disable iff (!reset_n)
+    (cmd_decoded inside {CMD_MRR, CMD_MRW}) |->
+        all_banks_idle();
+endproperty
+a_mrr_mrw_idle: assert property (p_mrr_mrw_only_in_idle)
+    else `uvm_error("SVA_MR", "MRR/MRW issued while bank active")
+```
+
+### 8.10 DDR5 MR4 (Refresh Settings) — 정확한 비트 매핑
+
+> 출처: Table 24
+
+| OP | 필드 | 의미 |
+|---|---|---|
+| OP[7] | **TUF** (Thermal Update Flag) | Status flag — read-only |
+| OP[6] | RFU | 0 write |
+| OP[5] | **Wide Range (Optional)** | Extended temperature range support |
+| OP[4] | **Refresh tRFC Mode** | 0 = standard tRFC, 1 = optional |
+| OP[3] | **Refresh Interval Rate Indicator** | 1x vs 0.5x interval |
+| OP[2:0] | **Minimum Refresh Rate** | Encoded refresh rate |
+
+> Default = `0000_0000B` (Table 9의 MR4는 별도 표기 없음 — 위 매핑은 Table 24 기반)
+
+**MR4 의 TUF (Thermal Update Flag) 의 의미**: DRAM 내부 온도 상승 등으로 MR4 settings update가 필요할 때 set. DV는 *thermal model* 시뮬레이션 시 TUF 비트가 *정확한 시점에 set/clear*되는지 검증.
+
+```systemverilog
+covergroup mr4_cg with function sample (bit [7:0] mr4_val);
+    cp_tuf: coverpoint mr4_val[7] {
+        bins tuf_clear = {0};
+        bins tuf_set   = {1};
+    }
+    cp_wide_range: coverpoint mr4_val[5] {
+        bins normal_range   = {0};
+        bins wide_range     = {1};
+    }
+    cp_trfc_mode: coverpoint mr4_val[4] {
+        bins standard = {0};
+        bins optional = {1};
+    }
+    cp_interval_rate: coverpoint mr4_val[3] {
+        bins normal_1x  = {0};
+        bins half_0p5x  = {1};
+    }
+    cp_min_refresh: coverpoint mr4_val[2:0] {
+        bins all_rates[] = {[0:7]};
+    }
+endgroup
+```
+
+## 9. 핵심 정리 (Key Takeaways)
+
+- DDR5의 MR은 *MR0~MR254*까지 확장. **인코딩 방식이 LPDDR style로 변경** — 8-bit MRA + 8-bit OP가 *command bus에 packed*.
 - DDR4는 MRS만, DDR5는 *MRW + MRR* (Read 직접 지원).
+- MR 비트는 `R`/`W`/`R/W`/`SR/W` 분류. **RFU는 write 시 0 강제**.
 - LPDDR5는 CBT용 *3 physical MR* 특수 구조.
 - UVM RAL로 MR을 모델링하면 mirror update + 자동 검증이 깔끔.
 - MR은 *init-only*, *runtime updatable(제약 하)*, *freely updatable*, *read-only*로 분류. SVA로 위반 catch 필수.
-- MR write/read coverage는 *MR 번호 × write/read* cross로 모든 MR이 쓰이는지 확인.
+- **MR0**: OP[1:0]=BL, OP[6:2]=CL. **MR4**: refresh 관련 + TUF flag. **MR6**: tRTP + tWR.
+- **MRR burst**: BL16 고정. BL0~7은 marker (0/1), BL8~15가 실제 MR 값. 홀수 DQ는 inverted.
+- **MRR/MRW**: All banks idle 필수. tMRR=max(14ns,16nCK), tMRW=max(5ns,8nCK), tMRD=max(14ns,16nCK).
+- **DFE MR (MR112~248)**: tDFE = 80ns settling time.
+- MR write/read coverage는 *MR 번호 × write/read* cross + *각 핵심 MR의 비트 필드별 cross*.
 
-## 9. Further Reading
+## 10. Further Reading
 
 - 이전: [Ch03. 초기화·Reset·Power](03_init_reset_power.md)
 - 다음: [Ch05. Command·Truth Table·Burst Operation](05_commands_burst.md)

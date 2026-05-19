@@ -355,17 +355,170 @@ endgroup
 
 ---
 
-## 9. 핵심 정리 (Key Takeaways)
+## 9. PDF 정밀 인용 — DDR5 SDRAM 어드레싱 (밀도별)
+
+> 출처: JESD79-5C.01 v1.31 §2.7, Tables 4~8
+
+DDR5는 device 밀도 (8 Gb ~ 64 Gb) 와 organization (x4/x8/x16) 에 따라 BG/BA/Row/Column 비트 수가 달라집니다. controller IP가 *다양한 밀도/organization*을 지원하려면 다음 표를 *parameter*로 모델링해야 합니다.
+
+### 9.1 8 Gb (Table 4)
+
+| Config | 2 Gb × 4 | 1 Gb × 8 | 512 Mb × 16 |
+|---|---|---|---|
+| BG Address | BG0~BG2 | BG0~BG2 | BG0~BG1 |
+| Bank Address in a BG | BA0 | BA0 | BA0 |
+| # BG / # Banks per BG / # Banks | 8 / 2 / 16 | 8 / 2 / 16 | 4 / 2 / 8 |
+| Row Address | R0~R15 | R0~R15 | R0~R15 |
+| Column Address | C0~C10 | C0~C9 | C0~C9 |
+| Page Size | 1KB | 1KB | 2KB |
+| CID / Max Stack Height | CID0~3 / 16H | CID0~3 / 16H | CID0~3 / 16H |
+
+### 9.2 16 Gb (Table 5)
+
+| Config | 4 Gb × 4 | 2 Gb × 8 | 1 Gb × 16 |
+|---|---|---|---|
+| BG Address | BG0~BG2 | BG0~BG2 | BG0~BG1 |
+| Bank Address in a BG | BA0~BA1 | BA0~BA1 | BA0~BA1 |
+| # BG / # Banks per BG / # Banks | 8 / 4 / **32** | 8 / 4 / **32** | 4 / 4 / **16** |
+| Row Address | R0~R15 | R0~R15 | R0~R15 |
+| Column Address | C0~C10 | C0~C9 | C0~C9 |
+| Page Size | 1KB | 1KB | 2KB |
+
+> **핵심 변화 (8 Gb → 16 Gb)**: bank 수가 *2배* (16 → 32 for x4/x8; 8 → 16 for x16). DDR5 §3.2의 "16 Gb 이상은 *32-bank* (8 BG × 4 banks/BG for x4/x8) 또는 *16-bank* (4 BG × 4 banks/BG for x16) 로 *doubling*" 과 일치.
+
+### 9.3 24 Gb (Table 6)
+
+| Config | 6 Gb × 4 | 3 Gb × 8 | 1.5 Gb × 16 |
+|---|---|---|---|
+| Row Address | **R0~R16** | **R0~R16** | **R0~R16** |
+| 나머지 | 16 Gb와 동일 (BG/BA, Page Size, CID) | | |
+
+> **NOTE 1 (스펙 원문 인용)**: "For non-binary memory densities, **a quarter of the row address space is invalid. When the MSB address bit is 'HIGH', the MSB-1 address bit shall be 'LOW'**."
+>
+> 즉 24 Gb (= non-binary) 에서 row[16] = 1 일 때 row[15] = 0 강제. DV의 *random row* constraint에 반영 필요:
+> ```systemverilog
+> constraint c_nonbinary_row {
+>     // 24Gb: 1/4 of row space invalid
+>     if (density == DENSITY_24Gb) {
+>         !(row[16] && row[15]);   // MSB HIGH 일 때 MSB-1 LOW
+>     }
+> }
+> ```
+
+### 9.4 32 Gb (Table 7) / 64 Gb (Table 8)
+
+| Density | Row Address | Column Address | CID / Max Stack |
+|---|---|---|---|
+| 32 Gb (x4/x8) | R0~R16 | C0~C10 / C0~C9 | CID0~3 / 16H |
+| 32 Gb (x16) | R0~R16 | C0~C9 | CID0~3 / 16H |
+| 64 Gb (x4/x8) | **R0~R17** | C0~C10 / C0~C9 | **CID0~2 / 8H** |
+| 64 Gb (x16) | **R0~R17** | C0~C9 | **CID0~2 / 8H** |
+
+64 Gb 부터는 row 비트가 *R0~R17* (총 18-bit) — 단일 bank당 row 수 = 2^18 = 256K. 또한 stack height 가 16H → 8H로 *감소* (TSV / thermal 제약).
+
+### 9.5 핀 정의 정밀 — Table 3 인용
+
+> 출처: JESD79-5C.01 §2.6, Table 3 — Pinout Description (요약 발췌)
+
+| Symbol | Type | 핵심 기능 |
+|---|---|---|
+| `CK_t`, `CK_c` | Input | Differential clock. address/control은 *CK_t positive edge와 CK_c negative edge의 crossing*에서 sample. |
+| `CS_n`, `(CS1_)` | Input | Chip Select. HIGH일 때 모든 명령 mask. multi-rank 의 rank selection + command code 일부. Power-down 진입/탈출에도 사용. |
+| `DM_n`, `DMU_n`, `DML_n` | Input | Input Data Mask. **MR5:OP[5]=1**로 enable. **x8 only** (x4는 unsupported). |
+| `CA[13:0]` | Input | Command/Address. *Multi-Cycle command 에서 pin은 cycle 간 interchange 불가*. |
+| `RESET_n` | Input | Active-low async. CMOS rail-to-rail, *80%~20% of VDDQ*. |
+| `DQ` | I/O | Bidirectional data bus. CRC enabled (MR50) 면 burst 끝에 CRC code 추가. |
+| `DQS_t/c`, `DQSU_t/c`, `DQSL_t/c` | I/O | Read: *edge-aligned* with data. Write: *center-aligned* with data. **DDR5는 differential strobe만 지원** (single-ended 미지원). |
+| `TDQS_t/c` | Output | Termination Data Strobe. **x8 only**. **MR5:OP[4]=1**로 enable. enable 시 DM_n 자리에 termination 제공. |
+| `ALERT_n` | I/O | CRC error 검출 시 LOW. Connectivity Test mode에서 input. unused면 *VDDQ로 pull-up*. |
+| `TEN` | Input | Connectivity Test mode enable. AC HIGH/LOW = 80%/20% of VDDQ. |
+| `MIR` | Input | Mirrored mode strap. VDDQ strap 시 SDRAM 내부적으로 *짝수 CA bit와 다음 홀수 CA bit를 swap*. |
+| `CAI` | Input | Command & Address Inversion strap. VDDQ strap 시 internal하게 CA 신호 *invert*. |
+| `CA_ODT` | Input | CA용 ODT strap. VSS strap = Group A, VDDQ strap = Group B. |
+| `LBDQ`/`LBDQS` | Output | Loopback Data Output/Strobe. **MR53:OP[4:0]**에서 선택. |
+| `VDDQ` / `VDD` | Supply | DQ Power / Core Power — 모두 **1.1V** |
+| `VPP` | Supply | DRAM Activating Power Supply — **1.8V** |
+| `ZQ`, `(ZQ1)` | Reference | ZQ Calibration. **240 Ω RZQ** resistor로 VSS 연결. DDP 의 경우 bottom die (Rank 0) 에 연결. |
+
+!!! tip "DV 적용 — 핀 정의 검증 포인트"
+    - **MR5:OP[4]/[5]**: x4 device에서 *DM/TDQS 둘 다 disabled* 인지 SVA로 확인 (x4는 두 기능 모두 unsupported)
+    - **MIR/CAI strap**: power-on 시 strap 값이 *MR mirror에 정확히 반영*되는지 init coverage
+    - **ZQ resistor**: simulation model이 *240 Ω 가정*인지 확인 (다른 값이면 calibration fail)
+    - **Multi-Cycle command pin interchange 금지**: SVA로 *2-cycle 명령의 두 cycle 사이*에 *CA pin assignment 변경*이 없는지 검증
+
+### 9.6 §3.2 Basic Functionality 원문 인용
+
+> JESD79-5C.01 §3.2 (원문 인용):
+>
+> "The DDR5 SDRAM is a high-speed dynamic random-access memory. To ease transition from DDR4 to DDR5, **the introductory density (8 Gb) shall be internally configured as 16-bank, 8 bank group with 2 banks for each bank group for x4/x8 and 8-bank, 4 bank group with 2 banks for each bank group for x16 DRAM**. When the industry transitions to higher densities (=>16 Gb), **it doubles the bank resources and internally be configured as 32-bank, 8 bank group with 4 banks for each bank group for x4/x8 and 16-bank, 4-bank group with 4 banks for each bank group for x16 DRAM**."
+
+핵심:
+- **8 Gb**: x4/x8 → 16 banks (8 BG × 2 BA), x16 → 8 banks (4 BG × 2 BA)
+- **16 Gb 이상**: x4/x8 → 32 banks (8 BG × 4 BA), x16 → 16 banks (4 BG × 4 BA)
+
+### 9.7 16n Prefetch Architecture 원문 인용
+
+> JESD79-5C.01 §3.2 (원문 인용):
+>
+> "The DDR5 SDRAM uses a **16n prefetch architecture** to achieve high-speed operation. The 16n prefetch architecture is combined with an interface designed to transfer two data words per clock cycle at the I/O pins. **A single read or write operation for the DDR5 SDRAM consists of a single 16n-bit wide, eight clock data transfer at the internal DRAM core and sixteen corresponding n-bit wide, one-half clock cycle data transfers at the I/O pins**."
+
+| 영역 | 폭 | 클럭 |
+|---|---|---|
+| 내부 DRAM core 전송 | **16n bits wide** | 8 clocks |
+| I/O 인터페이스 전송 | n bits wide | **16 half-clocks** (= BL16 × half-tCK) |
+
+즉:
+- 내부 prefetch = 16n bits (n = DQ width: 4/8/16)
+- 외부 I/O 전송 = 16 beats × n bits at half-tCK
+- BL16 → 16 beats → 1 burst = *1 internal prefetch*
+- BL32 → 32 beats → 2 internal prefetches
+
+### 9.8 Burst Length 옵션 (§3.2 원문)
+
+> JESD79-5C.01 §3.2: "**BC8 on-the-fly (OTF)**, **fixed BL16**, **fixed BL32 (optional)**, or **BL32 OTF (optional)** mode if enabled in the mode register."
+
+| Burst Mode | 의미 | 활용 |
+|---|---|---|
+| BC8 OTF | Burst Chop 8 — *command 단위*로 선택 | legacy / 짧은 burst |
+| Fixed BL16 | 모든 burst가 16-beat (**default**) | 일반 traffic |
+| Fixed BL32 (optional) | 모든 burst가 32-beat | sequential 대량 |
+| BL32 OTF (optional) | command 단위로 BL16/BL32 선택 | mixed traffic |
+
+```systemverilog
+// DV 적용 — burst mode coverage
+typedef enum {BURST_BC8_OTF, BURST_BL16_FIXED, BURST_BL32_FIXED, BURST_BL32_OTF} burst_mode_e;
+
+covergroup ddr5_burst_mode_cg with function sample (burst_mode_e mode, int actual_bl);
+    cp_mode: coverpoint mode;
+    cp_bl: coverpoint actual_bl {
+        bins bc8  = {8};
+        bins bl16 = {16};
+        bins bl32 = {32};
+    }
+    cx_consistency: cross cp_mode, cp_bl {
+        ignore_bins illegal_bc8_with_fixed16 =
+            binsof(cp_mode) intersect {BURST_BL16_FIXED} &&
+            binsof(cp_bl.bc8);
+        // BL16 fixed mode에서 BC8 발급은 illegal
+    }
+endgroup
+```
+
+---
+
+## 10. 핵심 정리 (Key Takeaways)
 
 - DDR5는 *DIMM당 2 channels* 분리. 각 channel은 독립적 address/command bus.
-- DDR5 command는 *2 cycles에 걸쳐* CA[6:0]에 인코딩 — monitor sampling window 2배 확장 필요.
-- DDR5 Bank Group은 *8개*, BG당 4 banks (channel당). `tCCD_L` vs `tCCD_S` 가 BG 동일성에 따라 적용.
-- LPDDR4는 dual-channel die가 기본 — 채널 독립성을 cover해야 함.
-- LPDDR5는 WCK/RDQS 도입 — data 클럭이 CK와 분리 (CK=command, WCK=data).
-- LPDDR5 Bank mode가 3가지 (16/8/BG mode) — MR 설정으로 전환, 재초기화 필요.
+- DDR5 command는 *2 cycles에 걸쳐* CA[13:0] (또는 CA[6:0]) 에 인코딩 — monitor sampling window 2배 확장 필요.
+- DDR5 Bank Group은 *8개* (x4/x8) 또는 *4개* (x16). `tCCD_L` vs `tCCD_S` 가 BG 동일성에 따라 적용.
+- **밀도별 bank 수**: 8 Gb는 16-bank (x4/x8) 또는 8-bank (x16). 16 Gb 이상은 32-bank (x4/x8) 또는 16-bank (x16) — *bank doubling*.
+- **Row address 비트**: 8/16 Gb → R0~R15, 24/32 Gb → R0~R16, 64 Gb → R0~R17. **24 Gb 의 non-binary 제약** (MSB HIGH 시 MSB-1 LOW 강제).
+- **16n prefetch**: 내부 16n-bit × 8 클럭 ↔ 외부 n-bit × 16 half-클럭. BL16 = 1 prefetch.
+- **Burst Length**: BC8 OTF / Fixed BL16 (default) / Fixed BL32 (opt) / BL32 OTF (opt).
+- LPDDR4는 dual-channel die가 기본. LPDDR5는 WCK/RDQS 도입, Bank mode 3가지.
 - Coverage에서 Row를 *range bin*으로 묶지 않으면 폭발. 4축(BG/BA/Row/Col)을 균형 있게.
 
-## 10. Further Reading
+## 11. Further Reading
 
 - 이전: [Ch01. DRAM 기본 원리와 JEDEC 표준 지형도](01_dram_jedec_landscape.md)
 - 다음: [Ch03. 초기화·Reset·Power 시퀀스](03_init_reset_power.md)

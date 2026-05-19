@@ -371,7 +371,148 @@ endgroup
 - UVM phase 매핑: pre_reset → reset → post_reset → pre_configure → configure → post_configure → main.
 - CKE=0 상태에서 MRW 같은 위반은 *조용히* 진행되어 후속에서 mismatch — SVA로 *즉시* catch해야 한다.
 
-## 10. Further Reading
+## 10. PDF 정밀 인용 — DDR5 §3.3 Power-up Init
+
+> 출처: JESD79-5C.01 v1.31 §3.3, Table 9 (MR Default Settings), Figure 4, Table 10 (Voltage Ramp Conditions)
+
+### 10.1 MR Default Settings (Table 9) — power-up 시 DRAM이 가정하는 값
+
+> 스펙 인용 (§3.3): "For power-up and reset initialization, in order to prevent DRAM from functioning improperly, default values for the following MR settings need to be defined."
+
+| Item | Mode Register | Default Setting | Description |
+|---|---|---|---|
+| Burst Length | MR0 OP[1:0] | `00B` | **BL16** |
+| Read Latency | MR0 OP[6:2] | `00010B` | **RL(CL) = 26 @ DDR5-3200** |
+| Write Latency | n/a | WL = RL-2 (CWL=CL-2) | Fixed based on RL(CL) |
+| Write Recovery (tWR) | MR6 OP[3:0] | `0000B` | **tWR = 48 nCK @3200, or 30 ns** |
+| Read to Precharge Delay (tRTP) | MR6 OP[7:4] | `0000B` | **tRTP = 12 nCK @3200, or 7.5 ns** |
+| VrefDQ Value | MR10 | `0010 1101B` | VREF(DQ) Range = **75% of VDDQ** |
+| VrefCA Value | MR11 | `0010 1101B` | VREF(CA) Range = **75% of VDDQ** |
+| VrefCS Value | MR12 | `0010 1101B` | VREF(CS) Range = **75% of VDDQ** |
+| ECS Error Threshold Count (ETC) | MR15 | `011B` | **256** |
+| Post Package Repair | MR23 OP[1:0] | `00B` | **hPPR and sPPR Disabled** |
+| CK ODT | MR32 OP[2:0] | strap-based | Group A = RTT_OFF=`000B`, Group B = 40 Ω = `111B` |
+| CS ODT | MR32 OP[5:3] | strap-based | Group A = RTT_OFF, Group B = 40 Ω |
+| CA ODT | MR33 OP[2:0] | strap-based | Group A = RTT_OFF=`000B`, Group B = 80 Ω = `100B` |
+| DQS_RTT_PARK | MR33 OP[5:3] | `000B` | **RTT OFF** |
+| RTT_PARK | MR34 OP[2:0] | `000B` | **RTT OFF** |
+| RTT_WR | MR34 OP[5:3] | `001B` | **240 Ω** |
+| RTT_NOM_WR | MR35 OP[2:0] | `011B` | **80 Ω** |
+| RTT_NOM_RD | MR35 OP[5:3] | `011B` | **80 Ω** |
+| RTT Loopback | MR36 OP[2:0] | `000B` | **RTT OFF** |
+| RFM RAAIMT | MR58 OP[4:1] | vendor specific | (Refresh Management) |
+| RFM RAAMMT | MR58 OP[7:5] | vendor specific | |
+| RFM RAA Counter | MR59 OP[7:6] | vendor specific | |
+
+!!! tip "DV 적용 — Default Reset 값 SVA"
+    Power-on reset 직후 *MR을 readback*해서 위 default와 *일치*하는지 SVA 또는 RAL verify로 확인.
+
+    ```systemverilog
+    // DDR5 init reset value check
+    task check_default_mr_values();
+        uvm_status_e status;
+        bit [7:0] read_val;
+
+        ral.MR0.read(status, read_val, UVM_FRONTDOOR);
+        if (read_val[1:0] !== 2'b00)
+            `uvm_error("MR_DEFAULT", $sformatf("MR0[1:0]=0x%x, expected 0x0 (BL16)", read_val[1:0]))
+        if (read_val[6:2] !== 5'b00010)
+            `uvm_error("MR_DEFAULT", $sformatf("MR0[6:2]=0x%x, expected 0x2 (CL=26@3200)", read_val[6:2]))
+
+        ral.MR10.read(status, read_val, UVM_FRONTDOOR);
+        if (read_val !== 8'b0010_1101)
+            `uvm_error("MR_DEFAULT", $sformatf("MR10=0x%x, expected 0x2D (VrefDQ 75%)", read_val))
+        // ... MR11, MR12, MR15, MR23, MR32~36 모두 ...
+    endtask
+    ```
+
+### 10.2 Voltage Ramp Conditions (Table 10)
+
+> 스펙 원문 인용 (§3.3.1 Step 1): "While applying power (after Ta), RESET_n is recommended to be LOW (≤0.2 × VDDQ) and all other inputs may be undefined. The device outputs remain disabled while RESET_n is held LOW. Power supply voltage ramp requirements are provided in Table 10. **VPP shall ramp at the same time or earlier than VDD**."
+
+| After | Application Conditions |
+|---|---|
+| Ta is reached | **VPP shall be greater than VDD** |
+
+> NOTE 1: Ta is the point when any power supply first reaches 300 mV.
+> NOTE 2: Voltage ramp conditions apply between (Ta) and Power-off.
+> NOTE 3: Tb is the point at which all supply and reference voltages are within their defined ranges.
+> NOTE 4: Power ramp duration (Tb - Ta) shall not exceed tINIT0.
+
+### 10.3 Power-up Initialization Sequence — 단계 인용
+
+> 출처: JESD79-5C.01 §3.3.1, Figure 4
+
+스펙 원문 인용 (§3.3.1 Steps 1~4):
+
+1. *Step 1*: RESET_n LOW (≤0.2 × VDDQ) 로 유지. all other inputs may be undefined. VPP shall ramp at the same time or earlier than VDD.
+2. *Step 2*: Voltage ramp 완료 (Tb 시점). RESET_n LOW 유지. DQ, DQS_t, DQS_c, CS_n, CK_t, CK_c, CA 입력 레벨은 VSS~VDDQ 사이.
+3. *Step 3*: Tb 부터 RESET_n LOW 유지 *최소 tINIT1 (Tb→Tc)*. 후 HIGH (Tc). RESET_n de-assert *최소 tINIT2 이전*에 CS_n=LOW 설정 필요. 다른 입력은 "Don't Care". DRAM은 RESET_n을 *indefinitely* hold 지원.
+4. *Step 4*: RESET_n HIGH (Tc) 후, *최소 tINIT3* 대기 후 CS_n HIGH 가능.
+
+### 10.4 Figure 4 의 Phase 구분 — Power Ramp → Configuration
+
+```
+T_a → T_b → T_c → T_d → T_e → T_f → T_g → T_h ...
+│ Power │ Reset │ Initialization │ CS_CMOS Registration │ Configuration ...
+│ Ramp  │       │                │ & ODT Async Off       │
+├──────┤
+│tINIT0 (Ta→Tb)
+       ├──────┤
+       │tINIT1 (Tb→Tc) — RESET_n LOW 최소
+              ├──────┤
+              │tINIT2 (...) — CS_n LOW 보장 시점
+                     ├──────┤
+                     │tINIT3 — RESET_n HIGH → CS_n HIGH 가능
+                            ├──────┤
+                            │tINIT4
+                                   ├──────┤
+                                   │tINIT5
+                                          ├──────┤
+                                          │tXPR — DES/NOP 만
+                                                 ├──────┤
+                                                 │tMRD — MRW 시작
+```
+
+DV 검증 포인트:
+- **각 tINIT* timing 위반** SVA로 catch
+- **CS_n LOW 보장 시점** (tINIT2 이전) 검증
+- **DES/NOP only window** (CKE HIGH 후 ~ first MRW 까지) 동안 다른 명령 금지
+
+```systemverilog
+// 출처: JESD79-5C.01 §3.3.1 + Figure 4
+// tINIT 단계별 위반 catch
+typedef enum {INIT_PHASE_PWR, INIT_PHASE_RST, INIT_PHASE_INIT, INIT_PHASE_CFG, INIT_PHASE_READY} init_phase_e;
+init_phase_e init_phase;
+
+property p_no_cmd_during_reset;
+    @(posedge clk) (init_phase == INIT_PHASE_RST) |->
+        cmd_decoded inside {CMD_DES, CMD_NOP};
+endproperty
+
+property p_no_legal_cmd_before_training;
+    @(posedge clk) (init_phase == INIT_PHASE_INIT) |->
+        cmd_decoded inside {CMD_DES, CMD_NOP, CMD_MPC};
+            // MPC for CS/CA training is allowed
+endproperty
+```
+
+### 10.5 Step 5~10 (§3.3.1 cont'd, Figure 4 NOTES 인용)
+
+> 스펙 NOTES 인용 (Figure 4):
+>
+> 5. "Prior to ZQcal completion at (Tk), MPC commands shall be Multi-Cycle as described in the MPC command Timings section."
+> 6. "From time point (Tk) until (Tl), MPC, VREFCA and VREFCS commands prior to CS and CA training successfully completing, shall be Multi-Cycle (MR2:OP[4]=0) as described in the MPC, VREFCS, and VREFCA timing sections."
+> 7. "At time point (Tl), with successful completion of CS and CA training, an MRW command setting MR2:OP[4]=1 is recommended and allows for MPC, VREFCS, VREFCA commands to be **single-cycle, improving training duration**."
+> 8. "From time point (Tk) until (Tz), DES commands shall be applied between legal commands (MRR, MRW, MPC, VREFCS, & VREFCA)."
+> 9. "Starting at Tl, MRW commands shall be issued to all Mode Registers that require defined settings."
+
+DV 검증 포인트:
+- **MR2:OP[4] 전환** (multi-cycle → single-cycle MPC): training 완료 (Tl) 후에만
+- **DES 명령 의무**: Tk ~ Tz 사이 legal command 간에 *반드시 DES* 삽입
+- **MRW 시퀀스**: defined settings를 위한 MRW가 *Tl 이후* 발급
+
+## 11. Further Reading
 
 - 이전: [Ch02. 패키지·핀아웃·어드레싱](02_package_pinout_addressing.md)
 - 다음: [Ch04. Mode Register 깊이 분석](04_mode_registers.md)
