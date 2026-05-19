@@ -1,7 +1,7 @@
 # Ch09 퀴즈 — 신뢰성·ECC·CRC·PPR
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">CH 09</span>
 </div>
@@ -125,11 +125,11 @@
 ---
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="ch08_quiz/">
+  <a class="nav-prev" href="../ch08_quiz/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch08 퀴즈</div>
   </a>
-  <a class="nav-next" href="ch10_quiz/">
+  <a class="nav-next" href="../ch10_quiz/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch10 퀴즈</div>
   </a>

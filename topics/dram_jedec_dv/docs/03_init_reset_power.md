@@ -1,7 +1,7 @@
 # Ch03. 초기화·Reset·Power 시퀀스
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 03</span>
 </div>
@@ -379,11 +379,11 @@ endgroup
 - 퀴즈: [Ch03 퀴즈](quiz/ch03_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="02_package_pinout_addressing/">
+  <a class="nav-prev" href="../02_package_pinout_addressing/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch02. 패키지·핀아웃·어드레싱</div>
   </a>
-  <a class="nav-next" href="04_mode_registers/">
+  <a class="nav-next" href="../04_mode_registers/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch04. Mode Register 깊이 분석</div>
   </a>

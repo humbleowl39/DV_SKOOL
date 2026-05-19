@@ -1,7 +1,7 @@
 # Ch02. 패키지·핀아웃·어드레싱
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 02</span>
 </div>
@@ -373,11 +373,11 @@ endgroup
 - 퀴즈: [Ch02 퀴즈](quiz/ch02_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="01_dram_jedec_landscape/">
+  <a class="nav-prev" href="../01_dram_jedec_landscape/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch01. JEDEC 표준 지형도</div>
   </a>
-  <a class="nav-next" href="03_init_reset_power/">
+  <a class="nav-next" href="../03_init_reset_power/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch03. 초기화·Reset·Power</div>
   </a>

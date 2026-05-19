@@ -1,7 +1,7 @@
 # Ch04 퀴즈 — Mode Register 깊이 분석
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">CH 04</span>
 </div>
@@ -104,11 +104,11 @@
 ---
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="ch03_quiz/">
+  <a class="nav-prev" href="../ch03_quiz/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch03 퀴즈</div>
   </a>
-  <a class="nav-next" href="ch05_quiz/">
+  <a class="nav-next" href="../ch05_quiz/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch05 퀴즈</div>
   </a>

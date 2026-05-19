@@ -1,7 +1,7 @@
 # Ch06. Timing 파라미터·Preamble·Postamble
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 06</span>
 </div>
@@ -331,11 +331,11 @@ endgroup
 - 퀴즈: [Ch06 퀴즈](quiz/ch06_quiz.md)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="05_commands_burst/">
+  <a class="nav-prev" href="../05_commands_burst/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch05. Command·Burst</div>
   </a>
-  <a class="nav-next" href="07_refresh_rfm/">
+  <a class="nav-next" href="../07_refresh_rfm/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch07. Refresh·RFM</div>
   </a>

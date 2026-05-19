@@ -1,7 +1,7 @@
 # 부록 B. 용어집 (한국어)
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker chapter-quickref-marker">부록 B (KO)</span>
 </div>
@@ -15,7 +15,7 @@
 <p class="glossary-field"><strong>정의.</strong> 각 비트를 *하나의 커패시터*에 전기적 전하 형태로 저장하고 *하나의 트랜지스터*로 접근하는(1T1C) 휘발성 반도체 메모리 기술.</p>
 <p class="glossary-field"><strong>출처.</strong> 일반 DV 용어; JESD79-5C.01 §1.</p>
 <p class="glossary-field"><strong>관련.</strong> SDRAM, Refresh, DDR</p>
-<p class="glossary-field"><strong>참조.</strong> <a href="01_dram_jedec_landscape/">Ch01</a></p>
+<p class="glossary-field"><strong>참조.</strong> <a href="../01_dram_jedec_landscape/">Ch01</a></p>
 </div>
 
 <div class="glossary-term">
@@ -277,11 +277,11 @@
 ---
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="appendix_b_glossary/">
+  <a class="nav-prev" href="../appendix_b_glossary/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Glossary (EN)</div>
   </a>
-  <a class="nav-next" href="appendix_c_sva_coverage_examples/">
+  <a class="nav-next" href="../appendix_c_sva_coverage_examples/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">부록 C. SVA/Coverage 예제</div>
   </a>

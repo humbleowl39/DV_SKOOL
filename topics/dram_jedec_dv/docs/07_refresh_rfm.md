@@ -1,7 +1,7 @@
 # Ch07. Refresh·tREFI/tRFC·Refresh Management (RFM)
 
 <div class="chapter-context" data-cat="memory">
-  <a class="chapter-back" href="./"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> DRAM JEDEC Deep-Dive</a>
   <span class="chapter-divider">›</span>
   <span class="chapter-marker">CH 07</span>
 </div>
@@ -415,11 +415,11 @@ endgroup
     - JEDEC RFM technical brief (공개 자료)
 
 <div class="chapter-nav">
-  <a class="nav-prev" href="06_timing_preamble/">
+  <a class="nav-prev" href="../06_timing_preamble/">
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch06. Timing·Preamble</div>
   </a>
-  <a class="nav-next" href="08_training/">
+  <a class="nav-next" href="../08_training/">
     <div class="nav-label">다음 →</div>
     <div class="nav-title">Ch08. Training</div>
   </a>
