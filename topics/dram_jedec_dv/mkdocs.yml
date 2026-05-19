@@ -1,0 +1,135 @@
+site_name: DRAM JEDEC Deep-Dive (DV)
+site_description: DDR4/DDR5/LPDDR4/LPDDR5 JEDEC 스펙 deepdive — DV 실무자용 학습 자료
+site_url: https://humbleowl39.github.io/DV_SKOOL/dram_jedec_dv/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/dram_jedec_dv/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+nav:
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 본문":
+      - "Ch01. DRAM 기본 원리와 JEDEC 표준 지형도": 01_dram_jedec_landscape.md
+      - "Ch02. 패키지·핀아웃·어드레싱": 02_package_pinout_addressing.md
+      - "Ch03. 초기화·Reset·Power 시퀀스": 03_init_reset_power.md
+      - "Ch04. Mode Register 깊이 분석": 04_mode_registers.md
+      - "Ch05. Command·Truth Table·Burst": 05_commands_burst.md
+      - "Ch06. Timing·Preamble·Postamble": 06_timing_preamble.md
+      - "Ch07. Refresh·tREFI/tRFC·RFM": 07_refresh_rfm.md
+      - "Ch08. Training (CA/DQ/DQS/WCK2CK)": 08_training.md
+      - "Ch09. 신뢰성·ECC·CRC·PPR": 09_reliability_ecc_crc.md
+      - "Ch10. DV Methodology 통합": 10_dv_methodology.md
+      - "Ch11. DV 프로젝트 End-to-End": 11_dv_project_endtoend.md
+  - "📎 부록":
+      - "A. JEDEC Spec 빠른 참조": appendix_a_quick_reference.md
+      - "B. Glossary (EN)": appendix_b_glossary.md
+      - "B. 용어집 (KO)": appendix_b_glossary_ko.md
+      - "C. SVA / Coverage 예제 모음": appendix_c_sva_coverage_examples.md
+  - "❓ 퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
+      - "Ch01 퀴즈": quiz/ch01_quiz.md
+      - "Ch02 퀴즈": quiz/ch02_quiz.md
+      - "Ch03 퀴즈": quiz/ch03_quiz.md
+      - "Ch04 퀴즈": quiz/ch04_quiz.md
+      - "Ch05 퀴즈": quiz/ch05_quiz.md
+      - "Ch06 퀴즈": quiz/ch06_quiz.md
+      - "Ch07 퀴즈": quiz/ch07_quiz.md
+      - "Ch08 퀴즈": quiz/ch08_quiz.md
+      - "Ch09 퀴즈": quiz/ch09_quiz.md
+      - "Ch10 퀴즈": quiz/ch10_quiz.md
+      - "Ch11 퀴즈": quiz/ch11_quiz.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  homepage: https://humbleowl39.github.io/DV_SKOOL/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — JEDEC 스펙 학습용 (스펙 원문 복제 아님 — 학습 목적 인용/요약)
