@@ -254,6 +254,136 @@
 
 **예시.** DDR5는 ZQCS(short) 명령을 128ms마다 실행하여 driver 저항의 process·temperature drift를 보상.
 
+## Bandgap Reference
+
+**정의.** CTAT(V_BE)와 PTAT(ΔV_BE) 항을 합쳐 silicon bandgap 에너지 근처(~1.205 V)에 해당하는 전압을 만들어, 온도·공급에 거의 independent한 reference를 생성하는 회로.
+
+**출처.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 11.
+
+**관련.** [[CTAT]], [[PTAT]], [[LDO]], [[UVLO]].
+
+**예시.** 일반적인 SoC bandgap은 -40~125 °C에서 1.205 V ± 5 mV, TC 20~50 ppm/°C를 만족.
+
+## CDR (Clock-Data Recovery)
+
+**정의.** Self-clocked 직렬 데이터 스트림에서 sampling clock을 추출해 비트를 최적 위상에서 sample하게 해주는 SerDes 수신부.
+
+**출처.** Razavi, *Design of Integrated Circuits for Optical Communications*, Ch. 9.
+
+**관련.** [[SerDes]], [[PLL]], [[LTSSM]].
+
+**예시.** Bang-bang CDR는 Alexander phase detector로 charge pump와 VCO를 데이터 eye 중앙으로 끌고 간다.
+
+## connectrules
+
+**정의.** discipline 경계에서 어떤 connect module을 삽입할지, threshold와 drive strength 같은 변환 파라미터까지 한 이름으로 정의하는 Verilog-AMS 구문.
+
+**출처.** Verilog-AMS LRM § Connection rules.
+
+**관련.** [[Connect Module]], [[Discipline]], [[AMS]].
+
+**예시.** `connectrules cr_18v; connect e2l_18v input electrical, output wire; ... endconnectrules`
+
+## CTAT (Complementary-To-Absolute-Temperature)
+
+**정의.** 절대 온도가 올라갈 때 값이 거의 선형으로 감소하는 회로 quantity.
+
+**출처.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 11.
+
+**관련.** [[PTAT]], [[Bandgap Reference]].
+
+**예시.** BJT의 base-emitter 전압 V_BE는 약 -2 mV/°C로 떨어져, bandgap 회로의 표준 CTAT 항.
+
+## interconnect (SystemVerilog)
+
+**정의.** Net의 nettype binding을 elaboration 시점까지 미루는 SystemVerilog 2012 net 선언으로, 같은 module port가 주변 문맥에 따라 다른 user-defined nettype을 받아들일 수 있게 한다.
+
+**출처.** IEEE 1800-2017 § 6.6.7.
+
+**관련.** [[nettype]], [[Resolution Function]].
+
+**예시.** `interconnect link;`로 선언하고 `ip_a u_a (.out(link));`이 `wAnalog` 타입 port에 연결되면 elaborate 시점에 link가 `wAnalog`로 확정.
+
+## LDO (Low-Dropout Regulator)
+
+**정의.** 약간 더 높은 입력 전압에서 regulated 출력 전압을 만드는 linear regulator로, error amplifier와 reference가 linear 영역의 pass FET를 제어하는 구조.
+
+**출처.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 12.
+
+**관련.** [[Bandgap Reference]], [[PMU]], [[UVLO]], [[PG]].
+
+**예시.** 1.8 V 입력에서 200 mV dropout인 1.2 V LDO는 VIN > 1.4 V일 때 regulating.
+
+## LTSSM (Link Training and Status State Machine)
+
+**정의.** PCIe·USB 등 직렬 link에서 link bring-up, training, recovery, 저전력 state 전이를 지배하는 protocol-defined 유한 상태 머신.
+
+**출처.** PCI Express Base Specification § Link Training.
+
+**관련.** [[CDR]], [[SerDes]].
+
+**예시.** PCIe LTSSM은 cold bring-up 동안 DETECT → POLLING → CONFIG → L0로 전이.
+
+## PG (Power Good)
+
+**정의.** Regulator 또는 power-management 블록이 monitored 출력 전압이 nominal 값 주변의 지정된 band 안에 settled 되었을 때 assert하는 디지털 신호.
+
+**출처.** 일반적인 PMU/LDO datasheet 용법.
+
+**관련.** [[LDO]], [[PMU]], [[UVLO]].
+
+**예시.** PMU는 `pg_io`, `pg_core`, `pg_pll`이 모두 high일 때만 `pg_chip`을 assert.
+
+## PMU (Power Management Unit)
+
+**정의.** SoC의 여러 supply rail을 spec이 정한 deterministic ordering과 fault-handling policy에 따라 enable, disable, monitoring 하는 on-chip 블록.
+
+**출처.** 일반적인 SoC architecture 관행.
+
+**관련.** [[LDO]], [[PG]], [[UVLO]].
+
+**예시.** 모바일 PMU는 VDD_IO를 먼저, 이어서 VDD_CORE, VDD_PLL을 spec inter-rail delay에 맞춰 켠다.
+
+## PTAT (Proportional-To-Absolute-Temperature)
+
+**정의.** 절대 온도에 비례해 값이 거의 선형으로 증가하는 회로 quantity.
+
+**출처.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 11.
+
+**관련.** [[CTAT]], [[Bandgap Reference]].
+
+**예시.** 서로 다른 current density로 동작하는 두 BJT의 ΔV_BE = (kT/q)·ln(N)는 PTAT이며, CTAT와 합쳐 bandgap reference가 된다.
+
+## PVT (Process Voltage Temperature)
+
+**정의.** 회로 동작에 영향을 주는 세 가지 운용-조건 변동(fabrication process corner, supply voltage, operating temperature)을 함께 일컫는 용어.
+
+**출처.** SoC sign-off 표준 용어.
+
+**관련.** [[Monte Carlo]], [[Pelgrom's Law]].
+
+**예시.** 일반적인 PVT corner regression은 SS/TT/FF × Vmin/Vnom/Vmax × -40/25/125 °C를 모두 cover.
+
+## UVLO (Under-Voltage Lockout)
+
+**정의.** 입력 supply가 지정된 임계 아래로 떨어지면 regulator 또는 power-management 기능을 disable해서 undefined·unsafe 영역에서의 동작을 막는 회로 feature.
+
+**출처.** 일반적인 PMU/LDO datasheet 용법.
+
+**관련.** [[LDO]], [[PMU]], [[PG]].
+
+**예시.** UVLO threshold 1.4 V인 LDO는 VIN이 1.4 V 아래로 떨어지면 shutdown하고, threshold + hysteresis 위로 다시 올라오면 re-enable.
+
+## wreal (Verilog-AMS)
+
+**정의.** 단일 real 전압 값을 전달하는 Verilog-AMS net 타입으로, wired-OR · sum · average 같은 소수의 multi-driver resolution 모드를 지원.
+
+**출처.** Verilog-AMS LRM § wreal nets.
+
+**관련.** [[nettype]], [[RNM]], [[Verilog-AMS]].
+
+**예시.** `wreal_resolution wAverage average`는 `wreal` net의 multi-driver junction에서 driver들이 평균된다고 선언.
+
 ## 참고
 
 - [English mirror](appendix_c_glossary.md)

@@ -146,14 +146,47 @@ DRAM에서 보통 Level 2~3을 씁니다.
 
 > Verilog-AMS는 2014년의 v2.4 이후 사실상 SystemVerilog와 합쳐지는 흐름. 2023년 VAMS-2023이 Accellera 마지막 메이저 갱신.
 
-## 6. RNM이 DRAM 산업에서 표준이 된 4가지 이유
+## 6. 속도 감각 잡기 — 상대 속도 비율
+
+절대 수치는 모델 복잡도와 회로 크기에 따라 크게 다르지만, **같은 testbench에서 추상화만 바꿀 때의 상대 비율**은 보통 다음 범위에 들어옵니다. 업체 자료·conference paper에서 흔히 인용되는 수치이며, 자기 환경에서는 실측이 우선입니다.
+
+| 시나리오 | Spice 대비 속도 | 비고 |
+|---|---|---|
+| Spice (Spectre/HSPICE) | 1× | baseline, full-chip 회귀 비현실적 |
+| FastSPICE (FineSim, APS, AFS) | 10~30× | 큰 회로의 전체 transient에 유리 |
+| VAMS (electrical + wreal) | 50~500× | connect module이 많을수록 느려짐 |
+| SV-RNM | 1000~10000× | digital 회귀와 거의 동급 |
+| Pure digital stub | 10000×~ | analog 동작은 못 봄 |
+
+→ RNM은 digital 회귀와 거의 같은 속도라 **nightly seed 수천 개**가 현실적. 이게 SPICE가 줄 수 없는 결정적 강점.
+
+## 7. WREAL vs nettype — 두 real-도메인 net
+
+VAMS 시절엔 `wreal` 한 종류만 있었습니다. SV-2012부터 `nettype`이 들어와 더 유연해졌고, legacy IP가 wreal을 쓸 수 있으니 두 개념을 모두 알아둬야 합니다.
+
+| 측면 | `wreal` (Verilog-AMS) | `nettype` (SV-2012) |
+|---|---|---|
+| 표현력 | net 값이 real 1개 | struct payload 가능 (V·I·Z 동시) |
+| Multi-driver | `wreal_resolution` directive로 wired-OR / sum / average 중 택1 | 사용자 정의 resolution function (KCL/KVL 자유롭게) |
+| Simulator | VAMS sim 필요한 경우 多 | 일반 SV simulator로 충분 |
+| 사용처 | legacy IP | 신규 RNM 코드 표준 |
+
+> 신규 mixed-signal IP는 `nettype` 기반으로 작성하고, legacy wreal IP는 wrapper로 감싸 boundary에서만 변환하는 것이 실무 패턴입니다.
+
+## 8. Partitioning은 검증 가설과 함께 정의해야
+
+실제 SoC tape-out 흐름은 **한 레벨로 통일하지 않고** 섞어 씁니다 — Block-level은 Spice signoff + RNM behavioral acceptance, Subsystem은 RNM이 주력 + 일부 Spice cosim spot check.
+
+> Partition을 적을 때 "PLL을 RNM으로 갈음"이라고만 적으면 안 됩니다. **"PLL lock time, divider 정합성은 RNM으로 보고 phase noise는 보지 않는다"**까지 명시해야 false-pass risk가 추적됩니다. 이 한 줄이 silicon bring-up에서 모델 gap의 책임을 명확히 합니다.
+
+## 9. RNM이 DRAM 산업에서 표준이 된 4가지 이유
 
 1. **DRAM 셀 수가 너무 많다** — 1Gb 칩이면 10⁹ cell. SPICE 불가.
 2. **Sense amp 동작은 정확도 필요** — 그런데 SPICE는 느림. RNM이 voltage 표현하면서 빠른 유일 해법.
 3. **표준 SV 기능** — `nettype`만 있으면 됨. 별도 라이선스/도구 불필요.
 4. **UVM과 공존** — stimulus·coverage·assertion에 UVM/SV를 그대로 활용 가능.
 
-## 7. 대표 문제 — 한 SerDes 검증 task 분해
+## 10. 대표 문제 — 한 SerDes 검증 task 분해
 
 ### 문제
 

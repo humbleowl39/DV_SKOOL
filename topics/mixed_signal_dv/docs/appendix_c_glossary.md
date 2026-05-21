@@ -254,6 +254,136 @@
 
 **Example.** A ZQCS (short) command runs every 128 ms in DDR5 to compensate for process and temperature drift in the driver resistance.
 
+## Bandgap Reference
+
+**Definition.** A circuit that produces a voltage reference near the silicon bandgap energy (~1.205 V) by summing a CTAT (V_BE) and a PTAT (ΔV_BE) term so that the output is nearly independent of temperature and supply.
+
+**Source.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 11.
+
+**Related.** [[CTAT]], [[PTAT]], [[LDO]], [[UVLO]].
+
+**Example.** A typical SoC bandgap delivers 1.205 V ± 5 mV across -40 to 125 °C with a TC of 20~50 ppm/°C.
+
+## CDR (Clock-Data Recovery)
+
+**Definition.** A receiver subsystem in a SerDes that extracts a sampling clock from a self-clocked serial data stream so that bits can be sampled at their optimal phase.
+
+**Source.** Razavi, *Design of Integrated Circuits for Optical Communications*, Ch. 9.
+
+**Related.** [[SerDes]], [[PLL]], [[LTSSM]].
+
+**Example.** A bang-bang CDR uses an Alexander phase detector to drive a charge pump and VCO toward the data eye center.
+
+## connectrules
+
+**Definition.** A Verilog-AMS construct that defines named rules specifying which connect module to insert at boundaries between named disciplines, along with conversion parameters such as threshold and drive strength.
+
+**Source.** Verilog-AMS LRM § Connection rules.
+
+**Related.** [[Connect Module]], [[Discipline]], [[AMS]].
+
+**Example.** `connectrules cr_18v; connect e2l_18v input electrical, output wire; ... endconnectrules`
+
+## CTAT (Complementary-To-Absolute-Temperature)
+
+**Definition.** A circuit quantity whose value decreases approximately linearly as absolute temperature increases.
+
+**Source.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 11.
+
+**Related.** [[PTAT]], [[Bandgap Reference]].
+
+**Example.** A BJT base-emitter voltage V_BE drops about -2 mV/°C and is the canonical CTAT term in bandgap circuits.
+
+## interconnect (SystemVerilog)
+
+**Definition.** A SystemVerilog 2012 net declaration that defers the net's nettype binding until elaboration time, allowing the same module port to accept different user-defined nettypes depending on the surrounding context.
+
+**Source.** IEEE 1800-2017 § 6.6.7.
+
+**Related.** [[nettype]], [[Resolution Function]].
+
+**Example.** `interconnect link;` declares a placeholder net whose type is resolved when `ip_a u_a (.out(link));` is connected to a port of type `wAnalog`.
+
+## LDO (Low-Dropout Regulator)
+
+**Definition.** A linear voltage regulator that produces a regulated output voltage from a slightly higher input voltage, with a pass FET in the linear region controlled by an error amplifier and a reference.
+
+**Source.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 12.
+
+**Related.** [[Bandgap Reference]], [[PMU]], [[UVLO]], [[PG]].
+
+**Example.** A 1.2 V LDO supplied from 1.8 V with 200 mV dropout regulates as long as VIN > 1.4 V.
+
+## LTSSM (Link Training and Status State Machine)
+
+**Definition.** A protocol-defined finite state machine in PCIe, USB, and similar serial links that governs link bring-up, training, recovery, and low-power state transitions.
+
+**Source.** PCI Express Base Specification § Link Training.
+
+**Related.** [[CDR]], [[SerDes]].
+
+**Example.** A PCIe LTSSM transitions DETECT → POLLING → CONFIG → L0 during cold bring-up.
+
+## PG (Power Good)
+
+**Definition.** A digital signal asserted by a regulator or power-management block when its monitored output voltage has settled within a specified band around its nominal value.
+
+**Source.** Common PMU/LDO datasheet usage.
+
+**Related.** [[LDO]], [[PMU]], [[UVLO]].
+
+**Example.** A PMU asserts `pg_chip` only when `pg_io`, `pg_core`, and `pg_pll` are all high.
+
+## PMU (Power Management Unit)
+
+**Definition.** An on-chip block that sequences the enable, disable, and monitoring of multiple supply rails for an SoC according to a deterministic ordering and fault-handling policy.
+
+**Source.** Common SoC architecture practice.
+
+**Related.** [[LDO]], [[PG]], [[UVLO]].
+
+**Example.** A mobile PMU brings up VDD_IO first, then VDD_CORE, then VDD_PLL with inter-rail delays defined in spec.
+
+## PTAT (Proportional-To-Absolute-Temperature)
+
+**Definition.** A circuit quantity whose value increases approximately linearly with absolute temperature.
+
+**Source.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 11.
+
+**Related.** [[CTAT]], [[Bandgap Reference]].
+
+**Example.** The voltage difference between two BJTs operating at different current densities, ΔV_BE = (kT/q)·ln(N), is PTAT and combined with CTAT to form a bandgap reference.
+
+## PVT (Process Voltage Temperature)
+
+**Definition.** A collective term for the three classes of operating-condition variation that affect circuit behavior — fabrication process corner, supply voltage, and operating temperature.
+
+**Source.** Standard SoC sign-off terminology.
+
+**Related.** [[Monte Carlo]], [[Pelgrom's Law]].
+
+**Example.** A typical PVT corner regression covers SS/TT/FF × Vmin/Vnom/Vmax × -40/25/125 °C.
+
+## UVLO (Under-Voltage Lockout)
+
+**Definition.** A circuit feature that disables a regulator or power-management function when its input supply falls below a specified threshold, preventing operation in an undefined or unsafe region.
+
+**Source.** Common PMU/LDO datasheet usage.
+
+**Related.** [[LDO]], [[PMU]], [[PG]].
+
+**Example.** An LDO with UVLO threshold 1.4 V shuts down when VIN drops below 1.4 V and re-enables when VIN rises back above the threshold plus hysteresis.
+
+## wreal (Verilog-AMS)
+
+**Definition.** A Verilog-AMS net type that carries a single real-valued voltage and supports a small set of multi-driver resolution modes such as wired-OR, sum, and average.
+
+**Source.** Verilog-AMS LRM § wreal nets.
+
+**Related.** [[nettype]], [[RNM]], [[Verilog-AMS]].
+
+**Example.** `wreal_resolution wAverage average` declares that drivers of a `wreal` net are averaged at multi-driver junctions.
+
 ## See also
 
 - [Korean mirror](appendix_c_glossary_ko.md)

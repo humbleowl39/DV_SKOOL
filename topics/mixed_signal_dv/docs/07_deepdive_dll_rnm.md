@@ -371,6 +371,35 @@ else if (phase_err_ps < -DEAD_ZONE && ctrl < MAX)
 | Loop bandwidth | Filter 계수 부적절 | Bode plot 분석 |
 | Harmonic lock 미검증 | 실리콘에서 fail | 의도적 worst-case sim |
 
+## 12. DLL ↔ PLL — 검증 관점 비교
+
+DLL과 PLL은 자주 한 chip에 같이 들어옵니다. 본 챕터의 DLL deep dive와 짝을 이루는 PLL 모델·시나리오·coverage는 [Appendix D §1 (PLL)](appendix_d_analog_ip_catalogue.md#1-pll--phase-locked-loop)에 있습니다. **검증 관점에서 두 IP의 차이**를 한 페이지로 정리:
+
+| 측면 | DLL | PLL |
+|---|---|---|
+| 변하는 것 | delay code (정수 step) | VCO 주파수 (연속) |
+| Lock 판정 | phase error < 1 step | freq error < ppm |
+| Lock 시간 모델 | step × 누적 cycle | loop dynamics (R·C·KVCO) |
+| 흔한 fail 모드 | **harmonic lock** (이 챕터 §6) | **cycle slip** in lock acquisition |
+| Jitter (RNM) | step 단위 quantization noise | 누적 phase noise (RNM 한계) |
+| Reference loss | 외부 처리 (digital) | loop이 vctrl drift |
+| Test 시나리오 핵심 | freq sweep + harmonic 진단 | step + reference loss + fast-lock mode |
+
+**같은 TB로 검증할 수 있나** — 부분적으로. Lock 시간 측정·SVA·tolerance compare 패턴은 그대로 재사용 가능합니다. 다만 PLL은 **분주비 N**과 **VCO range**, DLL은 **delay code range**가 randomize 대상이라 sequence_item 필드가 다릅니다.
+
+**한 chip에 같이 둘 때의 sequencing**:
+
+```text
+1) Bandgap stable
+2) LDO regulating (PLL용 supply)
+3) PLL ref clock 안정
+4) PLL lock → CK 분배
+5) DLL이 분배된 CK를 기준으로 phase align
+6) DQ output ready
+```
+
+→ PMU의 sequencing 검증과 PLL/DLL의 lock 시나리오는 **chip-wide virtual sequence** 수준에서 묶어 검증합니다 — [Ch12 §4 Virtual Sequence](12_uvm_rnm_integration.md#42-virtual-sequence--여러-도메인-동기) 참고.
+
 ## 핵심 정리
 
 1. DLL = PD + LF + DL + Replica delay 4 블록
@@ -378,6 +407,7 @@ else if (phase_err_ps < -DEAD_ZONE && ctrl < MAX)
 3. Lock 시간 = (목표 - 초기) / step + 안정 cycle
 4. 산업 실 문제: **harmonic lock** — start control + harmonic detector 필수
 5. Sign-off는 SPICE corner — jitter accumulation, supply noise sensitivity
+6. PLL과 짝 — Appendix D §1에 PLL 모델/시나리오, chip-wide sequencing은 Ch12 virtual sequence에서
 
 ## 더 읽을거리
 

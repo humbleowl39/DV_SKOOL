@@ -21,6 +21,7 @@
 | 09 | Sense Amp Offset · MC | [Ch09 퀴즈](ch09_quiz.md) |
 | 10 | 검증 방법론 통합 | [Ch10 퀴즈](ch10_quiz.md) |
 | 11 | 도구 지형 | [Ch11 퀴즈](ch11_quiz.md) |
+| 12 | UVM × RNM Integration | [Ch12 퀴즈](ch12_quiz.md) |
 
 ## 학습 권장 흐름
 

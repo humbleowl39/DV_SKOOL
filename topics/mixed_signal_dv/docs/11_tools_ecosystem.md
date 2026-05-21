@@ -178,7 +178,53 @@ UVM/SoC DV 경험자가 mixed-signal 도구를 익힐 때:
 4. **CustomSim / FineSim Pro**의 Fast SPICE — DRAM 검증
 5. **MATLAB SerDes Toolbox / ADS** — IBIS-AMI
 
-## 12. 흔한 오해
+## 12. Tool 호환성 체크리스트 — 새 IP를 받을 때
+
+같은 RNM 코드의 portability는 보장되지 않습니다. 새 IP를 받으면 다음을 **elaborate 시점에** 확인해야 vendor lock-in으로 인한 회귀 실패를 줄일 수 있습니다.
+
+| 항목 | 확인 방법 | 실패 시 증상 |
+|---|---|---|
+| `nettype` resolution function 지원 (특히 struct payload) | 최소 모델 elaborate | elaboration error 또는 silent type mismatch |
+| `interconnect` 지원과 nettype binding 규칙 | top-level instance binding | port type resolve 실패 |
+| `real` covergroup binning 지원 | 간단한 covergroup sample 후 report 확인 | bin 0%로 표시되거나 warning |
+| `rand real` 지원과 constraint 솔버 한계 | rand class 1개 randomize | UVM_ERROR with constraint conflict |
+| `$realtime` precision (`timeprecision`과의 상호작용) | 다른 timeunit 모듈과 boundary 테스트 | timing rounding drift |
+| Cross-language: VAMS `wreal` ↔ SV `nettype` 자동 변환 | mixed instance elaborate | implicit conversion missing |
+
+> 가능하면 **같은 RNM 코드가 두 vendor 이상에서 elaborate 되는 것**을 CI로 강제하세요. 한 vendor에 묶이면 model bug workaround가 vendor-specific으로 누적되고, vendor 교체 시 대대적 rewrite가 필요해집니다.
+
+## 13. License 경계와 비용 영향
+
+대량 회귀의 핵심 변수는 **AMS feature가 활성화되는지 여부**입니다. 같은 testbench라도 다음 두 경우 license cost가 10배 차이날 수 있습니다.
+
+| 환경 | License | 회귀 규모 |
+|---|---|---|
+| Pure SV-RNM | 일반 SV simulator (VCS / Xcelium / Questa) | nightly로 수천 seed |
+| AMS feature 의존 | AMS license 추가 (보통 별도 라인) | seed 수 제한 |
+
+> RNM 모델이 **의도치 않게 AMS 기능에 의존**하면 (예: `real_net` implicit conversion) 일반 SV license로는 elaborate 안 됩니다. 처음부터 **pure SV로 elaborate 되는지**를 CI로 강제해야 license cost가 통제됩니다.
+
+## 14. 팀 성향별 실무 선택 가이드
+
+조직의 기존 흐름을 따라가는 것이 가장 안전합니다.
+
+### Analog 팀이 Cadence 위주
+
+→ Xcelium AMS로 통일. Virtuoso · Spectre 흐름과 모델 swap이 편하고, connect module 자동 삽입(CMI)이 강합니다. UVM도 Xcelium에서 잘 돕니다.
+
+### Digital 팀이 Synopsys 위주
+
+→ VCS-AMS + CustomSim 조합. UVM regression 친화적이고, VC formal · VC LP 등 동일 vendor 도구와 통합이 쉽습니다. DRAM full-chip RNM에 가장 자주 보입니다.
+
+### Foundry corner / 군용·항공우주
+
+→ Siemens EDA Questa AMS + Eldo. corner 라이브러리가 강하고 보안 인증(예: DO-254)에 활용 사례가 많습니다.
+
+## 15. Verilator 등 오픈소스 도구 현황
+
+**Verilator**는 SV synthesizable subset 중심이라 mixed-signal에는 한계가 큽니다 (`real` 일부 지원, `nettype`은 제한적). 오픈소스로 mixed-signal 본격 회귀는 아직 어렵고, **학습 · prototype 용도**입니다. 상용 tape-out 흐름은 위 3개 vendor 중 하나가 사실상 표준.
+
+## 16. 흔한 오해
 
 | 오해 | 사실 |
 |---|---|
@@ -195,6 +241,8 @@ UVM/SoC DV 경험자가 mixed-signal 도구를 익힐 때:
 3. AMS는 **digital + SPICE 결합** — connectrule이 핵심
 4. DDR5/PCIe Gen5+ system 검증은 **IBIS-AMI** 표준
 5. 도구 선택은 **블록 크기 × 정확도 × 비용** 함수
+6. 호환성 체크리스트를 elaborate 시점에 통과시키는 것을 CI에 강제
+7. 팀 성향(Cadence/Synopsys/Siemens)에 맞춰 통일 — 혼합 흐름은 디버그 비용 큼
 
 ## 더 읽을거리
 

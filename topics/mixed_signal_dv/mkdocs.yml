@@ -68,12 +68,14 @@ nav:
       - "Ch09. Deep Dive — Sense Amp Offset · Pelgrom · Monte Carlo": 09_deepdive_sense_amp_offset.md
       - "Ch10. RNM/AMS 검증 방법론 통합 (DVCon 사례)": 10_verification_methodology.md
       - "Ch11. 도구 지형 — VCS-AMS · AMS Designer · Questa-AMS": 11_tools_ecosystem.md
+      - "Ch12. UVM × RNM Integration — Env · Agent · Sequence · Scoreboard": 12_uvm_rnm_integration.md
   - "📎 부록":
       - "A. Quick Reference (식·상수·표)": appendix_a_quick_reference.md
       - "B. Code Examples (EN)": appendix_b_code_examples.md
       - "B. 코드 예제 (KO)": appendix_b_code_examples_ko.md
       - "C. Glossary (EN, ISO 11179)": appendix_c_glossary.md
       - "C. 용어집 (KO)": appendix_c_glossary_ko.md
+      - "D. Analog IP Catalogue (PLL · ADC · DAC · LDO · Bandgap · PMU · Sensors · SerDes)": appendix_d_analog_ip_catalogue.md
   - "❓ 퀴즈":
       - "퀴즈 인덱스": quiz/index.md
       - "Ch01 퀴즈": quiz/ch01_quiz.md
@@ -87,6 +89,7 @@ nav:
       - "Ch09 퀴즈": quiz/ch09_quiz.md
       - "Ch10 퀴즈": quiz/ch10_quiz.md
       - "Ch11 퀴즈": quiz/ch11_quiz.md
+      - "Ch12 퀴즈": quiz/ch12_quiz.md
 
 markdown_extensions:
   - abbr

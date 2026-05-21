@@ -6,9 +6,9 @@
     <div class="topic-hero-title">UVM/SoC DV 경험자를 위한 Mixed-Signal 시뮬레이션 입문</div>
     <p class="topic-hero-sub">SPICE → AMS → RNM 흐름을 한 번에 잡고, DLL · IO Buffer · Sense Amp 3대 mixed-signal 블록을 RNM 코드와 dry-run으로 풀어봅니다.</p>
     <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">11</span><span class="topic-stat-lbl">챕터</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">📎</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">부록</span></span>
-      <span class="topic-stat"><span class="topic-stat-icon">❓</span><span class="topic-stat-val">11</span><span class="topic-stat-lbl">퀴즈 세트</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">12</span><span class="topic-stat-lbl">챕터</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">📎</span><span class="topic-stat-val">4</span><span class="topic-stat-lbl">부록</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">❓</span><span class="topic-stat-val">12</span><span class="topic-stat-lbl">퀴즈 세트</span></span>
       <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">RNM</span><span class="topic-stat-lbl">중심</span></span>
     </div>
   </div>
@@ -34,7 +34,7 @@
 ## 학습 경로
 
 <div class="concept-dag dag-long">
-  <div class="concept-dag-title">11 챕터 + 3 부록 — 권장 학습 순서</div>
+  <div class="concept-dag-title">12 챕터 + 4 부록 — 권장 학습 순서</div>
   <div class="concept-dag-row">
     <a class="concept-dag-node" href="01_why_mixed_signal/"><span class="concept-dag-node-num">CH 01</span><span class="concept-dag-node-title">왜 Mixed-Signal Simulation인가</span></a>
   </div>
@@ -63,7 +63,12 @@
     <a class="concept-dag-node" href="10_verification_methodology/"><span class="concept-dag-node-num">CH 10</span><span class="concept-dag-node-title">검증 방법론 통합</span></a>
     <a class="concept-dag-node" href="11_tools_ecosystem/"><span class="concept-dag-node-num">CH 11</span><span class="concept-dag-node-title">도구 지형</span></a>
   </div>
-  <p class="concept-dag-legend">Ch03~05는 병렬 학습 가능. Ch07~09는 deep-dive로 독립적. Ch10은 통합·전략, Ch11은 도구 카탈로그.</p>
+  <div class="concept-dag-row"><span class="concept-dag-arrow">▼</span></div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="12_uvm_rnm_integration/"><span class="concept-dag-node-num">CH 12</span><span class="concept-dag-node-title">UVM × RNM Integration</span></a>
+    <a class="concept-dag-node" href="appendix_d_analog_ip_catalogue/"><span class="concept-dag-node-num">APP D</span><span class="concept-dag-node-title">Analog IP Catalogue (8종)</span></a>
+  </div>
+  <p class="concept-dag-legend">Ch03~05는 병렬 학습 가능. Ch07~09는 deep-dive로 독립적. Ch10은 통합·전략, Ch11은 도구 카탈로그. Ch12는 UVM 통합 패턴, Appendix D는 IP별 카탈로그 참고용.</p>
 </div>
 
 ## 챕터 요약
@@ -158,6 +163,14 @@
     </span>
   </a>
 
+  <a class="module-card" data-cat="memory" href="12_uvm_rnm_integration/">
+    <span class="module-num">12</span>
+    <span class="module-body">
+      <span class="module-title">UVM × RNM Integration</span>
+      <span class="module-desc">Env · vif · agent · sequence · ref model · scoreboard — UVM testbench 위에 mixed-signal layer 얹기.</span>
+    </span>
+  </a>
+
 </div>
 
 ## 학습 목표 (전체)
@@ -218,3 +231,4 @@
 - **A. Quick Reference** — 식·상수·도구 표
 - **B. Code Examples** — Inverter / DRAM Cell+SA / PLL Lock 3종 RNM 예제 (EN+KO)
 - **C. Glossary** — ISO 11179 정의 (EN+KO)
+- **D. Analog IP Catalogue** — PLL · ADC · DAC · LDO · Bandgap · PMU · Sensors · SerDes 8종 카탈로그 (spec 표 + 최소 RNM 모델 + 검증 시나리오 + coverage + 함정)
