@@ -1,0 +1,136 @@
+site_name: Mixed-Signal DV — SPICE · AMS · RNM
+site_description: DRAM/Analog Mixed-Signal 검증 입문 — SPICE/AMS/RNM 시뮬레이션 방법론 + DLL·IO Buffer·Sense Amp Deep Dive
+site_url: https://humbleowl39.github.io/DV_SKOOL/mixed_signal_dv/
+
+theme:
+  name: material
+  language: ko
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: 다크 모드로 전환
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: 라이트 모드로 전환
+  icon:
+    repo: fontawesome/brands/github
+
+repo_url: https://github.com/humbleowl39/DV_SKOOL
+repo_name: humbleowl39/DV_SKOOL
+edit_uri: edit/main/topics/mixed_signal_dv/docs/
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - en
+        - ko
+  - tags
+
+nav:
+  - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
+  - "🏠 코스 홈": index.md
+  - "📚 본문":
+      - "Ch01. 왜 Mixed-Signal Simulation인가": 01_why_mixed_signal.md
+      - "Ch02. 세 가지 시뮬레이션 세계 — Digital · SPICE · RNM": 02_three_worlds_spice_ams_rnm.md
+      - "Ch03. SPICE / Fast SPICE 기초": 03_spice_fundamentals.md
+      - "Ch04. AMS · Verilog-AMS · Connect Module": 04_ams_connect_modules.md
+      - "Ch05. RNM with SystemVerilog (nettype · real · wreal)": 05_rnm_systemverilog.md
+      - "Ch06. DRAM Read Path — 어떤 블록을 어떤 방법으로?": 06_dram_read_path_partitioning.md
+      - "Ch07. Deep Dive — DLL RNM": 07_deepdive_dll_rnm.md
+      - "Ch08. Deep Dive — IO Buffer · IBIS-AMI": 08_deepdive_io_buffer_rnm.md
+      - "Ch09. Deep Dive — Sense Amp Offset · Pelgrom · Monte Carlo": 09_deepdive_sense_amp_offset.md
+      - "Ch10. RNM/AMS 검증 방법론 통합 (DVCon 사례)": 10_verification_methodology.md
+      - "Ch11. 도구 지형 — VCS-AMS · AMS Designer · Questa-AMS": 11_tools_ecosystem.md
+  - "📎 부록":
+      - "A. Quick Reference (식·상수·표)": appendix_a_quick_reference.md
+      - "B. Code Examples (EN)": appendix_b_code_examples.md
+      - "B. 코드 예제 (KO)": appendix_b_code_examples_ko.md
+      - "C. Glossary (EN, ISO 11179)": appendix_c_glossary.md
+      - "C. 용어집 (KO)": appendix_c_glossary_ko.md
+  - "❓ 퀴즈":
+      - "퀴즈 인덱스": quiz/index.md
+      - "Ch01 퀴즈": quiz/ch01_quiz.md
+      - "Ch02 퀴즈": quiz/ch02_quiz.md
+      - "Ch03 퀴즈": quiz/ch03_quiz.md
+      - "Ch04 퀴즈": quiz/ch04_quiz.md
+      - "Ch05 퀴즈": quiz/ch05_quiz.md
+      - "Ch06 퀴즈": quiz/ch06_quiz.md
+      - "Ch07 퀴즈": quiz/ch07_quiz.md
+      - "Ch08 퀴즈": quiz/ch08_quiz.md
+      - "Ch09 퀴즈": quiz/ch09_quiz.md
+      - "Ch10 퀴즈": quiz/ch10_quiz.md
+      - "Ch11 퀴즈": quiz/ch11_quiz.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  homepage: https://humbleowl39.github.io/DV_SKOOL/
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/humbleowl39/DV_SKOOL
+  generator: false
+
+copyright: DV SKOOL — Mixed-Signal DV 학습용 (스펙 원문 복제 아님 — 학습 목적 인용/요약)
