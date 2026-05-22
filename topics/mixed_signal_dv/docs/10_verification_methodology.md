@@ -24,6 +24,8 @@
 
 DVCon paper들의 공통 메시지: **"DMS를 우선, AMS를 보완으로"**.
 
+> **용어 주의:** 이 표의 "AMS"는 **Verilog-AMS 언어** (좁은 의미)입니다. 한편 Accellera **"UVM-AMS" working group**이나 EDA 벤더 제품명("VCS-AMS", "AMS Designer", "Questa-AMS")에서 쓰이는 "AMS"는 **RNM까지 포함하는 우산 용어**로, 이 책의 **DMS + AMS를 모두 포괄**합니다. 두 용법의 차이는 Ch02 §5.1 참조.
+
 ## 2. 4가지 DVCon 패턴
 
 ### Pattern 1 — Single wreal는 부족하다

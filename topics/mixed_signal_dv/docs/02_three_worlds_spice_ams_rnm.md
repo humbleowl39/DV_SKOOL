@@ -146,6 +146,29 @@ DRAM에서 보통 Level 2~3을 씁니다.
 
 > Verilog-AMS는 2014년의 v2.4 이후 사실상 SystemVerilog와 합쳐지는 흐름. 2023년 VAMS-2023이 Accellera 마지막 메이저 갱신.
 
+## 5.1 ⚠️ "AMS"라는 단어의 두 가지 의미 (혼동 주의)
+
+업계 문서·발표·툴 이름에서 "AMS"는 **두 가지 다른 의미**로 쓰입니다. 이 책은 (1)을 표준으로 쓰지만, 외부 자료를 읽을 때는 (2)도 인식해야 false-pass risk를 줄일 수 있습니다.
+
+| 용법 | 의미 | 포함 범위 |
+|---|---|---|
+| **(1) 좁은 의미 — 이 책의 정의** | **Verilog-AMS / VHDL-AMS 언어** (`electrical` discipline, KCL/KVL solver, connect module) | SPICE를 sim에 결합하는 mixed-signal **표준 언어** |
+| **(2) 넓은 의미 — 우산 용어** | "Analog Mixed-Signal" 일반 — 디지털 sim에 아날로그를 섞는 **모든 방법론** | (1) + RNM(`nettype`/`wreal`) + IBIS-AMI + DMS 등 모두 포함 |
+
+### 실무에서 마주치는 사례
+
+- **Accellera "UVM-AMS" working group** → (2)번 의미. RNM 기반 UVM 통합 패턴도 이 이름 아래 발표됨 (이 책 Ch12 "UVM × RNM Integration"이 산업 문헌에선 종종 "UVM-AMS"로 불림).
+- **EDA 제품명 "VCS-AMS", "AMS Designer", "Questa-AMS"** → 제품 안에 **(1) Verilog-AMS 엔진 + RNM 지원**이 모두 들어 있어 이름 자체가 우산 용어. Ch11 §4 도구 비교 참조.
+- **DVCon paper 제목에 "AMS"** → 본문을 읽어야 (1) 언어인지 (2) 우산인지 판별됨.
+
+### 이 책의 규약
+
+- 본문에서 "**AMS**"는 별다른 단서가 없는 한 (1) Verilog-AMS 언어를 지칭합니다.
+- RNM 기반 mixed-signal 검증을 가리킬 때는 "**RNM**" 또는 "**DMS**" (Digital Mixed-Signal — Ch10 §1 정의) 로 명시합니다.
+- 외부 자료를 읽을 때 "AMS"라는 단어가 보이면, **그게 (1) 언어인지 (2) 우산인지 한 번 더 확인**하는 습관을 들여야 합니다.
+
+> Verilog-AMS LRM(VAMS-2023) 자체에는 RNM 개념이 포함되어 있지 않으나, IEEE 1800-2017과 함께 쓰일 때는 `nettype real`이 같은 sim에 호스팅되어 "AMS + RNM"이 한 elaboration 안에 공존할 수 있습니다 — 이 공존이 (2)번 우산 용어가 산업에서 굳어진 배경입니다.
+
 ## 6. 속도 감각 잡기 — 상대 속도 비율
 
 절대 수치는 모델 복잡도와 회로 크기에 따라 크게 다르지만, **같은 testbench에서 추상화만 바꿀 때의 상대 비율**은 보통 다음 범위에 들어옵니다. 업체 자료·conference paper에서 흔히 인용되는 수치이며, 자기 환경에서는 실측이 우선입니다.

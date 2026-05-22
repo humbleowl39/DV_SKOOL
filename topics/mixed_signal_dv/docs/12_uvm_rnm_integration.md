@@ -10,6 +10,8 @@
 
 ## 1. 한 UVM env 안에 두 도메인
 
+> **용어 메모:** 이 챕터는 정확히 말하면 **"UVM-DMS"** (Digital Mixed-Signal, Ch10 §1 정의) — 즉 RNM 기반 mixed-signal의 UVM 통합 — 을 다룹니다. 산업 문헌·Accellera working group에서 같은 내용을 종종 **"UVM-AMS"** 로 부르는데, 거기서의 "AMS"는 Verilog-AMS 언어가 아니라 **mixed-signal 우산 용어**입니다. 두 용법의 차이는 Ch02 §5.1 참조.
+
 digital UVM env에 익숙한 사람이 mixed-signal env로 옮길 때 가장 어색한 부분은 **"같은 env에 시간 모델이 다른 agent가 공존한다"**는 사실입니다. analog agent는 sub-event step으로 real wave를 만들고, digital agent는 cycle 단위로 transaction을 다룹니다. 둘을 한 scoreboard 안에서 정렬·비교하는 것이 env topology 설계의 본질.
 
 ### 1.1 표준 토폴로지
