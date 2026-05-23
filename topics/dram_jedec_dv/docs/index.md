@@ -6,7 +6,7 @@
     <div class="topic-hero-title">DDR4 / DDR5 / LPDDR4 / LPDDR5 — Spec-Driven DV</div>
     <p class="topic-hero-sub">JEDEC 표준 4종을 검증 관점에서 deepdive합니다. 스펙 원문 인용 → 비교 표 → DV 적용(Coverage / SVA / Scoreboard) → 대표 문제 dry-run.</p>
     <div class="topic-hero-stats">
-      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">11</span><span class="topic-stat-lbl">챕터</span></span>
+      <span class="topic-stat"><span class="topic-stat-icon">📚</span><span class="topic-stat-val">12</span><span class="topic-stat-lbl">챕터</span></span>
       <span class="topic-stat"><span class="topic-stat-icon">📎</span><span class="topic-stat-val">3</span><span class="topic-stat-lbl">부록</span></span>
       <span class="topic-stat"><span class="topic-stat-icon">❓</span><span class="topic-stat-val">11</span><span class="topic-stat-lbl">퀴즈 세트</span></span>
       <span class="topic-stat"><span class="topic-stat-icon">🎯</span><span class="topic-stat-val">DDR5</span><span class="topic-stat-lbl">중심</span></span>
@@ -81,7 +81,11 @@
   <div class="concept-dag-row">
     <a class="concept-dag-node" href="11_dv_project_endtoend/"><span class="concept-dag-node-num">CH 11</span><span class="concept-dag-node-title">DV 프로젝트 End-to-End</span></a>
   </div>
-  <p class="concept-dag-legend">각 챕터는 독립적으로도 학습 가능하지만, Ch11은 Ch01~Ch10의 통합 사례라 마지막에 보는 것을 권장합니다.</p>
+  <div class="concept-dag-row"><span class="concept-dag-arrow">▼</span></div>
+  <div class="concept-dag-row">
+    <a class="concept-dag-node" href="12_vendor_dv_mixed_signal_sta/"><span class="concept-dag-node-num">CH 12</span><span class="concept-dag-node-title">Vendor DV: Mixed-Signal·STA</span></a>
+  </div>
+  <p class="concept-dag-legend">Ch01~Ch10은 시스템 측 DV (controller IP) 관점, Ch11은 통합 사례, Ch12는 DRAM vendor 측 (Mixed-Signal + STA + Custom 회로) 관점 — 양쪽 다 이해하면 sweet-spot.</p>
 </div>
 
 ## 챕터 요약
@@ -173,6 +177,14 @@
     <span class="module-body">
       <span class="module-title">DV 프로젝트 End-to-End ⭐</span>
       <span class="module-desc">DDR5 controller IP 검증을 UVM 스켈레톤 + SVA bind + 시나리오 라이브러리로 통합.</span>
+    </span>
+  </a>
+
+  <a class="module-card" data-cat="memory" href="12_vendor_dv_mixed_signal_sta/">
+    <span class="module-num">12</span>
+    <span class="module-body">
+      <span class="module-title">Vendor DV — Mixed-Signal·STA·Custom 회로 ⭐</span>
+      <span class="module-desc">DRAM vendor 관점 — Hspice/PrimeSim, STA, Sense Amp/SWE/X-DEC/Y-DEC, antifuse circuit, MBIST. SK Hynix 설계검증 JD 정렬.</span>
     </span>
   </a>
 

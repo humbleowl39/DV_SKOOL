@@ -68,6 +68,7 @@ nav:
       - "Ch09. 신뢰성·ECC·CRC·PPR": 09_reliability_ecc_crc.md
       - "Ch10. DV Methodology 통합": 10_dv_methodology.md
       - "Ch11. DV 프로젝트 End-to-End": 11_dv_project_endtoend.md
+      - "Ch12. Vendor DV — Mixed-Signal·STA·Custom 회로": 12_vendor_dv_mixed_signal_sta.md
   - "📎 부록":
       - "A. JEDEC Spec 빠른 참조": appendix_a_quick_reference.md
       - "B. Glossary (EN)": appendix_b_glossary.md

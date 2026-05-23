@@ -1339,8 +1339,8 @@ endmodule
     <div class="nav-label">← 이전</div>
     <div class="nav-title">Ch10. DV Methodology 통합</div>
   </a>
-  <a class="nav-next" href="../appendix_a_quick_reference/">
+  <a class="nav-next" href="../12_vendor_dv_mixed_signal_sta/">
     <div class="nav-label">다음 →</div>
-    <div class="nav-title">부록 A. Quick Reference</div>
+    <div class="nav-title">Ch12. Vendor DV — Mixed-Signal·STA</div>
   </a>
 </div>
