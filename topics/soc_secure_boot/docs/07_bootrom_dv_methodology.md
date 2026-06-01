@@ -75,27 +75,16 @@ BootROM 은 **silicon 에 mask 로 영구 고정** 됩니다. Bug = silicon resp
 
 ### 한 장 그림 — Legacy → UVM 의 핵심 차이
 
-```
-   ┌─── Legacy SV TB ───┐              ┌─── UVM Framework ──┐
-   │                    │              │                     │
-   │  Passive Monitor    │              │  Active Driver      │
-   │  (관찰만)            │   ──────▶   │  (force/release)    │
-   │                    │              │                     │
-   │  수동 force 삽입    │              │  Sequence Item 추상화│
-   │  (테스트마다)        │              │  (재사용)            │
-   │                    │              │                     │
-   │  $display 디버그   │              │  Scoreboard +        │
-   │                    │              │  DPI-C C-model      │
-   │                    │              │                     │
-   │  물리주소 OTP       │              │  OTP Abstraction    │
-   │  hardcode          │              │  Layer (RAL 방식)   │
-   │                    │              │                     │
-   │  FW 대기 1-2개월   │              │  C-model 으로 사전  │
-   │                    │              │  검증 시작           │
-   └────────────────────┘              └─────────────────────┘
-         │                                        │
-         ▼                                        ▼
-   "재현 불가 + 수동"                  "결정론적 + 재사용 + 측정"
+```d2
+direction: down
+
+LEGACY: "Legacy SV TB\n- Passive Monitor (관찰만)\n- 수동 force 삽입 (테스트마다)\n- 물리주소 OTP hardcode\n- FW 대기 1-2개월"
+LEGACY_RESULT: "재현 불가 + 수동"
+UVM: "UVM Framework\n- Active Driver (force/release)\n- Sequence Item 추상화 (재사용)\n- Scoreboard + DPI-C C-model\n- OTP Abstraction Layer (RAL 방식)\n- C-model 으로 사전 검증 시작"
+UVM_RESULT: "결정론적 + 재사용 + 측정"
+LEGACY -> UVM
+LEGACY -> LEGACY_RESULT
+UVM -> UVM_RESULT
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale

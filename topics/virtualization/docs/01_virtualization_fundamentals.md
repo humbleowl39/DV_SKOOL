@@ -303,21 +303,16 @@ SENS -> NONPRIV
 ### 5.4 Trap-and-Emulate 메커니즘 (§3 의 형식적 일반화)
 
 ```d2
-direction: down
+direction: right
 
-G1: "Guest OS (EL1) 가 특권 명령어 실행"
-TRAP: "TRAP\n(HW 가 자동으로 예외 발생)"
-H1: "Hypervisor (EL2) 가 예외를 받음"
-H2: "명령어 분석 + 에뮬레이션"
-H3: "VM 상태 업데이트"
-ERET: "ERET (Guest OS 로 복귀)"
-G2: "Guest OS 계속 실행\n(trap 이 일어난 줄 모름)"
-G1 -> TRAP
-TRAP -> H1
-H1 -> H2
-H2 -> H3
-H3 -> ERET
-ERET -> G2
+G1: "Guest OS\n특권 명령어"
+TRAP: "TRAP"
+H1: "Hypervisor\n예외 수신"
+H2: "분석+에뮬"
+H3: "VM 상태\n업데이트"
+ERET: "ERET"
+G2: "Guest\n계속 실행"
+G1 -> TRAP -> H1 -> H2 -> H3 -> ERET -> G2
 ```
 
 **핵심**: Guest OS 는 자기가 직접 HW 를 제어한다고 생각하지만, 실제로는 Hypervisor 가 대신 처리하고 결과만 돌려줍니다 — Equivalence 의 구현.
@@ -327,10 +322,9 @@ ERET -> G2
 ```d2
 direction: down
 
-R3: "Ring 3 (User) — 일반 애플리케이션" {
-  direction: down
-  R0: "Ring 0 (Kernel) — OS 커널 (최고 권한)"
-}
+R3: "Ring 3 (User) — 일반 애플리케이션"
+R0: "Ring 0 (Kernel) — OS 커널 (최고 권한)"
+R3 -> R0: "특권 명령 시 예외 발생"
 ```
 
 - **Ring 0**: 모든 HW 자원 접근 가능 (특권 명령어 실행 가능).

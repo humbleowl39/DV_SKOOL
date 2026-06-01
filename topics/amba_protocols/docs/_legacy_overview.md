@@ -128,36 +128,11 @@ BR -> APB
 ```d2
 direction: down
 
-HI: "AXI / ACE — 성능 높음" {
-  direction: down
-  # unparsed: CPU["CPU"]
-  # unparsed: GPU["GPU"]
-  # unparsed: MC["MC"]
-  # unparsed: DMA1["DMA"]
-}
-MID: "AHB — 중간" {
-  direction: down
-  # unparsed: DMA2["DMA"]
-  # unparsed: BOOT["Boot ROM"]
-}
-LO: "APB — 게이트 비용 낮음" {
-  direction: down
-  # unparsed: TMR["Timer"]
-  # unparsed: UART["UART"]
-  # unparsed: GPIO["GPIO"]
-  # unparsed: OTP["OTP"]
-}
-# unparsed: ICN["AXI Interconnect"]
-# unparsed: BR1["AXI → AHB Bridge"]
-# unparsed: BR2["AHB → APB Bridge"]
-ICN { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-HI -> ICN
-BR1 { style.stroke: "#137333"; style.stroke-width: 2 }
-ICN -> BR1
-BR1 -> MID
-BR2 { style.stroke: "#137333"; style.stroke-width: 2 }
-MID -> BR2
-BR2 -> LO
+HI: "AXI / ACE — 고성능 (CPU · MC · DMA)"
+MID: "AHB — 중간 (Boot ROM · 레거시)"
+LO: "APB — 저속 (Timer · UART · GPIO · OTP)"
+HI -> MID: "AXI → AHB Bridge"
+MID -> LO: "AHB → APB Bridge"
 ```
 
 - 고성능 IP 는 AXI, 레거시 IP 는 AHB, 저속 말단은 APB.

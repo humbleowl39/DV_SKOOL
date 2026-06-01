@@ -348,21 +348,28 @@ EM Fault Injection:
 
 물리 접근 없이 인터넷에서 차량으로 직접 닿을 수 있는 경로는 Telematics Control Unit(TCU) 입니다. TCU 는 LTE/5G 셀룰러 모뎀, WiFi/BT, GPS 를 통합한 게이트웨이 ECU 로, 그 출력이 CAN 인터페이스를 통해 차량 전체 버스로 연결됩니다. 이 구조 때문에 모뎀 펌웨어나 TCU OS 에 취약점이 하나라도 있으면, 공격자는 인터넷에서 출발해 CAN 버스까지 도달할 수 있습니다. 2015년 Jeep Cherokee 가 정확히 이 경로로 뚫렸습니다.
 
-```
-TCU 아키텍처:
-+----------------------------------------------+
-|              TCU (Telematics Control Unit)     |
-|                                                |
-|  [Cellular Modem]  [WiFi/BT]  [GPS]           |
-|  (LTE/5G 모듈)     (연결성)   (위치)           |
-|       │                │          │            |
-|       ▼                ▼          ▼            |
-|  [Application Processor]                       |
-|  (Linux / QNX 기반 OS)                         |
-|       │                                        |
-|       ▼                                        |
-|  [CAN Interface] ──▶ CAN Bus ──▶ 차량 전체     |
-+----------------------------------------------+
+```d2
+direction: down
+
+TCU: "TCU (Telematics Control Unit)" {
+  direction: down
+  IO: "" {
+    direction: right
+    MODEM: "Cellular Modem\n(LTE/5G 모듈)"
+    WIFI: "WiFi/BT\n(연결성)"
+    GPS: "GPS\n(위치)"
+  }
+  AP: "Application Processor\n(Linux / QNX 기반 OS)"
+  CANIF: "CAN Interface"
+  IO.MODEM -> AP
+  IO.WIFI -> AP
+  IO.GPS -> AP
+  AP -> CANIF
+}
+BUS: "CAN Bus" { shape: oval }
+ALL: "차량 전체"
+TCU.CANIF -> BUS
+BUS -> ALL
 ```
 
 **Jeep Cherokee (2015) 원격 공격 재현**:
@@ -467,25 +474,25 @@ V2X 통신 시나리오:
 
 **SCMS — V2X PKI 인프라**:
 
-```
-SCMS (Security Credential Management System):
+```d2
+direction: down
 
-[Root CA]
-    │
-    ├── [Enrollment CA] ──▶ 차량 초기 등록 인증서 발급
-    │
-    ├── [Pseudonym CA] ──▶ 프라이버시 보호용 가명 인증서 발급
-    │       │                 (20 개씩 로테이션 → 추적 방지)
-    │       ▼
-    │   [차량] ──V2V 메시지──▶ {데이터 + 서명 + 가명 인증서}
-    │                              │
-    │                         [수신 차량]
-    │                              │
-    │                         서명 검증 → 유효? → 신뢰
-    │
-    ├── [Linkage Authority] ──▶ 부정 차량 식별 (프라이버시와 추적의 균형)
-    │
-    └── [Misbehavior Authority] ──▶ 악의 / 고장 차량 인증서 폐기 (CRL)
+ROOT: "Root CA"
+ENR: "Enrollment CA\n차량 초기 등록 인증서 발급"
+PSE: "Pseudonym CA\n가명 인증서 발급\n(20 개씩 로테이션 → 추적 방지)"
+LINK: "Linkage Authority\n부정 차량 식별\n(프라이버시와 추적의 균형)"
+MIS: "Misbehavior Authority\n악의/고장 차량 인증서 폐기 (CRL)"
+CAR: "차량"
+MSG: "V2V 메시지\n{데이터 + 서명 + 가명 인증서}" { shape: oval }
+RX: "수신 차량\n서명 검증 → 유효? → 신뢰"
+
+ROOT -> ENR
+ROOT -> PSE
+ROOT -> LINK
+ROOT -> MIS
+PSE -> CAR
+CAR -> MSG: "V2V 메시지"
+MSG -> RX
 ```
 
 **V2X 공격 시나리오**:

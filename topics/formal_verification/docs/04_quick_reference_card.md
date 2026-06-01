@@ -120,14 +120,14 @@ C -> D
 ### 시나리오 C — 새벽 디버그: "전부 BOUNDED 만 나옴"
 
 ```d2
-direction: down
+grid-columns: 2
 
 A: "상황: prove -all 결과가 모두 BOUNDED"
-B: "카드 ⑤ 'Convergence' 순서로 점프"
-S1: "1) Blackbox\n데이터 경로 모듈을 abstract -module"
-S2: "2) Abstraction\ncounter / data width 축소"
-S3: "3) Helper\n도달 불가능 상태 invariant 추가"
-S4: "4) Assume\n입력 환경 제약 (단, cover 짝 필수)"
+B: "카드 ⑤ Convergence 순서로 점프"
+S1: "1) Blackbox: abstract -module"
+S2: "2) Abstraction: counter / data width 축소"
+S3: "3) Helper: invariant 추가"
+S4: "4) Assume: cover 짝 필수"
 R: "대부분 1~3 단계에서 PROVEN 도달"
 A -> B
 B -> S1

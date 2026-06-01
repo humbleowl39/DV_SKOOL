@@ -12,27 +12,33 @@
 
 DRAM의 read 동작을 이해하면, 왜 mixed-signal 검증이 필수인지가 자연스럽게 보입니다. ACT 커맨드가 들어오면 row decoder가 활성화할 행을 선택하고, word line driver가 그 행의 WL을 높은 전압으로 구동합니다. WL이 올라가면 비트 셀의 access transistor가 켜지고, 수십 펨토패럿(fF) 크기의 cell capacitor에 저장된 전하가 bit line으로 흘러나옵니다. 이 때 bit line은 precharge 전압 근처에서 미세하게 — 보통 수십 밀리볼트 — 변합니다. sense amplifier가 이 미세한 전압 차이를 감지하고 full-swing 디지털 신호로 증폭한 뒤, column mux를 통해 IO buffer로 보내지고 DQ 핀으로 출력됩니다.
 
-```
-[Command]                  [Bit cell]
-ACT/RD                      │
-   │                        │
-   ▼                        ▼
-[Row Decoder] ──→ [Word Line Driver] ──→ Word Line (WL)
-                                              │
-                                              ▼ (WL active)
-                                          [Bit Cell]: capacitor 방전
-                                              │
-                                              ▼ Charge sharing
-                                          [Bit Line (BL)]
-                                              │
-                                              ▼ (Sensing window)
-                                          [Sense Amp]: 미세 차이 증폭
-                                              │
-                                              ▼ Latch
-                                          [Column Mux]
-                                              │
-                                              ▼
-                                          [IO buffer] ──→ DQ pin
+```d2
+direction: down
+
+g: {
+  grid-rows: 5
+  grid-gap: 60
+  cmd: "Command\n(ACT/RD)"
+  bl: "Bit Line (BL)"
+  row_dec: "Row Decoder"
+  sense_amp: "Sense Amp\n(미세 차이 증폭)"
+  wl_drv: "Word Line Driver"
+  col_mux: "Column Mux"
+  wl: "Word Line (WL)"
+  io_buf: "IO buffer"
+  bit_cell: "Bit Cell\n(capacitor 방전)"
+  dq: "DQ pin"
+}
+
+g.cmd -> g.row_dec
+g.row_dec -> g.wl_drv
+g.wl_drv -> g.wl
+g.wl -> g.bit_cell: "WL active"
+g.bit_cell -> g.bl: "Charge sharing"
+g.bl -> g.sense_amp: "Sensing window"
+g.sense_amp -> g.col_mux: "Latch"
+g.col_mux -> g.io_buf
+g.io_buf -> g.dq
 ```
 
 이 7개 stage 중 row decoder, mode register, FSM 같은 순수 디지털 로직은 기존 digital sim으로 충분합니다. 그러나 WL driver부터 DQ 출력까지는 전압·전하·임피던스가 의미를 갖는 영역입니다. 각 stage가 검증 관점에서 무엇을 요구하는지를 정리하면 다음과 같습니다.
@@ -70,34 +76,31 @@ ACT/RD                      │
 
 ## 3. 검증 시나리오 #1 — "ACT → RD → PRE 한 cycle 동작 확인"
 
-```
-TB (SV) → ACT command → DRAM
-         (digital)
-              │
-              ▼
-        Internal signals (mostly digital)
-              │
-              ▼
-        Word line activation
-        ← RNM/AMS boundary 시작
-              │
-              ▼
-        Bit line voltage development
-        (RNM: charge sharing)
-              │
-              ▼
-        Sense amp activation
-        (RNM 또는 SPICE)
-              │
-              ▼
-        Data latched
-        ← Digital boundary 복귀
-              │
-              ▼
-        IO buffer drives DQ
-              │
-              ▼
-        TB checks DQ value (digital)
+```d2
+direction: down
+
+g: {
+  grid-rows: 5
+  grid-gap: 50
+  tb_sv: "TB (SV)"
+  sa_act: "Sense amp activation\n(RNM 또는 SPICE)"
+  act_cmd: "ACT command (digital)"
+  data_latch: "Data latched\n← Digital boundary 복귀"
+  internal_sigs: "Internal signals\n(mostly digital)"
+  io_dq: "IO buffer drives DQ"
+  wl_act: "Word line activation\n← RNM/AMS boundary 시작"
+  tb_check: "TB checks DQ value (digital)"
+  bl_dev: "Bit line voltage development\n(RNM: charge sharing)"
+}
+
+g.tb_sv -> g.act_cmd
+g.act_cmd -> g.internal_sigs
+g.internal_sigs -> g.wl_act
+g.wl_act -> g.bl_dev
+g.bl_dev -> g.sa_act
+g.sa_act -> g.data_latch
+g.data_latch -> g.io_dq
+g.io_dq -> g.tb_check
 ```
 
 핵심 checkpoint:

@@ -58,25 +58,34 @@ DCMAC = AMD 100 / 200 / 400 GbE MAC IP.
     들어오는 편지 (AXI-S 데이터) 에 봉투 (Preamble + FCS) 를 씌워 배달망 (Line Side) 에 내보내고, 반대로 배달망에서 온 봉투를 열어 내용만 전달한다. 초당 수백억 비트를 처리하면서 하나도 빠뜨리지 않아야 한다.
 
 ```d2
-direction: right
+direction: down
 
-# unparsed: HOST_T["Host (TOE / IP)<br/>↓ AXI-S byte"]
-# unparsed: DTX["DCMAC TX<br/>MAC engine"]
-# unparsed: PCS_TX["PCS + RS-FEC + lane dist<br/>(block, PHY 영역)"]
-# unparsed: SD_TX["SerDes"]
-# unparsed: NET((Network))
-# unparsed: SD_RX["SerDes"]
-# unparsed: PCS_RX["PCS + FEC decode + align"]
-# unparsed: DRX["DCMAC RX"]
-# unparsed: HOST_R["Host (TOE / IP)<br/>↑ AXI-S byte + tuser<br/>(bad_fcs, vlan_tagged, ts)"]
-HOST_T -> DTX
-DTX -> PCS_TX
-PCS_TX -> SD_TX
-SD_TX -> NET
-NET -> SD_RX
-SD_RX -> PCS_RX
-PCS_RX -> DRX
-DRX -> HOST_R
+TX_PATH: "TX Path" {
+  grid-rows: 2
+  HOST_T: "Host (TOE / IP)\nAXI-S byte"
+  DTX: "DCMAC TX\nMAC engine"
+  PCS_TX: "PCS + RS-FEC\nlane dist"
+  SD_TX: "SerDes TX"
+  HOST_T -> DTX
+  DTX -> PCS_TX
+  PCS_TX -> SD_TX
+}
+
+NET: "Network" { shape: circle }
+
+RX_PATH: "RX Path" {
+  grid-rows: 2
+  SD_RX: "SerDes RX"
+  PCS_RX: "PCS + FEC\ndecode + align"
+  DRX: "DCMAC RX"
+  HOST_R: "Host (TOE / IP)\nAXI-S byte + tuser"
+  SD_RX -> PCS_RX
+  PCS_RX -> DRX
+  DRX -> HOST_R
+}
+
+TX_PATH.SD_TX -> NET
+NET -> RX_PATH.SD_RX
 ```
 
 ---
@@ -261,7 +270,8 @@ Mixed      가변         포트별         포트별                53.125 G
 ### 5.10 MangoBoost 데이터 패스 전체
 
 ```d2
-direction: right
+grid-rows: 2
+
 HOST: Host { shape: circle }
 TOE: "TOE\n(TCP)"
 DCMAC: "DCMAC\n(MAC)"

@@ -116,29 +116,30 @@ TOPDV: "Top-level DV 가 catch 하는 영역" {
 CCTV / 영상 SoC 의 가장 단순한 시나리오. **CMOS image sensor** 가 한 장의 **1920 × 1080 RAW10** frame 을 찍어 → ISP 가 RGB 로 변환 → Video codec (H.264 encoder) 이 압축 → DDR 에 bitstream 적재 → Display IP 가 preview 로 다시 읽어 LCD 로 출력. 이 한 frame 의 여행에서 **IP 간 연결 / 라우팅 / 도메인 경계가 어떻게 동시에 검증되는지** 따라가 봅니다.
 
 ```d2
-direction: right
+direction: down
 
-SENSOR: CMOS Sensor
-ISP: ISP
-CODEC: H.264 Encoder
-DDR: "DDR · MC" { shape: cylinder; style.stroke: "#1a73e8"; style.stroke-width: 3 }
-DISP: Display IP
-LCD: LCD panel
-GIC: "GIC (SPI)\nspi[12] · spi[13] · spi[14]" { style.stroke: "#c5221f"; style.stroke-width: 2 }
-CPU: "CPU (FW)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+DATA: "데이터 경로" {
+  direction: right
+  SENSOR: CMOS Sensor
+  ISP: ISP
+  CODEC: H.264 Encoder
+  DDR: "DDR · MC" { shape: cylinder; style.stroke: "#1a73e8"; style.stroke-width: 3 }
+  DISP: Display IP
+  LCD: LCD panel
 
-SENSOR -> ISP: "MIPI CSI-2\npixel bus"
-ISP -> CODEC: "AXI-S\nRGB888"
-CODEC -> DDR: "AXI-MM\nbitstream"
-DDR -> DISP: "⑤ AXI-MM read"
-DISP -> LCD: "⑥ MIPI DSI"
+  SENSOR -> ISP: "MIPI CSI-2\npixel bus"
+  ISP -> CODEC: "AXI-S\nRGB888"
+  CODEC -> DDR: "AXI-MM\nbitstream"
+  DDR -> DISP: "⑤ AXI-MM read"
+  DISP -> LCD: "⑥ MIPI DSI"
+}
 
-SENSOR -> GIC: "① VSYNC irq" { style.stroke-dash: 4 }
-ISP -> GIC: "② frame_done irq" { style.stroke-dash: 4 }
-CODEC -> GIC: "③ bs_ready" { style.stroke-dash: 4 }
-GIC -> CPU: "④ to CPU0"
-CPU -> ISP: "reg-config (APB)"
-CPU -> GIC: "ISR ack" { style.stroke-dash: 4 }
+CTRL: "인터럽트 / 제어" {
+  direction: right
+  GIC: "GIC (SPI)\nspi[12] · spi[13] · spi[14]" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  CPU: "CPU (FW)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  GIC -> CPU: "④ to CPU0"
+}
 
 PWR_CLK: "Power / Clock 도메인" {
   PD_VIDEO: "PD_VIDEO ON · ISP + codec + display"
@@ -146,6 +147,13 @@ PWR_CLK: "Power / Clock 도메인" {
   PIXCLK: "PIXCLK 297 MHz → sensor, ISP"
   AXICLK: "AXICLK 533 MHz → codec, display, MC"
 }
+
+DATA.SENSOR -> CTRL.GIC: "① VSYNC irq" { style.stroke-dash: 4 }
+DATA.ISP -> CTRL.GIC: "② frame_done irq" { style.stroke-dash: 4 }
+DATA.CODEC -> CTRL.GIC: "③ bs_ready" { style.stroke-dash: 4 }
+CTRL.CPU -> DATA.ISP: "reg-config (APB)"
+CTRL.CPU -> CTRL.GIC: "ISR ack" { style.stroke-dash: 4 }
+CTRL -> PWR_CLK: { style.opacity: 0.0 }
 ```
 
 ### 단계별 추적

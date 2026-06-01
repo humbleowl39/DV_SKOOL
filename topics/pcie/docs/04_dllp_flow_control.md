@@ -254,28 +254,7 @@ DLL 은 크게 세 가지 일을 합니다. 첫째, 보낸 packet 이 깨지지 
 
 ### 5.2 ACK / NAK 타임라인 (전체)
 
-```d2
-shape: sequence_diagram
-
-TX: "Sender\n[Replay Buf]"
-RX: "Receiver"
-
-# Note over TX: NAK 수신 → Replay Buffer 에서 Seq=12 부터 재송신
-# Note over RX: ACK timer 만료 (또는 packet 누적)
-# Note over TX: ACK 수신 → Replay Buffer 에서 Seq ≤ 13 entry retire
-TX -> RX: "Seq=10 TLP"
-RX -> RX: "LCRC OK → next expected = 11"
-TX -> RX: "Seq=11 TLP"
-RX -> RX: "LCRC OK → next expected = 12"
-TX -> RX: "Seq=12 TLP"
-RX -> RX: "LCRC FAIL → NAK send"
-RX -> TX: "NAK Seq=12" { style.stroke-dash: 4 }
-TX -> RX: "Seq=12 TLP (re-send)"
-RX -> RX: "LCRC OK → next expected = 13"
-TX -> RX: "Seq=13 TLP"
-RX -> RX: "LCRC OK"
-RX -> TX: "ACK Seq=13" { style.stroke-dash: 4 }
-```
+ACK/NAK 시퀀스의 전체 흐름은 §3 의 다이어그램을 참조. 핵심 동작: Seq=10/11 LCRC OK → Seq=12 LCRC FAIL → NAK → replay → ACK(누적).
 
 #### Replay Buffer
 
@@ -356,13 +335,20 @@ shape: sequence_diagram
 S: "Sender"
 R: "Receiver"
 
-# Note over S: 양 끝 모두 FC2 보낸 후 FC initialization complete\nDL_Active 상태 → 정상 traffic (UpdateFC 로 credit 갱신)
 S -> R: "InitFC1 (P, advertised_credit)"
 S -> R: "InitFC1 (NP, …)"
 S -> R: "InitFC1 (Cpl, …)"
 R -> S: "InitFC1 (P, …)" { style.stroke-dash: 4 }
 R -> S: "InitFC1 (NP, …)" { style.stroke-dash: 4 }
 R -> S: "InitFC1 (Cpl, …)" { style.stroke-dash: 4 }
+```
+
+```d2
+shape: sequence_diagram
+
+S: "Sender"
+R: "Receiver"
+
 R -> S: "InitFC2 (P, …)" { style.stroke-dash: 4 }
 R -> S: "InitFC2 (NP, …)" { style.stroke-dash: 4 }
 R -> S: "InitFC2 (Cpl, …)" { style.stroke-dash: 4 }
@@ -370,6 +356,8 @@ S -> R: "InitFC2 (P)"
 S -> R: "InitFC2 (NP)"
 S -> R: "InitFC2 (Cpl)"
 ```
+
+양 끝 모두 InitFC2 완료 후 FC initialization complete → DL\_Active 상태에서 정상 traffic (UpdateFC 로 credit 갱신).
 
 UpdateFC: 현재 credit consumed 의 총합 (modulo) 을 주기적으로 송신.
 

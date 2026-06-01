@@ -74,29 +74,25 @@ UFS 의 _병렬화_:
 ### 한 장 그림 — 5 계층의 데이터 흐름
 
 ```d2
-direction: right
+direction: down
+grid-columns: 2
 
-HOST: "Host side" {
-  direction: down
-  H_APP: "App\nREAD 4KB @LBA=0x1000"
-  H_UTP: "UTP / UPIU"
-  H_UNI: "UniPro\nL4 / L3 / L2 / L1.5"
-  H_PHY: "M-PHY TX"
-  H_APP -> H_UTP: "SCSI CDB\n(16B, opcode=0x28)"
-  H_UTP -> H_UNI: "Command UPIU"
-  H_UNI -> H_PHY: "DL Frame\nSOF+Hdr+UPIU+CRC+EOF"
-}
-DEV: "Device side" {
-  direction: down
-  D_PHY: "M-PHY RX"
-  D_UNI: "UniPro"
-  D_UTP: "UTP / UPIU 디코드"
-  D_MEDIA: "Storage media\n(NAND read)"
-  D_PHY -> D_UNI: "M-PHY symbol\n(8b/10b or PWM)"
-  D_UNI -> D_UTP: "DL Frame 재조립"
-  D_UTP -> D_MEDIA: "SCSI 명령 실행"
-}
+H_APP: "[Host] App\nREAD 4KB @LBA=0x1000"
+D_PHY: "[Device] M-PHY RX"
+H_UTP: "[Host] UTP / UPIU"
+D_UNI: "[Device] UniPro"
+H_UNI: "[Host] UniPro\nL4/L3/L2/L1.5"
+D_UTP: "[Device] UTP / UPIU 디코드"
+H_PHY: "[Host] M-PHY TX"
+D_MEDIA: "[Device] Storage media\n(NAND read)"
+
+H_APP -> H_UTP: "SCSI CDB\n(16B, opcode=0x28)"
+H_UTP -> H_UNI: "Command UPIU"
+H_UNI -> H_PHY: "DL Frame\nSOF+Hdr+UPIU+CRC+EOF"
 H_PHY -> D_PHY: "TX lane"
+D_PHY -> D_UNI: "M-PHY symbol\n(8b/10b or PWM)"
+D_UNI -> D_UTP: "DL Frame 재조립"
+D_UTP -> D_MEDIA: "SCSI 명령 실행"
 ```
 
 ### 왜 이 디자인인가 — Design rationale

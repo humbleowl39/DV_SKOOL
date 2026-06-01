@@ -218,25 +218,15 @@ Agent 는 이 구조를 루프로 바꿉니다. 사용자가 "목표" 를 제시
 ```d2
 direction: down
 
-AG: "Agent" {
-  direction: down
-  L: "LLM (두뇌)\n추론, 계획, 의사결정"
-  CAPS: "네 가지 능력" {
-    direction: right
-    C1: "Tools"
-    C2: "Planning"
-    C3: "Memory"
-    C4: "Observation / Action"
-  }
-  TOOLS: "Tool 예시" {
-    direction: right
-    T1: "Tool 1\n파일 읽기"
-    T2: "Tool 2\n코드 실행"
-    T3: "Tool 3\nDB 검색"
-  }
-  L -> CAPS
-  C1 -> TOOLS
-}
+L: "LLM (두뇌)\n추론, 계획, 의사결정"
+C1: "Tools\n(파일 읽기 / 코드 실행 / DB 검색)"
+C2: "Planning\n계획 수립"
+C3: "Memory\n상태 보존"
+C4: "Observation / Action\n관찰 → 결정 → 행동"
+L -> C1
+C1 -> C2: { style.opacity: 0.0 }
+C2 -> C3: { style.opacity: 0.0 }
+C3 -> C4: { style.opacity: 0.0 }
 ```
 
 ### 4.3 동작 패턴 — ReAct / Plan-and-Execute / Tool-Augmented RAG
@@ -501,7 +491,7 @@ MCP (Anthropic 제안, 2024):
 구조:
 
 ```d2
-direction: right
+direction: down
 H: "MCP Host\n(Claude Code 등)"
 S: "MCP Server\n(도구)"
 H <-> S: "MCP Protocol\nJSON-RPC 2.0"
@@ -611,16 +601,13 @@ IN: "입력\nRTL 인터페이스 정의 변경"
 S1: "1. RTL 파서 (Tool)\nRTL 포트 변경 감지"
 S2: "2. 템플릿 엔진 (Tool)\nUVM Agent / Driver / Monitor 템플릿 적용"
 S3: "3. LLM\n포트별 Driver 로직 생성"
-S4: "4. 컴파일러 (Tool)\n생성 코드 컴파일 검증"
-S5: "5. LLM\n컴파일 에러 자동 수정"
+GEN: "4-5. 컴파일 + 에러 자동 수정 루프\n4. 컴파일러 (Tool) → 5. LLM 수정 → 재컴파일"
 OUT: "6. 최종 결과물 출력"
 IN -> S1
 S1 -> S2
 S2 -> S3
-S3 -> S4
-S4 -> S5
-S5 -> OUT
-S5 -> S4: "재컴파일 루프" { style.stroke-dash: 4 }
+S3 -> GEN
+GEN -> OUT
 ```
 
 DVCon 2025: Verification Gap Discovery Agent.

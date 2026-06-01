@@ -66,14 +66,16 @@
 
 ```d2
 direction: down
+grid-columns: 2
 
-# unparsed: SW["<b>SW Driver (UFSHCD)</b><br/>(Linux Kernel)"]
-# unparsed: HCI["<b>UFS HCI (Host Controller IF)</b><br/>· UTP (SCSI → UPIU)<br/>· Task Mgmt<br/>· DMA Engine<br/>· Interrupt"]
-# unparsed: UNI["<b>UniPro (Link)</b><br/>· DME / L3 ~ L1.5"]
-# unparsed: PHY["<b>M-PHY (Physical)</b><br/>· HS / PWM Gear"]
-# unparsed: DEV["UFS Device"]
+SW: "SW Driver\n(UFSHCD)"
+UNI: "UniPro\n(Link)"
+HCI: "UFS HCI\n(Host Controller)"
+PHY: "M-PHY\n(Physical)"
+DEV: "UFS Device"
+
 SW -> HCI: "Register / Doorbell"
-HCI -> UNI: "UPIU (UFS Protocol Info Unit)"
+HCI -> UNI: "UPIU"
 UNI -> PHY
 PHY -> DEV
 ```

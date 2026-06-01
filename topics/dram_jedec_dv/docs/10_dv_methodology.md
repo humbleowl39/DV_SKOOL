@@ -20,36 +20,37 @@
 
 ## 1. DRAM TB의 구조 — 큰 그림
 
-```mermaid
-flowchart TB
-    subgraph TB["DDR5 Testbench"]
-        VS[Virtual Sequence]
-        ENV[ddr5_env]
-        VS --> ENV
-        subgraph ENV2["Inside Env"]
-            AGT[ddr5_agent<br>Active]
-            CGT[ddr5_cov]
-            SB[ddr5_scoreboard]
-            REF[Memory Reference Model]
-            CHK[Protocol Checker SVA bind]
-        end
-        ENV --> AGT
-        ENV --> CGT
-        ENV --> SB
-        ENV --> REF
-    end
+```d2
+direction: down
 
-    subgraph DUT["DUT"]
-        CTRL[Memory Controller RTL]
-        DRAM[DRAM Model<br>BFM]
-    end
+TB: "DDR5 Testbench" {
+  VS: "Virtual Sequence"
+  ENV: ddr5_env
+  ENV2: "Inside Env" {
+    AGT: "ddr5_agent (Active)"
+    CGT: ddr5_cov
+    SB: ddr5_scoreboard
+    REF: "Memory Reference Model"
+    CHK: "Protocol Checker SVA bind"
+  }
+  VS -> ENV
+  ENV -> ENV2.AGT
+  ENV -> ENV2.CGT
+  ENV -> ENV2.SB
+  ENV -> ENV2.REF
+}
 
-    AGT -- drives/monitors --> CTRL
-    CTRL -- DDR5 bus --> DRAM
-    CHK -. bind .-> CTRL
-    AGT -- analysis port --> SB
-    AGT -- analysis port --> CGT
-    SB -- compares --> REF
+DUT: DUT {
+  CTRL: "Memory Controller RTL"
+  DRAM: "DRAM Model (BFM)"
+}
+
+TB.ENV2.AGT -> DUT.CTRL: drives/monitors
+DUT.CTRL -> DUT.DRAM: DDR5 bus
+TB.ENV2.CHK -> DUT.CTRL: bind {style.stroke-dash: 5}
+TB.ENV2.AGT -> TB.ENV2.SB: analysis port
+TB.ENV2.AGT -> TB.ENV2.CGT: analysis port
+TB.ENV2.SB -> TB.ENV2.REF: compares
 ```
 
 ### 1.1 컴포넌트별 책임

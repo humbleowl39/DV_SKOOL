@@ -95,32 +95,31 @@ LeetCode Easy / Medium 문제의 **30~40 %** 는 hash map 단 하나로 O(N) 풀
 ### 한 장 그림 — Brute Force vs Hash Map
 
 ```d2
-direction: right
+direction: down
 
 BF: "Brute Force — O(n²)" {
-  direction: down
-  # unparsed: B1["for i in 0..n"]
-  # unparsed: B2["for j in i+1..n<br/>(내부 루프가 매번 검색)"]
-  # unparsed: B3["nums[i] + nums[j] == target ?"]
-  B2 { style.stroke-width: 3 }
+  direction: right
+  B1: "for i in 0..n"
+  B2: "for j in i+1..n\n(내부 루프가 매번 검색)" { style.stroke-width: 3 }
+  B3: "nums[i] + nums[j] == target ?"
+  Bcost: "= O(n²)"
   B1 -> B2
   B2 -> B3
-  Bcost: "= O(n²)"
   B3 -> Bcost: "총 비용 n × n"
 }
 HM: "Hash Map — O(n)" {
-  direction: down
+  direction: right
   H1: "seen = {}"
-  # unparsed: H2["for i in 0..n<br/>complement 계산"]
+  H2: "for i in 0..n\ncomplement 계산"
   H3: "seen.exists(c) ?\nO(1) lookup" { shape: diamond; style.stroke-width: 3 }
-  # unparsed: H4["답 반환"]
-  # unparsed: H5["seen[v] = i"]
+  H4: "답 반환"
+  H5: "seen[v] = i"
+  Hcost: "총 비용 n × O(1)\n= O(n)"
   H1 -> H2
   H2 -> H3
   H3 -> H4: "YES"
   H3 -> H5: "NO"
   H5 -> H2
-  Hcost: "총 비용 n × O(1)\n= O(n)"
   H4 -> Hcost
 }
 ```
@@ -203,14 +202,17 @@ direction: down
 Q1: "'이 값을 이전에 본 적 있는가?'\n라는 lookup 이 있나?" { shape: diamond }
 NO: "Hash Map 후보 아님\n(Two Pointers / DP / 다른 패턴)"
 Q2: "무엇을 추적하나?" { shape: diamond }
-U1: "① 존재 여부\nKey=값, Value=index/1"
-U2: "② 빈도 (count)\nKey=값, Value=count"
-U3: "③ 그룹\nKey=불변식, Value=목록"
+U: "세 가지 용법" {
+  direction: down
+  U1: "① 존재 여부\nKey=값, Value=index/1"
+  U2: "② 빈도 (count)\nKey=값, Value=count"
+  U3: "③ 그룹\nKey=불변식, Value=목록"
+  U1 -> U2: { style.opacity: 0 }
+  U2 -> U3: { style.opacity: 0 }
+}
 Q1 -> NO: "NO"
 Q1 -> Q2: "YES"
-Q2 -> U1
-Q2 -> U2
-Q2 -> U3
+Q2 -> U
 ```
 
 ### 4.2 세 가지 용법 요약

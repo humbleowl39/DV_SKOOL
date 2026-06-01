@@ -113,23 +113,37 @@ ddr5_tb/
 
 ### 11.2.2 Top-level connection
 
-```mermaid
-flowchart LR
-    TC[Test Case] --> ENV[ddr5_env]
-    ENV --> AGT[ddr5_agent]
-    ENV --> SB[ddr5_scoreboard]
-    ENV --> COV[ddr5_coverage]
-    ENV --> REF[ddr5_mem_ref_model]
-    AGT --> DRV[ddr5_driver]
-    AGT --> MON[ddr5_monitor]
-    AGT --> SQR[ddr5_sequencer]
-    DRV -.via vif.-> DUT[DDR5 Controller RTL]
-    MON -.snoop vif.-> DUT
-    DUT -.bus.-> DRAM[DRAM Model]
-    MON --> SB
-    MON --> COV
-    SB --> REF
-    SVA[ddr5_protocol_check] -.bind.-> DUT
+```d2
+direction: down
+
+TC: Test Case
+ENV: ddr5_env
+AGT: ddr5_agent
+SB: ddr5_scoreboard
+COV: ddr5_coverage
+REF: ddr5_mem_ref_model
+DRV: ddr5_driver
+MON: ddr5_monitor
+SQR: ddr5_sequencer
+DUT: DDR5 Controller RTL
+DRAM: DRAM Model
+SVA: ddr5_protocol_check
+
+TC -> ENV
+ENV -> AGT
+ENV -> SB
+ENV -> COV
+ENV -> REF
+AGT -> DRV
+AGT -> MON
+AGT -> SQR
+DRV -> DUT: via vif {style.stroke-dash: 5}
+MON -> DUT: snoop vif {style.stroke-dash: 5}
+DUT -> DRAM: bus {style.stroke-dash: 5}
+MON -> SB
+MON -> COV
+SB -> REF
+SVA -> DUT: bind {style.stroke-dash: 5}
 ```
 
 ---

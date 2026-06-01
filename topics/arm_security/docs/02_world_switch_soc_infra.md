@@ -190,7 +190,7 @@ asm volatile("smc #0"
 ### 4.1 월드 전환의 3 단계
 
 ```d2
-direction: right
+direction: down
 
 A: "**Stage A — Trap**\nSMC instruction\nPSTATE → SPSR_EL3\nPC → ELR_EL3\nPC ← VBAR_EL3 + 0x400"
 B: "**Stage B — Switch**\nSCR_EL3.NS toggle\nContext save (current world)\nContext restore (target world)\n모든 GPR / FP / sysreg"
@@ -223,7 +223,7 @@ B -> C
 - **SMMU** = "어느 master 가 어느 PA 에 가도 되는가?"
 
 ```d2
-direction: right
+direction: down
 
 GPU: "GPU master"
 SMMUb: "SMMU\nstream id check\n+ Stage1/2 translation"
@@ -292,7 +292,7 @@ ARM SMC Calling Convention:
 TZPC 는 APB 버스에 연결된 주변장치(peripheral slave)를 Secure 전용인지 Non-Secure 접근도 허용하는지 슬레이브 단위로 분류하는 컨트롤러입니다. 이 분류는 BootROM (EL3) 이 부팅 초기에 레지스터로 설정하고, 이후 변경이 잠겨야(locked) 합니다. OTP 와 Crypto Engine 처럼 키를 다루는 슬레이브는 Secure 전용으로 분류해야 하고, 그 결과 Normal World 에서 해당 주소로 트랜잭션이 들어오면 TZPC 가 버스 에러를 반환합니다. 반대로 Timer 나 일반 UART 처럼 양쪽에서 접근해도 되는 슬레이브는 Non-Secure OK 로 열어 둡니다.
 
 ```d2
-direction: right
+direction: down
 
 M: "Master"
 TZPCb: "TZPC" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
@@ -352,19 +352,22 @@ DRAM 영역을 Secure/Non-Secure로 분할:
 GICv3 = Distributor + Redistributor + CPU Interface.
 
 ```d2
-direction: right
+direction: down
 
-SPI: "SPI (공유)"
-LPI: "LPI (MSI)"
-SGIPPI: "SGI/PPI (코어별)"
+IN: "인터럽트 소스" {
+  SPI: "SPI (공유)"
+  LPI: "LPI (MSI)"
+  SGIPPI: "SGI/PPI (코어별)"
+}
 GICD: "Distributor\n(GICD)"
 GICR: "Redistributor\n(GICR, 코어별)"
 CPUIF: "CPU Interface"
 CORE: "Core"
-SPI -> GICD
-LPI -> GICD
+
+IN.SPI -> GICD
+IN.LPI -> GICD
 GICD -> GICR
-SGIPPI -> GICR
+IN.SGIPPI -> GICR
 GICR -> CPUIF
 CPUIF -> CORE
 ```
@@ -514,12 +517,11 @@ DRAM 레이아웃 (개념):
 전용 HW 메일박스로, 한쪽이 메시지를 쓰면 상대방에게 인터럽트가 발생합니다. 레지스터 기반이므로 메모리 공유 없이 통신할 수 있습니다.
 
 ```d2
-direction: right
+direction: down
 
-# unparsed: NW["Normal World"]
-# unparsed: MHU["MHU<br/>(mailbox + IRQ)"]
-# unparsed: SW["Secure World"]
-MHU { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+NW: "Normal World"
+MHU: "MHU\n(mailbox + IRQ)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+SW: "Secure World"
 NW <-> MHU
 MHU <-> SW
 ```
@@ -533,17 +535,22 @@ MHU <-> SW
 상세는 Module 03 참조.
 
 ```d2
-direction: right
-BL1: "BL1\n(EL3/S)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
-BL2: "BL2\n(S-EL1/S)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
-BL31: "BL31\n(EL3/S, 상주)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
-BL33: "BL33\n(NS-EL1/NS)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-Linux: "Linux\n(NS-EL1/NS)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-
-BL1 -> BL2
-BL2 -> BL31
-BL31 -> BL33: "SCR_EL3.NS\n0→1" { style.stroke: "#b8860b"; style.stroke-width: 3 }
-BL33 -> Linux
+direction: down
+S: "Secure (NS=0)" {
+  direction: right
+  BL1: "BL1\n(EL3/S)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  BL2: "BL2\n(S-EL1/S)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  BL31: "BL31\n(EL3/S, 상주)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
+  BL1 -> BL2
+  BL2 -> BL31
+}
+NS: "Non-Secure (NS=1)" {
+  direction: right
+  BL33: "BL33\n(NS-EL1/NS)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  Linux: "Linux\n(NS-EL1/NS)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+  BL33 -> Linux
+}
+S.BL31 -> NS.BL33: "SCR_EL3.NS\n0→1" { style.stroke: "#b8860b"; style.stroke-width: 3 }
 ```
 
 핵심 전환점은 BL31 → BL33 의 `SCR_EL3.NS = 0 → 1`.

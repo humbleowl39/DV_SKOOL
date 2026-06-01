@@ -94,21 +94,18 @@ QP FSM 은 시스템 검증의 **bring-up 시퀀스의 뼈대** 입니다. RAL �
 ### 한 장 그림 — Service type × QP FSM
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> Reset
 Reset -> Init: "Modify(Init)"
 Init -> RTR: "Modify(RTR)"
 RTR -> RTS: "Modify(RTS)"
+Err: Err
 RTS -> Err: "async error\nWC error"
 RTR -> Err: "error"
 Init -> Err: "error"
 Err -> Reset: "Modify(Reset)"
-# unparsed: note right of Err
-# unparsed: 모든 in-flight WR
-# unparsed: flush 됨
-# unparsed: end note
 ```
 
 **Service 별 차이 (단계별 attribute 만 다름)**:
@@ -251,40 +248,39 @@ FSM 을 움직이는 규칙은 크게 세 가지 원칙으로 묶을 수 있습�
 ```d2
 direction: down
 
-Q1: "메시지 < MTU\n+ 1:N 멀티캐스트?" { shape: diamond }
-UD: "UD" { style.stroke: "#137333"; style.stroke-width: 2 }
-Q1 -> UD: "Yes"
-Q2: "Reliable + connection\n+ 4 opcode 다 필요?" { shape: diamond }
+Q1: "Q1. msg < MTU\n+ 멀티캐스트?"
+Q2: "Q2. Reliable\n+ 4 opcodes?"
+Q3: "Q3. Throughput only\ndrop OK?"
+Q4: "Q4. RQ 공유?"
+Q5: "Q5. WAN?"
+
 Q1 -> Q2: "No"
-RC: "RC" { style.stroke: "#137333"; style.stroke-width: 2 }
-Q2 -> RC: "Yes"
-Q3: "Throughput 만 중요,\ndrop OK?" { shape: diamond }
 Q2 -> Q3: "No"
-UC: "UC" { style.stroke: "#137333"; style.stroke-width: 2 }
-Q3 -> UC: "Yes"
-Q4: "여러 sender 가\nRQ 공유?" { shape: diamond }
 Q3 -> Q4: "No"
-XRC: "XRC" { style.stroke: "#137333"; style.stroke-width: 2 }
-Q4 -> XRC: "Yes"
-Q5: "WAN / 대륙간?" { shape: diamond }
 Q4 -> Q5: "No"
-TCP: "TCP 권장" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+
+UD: UD { style.stroke: "#137333"; style.stroke-width: 2 }
+RC: RC { style.stroke: "#137333"; style.stroke-width: 2 }
+UC: UC { style.stroke: "#137333"; style.stroke-width: 2 }
+XRC: XRC { style.stroke: "#137333"; style.stroke-width: 2 }
+TCP: TCP { style.stroke: "#b8860b"; style.stroke-width: 2 }
+
+Q1 -> UD: "Yes"
+Q2 -> RC: "Yes"
+Q3 -> UC: "Yes"
+Q4 -> XRC: "Yes"
 Q5 -> TCP: "Yes"
 ```
 
 ### 5.3 QP State Machine 상세
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> Reset
 Reset -> Init: "Modify(Init)"
 Init -> RTR: "Modify(RTR)"
-# unparsed: note right of RTR
-# unparsed: Ready To Receive
-# unparsed: RX 가능, TX 불가
-# unparsed: end note
 RTR -> RTS: "Modify(RTS)"
 RTS -> SQD: "Modify(SQD)"
 SQD -> RTS: "Modify(RTS)"
@@ -296,10 +292,6 @@ SQD -> Err: "error"
 SQErr -> Err: "fatal"
 Err -> Reset: "Modify(Reset)"
 SQErr -> Reset: "Modify(Reset)"
-# unparsed: note right of Err
-# unparsed: Modify(Reset) 으로만
-# unparsed: 빠져나옴
-# unparsed: end note
 ```
 
 | State | 의미 | RX | TX |

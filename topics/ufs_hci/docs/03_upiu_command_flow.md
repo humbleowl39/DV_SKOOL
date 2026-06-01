@@ -235,7 +235,7 @@ hci_writel(BIT(5), UTRLCLR);        // transfer slot cleanup
 ### 4.3 Task Tag lifecycle
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> FREE

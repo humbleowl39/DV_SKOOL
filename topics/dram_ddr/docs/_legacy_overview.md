@@ -68,10 +68,10 @@
 ```d2
 direction: down
 
-# unparsed: SOC["SoC (CPU/GPU/DMA)"]
-# unparsed: MC["Memory Controller (MC)<br/>· Cmd Scheduler<br/>· Bank Mgmt<br/>· Refresh<br/>· Training"]
-# unparsed: MI["Memory Interface (MI / PHY)<br/>· DQ/DQS Driver<br/>· Timing Calib<br/>· ZQ Calibration"]
-# unparsed: DRAM["DRAM Device<br/>(DIMM/Package)"]
+SOC: "SoC (CPU/GPU/DMA)"
+MC: "Memory Controller (MC)\n· Cmd Scheduler\n· Bank Mgmt\n· Refresh\n· Training"
+MI: "Memory Interface (MI / PHY)\n· DQ/DQS Driver\n· Timing Calib\n· ZQ Calibration"
+DRAM: "DRAM Device\n(DIMM/Package)"
 SOC -> MC: "AXI/ACE"
 MC -> MI: "PHY Interface"
 MI -> DRAM: "DDR4/5 Bus"

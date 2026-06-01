@@ -60,15 +60,12 @@
 ```d2
 direction: down
 
-# unparsed: ROOT["알고리즘 면접<br/>핵심 패턴"]
-# unparsed: DS["자료구조 패턴"]
-# unparsed: SR["탐색 패턴"]
-# unparsed: OP["최적화 패턴"]
-DS { style.stroke-width: 3 }
+ROOT: "알고리즘 면접\n핵심 패턴"
+DS: "자료구조 패턴" { style.stroke-width: 3 }
+SR: "탐색 패턴" { style.stroke-width: 3 }
+OP: "최적화 패턴" { style.stroke-width: 3 }
 ROOT -> DS
-SR { style.stroke-width: 3 }
 ROOT -> SR
-OP { style.stroke-width: 3 }
 ROOT -> OP
 A: "Array + String"
 DS -> A
@@ -109,46 +106,48 @@ SQ -> MS
 
 ## 패턴 인식 플로차트
 
+**1단계 — 배열/문자열 패턴 분기:**
+
 ```d2
 direction: down
 
-# unparsed: START["문제 수신"]
+START: "문제 수신"
 Q1: "입력이 정렬?" { shape: diamond }
-Q2: "연속 부분 배열/\n부분 문자열?" { shape: diamond }
+Q2: "연속 부분\n배열/문자열?" { shape: diamond }
 Q3: "두 값의 관계\n(합/차)?" { shape: diamond }
+P_BS_TP: "Binary Search\n또는 Two Pointers" { style.stroke-width: 3 }
+P_SW: "Sliding Window" { style.stroke-width: 3 }
+P_TP: "Two Pointers\n(정렬 가능)" { style.stroke-width: 3 }
+P_HM: "Hash Map\n(정렬 불가)" { style.stroke-width: 3 }
+CONT: "→ 2단계로 (트리/DP/Stack 분기)"
+START -> Q1
+Q1 -> P_BS_TP: "YES"
+Q1 -> Q2: "NO"
+Q2 -> P_SW: "YES"
+Q2 -> Q3: "NO"
+Q3 -> P_TP: "YES · 정렬 가능"
+Q3 -> P_HM: "YES · 정렬 불가"
+Q3 -> CONT: "NO"
+```
+
+**2단계 — 트리/그래프/DP/Stack 분기:**
+
+```d2
+direction: down
+
 Q4: "트리/그래프 구조?" { shape: diamond }
 Q5: "최대/최소/경우의 수?" { shape: diamond }
 Q6: "매칭 쌍 / 중첩?" { shape: diamond }
-# unparsed: FALLBACK["Brute Force 먼저,<br/>그 다음 최적화"]
-# unparsed: P_BS_TP["Binary Search<br/>또는 Two Pointers"]
-# unparsed: P_SW["Sliding Window"]
-# unparsed: P_TP["Two Pointers<br/>(정렬 가능)"]
-# unparsed: P_HM["Hash Map<br/>(정렬 불가)"]
-# unparsed: P_BFS["BFS (레벨 순서)"]
-# unparsed: P_DFS["DFS (경로/깊이)"]
-# unparsed: P_DP["DP<br/>(이전 선택이 다음에 영향)"]
-# unparsed: P_STACK["Stack"]
-START -> Q1
-P_BS_TP { style.stroke-width: 3 }
-Q1 -> P_BS_TP: "YES"
-Q1 -> Q2: "NO"
-P_SW { style.stroke-width: 3 }
-Q2 -> P_SW: "YES"
-Q2 -> Q3: "NO"
-P_TP { style.stroke-width: 3 }
-Q3 -> P_TP: "YES · 정렬 가능"
-P_HM { style.stroke-width: 3 }
-Q3 -> P_HM: "YES · 정렬 불가"
-Q3 -> Q4: "NO"
-P_BFS { style.stroke-width: 3 }
+FALLBACK: "Brute Force 먼저,\n그 다음 최적화"
+P_BFS: "BFS (레벨 순서)" { style.stroke-width: 3 }
+P_DFS: "DFS (경로/깊이)" { style.stroke-width: 3 }
+P_DP: "DP\n(이전 선택이 다음에 영향)" { style.stroke-width: 3 }
+P_STACK: "Stack" { style.stroke-width: 3 }
 Q4 -> P_BFS: "YES · 레벨"
-P_DFS { style.stroke-width: 3 }
 Q4 -> P_DFS: "YES · 경로/깊이"
 Q4 -> Q5: "NO"
-P_DP { style.stroke-width: 3 }
 Q5 -> P_DP: "YES"
 Q5 -> Q6: "NO"
-P_STACK { style.stroke-width: 3 }
 Q6 -> P_STACK: "YES"
 Q6 -> FALLBACK: "NO"
 ```

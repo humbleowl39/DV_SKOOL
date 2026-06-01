@@ -72,7 +72,7 @@ CHK -> CONF
 ```
 
 ```d2
-direction: right
+direction: down
 
 ACT: "ACT"
 RW: "RD/WR"

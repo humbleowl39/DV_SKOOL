@@ -14,16 +14,24 @@
 
 AMS와 RNM의 차이를 한 그림으로 보면 다음과 같습니다.
 
-```
-[AMS]                              [RNM]
+```d2
+direction: down
 
-Digital sim                        Digital sim
-    ↓                                  ↓
-Connect module                     (no connect module needed)
-    ↓                                  ↓
-SPICE sim ← 느림                   Real-valued model in SV ← 빠름
-    ↓                                  ↓
-Transistor physics                 Behavioral approximation
+ams_col: "AMS" {
+  ams_dig: "Digital sim"
+  ams_conn: "Connect module"
+  ams_spice: "SPICE sim (느림)"
+  ams_phys: "Transistor physics"
+  ams_dig -> ams_conn -> ams_spice -> ams_phys
+}
+
+rnm_col: "RNM" {
+  rnm_dig: "Digital sim"
+  rnm_no_conn: "(no connect module needed)"
+  rnm_model: "Real-valued model in SV (빠름)"
+  rnm_behav: "Behavioral approximation"
+  rnm_dig -> rnm_no_conn -> rnm_model -> rnm_behav
+}
 ```
 
 AMS는 경계를 넘을 때마다 connect module이라는 번역기를 통하고, 아날로그 측에서는 SPICE 엔진이 수치 적분을 수행합니다. RNM은 SPICE 엔진 자체를 제거합니다. 아날로그 동작을 SystemVerilog의 `real` 타입과 수학 함수로 근사하고, 디지털 시뮬레이터만으로 전부 처리합니다. 시간은 여전히 이벤트 기반이어서 수치 적분의 오버헤드가 없습니다. DVCon 발표에 따르면 RNM 도입으로 **100~1000× 속도 향상**이 보고되었습니다(PMIC SSD 사례, 2020).

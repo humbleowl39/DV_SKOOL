@@ -100,7 +100,7 @@
 **Error handling 측면 — 2 클래스**:
 
 ```d2
-direction: down
+direction: right
 
 RETRY: "Transport retry class (4)" {
   direction: down
@@ -115,14 +115,13 @@ ACCESS: "Remote access class (6)" {
   A2: "MR bound violation"
   A3: "PD violation"
   A4: "R-Key violation"
-  A5: "Invalid Op (illegal opcode)"
+  A5: "Invalid Op"
   A6: "Max read outstanding"
 }
-RX: "retry_cnt 초과"
-QPE: "QP → Err state\nWC status (sender)"
-NAKE: "responder NAK + WC\n+ Error CQ + IRQ\ndebug flag 가 정확한\nroot cause 1줄로 보고"
-RETRY -> RX
-RX -> QPE
+RETRY -> ACCESS: { style.opacity: 0.0 }
+QPE: "retry_cnt 초과\n→ QP Err + WC (sender)"
+NAKE: "NAK + WC + Error CQ + IRQ\ndebug flag = root cause"
+RETRY -> QPE
 ACCESS -> NAKE
 ```
 
@@ -240,24 +239,24 @@ QP_A (NODE0) 가 QP_B (NODE1) 의 MR_X 에 RDMA WRITE. 그러나 sender 의 pack
 ### 4.2 실무 에러 디버그 트리
 
 ```d2
-direction: down
+direction: right
 
 ROOT: "WC error 발견\n(status?)"
-R1: WC_RETRY_EXC_ERR { style.stroke: "#b8860b"; style.stroke-width: 2 }
-R2: WC_RNR_RETRY_EXC_ERR { style.stroke: "#b8860b"; style.stroke-width: 2 }
-R3: WC_REM_ACCESS_ERR { style.stroke: "#c0392b"; style.stroke-width: 2 }
-R4: WC_REM_INV_RD_REQ_ERR { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R1: "RETRY_EXC_ERR" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R2: "RNR_RETRY_EXC_ERR" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R3: "REM_ACCESS_ERR" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R4: "REM_INV_RD_REQ_ERR" { style.stroke: "#c0392b"; style.stroke-width: 2 }
 
-R1a: "ACK 못 받음\n(Local ACK timeout)" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R1a: "Local ACK timeout" { style.stroke: "#b8860b"; style.stroke-width: 2 }
 R1b: "PSN hole (PSE)" { style.stroke: "#b8860b"; style.stroke-width: 2 }
-R1c: "ACK 의 PSN > ePSN\n(Implied NAK)" { style.stroke: "#b8860b"; style.stroke-width: 2 }
-R1note: "모두 retry_cnt 초과"
-R2a: "Receiver 가 RECV WR 부족\n→ rnr_retry_cnt 초과" { style.stroke: "#b8860b"; style.stroke-width: 2 }
-R3a: "debug_flag = WC_FLAG_RESP_ACCESS\n(access flag)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
-R3b: "debug_flag = WC_FLAG_RESP_RANGE\n(MR bound)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
-R3c: "debug_flag = WC_FLAG_RESP_PD\n(PD mismatch)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
-R3d: "debug_flag = WC_FLAG_RESP_RKEY\n(R-Key invalid)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
-R4a: "debug_flag = WC_FLAG_RESP_OP\n(max read outstanding)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R1c: "Implied NAK" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R1note: "retry_cnt 초과"
+R2a: "RECV WR 부족\nrnr_retry 초과" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+R3a: "RESP_ACCESS" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R3b: "RESP_RANGE" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R3c: "RESP_PD" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R3d: "RESP_RKEY" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+R4a: "RESP_OP" { style.stroke: "#c0392b"; style.stroke-width: 2 }
 
 ROOT -> R1 -> R1a
 R1 -> R1b

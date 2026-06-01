@@ -134,17 +134,18 @@ I2: SUB r4, r1, r5       # ID 에서 r1 필요 → I1 의 EX 결과 필요
 
 ### 3.3 Out-of-Order Execution — Tomasulo
 
-```
-[Front-end]
-  Fetch → Decode → Rename → Dispatch
-                              ↓
-                  [Reservation Station] (waiting for operands)
-                              ↓ (operand ready)
-                          [FU] (ALU, Mem, FP)
-                              ↓
-                          [CDB] (Common Data Bus broadcast)
-                              ↓
-                      [ROB] (Reorder Buffer) — in-order commit
+```d2
+direction: right
+grid-rows: 3
+RS.label: "Reservation Station"
+FU.label: "FU (ALU/Mem/FP)"
+CDB.label: "CDB"
+ROB.label: "ROB (in-order commit)"
+Fetch -> Decode -> Rename -> Dispatch
+Dispatch -> RS: "waiting for operands"
+RS -> FU: "operand ready"
+FU -> CDB: broadcast
+CDB -> ROB
 ```
 
 **핵심**:

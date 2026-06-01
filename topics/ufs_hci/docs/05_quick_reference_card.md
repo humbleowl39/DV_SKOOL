@@ -63,26 +63,24 @@
 ### 한 장 그림 — 전체 stack 한 장에
 
 ```d2
-direction: right
+direction: down
+grid-columns: 2
 
-SW: "**[SW driver]**\nread(fd, buf)"
-UTRD: "UTRD(slot)"
-UCD: "UCD / PRDT\nmemory layout"
-DB: "UTRLDBR ring"
-CMD: "Cmd UPIU"
-NAND: "**[UFS device]**\nNAND"
+SW: "SW driver\nread(fd, buf)"
 DIN: "Data-In × N"
-DMA: "DMA"
+UTRD: "UTRD(slot)"
 RSP: "Resp UPIU"
-DONE: "UTRLDBR clear\n+ IS[UTRCS]\n+ IRQ"
+DB: "UTRLDBR ring"
+DONE: "UTRLDBR clear\n+ IS[UTRCS] + IRQ"
+CMD: "Cmd UPIU"
 ISR: "ISR"
+NAND: "UFS device\n(NAND)"
+
 SW -> UTRD
-UTRD -> UCD
 UTRD -> DB
 DB -> CMD
 CMD -> NAND
 NAND -> DIN
-DIN -> DMA
 DIN -> RSP
 RSP -> DONE
 DONE -> ISR

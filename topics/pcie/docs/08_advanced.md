@@ -72,25 +72,36 @@
 
 ### 한 장 그림 — VM·VF·IOMMU·ATS 가 한 PCIe link 위에 어떻게 얹히는가
 
-```
-       Guest VMs (각자 자기 VA 공간)
-       ┌─────────┐ ┌─────────┐ ┌─────────┐
-       │  VM₀    │ │  VM₁    │ │  VM₂    │
-       │ driver  │ │ driver  │ │ driver  │
-       └────┬────┘ └────┬────┘ └────┬────┘
-            │  guest IOVA   │           │     ← 각 VM 이 자기 view 의 주소 사용
-   Hypervisor + IOMMU (BDF + PASID 로 page table 분리)
-            │           │           │
-   ─ PCIe ──┴───────────┴───────────┴───────────────────────────
-            │           │           │
-        ┌───▼───┐   ┌───▼───┐   ┌───▼───┐
-        │ VF₀   │   │ VF₁   │   │ VF₂   │      ← 각자 BDF + BAR + MSI-X
-        │  ATC  │   │  ATC  │   │  ATC  │      ← ATS cache (IOVA → PA)
-        └───────┘   └───────┘   └───────┘
-            └─────────PF (관리)──────────┘      ← PF 가 VF 생성/삭제 권한
-                  │  same silicon
-                  │
-                  ▼ host memory (PA)
+```d2
+direction: down
+
+VMs: "Guest VMs (각자 자기 VA 공간)" {
+  direction: right
+  VM0: "VM₀\ndriver"
+  VM1: "VM₁\ndriver"
+  VM2: "VM₂\ndriver"
+}
+
+IOMMU: "Hypervisor + IOMMU\n(BDF + PASID 로 page table 분리)"
+
+Device: "PCIe Device (same silicon)" {
+  direction: right
+  VF0: "VF₀\n(BDF · BAR · MSI-X · ATC)"
+  VF1: "VF₁\n(BDF · BAR · MSI-X · ATC)"
+  VF2: "VF₂\n(BDF · BAR · MSI-X · ATC)"
+  PF: "PF\n(관리 · VF 생성/삭제)"
+  VF0 -> PF: { style.opacity: 0.0 }
+}
+
+HostMem: "Host Memory (PA)" { shape: cylinder }
+
+VMs.VM0 -> IOMMU: "guest IOVA"
+VMs.VM1 -> IOMMU: "guest IOVA"
+VMs.VM2 -> IOMMU: "guest IOVA"
+IOMMU -> Device.VF0: "passthrough"
+IOMMU -> Device.VF1: "passthrough"
+IOMMU -> Device.VF2: "passthrough"
+Device.PF -> HostMem: "DMA"
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale

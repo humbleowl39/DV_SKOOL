@@ -211,24 +211,34 @@ training은 *FSM (Finite State Machine)*으로 모델링하면 깔끔.
 
 ### 6.1 LPDDR5 Training FSM (개념)
 
-```mermaid
-stateDiagram-v2
-    [*] --> Init
-    Init --> ZQ_Cal: power_good
-    ZQ_Cal --> CBT_Mode1: zq_done
-    CBT_Mode1 --> CBT_Mode2: cbt1_pass
-    CBT_Mode2 --> CA_VREF: cbt2_pass
-    CA_VREF --> DQ_VREF: ca_vref_done
-    DQ_VREF --> WCK2CK_Lvl: dq_vref_done
-    WCK2CK_Lvl --> DCA: wck_aligned
-    DCA --> Read_Training: dca_done
-    Read_Training --> Normal: rd_train_done
+```d2
+direction: down
 
-    Init --> Training_Fail: timeout
-    ZQ_Cal --> Training_Fail: zq_fail
-    CBT_Mode1 --> Training_Fail: cbt1_fail
-    Training_Fail --> [*]
-    Normal --> [*]
+Init: Init
+ZQ_Cal: ZQ_Cal
+CBT_Mode1: CBT_Mode1
+CBT_Mode2: CBT_Mode2
+CA_VREF: CA_VREF
+DQ_VREF: DQ_VREF
+WCK2CK_Lvl: WCK2CK_Lvl
+DCA: DCA
+Read_Training: Read_Training
+Normal: Normal
+Training_Fail: Training_Fail
+
+Init -> ZQ_Cal: power_good
+ZQ_Cal -> CBT_Mode1: zq_done
+CBT_Mode1 -> CBT_Mode2: cbt1_pass
+CBT_Mode2 -> CA_VREF: cbt2_pass
+CA_VREF -> DQ_VREF: ca_vref_done
+DQ_VREF -> WCK2CK_Lvl: dq_vref_done
+WCK2CK_Lvl -> DCA: wck_aligned
+DCA -> Read_Training: dca_done
+Read_Training -> Normal: rd_train_done
+
+Init -> Training_Fail: timeout
+ZQ_Cal -> Training_Fail: zq_fail
+CBT_Mode1 -> Training_Fail: cbt1_fail
 ```
 
 ### 6.2 Training FSM model (SystemVerilog skeleton)

@@ -71,10 +71,10 @@ DCMAC 검증의 모든 트랜잭션은 **Ethernet frame 1 개** 단위로 출발
 ```d2
 direction: down
 
-APP: "Application (e.g. TOE)\nL4 / IP layer 위"
-MAC: "MAC engine (DCMAC)\n1) Preamble + SFD prepend\n2) Pad to ≥ 46B if needed\n3) Compute FCS over (DA..Payload)\n4) Insert IFG (≥ 12B)"
-PCS: "PCS\n64b/66b encode + scramble\nRS-FEC parity (100G+)\nLane distribute + AM insert"
-PMD: "PMA / PMD\nSerDes lane (e.g. 4 × 25G NRZ or 4 × 53G PAM4)"
+APP: "Application (e.g. TOE) — L4 / IP layer 위"
+MAC: "MAC engine (DCMAC) — 1) Preamble + SFD prepend, 2) Pad to ≥ 46B if needed, 3) Compute FCS over (DA..Payload), 4) Insert IFG (≥ 12B)"
+PCS: "PCS — 64b/66b encode + scramble, RS-FEC parity (100G+), Lane distribute + AM insert"
+PMD: "PMA / PMD — SerDes lane (e.g. 4 × 25G NRZ or 4 × 53G PAM4)"
 NET: "Network" { shape: circle }
 APP -> MAC: "bytes (Dst MAC ~ Payload)"
 MAC -> PCS
@@ -154,11 +154,11 @@ SD -> SD: "⑧ NRZ / PAM4"
 ```d2
 direction: down
 
-MAC: "**MAC (Media Access Control)**\nframe 생성/파싱, FCS\n흐름 제어 (Pause/PFC)\n← DCMAC 이 이 계층"
-PCS: "**PCS (Physical Coding Sublayer)**\n인코딩 (64b/66b), Scrambling, Alignment\nRS-FEC (100G+), Lane Distribution"
-PMA: "**PMA (Physical Medium Attachment)**\nSerDes, CDR, Signal Conditioning"
-PMD: "**PMD (Physical Medium Dependent)**\n광모듈 (QSFP, SFP), 전기 인터페이스"
-MED: "Physical Medium\n광섬유 / 구리" { shape: circle }
+MAC: "**MAC (Media Access Control)** — frame 생성/파싱, FCS, 흐름 제어 (Pause/PFC) — ← DCMAC 이 이 계층"
+PCS: "**PCS (Physical Coding Sublayer)** — 인코딩 (64b/66b), Scrambling, Alignment, RS-FEC (100G+), Lane Distribution"
+PMA: "**PMA (Physical Medium Attachment)** — SerDes, CDR, Signal Conditioning"
+PMD: "**PMD (Physical Medium Dependent)** — 광모듈 (QSFP, SFP), 전기 인터페이스"
+MED: "Physical Medium — 광섬유 / 구리" { shape: circle }
 MAC -> PCS: "MII / XGMII / CGMII / Segmented"
 PCS -> PMA: "PMA Service Interface"
 PMA -> PMD: "PMD"
@@ -431,41 +431,44 @@ DV 관점:
 
 100G+ Ethernet에서 BER(Bit Error Rate)을 낮추기 위한 필수 기술.
 
-```
 왜 필요한가?
-  - 25Gbps+ SerDes에서는 신호 품질 열화로 BER이 높아짐
-  - CRC(FCS)는 에러를 "검출"만 함 → 프레임 폐기 → 재전송 필요
-  - RS-FEC는 에러를 "정정"함 → 폐기 없이 복구 → 처리량 유지
 
-동작 원리:
-  TX: PCS 인코딩 후, RS 부호화 (패리티 심볼 추가)
-  RX: RS 복호화로 에러 정정 → PCS 디코딩
+- 25 Gbps+ SerDes에서는 신호 품질 열화로 BER이 높아짐
+- CRC(FCS)는 에러를 "검출"만 함 → 프레임 폐기 → 재전송 필요
+- RS-FEC는 에러를 "정정"함 → 폐기 없이 복구 → 처리량 유지
 
-  +------+    +------+    +--------+    +--------+
-  | MAC  | → | PCS  | → | RS-FEC | → | SerDes |
-  |      |    |64b66b|    |Encode  |    |   TX   |
-  +------+    +------+    +--------+    +--------+
+동작 원리: TX는 PCS 인코딩 후 RS 부호화(패리티 심볼 추가), RX는 RS 복호화로 에러 정정 후 PCS 디코딩.
 
-                         RS(544, 514):
-                           514 심볼 데이터 + 30 심볼 패리티
-                           → 최대 16 심볼 에러 정정 가능
+```d2
+grid-rows: 2
+
+MAC: "MAC"
+PCS: "PCS\n(64b/66b)"
+FEC: "RS-FEC\nEncode"
+SD: "SerDes\nTX"
+
+MAC -> PCS
+PCS -> FEC
+FEC -> SD
+```
+
+RS(544, 514): 514 심볼 데이터 + 30 심볼 패리티 → 최대 16 심볼 에러 정정 가능.
 
 성능 지표:
-  - Pre-FEC BER: ~1e-5 (RS-FEC 투입 전, SerDes 출력)
-  - Post-FEC BER: ~1e-13 이하 (RS-FEC 정정 후)
-  → 8자릿수 이상의 BER 개선
 
-종류:
-  | 표준 | 속도 | FEC 방식 | 레이턴시 |
-  |------|------|----------|---------|
-  | 802.3bj (Clause 91) | 100G | RS(528,514) | ~50ns |
-  | 802.3cd (Clause 119) | 200G/400G | RS(544,514) | ~50ns |
+- Pre-FEC BER: ~1e-5 (RS-FEC 투입 전, SerDes 출력)
+- Post-FEC BER: ~1e-13 이하 (RS-FEC 정정 후) → 8자릿수 이상의 BER 개선
+
+| 표준 | 속도 | FEC 방식 | 레이턴시 |
+|------|------|----------|---------|
+| 802.3bj (Clause 91) | 100G | RS(528,514) | ~50ns |
+| 802.3cd (Clause 119) | 200G/400G | RS(544,514) | ~50ns |
 
 DV 관점:
-  - FEC 카운터(corrected/uncorrected codeword) 정확성
-  - FEC 바이패스 모드 동작
-  - Pre-FEC BER vs Post-FEC BER 통계 수집 검증
-```
+
+- FEC 카운터(corrected/uncorrected codeword) 정확성
+- FEC 바이패스 모드 동작
+- Pre-FEC BER vs Post-FEC BER 통계 수집 검증
 
 ### 5.9 Q&A 보강
 

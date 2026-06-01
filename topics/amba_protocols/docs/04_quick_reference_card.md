@@ -67,12 +67,12 @@
 ### 한 장 그림 — AMBA family 와 SoC 내 위치
 
 ```d2
-direction: right
+direction: down
 
-APB: "**APB**\n2-phase\nregister · peripheral"
-AHB: "**AHB**\npipelined\nlegacy IP · DMA"
-AXI: "**AXI**\n5채널 + OoO\nCPU↔MC · NoC · Accel"
-AXIS: "**AXI-Stream / CHI / ACE**\n스트리밍 · coherent\nAI · DSP · Network packet"
+APB: "APB\n2-phase · register · peripheral"
+AHB: "AHB\npipelined · legacy IP · DMA"
+AXI: "AXI\n5채널 + OoO · CPU↔MC · NoC · Accel"
+AXIS: "AXI-Stream / CHI / ACE\n스트리밍 · coherent · AI · DSP · Network packet"
 APB -> AHB
 AHB -> AXI
 AXI -> AXIS

@@ -92,8 +92,8 @@
 ```d2
 direction: down
 
-# unparsed: REQ["요청 도착<br/>(Bank N, Row R)"]
-# unparsed: BANK["Bank N<br/>Row Buffer = 현재 open 된 Row (예: Row 5)"]
+REQ: "요청 도착\n(Bank N, Row R)"
+BANK: "Bank N\nRow Buffer = 현재 open 된 Row (예: Row 5)"
 REQ -> BANK
 HIT: "① R == open Row\n**Row HIT**\ntCL 만 기다리면 데이터 나감\n★ 가장 빠름" { style.stroke-width: 3 }
 BANK -> HIT
@@ -209,7 +209,7 @@ DDR4 예시 (8Gb): 2 Rank · 4 Bank Group · 4 Bank/Group (총 16 Bank) · 65536
 ### 4.3 명령 FSM — Bank 별 상태 머신
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> POWERUP

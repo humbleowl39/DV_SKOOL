@@ -405,34 +405,30 @@ Boot Stage별 측정:
 
 #### Remote Attestation
 
-```
 서버가 디바이스의 무결성을 원격으로 검증:
 
-  디바이스                              서버
-  +------------------+                +------------------+
-  | 1. 부팅 (측정)    |                |                  |
-  | 2. PCR 값 확정    |                | 3. Nonce 전송    |
-  |                   | ←── Nonce ──── |                  |
-  | 4. Attestation    |                |                  |
-  |    Token 생성:    |                |                  |
-  |    Sign(PCR+Nonce |                |                  |
-  |    , DeviceKey)   |                |                  |
-  |                   | ──→ Token ──→  | 5. Token 검증:   |
-  |                   |                |    서명 확인      |
-  |                   |                |    PCR 비교      |
-  |                   |                |    → 신뢰 판단   |
-  +------------------+                +------------------+
+```d2
+shape: sequence_diagram
 
-  활용 사례:
-    DRM: 콘텐츠 서버가 디바이스 무결성 확인 후 키 전달
-    기업 보안: MDM 서버가 단말 무결성 확인 후 접속 허용
-    IoT: 클라우드가 디바이스 상태 확인 후 OTA 업데이트 배포
+DEV: "디바이스\n(TEE 내부 DeviceKey)"
+SRV: "서버"
 
-  보안 레벨 연결:
-    → DeviceKey는 Secure World(EL3 또는 S-EL1)에서만 접근 가능
-    → PCR 값은 Secure 메모리에 저장 — NS에서 변조 불가
-    → Token 생성은 TEE 내부에서 수행
+DEV -> DEV: "1. 부팅 측정\n2. PCR 값 확정"
+SRV -> DEV: "3. Nonce 전송"
+DEV -> DEV: "4. Attestation Token 생성\nSign(PCR + Nonce, DeviceKey)"
+DEV -> SRV: "5. Token 전송"
+SRV -> SRV: "6. Token 검증\n서명 확인 + PCR 비교\n→ 신뢰 판단"
 ```
+
+활용 사례:
+- DRM: 콘텐츠 서버가 디바이스 무결성 확인 후 키 전달
+- 기업 보안: MDM 서버가 단말 무결성 확인 후 접속 허용
+- IoT: 클라우드가 디바이스 상태 확인 후 OTA 업데이트 배포
+
+보안 레벨 연결:
+- DeviceKey는 Secure World(EL3 또는 S-EL1)에서만 접근 가능
+- PCR 값은 Secure 메모리에 저장 — NS에서 변조 불가
+- Token 생성은 TEE 내부에서 수행
 
 ### 5.5 보안 레벨과 공격 방어의 연결
 

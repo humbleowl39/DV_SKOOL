@@ -217,26 +217,25 @@ Boot Mode 결정 (BootROM 초기 단계)
 ```d2
 direction: down
 
-# unparsed: PRI["Primary: UFS"]
-PRIQ: "UFS 초기화 성공?" { shape: diamond }
-# unparsed: UBL2[BL2 로드]
-UVRF: "검증 PASS?" { shape: diamond }
-# unparsed: BOOT["Boot"]
-# unparsed: SEC["Secondary: eMMC"]
-SECQ: "eMMC 초기화 성공?" { shape: diamond }
-# unparsed: EBL2["BL2 로드 → 검증"]
-# unparsed: TER["Tertiary: USB DL Mode<br/>USB Enumeration 대기<br/>(무한 대기 또는 타임아웃)"]
+PRI: "Primary\n(UFS)"
+PRIQ: "UFS OK?" { shape: diamond }
+UBL2: "BL2 로드"
+UVRF: "검증?" { shape: diamond }
+BOOT: "Boot 완료"
+SEC: "Secondary\n(eMMC)"
+SECQ: "eMMC OK?" { shape: diamond }
+EBL2: "BL2 로드\n+ 검증"
+TER: "Tertiary\n(USB DL)"
 PRI -> PRIQ
 PRIQ -> UBL2: "YES"
 UBL2 -> UVRF
 UVRF -> BOOT: "PASS"
 UVRF -> SEC: "FAIL"
-PRIQ -> SEC: "NO (장치 없음/에러)"
+PRIQ -> SEC: "NO"
 SEC -> SECQ
 SECQ -> EBL2: "YES"
+EBL2 -> BOOT
 SECQ -> TER: "NO"
-# unparsed: NOTE["주의: Fallback 순서/허용 여부는 OTP 에 설정됨<br/>Secure Boot 는 USB DL 자체를 차단할 수도 있음"]
-TER -> NOTE { style.stroke-dash: 4 }
 ```
 
 **치명적 OTP 설계 포인트**: OTP 는 양산 후 변경 불가. Fallback 경로가 OTP 에 사전 프로그래밍되지 않은 상태에서 Primary 부팅 장치가 실패하면 → 죽은 장치 (brick). 모든 실패 시나리오가 OTP 프로그래밍 _이전에_ 고려되어야 함.

@@ -116,9 +116,9 @@ RXMAC -> HOST_RX
 가장 단순한 시나리오. **PFC frame 이 line 에서 들어와 DCMAC 이 TX 의 priority-3 큐만 멈추도록** 하는 1 cycle 추적. (정상 data frame 의 RX path 와 PFC 처리 path 두 가지를 한 번에 보여줌.)
 
 ```d2
-direction: right
+direction: down
 
-NETIN: "Network\n(in)" { shape: circle }
+NETIN: "Network (in)" { shape: circle }
 SDIN: "SerDes RX"
 PCSIN: "PCS RX"
 RXMAC: "RX MAC"
@@ -128,7 +128,8 @@ TXQ3: "TX MAC priority-3 queue\n③ scheduler: priority_3 만 정지\n(priority 
 TXMAC: "TX MAC"
 PCSOUT: "PCS TX"
 SDOUT: "SerDes TX"
-NETOUT: "Network\n(out)" { shape: circle }
+NETOUT: "Network (out)" { shape: circle }
+
 NETIN -> SDIN
 SDIN -> PCSIN
 PCSIN -> RXMAC
@@ -387,12 +388,12 @@ S4 -> OUT
 direction: down
 
 IN: "PCS / SerDes 에서 수신" { shape: oval }
-R1: "1. Preamble / SFD 감지 + 제거\n프레임 시작 인식"
-R2: "2. FCS 검증\nCRC-32 재계산 vs FCS\n불일치 → bad 플래그"
-R3: "3. 주소 필터링\nDst MAC == 자신?\nBroadcast? Multicast?\nPromiscuous 모드?"
-R4: "4. 길이/타입 검사\n최소 64B? Jumbo 허용?\nRunt/Oversize 감지"
-R5: "5. 통계 카운터 업데이트\nRX frames, bytes,\nCRC errors, etc."
-OUT: "사용자에게 전달 (AXI-S)\ntuser 에 FCS good/bad 표시" { shape: oval }
+R1: "1. Preamble / SFD 감지 + 제거 — 프레임 시작 인식"
+R2: "2. FCS 검증 — CRC-32 재계산 vs FCS, 불일치 → bad 플래그"
+R3: "3. 주소 필터링 — Dst MAC == 자신? Broadcast? Multicast? Promiscuous 모드?"
+R4: "4. 길이/타입 검사 — 최소 64B? Jumbo 허용? Runt/Oversize 감지"
+R5: "5. 통계 카운터 업데이트 — RX frames, bytes, CRC errors, etc."
+OUT: "사용자에게 전달 (AXI-S) — tuser 에 FCS good/bad 표시" { shape: oval }
 IN -> R1
 R1 -> R2
 R2 -> R3
@@ -436,36 +437,33 @@ AXI-Lite Bus:
 
 정밀 시간 동기화를 위한 하드웨어 타임스탬프 기능.
 
-```
 왜 필요한가?
-  - 데이터센터 내 서버 간 μs~ns 단위 시간 동기화
-  - 금융 거래, 5G 프론트홀 등에서 정밀 타이밍 필수
-  - 소프트웨어 타임스탬프는 OS 지터로 정밀도 부족
 
-DCMAC의 PTP 지원:
-  TX Timestamp:
-    - 프레임이 MAC을 떠나는 정확한 시점 캡처
-    - AXI-S 사이드밴드 또는 별도 FIFO로 전달
-    - 1-step (수정 후 전송) / 2-step (캡처만 후 SW 처리) 모드
+- 데이터센터 내 서버 간 μs~ns 단위 시간 동기화
+- 금융 거래, 5G 프론트홀 등에서 정밀 타이밍 필수
+- 소프트웨어 타임스탬프는 OS 지터로 정밀도 부족
 
-  RX Timestamp:
-    - 프레임이 MAC에 도착하는 정확한 시점 캡처
-    - tuser 또는 별도 인터페이스로 상위 계층에 전달
+DCMAC의 PTP 지원 — TX Timestamp: 프레임이 MAC을 떠나는 정확한 시점 캡처, AXI-S 사이드밴드 또는 별도 FIFO로 전달, 1-step(수정 후 전송) / 2-step(캡처만 후 SW 처리) 모드. RX Timestamp: 프레임이 MAC에 도착하는 정확한 시점 캡처, tuser 또는 별도 인터페이스로 상위 계층에 전달.
 
-  +---------+    +------+    +----------+
-  | PTP     | →  | MAC  | →  | TX       |
-  | Frame   |    |      |    | (ts 캡처)|
-  +---------+    +------+    +----------+
-                    ↓
-              Timestamp FIFO
-              → SW가 읽어서 PTP 프로토콜 처리
+```d2
+direction: right
+
+PTP: "PTP Frame\n(EtherType 0x88F7)"
+MAC: "MAC"
+TX: "TX (ts 캡처)"
+FIFO: "Timestamp FIFO (SW 읽기 후 PTP 프로토콜 처리)" { shape: cylinder }
+
+PTP -> MAC
+MAC -> TX
+MAC -> FIFO: { style.stroke-dash: 4 }
+```
 
 DV 관점:
-  - 타임스탬프 정밀도: 캡처 시점이 실제 전송/수신 시점과 일치하는지
-  - 1-step 모드: Correction Field가 정확히 수정되었는지
-  - 타임스탬프 FIFO 오버플로우 시 동작
-  - PTP 프레임 식별 (EtherType 0x88F7) 정확성
-```
+
+- 타임스탬프 정밀도: 캡처 시점이 실제 전송/수신 시점과 일치하는지
+- 1-step 모드: Correction Field가 정확히 수정되었는지
+- 타임스탬프 FIFO 오버플로우 시 동작
+- PTP 프레임 식별 (EtherType 0x88F7) 정확성
 
 ### 5.8 통계 카운터 (RMON)
 
@@ -484,7 +482,8 @@ DV 관점:
 **MangoBoost Data Path:** Host ↔ TOE ↔ DCMAC ↔ PHY ↔ Network
 
 ```d2
-direction: right
+direction: down
+
 HOST: Host { shape: circle }
 TOE: TOE
 DCMAC: DCMAC

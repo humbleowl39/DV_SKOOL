@@ -23,12 +23,12 @@
 
 **요구**: 실내 온도를 ±0.5°C 로 유지.
 
-```
-[Temp sensor] --I2C--> [MCU] --PWM--> [Heater relay]
-                         |
-                         +--UART--> [Display]
-                         |
-                         +--Button input (GPIO + IRQ)
+```d2
+direction: down
+Temp sensor -> MCU: I2C
+MCU -> Heater relay: PWM
+MCU -> Display: UART
+MCU -> Button input: "GPIO + IRQ"
 ```
 
 **설계 포인트** (인터뷰 답변 시 다루어야 할 것):

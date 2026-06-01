@@ -122,27 +122,16 @@
 ```d2
 direction: down
 
-DUT: "DUT — fifo_8entry" {
-  direction: right
-  # unparsed: IN["wr_en / wr_data<br/>rd_en"]
-  # unparsed: ST["count [3:0]<br/>buf [7:0][N]"]
-  # unparsed: OUT["full / empty"]
-  IN -> ST
-  ST -> OUT
-}
-SVA: "SVA bind" {
-  direction: down
-  # unparsed: A["assert<br/>!(wr_en && full)"]
-  # unparsed: C["cover<br/>(wr_en && count == N-1)"]
-}
+DUT: "DUT — fifo_8entry\n(wr_en / wr_data / rd_en → count / buf → full / empty)"
+SVA: "SVA bind\nassert !(wr_en && full)\ncover (wr_en && count==N-1)"
 DUT -> SVA: "bind"
 EL: "elaborate (JG)"
 SVA -> EL
-PR: "prove -all\nEngine: SAT/SMT\nInduction"
+PR: "prove -all\nEngine: SAT/SMT / Induction"
 EL -> PR
 CEX: "CEX (FAILED)\ncount overflow path 발견"
+PV: "PROVEN\n모든 cycle 안전 (목표)" { style.stroke: "#27ae60"; style.stroke-width: 3 }
 PR -> CEX
-PV: "PROVEN\n모든 cycle 안전\n(목표)" { style.stroke: "#27ae60"; style.stroke-width: 3 }
 PR -> PV
 ```
 
@@ -356,7 +345,7 @@ SVA 로 Property 작성 → Formal Engine (SAT/SMT) 이 증명
 워크플로:
 
 ```d2
-direction: right
+direction: down
 
 A: "RTL 로드"
 B: "SVA 로드"
@@ -380,12 +369,12 @@ C -> D
 **핵심 개념 — Miter Circuit**
 
 ```d2
-direction: right
+grid-columns: 2
 
 IN: "같은 입력"
 SA: "Spec A"
-IN -> SA
 IB: "Impl B"
+IN -> SA
 IN -> IB
 X: "XOR" { shape: circle }
 SA -> X: "out_A"
@@ -482,10 +471,10 @@ DUT: "DUT" {
 큰 설계를 작은 블록으로 분할하여 각각 Formal 적용.
 
 ```d2
-direction: right
+direction: down
 
 SoC: "대규모 SoC" {
-  direction: right
+  grid-columns: 2
   A: "블록 A"
   B: "블록 B"
   C: "블록 C"

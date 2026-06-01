@@ -84,24 +84,21 @@ DDR5는 DIMM에 PMIC가 내장되고 channel별 독립 초기화가 가능하다
 
 ### 3.1 단계별 개요
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant SYS as System Power
-    participant PMIC as on-DIMM PMIC
-    participant DRAM as DDR5 SDRAM
-    participant CTRL as Memory Controller
+```d2
+direction: down
 
-    SYS->>PMIC: 12V supply 인가
-    PMIC->>DRAM: Vdd / Vddq / Vpp ramp (정해진 순서)
-    CTRL->>DRAM: RESET_n LOW (안정 후 HIGH)
-    Note over DRAM: Internal reset
-    CTRL->>DRAM: CKE LOW → HIGH after tXPR
-    CTRL->>DRAM: Initial MR Write (특정 MR 우선)
-    CTRL->>DRAM: ZQCL (ZQ Calibration Long)
-    Note over DRAM: tZQinit 후 ready
-    CTRL->>DRAM: CA training, DQ training (Ch08)
-    Note over DRAM: Ready for normal ops
+SYS: System Power
+PMIC: on-DIMM PMIC
+DRAM: DDR5 SDRAM
+CTRL: Memory Controller
+
+SYS -> PMIC: 12V supply 인가
+PMIC -> DRAM: Vdd / Vddq / Vpp ramp (정해진 순서)
+CTRL -> DRAM: RESET_n LOW → HIGH
+CTRL -> DRAM: CKE LOW → HIGH after tXPR
+CTRL -> DRAM: Initial MR Write (특정 MR 우선)
+CTRL -> DRAM: ZQCL (ZQ Calibration Long)
+CTRL -> DRAM: CA training, DQ training (Ch08)
 ```
 
 ### 3.2 DDR5 특유의 추가 단계

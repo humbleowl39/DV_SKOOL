@@ -36,14 +36,16 @@ extract → check → report → final
 
 ### 1.2 Component 계층
 
-```
-uvm_test
-└── uvm_env
-    ├── uvm_agent (× N — protocol 별)
-    │   ├── uvm_sequencer
-    │   ├── uvm_driver
-    │   └── uvm_monitor
-    └── uvm_scoreboard / uvm_subscriber / uvm_coverage
+```d2
+direction: down
+uvm_test -> uvm_env
+uvm_env -> uvm_agent: "× N (protocol 별)"
+uvm_agent -> uvm_sequencer
+uvm_agent -> uvm_driver
+uvm_agent -> uvm_monitor
+uvm_env -> uvm_scoreboard
+uvm_env -> uvm_subscriber
+uvm_env -> uvm_coverage
 ```
 
 **Agent** 는 AXI master 와 같이 *한 인터페이스 단위*로 자극 생성과 관찰을 하나로 묶은 컨테이너입니다. `is_active` 속성에 따라 sequencer+driver+monitor 를 모두 가진 *Active* 모드 또는 monitor 만 가진 *Passive* 모드로 동작합니다. Passive agent 는 DUT 버스를 건드리지 않고 관찰만 하므로, 예를 들어 scoreboard 에 데이터를 공급하는 read side 모니터링에 유용합니다.

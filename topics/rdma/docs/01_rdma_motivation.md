@@ -87,36 +87,37 @@
 ### 한 장 그림 — TCP path vs RDMA path
 
 ```d2
-direction: right
+direction: down
 
 TCP: "TCP/IP — 3 copies + interrupt" {
-  direction: down
-  T1: "App"
+  direction: right
+  T1: "App (송신)"
   T2: "user buf"
   T3: "socket buf"
-  T4: "NIC"
+  T4: NIC
   T5: "NIC (수신)"
   T6: "socket buf"
-  T7: "App"
+  T7: "App (수신)"
   T1 -> T2
-  T2 -> T3: "copy_from_user · CPU"
-  T3 -> T4: "TCP/IP stack · CPU"
+  T2 -> T3: "copy_from_user"
+  T3 -> T4: "TCP/IP stack"
   T4 -> T5: "wire"
-  T5 -> T6: "IRQ → ksoftirqd · CPU"
-  T6 -> T7: "copy_to_user · CPU"
+  T5 -> T6: "IRQ"
+  T6 -> T7: "copy_to_user"
 }
 RDMA: "RDMA — 0 copies, no IRQ" {
-  direction: down
-  R1: "App"
-  R2: "user buf\n(= MR, 등록만 해 두면 끝)"
-  R3: "HCA"
+  direction: right
+  R1: "App (송신)"
+  R2: "user buf (MR)"
+  R3: HCA
   R4: "HCA (peer)"
   R5: "peer MR"
   R1 -> R2
-  R2 -> R3: "MMIO doorbell"
-  R3 -> R4: "DMA → wire"
-  R4 -> R5: "rkey 검증 후\n직접 DMA write\n(peer CPU 안 깨움)"
+  R2 -> R3: "doorbell"
+  R3 -> R4: "DMA wire"
+  R4 -> R5: "DMA write"
 }
+TCP -> RDMA: { style.opacity: 0.0 }
 ```
 
 세 개의 빨간 원이 RDMA 에서는 모두 사라지고, 대신 **HCA hardware** 가 PSN, ACK, 재전송, 무결성 검사를 처리합니다.
@@ -261,7 +262,8 @@ ibv_poll_cq(cq, 1, &wc);              // ⑧ 까지 끝나면 status=SUCCESS
 ```d2
 direction: right
 
-DMAg: "Local DMA" {
+DMAg: "Local DMA\n(CPU 개입 없음)" {
+  direction: down
   LD_CPU: CPU
   LD_MEM: memory
   LD_DISK: disk
@@ -269,7 +271,8 @@ DMAg: "Local DMA" {
   LD_MEM <-> LD_DISK: "DMA"
 }
 
-RDMAg: "RDMA" {
+RDMAg: "RDMA\n(원격 메모리 직접 액세스)" {
+  direction: down
   R_CPU1: "CPU₁"
   R_MEM1: "mem₁"
   R_HCA1: "HCA₁"
@@ -351,22 +354,25 @@ WQE 처리 결과 (status, byte count, opcode, source QP 등). CQ 에서 polling
 ### 5.1 TCP/IP 가 가진 세 가지 비용 (RDMA 가 제거하는 것)
 
 ```d2
-direction: right
+direction: down
 
-AppS: "App\n(송신)"
-SBS: "Socket\nbuffer"
-NICS: NIC
-NET: Network { shape: circle }
-NICR: NIC
-SBR: "Socket\nbuffer"
-AppR: "App\n(수신)"
-
-AppS -> SBS: "(1) copy_from_user"
-SBS -> NICS: "(2) TCP/IP\nchecksum, retransmit"
-NICS -> NET
-NET -> NICR
-NICR -> SBR: "IRQ → ksoftirqd"
-SBR -> AppR: "(3) copy_to_user"
+TX: "송신 측" {
+  direction: right
+  AppS: "App"
+  SBS: "Socket buf"
+  NICS: NIC
+  AppS -> SBS: "(1) copy_from_user"
+  SBS -> NICS: "(2) TCP/IP stack · CPU"
+}
+RX: "수신 측" {
+  direction: right
+  NICR: NIC
+  SBR: "Socket buf"
+  AppR: "App"
+  NICR -> SBR: "IRQ → ksoftirqd · CPU"
+  SBR -> AppR: "(3) copy_to_user"
+}
+TX -> RX: "wire"
 ```
 
 | 비용 | 발생 위치 | RDMA 의 해결 |

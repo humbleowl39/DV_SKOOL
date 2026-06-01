@@ -295,13 +295,13 @@ AXI 규칙:
 ### 4.4 Burst FSM — 1개 transaction 안에서 multiple beat
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> IDLE
 IDLE -> W_BEAT: "AW handshake 발행"
-W_BEAT -> W_BEAT: "WVALID=1 +\nWSTRB + WDATA\n(beat counter ↑)"
-W_BEAT -> W_DONE: "WLAST=1\n(AxLEN+1 beats 완료)"
+W_BEAT -> W_BEAT: "WVALID=1 + WSTRB + WDATA (beat counter ↑)"
+W_BEAT -> W_DONE: "WLAST=1 (AxLEN+1 beats 완료)"
 W_DONE -> B_RESP: "BVALID 대기"
 B_RESP -> IDLE: "BVALID && BREADY"
 ```

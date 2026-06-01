@@ -237,11 +237,11 @@ assign PENABLE = (state == S_ACCESS);
 ### 4.4 AHB-to-APB Bridge — 두 패턴의 접점
 
 ```d2
-direction: right
+direction: down
 
-CPU: "CPU"
+CPU: "CPU (Master)"
 BR: "AHB-APB Bridge"
-SL: "APB slave"
+SL: "APB Slave (Peripheral)"
 CPU -> BR: "AHB (pipeline)"
 BR -> SL: "APB (2-phase)"
 ```

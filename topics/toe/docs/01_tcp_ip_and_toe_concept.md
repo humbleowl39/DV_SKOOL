@@ -68,36 +68,35 @@
 ### 한 장 그림 — SW TCP path vs TOE path
 
 ```d2
-direction: right
+direction: down
 
 SW: "Software TCP — CPU 풀로드" {
-  direction: down
   S1: "App"
   S2: "user buf"
   S3: "socket buf\n(sk_buff)"
   S4: "NIC → wire"
   S5: "socket buf"
-  S6: "App"
+  S6: "App (rcv)"
   S1 -> S2
-  S2 -> S3: "copy_from_user · CPU"
-  S3 -> S4: "header build / chksum\nsegmentation / retx · CPU"
-  S4 -> S5: "ksoftirqd / IRQ · CPU"
-  S5 -> S6: "reassembly / copy_to_user · CPU"
+  S2 -> S3: "copy · CPU"
+  S3 -> S4: "hdr/chksum\nseg/retx · CPU"
+  S4 -> S5: "IRQ · CPU"
+  S5 -> S6: "reasm/copy · CPU"
 }
 TOE: "TOE — HW offload" {
-  direction: down
   T1: "App"
   T2: "user buf"
   T3: "TOE TX queue"
   T4: "MAC → wire"
   T5: "TOE RX queue"
-  T6: "App"
+  T6: "App (rcv)"
   T1 -> T2
-  T2 -> T3: "DMA descriptor"
-  T3 -> T4: "HW segmentation\nHW checksum\nHW header build\nHW RTO timer"
-  T4 -> T5: "HW ACK process"
-  T5 -> T6: "HW reassembly\nDMA"
+  T2 -> T3: "DMA desc"
+  T3 -> T4: "HW seg/chksum\nhdr/RTO"
+  T4 -> T5: "HW ACK"
+  T5 -> T6: "HW reasm\nDMA"
 }
+SW -> TOE: { style.opacity: 0 }
 ```
 
 빨간 박스가 SW TCP 에서는 packet 마다 발생하지만, TOE 에서는 모두 **HW pipeline** 안에서 처리됩니다. CPU 는 `connect()` / `accept()` / `close()` 같은 **연결당 1~2 회** 의 control path 만 담당.

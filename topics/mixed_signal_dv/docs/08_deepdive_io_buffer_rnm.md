@@ -40,24 +40,20 @@ Driver와 ODT의 저항값은 공정 변동과 온도에 따라 달라집니다.
 
 ## 3. IO Buffer 회로 구조
 
-```
-                          ┌── PMOS array ──┐  +VDDQ
-                          │  W ratio: 1,2,4 │
-                          │  digital select │
-                          │                  │
-        Internal data ────┤                  ├──── DQ pin
-                          │                  │
-                          │  NMOS array     │
-                          │  W ratio: 1,2,4 │
-                          └── NMOS array ──┘  -VSSQ
-                                ▲
-                                │
-                          ┌─────┴────────┐
-                          │ ZQ Cal       │
-                          │ Controller   │
-                          │ - up/down    │
-                          │ - select     │
-                          └──────────────┘
+```d2
+direction: down
+
+internal_data: "Internal data"
+driver: "IO Driver" {
+  pmos: "PMOS array\n(W ratio: 1,2,4)\n+VDDQ"
+  nmos: "NMOS array\n(W ratio: 1,2,4)\n-VSSQ"
+}
+dq: "DQ pin"
+zq_cal: "ZQ Cal Controller\n(up/down, select)"
+
+internal_data -> driver
+driver -> dq
+zq_cal -> driver.nmos: "select"
 ```
 
 - Driver는 보통 여러 작은 transistor의 parallel 조합 (binary weighted)
@@ -325,20 +321,18 @@ DDR5/PCIe Gen5+ 같은 고속 인터페이스는 단순 driver/ODT 모델로 부
 
 **IBIS-AMI** = IBIS Algorithmic Model Interface. IBIS 5.0 (2008) 도입, **IBIS 7.0 (2019)** 에서 PAM modulation과 **back-channel link training** 지원 추가.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                  IBIS-AMI Simulation                          │
-│                                                                │
-│  ┌──────────┐   channel    ┌──────────┐                       │
-│  │ TX AMI   │ ───────────→ │ RX AMI   │ → recovered data      │
-│  │ - FFE    │   pulse      │ - CTLE   │                       │
-│  │ - pre-em │   response   │ - DFE    │                       │
-│  │          │              │ - AGC    │                       │
-│  │          │              │ - CDR    │                       │
-│  │          │ ←─────────── │          │                       │
-│  │          │ back-channel │          │                       │
-│  └──────────┘ (IBIS 7.0+)  └──────────┘                       │
-└──────────────────────────────────────────────────────────────┘
+```d2
+direction: down
+
+ibis_sim: "IBIS-AMI Simulation" {
+  tx: "TX AMI\n· FFE\n· pre-emphasis"
+  rx: "RX AMI\n· CTLE\n· DFE\n· AGC\n· CDR"
+  recovered: "recovered data"
+
+  tx -> rx: "channel\n(pulse response)"
+  rx -> tx: "back-channel\n(IBIS 7.0+)"
+  rx -> recovered
+}
 ```
 
 ### 11.2 핵심 알고리즘 (DDR5/PCIe Gen5+ RX)

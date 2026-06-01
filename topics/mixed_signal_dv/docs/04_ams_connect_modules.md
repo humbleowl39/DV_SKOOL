@@ -12,24 +12,18 @@
 
 AMS 시뮬레이션을 처음 배울 때 가장 중요한 것은 "두 개의 시뮬레이터가 같은 시간 축 위에서 동시에 동작한다"는 그림을 머릿속에 잡는 것입니다. 한쪽에는 VCS나 Xcelium 같은 디지털 시뮬레이터가 SV testbench와 디지털 RTL을 이벤트 기반으로 처리하고, 다른 한쪽에는 FineSim, HSPICE, Spectre 같은 SPICE 시뮬레이터가 아날로그 넷리스트를 수치 적분으로 풀고 있습니다. 두 엔진은 각자 자신의 영역을 독립적으로 계산하지만, **동일한 wall-clock time**을 공유하면서 주기적으로 동기화 점을 맞춥니다.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                  AMS Simulation Environment                   │
-│                                                                │
-│  ┌──────────────────────┐         ┌──────────────────────┐   │
-│  │ Digital Simulator    │  Sync   │ Analog Simulator     │   │
-│  │ (VCS / Xcelium)      │ ←─────→ │ (FineSim / HSPICE /   │   │
-│  │                      │         │  Spectre)             │   │
-│  │ - SV testbench       │         │ - SPICE netlist       │   │
-│  │ - Digital RTL        │         │ - BSIM model          │   │
-│  │ - Event-driven       │         │ - Numerical solver    │   │
-│  └──────────────────────┘         └──────────────────────┘   │
-│              ↑                                ↑                │
-│              │     ┌─────────────────────┐    │                │
-│              └─────┤   Connect modules   ├────┘                │
-│                    │  (D2A, A2D, A2A)    │                     │
-│                    └─────────────────────┘                     │
-└──────────────────────────────────────────────────────────────┘
+```d2
+direction: down
+
+ams_env: "AMS Simulation Environment" {
+  digital_sim: "Digital Simulator\n(VCS / Xcelium)\n· SV testbench\n· Digital RTL\n· Event-driven"
+  analog_sim: "Analog Simulator\n(FineSim / HSPICE / Spectre)\n· SPICE netlist\n· BSIM model\n· Numerical solver"
+  connect_mods: "Connect modules\n(D2A, A2D, A2A)"
+
+  digital_sim <-> analog_sim: "Sync"
+  digital_sim -> connect_mods
+  analog_sim -> connect_mods
+}
 ```
 
 동기화할 때마다 connect module이 두 도메인 사이의 신호를 변환합니다. 동기화를 자주 할수록 정확도는 올라가지만 두 엔진이 서로 기다리는 오버헤드가 커져 속도가 떨어집니다. 이 정확도 ↔ 속도 trade-off는 AMS 설정의 핵심 파라미터입니다.

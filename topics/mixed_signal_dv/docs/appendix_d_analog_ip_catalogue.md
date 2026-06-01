@@ -17,14 +17,24 @@
 
 ## 1. PLL — Phase-Locked Loop
 
-```text
-f_ref   +-----+    +-----+    +-----+    +-----+   f_out
-   --->| PFD |--->| CP  |--->| LPF |--->| VCO |---+--->
-       +-----+    +-----+    +-----+    +-----+   |
-          ^                                       |
-          |               +----------+            |
-          +---------------| /N (div) |<-----------+
-                          +----------+
+```d2
+direction: down
+
+g: {
+  grid-rows: 2
+  grid-gap: 70
+  f_ref: "f_ref"
+  f_out: "f_out"
+  pfd: "PFD"
+  div_n: "/N (div)"
+  cp: "CP"
+  lpf: "LPF"
+  vco: "VCO"
+}
+
+g.f_ref -> g.pfd -> g.cp -> g.lpf -> g.vco -> g.f_out
+g.vco -> g.div_n
+g.div_n -> g.pfd: "feedback"
 ```
 
 ### spec
@@ -805,15 +815,27 @@ endmodule
 
 SerDes는 **analog signal integrity**(eye, jitter, equalization)와 **protocol**(link training)을 동시에 다룹니다. protocol은 RNM/UVM과 잘 맞지만 signal integrity는 **RNM의 한계가 매우 큰 영역**. spec PASS는 대부분 statistical sim + silicon measurement에 의존.
 
-```text
-TX side                                       RX side
-+----------+  +-----+                       +------+  +----------+
-| parallel |->| FFE |--- serial ----->----- | CTLE |->| deser    |
-| data     |  +-----+    (diff pair)        +------+  | + CDR    |
-| encoder  |             channel                      | decoder  |
-| (8b/10b, |             (cable + PCB)                |          |
-|  64b/66b)|                                          |          |
-+----------+                                          +----------+
+```d2
+direction: down
+
+g: {
+  grid-rows: 4
+  grid-gap: 50
+  tx_side: "TX side"
+  channel: "channel\n(diff pair, cable + PCB)"
+  parallel_data: "parallel data\nencoder\n(8b/10b, 64b/66b)"
+  ctle: "CTLE"
+  ffe: "FFE"
+  deser: "deser + CDR\ndecoder"
+  rx_side: "RX side"
+}
+
+g.tx_side -> g.parallel_data
+g.parallel_data -> g.ffe
+g.ffe -> g.channel: "serial"
+g.channel -> g.ctle
+g.ctle -> g.deser
+g.deser -> g.rx_side
 ```
 
 ### spec과 RNM 한계

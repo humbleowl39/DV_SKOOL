@@ -346,12 +346,12 @@ assume property (@(posedge clk) mul_out < 32'hFFFF_FFFF);
 파이프라인의 중간 단계를 자유 입력으로 교체 → 앞단과 뒷단을 독립적으로 검증 가능.
 
 ```d2
-direction: right
+grid-columns: 2
 
 IN: "입력"
 S1: "Stage 1"
 IN -> S1
-CP: "[Cut Point]\n자유 입력" { style.stroke: "#c0392b"; style.stroke-width: 3; style.stroke-dash: 4 }
+CP: "[Cut Point] 자유 입력" { style.stroke: "#c0392b"; style.stroke-width: 3; style.stroke-dash: 4 }
 S1 -> CP
 S2: "Stage 2"
 CP -> S2

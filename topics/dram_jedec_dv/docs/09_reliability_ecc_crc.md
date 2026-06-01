@@ -22,26 +22,20 @@
 
 DRAM 데이터는 두 단계에서 오류가 발생할 수 있습니다. 첫째는 DRAM 셀 내부에서 발생하는 오류입니다. capacitor의 자연 leakage, 우주선에서 날아오는 alpha particle에 의한 soft error, 시간이 지남에 따른 cell aging 등이 원인입니다. 둘째는 DRAM과 controller 사이의 링크에서 발생하는 오류입니다. 수 GT/s의 고속 신호에서 ISI(심볼 간 간섭), jitter, 크로스토크로 인해 전송 중 비트가 바뀔 수 있습니다.
 
-```
-        ┌────────────────────────────────┐
-        │     Controller (SoC)           │
-        │    ┌────────┐                  │
-        │    │ Logic  │                  │
-        │    └───┬────┘                  │
-        └────────┼───────────────────────┘
-                 │  ← *링크 오류* (Link ECC / CRC가 보호)
-                 │
-        ┌────────┼───────────────────────┐
-        │        ▼                       │
-        │    ┌────────┐                  │
-        │    │ DQ I/O │                  │
-        │    └───┬────┘                  │
-        │        │   ← *셀-I/O 사이* (on-die ECC가 보호)
-        │    ┌───▼────┐                  │
-        │    │ Array  │                  │
-        │    └────────┘                  │
-        └────────────────────────────────┘
-            DRAM Device
+```d2
+direction: down
+
+Controller: "Controller (SoC)" {
+  Logic: Logic
+}
+
+DRAM: "DRAM Device" {
+  DQ_IO: "DQ I/O"
+  Array: Array
+}
+
+Controller.Logic -> DRAM.DQ_IO: "링크 오류 (Link ECC / CRC가 보호)"
+DRAM.DQ_IO -> DRAM.Array: "셀-I/O 사이 (on-die ECC가 보호)"
 ```
 
 같은 "ECC"라는 단어를 쓰더라도 보호 대상이 완전히 다릅니다. DDR5의 Transparency ECC는 셀 내부를 보호하고 controller에게는 투명하게 동작하는 반면, LPDDR5의 Link ECC는 DQ 핀과 controller 사이 링크를 보호합니다. DV는 두 가지를 별도로 설계하고 검증해야 합니다. 한 가지만 검증하고 다른 것을 빠뜨리면 보호되지 않는 오류 경로가 생깁니다.

@@ -301,18 +301,19 @@ N -- S: "HW 강제 격리\nNormal → Secure 메모리 접근 불가" { style.st
 모든 버스 트랜잭션에 NS (Non-Secure) 비트 추가:
 
 ```d2
-direction: right
+direction: down
 
 M: "Master"
 BUS: "Bus transaction\n{NS, ADDR, DATA}"
-M -> BUS
 SEC: "Secure 메모리/디바이스\n접근 허용" { style.stroke: "#c5221f"; style.stroke-width: 2 }
-BUS -> SEC: "NS=0 (Secure)"
 CHK: "Secure 영역?" { shape: diamond }
-BUS -> CHK: "NS=1 (Non-Secure)"
 ERR: "버스 에러 — 차단" { style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
-CHK -> ERR: "yes"
 NOK: "Non-Secure 영역\n접근 허용" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+
+M -> BUS
+BUS -> SEC: "NS=0 (Secure)"
+BUS -> CHK: "NS=1 (Non-Secure)"
+CHK -> ERR: "yes"
 CHK -> NOK: "no"
 ```
 
@@ -483,11 +484,12 @@ VZ: "EL2 있을 때 (가상화)" {
 EL3 = Secure Monitor = 보안 월드 전환의 유일한 게이트.
 
 ```d2
-direction: right
+direction: down
 
 NSEL1: "NS-EL1 (Linux)"
 EL3M: "EL3 (Secure Monitor)"
 SEL1: "S-EL1 (OP-TEE)"
+
 NSEL1 -> EL3M: "SMC 호출 (결제 요청)"
 EL3M -> SEL1: "ERET → Secure"
 SEL1 -> EL3M: "결제 처리 후\nSMC 반환"
@@ -510,7 +512,7 @@ ARMv8.4 이전:
 ARMv8.4+: Secure EL2 추가 → Secure Hypervisor 가 복수의 Secure Partition (SP) 을 격리 → FF-A (Firmware Framework for Arm) 표준으로 통신.
 
 ```d2
-direction: down
+direction: right
 
 SW: "Secure side" {
   SP0: "SP0 (TEE)"
@@ -527,8 +529,8 @@ NW: "Non-Secure side" {
   VM -> NSEL2
 }
 EL3M: "**EL3 — Secure Monitor**"
-SEL2 -> EL3M
-NSEL2 -> EL3M
+SW.SEL2 -> EL3M
+NW.NSEL2 -> EL3M
 ```
 
 #### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준

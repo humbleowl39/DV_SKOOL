@@ -89,11 +89,11 @@ endclass
 direction: down
 
 TEST: "uvm_test\nstart vseq"
-VSEQ: "**Virtual Sequence**\n연출가" { style.stroke: "#1a73e8"; style.stroke-width: 3 }
-SEQA: "agentA Sequence\n(각본가)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-SEQB: "agentB Sequence\n(각본가)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-ITA: "Item\n(대사 한 줄)\nrand + constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
-ITB: "Item\n(대사 한 줄)\nrand + constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
+VSEQ: "**Virtual Sequence** 연출가" { style.stroke: "#1a73e8"; style.stroke-width: 3 }
+SEQA: "agentA Sequence" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+SEQB: "agentB Sequence" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+ITA: "Item A · rand+constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
+ITB: "Item B · rand+constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
 SQRA: sequencerA { style.stroke: "#5f6368"; style.stroke-width: 2 }
 SQRB: sequencerB { style.stroke: "#5f6368"; style.stroke-width: 2 }
 DRVA: driverA { style.stroke: "#5f6368"; style.stroke-width: 2 }
@@ -105,12 +105,13 @@ VSEQ -> SEQA
 VSEQ -> SEQB
 SEQA -> ITA: "body()"
 SEQB -> ITB: "body()"
-ITA -> SQRA: "start_item / finish_item"
-ITB -> SQRB: "start_item / finish_item"
+ITA -> SQRA: "start/finish_item"
+ITB -> SQRB: "start/finish_item"
 SQRA -> DRVA
 SQRB -> DRVB
 DRVA -> DUT
 DRVB -> DUT
+```
 ```
 
 ### 왜 이 디자인인가 — Design rationale

@@ -89,34 +89,39 @@
 
 ### 한 장 그림 — Embedding + ANN 검색의 전체 구조
 
-```d2
-direction: right
+**Offline — Indexing** (D4 의 FAISS index 가 아래 Online 단계 ⑦ ANN 검색의 대상이 됩니다):
 
-OFF: "Offline — Indexing" {
-  direction: down
-  D1: "IP spec / 코드 / 문서"
-  D2: "Chunking\n[chunk₁, chunk₂, ...]"
-  D3: "Embedding\nv₁, v₂, v₃, ... ∈ ℝᵈ"
-  D4: "Vector DB\nFAISS index" { shape: cylinder }
-  D1 -> D2
-  D2 -> D3
-  D3 -> D4
-}
-ON: "Online — Query" {
-  direction: down
-  Q1: "사용자 쿼리\n'TLB flush'"
-  Q2: "embed\nq ∈ ℝᵈ"
-  Q3: "Vector DB\nFAISS / IVF / HNSW / PQ" { shape: cylinder }
-  Q4: "top-k\nchunk₁₂, chunk₃₇"
-  Q5: "LLM"
-  Q6: "답변 + 출처"
-  Q1 -> Q2
-  Q2 -> Q3
-  Q3 -> Q4
-  Q4 -> Q5
-  Q5 -> Q6
-}
-D4 -> Q3: "적재" { style.stroke-dash: 4 }
+```d2
+direction: down
+
+D1: "① IP spec / 코드 / 문서"
+D2: "② Chunking\n[chunk₁, chunk₂, ...]"
+D3: "③ Embedding\nv₁, v₂, v₃, ... ∈ ℝᵈ"
+D4: "④ Vector DB\nFAISS index" { shape: cylinder }
+D1 -> D2
+D2 -> D3
+D3 -> D4
+```
+
+**Online — Query** (⑦ ANN 검색은 위 Offline 의 ④ FAISS index 를 대상으로 합니다):
+
+```d2
+direction: down
+
+Q1: "⑤ 사용자 쿼리\n'TLB flush'"
+Q2: "⑥ embed(query)\nq ∈ ℝᵈ"
+Q3: "⑦ ANN 검색\n(IVF / HNSW / PQ)"
+Q4: "⑧ top-k\nchunk₁₂, chunk₃₇"
+Q5: "⑨ LLM"
+Q6: "⑩ 답변 + 출처"
+Q1 -> Q2
+Q2 -> Q3
+Q3 -> Q4
+Q4 -> Q5
+Q5 -> Q6
+Q1 -> Q4: { style.opacity: 0.0 }
+Q2 -> Q5: { style.opacity: 0.0 }
+Q3 -> Q6: { style.opacity: 0.0 }
 ```
 
 ### 왜 이 구조인가 — Design rationale

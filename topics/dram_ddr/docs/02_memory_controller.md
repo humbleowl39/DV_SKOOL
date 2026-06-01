@@ -72,10 +72,10 @@ Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지
 ### 한 장 그림 — MC 가 만드는 변환
 
 ```d2
-direction: right
+direction: down
 
 HOST: "input side (host)" {
-  direction: down
+  direction: right
   CPU: "CPU"
   GPU: "GPU"
   DMA: "DMA"
@@ -84,31 +84,19 @@ HOST: "input side (host)" {
 }
 MC: "Memory Controller" {
   direction: down
-  MC1: "1. AXI request 수집 (RQ)"
-  MC2: "2. 주소 → R/BG/B/Row/Col 디코드"
-  MC3: "3. Row buffer state 추적"
-  MC4: "4. timing constraint 체크"
-  MC5: "5. FR-FCFS 등 정책으로 재배치"
-  MC6: "6. Refresh 끼워넣기"
-  MC7: "7. Write batching / R/W turn"
-  MC8: "8. ACT/RD/WR/PRE/REF 발행"
-  MC1 -> MC2
-  MC2 -> MC3
-  MC3 -> MC4
-  MC4 -> MC5
-  MC5 -> MC6
-  MC6 -> MC7
-  MC7 -> MC8
+  RQ: "① RQ 수집\n주소 디코드"
+  SCH: "② Row buffer 추적\ntiming 체크"
+  OPT: "③ FR-FCFS 재배치\nRefresh / Write batching"
+  CMD: "④ 명령 발행\n(ACT/RD/WR/PRE/REF)"
+  RQ -> SCH
+  SCH -> OPT
+  OPT -> CMD
 }
 DRAM: "output side (DRAM)" {
   DEV: "DRAM device(s)"
 }
-CPU -> MC1
-GPU -> MC1
-DMA -> MC1
-DISP -> MC1
-ISP -> MC1
-MC8 -> DEV: "DDR phy / CA bus"
+HOST -> RQ: "AXI"
+CMD -> DEV: "DDR phy / CA bus"
 ```
 
 ### 왜 이렇게 설계됐는가 — Design rationale
@@ -311,21 +299,22 @@ QoS 메커니즘:
      - Underrun(화면 깨짐) 방지
 
 MC Arbiter 구조 (간략):
-  +--------+  +--------+  +--------+
-  | CPU    |  | GPU    |  | Display|
-  | Port   |  | Port   |  | Port   |
-  +---+----+  +---+----+  +---+----+
-      |           |           |
-  +---+-----------+-----------+----+
-  |         QoS Arbiter            |
-  |  - Priority check              |
-  |  - Bandwidth regulation        |
-  |  - Aging / Urgent              |
-  +--------+-----------------------+
-           |
-  +--------+---+
-  | Cmd Queue   |  ← 여기서 FR-FCFS 스케줄링 적용
-  +-------------+
+
+```d2
+direction: down
+
+MASTERS: "Masters" {
+  direction: right
+  CPU: "CPU Port"
+  GPU: "GPU Port"
+  DISP: "Display Port"
+}
+ARB: "QoS Arbiter\n· Priority check\n· Bandwidth regulation\n· Aging / Urgent"
+CQ: "Cmd Queue\n(FR-FCFS 스케줄링)"
+CPU -> ARB
+GPU -> ARB
+DISP -> ARB
+ARB -> CQ
 ```
 
 ### 5.5 Read-Write Turnaround — 숨은 성능 병목
@@ -489,7 +478,7 @@ DDR5 초기화 차이:
 ### 5.10 Power Management — 전력 상태 머신
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> Active

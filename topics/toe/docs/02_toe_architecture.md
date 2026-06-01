@@ -103,15 +103,15 @@ RX -- MAC
 ```d2
 direction: down
 
-S1: "① DCMAC → RX Path 첫 stage\nEthernet Frame 인계"
-S2: "② IP / TCP Checksum 검증\n실패 시 drop + counter 증가"
-S3: "③ 4-tuple 추출 → Connection Table lookup\n{srcIP, srcPort, dstIP, dstPort}\nO(1) hash · SRAM\n→ conn_id=0x4F2, state=ESTABLISHED\nrcv_nxt=10000, rcv_wnd=65535"
-S4: "④ Sequence 검증\nseg.seq (=10000) == rcv_nxt? ✓\n→ in-order, accept"
-S5: "⑤ TCP state 처리\nrcv_nxt += 256 → 10256\nACK 생성 트리거 (delayed ack)\npeer 의 ack=20000 → snd_una 갱신\nretx buffer 의 [snd_una, 20000) 해제"
-S6: "⑥ Reassembly\n(이번엔 in-order 라 OOO 버퍼 거치지 않음)"
-S7: "⑦ DMA TOE buf → Host buf\nhost RX descriptor ring 에 entry 추가"
-S8: "⑧ host 알림 (IRQ 또는 polling)"
-APP: "App: read() return 256"
+S1: "① DCMAC RX 인계"
+S2: "② Checksum 검증"
+S3: "③ Conn Lookup · 4-tuple → SRAM"
+S4: "④ Seq 검증 · rcv_nxt 비교"
+S5: "⑤ TCP State · rcv_nxt·snd_una 갱신"
+S6: "⑥ Reassembly · OOO 버퍼"
+S7: "⑦ DMA · TOE→Host"
+S8: "⑧ Host 알림 · IRQ/polling"
+APP: "App · read() 256"
 S1 -> S2
 S2 -> S3: "pass"
 S3 -> S4: "hit"
@@ -214,14 +214,14 @@ Connection Table entry 가 담는 필드들이 곧 TOE 의 "stateful" 을 정의
 ```d2
 direction: down
 
-APP: "애플리케이션 데이터 (예: 64KB)"
-T1: "**1. DMA**\n호스트 → TOE 버퍼"
-T2: "**2. TCP Segmentation**\n64KB → MSS 단위 분할\nMSS = 1460B (일반적)\n→ 약 45 개 세그먼트"
-T3: "**3. TCP 헤더 생성**\nSeq Number 할당\nWindow Size 삽입\nFlags 설정"
-T4: "**4. IP 헤더 생성**\nSrc / Dst IP\nTotal Length\nTTL, Protocol=TCP"
-T5: "**5. Checksum 계산**\nTCP Checksum\nIP Header Checksum"
-T6: "**6. 재전송 버퍼 사본 보관**\n(ACK 올 때까지 유지)"
-MAC: "MAC 로 전송 (Ethernet Frame)"
+APP: "App 데이터 (64KB)"
+T1: "1. DMA · Host→TOE"
+T2: "2. Segmentation · MSS 분할"
+T3: "3. TCP Header · Seq/Win/Flags"
+T4: "4. IP Header · Src/Dst/TTL"
+T5: "5. Checksum · TCP+IP"
+T6: "6. Retx 버퍼 · 사본 보관"
+MAC: "MAC 전송"
 APP -> T1
 T1 -> T2
 T2 -> T3
@@ -236,13 +236,13 @@ T6 -> MAC
 ```d2
 direction: down
 
-MAC: "MAC 에서 Ethernet Frame 수신"
-R1: "**1. IP / TCP Checksum 검증**\n불일치 → 폐기"
-R2: "**2. Connection Lookup**\n(SrcIP:Port, DstIP:Port)\n→ Connection Table 에서\n해당 연결 상태 조회"
-R3: "**3. Sequence Number 검증**\n기대 범위 내?\n중복? 순서 벗어남?"
-R4: "**4. TCP 상태 처리**\nACK 처리 (TX 버퍼 해제)\nWindow Update\nSYN / FIN / RST 처리"
-R5: "**5. Reassembly**\n순서대로 조합\nOut-of-Order 버퍼링"
-R6: "**6. DMA**\nTOE 버퍼 → 호스트"
+MAC: "MAC 수신"
+R1: "1. Checksum 검증"
+R2: "2. Conn Lookup · 4-tuple"
+R3: "3. Seq 검증 · 범위/중복"
+R4: "4. TCP State · ACK/Win/FSM"
+R5: "5. Reassembly · OOO 버퍼링"
+R6: "6. DMA · TOE→Host"
 MAC -> R1
 R1 -> R2
 R2 -> R3
@@ -403,22 +403,23 @@ direction: right
 
 CP: "Control Path — SW (CPU)" {
   direction: down
-  C1: "연결 수립/해제\n(3-way / 4-way handshake)"
-  C2: "연결 정책 설정"
+  C1: "연결 수립/해제\n(3-way / 4-way)"
+  C2: "연결 정책\n설정"
   C3: "예외 처리"
   C4: "통계 / 모니터링"
   CN: "빈도: 연결당 1-2 회\n지연 허용: ms 단위"
 }
 DP: "Data Path — HW (TOE)" {
   direction: down
-  D1: "Checksum 계산 / 검증"
-  D2: "Segmentation / Reassembly"
-  D3: "ACK 생성 / 처리"
-  D4: "재전송 (타이머 + 재전송)"
-  D5: "흐름 / 혼잡 제어"
+  D1: "Checksum\n계산/검증"
+  D2: "Segmentation\nReassembly"
+  D3: "ACK\n생성/처리"
+  D4: "재전송\n(타이머+재전송)"
+  D5: "흐름/혼잡\n제어"
   D6: "DMA 전송"
-  DN: "빈도: 패킷당 매번\n지연 요구: ns ~ μs 단위"
+  DN: "빈도: 패킷당 매번\n지연 요구: ns~μs"
 }
+CP -> DP: { style.opacity: 0 }
 ```
 
 핵심: "자주 발생하는 Data Path 를 HW 로, 드문 Control Path 를 SW 로".
@@ -426,7 +427,7 @@ DP: "Data Path — HW (TOE)" {
 ### 5.7 TOE 와 DCMAC 연동 (이력서 연결)
 
 ```d2
-direction: right
+direction: down
 HOST: "Host\n(CPU)"
 TOE: "TOE Engine"
 DCMAC: "DCMAC\n(AMD MAC)"

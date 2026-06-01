@@ -61,10 +61,10 @@
 
 ```d2
 direction: down
-UPPER: "Upper Layer\n(TOE / IP)"
-DCMAC: "DCMAC\n(Ethernet MAC)\n- Frame 생성\n- FCS 계산/검증\n- Flow Control\n- Rate Adapt" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-PHY: "Ethernet PHY\n(SerDes, Optic)"
-LINK: "Ethernet Link\n(100G / 200G / 400G)" { shape: circle }
+UPPER: "Upper Layer (TOE / IP)"
+DCMAC: "DCMAC (Ethernet MAC) — Frame 생성, FCS 계산/검증, Flow Control, Rate Adapt" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+PHY: "Ethernet PHY (SerDes, Optic)"
+LINK: "Ethernet Link (100G / 200G / 400G)" { shape: circle }
 
 UPPER -> DCMAC: "AXI-Stream"
 DCMAC -> PHY: "PCS / PMA"

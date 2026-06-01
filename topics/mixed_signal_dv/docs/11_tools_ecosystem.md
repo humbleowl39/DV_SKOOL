@@ -107,20 +107,25 @@ DDR5/PCIe Gen5+ 등 고속 인터페이스 system 검증용:
 
 ## 7. 도구 선택 결정 트리
 
-```
-검증 task 시작
-    │
-    ▼
-SerDes / DDR5 channel · eye sign-off?
-    ├─ Yes → IBIS-AMI 도구 (MATLAB SerDes, ADS, HyperLynx)
-    └─ No
-        │
-        ▼
-    Block 크기 (transistor 수)
-    ├─ < 1k → SPICE (HSPICE, Spectre)
-    ├─ 1k~10k → Fast SPICE
-    ├─ 10k~1M → AMS (VCS AMS / AMS Designer / Questa AMS)
-    └─ > 1M → RNM (VCS / Xcelium / Questa) + critical block AMS
+```d2
+direction: down
+
+start: "검증 task 시작"
+q_serdes: "SerDes / DDR5 channel · eye sign-off?" {shape: diamond}
+ibis_ami: "IBIS-AMI 도구\n(MATLAB SerDes, ADS, HyperLynx)"
+q_size: "Block 크기\n(transistor 수)" {shape: diamond}
+spice: "SPICE\n(HSPICE, Spectre)\n< 1k"
+fast_spice: "Fast SPICE\n1k ~ 10k"
+ams: "AMS\n(VCS AMS / AMS Designer / Questa AMS)\n10k ~ 1M"
+rnm: "RNM\n(VCS / Xcelium / Questa)\n+ critical block AMS\n> 1M"
+
+start -> q_serdes
+q_serdes -> ibis_ami: "Yes"
+q_serdes -> q_size: "No"
+q_size -> spice
+q_size -> fast_spice
+q_size -> ams
+q_size -> rnm
 ```
 
 ## 8. 라이센스 / 비용 고려

@@ -177,31 +177,36 @@ DRV0 -> SB: "completed_wqe_ap.write(cmd)"
 ### 4.2 노드 간 통신 모델
 
 ```d2
-direction: right
+direction: down
 
-Node0: "Node 0" {
-  H0: "Host Mem 0"
-  IP0: "IP Shell 0"
-  H0 <-> IP0
+NODES: "두 노드" {
+  direction: right
+  Node0: "Node 0" {
+    H0: "Host Mem 0"
+    IP0: "IP Shell 0"
+    H0 <-> IP0
+  }
+  Node1: "Node 1" {
+    H1: "Host Mem 1"
+    IP1: "IP Shell 1"
+    H1 <-> IP1
+  }
+  Node0.IP0 <-> Node1.IP1: "Network"
 }
 
-Node1: "Node 1" {
-  H1: "Host Mem 1"
-  IP1: "IP Shell 1"
-  H1 <-> IP1
+CROSS: "횡단 검증 env" {
+  direction: right
+  Net: "ntw_env"
+  Data: "data_env\n1side/2side/imm compare"
+  Dma: "dma_env\nc2h_tracker"
 }
 
-Net: "ntw_env"
-Data: "data_env\n1side/2side/imm compare"
-Dma: "dma_env\nc2h_tracker"
-
-Node0.IP0 <-> Node1.IP1: "Network"
-Node0.IP0 -> Net: "monitor" { style.stroke-dash: 4 }
-Node1.IP1 -> Net: "monitor" { style.stroke-dash: 4 }
-Node0.H0 -> Data: { style.stroke-dash: 4 }
-Node1.H1 -> Data: { style.stroke-dash: 4 }
-Node0.IP0 -> Dma: "C2H DMA" { style.stroke-dash: 4 }
-Node1.IP1 -> Dma: "C2H DMA" { style.stroke-dash: 4 }
+NODES.Node0.IP0 -> CROSS.Net: "monitor" { style.stroke-dash: 4 }
+NODES.Node1.IP1 -> CROSS.Net: "monitor" { style.stroke-dash: 4 }
+NODES.Node0.H0 -> CROSS.Data: { style.stroke-dash: 4 }
+NODES.Node1.H1 -> CROSS.Data: { style.stroke-dash: 4 }
+NODES.Node0.IP0 -> CROSS.Dma: "C2H DMA" { style.stroke-dash: 4 }
+NODES.Node1.IP1 -> CROSS.Dma: "C2H DMA" { style.stroke-dash: 4 }
 ```
 
 - **data_env** — 양 노드의 호스트 메모리 영역을 비교 (write/read/send/recv 정합성)
@@ -271,26 +276,34 @@ TB 는 `cfg.num_nodes` 만큼 `vrdma_node_env` 를 build 단계에서 생성합�
 
 `rdma_basic_test` 가 `num_nodes=2` 로 실행될 때 인스턴스화되는 컴포넌트 (간략):
 
-```
-uvm_test_top (rdma_basic_test)
-└── env (vrdmatb_top_env)
-    ├── node[0] (vrdma_node_env)
-    │   ├── host_env (vrdma_host_env)
-    │   ├── ipshell_env (vrdma_ipshell_env)
-    │   └── agent (vrdma_agent)
-    │       ├── driver (vrdma_driver)
-    │       ├── sequencer (vrdma_sequencer)
-    │       └── handlers (cq_handler, send/recv/write/read_handler)
-    ├── node[1] (vrdma_node_env)
-    │   └── ... (동일)
-    ├── ntw_env (vrdma_ntw_env)
-    │   └── pkt_monitor[0,1] (vrdma_pkt_monitor)
-    ├── data_env (vrdma_data_env)
-    │   ├── 1side_compare, 2side_compare, imm_compare
-    │   └── data_scoreboard, cqe_validation_checker
-    ├── dma_env (vrdma_dma_env)
-    │   └── c2h_tracker
-    └── top_vseqr (vrdma_top_virtual_sequencer)
+```d2
+direction: down
+
+TOP: "uvm_test_top\n(rdma_basic_test)" {
+  ENV: "env\n(vrdmatb_top_env)" {
+    N0: "node[0]\n(vrdma_node_env)" {
+      H0: "host_env\n(vrdma_host_env)"
+      I0: "ipshell_env\n(vrdma_ipshell_env)"
+      A0: "agent\n(vrdma_agent)" {
+        DRV: "driver\n(vrdma_driver)"
+        SQR: "sequencer\n(vrdma_sequencer)"
+        HND: "handlers\n(cq/send/recv/write/read_handler)"
+      }
+    }
+    N1: "node[1]\n(vrdma_node_env)\n— 동일 구조 —"
+    NTW: "ntw_env\n(vrdma_ntw_env)" {
+      PM: "pkt_monitor[0,1]\n(vrdma_pkt_monitor)"
+    }
+    DATA: "data_env\n(vrdma_data_env)" {
+      CMP: "1side / 2side / imm_compare"
+      DSB: "data_scoreboard\ncqe_validation_checker"
+    }
+    DMA: "dma_env\n(vrdma_dma_env)" {
+      C2H: "c2h_tracker"
+    }
+    VSEQR: "top_vseqr\n(vrdma_top_virtual_sequencer)"
+  }
+}
 ```
 
 ---

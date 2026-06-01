@@ -283,17 +283,15 @@ Continuous Stream (오디오 DAC):
 - **TDEST**: 라우팅 목적지 — "이 데이터가 어디로 가야 하는가?"
 
 ```d2
-direction: right
+direction: down
 
 MA: "Master A"
 MB: "Master B"
-IC: "Interconnect\nTDEST 라우팅 +\nTID 인터리브"
-S0: "Slave 0\n(포트 0)"
-S1: "Slave 1\n(포트 1)"
-MA -> IC: "TDEST=0, TID=0"
-MA -> IC: "TDEST=1, TID=0"
-MB -> IC: "TDEST=0, TID=1"
-MB -> IC: "TDEST=1, TID=1"
+IC: "Interconnect\n(TDEST 라우팅 + TID 인터리브)"
+S0: "Slave 0 (포트 0)"
+S1: "Slave 1 (포트 1)"
+MA -> IC: "TDEST=0/1, TID=0"
+MB -> IC: "TDEST=0/1, TID=1"
 IC -> S0: "TDEST=0"
 IC -> S1: "TDEST=1"
 ```

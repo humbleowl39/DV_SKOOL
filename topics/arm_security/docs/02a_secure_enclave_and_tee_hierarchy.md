@@ -328,24 +328,33 @@ DRM (Digital Rights Management) 은 TEE 의 가장 직관적인 활용 사례. *
 
 #### ARM TZMP (TrustZone Multimedia Play) 흐름
 
-```
-┌─────────────┐   ┌──────────────┐   ┌──────────────────────────────────────┐
-│ Non-secure  │   │   Secure     │   │       Protected Media Pipeline       │
-│ World       │   │   World      │   │       (Secure 전용 HW 파이프라인)     │
-│             │   │              │   │                                      │
-│ ┌─────────┐ │   │ ┌──────────┐│   │ ┌──────┐ ┌────────┐ ┌────────────┐  │
-│ │Encrypted│─┼──►│ │ Decrypt  ││──►│ │Decode│→│Picture │→│  Display   │──►Panel/
-│ │Stream   │ │   │ │          ││   │ │      │ │Quality │ │  Engine    │  HDMI
-│ └─────────┘ │   │ └──────────┘│   │ └──────┘ └────────┘ └────────────┘  │
-│             │   │              │   │                                      │
-│ ┌─────────┐ │   │              │   │  ※ 파이프라인의 모든 버퍼 메모리가   │
-│ │Metadata │─┼─ ─┼─ ─ ─ ─ ─ ─ ─┼──►│    TZASC에 의해 Secure 전용으로 보호 │
-│ └─────────┘ │   │              │   │    Non-secure 접근 시 DECERR         │
-│             │   │              │   │                                      │
-│ ┌─────────┐ │   │              │   │  Display Engine도 Secure Master로    │
-│ │  OSD    │─┼─ ─┼─ ─ ─ ─ ─ ─ ─┼──►│  설정 → HDMI까지 보안 체인 유지     │
-│ └─────────┘ │   │              │   │                                      │
-└─────────────┘   └──────────────┘   └──────────────────────────────────────┘
+```d2
+direction: down
+
+NS: "Non-secure World" {
+  direction: right
+  ESTREAM: "Encrypted Stream"
+  META: "Metadata"
+  OSD: "OSD"
+}
+SW: "Secure World" {
+  DEC: "Decrypt"
+}
+PMP: "Protected Media Pipeline\n(TZASC 보호 — NS 접근 DECERR)" {
+  direction: right
+  DECODE: "Decode"
+  PQ: "Picture Quality"
+  DISP: "Display Engine"
+  HDMI: "Panel / HDMI"
+  DECODE -> PQ
+  PQ -> DISP
+  DISP -> HDMI
+}
+
+NS.ESTREAM -> SW.DEC
+SW.DEC -> PMP.DECODE
+NS.META -> PMP.DECODE: { style.stroke-dash: 4 }
+NS.OSD -> PMP.DISP: { style.stroke-dash: 4 }
 ```
 
 #### HW 보안 인프라의 역할 (Module 02 연결)

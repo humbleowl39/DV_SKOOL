@@ -78,7 +78,7 @@ vs _ECRC error_:
 ### 한 장 그림 — 송신 path 와 layer 별 wrapper
 
 ```d2
-direction: right
+direction: down
 
 TX: "Sender — wrapper 추가" {
   direction: down
@@ -100,8 +100,8 @@ RX: "Receiver — wrapper 제거" {
   RXDLL -> RXTL
   RXTL -> RXAPP
 }
-TXPL -> RXPL: "wire"
-RXDLL -> TXDLL: "ACK/NAK" { style.stroke-dash: 4 }
+TX.TXPL -> RX.RXPL: "wire"
+RX.RXDLL -> TX.TXDLL: "ACK/NAK" { style.stroke-dash: 4 }
 ```
 
 세 layer 가 각자의 wrapper 를 추가/제거. **wrapper 추가는 송신, 제거는 수신** — 이 layered 구조 덕에 디버그가 직선화됩니다.
@@ -125,21 +125,27 @@ PCIe 가 풀어야 하는 세 문제는 _서로 다른 시간 척도_ 에 있습
 ```d2
 direction: down
 
-CORE: "Device Core\nhost PA 0x10000 에 64 B write 요청"
-TXTL: "TL (tx)\nMWr TLP 생성 (Fmt=10, Type=00000,\nLength=16 DW, Addr=0x10000, payload 64 B)\nFC credit 차감 (P), ECRC 옵션"
-TXDLL: "DLL (tx)\nSeq# = 0x123, LCRC over [Seq# + TLP]\nReplay Buffer 에 저장"
-TXPL: "PL (tx)\nSTP + TLP + END framing\n128b/130b + scramble + lane stripe\nSerDes → wire"
+TX: "Sender" {
+  direction: down
+  CORE: "Device Core\nhost PA 0x10000 에 64 B write 요청"
+  TXTL: "TL (tx)\nMWr TLP 생성\nFC credit 차감 (P), ECRC 옵션"
+  TXDLL: "DLL (tx)\nSeq# = 0x123, LCRC 계산\nReplay Buffer 에 저장"
+  TXPL: "PL (tx)\nSTP/END framing\n128b/130b + scramble + lane stripe\nSerDes → wire"
+  CORE -> TXTL
+  TXTL -> TXDLL
+  TXDLL -> TXPL
+}
 WIRE: "Wire" { shape: oval }
-RXPL: "PL (rx)\nCDR · lane de-stripe\n130b→128b decode · descramble · frame detect"
-RXDLL: "DLL (rx)\nLCRC 검증\nOK → ACK DLLP / FAIL → NAK DLLP"
-RXTL: "TL (rx)\nFC credit 반환 · TLP 처리\nmemory write 적용"
-CORE -> TXTL
-TXTL -> TXDLL
-TXDLL -> TXPL
-TXPL -> WIRE
-WIRE -> RXPL
-RXPL -> RXDLL
-RXDLL -> RXTL
+RX: "Receiver" {
+  direction: down
+  RXPL: "PL (rx)\nCDR · lane de-stripe\n130b→128b decode · descramble"
+  RXDLL: "DLL (rx)\nLCRC 검증\nOK → ACK DLLP / FAIL → NAK DLLP"
+  RXTL: "TL (rx)\nFC credit 반환 · TLP 처리\nmemory write 적용"
+  RXPL -> RXDLL
+  RXDLL -> RXTL
+}
+TX.TXPL -> WIRE
+WIRE -> RX.RXPL
 ```
 
 ### 단계별 의미
@@ -225,15 +231,17 @@ PHY 의 BER 이 아무리 낮아도 0 은 아니기 때문에, 언젠가는 단 
 ### 4.3 디버그 흐름의 직선화
 
 ```d2
-direction: down
+direction: right
 
 S: "증상 발견"
 Q: "어느 layer 의 일인가?"
+
 TL1: "TLP type / address 잘못 → TL"
 DLL1: "LCRC error / replay 빈발 → DLL"
-PL1: "Link 자체가 안 올라옴 → PL (LTSSM)"
-BAR1: "Specific BAR 만 fail → TL (header field) + Module 06"
-AER1: "AER counter 증가 → AER mapping → 해당 layer"
+PL1: "Link 자체가 안 올라옴\n→ PL (LTSSM)"
+BAR1: "Specific BAR 만 fail\n→ TL (header field) + Module 06"
+AER1: "AER counter 증가\n→ AER mapping → 해당 layer"
+
 S -> Q
 Q -> TL1
 Q -> DLL1
@@ -256,8 +264,8 @@ direction: down
 APP: "Application / Device Core\n(driver, NIC engine, …)"
 TL: "Transaction Layer\n· TLP 생성/분해 (header + payload + ECRC)\n· Flow Control credit 관리\n· TLP type / routing / address translation\n· Ordering rules (P/NP/Cpl)"
 DLL: "Data Link Layer\n· Sequence Number 부여\n· LCRC 계산 / 검증\n· ACK/NAK 송신, Replay Buffer\n· DLLP (FC update, ACK/NAK, Power)\n· Link state (DL_Inactive / Init / Active)"
-PL: "Physical Layer\n· Framing (STP/END, SDP/EDS)\n· Encoding (8b/10b → 128b/130b → PAM4/FLIT)\n· Scrambling, Lane stripe\n· Serializer/Deserializer (SerDes)\n· LTSSM (link training)\n· Equalization, CDR\n· Ordered Sets (TS1/TS2, EIOS, …)"
-APP -> TL: "memory request, completion, message"
+PL: "Physical Layer\n· Framing (STP/END, SDP/EDS)\n· Encoding (8b/10b → 128b/130b → PAM4/FLIT)\n· Scrambling, Lane stripe\n· SerDes (Serializer/Deserializer)\n· LTSSM (link training)\n· Equalization, CDR\n· Ordered Sets (TS1/TS2, EIOS, …)"
+APP -> TL: "memory request,\ncompletion, message"
 TL -> DLL: "TLP"
 DLL -> PL: "TLP + Seq# + LCRC, DLLP"
 ```
@@ -268,10 +276,10 @@ DLL -> PL: "TLP + Seq# + LCRC, DLLP"
 direction: down
 
 CORE: "from device core"
-BLD: "TLP Builder\nheader, payload, ECRC"
+BLD: "TLP Builder\nheader · payload · ECRC"
 FC: "Flow Control\ncredit available 확인 후 송신"
 ORD: "Ordering\nP / NP / Cpl 규칙"
-RT: "TLP Routing / Type\nMRd / MWr / CfgRd / CfgWr / Cpl / Msg"
+RT: "TLP Routing / Type\nMRd · MWr · CfgRd · CfgWr · Cpl · Msg"
 DLL: "Data Link Layer"
 CORE -> BLD
 BLD -> FC
@@ -294,17 +302,13 @@ RT -> DLL: "TLP"
 direction: down
 
 INTL: "from TL: TLP"
-SEQ: "Seq# 부여\n12-bit sequence number 0..4095"
+SEQ: "Seq# 부여\n12-bit · 0..4095"
 LCRC: "LCRC 계산\n32-bit Link CRC"
-REPLAY: "Replay Buffer 저장\nACK 받기까지 보관"
-ACK: "ACK/NAK 처리\n받은 순서대로 ACK, error 시 NAK + replay"
-DLLP: "DLLP 송신\nFC update, ACK/NAK, PM_*"
+REPLAY: "Replay Buffer 저장\nACK 받기까지"
+ACK: "ACK/NAK 처리"
+DLLP: "DLLP 송신\nFC update · ACK/NAK · PM_*"
 PL: "Physical Layer"
-INTL -> SEQ
-SEQ -> LCRC
-LCRC -> REPLAY
-REPLAY -> ACK
-ACK -> DLLP
+INTL -> SEQ -> LCRC -> REPLAY -> ACK -> DLLP
 DLLP -> PL: "TLP + Seq# + LCRC, DLLP"
 ```
 
@@ -323,23 +327,19 @@ DLLP -> PL: "TLP + Seq# + LCRC, DLLP"
 ```d2
 direction: down
 
-IN: "from DLL: TLP + Seq# + LCRC, DLLP"
-FRM: "Framing\nSTP/END (Gen1/2), SDP/EDS (Gen3+)"
-SCR: "Scrambling\nLFSR-based, EMI 분산"
-ENC: "Encoding\n8b/10b (Gen1/2) or 128b/130b (Gen3+)"
-STR: "Lane Stripe\nbyte-wise round-robin 분산"
-SD: "SerDes\n직렬화 → differential pair"
-LTSSM: "LTSSM\nlink bring-up, EQ, recovery"
-OS: "Ordered Sets\nTS1/TS2, FTS, EIOS, SKP"
-WIRE: "Wire / connector"
-IN -> FRM
-FRM -> SCR
-SCR -> ENC
-ENC -> STR
-STR -> SD
-SD -> LTSSM
-LTSSM -> OS
-OS -> WIRE: "analog signal"
+IN: "from DLL:\nTLP + Seq# + LCRC, DLLP"
+FRM: "Framing\nSTP/END (Gen1/2)\nSDP/EDS (Gen3+)"
+SCR: "Scrambling\nLFSR-based\nEMI 분산"
+ENC: "Encoding\n8b/10b (Gen1/2)\n128b/130b (Gen3+)"
+STR: "Lane Stripe\nbyte-wise\nround-robin"
+SD: "SerDes\n직렬화\ndifferential pair"
+WIRE: "Wire /\nconnector" { shape: oval }
+
+LTSSM: "LTSSM\n(link bring-up\nEQ · recovery)"
+OS: "Ordered Sets\n(TS1/TS2 · FTS\nEIOS · SKP)"
+
+IN -> FRM -> SCR -> ENC -> STR -> SD -> WIRE: "analog signal"
+LTSSM -> OS -> WIRE: { style.opacity: 0.0 }
 ```
 
 | 기능 | 핵심 |

@@ -87,38 +87,28 @@
 ```d2
 direction: down
 
-SEND: "Sender 가 만든 패킷" {
+SEND: "Sender" {
   direction: right
-  S_LRH: "LRH"
+  S_LRH: LRH
   S_GRH: "GRH?"
-  S_BTH: "BTH"
+  S_BTH: BTH
   S_XTH: "xTH?"
-  S_PAY: "Payload"
-  S_ICRC: "ICRC"
-  S_VCRC: "VCRC"
-  S_LRH -- S_GRH
-  S_GRH -- S_BTH
-  S_BTH -- S_XTH
-  S_XTH -- S_PAY
-  S_PAY -- S_ICRC
-  S_ICRC -- S_VCRC
+  S_PAY: Payload
+  S_ICRC: ICRC
+  S_VCRC: VCRC
+  S_LRH -- S_GRH -- S_BTH -- S_XTH -- S_PAY -- S_ICRC -- S_VCRC
 }
-SW: "**Switch / Router**\n━━━━━━━━━━━━━━━━━━\nLRH.DLID / VL rewrite 가능\nGRH.HopLmt 감소\nBTH / xTH / Payload 손대지 않음\nVCRC 재계산\nICRC 그대로 보존 ⭐"
-RECV: "Receiver 가 받는 패킷 (BTH 이후는 sender 가 보낸 그대로)" {
+SW: "Switch · DLID/VL 재작성 · VCRC 재계산 · ICRC 보존 ⭐"
+RECV: "Receiver" {
   direction: right
   R_LRH: "LRH'"
   R_GRH: "GRH'"
-  R_BTH: "BTH"
+  R_BTH: BTH
   R_XTH: "xTH?"
-  R_PAY: "Payload"
-  R_ICRC: "ICRC"
+  R_PAY: Payload
+  R_ICRC: ICRC
   R_VCRC: "VCRC'"
-  R_LRH -- R_GRH
-  R_GRH -- R_BTH
-  R_BTH -- R_XTH
-  R_XTH -- R_PAY
-  R_PAY -- R_ICRC
-  R_ICRC -- R_VCRC
+  R_LRH -- R_GRH -- R_BTH -- R_XTH -- R_PAY -- R_ICRC -- R_VCRC
 }
 SEND -> SW
 SW -> RECV
@@ -240,19 +230,16 @@ LNK -> PHY
 ```d2
 direction: right
 
-LRH: "LRH\n8B"
-GRH: "GRH?\n40B"
-BTH: "BTH\n12B"
-XTH: "xTH?\nvariable"
-PAY: "Payload\n0..MTU"
-ICRC: "ICRC\n4B"
-VCRC: "VCRC\n2B"
-LRH -- GRH
-GRH -- BTH
-BTH -- XTH
-XTH -- PAY
-PAY -- ICRC
-ICRC -- VCRC
+H1: "LRH · 8B"
+H2: "GRH? · 40B"
+H3: "BTH · 12B"
+H4: "xTH? · var"
+H5: "Payload · 0..MTU"
+H6: "ICRC · 4B"
+H7: "VCRC · 2B"
+H1 -- H2 -- H3 -- H4
+H5 -- H6 -- H7
+H4 -- H5: { style.opacity: 0.0 }
 ```
 
 - **LRH** — Local Route Header (필수)
@@ -379,13 +366,13 @@ GRH 가 들어가는 조건 (C8-1):
 ### 5.4 ICRC vs VCRC — 두 CRC 가 분리된 이유
 
 ```d2
-direction: right
+direction: down
 
 SND: "sender"
 SW: "Switch / Router" {
   direction: down
   MUT: "LRH 의 SLID / DLID 변경 가능\nVL field 도 매핑 가능"
-  VR: "↓ VCRC 재계산\n✓ ICRC 는 그대로"
+  VR: "VCRC 재계산\nICRC 는 그대로 ⭐"
   MUT -> VR
 }
 RCV: "receiver"
@@ -501,11 +488,11 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
 ### 5.8 Link 상태 머신
 
 ```d2
-direction: right
+direction: down
 
 INITIAL { shape: circle; style.fill: "#333" }
 INITIAL -> Down
-Down -> Initialize: "PortInfo\nNoStateChange"
+Down -> Initialize: "PortInfo NoStateChange"
 Initialize -> Arm: "FC packet exchange"
 Arm -> Active: "Mgmt cmd"
 Active -> Down: "error / PortInfo Down"

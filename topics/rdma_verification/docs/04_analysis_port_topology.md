@@ -93,9 +93,10 @@ RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/
 ### 한 장 그림 — 5 AP + derived AP
 
 ```d2
-direction: right
+direction: down
 
 DRV: "vrdma_driver (방송국) — 5 채널 broadcast" {
+  direction: right
   AP1: issued_wqe_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
   AP2: "completed_wqe_ap\nErrQP 차단" { style.stroke: "#c0392b"; style.stroke-width: 3 }
   AP3: cqe_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
@@ -107,25 +108,28 @@ CQH: "vrdma_cq_handler (derived)" {
   APD: cqe_validation_cqe_ap { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 }
 
-HND: "*_handler"
-C123: "1side / 2side / imm"
-CT: c2h_tracker
-SB: data_scoreboard
-CV: cqe_validation_checker
-CC: cqe_cov_collector
+SUBS: "Subscriber" {
+  direction: right
+  HND: "*_handler"
+  C123: "1side / 2side / imm"
+  CT: c2h_tracker
+  SB: data_scoreboard
+  CV: cqe_validation_checker
+  CC: cqe_cov_collector
+}
 
-DRV.AP1 -> HND
-HND -> C123
-HND -> CT
-DRV.AP2 -> SB
-DRV.AP3 -> C123
-DRV.AP4 -> C123
-DRV.AP4 -> CT
-DRV.AP4 -> SB
-DRV.AP5 -> CT
-DRV.AP5 -> SB
-CQH.APD -> CV
-CQH.APD -> CC
+DRV.AP1 -> SUBS.HND
+SUBS.HND -> SUBS.C123
+SUBS.HND -> SUBS.CT
+DRV.AP2 -> SUBS.SB
+DRV.AP3 -> SUBS.C123
+DRV.AP4 -> SUBS.C123
+DRV.AP4 -> SUBS.CT
+DRV.AP4 -> SUBS.SB
+DRV.AP5 -> SUBS.CT
+DRV.AP5 -> SUBS.SB
+CQH.APD -> SUBS.CV
+CQH.APD -> SUBS.CC
 ```
 
 ### 왜 이 디자인인가 — Design rationale

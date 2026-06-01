@@ -41,18 +41,25 @@ SPICE의 계산 복잡도는 회로 규모 N에 대해 O(N²) ~ O(N³)에 가깝
 
 정리하면, 디지털 sim만으로는 전압을 볼 수 없고 SPICE만으로는 전체 칩 규모를 감당할 수 없습니다. 이 두 가지 한계를 동시에 돌파하는 접근이 **Mixed-Signal Simulation**입니다. 핵심 아이디어는 디지털과 아날로그를 같은 시뮬레이션 안에서 동시에 돌리되, **각 영역에 맞는 알고리즘을 사용**하는 것입니다.
 
-```
-       [전통적 분리 방식]                    [Mixed-Signal 방식]
+```d2
+direction: right
 
-  ┌──────────────────┐                ┌──────────────────────────┐
-  │ Digital sim only │                │ Digital region │ Analog  │
-  │ (sense amp 못 검증) │              │ (event-driven) │ (SPICE) │
-  └──────────────────┘                │       ↕ Connect module    │
-  ┌──────────────────┐                │       ↕                   │
-  │ SPICE sim only   │                │ One unified simulation    │
-  │ (full chip 불가) │                │                          │
-  └──────────────────┘                └──────────────────────────┘
-       ✗                                       ✓
+traditional: "전통적 분리 방식 ✗" {
+  style.fill: "#fce4ec"
+  digital_only: "Digital sim only\n(sense amp 못 검증)"
+  spice_only: "SPICE sim only\n(full chip 불가)"
+}
+
+mixed: "Mixed-Signal 방식 ✓" {
+  style.fill: "#e8f5e9"
+  digital_region: "Digital region\n(event-driven)"
+  analog_region: "Analog\n(SPICE)"
+  connect: "Connect module"
+  unified: "One unified simulation"
+  digital_region -> connect
+  analog_region -> connect
+  connect -> unified
+}
 ```
 
 이 통합에는 두 가지 방식이 있습니다. 하나는 **AMS (Analog Mixed-Signal Simulation)**로, digital 시뮬레이터와 SPICE 시뮬레이터를 connect module로 연결해 함께 돌리는 방식입니다. 정확도는 높지만 SPICE 부분이 병목이 되어 느립니다. 다른 하나는 **RNM (Real Number Modeling)**으로, SPICE를 쓰지 않고 디지털 시뮬레이터 안에서 아날로그 동작을 실수(real) 값을 사용하는 함수로 근사합니다. 속도는 훨씬 빠르지만 모델을 잘 작성해야 정확도를 담보할 수 있습니다. 자세한 비교는 Ch02에서 다룹니다.

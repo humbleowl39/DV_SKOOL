@@ -71,11 +71,11 @@ direction: down
 MC: "Memory Controller (logic)\nACT/RD/WR/PRE 명령 시퀀스"
 PHY: "PHY" {
   direction: down
-  PLL: "PLL — DDR clock (수 GHz)"
-  TX: "CA TX / DQ TX / DQS TX\ndelay tap → CA/DQ/DQS pin"
+  PLL: "PLL — DDR clock\n(수 GHz)"
+  TX: "CA/DQ/DQS TX\ndelay tap → pin"
   RX: "DQ RX (delay tap + VREF)\nDQS RX (90° shift, read)"
-  ZQ: "ZQ — 임피던스 보정 (240Ω 기준)"
-  ODT: "ODT — RTT_NOM/WR/PARK 종단 저항"
+  ZQ: "ZQ — 임피던스 보정\n(240Ω 기준)"
+  ODT: "ODT —\nRTT_NOM/WR/PARK"
   EQ: "CTLE / DFE — EQ (DDR5)"
   TR: "Training engine\n· WL → Gate → DQ → Eye → VREF\n· DDR5: + CA Training, DFE coef\n· LPDDR5: + WCK2CK, CBT\n· 주기 retraining (PVT drift)\nresult → MR / delay-tap reg"
   PLL -> TX
@@ -356,7 +356,7 @@ DLL이 하는 일:
 목적: 시스템 클럭에서 DDR 클럭과 그 분주/배수 클럭 생성. 원리: VCO(전압제어발진기)의 주파수를 조절하여 기준 주파수에 Lock.
 
 ```d2
-direction: right
+direction: down
 
 SYS: "System CLK"
 PFD: "PFD"

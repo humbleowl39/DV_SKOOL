@@ -16,34 +16,34 @@ digital UVM env에 익숙한 사람이 mixed-signal env로 처음 넘어올 때 
 
 ### 1.1 표준 토폴로지
 
-```text
-UVM TEST
+```d2
+direction: down
 
-   +------ virtual sequencer (analog + reg + irq) ------+
-   +-------------------------+--------------------------+
-                             |
-       +---------------------+-------------------+
-       |                     |                   |
-   +---+----------+   +------+--------+   +------+--------+
-   | analog_agent |   | reg_agent     |   | irq_agent     |
-   |  sequencer   |   |  RAL adapter  |   |  irq monitor  |
-   |  driver (rv) |   |  APB/AXI drv  |   |  irq sample   |
-   |  monitor     |   |  APB/AXI mon  |   |               |
-   +---+----------+   +------+--------+   +------+--------+
-       |                     |                   |
-       v                     v                   v
-   +----------------------------------------------------+
-   |                    DUT WRAPPER                     |
-   |   +------------+         +-----------------+       |
-   |   | RNM analog | <-----> | digital RTL     |       |
-   |   |  model     |         | (FSM, cal, DSP) |       |
-   |   +------------+         +--------+--------+       |
-   |                                   ^                |
-   |                                   |  RAL regs      |
-   +-----------------------------------+----------------+
+uvm_test: "UVM TEST"
+virt_seq: "virtual sequencer\n(analog + reg + irq)"
 
-   scoreboard  <-- analog mon + reg mon + irq mon + ref model
-   coverage    <-- functional cg + assertion cover
+analog_agent: "analog_agent\n· sequencer\n· driver (rv)\n· monitor"
+reg_agent: "reg_agent\n· RAL adapter\n· APB/AXI drv\n· APB/AXI mon"
+irq_agent: "irq_agent\n· irq monitor\n· irq sample"
+
+dut_wrapper: "DUT WRAPPER" {
+  rnm_model: "RNM analog model"
+  digital_rtl: "digital RTL\n(FSM, cal, DSP)"
+  rnm_model <-> digital_rtl
+}
+
+scoreboard: "scoreboard\n← analog mon + reg mon + irq mon + ref model"
+coverage: "coverage\n← functional cg + assertion cover"
+
+uvm_test -> virt_seq
+virt_seq -> analog_agent
+virt_seq -> reg_agent
+virt_seq -> irq_agent
+analog_agent -> dut_wrapper
+reg_agent -> dut_wrapper
+irq_agent -> dut_wrapper
+dut_wrapper -> scoreboard
+dut_wrapper -> coverage
 ```
 
 ### 1.2 구성 요소별 책임
@@ -250,15 +250,24 @@ endinterface
 
 디지털 agent는 driver와 monitor가 대칭입니다. driver는 클록 엣지마다 신호를 구동하고, monitor는 같은 클록 엣지마다 신호를 샘플링합니다. analog agent는 이 대칭이 깨집니다. **driver는 sub-event step으로 연속 파형을 생성하고, monitor는 trigger 이벤트 기반으로 의미 단위 transaction을 수집합니다.** 이 비대칭을 이해하지 못하면 analog agent를 잘못 구현하게 됩니다.
 
-```text
-Digital agent (대칭)
-   driver:   transaction → cycle 단위 신호 → DUT
-   monitor:  DUT의 cycle 단위 신호 → transaction
+```d2
+direction: down
 
-Analog agent (비대칭)
-   driver:   transaction → 시간×값 sub-event 시퀀스 → DUT (수 ns/sample)
-   monitor:  DUT 신호 → trigger 검출 → 의미 단위 transaction
-                                     (zero-cross, settled, eoc 등)
+digital_agent: "Digital agent (대칭)" {
+  d_driver: "driver\ntransaction → cycle 단위 신호"
+  d_dut: "DUT"
+  d_monitor: "monitor\nDUT의 cycle 단위 신호 → transaction"
+  d_driver -> d_dut
+  d_dut -> d_monitor
+}
+
+analog_agent: "Analog agent (비대칭)" {
+  a_driver: "driver\ntransaction → 시간×값 sub-event 시퀀스\n(수 ns/sample)"
+  a_dut: "DUT"
+  a_monitor: "monitor\nDUT 신호 → trigger 검출 → 의미 단위 transaction\n(zero-cross, settled, eoc 등)"
+  a_driver -> a_dut
+  a_dut -> a_monitor
+}
 ```
 
 driver는 "0.0 V에서 1.8 V로 100 ns에 걸쳐 선형 ramp" 같은 파라미터화된 의도(intent)를 sub-event step으로 풀어냅니다. monitor는 "BL 전압이 threshold를 지나는 시점", "출력이 settled 된 시점", "ADC의 eoc 신호가 올라오는 시점" 같은 trigger에 반응해 의미 있는 transaction을 만듭니다. 이 비대칭이 모든 구현 결정에 영향을 줍니다.
@@ -396,12 +405,19 @@ endclass
 
 mixed-signal 시나리오는 보통 **여러 도메인의 동기**가 필요합니다. "register write → analog ramp 시작 → settled까지 대기 → 결과 읽기" 같은 흐름을 한 sequence가 다 짊어지면 가독성·재사용성이 나빠집니다.
 
-```text
-virtual sequence  (scenario)
-   ├─ reg seq         "trim_bg = 0x12"
-   ├─ analog seq      "apply 1 MHz sine, 0.5 V"
-   ├─ reg seq         "enable = 1"
-   └─ wait IRQ "eoc"
+```d2
+direction: down
+
+vseq: "virtual sequence\n(scenario)"
+reg_seq1: "reg seq\n\"trim_bg = 0x12\""
+analog_seq: "analog seq\n\"apply 1 MHz sine, 0.5 V\""
+reg_seq2: "reg seq\n\"enable = 1\""
+wait_irq: "wait IRQ \"eoc\""
+
+vseq -> reg_seq1
+vseq -> analog_seq
+vseq -> reg_seq2
+vseq -> wait_irq
 ```
 
 ### 4.1 4가지 계층
@@ -648,14 +664,20 @@ scoreboard fail의 30~50%가 실제로는 reference 또는 scoreboard bug라고 
 
 UVM scoreboard는 보통 **spec reference**(이상적 동작) 기준으로 비교하고, **golden Spice**(실측에 가까운 모델)는 별도 corner spot check에서 RNM의 신뢰 범위를 확인하는 데 씁니다. 둘을 한 scoreboard에 섞지 마세요.
 
-```text
-Inputs (sequence_item)
-   |
-   +--> reference (spec 수식)        -->  expected
-   |
-   +--> DUT (RNM model)              -->  observed_rnm    <-- nightly regression
-   |
-   +--> DUT (Spice netlist, opt)     -->  observed_spice  <-- spot check only
+```d2
+direction: right
+
+inputs: "Inputs\n(sequence_item)"
+reference: "reference\n(spec 수식)"
+dut_rnm: "DUT (RNM model)"
+dut_spice: "DUT (Spice netlist, opt)"
+expected: "expected"
+observed_rnm: "observed_rnm\n← nightly regression"
+observed_spice: "observed_spice\n← spot check only"
+
+inputs -> reference -> expected
+inputs -> dut_rnm -> observed_rnm
+inputs -> dut_spice -> observed_spice
 ```
 
 > reference 검증은 **verification의 검증**입니다. 새 IP를 받으면 가장 먼저 reference만으로 spec example sweep을 돌리고 결과를 spec PDF의 표·그래프와 손으로 비교하는 것이 첫 단계. 이걸 생략하면 모든 회귀 결과의 의미가 불확실해집니다.

@@ -79,16 +79,14 @@
 ```d2
 direction: down
 
-ENV: "MMU UVM Verification Env" {
-  REQ: "Translation Req Agent\n- Random VA gen\n- Traffic pattern\n  (Seq / Rand / Hot)\n- Burst / Single"
-  PT: "Page Table Memory Model\n- Multi-level PT\n- PTE 동적 변경\n- Fault injection\n  (Invalid PTE)"
-  VSEQ: "Virtual Sequence\n(시나리오 조합)\n예: Random VA + Huge Page\n+ TLB Full + Page Fault"
-  DUT: "DUT (MMU IP)"
-  THIN: "Custom Thin VIP (AXI-S)\n- tdata/valid/ready 만\n- 경량 메모리"
-  MEM: "Memory Response Model\n- Page Walk 응답\n- 지연 모델링\n- 에러 주입"
-  SB: "Dual Scoreboard\n① DUT.PA == FuncModel.PA?\n② DUT.Latency vs IdealModel.Latency\n③ AXI-S handshake compliance"
-  COV: "Functional Coverage\n- Translation × Page size × TLB state\n- Miss Ratio × Traffic pattern\n- Fault type × Recovery"
-}
+REQ: "Translation Req Agent\n- Random VA gen\n- Traffic pattern\n  (Seq / Rand / Hot)\n- Burst / Single"
+PT: "Page Table Memory Model\n- Multi-level PT\n- PTE 동적 변경\n- Fault injection\n  (Invalid PTE)"
+VSEQ: "Virtual Sequence\n(시나리오 조합)\n예: Random VA + Huge Page\n+ TLB Full + Page Fault"
+DUT: "DUT (MMU IP)"
+THIN: "Custom Thin VIP (AXI-S)\n- tdata/valid/ready 만\n- 경량 메모리"
+MEM: "Memory Response Model\n- Page Walk 응답\n- 지연 모델링\n- 에러 주입"
+SB: "Dual Scoreboard\n① DUT.PA == FuncModel.PA?\n② DUT.Latency vs IdealModel.Latency\n③ AXI-S handshake compliance"
+COV: "Functional Coverage\n- Translation × Page size × TLB state\n- Miss Ratio × Traffic pattern\n- Fault type × Recovery"
 REQ -> VSEQ
 PT -> VSEQ
 VSEQ -> DUT

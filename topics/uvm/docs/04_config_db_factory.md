@@ -83,20 +83,32 @@ UVM 환경의 **유연성과 재사용성은 모두 config_db + Factory 에서 �
 ```d2
 direction: down
 
-TEST: "**Test (top of TB)**\nuvm_config_db#(virtual my_if)::set(\nnull, 'uvm_test_top.env.agent.*', 'vif', intf)" { style.stroke: "#137333"; style.stroke-width: 2 }
-BOARD: "게시판\n(config_db)" { shape: cylinder; style.stroke: "#1a73e8"; style.stroke-width: 3 }
-ENV: "**env.build_phase**\nagent = my_agent::type_id::create('agent', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
-FACT: "Factory\ntype override 등록되어 있으면\n다른 클래스 인스턴스 반환" { shape: cylinder; style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
-AGENT: "**agent.build_phase**\ndriver = my_driver::type_id::create('driver', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
-DRV: "**driver.build_phase**\nif (!uvm_config_db#(virtual my_if)::get(\nthis, '', 'vif', vif))\n  uvm_fatal('NOVIF', ...)" { style.stroke: "#137333"; style.stroke-width: 2 }
-HIT: "lookup key =\nthis.get_full_name() =\n'uvm_test_top.env.agent.driver'\n↓\n'uvm_test_top.env.agent.*'\nwildcard 매칭 → 발견"
+SETSIDE: "set → 게시판" {
+  style.stroke: "#5f6368"
+  style.stroke-dash: 2
 
-TEST -> BOARD: "(게시판에 부착)"
-ENV -- FACT: "factory 가\n카탈로그 보고 생성" { style.stroke-dash: 4 }
-ENV -> AGENT
-AGENT -> DRV
-BOARD -> DRV: "조회" { style.stroke-dash: 4 }
-DRV -> HIT
+  TEST: "**Test (top of TB)**\nconfig_db::set(\nnull, '*.env.agent.*',\n'vif', intf)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  BOARD: "게시판\n(config_db)" { shape: cylinder; style.stroke: "#1a73e8"; style.stroke-width: 3 }
+
+  TEST -> BOARD: "(게시판에 부착)"
+}
+
+GETSIDE: "build → get" {
+  style.stroke: "#5f6368"
+  style.stroke-dash: 2
+
+  ENV: "**env.build_phase**\nagent = my_agent::type_id::create\n('agent', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  FACT: "Factory\noverride 있으면 대체" { shape: cylinder; style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
+  AGENT: "**agent.build_phase**\ndriver = my_driver::type_id::create\n('driver', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  DRV: "**driver.build_phase**\nconfig_db::get(this,'','vif',vif)\n→ wildcard 매칭 성공" { style.stroke: "#137333"; style.stroke-width: 2 }
+
+  ENV -- FACT: "factory 카탈로그" { style.stroke-dash: 4 }
+  ENV -> AGENT
+  AGENT -> DRV
+}
+
+SETSIDE -> GETSIDE: { style.opacity: 0.0 }
+SETSIDE.BOARD -> GETSIDE.DRV: "조회" { style.stroke-dash: 4 }
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -120,20 +132,20 @@ DRV -> HIT
 ```d2
 shape: sequence_diagram
 
-TOP: "tb_top\n(module)"
+TOP: "tb_top"
 TST: uvm_test
 ENV: my_env
 AG: my_agent
 DRV: my_driver
-DB: "config_db\n(게시판)"
+DB: config_db
 
-TOP -> DB: "① set(null, '*', 'vif', intf)\n② context=null · inst='*'\nfield='vif' · value=intf"
-TOP -> TST: "③ run_test()"
-TST -> ENV: "④ env = my_env::type_id::create('env', this)"
-ENV -> AG: "⑤ agent = my_agent::type_id::create('agent', this)"
-AG -> DRV: "⑥ driver = my_driver::type_id::create('driver', this)"
-DRV -> DB: "⑧ get(this, '', 'vif', vif)\n⑨ lookup key = 'uvm_test_top.env.agent.driver'"
-DB -> DRV: "⑩ inst='*' wildcard 매칭\nvif <= intf (성공)" { style.stroke-dash: 4 }
+TOP -> DB: "① set(null,'*','vif',intf)"
+TOP -> TST: "② run_test()"
+TST -> ENV: "③ create('env',this)"
+ENV -> AG: "④ create('agent',this)"
+AG -> DRV: "⑤ create('driver',this)"
+DRV -> DB: "⑥ get(this,'','vif',vif)"
+DB -> DRV: "⑦ wildcard 매칭 → 성공" { style.stroke-dash: 4 }
 ```
 
 ### 단계별 의미
