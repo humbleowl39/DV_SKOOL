@@ -20,10 +20,7 @@
 
 ## 1. 신뢰성 보호의 두 영역 — 어디서 무엇을 보호하는가
 
-DRAM 데이터는 두 단계에서 *오류*가 발생할 수 있습니다:
-
-1. **DRAM 셀 내부** — cap leakage, soft error (alpha particle), aging → *on-die ECC*가 보호
-2. **DRAM ↔ Controller 링크** — high-speed signaling의 ISI, jitter, crosstalk → *Link ECC* 또는 *CRC*가 보호
+DRAM 데이터는 두 단계에서 오류가 발생할 수 있습니다. 첫째는 DRAM 셀 내부에서 발생하는 오류입니다. capacitor의 자연 leakage, 우주선에서 날아오는 alpha particle에 의한 soft error, 시간이 지남에 따른 cell aging 등이 원인입니다. 둘째는 DRAM과 controller 사이의 링크에서 발생하는 오류입니다. 수 GT/s의 고속 신호에서 ISI(심볼 간 간섭), jitter, 크로스토크로 인해 전송 중 비트가 바뀔 수 있습니다.
 
 ```
         ┌────────────────────────────────┐
@@ -47,7 +44,7 @@ DRAM 데이터는 두 단계에서 *오류*가 발생할 수 있습니다:
             DRAM Device
 ```
 
-**핵심 통찰**: 같은 "ECC" 라도 보호 대상이 *완전히 다름*. DV는 두 가지를 *별도*로 검증해야 함.
+같은 "ECC"라는 단어를 쓰더라도 보호 대상이 완전히 다릅니다. DDR5의 Transparency ECC는 셀 내부를 보호하고 controller에게는 투명하게 동작하는 반면, LPDDR5의 Link ECC는 DQ 핀과 controller 사이 링크를 보호합니다. DV는 두 가지를 별도로 설계하고 검증해야 합니다. 한 가지만 검증하고 다른 것을 빠뜨리면 보호되지 않는 오류 경로가 생깁니다.
 
 ---
 
@@ -84,17 +81,20 @@ Write data (BL8 + DBI) → CRC encoder → DRAM
 
 ### 2.3 hPPR / sPPR (§4.32, §4.33)
 
-**PPR (Post Package Repair)**: 제조 후 *fail row*가 발견되면 *spare row*로 redirect 가능.
+**PPR (Post Package Repair)**: DRAM이 패키지로 나온 후에 fail row가 발견되면 spare row로 redirect하는 수리 기능입니다.
 
-- **hPPR (hard)**: *영구* — DRAM의 fuse를 *물리적으로* 변경
-- **sPPR (soft)**: *power-cycle까지만* — fuse는 안 바꾸고 메모리 controller의 redirect table만 변경
+- **hPPR (hard)**: 영구적입니다. DRAM 내부의 antifuse를 물리적으로 프로그래밍하여 fail row 대신 spare row가 사용되도록 영구히 바꿉니다. power cycle 후에도 설정이 유지됩니다.
+- **sPPR (soft)**: 임시적입니다. fuse를 바꾸지 않고 controller의 redirect table만 변경합니다. power cycle이 발생하면 설정이 사라지므로, 재부팅 후 다시 적용해야 합니다.
+
+PPR은 강력한 기능인 만큼 보안 메커니즘도 있습니다. 실수로 정상 row를 수리하거나 악의적인 접근을 막기 위해 Guard Key 시퀀스(MR24)를 정확히 입력해야만 PPR이 발동됩니다.
 
 PPR 절차:
-1. controller가 *fail row 주소* 식별
-2. PPR mode 진입 (MR 설정)
-3. WRA (Write with Auto Precharge) 같은 명령에 *PPR 지시*
-4. tPGM (program time) 대기 — hPPR은 더 길음
-5. PPR exit
+1. controller가 fail row 주소 식별
+2. Guard Key 시퀀스 — MR24에 정해진 순서로 key write
+3. PPR mode 진입 (MR23 설정)
+4. WRA (Write with Auto Precharge) 같은 명령에 PPR 지시
+5. tPGM (program time) 대기 — hPPR은 ms 단위로 더 길음
+6. PPR exit
 
 ---
 
@@ -104,12 +104,14 @@ PPR 절차:
 
 ### 3.1 Transparency ECC란
 
-"Transparency" = controller에게 *투명* (controller가 ECC 동작을 *모르고* 일반 RD/WR 처리). 그러나 DRAM 내부에서:
+"Transparency"는 controller에게 투명하다는 의미입니다. controller가 WR 명령을 발급하면 DRAM이 내부에서 ECC 인코딩을 수행한 뒤 데이터와 parity를 cell array에 함께 저장합니다. RD 명령에서는 array에서 읽은 값을 ECC 디코딩하여 1-bit 오류면 자동으로 정정한 후 DQ에 출력합니다. controller는 이 과정을 전혀 알지 못하고 단지 정상 데이터를 받습니다.
 
 ```
 Write:  data → DRAM ECC encoder → [data + parity bits] → cell array
 Read:   cell array → ECC decoder → error correct → data → DQ
 ```
+
+투명하다는 것이 "DV가 신경 쓸 필요 없다"는 의미는 아닙니다. ECC가 제대로 동작하지 않으면 단일 비트 오류가 정정되지 않고 controller에 전달될 수 있는데, 이는 silent corruption으로 매우 위험합니다. 또한 DRAM이 MR14~MR20을 통해 에러 통계를 노출하므로, 이 통계가 정확히 갱신되는지도 검증해야 합니다.
 
 ### 3.2 핵심 MR
 

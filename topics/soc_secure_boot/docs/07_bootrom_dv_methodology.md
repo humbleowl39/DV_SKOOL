@@ -258,6 +258,8 @@ endclass
 
 ### 5.1 Legacy 환경의 문제 — 왜 바꿔야 했는가
 
+BootROM 검증이 오래된 SystemVerilog 환경에 머물 때 가장 먼저 드러나는 증상은 검증 병목입니다. 담당자들은 흔히 "FW 가 늦게 넘어오기 때문"이라고 진단하지만, 실제 원인은 환경 자체의 재사용성 부족입니다. 새 OTP 설정을 실험하려면 물리 주소를 직접 force 해야 하고, 보안 공격 시나리오를 재현하려면 매번 수동으로 force 문을 작성해야 하며, 테스트가 통과했는지 판단하는 기준도 엔지니어의 주관에 의존합니다. 이 세 가지 문제가 중첩되면서 FW 전달이 늦어지는 것처럼 보이는 것이고, FW 를 더 일찍 받아도 환경이 바뀌지 않으면 병목은 사라지지 않습니다.
+
 #### 기존 환경 (Legacy SystemVerilog TB)
 
 ```
@@ -499,6 +501,8 @@ DPI-C 로 검증하는 이유:
 
 #### BootROM Coverage Model 구조
 
+Coverage 를 5개 Covergroup 으로 구조화한 이유는 "어떤 상황에서" (CG1: 설정), "검증 결과가 어떠했는지" (CG2: Verify), "어떤 공격을 시도했는지" (CG3: Attack), "Fallback 경로는 닫혔는지" (CG4: Fallback), "버전 축의 경계는 다뤘는지" (CG5: Anti-RB) 를 각각 독립적으로 관리할 수 있기 때문입니다. 하나의 큰 covergroup 으로 모으면 어떤 bin 이 비어 있는지 파악하기 어렵고, cross 가 폭발적으로 늘어납니다. 5개로 나누면 CG 별로 closure 진척도를 추적할 수 있고, coverage 갭이 어느 축인지 즉시 진단됩니다.
+
 ```
 +----------------------------------------------------------+
 |              BootROM Functional Coverage                   |
@@ -589,6 +593,8 @@ DPI-C 로 검증하는 이유:
 > "UVM 프레임워크를 모듈형으로 설계했기 때문에 가능했다. 핵심은 세 가지 분리: (1) DUT 독립적 Agent — 프로토콜만 처리하므로 DUT 가 바뀌어도 재사용. (2) Config Object — SoC 별 차이를 파라미터로 흡수. (3) OTP Abstraction Layer — 맵 파일만 교체하면 물리 주소 변경에 면역. 결과적으로 수 주 걸리던 포팅을 3-5일로 단축하여 촉박한 일정 내에서 즉시 검증 지원을 제공했다."
 
 ### 5.8 Post-Silicon 연결 — Pre-silicon 검증이 Bring-up 을 가속하는 이유
+
+Pre-silicon 에서 BootROM 을 100% 검증해 놓으면 Post-silicon bring-up 때 BootROM 을 원인 후보에서 즉시 제외할 수 있습니다. 부팅에 실패했을 때 "BootROM 버그인가, Boot Device 연결 문제인가, OTP 프로그래밍 오류인가?" 를 동시에 의심해야 하는 상황과, "BootROM 은 검증 완료 — 비-ROM 영역에서 찾으면 된다" 고 확신할 수 있는 상황의 디버그 속도는 주 단위로 차이납니다.
 
 #### Pre-silicon 에서 100% 기능 무결성 확보의 의미
 

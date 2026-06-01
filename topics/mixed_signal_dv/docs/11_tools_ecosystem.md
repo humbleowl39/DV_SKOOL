@@ -9,6 +9,8 @@
 
 ## 1. 도구 카테고리 정리
 
+도구를 선택하기 전에 먼저 도구 지형 전체를 한 눈에 볼 필요가 있습니다. mixed-signal 검증에서 쓰이는 도구는 다섯 가지 카테고리로 나뉩니다. SPICE는 정확도의 기준점이지만 느립니다. Fast SPICE는 속도를 높여 DRAM full-chip에도 적용할 수 있습니다. AMS는 digital sim과 SPICE를 결합합니다. Pure RNM은 별도 SPICE 엔진 없이 디지털 시뮬레이터만으로 mixed-signal을 처리합니다. IBIS-AMI는 SerDes와 DDR 같은 고속 인터페이스의 system-level 검증 표준입니다.
+
 | 카테고리 | 대표 도구 | 특징 |
 |---|---|---|
 | SPICE | HSPICE, Spectre, Eldo, FineSim | 정확도 표준, 느림 |
@@ -17,7 +19,11 @@
 | Pure RNM | VCS, Xcelium, Questa | digital simulator만으로 RNM |
 | IBIS-AMI | MATLAB SerDes, ADS, HyperLynx | SerDes/DDR system 검증 |
 
+이 중 "어떤 도구를 언제 쓰느냐"의 판단 기준은 단순합니다. 트랜지스터 물리 정밀도가 필요한지, 회로 규모가 얼마인지, 채널 특성까지 봐야 하는지에 따라 선택이 결정됩니다. 자세한 결정 트리는 §7에서 다룹니다.
+
 ## 2. SPICE 도구
+
+SPICE 도구들은 정확도 측면에서 silicon에 가장 가깝습니다. 어떤 도구를 쓰느냐보다 "어떤 foundry의 `.lib` 파일을 쓰느냐"가 더 중요합니다. 도구 자체는 벤더와 팀 성향에 따라 선택됩니다.
 
 | 도구 | 벤더 | 특징 |
 |------|------|------|
@@ -26,7 +32,7 @@
 | **FineSim** | Synopsys | 빠른 SPICE. AMS 통합 잘 됨 |
 | **Eldo** | Siemens EDA | 군용/항공우주에서 자주 (보안 인증) |
 
-라이센스: 모두 enterprise license, node-locked + floating 혼합.
+라이센스는 모두 enterprise 수준으로 비쌉니다. node-locked과 floating의 혼합 형태가 일반적이며, 이 비용이 RNM의 비용 우위를 만드는 핵심 배경입니다.
 
 ## 3. Fast SPICE 도구
 

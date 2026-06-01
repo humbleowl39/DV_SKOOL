@@ -12,6 +12,8 @@
 
 > "Analog 동작을 SPICE로 풀지 말고, digital simulator 안에서 real-valued 함수로 근사하자."
 
+AMS와 RNM의 차이를 한 그림으로 보면 다음과 같습니다.
+
 ```
 [AMS]                              [RNM]
 
@@ -24,13 +26,11 @@ SPICE sim ← 느림                   Real-valued model in SV ← 빠름
 Transistor physics                 Behavioral approximation
 ```
 
+AMS는 경계를 넘을 때마다 connect module이라는 번역기를 통하고, 아날로그 측에서는 SPICE 엔진이 수치 적분을 수행합니다. RNM은 SPICE 엔진 자체를 제거합니다. 아날로그 동작을 SystemVerilog의 `real` 타입과 수학 함수로 근사하고, 디지털 시뮬레이터만으로 전부 처리합니다. 시간은 여전히 이벤트 기반이어서 수치 적분의 오버헤드가 없습니다. DVCon 발표에 따르면 RNM 도입으로 **100~1000× 속도 향상**이 보고되었습니다(PMIC SSD 사례, 2020).
+
 ## 2. RNM이 가능한 이유
 
-- 디지털 시뮬레이터(VCS, Xcelium, Questa)도 **실수(real) 타입 지원** (SystemVerilog 표준)
-- 신호값이 0/1이 아니라 0.0~0.9 같은 실수
-- 시간은 여전히 **이벤트 기반** (수치적분 안 함) → **빠름**
-
-DVCon 발표에 따르면 RNM 도입으로 **100~1000× 속도 향상**이 보고되었습니다 (PMIC SSD 사례, 2020).
+RNM이 SPICE 없이 아날로그를 흉내낼 수 있는 이유는 SystemVerilog 표준이 **`real` 타입**을 지원하기 때문입니다. 신호 값이 0/1이 아니라 0.0~0.9 같은 실수가 될 수 있고, 그 실수에 수학 함수를 적용할 수 있습니다. 시간은 여전히 이벤트 기반으로 처리되어 수치 적분을 수행하지 않으므로 빠릅니다. 아날로그 회로의 물리를 "BSIM으로 정확하게" 푸는 대신 "수식으로 행동을 근사"하는 것입니다. 모델이 잘 작성되면 sense amp나 DLL 같은 중요 회로의 동작을 SPICE 결과와 높은 일치도로 재현할 수 있습니다.
 
 ## 3. `real` 데이터 타입 (SV-2001)
 
@@ -50,7 +50,7 @@ end
 
 ## 4. `nettype` (SV-2012) — RNM의 핵심
 
-`real`만으로는 net을 만들 수 없어 port 통신이 어려움 → `nettype`이 해결합니다.
+`real` 변수만으로는 모듈 사이의 연결선(net)을 만들 수 없습니다. SV에서 `real`은 변수이지 wire가 아니기 때문에 포트 사이의 연결에 직접 사용할 수 없습니다. 이 문제를 해결하기 위해 SV-2012에서 `nettype` 키워드가 추가되었습니다. `nettype`은 사용자가 정의한 데이터 타입을 net으로 만들어 주고, 여러 드라이버가 같은 net에 값을 쓸 때 어떻게 합성할지를 resolution function으로 지정할 수 있게 합니다.
 
 ### 4.1 기본 사용
 
@@ -204,6 +204,8 @@ v_shared = (Q_cell + Q_bl) / (C_cell + C_bl)
 
 ## 8. UVM 사용자에게 친숙한가?
 
+UVM 경험자가 RNM 환경으로 넘어올 때 느끼는 가장 큰 혼란은 "내가 아는 것들이 얼마나 통하나"입니다. stimulus·coverage 측에서는 많은 것이 그대로 통합니다. constrained-random도 쓸 수 있고 functional coverage도 쓸 수 있습니다. 단지 대상이 logic 신호에서 real 값으로 바뀌었을 뿐입니다. 반면 RNM 모델 자체를 작성하는 것 — 즉 charge sharing을 수식으로 표현하거나, VCO 주파수를 제어 전압의 함수로 모델링하는 것 — 은 완전히 새로운 작업입니다.
+
 | UVM에서 익숙한 것 | RNM에서 비슷한 것 / 차이 |
 |------------------|-------------------------|
 | `uvm_sequence_item` | 없음 — RNM은 RTL/behavioral level |
@@ -215,7 +217,7 @@ v_shared = (Q_cell + Q_bl) / (C_cell + C_bl)
 | Functional coverage | 사용 가능. voltage는 bin으로 매핑 필요 |
 | Factory / config_db | 거의 사용 안 함 — parameter override 중심 |
 
-> **결론**: UVM 경험이 stimulus·coverage 측에서는 활용 가능하나, **RNM 모델 작성 자체는 새로운 학습** 필요.
+UVM 경험이 stimulus·coverage 측에서는 그대로 활용 가능하지만, **RNM 모델 작성 자체는 새로운 학습**이 필요합니다. Ch12에서는 UVM env에 RNM을 통합하는 구체적 패턴을 다룹니다.
 
 ## 9. 대표 문제 — Charge Sharing 결과 예측 (Dry-Run)
 

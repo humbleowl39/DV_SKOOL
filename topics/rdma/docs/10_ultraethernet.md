@@ -55,7 +55,7 @@
 
 **RoCEv2 의 _lossless 가정_** 이 hyperscale 에서 한계. 운영 비용 (PFC 관리, ECN tune) 도 큼.
 
-**Ultra Ethernet Consortium (UEC, 2023)** 의 해법: "**lossy 허용 + multipath 기본 + message 단위 ordering**". 즉 _packet drop_ 을 정상으로 받아들이고, 여러 path 에 _packet-level_ 분산하며, _메시지 단위_ 로만 순서 보장.
+**Ultra Ethernet Consortium (UEC, 2023)** 이 내놓은 해법은 발상의 전환입니다. RoCEv2 가 "packet 을 절대 떨어뜨리지 않아야 한다"는 전제에서 출발한다면, UEC 는 "**lossy 는 허용하되 message 단위의 완결성만 보장하자**" 고 뒤집습니다. packet drop 을 비정상이 아닌 정상 상황으로 받아들이고, 그 대신 여러 path 에 _packet-level_ 분산을 기본으로 깔며, 순서 보장은 _메시지 전체_ 가 도착했는지 여부로만 판단합니다. 그 결과 PFC 라는 네트워크 전체의 운명을 좌우하는 메커니즘에 의존하지 않아도 되게 됩니다.
 
 |  | RoCEv2 | **UEC** |
 |---|--------|---------|
@@ -111,9 +111,7 @@
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
-- **PFC 의존을 끊는다**: hyperscale 클러스터에서 PFC storm/deadlock 의 운영 비용이 너무 큼. lossy 허용 + selective retransmission + multipath 가 더 안정적.
-- **AI workload 친화**: NCCL/MPI 의 collective 가 강세 → INC (In-Network Collectives) 와 libfabric 시맨틱 직접 매핑.
-- **2-stack 분리**: PDS (전송) 와 SES (시맨틱) 를 분리하면 새 API (예: 미래의 새 collective) 도 SES 만 확장하면 됨.
+UEC 의 설계에는 세 가지 동기가 얽혀 있습니다. 첫째, **PFC 의존을 끊어야 했습니다**. hyperscale 클러스터에서는 PFC storm 과 deadlock 의 운영 비용이 너무 큰 현실이 이미 드러났고, lossy 를 허용한 위에 selective retransmission 과 multipath 를 쌓는 쪽이 더 안정적이라는 판단이 나왔습니다. 둘째, **AI workload 와의 친화성** 입니다. NCCL/MPI 의 collective 연산이 점점 중심이 되면서, INC (In-Network Collectives) 와 libfabric 시맨틱을 전송 층에 직접 맞붙일 수 있는 구조가 필요해졌습니다. 셋째, **2-stack 분리** 를 통해 확장성을 확보했습니다. PDS (전송 신뢰성) 와 SES (시맨틱) 를 분리하면, 미래에 새 collective API 가 나와도 SES 만 확장하면 되고 PDS 는 건드리지 않아도 됩니다.
 
 ---
 

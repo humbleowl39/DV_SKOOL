@@ -10,6 +10,8 @@
 
 ## 1. DRAM Read 경로 — 7 단계
 
+DRAM의 read 동작을 이해하면, 왜 mixed-signal 검증이 필수인지가 자연스럽게 보입니다. ACT 커맨드가 들어오면 row decoder가 활성화할 행을 선택하고, word line driver가 그 행의 WL을 높은 전압으로 구동합니다. WL이 올라가면 비트 셀의 access transistor가 켜지고, 수십 펨토패럿(fF) 크기의 cell capacitor에 저장된 전하가 bit line으로 흘러나옵니다. 이 때 bit line은 precharge 전압 근처에서 미세하게 — 보통 수십 밀리볼트 — 변합니다. sense amplifier가 이 미세한 전압 차이를 감지하고 full-swing 디지털 신호로 증폭한 뒤, column mux를 통해 IO buffer로 보내지고 DQ 핀으로 출력됩니다.
+
 ```
 [Command]                  [Bit cell]
 ACT/RD                      │
@@ -33,7 +35,7 @@ ACT/RD                      │
                                           [IO buffer] ──→ DQ pin
 ```
 
-각 stage가 검증 관점에서 무엇을 의미하는지:
+이 7개 stage 중 row decoder, mode register, FSM 같은 순수 디지털 로직은 기존 digital sim으로 충분합니다. 그러나 WL driver부터 DQ 출력까지는 전압·전하·임피던스가 의미를 갖는 영역입니다. 각 stage가 검증 관점에서 무엇을 요구하는지를 정리하면 다음과 같습니다.
 
 | Stage | 입력 | 출력 | 핵심 물리 |
 |---|---|---|---|
@@ -46,6 +48,8 @@ ACT/RD                      │
 | 7. IO buffer | digital data | DQ pin (driven) | Driver Z, slew, eye, ODT |
 
 ## 2. 어느 부분을 어떤 방법으로?
+
+각 블록에 어떤 시뮬레이션 패러다임이 맞는지는 "이 블록의 동작이 전압·전류 값에 직접 의존하는가"라는 질문으로 판단할 수 있습니다. command decoder나 refresh counter처럼 순수한 디지털 로직은 전압을 알 필요가 없으므로 digital sim으로 충분합니다. WL driver는 VPP까지 올라가는 전압 천이와 큰 capacitance load가 핵심이므로 RNM이 필요합니다. sense amplifier는 수십 mV의 차이를 감지하는 DRAM의 심장으로, 대량 검증은 RNM으로 하되 트랜지스터 mismatch 통계는 SPICE Monte Carlo로 sign-off합니다.
 
 | 블록 | 추천 시뮬레이션 | 이유 |
 |------|----------------|------|

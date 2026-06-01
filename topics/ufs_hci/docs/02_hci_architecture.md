@@ -320,18 +320,13 @@ IS (Interrupt Status) 레지스터 — 비트별 의미:
   [17]   SBFES   System Bus Fatal Error            치명적 에러
   [18]   CEFES   Crypto Engine Fatal Error         치명적 에러
 
-  인터럽트 처리 흐름:
-    1. IRQ 발생 → ISR 진입
-    2. IS 레지스터 읽기 → 어떤 비트가 셋되었는지 확인
-    3. 해당 이벤트 처리 (예: UTRCS → 완료된 슬롯 확인)
-    4. IS에 Write-1-to-Clear (W1C) → 해당 비트 클리어
-    5. 추가 인터럽트 없으면 ISR 종료
-
   IE (Interrupt Enable) 마스킹:
     IE[N] = 0 → IS[N]이 셋되어도 IRQ 출력 안 됨
     IE[N] = 1 → IS[N] 셋 시 IRQ 출력
     → SW가 관심 있는 인터럽트만 선택적 활성화
 ```
+
+인터럽트 처리는 다음 순서로 진행됩니다. IRQ 가 발생해 ISR 에 진입하면 IS 레지스터를 먼저 읽어 어느 비트가 셋됐는지 파악하고, 해당 이벤트를 처리합니다(예: UTRCS 비트이면 완료된 슬롯 번호를 UTRLDBR 에서 확인). 처리가 끝나면 IS 에 Write-1-to-Clear(W1C) 로 해당 비트를 클리어하고, 처리할 이벤트가 더 없으면 ISR 을 종료합니다.
 
 ### 5.4 UIC Command 상세
 
@@ -394,6 +389,8 @@ Gear 변경 예시 (HS-G1 → HS-G3):
 | **UICCMDARG** | 0x94-9C | UIC Command Arguments |
 
 ### 5.6 MCQ (Multi-Circular Queue) — UFS 4.0+
+
+SDB 와 MCQ 의 차이는 단순한 큐 개수가 아니라 완료 통지 방식까지 바뀐다는 점에 있습니다. SDB 에서는 모든 코어가 단일 Doorbell 레지스터와 IS 를 공유하므로, 큐 깊이가 포화될수록 Lock 경합이 병목이 됩니다. MCQ 는 이 문제를 NVMe 방식으로 해결했습니다. 각 CPU 코어가 자신만의 Submission Queue 와 Completion Queue 쌍을 가지고 독립적으로 처리하기 때문에 Lock 없이도 명령을 병렬로 제출하고 회수할 수 있습니다.
 
 ```
 기존 (SDB — Single Doorbell):

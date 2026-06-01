@@ -248,11 +248,7 @@ prove -all
 
 ### 4.3 BOUNDED 가 나오는 3가지 원인
 
-```
-1. 상태 공간이 너무 큼 → 엔진이 Inductive Step 을 증명하지 못함
-2. Property 가 너무 복잡 → 엔진이 시간/메모리 한계에 도달
-3. 도달 불가능 상태에서 귀납 반례 → Helper 가 필요함 (§3 의 케이스)
-```
+BOUNDED 의 근본 원인은 세 가지 중 하나입니다. 가장 흔한 것은 상태 공간이 너무 커서 엔진이 귀납 단계 (Inductive Step) 를 완성하지 못하는 경우입니다. 두 번째는 Property 자체가 복잡해 엔진이 시간 또는 메모리 한계에 먼저 도달하는 경우이고, 세 번째는 §3 의 FIFO 예에서 본 것처럼 도달 불가능한 상태가 귀납 반례를 만들어내는 경우 — 이때는 Helper invariant 한 줄로 풀립니다.
 
 이후 §5 의 Convergence 기법 6 종이 이 3 가지에 1:1 대응합니다.
 
@@ -318,19 +314,21 @@ assert property (@(posedge clk) disable iff (rst)
 
 #### Blackboxing
 
+JasperGold 에서 `abstract -module` 명령으로 모듈을 블랙박스로 지정하면 해당 모듈의 내부 상태가 탐색 공간에서 제거됩니다.
+
+```tcl
+abstract -module mul_32x32       # 32x32 곱셈기를 블랙박스
+abstract -module data_memory     # 데이터 메모리를 블랙박스
 ```
-JasperGold 에서 모듈을 블랙박스로 처리:
 
-  # TCL
-  abstract -module mul_32x32       # 32x32 곱셈기를 블랙박스
-  abstract -module data_memory     # 데이터 메모리를 블랙박스
+블랙박스로 지정된 모듈의 출력은 unconstrained — 즉 엔진이 어떤 값이든 자유롭게 생성할 수 있다고 가정합니다. 그 출력이 실제로 spec 에 의해 제약된다면, assume 으로 그 범위를 명시해야 false counterexample 을 막을 수 있습니다.
 
-  블랙박스의 출력:
-  - 모든 가능한 값을 자유롭게 생성 (unconstrained)
-  - 필요시 assume 으로 출력 제약:
-    assume property (@(posedge clk) mul_out < 32'hFFFF_FFFF);
+```systemverilog
+assume property (@(posedge clk) mul_out < 32'hFFFF_FFFF);
+```
 
-  블랙박스 대상 선정 기준:
+블랙박스 대상을 고를 때는 검증하려는 property 에 영향을 주지 않는 모듈을 우선합니다.
+
   ┌───────────────────────────────────────────┐
   │ 블랙박스 적합           │ 블랙박스 부적합  │
   ├───────────────────────────────────────────┤
@@ -340,7 +338,6 @@ JasperGold 에서 모듈을 블랙박스로 처리:
   │ 아날로그 블록 모델      │ 타겟 Property 와 │
   │                         │ 관련된 모듈      │
   └───────────────────────────────────────────┘
-```
 
 #### Cut Point
 

@@ -22,7 +22,7 @@
 
 ### 1.1 핵심 명령 7가지
 
-DRAM이 받을 수 있는 명령은 *놀랍게도 적습니다*. 모든 동작은 이 명령들의 *조합*입니다.
+DRAM이 받을 수 있는 명령은 놀랍게도 매우 적습니다. 메모리 컨트롤러가 수백 가지 복잡한 시나리오를 처리하는 것처럼 보여도, 결국 DRAM 핀 레벨에서 주고받는 명령은 아래 7개의 조합으로 표현됩니다. 이 명령들의 순서와 타이밍이 곧 DRAM 프로토콜입니다.
 
 | 명령 | 약어 | 기능 |
 |---|---|---|
@@ -54,14 +54,14 @@ DDR4에서 명령은 *RAS_n / CAS_n / WE_n / ACT_n + ADDR + BG + BA* 의 *조합
 
 > 출처: JESD79-5C.01 v1.31 §4.1
 
-DDR5는 *CA[6:0]* 7-bit 핀에 *2 클럭에 걸쳐* 인코딩:
+DDR5는 CA[6:0] 7-bit 핀에 2 클럭에 걸쳐 인코딩합니다. DDR4가 17-bit row address, bank group, bank를 한 클럭에 넓은 address bus로 전달했다면, DDR5는 핀 수를 줄이는 대신 2 클럭을 활용하는 방식을 택했습니다. 이는 pin count를 낮추는 동시에 CA 핀 각각에서 더 정확한 signal integrity를 확보할 수 있는 장점이 있습니다.
 
 ```
 Cycle 0 (CA[6:0]):  OPCODE 일부 + 일부 주소
 Cycle 1 (CA[6:0]):  OPCODE 나머지 + 나머지 주소
 ```
 
-CS_n이 LOW인 *2 cycles 동안*이 하나의 명령. DDR5의 *2-Cycle Command Cancel* (§4.1.1) 으로 명령이 *부분적으로* 발급된 상태를 *취소*하는 메커니즘도 있음.
+CS_n이 LOW인 2 cycles 동안이 하나의 명령입니다. 중요한 예외 케이스가 있는데, DDR5의 2-Cycle Command Cancel(§4.1.1)은 1st cycle 발급 후 2nd cycle의 CS_n도 LOW로 유지되면 명령 자체를 취소하는 메커니즘입니다. 이는 RCD가 CA parity error를 감지했을 때 발동됩니다.
 
 !!! warning "DV 함정 — DDR5 monitor 설계"
     DDR5 명령은 *2 클럭 윈도우*로 보아야 합니다. monitor가 cycle 0 만 보고 명령을 reconstruct하면 *명령이 부분적*이고 ADDR이 잘못 인코딩됩니다.
@@ -72,7 +72,7 @@ CS_n이 LOW인 *2 cycles 동안*이 하나의 명령. DDR5의 *2-Cycle Command C
 
 ### 2.1 인코딩 구조 (개념)
 
-DDR5의 각 명령은 *고정된 OPCODE pattern* + *주소 비트 분포*가 있습니다. 예시 (ACT — 가정 형식):
+DDR5의 각 명령은 고정된 OPCODE pattern과 주소 비트 분포를 가집니다. spec의 §4.1.1에서 "CA1 비트가 1-cycle vs 2-cycle 명령의 식별자" 라고 명시하는데, 이는 monitor가 첫 cycle을 보자마자 2 클럭 윈도우가 필요한지를 판단할 수 있다는 의미입니다. 예시 (ACT — 가정 형식):
 
 ```
 Cycle 0:
@@ -127,7 +127,7 @@ DQ (x8):        D0 D1 D2 D3 D4 D5 D6 D7 D8 D9 DA  DB  DC  DD  DE  DF
 
 ### 3.3 BL32 — 두 배 burst
 
-BL32는 *동일한 명령으로* 32 beats 전송. DDR5 §4.2.1 *Burst Type and Burst Order for Optional BL32 Mode*.
+BL32는 동일한 명령으로 32 beats를 전송합니다. DDR5 §4.2.1 *Burst Type and Burst Order for Optional BL32 Mode*에 정의됩니다.
 
 ```
 RD with BL32:
@@ -135,8 +135,7 @@ RD with BL32:
   DQ:    [first 16 beats] [second 16 beats]
 ```
 
-장점: 큰 sequential read일 때 명령 overhead 감소.
-단점: 중간 *interrupt 불가* — bank 전환이 늦어짐.
+BL32를 쓰면 명령 overhead가 줄어든다는 장점이 있습니다. 같은 양의 데이터를 두 번의 BL16 명령으로 전송할 경우 두 번의 명령 overhead가 발생하지만, BL32 하나로 전송하면 명령 1회분의 overhead만 소모합니다. 대용량 sequential read, 예를 들어 DMA copy 같은 워크로드에서 유리합니다. 그러나 burst 도중 다른 bank에 접근하거나 burst를 중단하기가 어렵다는 단점이 있어, latency가 중요하거나 bank 전환이 잦은 경우에는 BL16이 더 적합합니다. DV는 두 모드 모두 coverage에 잡아야 합니다.
 
 ### 3.4 Burst Order
 

@@ -230,20 +230,11 @@ K -> P
 
 ### 5.1 Stack 기본 — Valid Parentheses
 
-```
-키워드: "가장 최근", "매칭 쌍", "중첩", "되돌리기"
-원리: LIFO (Last In, First Out) — 마지막에 넣은 것을 먼저 꺼냄
-
-SV 구현: queue + push_back / pop_back / [$] 로 top 접근
-```
+Stack 이 자연스러운 문제는 **"가장 최근", "매칭 쌍", "중첩", "되돌리기"** 키워드로 신호가 옵니다. 이 키워드들의 공통점은 모두 _시간 역순_ 으로 처리해야 한다는 점입니다. 가장 최근에 열린 괄호와 지금 만난 닫는 괄호가 짝이 되어야 하듯이, 가장 나중에 넣은 것이 가장 먼저 나와야 하는 LIFO 구조가 정확히 이 역순 처리를 구현합니다. SystemVerilog 에서는 queue 타입과 `push_back` / `pop_back` 으로 구현하며, top 에는 `[$]` 로 접근합니다.
 
 ### 5.2 Monotonic Stack — Daily Temperatures (LeetCode #739)
 
-```
-핵심: "다음으로 큰/작은 원소까지의 거리" → Monotonic Stack
-원리: Stack 에 "아직 답을 못 찾은 인덱스" 를 보관
-       현재 값이 stack top 보다 크면 → pop 하며 답 기록
-```
+"다음으로 큰/작은 원소까지의 거리" 류 문제가 Monotonic Stack 의 핵심 적용 대상입니다. 각 원소마다 오른쪽으로 스캔하는 Brute Force 는 O(n²) 가 되는데, Monotonic Stack 은 "아직 답을 못 찾은 인덱스" 를 stack 에 보관해 두었다가 현재 값이 stack top 보다 클 때 pop 하면서 한꺼번에 답을 기록합니다. 각 인덱스가 평생 push 한 번, pop 최대 한 번만 일어나므로 전체 비용이 amortized O(n) 입니다.
 
 #### 사고 과정
 
@@ -384,6 +375,8 @@ Binary Search 코딩 시:
 
    이 세 가지를 "Binary Search 3 원칙" 으로 외우면 실수 방지
 ```
+
+패턴 인식 키워드를 먼저 적은 이유는 코딩 시작 전에 패턴을 구두로 선언하는 것이 면접에서 사고 과정 점수를 얻는 가장 빠른 방법이기 때문입니다. Binary Search 의 세 원칙은 순서가 의미 있습니다. 등호 포함 여부가 틀리면 target 이 마지막 원소일 때 루프가 조기 종료되고, overflow-safe mid 를 생략하면 큰 배열에서 무음으로 터지며, ±1 이 없으면 left 나 right 가 제자리에 머물며 무한 루프가 됩니다. 세 가지 모두 실제 코딩 테스트에서 자주 발생하는 실수입니다.
 
 ### 5.7 SystemVerilog 예제 코드
 

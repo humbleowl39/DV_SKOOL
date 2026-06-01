@@ -45,25 +45,19 @@
 
 ### 1.1 시나리오 — UVM _없는_ 시뮬
 
-당신은 SystemVerilog 만으로 testbench 작성:
-- DUT instance
-- BFM (Bus Functional Model) — task / function 으로
-- Stimulus — initial block 에서
-- Checker — always block 에서 RTL 비교
+UVM 을 처음 마주하면 "왜 이렇게 계층이 복잡한가" 라는 의문부터 듭니다. 그 답은, UVM 이 _없을 때_ testbench 가 어떻게 무너지는지를 직접 따라가 보면 분명해집니다.
 
-규모가 작으면 OK. 그런데 _수개월 후_:
-- BFM 이 _이 test 와 저 test 에서 다른 reset 순서_ 필요 → BFM 코드 분기.
-- Checker 가 _stimulus 와 race condition_ — 시작 시점 misalignment.
-- 새 test 추가 시 _BFM 재사용_ 어려움 — 매번 reset / init 직접 작성.
-- 검증 progress 측정 (coverage) _수동_.
+SystemVerilog 만으로 testbench 를 짠다고 해봅시다. 가장 먼저 검증 대상인 **DUT 를 인스턴스화** 하고, 그 DUT 의 버스를 실제로 흔들어 줄 무언가가 필요합니다. 이 "버스를 흔드는 코드" 를 보통 **BFM (Bus Functional Model)** 이라 부르는데, SystemVerilog 만 쓸 때는 자연스럽게 `write_reg(addr, data)` 같은 **task 나 function** 형태로 작성하게 됩니다 — 신호를 직접 토글하는 절차를 함수 한 덩어리로 묶어 두는 것이죠. 그다음 이 BFM 을 _언제 어떤 순서로_ 호출할지, 즉 **자극 (stimulus)** 은 `initial` block 안에서 task 를 차례로 부르며 만듭니다. 마지막으로 DUT 가 제대로 동작했는지 확인할 **checker** 가 필요한데, 보통 `always` block 에서 DUT 출력과 기대값을 비교하는 식으로 붙입니다.
 
-**UVM 의 해법**:
-- **Phase 표준화** — build → connect → run → check → report. 모든 component 가 _같은 시점_ 에 같은 일.
-- **Component 재사용** — driver/monitor 한 번 만들면 모든 test 에서.
-- **Sequence layer** — stimulus 가 BFM 과 _decoupled_.
-- **Coverage 통합** — 자동 측정.
+규모가 작을 때는 이 구조로 충분합니다. 문제는 _수개월 뒤_, test 가 수십 개로 불어나면서 드러나기 시작합니다.
 
-결과: testbench _복잡도_ 가 _IP 면적의 선형_ 으로 증가. UVM 없으면 _제곱_ 또는 _exponential_.
+먼저 **BFM 이 test 마다 다른 동작을 요구** 하게 됩니다. 어떤 test 는 cold reset, 어떤 test 는 warm reset 이 필요해지면, 하나였던 BFM task 안에 `if (mode == ...)` 분기가 계속 늘어나고, 결국 어떤 test 가 어떤 경로를 타는지 아무도 추적하지 못하는 코드가 됩니다. 다음으로, `always` block 의 **checker 가 `initial` block 의 stimulus 와 race condition** 에 빠집니다 — 둘은 서로 독립적으로 도는 프로세스라, "검사 시작 시점" 과 "자극 시작 시점" 이 미세하게 어긋나면 멀쩡한 DUT 도 fail 로 잡힙니다. 또 새 test 를 추가할 때마다 **BFM 을 그대로 재사용하기 어렵습니다** — reset·초기화 절차를 매번 복사·수정하게 되고, 한 곳을 고치면 다른 test 가 깨집니다. 끝으로, "검증이 얼마나 됐는가" 를 말해 줄 **coverage 측정이 전부 수동** 이라, 무엇을 아직 안 건드렸는지 객관적으로 알 수가 없습니다.
+
+여기서 핵심은, 이 네 가지 고통이 _우연_ 이 아니라 **공통 뼈대의 부재** 에서 _기계적으로_ 흘러나온다는 점입니다. 자극·검사·재사용·측정을 묶어 줄 구조가 없으니, 규모가 커질수록 각 조각이 서로 간섭합니다.
+
+**UVM 은 이 네 고통을 각각 정조준한 구조로 풉니다.** BFM 이 test 마다 분기하던 문제는 **Phase 표준화** 로 풉니다 — build → connect → run → cleanup 이라는 정해진 시점에 _모든_ 컴포넌트가 같은 일을 하므로, "언제 reset 하고 언제 자극하나" 가 코드 분기가 아니라 phase 로 정해집니다. checker 와 stimulus 의 race 는 **Sequence layer** 가 자극을 BFM 과 _분리 (decouple)_ 해, 자극 생성과 신호 구동을 별도 계층으로 떼어 동기화 책임을 명확히 함으로써 사라집니다. 재사용 문제는 **Component 재사용** 으로 — driver/monitor 를 한 번 제대로 만들면 모든 test 가 그대로 가져다 씁니다. 그리고 수동 측정 문제는 **Coverage 통합** 으로 — 검증 진행도가 자동으로 수집됩니다.
+
+결과적으로 testbench 의 _복잡도_ 가 검증 대상 IP 면적에 대해 대략 **선형** 으로만 증가합니다. 이 뼈대가 없으면 같은 복잡도가 _제곱_ 에 가깝게, 심하면 지수적으로 늘어납니다 — 조각끼리의 간섭이 조각 수의 제곱으로 불어나기 때문입니다.
 
 이후 모든 UVM 모듈은 한 가정에서 출발합니다 — **"검증 환경의 모든 구성 요소는 동일한 Phase 위에서 같은 순서로 build / connect / run / cleanup 한다"**. Driver / Monitor / Sequencer / Scoreboard 가 어떻게 협력하는지, 왜 build_phase 에서 자식을 만들어야 하고 connect_phase 에서 포트를 잇는지, 시뮬레이션이 왜 어느 시점에 멈추는지 — 전부 이 가정의 파생입니다.
 

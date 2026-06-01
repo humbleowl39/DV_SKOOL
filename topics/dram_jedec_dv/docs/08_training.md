@@ -20,15 +20,11 @@
 
 ## 1. 왜 training이 필요한가
 
-DDR4-3200 (1.6GHz)부터 DDR5-8400 (4.2GHz), LPDDR5-9600 (4.8GHz) 까지 — 신호 속도가 너무 빨라 *고정 sampling timing*만으로는 *eye가 닫힐 수* 있습니다.
+DDR4-3200(1.6GHz)부터 DDR5-8400(4.2GHz), LPDDR5-9600(4.8GHz)까지 신호 속도가 크게 높아졌습니다. 신호 속도가 빨라지면 eye diagram의 가로 폭(timing margin)과 세로 폭(voltage margin)이 모두 좁아집니다. 고정된 sampling 타이밍을 사용하면 어떤 보드에서는 eye의 가장자리를 sample하게 되어 비트 오류가 발생할 수 있습니다.
 
-DRAM과 controller(host)는 각자의 PCB trace 길이, 부하, 온도가 다르므로:
+문제를 더 복잡하게 만드는 것은 시스템마다 조건이 다르다는 점입니다. PCB trace 길이는 보드 설계에 따라 다르고, 동작 온도와 전원 전압도 시간에 따라 변합니다. 제조 편차도 있어서 동일 lot의 device라도 내부 지연 특성이 조금씩 다릅니다. 결국 "최적의 sampling 타이밍"은 시스템마다, 심지어 같은 시스템 내 핀마다 다릅니다.
 
-1. *PCB 자체의 신호 지연*이 다름
-2. *온도/전압 변화*에 따라 지연이 *동적으로* 변함
-3. *제조 편차*로 device마다 sampling sweet spot이 다름
-
-→ 시스템 초기화 시 *training 단계*에서 *최적 sampling point*를 자동으로 찾아 설정.
+Training은 이 문제를 초기화 시에 해결합니다. 알려진 패턴을 주고받으면서 최적의 sampling 포인트, Vref, duty cycle, equalizer 계수를 찾아 MR에 기록합니다. training이 완료되면 그 값이 normal operation 동안 적용됩니다.
 
 ```
 이상적 eye opening:
@@ -156,6 +152,8 @@ LPDDR5의 *WCK* 클럭이 *CK와 분리*되었으므로, WCK 관련 training 단
 
 ### 5.1 LPDDR5 training 흐름
 
+LPDDR5 training은 WCK가 추가되면서 DDR4/DDR5보다 훨씬 복잡해졌습니다. CK와 WCK를 각각 정렬해야 하고, DVFS 지원으로 인해 주파수 변경 시 일부 단계를 반복해야 하기도 합니다.
+
 ```
 1. ZQ Calibration (§4.2.1)
    - Background calibration / Command-based calibration
@@ -176,7 +174,7 @@ LPDDR5의 *WCK* 클럭이 *CK와 분리*되었으므로, WCK 관련 training 단
 16. Rx Offset Calibration (§4.2.14)
 ```
 
-이 16+ 단계가 *모두 정상 동작*해야 normal traffic이 가능. *어느 한 단계라도 fail*이면 데이터 corruption 또는 DRAM 미응답.
+이 16개 이상의 단계가 모두 정상 동작해야 normal traffic이 가능합니다. 어느 한 단계라도 fail이면 데이터 corruption이나 DRAM 미응답이 발생합니다. 단계 사이에 의존 관계가 있어서(예: WCK2CK leveling은 CBT가 완료되어야 진행 가능), 어느 단계에서 실패했는지를 FSM으로 추적하는 것이 DV 설계에서 핵심입니다.
 
 ### 5.2 CBT Mode1 — 핵심 절차
 

@@ -281,12 +281,7 @@ Hypervisor 가 물리 디바이스를 **SW 로 완전히 모방**.
 
 #### 동작 흐름
 
-1. Guest OS 가 가상 디바이스의 레지스터에 접근 (MMIO write)
-2. **VM Exit** 발생 → Hypervisor 가 trap
-3. Hypervisor 의 에뮬레이터가 해당 레지스터 접근을 해석
-4. 필요 시 물리 디바이스에 실제 I/O 수행
-5. 결과를 가상 디바이스 상태에 반영
-6. **VM Entry** → Guest OS 재개
+Guest OS 가 가상 디바이스의 레지스터에 MMIO write 를 시도하면 VM Exit 이 발생하고 Hypervisor 가 trap 합니다. Hypervisor 의 에뮬레이터는 해당 레지스터 접근이 어떤 의미인지 해석한 뒤, 필요하면 물리 디바이스에 실제 I/O 를 수행하고 그 결과를 가상 디바이스 상태에 반영합니다. 그 후 VM Entry 로 Guest OS 가 재개됩니다. 이 과정에서 Guest OS 는 에뮬레이션이 끼어 있다는 사실을 알지 못합니다.
 
 #### 대표 구현: QEMU
 

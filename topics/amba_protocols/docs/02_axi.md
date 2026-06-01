@@ -260,6 +260,8 @@ Case 3: 동시
 
 ### 4.2 데드락 방지 규칙
 
+데드락이 생기는 구조는 단순합니다. Master 가 "READY 가 올 때까지 VALID 를 올리지 않겠다" 고 결정하고, 동시에 Slave 가 "VALID 가 올 때까지 READY 를 올리지 않겠다" 고 결정하면, 양쪽이 서로를 기다리게 되어 핸드셰이크가 영원히 일어나지 않습니다. AXI 는 이 상황을 차단하기 위해 VALID 를 발행하는 쪽(Source) 이 Destination 의 상태와 _무관하게_ 스스로 데이터가 준비되면 VALID 를 올리도록 규정합니다. Destination 은 반대로 VALID 를 기다렸다가 READY 를 올려도 무방하고, 미리 READY 를 상시 올려 두어도 됩니다.
+
 ```
 절대 금지:
   Master: "READY가 올 때까지 VALID 안 올리겠다"

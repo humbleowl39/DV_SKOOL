@@ -255,6 +255,8 @@ S2 -> IOTLB
 
 ### 4.3 핵심 데이터 구조
 
+SMMU 가 DMA 요청을 처리하는 흐름은 2단계 색인 구조로 이루어집니다. 먼저 StreamID 로 Stream Table 을 찾아 "이 디바이스가 어떤 변환 모드를 쓰는가" 를 결정하고(STE), SubstreamID 로 Context Descriptor 를 찾아 "이 프로세스의 page table 기저 주소가 어디인가" 를 얻습니다(CD). 그러면 나머지는 CPU MMU 의 4-level walk 와 동일한 형식의 page table 을 따라 내려갑니다.
+
 | 구조 | 역할 | 인덱싱 |
 |------|------|--------|
 | Stream Table | 디바이스별 설정의 최상위 테이블 | StreamID |
@@ -281,6 +283,8 @@ Config 모드:
 ```
 
 ### 4.5 2-Stage Translation (가상화)
+
+가상화 환경에서는 Guest OS 가 알고 있는 "물리 주소" 가 실제로는 Hypervisor 가 할당한 IPA(Intermediate Physical Address) 입니다. SMMU 는 이 사실을 두 단계로 다룹니다. Stage 1 에서 Guest OS 가 관리하는 page table 을 써서 디바이스의 VA 를 IPA 로 변환하고, Stage 2 에서 Hypervisor 가 관리하는 page table 로 IPA 를 진짜 PA 로 변환합니다. 이때 Stage 1 의 각 PTE 주소 자체도 IPA 이므로 Stage 2 walk 가 중첩되어 발생합니다. 그 결과가 4×5=20 번의 메모리 접근이라는 최악의 비용이고, 이것이 IOTLB 의 hit rate 가 SMMU 성능의 핵심 지표가 되는 이유입니다.
 
 ```
 Stage 1 (Guest OS 관리):
@@ -439,6 +443,8 @@ SMMU가 SW에 에러/이벤트를 보고하는 원형 버퍼:
 **DV 핵심**: Command/Event Queue는 원형 버퍼이므로, Wrap-around, Full/Empty 경계, Producer/Consumer 포인터 동기화를 집중 검증해야 한다.
 
 ### 5.4 IOMMU Page Fault 처리 — CPU Page Fault와의 차이
+
+CPU 의 page fault 는 "지금 이 instruction 이 실패했다" 는 동기적 이벤트입니다. CPU 가 멈추고 handler 가 실행되고 복구되면 같은 instruction 을 재실행합니다. 그런데 디바이스 DMA 는 이미 수십~수백 byte 의 burst 를 시작한 상태에서 fault 가 걸립니다. 멈추고 재실행한다는 개념 자체가 맞지 않습니다. 그래서 IOMMU 는 fault 를 Event Queue 에 기록하고 interrupt 를 올리는 것으로 끝나고, OS 가 queue 를 polling 해 원인을 파악한 뒤 page 를 준비하거나 디바이스에 abort 를 알리는 비동기 모델을 씁니다.
 
 ```
 CPU Page Fault:

@@ -255,19 +255,15 @@ ROOT -> F3
 | RC | **FIFO 순서 강제** | index 0 만 체크 |
 | OPS / SR | **Out-of-order 허용** | 전체 인덱스 범위 체크 |
 
-이 규칙은 RC 의 본질 (reliable connected = 순서 보장) 과 OPS/SR (performance / relaxed) 의 트레이드오프에서 나옵니다. RC 는 strict ordering 의 의미가 spec 정의이며, 검증의 첫 invariant. OPS/SR 는 같은 QP 의 다중 outstanding 이 보장 없이 도착할 수 있고, 그 경우 검증은 set 동등성으로 완화.
+이 규칙은 각 service type 의 본질에서 나옵니다. RC 는 이름 그대로 reliable connected, 즉 신뢰성 있는 순서 보장이 spec 의 정의입니다. 따라서 RC QP 에서 C2H 트랜잭션이 순서를 어기면 그것은 곧 spec 위반이므로, c2h_tracker 는 index 0 만 허용하는 strict FIFO 검사를 적용합니다. 반면 OPS/SR 는 성능 우선 설계로 relaxed ordering 이 허용됩니다. 같은 QP 의 다중 outstanding 이 순서 보장 없이 도착할 수 있기 때문에, 검증은 "이 PA 가 전체 expected 인덱스 범위 내에 있는가?" 하는 set 동등성으로 완화됩니다. 즉 OPS/SR 에서 `E-C2H-MATCH-0001` 이 발생하면 DUT 버그가 아니라 c2h_tracker 의 QP 타입 인식 로직을 먼저 의심해야 합니다.
 
 ### 5.3 5 단계 디버깅 — 자세히
 
 #### Step 1 — Ordering 위반: 원본 I/O WQE 확인
 
-`E-C2H-MATCH-0001` 발생 시 에러 로그에 **C2H 가 올라와야 하는 순서** 가 표시됩니다.
+`E-C2H-MATCH-0001` 이 발생하면 에러 로그에 "C2H 가 올라와야 하는 순서" 가 표시됩니다. 이 정보를 바탕으로 순서 위반이 실제로 DUT 의 RC out-of-order 처리인지, 아니면 c2h_tracker 가 QP 타입을 잘못 인식한 TB 측 문제인지를 먼저 분류해야 합니다. 두 상황이 에러 메시지 형태가 같아 혼동하기 쉽기 때문입니다.
 
-추적 절차:
-
-1. 에러 로그의 `expected idx`, `expected addr`, `found idx`, `actual addr` 추출
-2. `m_qp_tracker[node][qp].write_pa_queue` (또는 read/recv) 를 시간순 dump
-3. 두 원본 I/O WQE 의 발행 시점 + DUT 처리 시점 비교
+추적 절차는 다음과 같습니다. 먼저 에러 로그의 `expected idx`, `expected addr`, `found idx`, `actual addr` 를 추출합니다. 그 다음 `m_qp_tracker[node][qp].write_pa_queue` (또는 read/recv) 를 시간순으로 dump 해서 어떤 순서로 PA 가 expected 큐에 쌓였는지 확인합니다. 마지막으로 두 원본 I/O WQE 의 발행 시점과 DUT 처리 시점을 비교해 DUT 가 실제로 순서를 역전시켰는지 판단합니다.
 
 #### Step 2 — PA 매칭 실패: C2H QID + 메모리 범위 확인
 

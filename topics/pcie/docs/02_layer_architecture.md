@@ -203,6 +203,8 @@ void send_phy(struct dll_pkt p) {
 
 ### 4.2 책임 매트릭스
 
+각 layer 가 어떤 책임을 지는지 한눈에 정리하면 아래와 같습니다. 표를 보기 전에 핵심 원칙을 잡아 두면 좋습니다. Transaction Layer 는 "무엇을 어디로 보내는가"에만 집중하고 wire 의 상태를 전혀 모릅니다. Data Link Layer 는 packet 이 이 hop 을 안전하게 건넜는지만 체크하고 payload 의 의미를 해석하지 않습니다. Physical Layer 는 bit 를 운반하는 것 자체가 역할이며 TLP 의 목적지가 어디인지 알 필요가 없습니다.
+
 | 책임 | TL | DLL | PL |
 |------|-----|-----|-----|
 | 무엇을 어디로 (address, BDF) | ✓ | | |
@@ -218,7 +220,7 @@ void send_phy(struct dll_pkt p) {
 | Lane stripe + SerDes | | | ✓ |
 | LTSSM + EQ | | | ✓ |
 
-→ **모든 PCIe link 의 retransmission 은 DLL 책임.** PHY 의 BER 이 아무리 낮아도 0 이 아니므로 packet-level reliability 가 필요.
+PHY 의 BER 이 아무리 낮아도 0 은 아니기 때문에, 언젠가는 단 한 비트가 깨질 수 있고, 그 순간 LCRC 가 틀어집니다. 그때 재전송을 결정하는 것은 DLL 의 일입니다. **모든 PCIe link 의 retransmission 은 DLL 책임** — PHY 가 신호 품질을 개선해도 packet-level reliability 는 여전히 DLL 이 보장합니다.
 
 ### 4.3 디버그 흐름의 직선화
 
@@ -240,7 +242,7 @@ Q -> BAR1
 Q -> AER1
 ```
 
-이 한 단계의 분류가 _80% 의 디버그 케이스_ 를 해결합니다.
+증상을 보고 "어느 layer 의 일인가?" 라는 질문 하나를 먼저 던지면, 디버그 경로가 세 갈래로 바로 갈립니다. TLP 의 주소나 타입이 잘못됐다면 TL, LCRC 나 replay 가 빈발한다면 DLL, link 자체가 올라오지 않는다면 PL 로 시선이 좁혀집니다. 이 한 단계의 분류가 _80% 의 디버그 케이스_ 를 해결합니다.
 
 ---
 

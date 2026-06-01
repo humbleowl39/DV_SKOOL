@@ -13,6 +13,8 @@
 
 ## 1. DMS vs AMS — 핵심 구분
 
+이 챕터를 제대로 읽으려면 먼저 용어를 정리해야 합니다. "DMS"는 **Digital Mixed-Signal**의 약자로, 디지털 시뮬레이터만으로 RNM 기반 mixed-signal 검증을 수행하는 방법론을 뜻합니다. "AMS"는 이 챕터에서 Verilog-AMS 언어를 기반으로 digital + SPICE를 결합하는 좁은 의미로 쓰입니다. 실무에서는 두 방식을 경쟁 관계로 보지 않고 **"DMS 우선, AMS 보완"** 원칙으로 조합합니다.
+
 | 항목 | DMS (Digital Mixed-Signal) | AMS (Analog Mixed-Signal) |
 |---|---|---|
 | 신호 표현 | Real (event-driven) | Electrical (continuous) |
@@ -22,7 +24,9 @@
 | 정확도 | 모델 정확도에 의존 | SPICE 수준 |
 | 적용 | SoC 전체, 시나리오 검증 | 단일 block, sign-off |
 
-DVCon paper들의 공통 메시지: **"DMS를 우선, AMS를 보완으로"**.
+DVCon paper들이 반복해서 검증한 메시지는 하나입니다. **"DMS를 우선, AMS를 보완으로"**. 전체 회귀는 DMS로 수천 seed를 하루에 돌리고, SPICE 정확도가 꼭 필요한 critical block의 corner check만 AMS로 별도 진행합니다. 이 구조가 없으면 전체 회귀 속도가 SPICE에 묶여 버립니다.
+
+> **용어 주의:** 이 표의 "AMS"는 **Verilog-AMS 언어** (좁은 의미)입니다. Accellera **"UVM-AMS" working group**이나 EDA 벤더 제품명("VCS-AMS", "AMS Designer", "Questa-AMS")에서 쓰이는 "AMS"는 **RNM까지 포함하는 우산 용어**로, 이 책의 **DMS + AMS를 모두 포괄**합니다. 두 용법의 차이는 Ch02 §5.1 참조.
 
 > **용어 주의:** 이 표의 "AMS"는 **Verilog-AMS 언어** (좁은 의미)입니다. 한편 Accellera **"UVM-AMS" working group**이나 EDA 벤더 제품명("VCS-AMS", "AMS Designer", "Questa-AMS")에서 쓰이는 "AMS"는 **RNM까지 포함하는 우산 용어**로, 이 책의 **DMS + AMS를 모두 포괄**합니다. 두 용법의 차이는 Ch02 §5.1 참조.
 

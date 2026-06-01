@@ -321,6 +321,8 @@ CHK -> NOK: "no"
 
 ### 5.3 SCR_EL3 (Secure Configuration Register)
 
+SCR_EL3 는 EL3 가 하위 EL 전체의 보안 정책을 결정하는 레지스터입니다. 그 중 가장 핵심은 bit[0] — 바로 NS bit — 이며, 이 비트 하나가 현재 실행 중인 EL 의 세계(Secure/Non-Secure)를 결정하고, 그 결정이 모든 outgoing bus transaction 의 attribute 로 전파됩니다. IRQ·FIQ 라우팅 비트들(bit[1]/[2])은 인터럽트가 어느 EL 에서 처리될지를 EL3 가 중앙에서 정하는 통로이고, RW bit(bit[10])는 하위 EL 이 AArch64 인지 AArch32 인지를 EL3 가 선언하는 비트입니다. BootROM 이 이 레지스터를 먼저 설정함으로써 이후 모든 BL 단계의 실행 환경이 결정됩니다.
+
 ```
 EL3에서 제어하는 핵심 보안 레지스터:
 
@@ -339,6 +341,8 @@ EL3에서 제어하는 핵심 보안 레지스터:
 ```
 
 ### 5.4 EL 전환 명령어 요약
+
+EL 전환은 단순히 명령어를 외우는 것이 아니라 _방향마다 다른 원칙_ 이 있습니다. 권한 상승(상향)은 반드시 Exception 을 통해서만 가능하고, 그 순간 HW 가 PSTATE 를 SPSR 에 보관하고 PC 를 VBAR 벡터로 돌립니다. 권한 하강(하향)은 오직 ERET 한 가지 방법만 존재하며, 복귀 EL 과 복귀 주소 모두 SPSR/ELR 에서 꺼냅니다. 이 비대칭이 "SW 가 임의로 EL 을 올릴 수 없다" 는 보안 모델의 핵심이므로, 전환 명령어 하나하나가 _왜_ 그 방향에서만 쓰이는지를 함께 짚어야 합니다.
 
 ```
 상향 전환 (Lower EL → Higher EL): Exception 발생
@@ -362,6 +366,8 @@ EL3에서 제어하는 핵심 보안 레지스터:
 ```
 
 ### 5.5 Exception 발생 시 HW 가 자동으로 하는 일
+
+Exception 이 발생하면 HW 가 개입해 순서대로 상태를 저장합니다. SW 가 개입할 틈이 없다는 점이 핵심인데, 이렇게 해야 악의적인 SW 가 복귀 주소나 EL 을 조작하지 못합니다. ERET 은 그 역방향으로 저장한 것을 꺼내는 단계이며, 이 역시 해당 EL 만 SPSR/ELR 에 접근할 수 있기 때문에 하위 EL 이 상위 EL 의 복귀 상태를 변조하는 경로 자체가 차단됩니다.
 
 ```
 Exception 발생 (예: SMC 실행):
@@ -388,6 +394,8 @@ ERET 실행 (복귀):
 ```
 
 ### 5.6 Exception Vector Table (VBAR_ELn)
+
+Exception 이 발생하면 PC 가 무조건 `VBAR_ELn + offset` 으로 점프합니다. 여기서 중요한 것은 _각 EL 이 자신만의 벡터 테이블 기준 주소를 가진다_ 는 점입니다. EL1 이 자신의 VBAR_EL1 을 설정해 두면, EL0 에서 SVC 가 발생할 때 EL1 의 시스템 콜 핸들러로 진입합니다. EL3 의 VBAR_EL3 는 BootROM 이 설정하며, SMC 가 발생할 때마다 이 테이블의 정확한 offset 으로 BL31 의 핸들러가 호출됩니다. offset 은 "어느 EL 에서 왔는가" 와 "어떤 종류의 exception 인가" (Sync/IRQ/FIQ/SError) 의 조합으로 결정되므로, 아래 표를 기준 삼아 "이 exception 이 어느 entry 로 들어오는가" 를 짚는 것이 디버그의 첫 걸음입니다.
 
 ```
 각 EL은 자신만의 벡터 테이블을 가짐:
@@ -424,6 +432,8 @@ ERET 실행 (복귀):
 ```
 
 ### 5.7 EL 별 메모리 번역 체계 (Translation Regime)
+
+각 EL 은 자신만의 페이지 테이블 레지스터를 사용합니다. EL0/1 은 TTBR0_EL1 (유저 공간)과 TTBR1_EL1 (커널 공간)으로 분리하여 같은 주소 공간을 공유하되 range 로 역할을 나눕니다. EL2 는 자기 자신의 매핑(TTBR0_EL2)과 함께 VM 용 Stage 2 테이블(VTTBR_EL2)을 별도로 유지해, Guest OS 가 "자신이 물리 메모리를 직접 관리한다"고 착각하는 동안 Hypervisor 가 실제 PA 를 통제합니다. EL3 는 오직 Secure Monitor 자신의 매핑만 관리합니다.
 
 ```
 +-------+-------------------+--------------------------------------+
@@ -488,6 +498,8 @@ EL3M -> NSEL1: "ERET → Non-Secure"
 
 ### 5.9 Secure EL2 (ARMv8.4+) — Secure 가상화
 
+ARMv8.4 이전까지 Secure World 에는 Hypervisor 가 없었습니다. Secure OS (S-EL1) 가 하나만 존재했기 때문에, 복수의 TEE 를 같은 Secure World 안에서 서로 격리하는 방법이 없었고, 한 TEE 가 전체 Secure 메모리에 접근할 수 있는 구조였습니다. ARMv8.4 에서 Secure EL2 가 추가되면서 Secure Hypervisor (SPM) 가 복수의 Secure Partition 을 Stage 2 Translation 으로 서로 격리할 수 있게 됐고, 그 통신 표준이 FF-A (Firmware Framework for Arm) 입니다. SP 끼리 또는 Normal World ↔ SP 간에 메시지를 주고받으려면 기존에는 SMC 로 EL3 를 매번 경유해야 했는데, FF-A 는 이를 표준화된 메시지 인터페이스로 직접 라우팅합니다.
+
 ```
 ARMv8.4 이전:
   Secure World에는 Hypervisor 없음
@@ -520,6 +532,8 @@ NSEL2 -> EL3M
 ```
 
 #### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준
+
+FF-A 의 핵심은 메모리 공유 방식의 명확한 소유권 언어입니다. Share 는 양쪽이 동시에 접근하는 공유이고, Lend 는 빌려준 쪽이 접근권을 잃는 일시 양도, Donate 는 소유권 자체가 이전되는 완전 양도입니다. 이 세 가지 구분이 없으면 SP 간 메모리 공유에서 TOCTOU 취약점이 발생할 수 있습니다. 그 위에서 SPM (Hafnium) 이 Stage 2 Translation 으로 SP 간 메모리 경계를 강제하고, FF-A 메시지를 라우팅합니다.
 
 ```
 문제: SP끼리, 또는 Normal World↔SP 간 통신 방법이 필요

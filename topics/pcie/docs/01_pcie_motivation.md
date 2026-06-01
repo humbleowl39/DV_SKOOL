@@ -107,10 +107,9 @@ PCIE: "PCIe serial (2003~) — point-to-point" {
 }
 ```
 
-- **PCI**: 한 device 만 송신, 공유 bus 부하 ↑ → 속도 ↓, 32-line skew 가 freq 상한 (~533 MHz).
-- **PCIe**: 모든 link 가 full-duplex, Switch 가 fan-out 담당, lane 마다 독립 CDR.
+PCI 구조에서는 한 device 만 송신 권한을 얻을 수 있어 나머지는 기다려야 했고, 공유 bus 의 부하가 올라갈수록 전체 속도가 떨어졌으며, 32-line skew 가 주파수 상한을 ~533 MHz 근방으로 묶어두었습니다. PCIe 는 이 구조를 뒤집어 모든 link 를 full-duplex 로 만들고, Switch 가 fan-out 을 담당하며, 각 lane 이 독립 CDR 로 박자를 추출합니다.
 
-세 가지 PCI 의 한계 (공유 bus 부하 / parallel skew / multi-drop arbitration) 가 PCIe 에서 모두 사라지고, 대신 **lane 독립 SerDes + Switch fan-out + packet-switched layered architecture** 가 그 자리를 채웁니다.
+세 가지 PCI 의 한계 — 공유 bus 부하, parallel skew, multi-drop arbitration — 가 PCIe 에서 모두 사라지고, 그 자리를 **lane 독립 SerDes + Switch fan-out + packet-switched layered architecture** 가 채웁니다.
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
@@ -252,7 +251,7 @@ DD -- BUS
 | **Half-duplex** | 한 시점에 한 device 만 송신 |
 | **Arbitration overhead** | bus master 변경 시마다 협상 |
 
-→ 결과: **PCI-X 533 MHz 가 한계**. 그 이상은 parallel 로 못 감.
+이 한계들이 겹치면서 결국 **PCI-X 533 MHz 가 실질적 상한**이 되었습니다. 주파수를 더 올리려 할수록 skew, crosstalk, pin 수가 동시에 터져 나오기 때문에 parallel 버스로는 그 이상을 갈 수 없었습니다.
 
 ### 5.2 PCIe 의 핵심 결정
 
@@ -305,7 +304,7 @@ BR -> PDEV: "legacy PCI"
 | **Endpoint (EP)** | PCIe 디바이스. Type 0 config header. NVMe, NIC, GPU 등. |
 | **PCI-PCI Bridge** | PCIe ↔ legacy PCI. 사실상 Switch 의 일종. Type 1 config header. |
 
-**라우팅 단위**: Address routing (memory address 기반), ID routing (BDF 기반), Implicit routing (broadcast/upstream). 자세한 건 Module 03.
+PCIe 에서 TLP 를 어느 port 로 내보낼지 결정하는 방식은 세 가지입니다. Memory 나 IO 영역으로 향하는 TLP 는 헤더의 주소 값을 보고 포워딩하는 **Address routing** 을 사용하고, Configuration 이나 Completion 처럼 특정 device 를 겨냥할 때는 BDF 로 판별하는 **ID routing** 을 씁니다. 일부 Message TLP 는 "RC 방향으로", "브로드캐스트" 처럼 암묵적으로 경로가 정해지는 **Implicit routing** 을 따릅니다. 자세한 내용은 Module 03 에서 다룹니다.
 
 ### 5.4 Generation 진화
 

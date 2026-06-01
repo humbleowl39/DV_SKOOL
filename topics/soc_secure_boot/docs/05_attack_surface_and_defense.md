@@ -208,13 +208,15 @@ jump_to_bl2();                                // ◀ 단일 글리치로 모두 
 
 ### 4.2 Defense in Depth — 3 계층
 
+한 가지 방어만으로는 충분하지 않습니다. 이중 검증 코드가 잘 작성돼 있어도 HW 글리치 감지기가 없으면 정밀한 전압 공격에 무너질 수 있고, HW 감지기가 있어도 설계 단계에서 키 계층을 잘못 구성하면 ROTPK 침해 시 전체 fleet 이 위험에 빠집니다. 그래서 방어는 HW / SW / 설계 세 계층이 직교적으로 동작해야 하고, 공격자가 한 계층을 우회해도 나머지 두 계층이 독립적으로 막을 수 있어야 합니다.
+
 | 계층 | 메커니즘 | 예시 |
 |---|---|---|
 | **HW** | sensor + lock | glitch detector, SRAM lock-down, key isolation, anti-tamper mesh |
 | **SW** | 중복 + 검증 | 이중 verify, flow magic, anti-rollback counter, secure storage |
 | **설계** | architecture | key hierarchy (피해 범위 제한), crypto agility (PQC 전환), threat modeling |
 
-한 계층만 의존하면 그 계층의 공격에 모두 노출. 셋이 직교적으로 동작해야 attacker 가 하나를 우회해도 다른 계층이 잡습니다.
+한 계층만 의존하면 그 계층의 공격에 모두 노출됩니다. 셋이 직교적으로 동작해야 attacker 가 하나를 우회해도 다른 계층이 잡습니다.
 
 ### 4.3 Threat Model — 누가 공격자인가
 
@@ -413,7 +415,7 @@ TOCTOU 공격:
 
 ### 5.7 Negative Test 시나리오 프레임워크
 
-공격 카테고리별로 정리하면 면접에서 구조적 답변이 가능:
+Negative Test 를 단순히 "틀린 input 을 넣어보는 것" 으로 생각하면 coverage 가 산발적으로 흩어집니다. 공격 카테고리를 먼저 정의하고 그 안에서 시나리오를 도출하면, 어떤 공격 surface 가 검증됐고 어떤 것이 빠졌는지 즉시 파악할 수 있습니다. 면접에서도 "Negative 시나리오 3개" 를 단순 나열하는 대신 카테고리로 묶어 답하면 — "서명 카테고리 2개, Rollback 1개, Fault 2개" — 구조적 사고가 드러납니다.
 
 #### 카테고리 1: 서명/인증 실패
 

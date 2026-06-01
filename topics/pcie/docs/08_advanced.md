@@ -174,6 +174,8 @@ void ats_invalidate(uint16_t bdf_vf, uint64_t iova, uint32_t len) {
 
 ### 4.1 가상화의 3 축
 
+modern 데이터센터 워크로드가 요구하는 것을 한 줄로 요약하면 "CPU 의 개입을 최소화하면서 device 와 VM 이 직접 대화하게 하라" 입니다. 이 요구는 세 개의 축으로 나뉩니다. **SR-IOV** 는 하나의 physical function 을 여러 virtual function 으로 복제해 VM 이 hardware 를 직접 접근할 수 있게 합니다. **ATS** 는 IOMMU 의 page walk 를 device 의 ATC 에 캐시해 DMA 마다 발생하는 walk 지연을 없앱니다. **P2P + ACS** 는 RC 를 거치지 않고 device 끼리 직접 DMA 하는 경로를 허용하되, ACS 정책으로 보안을 통제합니다. 여기에 하나의 VF 안에서 여러 process 나 VM 을 분리해야 할 때 **PASID** 가 각 DMA 에 address space 식별자를 붙여 줍니다.
+
 | 축 | 무엇을 해결 | TLP 어휘 |
 |---|---|---|
 | **SR-IOV** | 한 device 의 _function 복제_ → VM 직접 패스스루 | PF/VF BDF, derived BAR |
@@ -259,7 +261,7 @@ void ats_invalidate(uint16_t bdf_vf, uint64_t iova, uint32_t len) {
                     └─ CXL.mem  : host → device-attached memory
 ```
 
-→ CXL 은 PCIe 의 _새 버전_ 이 아니라 _대안 프로토콜_. 같은 cable, 다른 transport.
+CXL 은 PCIe 의 새 버전이 아닙니다. 같은 SerDes, 같은 connector 를 공유하지만, LTSSM 초기 단계에서 Modified TS1/TS2 를 주고받아 "이 link 는 CXL 로 동작"이라는 합의가 이루어지면 그 위에 완전히 다른 transport 가 올라옵니다. **CXL.io** 는 PCIe 와 호환되는 Configuration, MMIO, DMA 경로로 모든 CXL device 의 baseline 입니다. **CXL.cache** 는 accelerator 가 host CPU 의 cache 일관성 도메인에 참여해 cache line 을 직접 공유할 수 있게 합니다. **CXL.mem** 은 host CPU 가 device 에 붙어 있는 메모리를 자기 메모리처럼 load/store 로 접근하는 경로이며, DDR DIMM 슬롯 부족 문제를 PCIe 슬롯으로 해결하는 것이 대표 사례입니다.
 
 ---
 
@@ -404,6 +406,8 @@ ATS 가 처리 안 된 IOVA (page fault) 발생 시:
 
 ### 5.3 PASID (Process Address Space ID)
 
+SR-IOV 로 VF 를 VM 에 패스스루하고 ATS 로 IOMMU walk 를 줄이더라도, 한 VF 가 여러 process 나 container 의 메모리에 동시에 DMA 해야 하는 상황이 생깁니다. 이때 BDF 만으로는 어느 process 의 page table 을 참조해야 하는지 알 수 없습니다. **PASID** 는 TLP 에 20-bit 의 address space 식별자를 붙여 IOMMU 가 (BDF, PASID) 쌍으로 page table 을 결정할 수 있게 합니다. 덕분에 하나의 VF 가 서로 다른 VM 의 메모리를 격리된 상태로 동시에 DMA 할 수 있습니다. PASID 는 **SVM (Shared Virtual Memory)** 의 기반이기도 합니다 — accelerator 가 CPU 의 가상 주소 공간을 그대로 참조하는 시나리오에서 PASID 가 없으면 프로세스별 메모리 격리가 무너집니다. 단, PASID 는 별도 Extended Capability (0x0023) 로 device 와 IOMMU 양쪽이 모두 지원해야 하며, 한쪽이라도 빠지면 silent failure 로 이어집니다.
+
 ```
    하나의 device 가 여러 process / VM 의 메모리에 동시 DMA 시:
        PASID 가 어느 address space 인지 식별 (20-bit)
@@ -411,8 +415,6 @@ ATS 가 처리 안 된 IOVA (page fault) 발생 시:
    TLP 의 PASID prefix 또는 PASID extension 으로 전달
    IOMMU 가 (BDF, PASID) 쌍으로 page table 결정
 ```
-
-→ Process-aware DMA. SVM (Shared Virtual Memory) 의 기반.
 
 ### 5.4 P2P (Peer-to-Peer) DMA
 

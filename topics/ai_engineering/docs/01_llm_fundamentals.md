@@ -604,40 +604,17 @@ Emergent Abilities (창발 능력):
 
 ### 5.8 LLM 의 학습 단계
 
-```
-Phase 1: Pre-training (사전 학습)
-  - 대규모 텍스트 코퍼스 (수 TB)
-  - Next Token Prediction (자기지도 학습)
-  - 수천 GPU × 수 주~수 개월
-  - 결과: 언어의 일반적 패턴 학습
-  - 비용: 수백만~수천만 달러
+오늘날 대부분의 LLM 은 세 단계를 순서대로 거쳐 완성됩니다.
 
-Phase 2: SFT (Supervised Fine-Tuning)
-  - 사람이 작성한 고품질 (질문, 답변) 쌍
-  - 수만~수십만 예시
-  - 결과: 지시 따르기(Instruction Following) 능력
+**Phase 1 — Pre-training (사전 학습)**: 수 TB 의 텍스트 코퍼스를 대상으로 "다음 토큰 예측" 이라는 자기지도 학습을 수행합니다. 수천 GPU 가 수 주에서 수 개월 동안 연산을 돌리며, 비용은 수백만~수천만 달러에 달합니다. 이 단계에서 모델은 언어의 일반적인 통계 패턴을 학습하지만, 아직 지시에 따라 답변하는 능력이 없습니다.
 
-Phase 3: RLHF / DPO (Human Alignment)
-  - 사람이 선호하는 출력을 학습
-  - 안전성, 유용성, 정확성 강화
-  - 결과: 실용적인 AI 어시스턴트
-```
+**Phase 2 — SFT (Supervised Fine-Tuning)**: 사람이 작성한 고품질 (질문, 답변) 쌍 수만~수십만 개를 추가로 학습합니다. 이 단계에서 비로소 "지시 따르기 (Instruction Following)" 능력이 생기고, 우리가 ChatGPT 에서 경험하는 대화형 응답 패턴이 내재화됩니다.
+
+**Phase 3 — RLHF / DPO (Human Alignment)**: 사람이 선호하는 출력 vs 비선호 출력의 쌍을 학습해 안전성·유용성·정확성을 강화합니다. 이 단계를 거쳐야 비로소 "실용적인 AI 어시스턴트" 가 됩니다. RLHF 는 별도의 Reward Model 을 요구하는 반면, 최근의 DPO/ORPO ([Module 06](06_strategy_selection.md) §5.5) 는 이 단계를 더 단순하게 만들었습니다.
 
 ### 5.9 추론 (Inference) 디코딩 전략
 
-```
-Autoregressive Generation:
-
-입력: "Write a UVM"
-
-Step 1: "Write a UVM" → P(next) → " test"
-Step 2: "Write a UVM test" → P(next) → "bench"
-Step 3: "Write a UVM testbench" → P(next) → " for"
-...
-
-한 번에 하나의 토큰만 생성 → 순차적 (병렬화 불가)
-→ 이것이 LLM 추론이 느린 근본 이유
-```
+LLM 이 응답을 생성하는 방식은 본질적으로 순차적입니다. "Write a UVM" 을 받으면 먼저 `" test"` 한 토큰을 예측하고, 그 다음 "Write a UVM test" 를 보고 `"bench"` 를 예측하며, 이런 식으로 한 번에 하나씩 이어갑니다. 병렬화가 불가능하다는 뜻이고, 이것이 LLM 추론이 느린 근본 이유입니다. 그리고 매 step 마다 "다음 토큰의 확률 분포를 어떻게 샘플링할지" 를 결정해야 하는데, 그 방법이 디코딩 전략입니다.
 
 | 전략 | 동작 | 특징 |
 |------|------|------|

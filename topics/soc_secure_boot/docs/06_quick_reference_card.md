@@ -101,6 +101,8 @@ POR → BL1(ROM,EL3) → BL2(FSBL,DRAM초기화) → BL31(Monitor) + BL32(TEE) +
 
 ### 4.2 핵심 정리 표
 
+Module 01~05 에서 흩어진 개념을 주제별로 응축하면 아래와 같습니다. 각 셀은 30초 답변의 출발점이고, 왜 그런지는 해당 모듈 본문이 설명합니다.
+
 | 주제 | 핵심 포인트 |
 |------|------------|
 | HW RoT | BootROM (변경불가 코드) + OTP (ROTPK 해시 + 설정), PUF 로 키 "생성" 가능 |
@@ -161,6 +163,8 @@ POR → BL1(ROM,EL3) → BL2(FSBL,DRAM초기화) → BL31(Monitor) + BL32(TEE) +
 | "Anti-rollback 만 있으면 안전" | _진짜_ OTP 여부 미확인 | "Counter 의 backing storage 가 OTP/eFuse 인지 확인" |
 
 ### 5.3 공격별 방어 빠른 참조
+
+각 공격은 서로 다른 방어 메커니즘을 요구합니다. 글리치는 단일 분기를 건너뛰는 것이 목표이므로 이중 검증 + Flow Integrity + HW 감지기의 _조합_ 이 필요합니다. 롤백은 유효한 서명을 가진 구버전을 재사용하는 것이므로 서명 검증과 _직교_ 하는 OTP Anti-Rollback Counter 가 요구됩니다. 나머지도 마찬가지로, 공격의 본질이 다르면 방어 메커니즘도 달라집니다 — 아래 매핑을 먼저 외우고 이유는 Module 05 로 돌아가서 확인하세요.
 
 ```
 글리치    → 이중 검증 + Flow Integrity + HW 감지기

@@ -289,7 +289,7 @@ ARM SMC Calling Convention:
 
 ### 5.2 TZPC (TrustZone Protection Controller)
 
-APB 주변장치를 Secure / Non-Secure 로 분류:
+TZPC 는 APB 버스에 연결된 주변장치(peripheral slave)를 Secure 전용인지 Non-Secure 접근도 허용하는지 슬레이브 단위로 분류하는 컨트롤러입니다. 이 분류는 BootROM (EL3) 이 부팅 초기에 레지스터로 설정하고, 이후 변경이 잠겨야(locked) 합니다. OTP 와 Crypto Engine 처럼 키를 다루는 슬레이브는 Secure 전용으로 분류해야 하고, 그 결과 Normal World 에서 해당 주소로 트랜잭션이 들어오면 TZPC 가 버스 에러를 반환합니다. 반대로 Timer 나 일반 UART 처럼 양쪽에서 접근해도 되는 슬레이브는 Non-Secure OK 로 열어 둡니다.
 
 ```d2
 direction: right
@@ -308,11 +308,9 @@ TZPCb -> AS
 | Slave 2 (Crypto) | Secure Only — NS 접근 차단 |
 | Slave 3 (UART) | Non-Secure OK |
 
-- BootROM (EL3) 이 TZPC 를 초기 설정.
-- OTP, Crypto Engine 은 Secure 에서만 접근 가능.
-- Normal World 에서 OTP 접근 시도 → 버스 에러.
-
 ### 5.3 TZASC (TrustZone Address Space Controller)
+
+TZASC 는 DRAM 전체를 물리 주소 범위(Region) 단위로 나누어 각 구간을 Secure 전용 또는 Non-Secure 접근 허용으로 설정하는 컨트롤러입니다. TZPC 가 개별 peripheral 슬레이브 하나하나를 잠근다면, TZASC 는 DRAM 전체를 "이 GB 블록은 Secure 전용" 이라는 영역 단위로 잠급니다. BootROM 이 Region 레지스터를 설정한 뒤 Lock bit 를 세우면 이후 NS 에서는 해당 Region 의 주소로 어떤 마스터가 접근하든 DECERR 가 반환됩니다.
 
 ```
 DRAM 영역을 Secure/Non-Secure로 분할:
@@ -347,10 +345,7 @@ DRAM 영역을 Secure/Non-Secure로 분할:
 | Group 1 Secure | Secure | S-EL1 |
 | Group 1 Non-Secure | Non-Secure | NS-EL1 |
 
-**보안 의미**:
-
-- Crypto Engine 완료 인터럽트 → Group 0 (Secure) → Normal World 에서 가로채거나 마스킹 불가.
-- Timer 인터럽트 → Group 1 NS → 일반 OS 가 처리.
+**보안 의미**: 인터럽트를 어느 Group 에 넣느냐가 곧 "누가 이 인터럽트를 볼 수 있는가" 를 결정합니다. Crypto Engine 완료 인터럽트처럼 Secure 측만 알아야 하는 신호는 Group 0 (Secure, FIQ → EL3) 에 배치합니다. 그러면 Normal World 가 실행 중이더라도 해당 인터럽트를 가로채거나 마스킹할 수 없습니다. 반대로 Timer 같은 일반 인터럽트는 Group 1 NS 로 두어 Linux 가 처리합니다.
 
 #### GICv3 구조 상세 (ARMv8 표준)
 
@@ -499,35 +494,24 @@ SMMUb -> DRAM
 
 ### 5.7 월드 간 통신 메커니즘
 
-Secure World 와 Normal World 는 격리되어 있지만 통신이 필요 (예: 일반 앱이 Secure World 의 암호 서비스를 사용해야 할 때).
+Secure World 와 Normal World 는 격리되어 있지만 통신이 필요합니다. 예컨대 일반 앱이 Secure World 의 암호 서비스를 요청해야 할 때입니다. 데이터 크기와 실시간성에 따라 네 가지 방법이 존재하며, 방법마다 보안 위험이 다르기 때문에 어떤 방법을 고를지도 보안 설계의 일부입니다.
 
 **방법 1 — SMC 레지스터 전달 (소량 데이터)**
 
-- X0~X7 레지스터로 파라미터 전달 (최대 8 × 64 bit = 64 bytes).
-- 간단한 요청 / 응답에 적합.
+레지스터 X0~X7 로 파라미터를 전달합니다. 최대 8 × 64 bit = 64 bytes 이므로 소량 요청/응답에 적합하고, 별도 메모리 공유가 없어 TOCTOU 위험이 없습니다.
 
 **방법 2 — Shared Memory (대량 데이터)**
 
-- 특정 메모리 영역을 양쪽에서 접근 가능하도록 설정.
-- TZASC 에서 해당 영역을 "NS-accessible" + "S-accessible" 로 설정.
-- 또는 Secure World 가 일시적으로 NS 메모리를 읽기.
+특정 메모리 영역을 TZASC 에서 양쪽 접근 가능으로 열어 두고 대량 데이터를 교환합니다. 이때 Shared Memory 는 양쪽에서 접근 가능하므로 민감 데이터를 두면 안 되고, 반드시 무결성 검증이 필요합니다. 특히 TOCTOU 공격에 주의해야 하는데, Secure 가 데이터를 검증한 _직후_ NS 가 그 버퍼를 변조하면 Secure 가 의도하지 않은 값으로 동작할 수 있습니다.
 
 DRAM 레이아웃 (개념):
 
 | Secure DRAM (S-only) | Shared Buffer (양쪽 접근) | NS DRAM (NS-only) |
 |---|---|---|
 
-주의:
-
-- Shared Memory 는 양쪽에서 접근 가능하므로 민감 데이터 금지.
-- 무결성 검증 필요 (NS 가 Shared Buffer 를 변조할 수 있음).
-- TOCTOU 공격 주의: Secure 가 검증 후 NS 가 변조.
-
 **방법 3 — MHU (Message Handling Unit)**
 
-- 전용 HW 메일박스.
-- 한쪽이 메시지를 쓰면 상대방에게 인터럽트 발생.
-- 레지스터 기반 — 메모리 공유 없이 통신 가능.
+전용 HW 메일박스로, 한쪽이 메시지를 쓰면 상대방에게 인터럽트가 발생합니다. 레지스터 기반이므로 메모리 공유 없이 통신할 수 있습니다.
 
 ```d2
 direction: right
@@ -542,10 +526,7 @@ MHU <-> SW
 
 **방법 4 — FF-A (ARMv8.4+)**
 
-- 표준화된 메시지 + 메모리 공유 프로토콜.
-- SPM (S-EL2) 이 라우팅 관리.
-- 기존 SMC + Shared Memory 의 표준화 버전.
-- 상세는 Module 01 Secure EL2 / FF-A 섹션 참조.
+방법 1~3 의 개념을 표준화한 것이 FF-A 입니다. SPM (S-EL2) 이 라우팅을 관리하고, 메모리 공유의 소유권 의미(Share / Lend / Donate)가 명확히 정의돼 있어 TOCTOU 방어를 프레임워크 레벨에서 지원합니다. 상세는 Module 01 Secure EL2/FF-A 섹션을 참조하세요.
 
 ### 5.8 Secure Boot 에서 보안 레벨 변화 (요약)
 

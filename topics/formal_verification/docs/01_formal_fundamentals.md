@@ -255,12 +255,15 @@ Formal 이 "모든 상태" 를 증명하는 핵심 기법 = 수학적 귀납법 
   └──────────────────────────────────────────┘
 
 Induction 실패 원인과 대응:
-  1. 도달 불가능 상태 (Unreachable State) 에서 귀납 실패
-     → Helper Assertion 추가: 중간 상태 불변 (invariant) 명시
-  2. 상태 공간이 너무 커서 탐색 한계
-     → Abstraction / Assume 으로 축소
-  3. Property 가 너무 복잡
-     → 작은 sub-property 로 분할 후 각각 증명
+  가장 흔한 원인은 도달 불가능 상태 (Unreachable State) 에서 시작하는 귀납 반례입니다.
+  엔진이 "state == 3'b101" 같은 실제로는 진입할 수 없는 인코딩을 귀납 가정으로
+  사용하면 N+1 에서 불변이 깨집니다. 이 경우 Helper Assertion — "state 는 반드시
+  유효한 인코딩만 가진다" 같은 중간 불변 (invariant) — 을 추가하면 엔진이 그 가짜
+  상태를 귀납 가정에서 제외합니다.
+  두 번째 경우는 상태 공간 자체가 커서 귀납 탐색 한계에 부딪히는 것입니다. 이때는
+  Abstraction 또는 Assume 으로 탐색 공간을 줄입니다.
+  세 번째 경우는 Property 가 한꺼번에 너무 많은 조건을 포함하는 것입니다. 작은
+  sub-property 로 분할해 각각 증명하면 귀납 단계가 단순해집니다.
 ```
 
 §3 의 FIFO 예에서 Induction 이 성공한 이유는 단순합니다 — `count` 가 `N-1` 일 때 `wr_en` 을 차단하는 조건이 1 cycle 안에 결정되어, 임의 N 의 가정에서 N+1 의 결론이 곧바로 따라옵니다. 더 복잡한 FSM 이라면 Helper invariant ("state 는 valid encoding 만 가짐") 가 필요하게 됩니다 — Module 03 에서 다룹니다.

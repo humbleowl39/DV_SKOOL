@@ -235,12 +235,14 @@ RESP: OKAY / EXOKAY / SLVERR / DECERR
 
 ### 5.3 면접 골든 룰
 
-1. **APB 존재 이유**: "게이트 비용 — 수십 개 저속 Slave 에 AXI 붙이면 면적 낭비"
-2. **AHB 파이프라인**: "주소/데이터 1 cycle 겹침 — Wait State 중 유지 주의"
-3. **AXI 3 대 특징**: "5 채널 독립 + Outstanding + OOO = 고성능의 핵심"
-4. **VALID/READY 규칙**: "VALID 은 READY 를 기다리지 않음 — 데드락 방지의 근본"
-5. **AXI-S 차이**: "주소 없음 + 단방향 + TLAST 로 패킷 경계"
-6. **Custom VIP**: "TDATA/TVALID/TREADY 핵심 경로만 → 메모리 수십배 절약"
+면접에서 AMBA 프로토콜을 물어볼 때 공통으로 기대하는 답변 구조가 있습니다. 첫 질문은 대개 "왜 여러 프로토콜이 공존하는가" 로 시작해서 각 프로토콜의 핵심 구분점, 핸드셰이크 규칙, 검증 시 주의점 순서로 깊어집니다. 아래 여섯 항목은 그 흐름을 한 줄로 정리한 것입니다.
+
+1. **APB 존재 이유**: "게이트 비용 — 수십 개 저속 Slave 에 AXI 붙이면 인터페이스 로직이 IP 자체보다 커져 면적 낭비가 누적된다"
+2. **AHB 파이프라인**: "주소와 데이터가 1 cycle 겹치므로 throughput 이 높아지지만, Wait State 중에는 두 phase 가 동시에 stall 되어 HADDR/HWDATA 를 모두 hold 해야 한다"
+3. **AXI 3 대 특징**: "5 채널 독립(full-duplex) + Outstanding(응답 전 다음 요청) + OOO(ID 기반 재정렬) — 이 세 가지가 AHB 대비 수 배 throughput 의 근거"
+4. **VALID/READY 규칙**: "VALID 을 올리는 쪽은 READY 상태와 무관하게 데이터가 준비되면 올린다 — 이 비대칭이 데드락을 원천 차단하는 근거"
+5. **AXI-S 차이**: "주소가 없고 단방향이며 TLAST 로 패킷 경계를 표시한다 — memory-mapped 가 아니라 data flow 모델"
+6. **Custom VIP**: "DUT 가 실제로 쓰는 신호(TDATA/TVALID/TREADY)만 처리하면 메모리가 수십 배 절약되고 검증 범위도 명확해진다"
 
 ### 5.4 이력서 연결 — 프로토콜별 사용처
 

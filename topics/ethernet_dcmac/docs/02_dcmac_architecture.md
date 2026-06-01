@@ -211,7 +211,7 @@ SerDes lane 8 개 pool:
   Mixed    : 레지스터 설정으로 임의 매핑
 ```
 
-**핵심**: 모드 변경은 **reset 후 재설정** 이 정상 흐름. runtime 에 모드 toggle 은 spec 외 영역.
+모드를 바꾼다는 것은 lane을 묶는 단위가 달라지는 것이므로, PCS lane alignment·FEC interleaver·MAC TX/RX FIFO 구조가 모두 함께 재구성되어야 합니다. 이 때문에 모드 변경은 **reset 후 재설정** 이 정상 흐름이며, runtime 에 모드 toggle 은 spec 외 영역입니다.
 
 ---
 

@@ -53,13 +53,7 @@
 
 원인 추적: 대부분 _"내가 필요한 기능을 위해 driver 코드 1 줄 변경"_ → 다른 test 의 hidden assumption 깨짐.
 
-해법: **4 원칙**:
-1. **Open/Closed**: 기존 코드 _수정 안 함_, _추가_ 만.
-2. **AP 사용**: driver 변경 대신 broadcast 구독.
-3. **Subclassing**: 기존 class 수정 대신 _override_ + factory.
-4. **Config-driven**: hardcode 대신 _config_db_.
-
-이 4 가 _자동 PR review checklist_ — "_이 변경이 4 원칙 어느 것 위반?_". 위반 없으면 merge. Regression _80% 감소_.
+해법은 **4 원칙**으로 요약됩니다. 먼저 **Open/Closed 원칙** — 기존 코드는 수정하지 않고 추가만 합니다. driver 를 건드리면 그 파일을 쓰는 30 명 모두에게 영향이 갑니다. 대신 새 컴포넌트를 추가하고 기존 **AP 를 구독**하면 driver 는 한 줄도 변경하지 않아도 됩니다. 인터페이스를 바꾸는 것은 모든 연결 지점을 깨뜨리므로, 기존 class 가 부족하다면 **서브클래싱으로 override** 하고, 동작의 차이는 hardcode 가 아닌 **config_db** 로 제어합니다. 이 4 가지 규칙이 PR 리뷰의 자동 체크리스트가 됩니다. "이 변경이 4 원칙 중 어느 것을 위반하는가?" 라는 한 질문으로 위반이 없으면 merge, 있으면 원칙에 맞는 방향을 제시합니다. 결과적으로 기존 경험에서 regression 이 약 80% 감소했습니다.
 
 RDMA-TB 는 수십 명이 동시에 변경하는 코드베이스입니다. "기존 동작을 바꾸지 않으면서 새 기능을 추가한다" 는 규율이 깨지면 회귀 (regression) 가 폭증합니다. 이 4 원칙은 그 규율을 명문화한 것입니다.
 

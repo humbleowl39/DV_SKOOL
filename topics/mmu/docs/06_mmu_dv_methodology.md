@@ -176,6 +176,8 @@ L2 -> L3
 
 ### 4.2 각 레벨의 검증 초점
 
+계층별 분리가 중요한 이유는 디버그 효율성 때문입니다. TLB 서브모듈 TB 에서 교체 정책 버그를 잡지 못하면, MMU Top 통합 테스트에서 발생한 PA mismatch 의 원인이 walk engine 인지 TLB 인지를 구분하기 어렵습니다. 각 레벨에서 자기 책임 범위를 충분히 검증한 뒤에 상위 레벨로 올라가야 통합 실패의 원인을 빠르게 좁힐 수 있습니다.
+
 | 레벨 | 초점 | 장점 |
 |------|------|------|
 | TLB 서브모듈 | 캐시 동작 정확성 | 빠른 시뮬레이션, 정밀 디버그 |
@@ -710,6 +712,8 @@ Agile 개발에서의 MMU 스펙 변경:
 
 ### 5.8 Coverage Model
 
+커버리지 모델은 "어떤 상황을 검증했는가" 를 기계적으로 측정하는 기준표입니다. 단순히 translation 이 성공/실패했는지만 보는 것으로는 부족하고, page size × access type × privilege level × result 의 조합이 빠짐없이 자극되었는지를 cross coverage 로 확인해야 합니다. 성능 커버리지(CG4) 는 특히 중요한데, miss ratio 가 특정 bin 에만 쏠려 있으면 stress 시나리오 자체가 충분하지 않다는 신호입니다.
+
 ```
 [CG1] Translation Coverage
   - cp_page_size:     {4KB, 2MB, 1GB}
@@ -745,6 +749,8 @@ Agile 개발에서의 MMU 스펙 변경:
 ```
 
 ### 5.9 주요 테스트 시나리오
+
+시나리오를 positive 와 negative 로 나누는 이유는 명확합니다. positive 시나리오가 "정상 경로가 제대로 동작하는가" 를 확인한다면, negative 시나리오는 "잘못된 입력을 받았을 때 올바른 에러 처리가 이루어지는가" 를 확인합니다. MMU 버그 중 상당수는 정상 동작은 통과하지만 fault injection 이나 stress 상황에서 드러납니다. 예를 들어 L1/L2 중간 레벨의 PTE 를 invalid 로 만드는 시나리오는 L3 만 invalid 로 하는 것과는 다른 walk engine 경로를 밟기 때문에, 두 케이스를 별개로 검증해야 합니다.
 
 #### Positive 시나리오
 

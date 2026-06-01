@@ -191,6 +191,8 @@ endclass
 
 ### 4.1 set / get 의 4 인자
 
+`config_db` 의 `set` 과 `get` 은 각각 4개의 인자를 받습니다. 첫 번째 `context` 는 어느 컴포넌트를 기준점으로 삼을지를 지정하며, `null` 을 넘기면 UVM 트리 전체를 기준으로 하는 글로벌 설정이 됩니다. 두 번째 `inst_name` 은 설정을 전달할 대상 경로로, 와일드카드(`*`)를 사용하면 여러 컴포넌트를 한 번에 대상으로 삼을 수 있습니다. 세 번째 `field_name` 은 이름표 역할로, `get` 에서 같은 문자열을 써야만 매칭됩니다. 네 번째는 전달하거나 받을 값입니다.
+
 ```
 set(context, inst_name, field_name, value)
 get(context, inst_name, field_name, variable)
@@ -202,6 +204,8 @@ get(context, inst_name, field_name, variable)
 ```
 
 ### 4.2 경로 매칭 규칙
+
+`get` 을 호출하는 컴포넌트는 자신의 전체 경로 (`this.get_full_name()`) 를 조회 키로 사용합니다. UVM 은 이 키가 `set` 의 `inst_name` 에 매칭되는지 확인하는데, 정확한 문자열 일치 외에도 와일드카드 매칭을 지원합니다. `"*"` 하나는 트리 전체에 도달하므로 가장 넓은 범위이고, `"env.agent.*"` 처럼 더 구체적인 경로를 쓸수록 의도치 않은 컴포넌트로의 hit 를 줄일 수 있습니다. `get` 의 두 번째 인자에 `""` 을 넘기면 자기 자신의 full_name 이 그대로 lookup key 로 쓰이는 표준 관용구입니다.
 
 ```
 "env.agent.driver"  → 정확히 일치
@@ -218,6 +222,8 @@ get(context, inst_name, field_name, variable)
 | `"env.agent.driver"` | 정확히 그 driver | driver 의 build 에서 get(this, "", ...) |
 
 ### 4.3 Factory 의 두 종류 override
+
+Factory override 는 "어느 범위까지 교체할 것인가" 에 따라 두 가지로 나뉩니다. Type Override 는 환경 내의 모든 `my_driver` 인스턴스를 `enhanced_driver` 로 바꾸는 방식으로, 전체 테스트 환경의 동작을 한 줄로 전환할 때 씁니다. Instance Override 는 특정 경로에 있는 인스턴스 하나만 교체하는 방식으로, 두 개의 Agent 중 하나의 Driver 만 다르게 동작시키고 싶을 때 적합합니다. 두 경우 모두 override 는 `type_id::create` 가 불리기 **전에** 등록되어야 하므로, base_test 의 `build_phase` 에서 env 를 create 하기 전 가장 먼저 설정하는 것이 관례입니다.
 
 ```systemverilog
 // Type Override: 모든 my_driver 를 enhanced_driver 로 대체
@@ -279,7 +285,7 @@ my_agent_config cfg;
 uvm_config_db #(my_agent_config)::get(this, "", "cfg", cfg);
 ```
 
-**장점**: set/get 호출 수 감소, 관련 설정을 논리적으로 그룹화, 타입 안전성. 포팅 시 Config Object 의 필드만 바꾸면 환경 전체 동작 변형.
+Config Object 패턴의 핵심 이점은 설정의 "단일 진입점" 을 만드는 것입니다. vif, is_active, timeout 같은 설정을 개별 `set` 으로 흩어 놓으면 경로 오타의 기회가 그만큼 늘어나지만, Config Object 한 개로 묶으면 set/get 호출이 컴포넌트당 한 번으로 줄고 관련 설정들이 논리적으로 그룹화됩니다. 다른 SoC 로 포팅할 때는 Config Object 의 필드 값만 바꾸면 환경 전체의 동작이 바뀌므로, 포팅 비용을 수 주에서 수 일로 줄이는 핵심 도구가 됩니다.
 
 ### 5.2 Factory Override 활용 패턴
 
@@ -356,7 +362,7 @@ BootROM 검증에서의 config_db 활용:
 
 ### 5.5 set 과 get 의 phase 순서 주의
 
-`set` 은 **언제든 호출 가능** 하지만, `get` 은 보통 **build_phase** 또는 그 이후에서만 의미가 있습니다. 그리고 build_phase 는 _top-down_ 이므로:
+`config_db` 에서 또 하나 놓치기 쉬운 함정이 phase 순서입니다. `set` 은 언제든 호출할 수 있지만, `get` 은 보통 `build_phase` 이후에서만 의미가 있습니다. 그런데 `build_phase` 자체가 top-down 순으로 실행되기 때문에, 부모가 `build_phase` 안에서 `set` 하고 자식이 같은 `build_phase` 안에서 `get` 하는 경우는 문제없지만, 순서가 역전되면 `get` 시점에 아직 `set` 이 일어나지 않은 상태가 됩니다.
 
 - 부모가 build_phase 안에서 set, 자식이 같은 build_phase 안에서 get → ✓ (자식 build 가 부모 build 보다 _늦게_ 실행됨)
 - 자식이 build_phase 에서 set, 부모가 build_phase 에서 get → ✗ (부모 build 가 _먼저_ 실행되므로 set 이 아직 안 됨)

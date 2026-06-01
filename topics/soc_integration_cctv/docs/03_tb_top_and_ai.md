@@ -46,18 +46,11 @@
 
 당신은 SoC 검증. 새 SoC release 마다 TB 작성 _4 주_, 검증 8 개월 → 다음 SoC 시작.
 
-DVCon 2025 데이터 [Cadence / Synopsys]:
-- **Config-driven TB + AI Gap discovery**: 4 주 → _1 주_.
-- 8 개월 검증 사이클을 _1.5 개월_ 단축 가능.
+DVCon 2025 데이터 [Cadence / Synopsys] 에 따르면 Config-driven TB + AI Gap discovery 를 도입했을 때 TB 작성 기간이 4 주에서 1 주로 단축되고, 8 개월 검증 사이클을 1.5 개월 줄일 수 있었습니다.
 
-**핵심 패턴**:
-1. **TB Top 의 모든 component 가 _Config 기반_**: JSON 한 파일이 IP list, base address, common task matrix 정의.
-2. **AI Gap discovery**: 새 IP 추가 시 _LLM 이_ 기존 spec → 자동 _Gap candidates_ 제시.
-3. **사람 review + commit**: AI 가 _제안_, 사람이 _승인_.
+이것이 가능한 이유는 세 가지 패턴이 결합되기 때문입니다. 먼저 TB Top 의 모든 component 가 **Config 기반** 으로 동작합니다 — JSON 한 파일이 IP list, base address, common task matrix 를 정의하면 Generator 가 나머지를 자동 구성합니다. 다음으로 **AI Gap discovery** 가 새 IP 추가 시 기존 Spec 과 검증 이력을 바탕으로 Gap candidate 를 자동으로 제시합니다. 마지막으로 **사람이 리뷰하고 승인** 합니다 — AI 는 제안을 만들고, 숙련된 DV 엔지니어가 False Positive 를 걸러내고 priority 를 확정합니다.
 
-8 개월 → 1 주 = _32 배 throughput_. 같은 팀 크기로 _8 배_ chip 가능.
-
-이게 modern SoC DV 의 _가장 큰 ROI_ 영역.
+이 세 패턴이 맞물리면 같은 팀 규모로 이전 대비 8 배 더 많은 chip 을 처리할 수 있습니다. 이것이 modern SoC DV 에서 가장 ROI 가 높은 영역입니다.
 
 Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap 을 _누가 어떤 테스트로 메우는지_ 는 여전히 수동입니다. 새 IP 가 들어오거나 base address 가 바뀌면 TB 의 agent / checker / monitor / coverage 가 _전부 손으로 갱신_ 돼야 하고, 이 과정에서 "TB 작업 4 주 → 검증 시작" 의 병목이 다시 발생합니다.
 
@@ -188,6 +181,8 @@ Phase 3: LLM Gap Detection + Test Generation
 
 ### 4.3 정량 결과 (DVCon 2025)
 
+다음 표는 DVCon 2025 에서 공개된 두 프로젝트의 CCTV Gap 발견 결과입니다.
+
 | 지표 | Project A (대규모) | Project B (소규모) |
 |------|-------------------|-------------------|
 | SoC 내 IP 수 | ~200 | ~50 |
@@ -196,21 +191,13 @@ Phase 3: LLM Gap Detection + Test Generation
 | Human Oversight 비율 | - | **96.30%** |
 | New IP/Feature 누락 감소 | **~40%** | - |
 
-**인사이트**:
+이 숫자들에서 세 가지 중요한 인사이트가 나옵니다.
 
-```
-1. 소규모 프로젝트의 Gap Rate가 더 높음 (4.99% > 2.75%)
-   → 엔지니어 수가 적어 교차 검증 부족
-   → 자동화의 필요성이 오히려 소규모에서 더 큼
+첫째, **소규모 프로젝트의 Gap Rate 가 더 높습니다** (4.99% > 2.75%). 직관과 반대입니다. IP 수가 적으면 관리가 쉬울 것 같지만, 실제로는 엔지니어 수가 적어 한 사람이 여러 IP 를 담당하고 교차 검증이 이루어지지 않습니다. 자동화의 필요성이 오히려 소규모에서 더 큽니다.
 
-2. Human Oversight가 96.30%
-   → 기술적 어려움이 아닌 "단순 누락"이 대부분
-   → 자동 체크리스트/매트릭스 관리로 해결 가능
+둘째, **Human Oversight 가 96.30%** 입니다. Gap 의 대부분이 기술적 어려움 때문이 아니라 단순 누락이라는 뜻입니다. 자동 체크리스트와 매트릭스 관리만으로 96% 를 해결할 수 있습니다.
 
-3. New IP/Feature 누락이 40% 감소
-   → 새 IP 추가 시 자동으로 Common Task 목록 갱신
-   → "이전 칩에서 했으니까" 가정을 제거
-```
+셋째, **New IP/Feature 누락이 40% 감소** 했습니다. 새 IP 가 추가될 때 Config 에서 Common Task 목록이 자동 갱신되므로 "이전 칩에서 했으니까" 라는 잘못된 가정이 사라집니다.
 
 ---
 
@@ -237,11 +224,7 @@ STIM -> DUT
 DUT -> CHK
 ```
 
-재사용 핵심:
-
-- 프로젝트 A → `Config_A.json` → TB Top 자동 구성
-- 프로젝트 B → `Config_B.json` → 같은 TB Top 프레임워크 재사용
-- → "8개월 동안 구축한 환경을 여러 SoC에 배포" (이력서)
+이 구조의 재사용 가치는 Layer 분리에서 나옵니다. 프로젝트 A 는 `Config_A.json` 을, 프로젝트 B 는 `Config_B.json` 을 사용하지만, Generator (Layer 2) 와 UVM Env (Layer 3) 는 양쪽에서 동일한 코드가 동작합니다. 첫 번째 SoC 에서 TB 를 구축하는 데 8 개월이 걸렸더라도, 두 번째 SoC 부터는 Config 파일 하나만 교체하면 같은 TB 프레임워크가 그대로 동작합니다 — "8개월 동안 구축한 환경을 여러 SoC에 배포" 한 것입니다.
 
 ### 5.2 코드 예시 — 구체적 JSON Config
 
@@ -319,7 +302,7 @@ DUT -> CHK
 }
 ```
 
-**Config 설계 핵심**:
+각 필드가 어떤 역할을 맡는지 이해하면 Config 설계의 의도가 명확해집니다.
 
 | 필드 | 용도 |
 |------|------|
@@ -328,7 +311,7 @@ DUT -> CHK
 | `power_domains[].depends_on` | Power 시퀀스 순서 자동 검증 |
 | `reset_sequence` | Reset 해제 순서 SVA 자동 생성 |
 
-→ **프로젝트 A → Config_A.json, 프로젝트 B → Config_B.json 만 교체하면 동일 TB 프레임워크 재사용**
+`ip_list[].common_tasks` 필드에 적힌 Task 만 CCTV 에서 검증 대상이 되고, 적히지 않은 Task 는 `ignore_bins` 로 자동 처리됩니다. 덕분에 UART 에 sysMMU 가 없다는 사실을 코드에 하드코딩하지 않아도 됩니다. `reset_sequence` 필드는 IP 사이의 reset 해제 순서를 선언하면 Generator 가 이를 SVA 로 자동 변환합니다 — 설계 의도와 검증 코드가 같은 파일에서 동기화됩니다. 프로젝트 A 와 B 는 Config 파일만 다르고 나머지는 동일합니다.
 
 ### 5.3 코드 예시 — Config 기반 UVM Env 자동 구성
 
@@ -587,7 +570,8 @@ def detect_gaps(ip_profile, existing_vplan, similar_ips):
     return llm_call(prompt)
 ```
 
-**AI 파이프라인 핵심 차별점**:
+이 파이프라인의 핵심 차별점은 IP-XACT 가 줄 수 없는 **시맨틱 판단** 을 제공한다는 점입니다. IP-XACT 만으로는 "이 IP 에 AXI Master 포트가 있다" 는 구조적 사실만 알 수 있고, "따라서 sysMMU 검증이 필요하다" 는 판단을 자동으로 내릴 수 없습니다. Hybrid 방식은 이 간극을 메웁니다.
+
 ```
 기존 (IP-XACT only):
   "이 IP에 AXI Master 포트가 있다" → 구조적 사실만 알 수 있음
@@ -599,6 +583,8 @@ Hybrid (IP-XACT + Spec + FAISS + LLM):
   FAISS: 유사 IP(GPU)에서 sysMMU 검증이 수행된 이력 참조
   LLM: 종합 판단 → "sysMMU 검증 필요, 특히 Bypass→Enable 전환 중요"
 ```
+
+IP Spec 텍스트에서 "sysMMU 를 통해 메모리에 접근" 이라는 문장을 발견하면 필요성이 확인되고, FAISS 로 유사 IP (GPU) 의 검증 이력을 참조하면 "어떤 시나리오를 우선해야 하는지" 까지 예측할 수 있습니다. 이 세 정보를 LLM 이 종합하여 Priority 가 매겨진 Gap 목록과 mrun 명령어를 출력합니다.
 
 ### 5.6 Gap Report → V-Plan 반영 실무 워크플로우
 

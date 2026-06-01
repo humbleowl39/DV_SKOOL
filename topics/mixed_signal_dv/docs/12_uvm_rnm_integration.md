@@ -12,7 +12,7 @@
 
 > **용어 메모:** 이 챕터는 정확히 말하면 **"UVM-DMS"** (Digital Mixed-Signal, Ch10 §1 정의) — 즉 RNM 기반 mixed-signal의 UVM 통합 — 을 다룹니다. 산업 문헌·Accellera working group에서 같은 내용을 종종 **"UVM-AMS"** 로 부르는데, 거기서의 "AMS"는 Verilog-AMS 언어가 아니라 **mixed-signal 우산 용어**입니다. 두 용법의 차이는 Ch02 §5.1 참조.
 
-digital UVM env에 익숙한 사람이 mixed-signal env로 옮길 때 가장 어색한 부분은 **"같은 env에 시간 모델이 다른 agent가 공존한다"**는 사실입니다. analog agent는 sub-event step으로 real wave를 만들고, digital agent는 cycle 단위로 transaction을 다룹니다. 둘을 한 scoreboard 안에서 정렬·비교하는 것이 env topology 설계의 본질.
+digital UVM env에 익숙한 사람이 mixed-signal env로 처음 넘어올 때 가장 어색한 것은 **"같은 env 안에 시간 모델이 다른 두 종류의 agent가 공존한다"**는 사실입니다. digital agent는 클록 엣지 단위로 transaction을 처리합니다. 반면 analog agent는 "1.0 V를 100 ns에 걸쳐 ramp-up"처럼 연속적인 파형을 수백 개의 sub-event step으로 분해해서 생성합니다. 이 두 agent가 만든 신호를 한 scoreboard에서 시간 순서에 맞게 정렬하고 비교하는 것이 env topology 설계의 본질입니다. 이 비대칭을 이해하면 나머지는 디지털 DV의 연장선입니다.
 
 ### 1.1 표준 토폴로지
 
@@ -48,6 +48,8 @@ UVM TEST
 
 ### 1.2 구성 요소별 책임
 
+표준 토폴로지의 각 요소가 mixed-signal에서 어떤 역할을 담당하는지를 정리합니다. digital UVM과 동일한 이름의 컴포넌트라도 mixed-signal 특유의 포인트가 있습니다.
+
 | 요소 | 역할 | MS-specific 포인트 |
 |---|---|---|
 | analog_agent | analog 신호 stim·sense | driver는 sub-event step, monitor는 trigger 기반 sample |
@@ -58,6 +60,8 @@ UVM TEST
 | scoreboard | 예상 vs 관측 비교 | analog tolerance, multi-rate 정렬, reference model 호출 |
 | ref model | 예상값 계산 | SV / DPI / co-sim 중 택1, spec 수식 직접 코드화 |
 | coverage | 도달도 정의 | real bin · spec corner cross · transition |
+
+이 중 digital DV에서 가장 낯선 것은 **DUT wrapper의 swap-in 패턴**과 **scoreboard의 tolerance + multi-rate 동기**입니다. 다음 절들에서 각각을 집중적으로 다룹니다.
 
 ### 1.3 DUT wrapper의 swap-in 패턴
 
@@ -244,7 +248,7 @@ endinterface
 
 ## 3. Analog Agent — 비대칭 Driver/Monitor
 
-digital agent는 driver와 monitor가 대체로 대칭입니다 — 같은 신호를 시간만 다르게 잡고 풀고. analog agent는 다릅니다. **driver는 sub-event step으로 연속파형을 만들고, monitor는 trigger 기반 sampling**으로 변환합니다. 이 비대칭이 모든 결정에 영향을 줍니다.
+디지털 agent는 driver와 monitor가 대칭입니다. driver는 클록 엣지마다 신호를 구동하고, monitor는 같은 클록 엣지마다 신호를 샘플링합니다. analog agent는 이 대칭이 깨집니다. **driver는 sub-event step으로 연속 파형을 생성하고, monitor는 trigger 이벤트 기반으로 의미 단위 transaction을 수집합니다.** 이 비대칭을 이해하지 못하면 analog agent를 잘못 구현하게 됩니다.
 
 ```text
 Digital agent (대칭)
@@ -256,6 +260,8 @@ Analog agent (비대칭)
    monitor:  DUT 신호 → trigger 검출 → 의미 단위 transaction
                                      (zero-cross, settled, eoc 등)
 ```
+
+driver는 "0.0 V에서 1.8 V로 100 ns에 걸쳐 선형 ramp" 같은 파라미터화된 의도(intent)를 sub-event step으로 풀어냅니다. monitor는 "BL 전압이 threshold를 지나는 시점", "출력이 settled 된 시점", "ADC의 eoc 신호가 올라오는 시점" 같은 trigger에 반응해 의미 있는 transaction을 만듭니다. 이 비대칭이 모든 구현 결정에 영향을 줍니다.
 
 ### 3.1 sequence_item에 "의도(kind) + 파라미터" 패턴
 

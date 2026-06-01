@@ -66,6 +66,8 @@
 
 ### 11.2.1 디렉토리 구조
 
+디렉토리 구조는 기능별로 분리하는 것이 핵심입니다. src는 TB 컴포넌트의 구조를, seq는 시나리오 행동을, test는 시나리오를 조합한 테스트 케이스를, sva는 protocol checker를 담습니다. 이렇게 나누면 새로운 시나리오 추가 시 seq 디렉토리만 건드리면 되고, SVA 수정은 sva 디렉토리에서만 이루어집니다.
+
 ```
 ddr5_tb/
 ├── sim/
@@ -646,6 +648,8 @@ endclass
 ## 11.6 Coverage Closure Flow
 
 ### 11.6.1 3-Tier 진행
+
+coverage closure는 한 번에 되는 것이 아닙니다. 먼저 기본 시나리오가 동작하는지 확인하고, 그 다음 랜덤 seed로 다양한 조합을 자동 탐색하고, 마지막으로 자동화로 채워지지 않은 hole을 targeted directed test로 채웁니다. 각 tier는 앞 tier가 패스되어야 진행하는 것이 원칙입니다. Tier 1이 실패한 상태에서 Tier 2를 돌리면 기본 버그 때문에 무수히 많은 fail이 쏟아져 debug가 어려워집니다.
 
 ```
 Day 1-2:  Tier 1 (Smoke) — seed=0 directed tests

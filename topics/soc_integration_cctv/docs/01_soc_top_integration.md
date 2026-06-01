@@ -232,59 +232,37 @@ IRQ -> PWR
 
 ### 5.1 IP 검증에서 잡을 수 없는 5 대 결함 카테고리
 
-```
-1. Connectivity 오류
-   - IP_A의 irq_out이 GIC의 SPI[47]에 연결되어야 하는데 SPI[48]에 연결
-   - IP 단독으로는 발견 불가 — 연결은 Top에만 존재
+IP 단독 검증이 완벽해도 통합 후 실리콘에서 나타나는 결함에는 공통된 구조적 이유가 있습니다. 해당 정보가 IP 자신의 테스트벤치 안에 애초에 존재하지 않기 때문입니다. 다섯 카테고리를 하나씩 살펴봅니다.
 
-2. Clock/Reset 오류
-   - IP에 잘못된 클럭 공급 (200MHz 필요한데 100MHz 연결)
-   - Reset 해제 순서 오류 (IP_A가 IP_B보다 먼저 해제되어야 하는데 반대)
+첫째, **Connectivity 오류**입니다. IP_A 의 `irq_out` 이 GIC 의 `SPI[47]` 에 연결돼야 하는데 `SPI[48]` 에 연결되는 식의 1 줄 misrouting 이 전형적 사례입니다. IP_A 자체는 인터럽트를 정상적으로 발생시키기 때문에 IP 단독 TB 는 PASS 를 냅니다. 오류가 있는 연결 정보는 오로지 `soc_top.sv` 에만 존재합니다.
 
-3. Memory Map 오류
-   - IP의 Base Address가 스펙과 다르게 배치
-   - 주소 범위 중첩 (IP_A와 IP_B 주소가 겹침)
+둘째, **Clock/Reset 오류**입니다. 200 MHz 를 필요로 하는 IP 에 100 MHz 가 공급되거나, IP_A 의 reset 이 IP_B 보다 먼저 해제돼야 하는데 순서가 바뀌는 경우입니다. 이 오류들은 reset 트리와 PLL 위계가 SoC Top 통합 시점에야 결정되므로 IP 단독 환경에서는 재현이 불가능합니다.
 
-4. Interrupt Routing 오류
-   - 인터럽트가 잘못된 CPU/GIC 입력에 연결
-   - 인터럽트 우선순위/보안 그룹 설정 오류
+셋째, **Memory Map 오류**입니다. IP 의 Base Address 가 스펙과 다르게 배치되거나 IP_A 와 IP_B 의 주소 범위가 겹치는 경우입니다. 주소 디코더는 SoC Top 에만 존재하기 때문에, 중첩이 발생해도 IP 단독 TB 는 이를 전혀 관찰할 수 없습니다.
 
-5. Power Domain 오류
-   - IP가 꺼진 Power Domain의 버스에 접근 → 행(hang)
-   - Power 순서 위반
-```
+넷째, **Interrupt Routing 오류**입니다. 인터럽트가 잘못된 CPU 또는 GIC 입력에 연결되거나, 우선순위·보안 그룹 설정이 어긋나는 경우입니다. GIC 와 IP 사이의 SPI 인덱스 매핑은 SoC 통합 시점에 결정되므로 IP 단독 환경에서는 검증 대상 자체가 없습니다.
+
+다섯째, **Power Domain 오류**입니다. IP 가 이미 꺼진 Power Domain 의 버스에 접근하여 hang 이 발생하거나, Power 인가 순서가 잘못되는 경우입니다. Isolation cell 과 Power domain 경계는 단일 IP 의 TB 안에 존재하지 않아, 이 역시 Top 단계에서만 검증 가능합니다.
 
 ### 5.2 SoC Top 검증 항목 상세
 
 #### 1. Connectivity Verification
 
-```
-모든 IP 간 신호 연결이 설계 의도와 일치하는가?
+Connectivity 검증의 핵심 질문은 "모든 IP 간 신호 연결이 설계 의도와 일치하는가?" 입니다. 이를 답하는 방법은 세 가지가 있으며, 각각 보완적인 역할을 맡습니다.
 
-검증 방법:
-  (a) Formal (JasperGold Connectivity):
-      - 연결 스펙(CSV/JSON) → Property 자동 생성 → 증명
-      - "IP_A.data_out이 IP_B.data_in에 연결됨" 증명
+**Formal (JasperGold Connectivity)** 은 연결 스펙 (CSV/JSON) 에서 property 를 자동 생성해 "IP_A.data_out 이 IP_B.data_in 에 연결됨" 을 exhaustive 하게 증명합니다. 입력 조합을 모두 탐색하므로 시뮬레이션이 미처 닿지 못한 경우도 커버합니다.
 
-  (b) Simulation:
-      - IP_A에서 특정 패턴 출력 → IP_B에서 동일 패턴 수신 확인
+**Simulation** 은 IP_A 에서 특정 패턴을 출력하고 IP_B 에서 동일 패턴이 수신되는지를 동적으로 확인합니다. 타이밍·핸드셰이크처럼 Formal 로 표현하기 어려운 동작을 보완합니다.
 
-  (c) DFT Scan:
-      - Scan Chain으로 신호 값 직접 관찰
+**DFT Scan** 은 scan chain 을 통해 신호 값을 직접 관찰합니다. 접근하기 어려운 내부 노드를 검사할 때 사용합니다.
 
-대상:
-  - 데이터 버스 (AXI, AHB, APB)
-  - 인터럽트 (IP → GIC)
-  - DMA 요청 (IP → DMAC)
-  - Clock/Reset 트리
-  - Power 스위치 제어
-```
+검증 대상으로는 데이터 버스 (AXI / AHB / APB), 인터럽트 (IP → GIC), DMA 요청 (IP → DMAC), Clock/Reset 트리, Power 스위치 제어 신호가 포함됩니다.
 
 #### 2. Memory Map Verification
 
-```
-모든 IP가 올바른 주소에 배치되어 있는가?
+Memory Map 검증의 핵심 질문은 "모든 IP 가 올바른 주소에 배치되어 있는가?" 입니다. SoC 의 전형적인 주소 배치는 다음과 같습니다.
 
+```
 +------------------------------------------+
 | 0x0000_0000 | BootROM                     |
 | 0x1000_0000 | Internal SRAM               |
@@ -294,56 +272,38 @@ IRQ -> PWR
 | ...         | ...                         |
 | 0x4000_0000 | DRAM (via MC)               |
 +------------------------------------------+
-
-검증:
-  - 각 IP의 Base Address에 접근 → 응답 확인
-  - 할당되지 않은 주소 접근 → DECERR 확인
-  - 주소 중첩 없음 확인
-  - IP-XACT 메타데이터와 실제 RTL 비교
 ```
+
+이 배치가 실제로 옳은지 확인하려면 네 가지를 검증해야 합니다. 먼저 각 IP 의 Base Address 에 실제로 접근했을 때 정상 응답 (OKAY) 이 돌아오는지 확인합니다. 그 다음 할당되지 않은 주소에 접근하면 DECERR 가 반환되는지 봅니다. 범위 중첩이 없는지도 확인해야 합니다 — 두 IP 의 주소 범위가 겹치면 DECERR 대신 OKAY 가 돌아오되 엉뚱한 IP 에 쓰이는 silent corruption 이 발생하기 때문입니다. 마지막으로 IP-XACT 메타데이터와 실제 RTL 의 주소 디코더를 비교하여 문서와 구현이 일치하는지 확인합니다.
 
 #### 3. Clock/Reset Verification
 
-```
-검증 항목:
-  - 각 IP에 올바른 클럭 주파수 공급
-  - Clock Gating 동작 (IP Idle 시 클럭 차단)
-  - Reset 해제 순서 (의존성에 따른 순서)
-  - Reset 후 모든 IP의 레지스터 기본값
+Clock/Reset 검증의 핵심 질문은 "각 IP 에 올바른 클럭이 공급되고, reset 이 의존성 순서에 따라 해제되는가?" 입니다.
 
-Reset 순서 예시:
-  1. PLL Lock 확인
-  2. Bus Fabric Reset 해제
-  3. Memory Controller Reset 해제 (DRAM 접근 필요)
-  4. 나머지 IP Reset 해제
-  → 순서 위반 시 IP가 초기화되지 않은 버스에 접근 → 행(hang)
+Clock 관점에서는 각 IP 가 요구하는 주파수를 실제로 받고 있는지, idle 시 clock gating 이 정상 동작하는지를 확인합니다. Reset 관점에서는 해제 순서가 핵심입니다. 다음 순서가 지켜져야 합니다.
+
 ```
+1. PLL Lock 확인
+2. Bus Fabric Reset 해제
+3. Memory Controller Reset 해제 (DRAM 접근 필요)
+4. 나머지 IP Reset 해제
+```
+
+이 순서가 뒤집히면 CPU 가 MC 보다 먼저 reset 에서 벗어나 아직 초기화되지 않은 DRAM 에 접근을 시도하고, AXI SLVERR 가 발생하면서 boot 시점에 hang 이 걸립니다. IP 단독 환경에서는 이 순서가 단순화돼 있어 위반이 드러나지 않지만, SoC Top 에서는 여러 reset 도메인이 얽혀 있기 때문에 명시적 검증이 필요합니다. Reset 후 모든 IP 의 레지스터가 스펙에서 정의한 기본값으로 복원됐는지도 함께 확인합니다.
 
 #### 4. Interrupt Routing Verification
 
-```
-검증 항목:
-  - IP_A의 인터럽트 → GIC의 올바른 SPI 번호
-  - 인터럽트 트리거 타입 (Edge/Level) 일치
-  - 인터럽트 보안 그룹 (Secure/Non-Secure)
-  - 인터럽트 우선순위
-  - 인터럽트 마스킹 동작
+Interrupt Routing 검증의 핵심 질문은 "IP 가 발생시킨 인터럽트가 GIC 의 올바른 SPI 번호를 거쳐 지정된 CPU 에 도달하는가?" 입니다.
 
-시나리오:
-  IP에서 인터럽트 발생 → GIC에서 올바른 CPU에 전달 →
-  ISR 실행 → 인터럽트 클리어 → GIC 상태 복귀
-```
+검증해야 할 항목은 SPI 번호의 정확성, 트리거 타입 (Edge/Level) 의 일치, 보안 그룹 (Secure/Non-Secure) 설정, 우선순위, 그리고 마스킹 동작입니다. 이 중 하나라도 어긋나면 IP 는 인터럽트를 정상적으로 발생시키지만 ISR 이 전혀 실행되지 않거나 엉뚱한 핸들러로 dispatch 됩니다.
+
+검증 시나리오는 다음 흐름을 따릅니다. IP 에서 인터럽트를 발생시킨 후, GIC 가 올바른 CPU 로 전달하는지 확인하고, ISR 이 실행되면 인터럽트를 clear 했을 때 GIC 가 idle 상태로 복귀하는지까지 end-to-end 로 추적합니다.
 
 #### 5. Power Domain Verification
 
-```
-검증 항목:
-  - Power On/Off 시퀀스 정확성
-  - 꺼진 도메인의 IP 접근 시 적절한 에러 응답
-  - Power Isolation (꺼진 IP의 출력이 버스를 오염시키지 않음)
-  - 전력 상태 전이 (Active → Idle → Retention → Off)
-  - DVFS (Dynamic Voltage Frequency Scaling) 동작
-```
+Power Domain 검증의 핵심 질문은 "Power On/Off 시퀀스가 정확하게 수행되고, 꺼진 도메인이 버스를 오염시키지 않는가?" 입니다.
+
+Power On/Off 시퀀스가 정확해야 하고, 꺼진 도메인의 IP 에 접근할 때 적절한 에러 응답이 돌아와야 합니다. 특히 **Power Isolation** 이 중요합니다 — isolation cell 이 제대로 활성화돼야만 꺼진 IP 의 출력이 0 (또는 latch 된 값) 으로 clamp 되며, isolation cell 이 misconfigured 이면 X 가 버스로 전파돼 downstream 전체가 알 수 없는 상태로 빠집니다. 이 X-propagation 은 논리 회로 특성상 시뮬레이션에서 즉시 터지지 않는 경우도 있어서 실리콘에서야 발견되는 silent bug 의 대표 사례입니다. 검증 대상 상태 전이는 Active → Idle → Retention → Off 이며, DVFS 동작도 함께 확인합니다.
 
 ### 5.3 SoC Top TB 아키텍처 (이력서 연결)
 
@@ -381,11 +341,7 @@ EXT.IFM -> DUT
 DUT -> CHK
 ```
 
-특징:
-
-- CPU Model이 FW(BootROM, BL2 등)를 실행 → 실제 부팅 시뮬레이션
-- 또는 AXI Master VIP으로 레지스터 접근 시나리오 실행
-- 외부 메모리/디바이스는 BFM(Bus Functional Model)으로 대체
+이 구조에서 CPU Model 은 BootROM, BL2 등의 FW 를 실행하여 실제 부팅과 동일한 흐름을 시뮬레이션합니다. FW 실행 없이 레지스터 접근 시나리오만 필요할 때는 AXI Master VIP 으로 대체할 수 있습니다. 외부 메모리와 디바이스는 BFM (Bus Functional Model) 으로 대체해 sim 속도를 확보합니다.
 
 ### 5.4 코드 예시 — Connectivity 검증 SVA
 
@@ -437,10 +393,7 @@ module soc_connectivity_check (
 endmodule
 ```
 
-**핵심 포인트**:
-- Positive check (올바른 연결 확인) + Negative check (잘못된 연결 배제) 모두 필요
-- Formal 도구(JasperGold)는 모든 입력 조합을 exhaustive하게 증명 → 시뮬레이션보다 확실
-- CSV/JSON 스펙에서 이런 property를 **자동 생성**하는 것이 실무 핵심
+위 코드에서 중요한 설계 의도가 세 가지 있습니다. 우선 Positive check (올바른 연결 확인) 와 Negative check (잘못된 연결 배제) 를 모두 작성해야 합니다 — `ip_a_irq_out == gic_spi[47]` 만으로는 ip_a_irq_out 이 gic_spi[48] 에도 동시에 연결돼 있는지를 잡지 못합니다. 다음으로, Formal 도구 (JasperGold) 는 모든 입력 조합을 exhaustive 하게 증명하므로 시뮬레이션보다 훨씬 확실한 구조적 보증을 제공합니다. 마지막으로, CSV/JSON 스펙에서 이런 property 를 **자동 생성** 하는 것이 실무의 핵심입니다 — IP 가 수십 개로 늘어날 때 SVA 를 수작업으로 유지하는 것은 현실적이지 않습니다.
 
 ### 5.5 코드 예시 — Memory Map 검증 UVM Sequence
 
@@ -524,10 +477,7 @@ class soc_memory_map_test_seq extends uvm_sequence #(axi_txn);
 endclass
 ```
 
-**검증 전략 3단계**:
-1. **Positive**: 각 IP Base Address R/W → OKAY 응답
-2. **Negative**: 미할당 주소 → DECERR 응답
-3. **Boundary**: 영역 경계에서 정확히 잘리는지 확인
+이 시퀀스는 Memory Map 검증을 세 단계로 체계화합니다. **Positive** 단계에서는 각 IP 의 Base Address 에 R/W 를 시도해 OKAY 응답이 돌아오는지 확인합니다. **Negative** 단계에서는 할당되지 않은 주소에 접근했을 때 DECERR 이 반드시 반환돼야 함을 검증합니다 — 이 응답이 없으면 silent write corruption 이 발생합니다. **Boundary** 단계에서는 각 IP 영역의 마지막 주소와 그 직후 주소에서 OKAY / DECERR 가 정확히 전환되는지를 확인해 디코더의 범위 설정이 정밀한지 검증합니다.
 
 ### 5.6 실전 디버그 시나리오 — Interrupt 라우팅 오류
 
@@ -648,10 +598,7 @@ class soc_top_env extends uvm_env;
 endclass
 ```
 
-**구조 핵심**:
-- `soc_top_config` 에 IP 목록/메모리맵/인터럽트맵 → 모든 Checker 가 Config 기반 동작
-- Common Task Checker Layer 가 Agent 와 별도 계층으로 분리
-- CCTV Coverage Collector 가 모든 트랜잭션을 수집하여 매트릭스 자동 갱신
+이 구조의 핵심은 `soc_top_config` 가 IP 목록·메모리맵·인터럽트맵을 한 곳에서 관리한다는 점입니다. 덕분에 모든 Checker 가 Config 를 참조해 동작하므로, IP 가 추가되거나 주소가 바뀌어도 Config 한 파일만 수정하면 됩니다. Common Task Checker Layer 는 Agent 와 별도 계층으로 분리돼 있어 프로토콜 드라이빙 역할과 검증 판단 역할이 뒤섞이지 않습니다. CCTV Coverage Collector 는 모든 트랜잭션을 수집해 매트릭스를 자동 갱신하므로, regression 이 끝나면 미검증 cell 이 자동으로 보고됩니다.
 
 ### 5.8 연습 — 한 번 더 손으로 풀어보기
 

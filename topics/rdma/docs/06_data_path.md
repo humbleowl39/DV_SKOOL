@@ -46,18 +46,9 @@
 
 당신이 RDMA spec 을 처음 보면 OpCode 표를 보고 어지러워집니다 — **SEND, SEND_FIRST, SEND_MIDDLE, SEND_LAST, SEND_ONLY, SEND_LAST_WITH_IMMEDIATE, SEND_ONLY_WITH_IMMEDIATE, SEND_WITH_INVALIDATE, ...**. 한 service (RC) 에만 25 개 가까이. _왜 이렇게 많을까?_
 
-직관적으로 _하나로 통일_ 하면 어떨까? 예를 들어 "**RDMA WRITE 가 모든 걸 할 수 있다**" 고 가정해 봅시다:
+직관적으로 하나로 통일하면 안 되는지 생각해봅시다. 예를 들어 "RDMA WRITE 가 모든 걸 할 수 있다" 고 가정해 보면, 금방 한계에 부딪힙니다. 데이터를 보내는 것은 WRITE 로 되고, receiver 에게 "도착했음" 을 알리는 것도 WRITE_WITH_IMMEDIATE 로 가능합니다. 그런데 receiver 가 _미리 주소를 모르는_ 영역에 보내야 한다면 어떻게 할까요? WRITE 는 (remote_va, rkey) 를 _사전에 약속해야_ 하므로, 그 약속 자체를 성립시키는 첫 번째 메시지를 WRITE 로 보낼 수 없습니다. 메시지 queue 에 push 하는 패턴도 마찬가지입니다. WRITE 는 고정 주소에 쓰는 모델이라 queue 의 head 가 동적으로 바뀌는 상황에 맞지 않습니다.
 
-- 데이터를 보낸다 → WRITE.
-- Receiver 에게 "도착했음" 알린다 → WRITE_WITH_IMMEDIATE (4 B immediate 데이터).
-- Receiver 가 미리 _주소를 모르는_ 영역에 보낸다 → ??? **불가능**. WRITE 는 (remote_va, rkey) 약속 필요.
-- 메시지 모델 (queue 에 push) → ??? **불가능**. WRITE 는 _고정 주소_, 메시지 queue 와 안 맞음.
-
-**그래서 SEND 와 WRITE 가 따로 존재합니다**:
-- WRITE = "내가 _그 주소_ 에 쓴다" (one-sided, peer 가 _addr_ 미리 노출).
-- SEND = "내가 _메시지_ 를 보낸다, peer 가 _어디_ 에 받을지는 peer 가 결정" (two-sided, peer 의 RQ WQE 가 destination).
-
-이게 _기본 두 axis_. 여기에 **multi-packet (FIRST/MIDDLE/LAST/ONLY)** axis 와 **with-immediate/invalidate** axis 가 곱해져 25 개 OpCode 가 _필연적_ 입니다.
+결국 두 가지 근본적으로 다른 모델이 필요해집니다. WRITE 는 "내가 _그 주소_ 에 쓴다 — sender 가 주소를 안다" 는 one-sided 모델이고, SEND 는 "내가 _메시지_ 를 보낸다 — receiver 가 어디에 받을지 스스로 결정한다" 는 two-sided 모델입니다. 이 두 축이 기본이고, 여기에 **multi-packet (FIRST/MIDDLE/LAST/ONLY)** 축과 **with-immediate/invalidate** 축이 곱해지면서 25 개 OpCode 가 _필연적_ 으로 생겨납니다.
 
 **Data path 가 RDMA 검증의 비중상 80%** 입니다. Connection setup 은 한 번이지만 data path 는 시뮬레이션 매 cycle 마다 동작 — 모든 PSN 산정, OpCode, ACK 발생, retry 행동을 정확히 모델링해야 scoreboard 가 거짓 보고를 안 합니다.
 

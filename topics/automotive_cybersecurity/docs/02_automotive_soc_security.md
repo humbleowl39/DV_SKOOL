@@ -45,12 +45,7 @@
 
 ### 1.1 시나리오 — _5 layer 중 하나_ 만 빠지면?
 
-당신은 차량 OEM. 5 보안 layer 모두 구현:
-- L1 Boot: Secure boot, HSM 키 보호.
-- L2 Communication: SecOC for CAN.
-- L3 Domain: Gateway 격리.
-- L4 Network: TLS for V2X.
-- L5 Cloud: OTA 인증.
+당신은 차량 OEM. 5 보안 layer 를 모두 구현했다고 가정합니다. L1 에서는 Secure Boot와 HSM으로 부팅 체인과 키를 보호하고, L2 에서는 SecOC 로 CAN 메시지마다 인증을 붙이고, L3 에서는 Gateway 로 도메인을 격리하며, L4 에서는 V2X 통신에 TLS 를 적용하고, L5 에서는 OTA 서명과 서버 인증을 갖췄습니다. 완벽해 보입니다.
 
 **한 layer 만 빠뜨리면 어떻게 되나?**
 
@@ -115,13 +110,9 @@ TEE -> L4 { style.stroke-dash: 4 }
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
-세 가지 요구가 동시에 풀려야 합니다.
+세 가지 요구가 동시에 풀려야 합니다. 먼저, 키는 소프트웨어가 절대 직접 만질 수 없어야 합니다. 키가 메모리에 잠깐이라도 평문으로 올라오면 덤프나 디버거로 뽑힐 위험이 있기 때문입니다. 이 요구가 **HSM** — 격리된 코어 안의 Secure Key Store — 을 필수로 만듭니다. 그 다음, 보호된 키로 연산을 할 수 있다 해도, 버스를 타고 흐르는 메시지 자체가 누가 보냈는지 검증되지 않으면 의미가 없습니다. 이 요구가 **SecOC** — HSM 키로 계산한 MAC과 Freshness Value 를 각 메시지에 붙이는 방식 — 으로 이어집니다. 마지막으로, 한 도메인이 침해되더라도 다른 도메인까지 연쇄적으로 무너지지 않아야 합니다. 이것이 **Secure Gateway** — 도메인 경계에서 화이트리스트로만 메시지를 통과시키는 구조 — 의 존재 이유입니다.
 
-1. **키는 SW 가 절대 만질 수 없어야** → HSM (격리된 코어 + Secure Key Store).
-2. **모든 메시지는 origin 검증되어야** → SecOC (HSM 키로 MAC + FV).
-3. **한 도메인이 침해돼도 다른 도메인은 안전해야** → Gateway (도메인 격리 + 화이트리스트).
-
-이 셋이 **Secure Boot 의 (RoT + Chain of Trust + JTAG Lock) 의 통신 버전** 입니다. 부팅 체인이 BL1→BL2→BL3 모든 단계 서명 검증을 요구하듯, 통신 체인은 _모든 노드가 SecOC 에 참여_ 해야 의미가 있습니다.
+이 셋은 **Secure Boot 의 (RoT + Chain of Trust + JTAG Lock) 의 통신 버전** 입니다. 부팅 체인이 BL1→BL2→BL3 모든 단계 서명 검증을 요구하듯, 통신 체인은 _모든 노드가 SecOC 에 참여_ 해야 의미가 있습니다.
 
 ---
 
@@ -283,29 +274,15 @@ HSMBOX -> NOTE { style.stroke-dash: 4 }
 
 ### 5.3 HSM 키 프로비저닝 라이프사이클 — 4 phase
 
-§3 의 작은 예가 phase 1 의 한 사이클이었습니다. 전체 라이프사이클은 4 phase:
+§3 의 작은 예가 phase 1 의 한 사이클이었습니다. 전체 라이프사이클은 4 phase 를 거칩니다.
 
-**Phase 1 — 제조 시 키 주입 (Factory Provisioning)**: `KMS → KDF → wrapped key → HSM → eFuse/OTP burn`
+**Phase 1 — 제조 시 키 주입 (Factory Provisioning)** 은 `KMS → KDF → wrapped key → HSM → eFuse/OTP burn` 순서로 진행됩니다. Device Unique Key, SecOC MAC Key, Secure Boot Key, Attestation 인증서가 이 단계에서 주입되고, 주입이 끝나면 JTAG eFuse 를 영구 disable 합니다. 이후에는 물리적으로도 키를 뽑아낼 방법이 없어집니다.
 
-- Device Unique Key, SecOC MAC Key, Secure Boot Key, Cert
-- 주입 후 JTAG eFuse 로 영구 disable
+**Phase 2 — 차량 출고 후 키 활성화** 는 `OEM 서버 ← TLS → 차량 TCU → HSM` 경로로 이루어집니다. 차량이 처음 네트워크에 접속하면 VIN 과 ECU ID 로 활성화 토큰을 요청하고, HSM 이 토큰을 검증한 뒤 SecOC 키를 운용 상태로 전환합니다. 공장에서 주입된 키가 이 단계에서 비로소 '실제 통신' 에 사용됩니다.
 
-**Phase 2 — 차량 출고 후 키 활성화**: `OEM 서버 ← TLS → 차량 TCU → HSM`
+**Phase 3 — 런타임 키 로테이션** 은 수천~수만 km 또는 일정 시간 간격으로 `K_n → KDF (HSM 내부) 또는 OTA → K_{n+1}` 로 키를 교체합니다. 교체는 모든 ECU 가 동기적으로 전환 명령을 받아야 하고, 전환 직후 Freshness Counter 를 리셋하며, 이전 키 `K_n` 은 즉시 zeroize 됩니다. Edge case 2 (§5.8) 에서 다룬 grace period 가 이 순간에 필요해집니다.
 
-- VIN + ECU ID 로 활성화 토큰 요청
-- HSM 이 토큰 검증 후 SecOC 키 활성화
-
-**Phase 3 — 런타임 키 로테이션** (주기: 수천~수만 km 또는 시간 기반): `K_n → KDF (HSM 내부) 또는 OTA → K_{n+1}`
-
-- 모든 ECU 동기 전환 명령
-- Freshness Counter 리셋
-- K_n 즉시 zeroize
-
-**Phase 4 — 키 폐기 / 갱신**
-
-- ECU 교체: 새 ECU 에 키 재주입 (정비소 보안 인증 필요)
-- 키 유출 의심: OTA 긴급 로테이션
-- 차량 폐차: HSM 키 영구 삭제 (Zeroization)
+**Phase 4 — 키 폐기 / 갱신** 은 세 가지 상황에 대응합니다. ECU 를 교체할 때는 새 ECU 에 키를 재주입해야 하는데, 이때 정비소 인증이 필요합니다. 키 유출이 의심되는 경우에는 OTA 긴급 로테이션으로 fleet 전체를 새 키로 교체합니다. 차량이 폐차될 때는 HSM 에 저장된 모든 키를 Zeroization 으로 영구 삭제합니다.
 
 | 단계 | 보안 위협 | 대응 |
 |---|---|---|
@@ -411,11 +388,11 @@ PWR -> RTOS -> INIT -> SYNC
 INIT -> GAP: "취약 구간" { style.stroke-dash: 4 }
 ```
 
-**대응 옵션:**
+**대응 옵션:** 세 가지 접근이 있으며, 모두 보안과 기능성 사이의 트레이드오프를 내포합니다.
 
-- **A) Authentication Build-Up** — 처음 N 개 메시지 인증 없이 수용 → 편의 O, 보안 X
-- **B) Strict Mode** — 인증 전 모든 메시지 폐기 → 보안 O, 기능 X (안전 임계 메시지도 폐기)
-- **C) FM 우선 부팅** — Freshness Manager ECU 가 최우선 부팅 후 sync 메시지 배포 → 현실적 타협, 단 FM 이 SPOF
+- **A) Authentication Build-Up** — 처음 N 개 메시지를 인증 없이 수용합니다. 안전 임계 기능을 빨리 살릴 수 있지만, 그 창구간 동안 위조 메시지도 통과한다는 보안 공백이 생깁니다.
+- **B) Strict Mode** — Freshness 동기화가 완료될 때까지 모든 메시지를 폐기합니다. 보안은 완벽하지만, 동기화가 오래 걸리면 브레이크·조향 같은 안전 임계 메시지도 함께 버려지는 치명적 기능 손실이 발생할 수 있습니다.
+- **C) FM 우선 부팅** — Freshness Manager ECU 를 최우선으로 부팅시켜 sync 메시지를 먼저 배포한 후 다른 ECU 가 기능을 시작하게 합니다. 현실적인 타협이지만 FM 자체가 단일 장애점(SPOF) 이 된다는 설계 위험이 남습니다.
 
 #### Edge case 2: 키 로테이션 중 통신 중단
 
@@ -434,11 +411,7 @@ A -> FAIL
 C -> FAIL
 ```
 
-**대응 — Grace Period:**
-
-- 전환 후 일정 시간 `K_old` 와 `K_new` 모두 유효
-- 양쪽 키로 검증 시도 → 하나라도 성공하면 수용
-- 트레이드오프: `K_old` 가 유출되면 grace period 동안 위험
+**대응 — Grace Period:** 전환 직후 일정 시간 동안은 `K_old` 와 `K_new` 양쪽을 모두 유효한 키로 인정합니다. 수신 ECU 는 두 키로 각각 MAC 을 검증해 하나라도 성공하면 메시지를 수용합니다. 이 덕분에 느리게 전환하는 ECU 가 있어도 통신이 끊기지 않습니다. 단, `K_old` 가 이미 유출된 상황이라면 grace period 내내 구 키로 서명된 위조 메시지가 통과할 수 있다는 위험이 남습니다. grace period 길이는 이 두 위험 사이에서 OEM 이 결정하는 정책값입니다.
 
 #### Edge case 3: Mixed Network — 레거시 ECU 혼재
 
@@ -456,17 +429,9 @@ L1 -- BUS
 L2 -- BUS
 ```
 
-**문제:**
+**문제:** 레거시 ECU 가 SecOC 를 모르면 두 방향으로 문제가 생깁니다. 먼저, SecOC 적용 ECU 가 `[Data | MAC | FV]` 형태로 보낸 프레임을 레거시 ECU 가 수신하면, MAC 과 FV 바이트를 데이터로 오인해 잘못된 명령을 실행할 수 있습니다. 반대로, 레거시 ECU 가 MAC 없이 보낸 메시지는 SecOC 적용 ECU 가 수용해야 할지 거부해야 할지 정책이 모호해집니다. 결국 SecOC 적용 범위가 부분적이라는 것은 체인의 가장 약한 고리 — 즉 레거시 ECU — 를 통해 우회 가능하다는 뜻이 됩니다.
 
-1. 레거시 ECU 는 MAC 필드를 데이터로 오인 → 오동작
-2. 레거시 ECU 의 메시지는 MAC 없음 → 위조 구별 불가
-3. SecOC 적용 범위가 부분적 → 체인의 가장 약한 고리
-
-**대응:**
-
-- Gateway 에서 도메인 분리 (SecOC / 레거시)
-- Gateway 가 레거시 도메인 메시지의 MAC 을 대신 생성/검증 (Proxy SecOC)
-- 장기적: 레거시 ECU 교체 (단, 차량 수명 15–20 년)
+**대응:** 현실적 해법은 세 단계로 진행합니다. 우선 Gateway 에서 SecOC 도메인과 레거시 도메인을 물리적으로 분리해 두 도메인이 직접 통신하지 않도록 합니다. 그 다음, Gateway 가 레거시 도메인에서 오는 메시지의 MAC 을 대신 생성하고 검증하는 Proxy SecOC 역할을 맡습니다. 이렇게 하면 레거시 ECU 가 SecOC 를 지원하지 않아도 외부에서 보기에는 인증된 것처럼 처리됩니다. 장기적으로는 레거시 ECU 를 SecOC 지원 모델로 교체해야 하지만, 차량 수명이 15~20년인 현실에서 이 과도기는 수년에서 수십년까지 이어질 수 있습니다.
 
 #### Edge case 4: Truncated MAC 의 보안 강도 한계
 
@@ -556,6 +521,8 @@ IN.OBD -> PT.ENG: "차단 ✗" { style.stroke: "#c0392b" }
 → OBD-II 는 Infotainment 까지만, Chassis/Safety 도메인 접근 차단.
 
 #### Gateway 보안 기능
+
+Gateway 는 단순히 메시지를 전달하는 라우터가 아닙니다. 도메인 경계에 위치해 "이 메시지가 이 도메인으로 넘어가도 되는가?" 를 결정하는 보안 게이트입니다. Jeep Cherokee 사례에서 인포테인먼트에서 파워트레인 도메인으로 메시지가 자유롭게 넘어갔던 것이 바로 이 역할이 없었기 때문입니다.
 
 | 기능 | 설명 |
 |---|---|

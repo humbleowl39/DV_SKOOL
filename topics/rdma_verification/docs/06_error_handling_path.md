@@ -50,12 +50,7 @@
 
 원인: Scoreboard 가 _하나의 NAK_ 를 _전역 fatal_ 로 처리 → 다른 QP 의 정상 시나리오까지 _abort_.
 
-해법: **에러 격리 (isolation)**:
-- **Per-cmd gate**: 이 NAK 는 _expected_, 해당 cmd 만 fail 처리.
-- **Per-QP gate**: 다른 QP 는 정상 검증 계속.
-- **Per-component gate**: 다른 컴포넌트 (예: receive scoreboard) 는 영향 없음.
-
-3 단위 gate 가 _정밀_ 한 에러 시나리오 검증의 _필수_ 조건.
+해법은 **에러 격리 (isolation)** 입니다. 가장 좁은 단위인 **per-cmd gate** 부터 시작합니다. 이번 NAK 는 의도된 것이므로 `expected_error=1` 로 표시하면 해당 cmd 하나만 fail 처리됩니다. 그런데 한 verb 가 에러를 받으면 그 QP 자체가 에러 상태로 전이될 수 있습니다. 이때 **per-QP gate** (`isErrQP()`) 가 개입해 그 QP 의 후속 verb 만 skip 시키고, 나머지 QP 의 정상 검증은 계속 진행합니다. 더 광범위한 fault injection 시나리오라면 **per-component gate** (`err_enabled`) 를 사용해 해당 comparator 또는 tracker 전체의 검증 수위를 완화할 수도 있습니다. 이 3 단위 게이트를 올바르게 조합해야 의도된 에러를 검증하면서도 다른 정상 시나리오를 오염시키지 않는 정밀한 에러 시나리오가 완성됩니다.
 
 RDMA 검증에서 "에러 시나리오" 는 정상 시나리오만큼 중요합니다. 그러나 에러 케이스에 다른 정상 검증이 휩쓸려가면 (false positive fatal) 디버깅이 불가능해집니다. RDMA-TB 는 에러를 **격리 (isolate)** 하면서도 **검증 (check)** 하는 정밀한 메커니즘을 가지고 있습니다.
 

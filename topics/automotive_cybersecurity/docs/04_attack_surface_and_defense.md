@@ -45,17 +45,11 @@
 
 ### 1.1 시나리오 — _가장 약한 link_ 가 전체를 결정
 
-당신은 차량 OEM. 다음 방어 모두 구현:
-- OBD-II 게이트웨이 (강).
-- CAN SecOC (강).
-- V2X TLS (강).
-- 인포테인먼트 sandbox (강).
+당신은 차량 OEM 으로서 OBD-II 게이트웨이, CAN SecOC, V2X TLS, 인포테인먼트 sandbox 를 모두 강력하게 구현했습니다. 차량 내부와 무선 채널은 완벽하게 방어된 것처럼 보입니다.
 
-그런데 **공급망**:
-- 한 supplier 의 ECU firmware 에 _backdoor_ — supplier 직원의 실수 또는 의도적 sabotage.
-- _OTA server_ 의 한 admin account 가 phishing 으로 탈취.
+그런데 **공급망** 에서 두 가지 사고가 동시에 발생합니다. 한 Tier-1 supplier 의 ECU firmware 빌드 시스템이 침해되어 백도어 코드가 삽입되었고, OTA 서버의 admin 계정 하나가 피싱 공격으로 탈취되었습니다. 두 사고 모두 차량 외부에서 일어났고, 차량 내 어떤 보안 장치도 이것을 감지하지 못합니다.
 
-이 _두 약점_ 이 _수십 보안 layer 의 가치_ 를 _0_ 으로 만듦.
+이 _두 약점_ 이 _수십 보안 layer 의 가치_ 를 _0_ 으로 만듭니다.
 
 **Defense-in-depth 의 본질**: _모든 surface_ 를 _동시에_ 방어. 한 곳 약점이 _다른 강한 layer_ 를 무용지물로 만듦.
 
@@ -251,6 +245,8 @@ print(risk(impact_score=3,       # High (safety)
 
 ### 4.3 3 축 × 6 Layer 매트릭스 (요약)
 
+공격과 방어를 매트릭스로 정리하면 각 공격이 어느 layer 에서 막혀야 하는지 한눈에 보입니다. 중요한 것은 대부분의 공격이 단일 layer 가 아니라 **두 개 이상의 layer 가 함께 방어해야** 막힌다는 점입니다. 예를 들어 CAN Injection 은 L2 SecOC 가 메시지를 거부하고, L3 Gateway 가 OBD 도메인에서 Safety 도메인으로의 접근 자체를 차단하는 두 단계가 모두 있어야 합니다.
+
 | 공격 | 진입점 | 1차 방어 (어느 layer) |
 |---|---|---|
 | CAN Injection | OBD-II | L2 SecOC + L3 Gateway |
@@ -281,6 +277,8 @@ print(risk(impact_score=3,       # High (safety)
 | **USB Exploit** | USB 포트 | 악성 USB 로 인포테인먼트 공격 | ★★★ | 다수 OEM |
 
 #### CAN Injection 의 5 가지 공격 모드
+
+OBD-II 에 연결한 단 하나의 장치가 다음 다섯 가지 공격 모드를 모두 수행할 수 있습니다. 모두 SecOC 가 없는 버스에서 가능하며, 비용은 $20~50 짜리 CAN 트랜시버 보드 하나에서 출발합니다.
 
 ```
 공격 장비: CAN 트랜시버 보드 ($20–$50) + OBD-II 커넥터
@@ -347,6 +345,8 @@ EM Fault Injection:
 | **Tire Pressure (TPMS)** | RF 433 MHz | 위조 타이어 압력 경고 | ★★ |
 
 #### Cellular / TCU 원격 공격 — 가장 위험한 원격 vector
+
+물리 접근 없이 인터넷에서 차량으로 직접 닿을 수 있는 경로는 Telematics Control Unit(TCU) 입니다. TCU 는 LTE/5G 셀룰러 모뎀, WiFi/BT, GPS 를 통합한 게이트웨이 ECU 로, 그 출력이 CAN 인터페이스를 통해 차량 전체 버스로 연결됩니다. 이 구조 때문에 모뎀 펌웨어나 TCU OS 에 취약점이 하나라도 있으면, 공격자는 인터넷에서 출발해 CAN 버스까지 도달할 수 있습니다. 2015년 Jeep Cherokee 가 정확히 이 경로로 뚫렸습니다.
 
 ```
 TCU 아키텍처:
@@ -517,6 +517,8 @@ Tesla 탈옥은 Level 1 사용 — 더 간단·확실
 ```
 
 ### 5.3 축 3: 공급망 공격
+
+공급망 공격이 가장 위험한 이유는 차량 내부의 어떤 보안 장치도 이것을 사전에 감지하기 어렵다는 점입니다. Tier-1 supplier 의 빌드 시스템이 침해되면 ECU 펌웨어 자체에 악성 코드가 들어간 채로 출하되며, 이 펌웨어는 Secure Boot 의 서명 키를 OEM 이 발급했다면 정상 서명을 받은 상태입니다. OTA 서버 하이재킹도 마찬가지로, 공격자가 정식 코드 서명 권한을 가진 계정을 탈취하면 악성 패키지가 유효한 서명을 달고 fleet 전체로 배포될 수 있습니다. 이 때문에 공급망 보안은 기술적 수단(코드 서명, SBOM)과 운영적 수단(접근 권한 분리, 공장 보안)이 모두 요구됩니다.
 
 | 공격 | 대상 | 기법 | 위험도 |
 |---|---|---|---|

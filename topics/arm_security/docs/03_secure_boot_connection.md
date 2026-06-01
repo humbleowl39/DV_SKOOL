@@ -270,6 +270,8 @@ void bl31_to_bl33_transition(void) {
 
 ### 5.1 BL1 → BL2 전환 상세
 
+BL1 이 처음 실행되는 이유는 단순합니다 — CPU Reset 직후 PC 가 BootROM 주소를 가리키고, BootROM 코드는 EL3 에서 실행됩니다. EL3 에서 시작하는 것이 중요한 이유는, 이 단계에서 SCR_EL3·TZPC·TZASC·GIC 같은 보안 인프라 레지스터를 _설정_ 해야 하는데 이 레지스터들이 EL3 에서만 쓸 수 있기 때문입니다. 보안 HW 초기화가 완료되면 BL2 이미지의 서명을 검증하고, SPSR_EL3 를 S-EL1h 로 맞춘 뒤 ERET 합니다. SPSR 을 EL3 에서 직접 쓴다는 것이 핵심인데, 이렇게 해야 BL2 가 S-EL1 에서 시작하는 것이 SW 가 선언하는 것이 아니라 HW 가 강제하는 것이 됩니다.
+
 ```
 BL1 (BootROM, EL3):
   1. CPU Reset → PC가 BootROM 주소 → EL3 진입
@@ -292,6 +294,8 @@ BL1 (BootROM, EL3):
 ```
 
 ### 5.2 BL31 → BL33 전환 (핵심 보안 경계)
+
+이 전환이 ARM Security 전체에서 가장 결정적인 순간입니다. BL31 (EL3, Secure) 에서 BL33 (NS-EL1/EL2) 으로 ERET 하는 바로 그 시점에 SCR_EL3.NS 가 0 에서 1 로 바뀌고, 그 cycle 부터 모든 outgoing transaction 이 NS=1 attribute 를 달고 버스에 나갑니다. 이 ERET 이전에 TZASC·TZPC·GIC·SMMU 의 lock-down 이 _모두_ 완료돼 있어야 합니다. 그래야 BL33 이 첫 instruction 을 실행하는 순간부터 Secure 자원 접근이 차단됩니다. 이 lock-down 이 한 cycle이라도 ERET 뒤로 밀리면 BL33 이 Secure DRAM 이나 OTP 에 접근할 수 있는 창이 열립니다.
 
 ```
 BL31 (Secure Monitor, EL3):
@@ -432,6 +436,8 @@ Boot Stage별 측정:
 
 ### 5.5 보안 레벨과 공격 방어의 연결
 
+각 공격은 ARM Security 의 특정 계층 하나에 정확히 대응합니다. OS 해킹으로 NS-EL1 커널이 탈취되더라도 TrustZone 이 NS 에서 Secure 메모리를 막기 때문에 키는 살아남고, DMA 마스터의 Secure DRAM 접근은 TZASC 와 SMMU 가 이중으로 차단합니다. 권한 상승 공격은 "EL 상향은 Exception 으로만" 이라는 HW 원칙이 차단하고, FW 롤백은 OTP Monotonic Counter 가 EL3 에서만 관리된다는 점이 방어선입니다. 아래 표는 공격 유형별로 방어 계층을 정리한 것으로, 검증 시나리오를 설계할 때 "어느 계층이 이 공격을 막는가" 의 출발점으로 활용하세요.
+
 | 공격 | 보안 레벨 방어 | 메커니즘 |
 |------|-------------|---------|
 | OS 해킹 → 키 탈취 | TrustZone 격리 | NS에서 Secure 메모리 접근 불가 |
@@ -492,6 +498,8 @@ Boot Stage별 측정:
 | 9 | 동시 SMC 멀티코어 | 다수 코어가 동시 SMC 호출 | Corner Case |
 
 #### 검증 방법론 상세 — Stimulus → Check → Coverage
+
+DV 의 핵심 원칙은 "무엇이 일어나야 하는가"(Positive) 와 "무엇이 일어나면 안 되는가"(Negative) 를 짝으로 검증하는 것입니다. BL31 → BL33 전환처럼 단 한 cycle 의 timing 이 보안을 결정하는 경우에는, 정상 전환 성공 검증과 함께 lock-down 이 ERET 이후로 밀렸을 때 Secure 자원이 노출되는지를 corner case 로 함께 만들어야 진짜 검증이 됩니다.
 
 ```
 시나리오 4: BL31 → BL33 NS 전환 (핵심 보안 경계)

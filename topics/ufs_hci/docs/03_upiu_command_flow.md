@@ -385,12 +385,9 @@ NOP IN UPIU (Device → Host):
   | Data Segment: 없음                        |
   +------------------------------------------+
 
-사용 시점:
-  1. Link Startup 직후 — 디바이스 생존 확인
-     → NOP IN 미응답 시 디바이스 비정상 → 재시도 또는 Fallback
-  2. Idle 중 주기적 Ping — 링크 유지 확인
-  3. Hibernate 복귀 후 — 링크 정상 동작 확인
+NOP 의 주된 사용 시점은 세 가지입니다. 먼저 Link Startup 직후에 디바이스가 살아 있는지 확인하기 위해 발행하며, NOP IN 이 돌아오지 않으면 비정상으로 판단해 재시도 또는 Fallback 경로를 탑니다. Idle 구간에서는 링크 유지 확인용으로 주기적으로 보내기도 하고, Hibernate 복귀 후에도 링크가 정상인지 한 번 더 검증할 목적으로 씁니다. 처리 흐름은 일반 Transfer 와 동일하게 SW 가 NOP OUT UTRD 를 작성하고 Doorbell 을 누르면 HCI 가 UPIU 를 보내고, Device 가 NOP IN 으로 응답하면 HCI 가 완료 처리와 IRQ 를 올립니다.
 
+```
 흐름:
   SW: NOP OUT UTRD 작성 → Doorbell
   HCI: NOP OUT UPIU 전송 → Device
@@ -472,18 +469,7 @@ BootROM이 UFS 부팅 시 사용하는 Query:
 | LOGICAL UNIT RESET | LUN 리셋 | LUN 오류 복구 |
 | QUERY TASK | 명령 상태 조회 | 진행 상태 확인 |
 
-```
-Task Management 흐름:
-
-  SW: UTMRD 작성 → UTMRLDBR 셋
-  HCI: Task Mgmt UPIU 전송 → Device
-  Device: 해당 명령 중단/리셋 → Task Mgmt Response
-  HCI: UTMRD 업데이트 → Interrupt
-  SW: ISR에서 완료 처리
-
-  별도의 Doorbell(UTMRLDBR)과 별도의 Request List(UTMRL) 사용
-  → Transfer Request와 독립적으로 처리
-```
+Task Management 가 별도 채널을 쓰는 이유는 Transfer 가 stuck 된 상태에서도 제어 경로가 살아 있어야 하기 때문입니다. SW 가 UTMRD 를 작성하고 UTMRLDBR 을 셋하면 HCI 는 Task Mgmt UPIU 를 Device 로 보내고, Device 는 해당 명령을 중단하거나 LUN 을 리셋한 뒤 Task Mgmt Response 를 반환합니다. HCI 는 UTMRD 를 갱신하고 IS[UTMRCS] 인터럽트를 발생시켜 SW 에 완료를 알립니다. UTMRL/UTMRLDBR/IS[UTMRCS] 가 UTRL/UTRLDBR/IS[UTRCS] 와 완전히 평행하게 존재하기 때문에 Transfer 경로가 막혀 있어도 Task Mgmt 경로는 독립적으로 동작합니다.
 
 ### 5.8 에러 처리 흐름
 
@@ -513,35 +499,23 @@ Task Management 흐름:
 
 ### 5.9 Device-Initiated 동작
 
+UFS 는 기본적으로 Host-initiated 프로토콜이지만, Device 가 자발적으로 Host 에 알리거나 내부 작업을 수행하는 세 가지 메커니즘이 있습니다.
+
+첫 번째는 **Attention** 입니다. Device 가 긴급하게 Host 에게 알려야 할 이벤트가 발생하면 UniPro 레벨 인터럽트를 띄우고, Host 는 이를 받아 Query 로 Exception Event Status 를 읽습니다. 여기서 BKOPS 긴급, Excessive Write 에 의한 성능 throttling, 또는 Device Life Time 경고 같은 정보를 확인합니다.
+
+두 번째는 **Background Operations(BKOPS)** 입니다. Garbage Collection 과 Wear Leveling 같은 내부 유지보수 작업인데, Device 가 자발적으로 수행하기도 하고 Host 가 fBackgroundOpsEn 플래그를 Set 해 명시적으로 시작시킬 수도 있습니다. Host 는 bBackgroundOpsStatus Attribute 로 긴박도를 파악하며, Critical 상태를 무시하면 Write 성능이 급격히 하락합니다.
+
 ```
-UFS는 Host-initiated가 기본이지만, Device가 자발적으로 알리는 메커니즘도 있음:
-
-  1. Attention (예외 이벤트 통지)
-     - Device가 Host에게 "확인해야 할 이벤트가 있다" 알림
-     - UniPro 레벨의 인터럽트 → IS[UE] 또는 별도 메커니즘
-     - Host가 Query로 Exception Event Status 읽기:
-       → Urgent BKOPS needed (백그라운드 작업 긴급)
-       → Excessive Write → Performance throttling
-       → Device Life Time 경고
-
-  2. Background Operations (BKOPS)
-     - Device가 내부적으로 수행하는 Garbage Collection, Wear Leveling 등
      - bBackgroundOpsStatus Attribute로 상태 확인:
        0x00 = Not required
        0x01 = Non-critical (idle 시 수행)
        0x02 = Performance impacted (빨리 수행 필요)
        0x03 = Critical (즉시 수행 필요)
-     - Host가 fBackgroundOpsEn Flag를 Set → Device가 BKOPS 시작
-     - Critical 상태를 무시하면 → Write 성능 급격히 하락
-
-  3. Write Booster Flush
-     - SLC 버퍼의 데이터를 TLC/QLC로 이동
-     - Device가 자동으로 Idle 시 수행
-     - Host가 강제로 트리거 가능: fWriteBoosterBufferFlushEn Flag
-
-이 동작들은 검증 시 Device Agent가 시뮬레이션해야 하며,
-Host Agent가 적절히 응답하는 시나리오를 포함해야 함.
 ```
+
+세 번째는 **Write Booster Flush** 입니다. SLC 버퍼에 쌓인 데이터를 TLC/QLC 로 이동하는 작업으로, Device 가 Idle 시 자동으로 수행하거나 Host 가 fWriteBoosterBufferFlushEn 플래그로 강제 트리거할 수 있습니다.
+
+검증 시에는 이 세 가지 동작을 Device Agent 가 시뮬레이션하고, Host Agent 가 Attention 인터럽트에 올바르게 응답하는 시나리오를 별도로 포함해야 합니다.
 
 ---
 

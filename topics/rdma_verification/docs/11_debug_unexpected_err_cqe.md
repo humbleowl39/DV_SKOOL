@@ -53,19 +53,11 @@ WC status = WC_REM_ACCESS_ERR
 QP = 3, opcode = WRITE
 ```
 
-가능한 3 가지 _완전히 다른_ 진단:
+가능한 진단은 세 가지인데, 이 세 가지가 **완전히 다른 방향의 수정**을 요구합니다. 첫째로 **DUT bug** 입니다. HW 가 valid rkey 인데 access error 를 잘못 발급한 경우로, RTL 수정이 필요합니다. 둘째로 **TB sequence bug** 입니다. Sequence 가 wrong rkey/lkey 를 발행한 경우로, 시퀀스 코드를 수정해야 합니다. 셋째로 **Promote 누락** 입니다. 이 에러가 사실은 의도된 시나리오인데 `expected_error=1` 을 표시하지 않은 경우로, scoreboard 설정을 고치면 됩니다.
 
-1. **DUT bug**: HW 가 _valid rkey_ 인데 access error 잘못 발급. → fix RTL.
-2. **TB sequence bug**: Sequence 가 _wrong rkey/lkey_ 발행. → fix sequence.
-3. **Promote 누락**: 이 에러가 _의도된 시나리오_ 인데 `expected_error=1` 표시 안 함. → fix scoreboard config.
+가장 흔한 시간 낭비는 가설 1 (DUT bug) 부터 시작하는 것입니다. fsdb 를 한 시간 파다가 결국 가설 3 (단순 promote 누락) 임을 발견하게 되는 패턴입니다. 올바른 순서는 trivial 부터 complex 순입니다. 먼저 가설 3 (TB config, 30초) → 가설 2 (sequence, 1분) → 가설 1 (DUT, 수십 분~수 시간) 순으로 진행해야 합니다.
 
-**가장 큰 시간 낭비**: 가설 1 (DUT bug) 부터 시작 → fsdb 뒤지기 → 결국 가설 3 (단순 promote 누락) 임을 발견.
-
-**올바른 순서**: 가설 3 (TB config) → 가설 2 (sequence) → 가설 1 (DUT). _trivial_ 부터 _복잡_ 으로.
-
-WC status 분기:
-- `WC_RETRY_EXC_ERR` 계열 → _network 또는 timing_ 문제 (DUT or env).
-- 그 외 → _대부분 TB sequence 또는 promote_ 문제.
+`wc_status` 를 보면 진단 방향이 갈립니다. `WC_RETRY_EXC_ERR` 계열 (12, 13) 은 network 또는 timing 문제로 DUT 의 성능 한계를 나타내는 신호입니다. 반면 그 외의 모든 에러 코드는 대부분 TB sequence 오류이거나 promote 누락입니다. 따라서 wc_status 확인이 가장 먼저 해야 할 분기점입니다.
 
 RDMA-TB 의 가장 강한 invariant 중 하나는 **"RETRY_EXC 계열을 제외한 모든 에러 CQE 는 정상 시뮬레이션에서 발생하면 안 된다"** 입니다. 이 invariant 가 깨지면 곧 DUT 버그이거나 TB 시퀀스가 잘못된 lkey/rkey/length 를 발행한 것 — 어느 쪽이든 **사람의 결정** 이 필요합니다. 그래서 TB 는 `F-CQHDL-TBERR-0003` 으로 fatal 을 띄워 시뮬을 멈춥니다.
 

@@ -312,6 +312,8 @@ DUT vs Ideal Model 비교:
 
 ### 4.3 TLB Miss 의 3C 분류
 
+miss rate 가 높다는 사실을 알았다면, 다음 질문은 "왜 높은가" 입니다. 캐시 이론에서 빌려온 3C 분류가 이 답을 줍니다. 첫 접근이라서 어쩔 수 없이 발생하는 Compulsory miss 는 prefetch 로 일부 숨길 수 있고, 워킹셋이 TLB 전체 용량을 초과해서 생기는 Capacity miss 는 Huge Page 로 TLB coverage 를 키우거나 TLB 자체를 늘려야 합니다. 같은 set 에 여러 VA 가 몰려 서로를 밀어내는 Conflict miss 는 associativity 를 높여야 해결됩니다. 세 원인을 구분하지 않고 "TLB 를 크게 하면 된다" 는 접근은 Conflict miss 에는 효과가 없고 lookup latency 만 늘릴 수 있습니다.
+
 | 원인 | 설명 | 대응 |
 |------|------|------|
 | **Compulsory** (Cold) | 첫 접근 — 캐시에 없으므로 필연적 Miss | Prefetch로 완화 |
@@ -319,6 +321,8 @@ DUT vs Ideal Model 비교:
 | **Conflict** | Set-associative 충돌 — 같은 set에 경쟁 | Associativity 증가 |
 
 ### 4.4 트래픽 패턴별 예상 Miss Ratio
+
+어떤 트래픽이 들어오느냐에 따라 TLB 의 miss ratio 는 극적으로 달라집니다. DMA 의 순차 접근은 같은 page 를 반복 히트하므로 miss ratio 가 아주 낮습니다. 반면 GPU 의 scatter-gather 처럼 완전 랜덤한 VA 가 쏟아지면 TLB capacity 를 아무리 늘려도 working set 전체를 담지 못해 miss 가 폭발합니다. Hotspot 패턴은 소수의 page 만 집중적으로 접근하므로 TLB 가 작아도 히트율이 높게 유지됩니다.
 
 | 패턴 | 설명 | 예상 Miss Ratio |
 |------|------|----------------|

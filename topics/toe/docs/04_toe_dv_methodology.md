@@ -45,17 +45,11 @@
 
 ### 1.1 시나리오 — _복합 시나리오_ 의 silent bug
 
-당신의 TOE happy path 모든 test 통과. Silicon 후 _수 시간_ 운영 시 _가끔_ corruption.
+당신의 TOE 가 happy path 테스트를 전부 통과했습니다. Silicon 이 나온 뒤 수 시간 운영하면 가끔 데이터 corruption 이 생깁니다.
 
-추적:
-- _Packet loss_ + _OOO arrival_ + _Zero Window_ + _RTO_ 가 _동시_ 발생 시 _bug_.
-- Happy path 또는 _단일_ abnormal 만 test 했으면 안 잡힘.
+추적해 보면 원인은 복합 조건입니다. Packet loss, OOO arrival, Zero Window, RTO 가 동시에 맞물렸을 때만 버그가 드러납니다. happy path 또는 단일 abnormal 만 테스트했다면 절대 잡히지 않는 조합입니다.
 
-해법: **복합 abnormal scenario** test:
-- 4 abnormal 조합 × N 시나리오 = 수십 test.
-- 각 조합의 _상태 cover_ 가 _필수_.
-
-검증의 _진짜 가치_ 는 _복합 abnormal_ 시나리오에서 나옴. Happy path 만 test = false safety.
+해법은 **복합 abnormal scenario** 를 의도적으로 구성하는 것입니다. 4 개의 abnormal 조건을 교차 조합하면 수십 개의 시나리오가 나오고, 각 조합에서 상태 커버리지를 확보해야 합니다. 검증의 진짜 가치는 바로 이 복합 abnormal 시나리오에 있습니다. happy path 만 통과하는 건 false safety 입니다.
 
 Module 01~03 가 _DUT 가 무엇을 하는가_ 였다면, 이 모듈은 _그것이 정확히 동작하는지를 어떻게 증명하는가_ 입니다. TOE 의 검증은 단순히 "happy path 통과" 로는 부족합니다 — 실제 silent bug 들은 **packet loss + OOO + Zero Window + RTO 동시 발생** 같은 _복합 abnormal_ 상황에서 나타납니다.
 
@@ -180,7 +174,7 @@ endclass
 | **Performance** | Throughput, Latency, Concurrent connection | Long regression | 100 Gbps line rate, ~µs latency |
 | **Error Recovery** | Loss/OOO/Dup/Corrupt 후 복구 | Network Agent injection | RFC 의 retransmit / fast retx 동작 |
 
-이 4 축이 _하나라도 빠지면_ 검증 끝났다고 말 못 함. 보통 시간 부족 → Performance 가 가장 먼저 희생되는데 위험.
+이 4 축 중 하나라도 빠지면 검증이 완료됐다고 말할 수 없습니다. 현실에서는 일정 압박 때문에 Performance 축이 가장 먼저 희생되는 경향이 있는데, TOE 의 경우 architecture 변경이 throughput 과 tail latency 에 큰 영향을 주므로 특히 위험합니다. "기능은 맞는데 성능이 무너진" 상태로 Silicon 이 나오면 수정에 드는 비용이 막대합니다.
 
 ### 4.2 시나리오 카테고리
 
@@ -291,20 +285,9 @@ Reference Model 구조:
   |    허용 범위: 타이밍 차이 OK, 데이터/프로토콜 차이 FAIL     |
   +------------------------------------------------------------+
 
-구현 방식:
-  1. C/C++ 모델 + DPI-C: Linux TCP 스택 축소판, DPI로 SV에서 호출
-     장점: 기존 TCP 코드 재사용, 정밀
-     단점: 유지보수 복잡
+구현 방식은 크게 세 가지입니다. **C/C++ 모델 + DPI-C** 는 Linux TCP 스택의 축소판을 C++ 로 작성하고 DPI 를 통해 SV 시뮬레이터에서 호출하는 방식입니다. 기존 TCP 코드를 재사용할 수 있어 정밀도가 높지만, 유지보수가 복잡합니다. **SystemVerilog 모델** 은 TCP FSM 과 Seq/ACK 로직을 SV 로 직접 구현해서 같은 시뮬레이터 안에서 디버그하기 쉽습니다. 다만 개발 비용이 높습니다. **Python 모델 + Socket** 은 Scapy 같은 라이브러리로 빠르게 개발할 수 있지만 co-simulation 오버헤드가 있습니다.
 
-  2. SystemVerilog 모델: SV로 TCP FSM + Seq/ACK 로직 직접 구현
-     장점: 디버그 용이 (같은 시뮬레이터)
-     단점: 개발 비용 높음
-
-  3. Python 모델 + Socket: Python Scapy 등으로 패킷 생성/파싱
-     장점: 빠른 개발, 유연
-     단점: co-simulation 오버헤드
-
-실무에서 가장 흔한 조합: C++ Reference Model + DPI-C
+실무에서 가장 흔한 조합은 **C++ Reference Model + DPI-C** 입니다.
 ```
 
 ### 5.2 Scoreboard 설계 — 트랜잭션 레벨 비교
@@ -454,10 +437,9 @@ class network_agent extends uvm_agent;
     ooo_rate      inside {[0:20]};
     dup_rate      inside {[0:5]};
   }
-
-핵심: 네트워크의 비결정론적 특성을 Constrained Random으로 모델링
-→ 실제 네트워크에서 발생 가능한 모든 조합을 커버
 ```
+
+이 설계의 핵심은 네트워크의 비결정론적 특성을 Constrained Random 으로 모델링한다는 것입니다. 실제 네트워크에서는 패킷 손실, 순서 역전, 중복이 어떤 조합으로든 발생할 수 있는데, 테스트마다 이 파라미터를 다르게 randomize 하면 그 조합 공간을 자연스럽게 커버하게 됩니다.
 
 #### Network Agent 동작 흐름 — 상세
 
@@ -496,10 +478,7 @@ Network Agent의 실제 동작은 Driver + Responder 패턴:
   │  └── 에러 주입은 응답 생성 후 Driver에서 적용               │
   └─────────────────────────────────────────────────────────────┘
 
-핵심 설계 결정:
-  - Reactive Agent: Monitor가 DUT 출력을 보고 Responder가 응답 생성
-  - 에러 주입은 Sequence/Driver 레벨에서 적용 (Responder 자체는 정상 응답 생성)
-  - config_db로 에러율 조절 → 테스트마다 다른 네트워크 환경 시뮬레이션
+설계의 핵심 결정은 **Reactive Agent 패턴**입니다. Monitor 가 DUT 출력을 먼저 보고, 그 결과를 Responder 에게 알려주면 Responder 가 적절한 응답을 만들어냅니다. Responder 자체는 항상 프로토콜에 맞는 정상 응답을 생성하고, 에러 주입은 Sequence 또는 Driver 레벨에서 별도로 적용합니다. 에러율은 config_db 로 조절하므로 테스트마다 서로 다른 네트워크 환경을 시뮬레이션할 수 있습니다.
 ```
 
 ### 5.5 이력서 연결 — TOE 검증 기여
@@ -507,22 +486,9 @@ Network Agent의 실제 동작은 Driver + Responder 패턴:
 ```
 Resume: "Enhanced the TCP Offload Engine verification environment
          by developing new test scenarios and expanding functional coverage"
-
-기여 포인트:
-  1. 새로운 테스트 시나리오 개발
-     - 복합 에러 시나리오 (패킷 손실 + OOO + Zero Window 동시)
-     - DCMAC 연동 에러 (MAC CRC 에러 → TOE 에러 처리)
-     - 대규모 연결 스트레스 (Connection Table 한계)
-
-  2. Functional Coverage 확장
-     - TCP FSM 전이 커버리지 (이전에 미커버된 전이 식별)
-     - Error/Recovery 교차 커버리지 추가
-     - Flow/Congestion 상태 조합 커버리지 추가
-
-  3. DCMAC 서브시스템 연동 검증
-     - TOE ↔ DCMAC AXI-S 인터페이스 검증
-     - End-to-End 데이터 무결성 (Host → TOE → DCMAC → 외부)
 ```
+
+실제 기여는 세 영역으로 나뉩니다. **테스트 시나리오 개발** 측면에서는 패킷 손실 + OOO + Zero Window 가 동시에 발생하는 복합 에러 시나리오를 추가했고, MAC CRC 에러가 TOE 에 전파되는 DCMAC 연동 에러와 Connection Table 한계를 직접 테스트하는 대규모 연결 스트레스 시나리오도 포함됩니다. **Functional Coverage 확장** 에서는 이전에 미커버된 TCP FSM 전이를 식별해 빈칸을 채웠고, Error × Recovery 교차 커버리지와 Flow/Congestion 상태 조합 커버리지를 새로 추가했습니다. **DCMAC 서브시스템 연동 검증** 으로는 TOE ↔ DCMAC AXI-S 인터페이스 정확성과 Host → TOE → DCMAC → 외부까지 이어지는 End-to-End 데이터 무결성을 확인했습니다.
 
 ### 5.6 실무 주의점 — Congestion Window 와 CUBIC 상태 불일치
 

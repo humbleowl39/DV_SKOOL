@@ -44,16 +44,9 @@
 
 ### 1.1 시나리오 — 100 Gbps 에서 _CPU 코어 다 잃기_
 
-당신의 서버 100 Gbps NIC. TCP/IP 모든 처리 _SW_ 에서. 측정:
+당신의 서버가 100 Gbps NIC 를 달고 있는데, TCP/IP 처리를 전부 SW 에서 한다고 해봅시다. 측정 결과는 냉정합니다 (Mellanox WP, 2014). 100 Gbps 양방향 트래픽을 소화하려면 CPU 코어 4~8 개가 100 % 점유됩니다. 64 코어 서버라면 약 12 % 가 통신 처리에만 잠겨 버리고, 애플리케이션이 쓸 수 있는 코어는 56 개로 줄어듭니다.
 
-- 100 Gbps 양방향 처리 → CPU 코어 _4-8 개 100% 점유_ (Mellanox WP, 2014).
-- 64 코어 서버 → 12% 코어 손실 _전부 통신만_.
-- Application 의 가용 CPU = 56 코어.
-
-또는 hardware offload (TOE):
-- TCP segmentation, checksum, ACK/timer 모두 _NIC HW_.
-- CPU 부담 = ~0.5 코어 (connection 관리만).
-- Application 의 가용 CPU = 63.5 코어.
+이제 hardware offload (TOE) 로 바꿔봅시다. TCP segmentation, checksum, ACK 생성, 재전송 타이머를 모두 NIC HW 가 처리하면 CPU 부담은 ~0.5 코어 (connection 개설·해제 관리) 수준으로 내려가고, 애플리케이션에 돌아오는 코어는 63.5 개가 됩니다.
 
 **5-7 코어 차이** = _수만 USD_ 의 서버 가치. Cloud 운영자는 _수십만 서버 fleet_ → 누적 절감 _수십억 USD_.
 
@@ -301,7 +294,7 @@ S -> C: "FIN"
 C -> S: "ACK"
 ```
 
-→ **연결 setup/teardown 은 연결당 1 회**. 데이터 전송은 packet 당 발생 → 빈도 격차가 100 만 배 이상. 이 비대칭이 HW/SW 분리의 근거.
+연결 setup/teardown 은 연결당 단 1 회 발생하지만, 데이터 전송 처리는 packet 이 올 때마다 매번 발생합니다. 빈도 격차가 100 만 배 이상 납니다. 이 비대칭이 HW/SW 분리의 근거입니다 — 자주 일어나는 일은 HW 로, 드물게 일어나는 일은 SW 로.
 
 ### 5.4 TCP 헤더 구조 (TOE HW 가 만들어야 하는 필드)
 
@@ -332,42 +325,11 @@ C -> S: "ACK"
 
 ### 5.5 100 Gbps 에서 CPU 가 부담하는 비용 — 어림셈
 
-```
-100 Gbps 네트워크에서 CPU TCP 처리:
-
-  64 B 패킷 기준: ~150 M packets/sec (라인레이트)
-  각 패킷마다 CPU 가:
-    1. Checksum 계산/검증
-    2. Sequence Number 관리
-    3. ACK 생성/처리
-    4. Window 크기 관리
-    5. 재전송 타이머 관리
-    6. 메모리 복사 (커널 → 유저 공간)
-
-  결과:
-    CPU 코어 여러 개가 TCP 처리에 100% 점유
-    → 애플리케이션 처리 능력 없음
-    → CPU 가 "네트워크 프로세서" 로 전락
-```
+100 Gbps 에서 64 B 패킷 기준 라인레이트는 약 150 M packets/sec 입니다. 이 패킷 하나하나에 대해 CPU 는 checksum 계산·검증, Sequence Number 관리, ACK 생성·처리, Window 크기 관리, 재전송 타이머 관리, 그리고 커널에서 유저 공간으로의 메모리 복사까지 수행해야 합니다. 이 연산들이 packet 마다 쌓이면 CPU 코어 여러 개가 TCP 처리에 100 % 점유되어 애플리케이션이 사용할 수 있는 CPU 가 사실상 없어지고, CPU 가 "네트워크 프로세서" 로 전락하게 됩니다.
 
 ### 5.6 TOE 적용 후 효과
 
-```
-TOE 있을 때:
-
-  NIC → TOE HW:
-    - Checksum 계산/검증 (HW, 1 cycle)
-    - TCP Segmentation (HW)
-    - ACK 생성 (HW)
-    - 재전송 관리 (HW)
-    - 흐름 제어 (HW)
-
-  CPU:
-    - 연결 수립/해제만 관여 (Control Path)
-    - 데이터 전달만 수행 (Data Path 은 DMA)
-    - → CPU 부하 80~90% 감소
-    - → 애플리케이션에 CPU 할당 가능
-```
+TOE 를 적용하면 checksum 계산·검증, TCP segmentation, ACK 생성, 재전송 관리, 흐름 제어를 NIC HW 가 모두 처리합니다. CPU 는 연결 수립·해제라는 Control Path 에만 관여하고, 데이터 전달은 DMA 가 맡습니다. 그 결과 CPU 부하가 80~90 % 감소하고, 절약된 코어를 애플리케이션에 돌릴 수 있게 됩니다.
 
 | 항목 | SW TCP (CPU) | TOE (HW) |
 |------|-------------|----------|
@@ -376,6 +338,8 @@ TOE 있을 때:
 | CPU 사용률 | 80–100 % (TCP 처리) | ~10 % (제어만) |
 | 연결 수 | 수만 (메모리/CPU 한계) | 수백만 (HW 상태 테이블) |
 | 전력 | 높음 (CPU 풀로드) | 낮음 (전용 HW 효율) |
+
+주목할 점은 throughput 숫자보다 **CPU 사용률** 과 **latency** 의 차이입니다. 일반 NIC + TSO 조합도 100 Gbps 라인레이트는 채울 수 있지만, CPU 점유율은 여전히 높습니다. TOE 의 진짜 가치는 그 CPU 를 애플리케이션에 돌려주는 데 있습니다.
 
 ### 5.7 TOE vs 다른 Offload 기술
 
@@ -387,15 +351,7 @@ TOE 있을 때:
 | **RDMA** | TCP 우회 (직접 메모리 접근) | 매우 높음 | 최고 | HPC, 저지연 |
 | **DPDK** | 커널 우회 (유저스페이스) | 높음 | 높음 | NFV, 라우터 |
 
-```
-Offload 수준:
-
-  Checksum Offload ⊂ TSO ⊂ TOE
-  (부분)            (중간)  (전체)
-
-  RDMA: TCP 자체를 우회 → 다른 범주
-  DPDK: SW이지만 커널을 우회 → Offload라기보다 최적화
-```
+Checksum Offload ⊂ TSO ⊂ TOE 로 포함관계가 성립합니다. 오른쪽으로 갈수록 더 많은 것을 HW 가 대신하지만, 구현 복잡도도 함께 높아집니다. RDMA 는 TCP 자체를 우회하므로 이 포함관계 바깥의 별도 범주이고, DPDK 는 SW 이지만 커널을 우회하는 최적화로 "offload" 라기보다는 "bypass" 에 가깝습니다.
 
 ### 5.8 실무 주의점 — Partial Checksum Offload 와 부분 헤더 처리 오류
 

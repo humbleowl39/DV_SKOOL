@@ -198,6 +198,8 @@ void send_cpld(uint8_t tag, uint16_t total_remaining, uint8_t low_addr_7b,
 
 ### 4.3 Routing 3 가지
 
+Switch 가 TLP 를 어느 port 로 내보낼지 결정하는 방법은 TLP 의 종류에 따라 세 가지로 나뉩니다. 가장 흔한 Memory Read/Write 는 header 의 주소 필드를 port 별 Memory Base/Limit 범위와 비교하는 **Address Routing** 으로 처리됩니다. Configuration 이나 Completion 처럼 특정 BDF 를 목적지로 삼는 TLP 는 Destination BDF 를 직접 보는 **ID Routing** 을 씁니다. 일부 Message TLP 는 "항상 RC 방향으로" 또는 "RC 가 브로드캐스트" 처럼 TLP 의 Type 필드 자체가 경로를 암묵적으로 결정하는 **Implicit Routing** 을 따릅니다.
+
 ```
    Address Routing (Memory, IO)
    ─────────────────────────────
@@ -216,6 +218,8 @@ void send_cpld(uint8_t tag, uint16_t total_remaining, uint8_t low_addr_7b,
 
 ### 4.4 Ordering Rules
 
+PCIe 의 ordering 규칙은 "어느 TLP 가 어느 TLP 를 앞지를 수 있는가"를 정의합니다. 핵심 논리는 Producer-Consumer 패턴에서 출발합니다. GPU 가 결과를 메모리에 Write(P) 한 뒤 CPU 가 Read 응답(Cpl) 을 받는 상황을 떠올리면, Write 가 Read 응답보다 반드시 먼저 도착해야 CPU 가 올바른 값을 읽을 수 있습니다. 반대로 Read 가 Write 를 추월해버리면 CPU 는 아직 Write 되지 않은 쓰레기 값을 읽게 됩니다. 그래서 P 는 NP 를 앞지를 수 있지만 NP 는 P 를 앞지를 수 없으며, 이 규칙이 PCI legacy 의 ordering 가정과도 호환을 맞춥니다.
+
 ```
    같은 source 의 P 두 개          : in-order 도착
    P 가 NP 를 추월 가능 (deadlock 회피)
@@ -223,8 +227,6 @@ void send_cpld(uint8_t tag, uint16_t total_remaining, uint8_t low_addr_7b,
    Cpl 이 다른 Cpl 을 추월 불가
    Cpl 이 P 를 추월 가능
 ```
-
-→ **Why?** Producer-Consumer 패턴에서 Producer 의 MWr (P) 가 Consumer 의 MRd Cpl 보다 먼저 도착해야 함. Posted/Non-Posted/Cpl 분리가 PCI legacy 의 ordering 가정과 호환.
 
 ---
 

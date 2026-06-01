@@ -45,21 +45,13 @@
 
 ### 1.1 시나리오 — _1 백만 연결_ 의 _RTO timer_
 
-당신은 cloud server. 동시 활성 TCP 연결 _1 백만_. 각 연결마다 _RTO timer_ 가 _별도_ — 응답 안 오면 retransmit.
+당신이 cloud server 를 운영한다고 해봅시다. 동시 활성 TCP 연결이 1 백만 개이고, 각 연결마다 독립적인 RTO timer 가 있어 응답이 안 오면 retransmit 해야 합니다.
 
-**Naive (SW 모델)**: 매 cycle 마다 _1M timer_ 비교 → CPU _대부분 시간_ timer 처리에 소진.
+가장 단순한 SW 모델은 매 cycle 마다 1 백만 개의 timer 를 전부 비교하는 것인데, 이러면 CPU 가 대부분의 시간을 timer 처리에 소진하게 됩니다.
 
-**Timer Wheel (TOE HW)**:
-- 1 ms 단위 _bucket_ 들.
-- 각 timer 가 _자기 만료 bucket_ 에 link.
-- 매 1 ms _wheel rotation_ → _만료 bucket_ 의 timer 만 처리 (수십 개).
-- 비용: _O(만료 수)_ vs _O(전체 N)_.
+TOE HW 의 Timer Wheel 은 이 문제를 구조적으로 풉니다. 1 ms 단위의 bucket 들로 시간을 분할하고, 각 timer 는 자신의 만료 시점에 해당하는 bucket 에 연결해 둡니다. 그러면 매 1 ms 마다 wheel 이 한 칸 돌아 현재 만료 bucket 의 timer 만 처리하면 됩니다 — 수십 개. 비용이 _O(전체 N)_ 에서 _O(만료 수)_ 로 내려갑니다.
 
-또한:
-- **Connection Table** = 1M 연결의 _4-tuple → state_ 매핑, SRAM 액세스 _O(1)_.
-- **Active vs Idle**: 활성 연결 SRAM (빠른), idle 연결 DRAM (느린).
-
-이 구조 없이 _SW 로_ 처리 = _CPU 8 코어 100%_ 점유. _HW offload_ 면 _0.5 코어_.
+여기에 더해 Connection Table 은 1 백만 연결의 4-tuple→state 매핑을 SRAM 에서 O(1) 로 꺼내 주고, 활성 연결은 빠른 SRAM 에, idle 연결은 느린 DRAM 에 두는 tier 구조가 메모리 비용을 현실적으로 만듭니다. 이 구조 없이 SW 로 처리하면 CPU 8 코어가 100 % 점유되지만, HW offload 면 0.5 코어로 줄어듭니다.
 
 Module 01 에서 "TOE 는 stateful offload" 라는 한 줄을 잡았습니다. 이 모듈은 그 한 줄이 **실제 칩 안에서 어떻게 블록으로 나뉘는가** 를 보여줍니다. TX path 의 6 단계, RX path 의 6 단계, 그 사이를 잇는 Connection Table, 수백만 연결의 RTO 를 처리하는 Timer Wheel, SRAM/DRAM 하이어라키 — 이 다섯이 TOE 의 골격입니다.
 
@@ -171,7 +163,7 @@ TX Path                                  RX Path
 6. To MAC                                6. RX DMA → host
 ```
 
-대칭적이지만 한 곳에서 만남: **Connection Table**. TX 는 read 위주 (header build 시 seq/ack 가져옴), RX 는 read+write (state update).
+TX 와 RX 는 대칭적인 구조를 가지지만, 두 path 모두 하나의 공통 지점에서 만납니다 — **Connection Table**. TX 는 header build 시 seq/ack 를 읽어 오는 read 위주 접근이고, RX 는 상태를 갱신하는 read+write 를 수행합니다. 이 공유 자원 때문에 동일 연결에 대한 TX/RX 의 접근 원자성이 중요해집니다.
 
 ### 4.2 컨트롤 패스 (CPU side) — 드문 결정
 
@@ -205,23 +197,13 @@ CT -> HASH
 CT -> PATH
 ```
 
-이 한 표가 TOE 의 "stateful" 의 모든 것:
-
-- **TCP FSM state** (CLOSED/LISTEN/SYN_RCVD/ESTABLISHED/...)
-- **Sequence numbers** (snd_una, snd_nxt, rcv_nxt)
-- **Window** (snd_wnd, rcv_wnd, snd_wl1/wl2)
-- **Congestion** (cwnd, ssthresh, dup_ack_count)
-- **RTT estimate** (srtt, rttvar)
-- **Timer pointer** (Timer Wheel slot 위치)
-- **Retx buffer pointer** (DRAM 영역의 시작 + 길이)
+Connection Table entry 가 담는 필드들이 곧 TOE 의 "stateful" 을 정의합니다. 각 연결마다 TCP FSM state (CLOSED/LISTEN/SYN_RCVD/ESTABLISHED/…), Sequence number 쌍 (snd_una, snd_nxt, rcv_nxt), Window 값 (snd_wnd, rcv_wnd, snd_wl1/wl2), 혼잡 제어 변수 (cwnd, ssthresh, dup_ack_count), RTT 추정치 (srtt, rttvar), Timer Wheel 의 slot 위치, 그리고 DRAM 상의 retx buffer 위치와 길이가 한 entry 에 기록됩니다. 이 정보가 모두 HW 에 있어야 packet 이 도착할 때마다 SW 개입 없이 올바른 응답을 만들 수 있습니다.
 
 ### 4.4 Timer Wheel + Memory hierarchy
 
-수백만 connection 의 RTO 타이머는 _동시에_ tick 검사할 수 없음. → Hashed Timing Wheel 자료구조로 슬롯에 등록 → 매 tick 에 _현재 슬롯_ 만 처리 → O(1).
+수백만 connection 의 RTO 타이머를 동시에 tick 마다 검사하는 것은 면적·전력 관점에서 불가능합니다. 그래서 Hashed Timing Wheel 자료구조로 각 타이머를 만료 슬롯에 등록해 두고, 매 tick 에는 현재 슬롯만 처리합니다 — O(1). 마찬가지로 수백만 connection 의 state 를 전부 SRAM 에 올릴 수도 없으므로, 활성 연결은 빠른 SRAM 에 두고 비활성 연결은 DRAM 으로 LRU swap 합니다.
 
-수백만 connection 의 모든 state 를 SRAM 에 둘 수 없음. → 활성은 SRAM, 비활성은 DRAM, LRU 로 swap.
-
-이 두 결정이 TOE 의 _scale 을 결정_ 합니다 (10K conn vs 1M conn).
+이 두 결정이 TOE 의 _scale 을 결정_ 합니다. Timer Wheel 과 메모리 tier 설계 없이는 10K 연결 수준에서 멈추게 되고, 이 둘을 갖추어야 1M 연결 이상을 지원할 수 있습니다.
 
 ---
 
@@ -403,12 +385,7 @@ DRAM: "Off-Chip DRAM — 느림, 저렴, 큼" {
 SRAM -> DRAM: "Cache / Spill"
 ```
 
-설계 트레이드오프:
-
-- SRAM 증가 → 성능 ↑, 면적/비용 ↑
-- DRAM 의존 → 비용 ↓, 지연 ↑ (메모리 컨트롤러 경유)
-- 캐싱 전략: 활성 연결을 SRAM 에 유지, LRU 로 교체
-- 100 Gbps 달성: 재전송 버퍼 대역폭이 병목 → DRAM 채널 수 중요
+설계 트레이드오프는 명확합니다. SRAM 을 늘리면 성능은 올라가지만 면적과 비용도 함께 올라갑니다. 반대로 DRAM 에 의존하면 비용은 줄지만 메모리 컨트롤러를 경유하는 지연이 늘어납니다. 따라서 실무 설계는 활성 연결을 SRAM 캐시에 유지하고 LRU 로 교체하는 전략을 씁니다. 100 Gbps 를 달성하는 데에는 재전송 버퍼 접근 대역폭이 병목이 될 수 있으므로 DRAM 채널 수와 access pattern 을 함께 검토해야 합니다.
 
 #### DV 검증 포인트 — 메모리
 
@@ -466,18 +443,9 @@ DCMAC (AMD):
 - FCS (Frame Check Sequence) 처리
 - Pause Frame (흐름 제어)
 
-TOE ↔ DCMAC 인터페이스:
+TOE ↔ DCMAC 인터페이스는 AXI-Stream 기반입니다. TX 방향에서는 TOE 가 만든 TCP 세그먼트가 DCMAC 으로 전달되어 Ethernet Frame 으로 포장되고, RX 방향에서는 DCMAC 이 수신한 Ethernet Frame 을 TOE 로 넘겨 TCP 세그먼트를 꺼냅니다.
 
-- AXI-Stream 기반
-- TX: TOE → DCMAC (TCP 세그먼트 → Ethernet Frame)
-- RX: DCMAC → TOE (Ethernet Frame → TCP 세그먼트)
-
-검증 포인트:
-
-- TOE 와 DCMAC 간 AXI-S 핸드셰이크 정확성
-- Frame 크기, 정렬, 패딩 정확성
-- 백프레셔 (DCMAC busy 시 TOE 대기)
-- 에러 전파 (CRC 에러 → TOE 에 통지)
+이 인터페이스의 검증 포인트는 크게 네 가지입니다. 먼저 AXI-S 핸드셰이크가 valid/ready 조건에서 모두 정확히 동작하는지 확인해야 합니다. 그 다음 Frame 크기와 정렬, 패딩이 규격대로인지 봅니다. DCMAC 이 busy 할 때 TOE 가 backpressure 를 받아 올바르게 대기하는지도 검증 대상입니다. 마지막으로 CRC 에러가 발생했을 때 DCMAC 이 TOE 에 이를 통지하고 TOE 가 적절히 처리하는 에러 전파 경로를 확인해야 합니다.
 
 ### 5.8 실무 주의점 — SYN Flood 시 Connection Table 고갈
 

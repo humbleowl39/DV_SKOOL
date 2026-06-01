@@ -264,11 +264,7 @@ SB -> IB
 SC -> IC
 ```
 
-**장점**:
-
-- 개별 Sequence 재사용 가능
-- Virtual Sequence 에서 조합만 변경하여 새 시나리오 생성
-- Test 에서는 어떤 VSeq 를 사용할지만 선택
+Virtual Sequence 의 강점은 이미 만들어진 개별 Sequence 를 재사용하면서, 조합 방식만 바꾸어 완전히 새로운 시나리오를 만들 수 있다는 데 있습니다. 한 번 작성된 `otp_config_seq`, `ufs_load_seq` 는 여러 Virtual Sequence 에서 꺼내 쓸 수 있으며, Test 는 어떤 Virtual Sequence 를 실행할지만 선택하면 됩니다. 이 구조 덕분에 "새 시나리오 추가 = Virtual Sequence 조합 파일 1개 추가" 로 수렴하여 코드 폭발이 방지됩니다.
 
 ### 4.4 start_item / finish_item 흐름
 
@@ -346,6 +342,8 @@ endclass
 ```
 
 #### do 메서드 vs Field Automation 매크로
+
+Sequence Item 이 Scoreboard 에서 제대로 비교되고, 로그에서 의미 있게 출력되려면 `do_copy`, `do_compare`, `do_print`, `convert2string` 네 가지 메서드를 구현해야 합니다. UVM 은 편의를 위해 `uvm_field_*` 매크로로 이 작업을 자동화하는 방법을 제공하지만, 내부적으로 reflection 기반으로 동작하기 때문에 시뮬레이션 속도가 10~30% 저하될 수 있습니다. 수십만 건의 transaction 을 처리하는 실무 환경에서는 이 오버헤드가 무시할 수 없으며, 또한 특정 필드만 비교에서 제외하거나 조건부 출력을 하는 등의 커스터마이즈가 불가능하다는 단점도 있습니다. 그래서 현업에서는 do 메서드를 직접 구현하는 방식이 표준으로 자리 잡고 있습니다. 새 필드를 추가할 때마다 네 메서드를 모두 업데이트하는 습관이 중요합니다.
 
 ```
 방법 1: `uvm_field_* 매크로 (편리하지만 비추천)
@@ -570,6 +568,8 @@ env.agent.sequencer.set_arbitration(UVM_SEQ_ARB_FIFO);
 
 ### 5.6 grab / lock — Sequencer 독점
 
+때로는 특정 sequence 가 Sequencer 를 독점하여 다른 sequence 가 끼어들지 못하게 해야 하는 경우가 있습니다. 대표적인 예가 reset sequence 처럼 중간에 다른 자극이 섞이면 안 되는 상황입니다. `grab()` 은 현재 처리 중인 item 이후부터 즉시 독점을 시작하며, `lock()` 은 현재 Sequencer 큐에 대기 중인 item 들이 모두 처리된 후에 독점을 시작합니다. 독점이 끝나면 반드시 `ungrab()` 또는 `unlock()` 을 호출해야 다른 sequence 가 다시 동작할 수 있습니다. 긴급 상황에는 `grab`, 원자적 (atomic) 트랜잭션 보장이 목적이면 `lock` 이 더 안전합니다.
+
 ```systemverilog
 // grab: 즉시 독점 (현재 진행 중인 item 이후부터)
 class critical_seq extends uvm_sequence #(axi_item);
@@ -615,6 +615,8 @@ lock():
 ```
 
 ### 5.7 Sequence Library 패턴
+
+시나리오가 많아질수록 sequence 파일이 프로젝트 곳곳에 흩어지면 유지보수가 어려워집니다. Sequence Library 패턴은 프로토콜 단위로 sequence 를 모아 패키지로 관리하는 방식입니다. `seq_lib/` 디렉토리에 base/write/read/burst/error 같은 단위 sequence 를, `vseq_lib/` 디렉토리에 이들을 조합한 virtual sequence 를 두고, 하나의 패키지 파일로 묶습니다. 이렇게 하면 새 시나리오는 vseq_lib 에 파일 하나를 추가하는 것으로 완성되고, 기존 sequence 는 수정할 필요가 없습니다.
 
 ```systemverilog
 // 기본 시퀀스들을 라이브러리로 관리

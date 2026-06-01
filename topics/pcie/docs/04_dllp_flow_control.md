@@ -186,6 +186,8 @@ void on_ack(uint16_t cumulative_seq) {
 
 ### 4.1 DLL 의 3 책임
 
+DLL 은 크게 세 가지 일을 합니다. 첫째, 보낸 packet 이 깨지지 않고 도착했는지 보장하는 **Reliability** — Seq# 를 붙여 보내고 LCRC 로 무결성을 검사한 뒤, 문제가 있으면 Replay Buffer 에서 꺼내 재전송합니다. 둘째, 수신 측 buffer 가 넘치지 않도록 조율하는 **Flow Control** — P/NP/Cpl 별로 Header 와 Data credit 을 따로 세어 수신 여유가 있을 때만 TLP 를 흘립니다. 셋째, link 가 초기화 → 정상 동작 → 비활성 중 어느 단계에 있는지를 관리하는 **Link State** — DL_Active 에 진입하기 전까지는 TLP 를 보낼 수 없습니다.
+
 | 책임 | 메커니즘 | DLLP 종류 |
 |---|---|---|
 | **Reliability** | Seq# (12-bit) + LCRC (32-bit) + Replay Buffer + ACK/NAK | Ack, Nak |
@@ -223,7 +225,7 @@ void on_ack(uint16_t cumulative_seq) {
             → Flow Control 트랙
 ```
 
-두 메커니즘이 같은 방향 (receiver → sender) 의 DLLP 라는 공통점이 있지만, **하나는 packet integrity, 다른 하나는 buffer occupancy**. 헷갈리면 stall 분석에서 잘못된 결론.
+두 메커니즘이 모두 receiver → sender 방향의 DLLP 로 전달된다는 공통점이 있어 혼동하기 쉽습니다. 그러나 ACK 는 "이 packet 이 깨지지 않고 도착했다"는 packet integrity 응답이고, FC Update 는 "내 buffer 에 이만큼 자리가 생겼으니 더 보내도 된다"는 buffer occupancy 통보입니다. **하나는 packet integrity, 다른 하나는 buffer occupancy** — 이 둘을 혼동하면 stall 분석에서 잘못된 결론에 이릅니다.
 
 ---
 
@@ -312,6 +314,8 @@ Replay 횟수가 한도 (보통 4) 초과 → DL 가 link recovery 트리거. LT
 → Window size = 2048 (modulo 의 절반) 정도가 정상 운영 범위.
 
 ### 5.4 Flow Control — 6 Credit Groups
+
+Flow Control 이 6개 그룹으로 세분화된 이유는 각 TLP 카테고리의 처리 경로가 다르기 때문입니다. Posted TLP 는 수신 즉시 메모리에 쓰면 되지만, Non-Posted 는 Completion 을 돌려보낼 때까지 buffer 를 점유하고, Completion 은 완전히 다른 우선순위 큐에 들어갑니다. 만약 6개를 하나로 합쳐 관리하면 NP 를 처리하느라 PH credit 이 차오르는 상황이 발생할 수 있어, 카테고리별로 독립적인 credit 풀을 두는 것이 필수입니다. Header 와 Data 를 따로 세는 것도 같은 이유입니다 — header 만 있는 MRd 와 payload 가 수백 byte 인 MWr 는 buffer 점유량이 전혀 다르기 때문입니다.
 
 ```
    각 Virtual Channel (VC) 마다 독립적으로:

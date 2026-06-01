@@ -246,15 +246,13 @@ static int handle_rdmsr(struct vcpu *vcpu) {
 └─────────────────────────────────────┘
 ```
 
-- **Ring 0**: 모든 HW 자원 접근 가능 (특권 명령어 실행 가능)
-- **Ring 3**: 제한된 권한 (특권 명령어 실행 시 → 예외 발생)
-- **Ring 1, 2**: x86 spec 에 존재하지만 현대 OS 미사용
+Ring 0 은 모든 HW 자원에 접근할 수 있는 최고 권한 모드이고, Ring 3 는 특권 명령어를 실행하려 하면 예외가 발생하는 제한 모드입니다. Ring 1 과 Ring 2 는 x86 spec 에 정의돼 있지만 현대 OS 는 사용하지 않습니다.
 
-**핵심**: OS 는 Ring 0 가정. 가상화 시 Guest OS 도 Ring 0 + Hypervisor 도 Ring 0 → **충돌**.
+**핵심**: OS 는 Ring 0 을 가정하고 설계됐습니다. 그런데 가상화 환경에서는 Guest OS 도 Ring 0 이 필요하고 Hypervisor 도 Ring 0 이 필요해 두 Ring 0 이 충돌합니다.
 
 ### 5.2 CPU 가상화의 과제
 
-Guest OS 는 원래 bare metal 에서 동작하도록 설계되었습니다. 즉, 자기가 가장 높은 권한을 갖고 있다고 가정합니다.
+Guest OS 는 원래 bare metal 에서 동작하도록 설계되었습니다. 즉, 자기가 가장 높은 권한을 갖고 있다고 가정합니다. 그 가정 아래에서 Guest OS 는 페이지 테이블 설정(CR3 / TTBR 쓰기), 인터럽트 활성화 / 비활성화, I/O 포트 접근, CPU 모드 전환 등을 자유롭게 수행하려 합니다.
 
 ```
 Guest OS 가 하려는 것:
@@ -269,7 +267,7 @@ Guest OS 가 하려는 것:
   → VM 간 격리 붕괴
 ```
 
-해결: Guest OS 의 특권 명령어를 Hypervisor 가 가로채서 (trap) 대신 처리 (emulate).
+문제는 이것들을 Guest OS 가 직접 수행하면 다른 VM 의 메모리를 건드릴 수 있고 Hypervisor 의 제어권을 빼앗을 수도 있다는 점입니다. VM 간 격리 자체가 붕괴됩니다. 따라서 Guest OS 의 특권 명령어를 Hypervisor 가 가로채어(trap) 대신 처리(emulate)하는 구조가 필요합니다.
 
 ### 5.3 방법 1 — Binary Translation (SW 방식)
 

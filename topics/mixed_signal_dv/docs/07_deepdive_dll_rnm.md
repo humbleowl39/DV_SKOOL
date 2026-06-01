@@ -10,9 +10,9 @@
 
 ## 1. DLL이란 무엇인가
 
-**DLL (Delay-Locked Loop)** — 입력 클록(REF_CLK)과 출력 클록(OUT_CLK)의 **위상 차이를 0으로 유지**하기 위해, **가변 delay line**을 자동으로 조절하는 폐회로(feedback loop) 시스템.
+**DLL (Delay-Locked Loop)**은 입력 클록(REF_CLK)과 출력 클록(OUT_CLK)의 **위상 차이를 0으로 유지**하기 위해, **가변 delay line**을 자동으로 조절하는 폐회로(feedback loop) 시스템입니다.
 
-PLL과의 차이:
+DLL을 처음 배울 때 PLL과 혼동하기 쉽습니다. 둘 다 입력 클록을 기준으로 출력을 정렬하는 폐루프 시스템이지만, 핵심 메커니즘이 다릅니다. PLL은 VCO가 새로운 주파수의 클록을 생성하고, 그 주파수를 제어 전압으로 조절합니다. DLL은 클록 주파수를 바꾸지 않습니다. 입력 클록을 그대로 전달하되, 가변 delay line으로 천이 시점을 조절해서 위상을 맞춥니다. 안정성 분석도 더 단순하고, 대부분의 경우 1차 시스템으로 취급할 수 있습니다.
 
 | 항목 | PLL | DLL |
 |---|---|---|
@@ -22,14 +22,11 @@ PLL과의 차이:
 | Stability 분석 | Bode plot, loop gain | 단순 (대부분 first-order) |
 | 적용 | Clock multiplication, RF | Phase alignment, clock deskew |
 
-DRAM에서 DLL의 역할:
-
-- DDR DRAM은 외부 CK 클록을 내부 데이터 출력 stage까지 전달
-- 내부 buffer/wire delay로 인해 외부 CK와 내부 DQ 출력 사이에 phase shift 발생
-- **DLL이 이 delay를 보상**하여 DQ가 CK 엣지에 정확히 정렬되게 함
-- DDR5는 WCK + DLL 조합으로 더 정밀한 alignment
+DRAM에서 DLL이 필요한 이유는 이렇습니다. DDR DRAM은 외부 CK 클록을 받아 내부 데이터 출력 stage까지 전달합니다. 그런데 내부를 통과하는 buffer와 배선 지연 때문에 외부 CK의 엣지와 내부 DQ 출력의 엣지 사이에 위상 차이(phase shift)가 생깁니다. **DLL이 이 지연을 정확히 측정하고 보상**하여 DQ가 CK 엣지에 정확히 정렬되도록 합니다. DDR5는 WCK와 DLL을 조합해 더욱 정밀한 alignment를 구현합니다.
 
 ## 2. DLL의 4가지 구성요소
+
+DLL의 동작을 이해하려면 네 블록이 어떻게 협력하는지를 살펴봐야 합니다.
 
 ```
        REF_CLK ──┬──→ ┌─────────────┐  delay_clk  ┌──────────┐  OUT_CLK
@@ -50,22 +47,11 @@ DRAM에서 DLL의 역할:
                       └───────────────┘    feedback
 ```
 
-| 블록 | 역할 |
-|------|------|
-| **Phase Detector (PD)** | REF_CLK와 feedback CLK의 위상 차이 감지 → up/down 신호 |
-| **Loop Filter (LF)** | up/down 신호를 누적하여 delay control 값 생성 |
-| **Delay Line (DL)** | 입력 클록을 가변 시간만큼 지연 |
-| **Replica Delay** | 실제 출력 경로의 delay를 모사 (feedback path) |
+**Phase Detector(PD)**는 REF_CLK와 feedback CLK의 위상 차이를 감지하고 up/down 신호를 생성합니다. **Loop Filter(LF)**는 up/down 신호를 누적해 delay control 값을 만드는 적분기 역할을 합니다. **Delay Line(DL)**은 입력 클록을 가변 시간만큼 지연시키는 핵심 소자로, 디지털 제어 코드로 지연량을 조절합니다. **Replica Delay**는 실제 출력 경로 — 데이터를 DQ 핀까지 전달하는 buffer와 배선 — 와 동일한 지연을 모사한 feedback path입니다. DLL은 replica delay를 통해 "출력 경로의 실제 지연이 얼마인지"를 추정하고 그것을 반영한 delay line 설정으로 수렴합니다.
 
 ## 3. 동작 시나리오
 
-1. **초기**: delay line의 delay 값이 임의 (예: 0)
-2. PD가 REF_CLK와 feedback CLK 비교:
-   - feedback이 REF보다 빠르면 → "delay 더 늘려라" (UP)
-   - feedback이 REF보다 느리면 → "delay 줄여라" (DOWN)
-3. Loop filter가 매 cycle마다 control 값을 증감
-4. 결국 delay line의 총 delay = `1 period - replica delay` 에 수렴
-5. **Lock**: 위상 차이가 충분히 작아지면 안정
+DLL의 lock 과정은 일종의 자동 보정입니다. 처음에는 delay line의 지연이 임의 값으로 시작합니다. PD가 REF_CLK와 feedback CLK를 비교하면서, feedback이 REF보다 빠르면 "지연을 더 늘려라(UP)" 신호를, 느리면 "지연을 줄여라(DOWN)" 신호를 냅니다. Loop filter가 매 클록 cycle마다 control 값을 증감시키고, 이것이 delay line의 지연량을 변화시킵니다. 이 과정을 반복하면 결국 delay line의 총 지연은 `1 period - replica delay`에 수렴합니다. 위상 차이가 충분히 작아지면 **lock** 상태가 됩니다.
 
 ## 4. RNM 모델 — 전체 구조
 

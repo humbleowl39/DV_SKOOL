@@ -10,52 +10,33 @@
 
 ## 1. IO Buffer가 왜 중요한가
 
-**IO Buffer**: 칩 내부의 디지털 신호를 외부 PCB로 전송하거나, 외부 신호를 내부로 받아들이는 회로.
+**IO Buffer**는 칩 내부의 디지털 신호를 외부 PCB로 전송하거나, 외부 신호를 내부로 받아들이는 회로입니다.
 
-DRAM에서 특히 중요한 이유:
-
-- DDR5 6400 Mbps/pin → 1 비트가 ~156 ps
-- 신호가 PCB trace · package · 다른 chip을 거치며 왜곡됨
-- Sense amp가 본 데이터는 깨끗했지만, IO buffer 거치며 변형되면 system error
-- ZQ calibration, ODT 같은 동적 조정 필수
-- DDR5/PCIe Gen5+ 이상은 **IBIS-AMI 모델로 RX equalizer까지 표준화**
+DRAM 검증에서 IO buffer는 단순한 출력 드라이버 이상의 의미를 갖습니다. sense amplifier까지는 완벽하게 데이터를 복원했어도, IO buffer를 거쳐 PCB trace와 package를 통과하는 과정에서 신호가 왜곡되면 결국 system error가 발생합니다. DDR5는 6400 Mbps/pin으로 동작하므로 1 비트의 시간이 약 156 ps밖에 되지 않습니다. 이 짧은 시간 안에 신호가 완전히 천이를 마쳐야 합니다. PCB trace는 전송선(transmission line)으로 동작하기 때문에 임피던스 불일치가 있으면 반사가 발생하고 eye가 닫힙니다. ZQ calibration과 ODT 같은 동적 조정이 필수인 이유가 여기에 있습니다. DDR5와 PCIe Gen5+ 이상의 고속 인터페이스에서는 **IBIS-AMI 모델로 RX equalizer까지 표준화**되어 있어, 이 표준을 이해하지 못하면 system-level sign-off가 불가능합니다.
 
 ## 2. IO Buffer의 5가지 특성
 
+IO buffer의 동작을 결정하는 다섯 가지 특성이 있습니다. 이것들이 서로 독립적이지 않고 함께 작용하므로, 하나씩 이해한 뒤 전체 그림을 보는 것이 중요합니다.
+
 ### 2.1 Driver Strength (구동 강도)
 
-```
-PMOS pull-up │ NMOS pull-down  →  output current
-     W/L           W/L              ∝ transistor size
-```
-
-- 강한 driver: 빠른 천이, 큰 EMI
-- 약한 driver: 느린 천이, 적은 EMI
-- DDR5는 보통 **34Ω, 40Ω, 48Ω** 같이 임피던스 단위로 표현
+Driver strength는 PMOS pull-up 트랜지스터와 NMOS pull-down 트랜지스터의 크기로 결정됩니다. 트랜지스터가 클수록 on-resistance가 낮아 더 많은 전류를 흘릴 수 있고, 신호 천이가 빠릅니다. 그러나 전류가 크면 EMI도 커집니다. DDR5에서는 트랜지스터 크기 대신 **34Ω, 40Ω, 48Ω** 같이 on-resistance의 임피던스로 강도를 표현합니다.
 
 ### 2.2 Slew Rate Control
 
-- dV/dt 제어
-- 너무 빠르면 → ringing, crosstalk
-- 너무 느리면 → eye 닫힘
-- 보통 0.5 ~ 2 V/ns 범위 (DDR5+에서 더 빠름)
+Slew rate는 신호가 단위 시간당 얼마나 빠르게 전압을 변화시키는지(dV/dt)를 나타냅니다. 너무 빠르면 ringing과 crosstalk이 심해지고, 너무 느리면 한 UI(Unit Interval) 안에 천이를 마치지 못해 eye가 닫힙니다. DDR5+에서는 6400 Mbps 이상의 속도를 위해 슬루레이트를 매우 빠르게 설정해야 하는데, 이것이 SI(Signal Integrity) 설계의 핵심 과제가 됩니다.
 
 ### 2.3 Output Impedance (Z_out)
 
-- 50Ω, 40Ω, 34Ω 등
-- PCB trace impedance와 매칭되어야 reflection 최소화
+출력 임피던스가 PCB trace의 특성 임피던스(보통 50Ω)와 매칭되어야 반사(reflection)가 최소화됩니다. 불일치가 있으면 신호가 끝단에서 반사되어 되돌아오고, 이것이 eye를 닫히게 합니다.
 
 ### 2.4 ODT (On-Die Termination)
 
-- Receiver 쪽에서 적용
-- 신호선 끝에 termination 저항 → reflection 흡수
-- 60Ω, 80Ω, 120Ω, 240Ω 등 선택 가능
+수신 측에서 신호선 끝에 termination 저항을 칩 내부에 구현한 것이 ODT입니다. 외부에 종단 저항을 붙이는 대신 칩 안에서 처리하므로 시스템 설계가 단순해집니다. 60Ω, 80Ω, 120Ω, 240Ω 등을 선택할 수 있으며, 값에 따라 반사 억제 효과와 전력 소비가 달라집니다.
 
 ### 2.5 ZQ Calibration
 
-- Driver/ODT 저항이 process/temp에 따라 변동
-- 외부 정밀 저항(ZQ pin, 보통 240Ω)을 기준으로 internal R을 캘리브레이션
-- 일반적으로 ZQCS (short) 매 128ms, ZQCL (long) 시동 시 + 정기적
+Driver와 ODT의 저항값은 공정 변동과 온도에 따라 달라집니다. ZQ calibration은 외부 정밀 저항(ZQ pin, 보통 240Ω)을 기준으로 내부 저항을 보정하는 절차입니다. ZQCS(short) 캘리브레이션은 매 128ms마다, ZQCL(long)은 시동 시와 정기적으로 수행합니다. 이 캘리브레이션이 없으면 process/temperature corner에서 임피던스 매칭이 틀어져 signal integrity 마진이 줄어듭니다.
 
 ## 3. IO Buffer 회로 구조
 

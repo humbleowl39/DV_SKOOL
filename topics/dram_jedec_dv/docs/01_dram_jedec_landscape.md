@@ -25,13 +25,9 @@
 
 > "스펙 요약본은 빠르게 이해하기 좋지만, 검증 환경의 진실은 스펙 원문에 있다."
 
-DRAM 검증에서 발생하는 버그의 상당수는 **스펙의 corner 조항**에서 발생합니다. 예시:
+DRAM 검증에서 발생하는 버그의 상당수는 **스펙의 corner 조항**에서 발생합니다. 요약본이나 애플리케이션 노트에는 공통 케이스만 기술되는 경우가 많고, 특정 기능을 활성화했을 때만 적용되는 타이밍 예외나 카운터 임계 조건은 스펙 원문의 주석(NOTE) 형태로만 남아 있을 때가 있습니다. 실제 예를 들면, DDR5의 `tCCD_L_WR2`는 일반적인 `tCCD_L`과 별도로 정의된 파라미터인데 요약본에서 누락되기 쉽고, LPDDR5에서 `Write Link ECC`가 활성화될 때 `tWR` 적용 규칙이 달라지는 내용은 스펙 §9.2.1.2에만 명시되어 있습니다. DDR5 `RFM` 명령은 `RAA Counter`가 임계치에 도달한 시점에 반드시 전송해야 하며 이를 어기면 Rowhammer 보호가 무력화됩니다.
 
-- DDR5 `tCCD_L_WR2` 가 DDR5의 일반 `tCCD_L` 과 별도로 정의됨 — 요약본에는 누락 가능
-- LPDDR5 의 `Write Link ECC` 가 활성화될 때 `tWR` 이 다르게 적용됨 (스펙 §9.2.1.2)
-- DDR5 `RFM` 명령이 `RAA Counter` 값에 따라 *반드시* 전송되어야 하는 시점 — 위반 시 Rowhammer 가능
-
-DV 엔지니어가 스펙 요약본만 보면 위 corner 들을 놓치기 쉽고, scoreboard / SVA / coverage가 모두 *통과*하지만 실제 silicon에서 fail이 나는 상황이 발생합니다.
+DV 엔지니어가 스펙 요약본만 보면 위와 같은 corner들을 놓치게 되고, scoreboard · SVA · coverage가 모두 통과하는데도 실제 silicon에서 fail이 나는 최악의 상황이 발생합니다. 시뮬레이션에서 잡지 못한 버그는 검증 비용이 수십 배로 뛰기 때문에, 스펙 원문을 직접 확인하는 습관은 선택이 아닌 필수입니다.
 
 **규칙**: 검증 모델·assertion·coverage 작성 시 *항상* 스펙 원문에서 해당 조항을 직접 확인하고, 코드 주석에 `JESD79-5C §3.5.59` 같은 출처를 남깁니다.
 
@@ -68,14 +64,14 @@ DRAM cell은 **1 transistor + 1 capacitor (1T1C)** 구조입니다.
 
 ### 2.2 destructive read — 왜 PRE가 필요한가
 
-cap의 charge를 sense amplifier가 감지하는 순간, **원본 charge는 손실**됩니다(즉 *destructive*). 그래서 sense amp이 *동시에 복원* 합니다. 그러나 다른 row로 옮기려면 현재 row buffer를 *닫고*(PRE), 새 row를 *열어야*(ACT) 합니다.
+capacitor에 저장된 charge를 sense amplifier가 감지하는 순간, **원본 charge가 bit-line으로 흘러나와 손실**됩니다. 이것이 destructive read입니다. sense amplifier는 이 미세한 전압 차이를 VDD/0으로 증폭하면서 *동시에* cell에 charge를 복원합니다. 그러나 다른 row에 접근하려면 현재 활성 row를 닫아야 하는데, bit-line을 VDD/2 수준으로 다시 평형 상태로 만드는 이 동작이 **Precharge(PRE)**입니다. PRE 없이는 다음 row를 열 수 없으므로, 모든 DRAM 접근은 ACT→(RD/WR)→PRE의 사이클로 귀결됩니다.
 
 이 ACT → PRE → 다음 ACT 사이클이 모든 DRAM timing의 출발점입니다. 핵심 timing 파라미터:
 
-- `tRCD` (Row-to-Column Delay): ACT → 첫 RD/WR 가능 시점
-- `tRP` (Row Precharge): PRE → 다음 ACT 가능 시점
-- `tRC` (Row Cycle): ACT → 동일 bank의 다음 ACT
-- `tRAS` (Row Active): ACT → 같은 bank의 PRE 까지 최소 active 시간
+- `tRCD` (Row-to-Column Delay): ACT → 첫 RD/WR 가능 시점. sense amp가 row를 완전히 latch하는 데 걸리는 시간입니다.
+- `tRP` (Row Precharge): PRE → 다음 ACT 가능 시점. bit-line이 VDD/2로 완전히 복귀하는 데 걸리는 시간입니다.
+- `tRC` (Row Cycle): ACT → 동일 bank의 다음 ACT. 사실상 tRAS + tRP의 합입니다.
+- `tRAS` (Row Active): ACT → 같은 bank의 PRE 까지 최소 active 시간. 너무 일찍 PRE를 내리면 cell restore가 완료되지 않아 데이터가 손실됩니다.
 
 !!! info "DV 적용 — 가장 기본적인 assertion"
     `tRCD`/`tRP`/`tRC`/`tRAS` 위반은 DRAM 검증에서 가장 먼저 짚는 항목입니다. Ch06에서 SVA로 직접 작성합니다.
@@ -120,9 +116,9 @@ flowchart LR
     DDR5 -.개념 공유.- LPDDR5
 ```
 
-**JESD79 (DDR)**는 *최대 대역폭과 용량* 우선 — 서버/데스크탑/HPC. 전압이 높고, ECC를 시스템 레벨에서 처리하는 가정.
+두 계열이 분리된 근본 이유는 사용 환경이 요구하는 최적화 방향이 정반대이기 때문입니다. 서버나 데스크탑은 전원이 항상 공급되므로 전력보다는 최대 대역폭과 용량이 우선됩니다. 그래서 **JESD79 (DDR)**는 전압을 비교적 높게 유지하고, ECC를 시스템(DIMM 또는 컨트롤러) 레벨에서 처리하는 구조를 택합니다. 반면 스마트폰이나 IoT 기기는 배터리로 동작하기 때문에, 동작하지 않는 시간에 전력을 최대한 아껴야 합니다. 그래서 **JESD209 (LPDDR)**는 저전압 설계, 더 정교한 power-down 모드, package-on-package 형태를 채택합니다.
 
-**JESD209 (LPDDR)**는 *전력 효율* 우선 — 모바일/IoT/자동차. 저전압, 더 정교한 power-down 모드, package-on-package 형태가 일반적.
+두 계열은 세대별로 개념을 공유합니다. DDR5가 도입한 온다이 ECC 개념은 LPDDR5의 Link ECC와, DDR5의 RFM은 LPDDR5의 ARFM/DRFM과 서로 영향을 주고받으며 발전했습니다.
 
 > **DV 시사점**: 동일한 "DDR" 이라 부르더라도, JESD79 vs JESD209는 *서로 다른 표준*입니다. 동일 vendor가 둘을 모두 만들고 controller IP도 둘을 모두 다루지만, 검증 환경은 *별도* 입니다.
 
@@ -151,11 +147,11 @@ flowchart LR
 
 ### 4.2 DDR5에서 새로 등장한 5가지 — DV가 가장 주목할 것
 
-1. **2-cycle command** — 명령 자체가 2 클럭에 걸쳐 전송. SVA 시 `@(posedge clk) command begins` 같은 timing 가정을 다시 짜야 함.
-2. **DFE (Decision Feedback Equalization)** — DDR5 receiver가 ISI를 보상. MR21~MR22, MR111~MR116 등에 설정. 훈련 단계에서 DV가 sweep 시나리오 필요.
-3. **RFM (Refresh Management)** — controller가 추적하는 `RAA (Rolling Accumulated ACT) counter`가 threshold 도달 시 RFM 명령 발급. Rowhammer 대응. (Ch07)
-4. **Transparency ECC** — DRAM 내부에서 ECC syndrome 자동 처리. controller는 *알 수 없는* 상태로 보이지만, MR15에서 임계 threshold 설정 가능. (Ch09)
-5. **DCA (Duty Cycle Adjuster)** — high-speed signaling에서 duty cycle을 fine-tune. MR42~MR48, MR103~MR254 영역.
+1. **2-cycle command** — 명령 자체가 2 클럭에 걸쳐 전송됩니다. CA[6:0] 7개 핀으로는 DDR5가 요구하는 주소 비트와 OPCODE를 1 클럭에 담을 수 없기 때문에 2 클럭으로 나눈 것입니다. 그 결과 monitor는 2 클럭 윈도우를 모아야 명령을 reconstruct할 수 있고, SVA의 타이밍 가정도 1-cycle 기반에서 다시 설계해야 합니다.
+2. **DFE (Decision Feedback Equalization)** — 8400 MT/s 이상의 고속 신호에서 ISI(심볼 간 간섭)를 보상하기 위해 DDR5 receiver에 DFE가 내장됩니다. MR21~MR22, MR111~MR116 등에 설정하며, 훈련 단계에서 DV는 sweep 시나리오가 필요합니다. (Ch08)
+3. **RFM (Refresh Management)** — controller가 추적하는 `RAA (Rolling Accumulated ACT) counter`가 threshold에 도달하면 RFM 명령을 발급해야 합니다. 동일 row를 반복 access하면 인접 row에 bit flip이 생기는 Rowhammer 취약점을 JEDEC 표준 수준에서 대응하는 메커니즘입니다. (Ch07)
+4. **Transparency ECC** — DRAM 내부에서 ECC 인코딩·디코딩이 자동으로 이루어져 controller에게는 투명하게 보입니다. 그러나 MR15에서 임계 threshold를 설정하고 MR16~MR20으로 에러 통계를 조회할 수 있으므로, DV는 이 통계가 정확히 갱신되는지 검증해야 합니다. (Ch09)
+5. **DCA (Duty Cycle Adjuster)** — 고속 신호에서 clock/strobe의 duty cycle이 50%에서 벗어나면 eye가 비대칭해집니다. DCA는 이를 fine-tune하는 회로로, MR42~MR48과 MR103~MR254 영역에서 DQ 핀별로 설정합니다.
 
 ---
 
@@ -181,11 +177,11 @@ flowchart LR
 
 ### 5.2 LPDDR5에서 새로 등장한 5가지 — DV가 가장 주목할 것
 
-1. **WCK (Write Clock) 분리** — CK는 command, WCK는 data. CK 대비 WCK는 4× 또는 2× 빠름. WCK2CK leveling이 별도 training. (Ch08)
-2. **DVFS (Dynamic Voltage Frequency Scaling)** — 동작 중 Vddq/주파수 동적 변경. DVFSC(Common parts), DVFSQ(Q output side). MR set 전환과 함께. (스펙 §7.7.1)
-3. **Link ECC** — DRAM과 controller 사이 *링크*에서 발생하는 에러를 ECC로 보호. encoding/decoding matrix가 정의됨. DDR5 *Transparency* ECC와는 보호 대상이 다름. (Ch09)
-4. **ARFM/DRFM** — Adaptive와 Directed Refresh Management. 컨트롤러가 더 정밀하게 hot row를 식별/지정해서 refresh 가능. (Ch07)
-5. **Per-pin DFE** — DQ pin마다 별도 DFE 계수. MR 셋업 양이 늘어남.
+1. **WCK (Write Clock) 분리** — LPDDR4까지는 command와 data가 같은 CK를 공유했습니다. LPDDR5는 CK를 command 전용으로, WCK를 data 전용으로 분리했는데 WCK는 CK보다 4× 또는 2× 빠릅니다. 두 클럭이 독립적으로 동작하므로 WCK2CK leveling이라는 별도 훈련 단계가 추가됩니다. (Ch08)
+2. **DVFS (Dynamic Voltage Frequency Scaling)** — 모바일 기기는 워크로드에 따라 실시간으로 메모리 동작 주파수와 전압을 바꿔야 합니다. LPDDR5는 DVFSC(Common parts)·DVFSQ(Q output side) 등의 FSP(Frequency Set Point) 전환 시퀀스를 정의하며, 전환할 때마다 MR set을 함께 교체해야 합니다. (스펙 §7.7.1)
+3. **Link ECC** — DRAM과 controller 사이의 DQ 링크에서 발생하는 에러를 ECC로 보호합니다. DDR5의 Transparency ECC가 *셀 내부* 보호라면, Link ECC는 *링크(핀)* 보호입니다. ECC encoding/decoding matrix가 스펙에 정의되므로, DV는 이 행렬과 controller의 구현이 일치하는지 검증해야 합니다. (Ch09)
+4. **ARFM/DRFM** — Adaptive와 Directed Refresh Management입니다. ARFM은 DRAM 내부가 hot row 여부를 힌트로 알려주면 controller가 대응하는 방식이고, DRFM은 controller가 직접 특정 row를 지정해 refresh하는 방식입니다. 두 방식 모두 결국 Rowhammer 위협을 줄이는 것이 목적입니다. (Ch07)
+5. **Per-pin DFE** — LPDDR5는 DQ 핀마다 별도의 DFE 계수를 가집니다. 덕분에 핀별 신호 특성 차이를 더 정밀하게 보정할 수 있지만, MR 설정 양이 크게 늘어나 훈련 시퀀스가 복잡해집니다.
 
 ---
 
@@ -203,7 +199,7 @@ DDR_CTRL (parameterized)
 └── LPDDR5 mode → BL16/32, WCK, DVFS, Link ECC
 ```
 
-**DV 시사점**: 동일 RTL이지만 mode마다 *별도의 testbench config*가 필요합니다. Coverage도 mode별로 별도 covergroup, 그리고 mode-cross coverage가 필요할 수 있습니다.
+같은 RTL 코드가 mode 파라미터 하나로 동작이 바뀐다는 것은, DV 관점에서 *각 mode가 독립적인 검증 대상*임을 의미합니다. DDR4 mode에서 통과한 테스트가 DDR5 mode의 2-cycle command 처리 경로를 검증하지는 않습니다. 따라서 mode마다 별도의 testbench configuration이 필요하고, mode별 coverage와 mode 간 cross coverage도 체계적으로 설계해야 합니다.
 
 ### 6.2 검증 환경 구성 — 4가지 패턴
 

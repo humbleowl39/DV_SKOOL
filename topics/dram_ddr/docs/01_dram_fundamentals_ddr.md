@@ -198,24 +198,13 @@ ROW -> COL
 
 DDR4 예시 (8Gb): 2 Rank · 4 Bank Group · 4 Bank/Group (총 16 Bank) · 65536 Row/Bank · 1024 Column/Row.
 
-접근 시퀀스:
-
-1. **ACTIVATE (ACT)**: Row를 Row Buffer에 로드 (Row Open)
-2. **READ/WRITE (RD/WR)**: Column 주소로 데이터 접근
-3. **PRECHARGE (PRE)**: Row Buffer 닫기 (다른 Row 접근 전)
+접근 시퀀스는 세 단계로 고정됩니다. 먼저 MC 가 **ACTIVATE (ACT)** 명령으로 원하는 Row 번호를 지정하면 DRAM 내부의 word-line 이 활성화되고 해당 행의 전하가 sense amplifier 로 끌려 나와 Row Buffer 에 자리잡습니다. Row Buffer 가 준비된 뒤에야 **READ 또는 WRITE (RD/WR)** 명령으로 Column 주소를 지정하여 실제 데이터를 주고받을 수 있습니다. 마지막으로 다른 Row 에 접근하기 전에 반드시 **PRECHARGE (PRE)** 명령으로 Row Buffer 를 비우고 bit-line 을 중립 전압으로 돌려야 합니다 — 이 단계를 건너뛰면 sense amplifier 가 오염된 상태에서 다음 Row 를 읽어 잘못된 데이터가 나옵니다.
 
 ### 4.2 Row Hit / Miss / Conflict — 일반화
 
-§3 의 Row Conflict 는 세 가능한 결말 중 하나입니다.
+§3 의 Row Conflict 는 세 가능한 결말 중 하나입니다. MC 가 특정 Bank 에 access 할 때 그 Bank 의 Row Buffer 에 이미 같은 Row 가 열려 있다면 **Row Hit** 입니다 — ACT 를 다시 발행할 필요 없이 tCL 만 기다리면 데이터가 나오므로 가장 빠릅니다. Row Buffer 가 완전히 비어 있는 경우는 **Row Miss** 인데, ACT 를 한 번 발행해야 하므로 tRCD 가 추가로 소요됩니다. 가장 비싼 경우는 **Row Conflict** 입니다 — 이미 다른 Row 가 열려 있으므로 먼저 PRE 로 닫고(tRP) 다시 ACT 로 원하는 Row 를 열어야(tRCD) 비로소 RD/WR 가 가능합니다(tCL). 따라서 Row Conflict 의 총 대기 시간은 세 값의 직렬 합인 tRP + tRCD + tCL 이며, Hit 대비 약 3배에 달합니다.
 
-```
-Row Hit:    같은 Row가 이미 열려 있음 → ACT 불필요 → tCL 만   ← 가장 빠름
-Row Miss:   Row Buffer 비어있음        → ACT 필요   → tRCD + tCL
-Row Conflict: 다른 Row가 열려 있음     → PRE + ACT  → tRP + tRCD + tCL  ← 가장 느림
-
-→ Memory Controller의 핵심 목표: Row Hit 비율 극대화
-→ 이를 위해 Module 02 의 FR-FCFS, Open/Close page, Address Mapping 이 등장
-```
+이 세 결말의 비용 격차가 바로 Memory Controller 의 핵심 목표를 정의합니다 — **Row Hit 비율을 극대화하는 것**. FR-FCFS 스케줄링, Open/Close page 정책, 그리고 연속 주소를 적절한 Bank 에 매핑하는 Address Mapping 이 모두 이 목표를 위해 등장하며, Module 02 에서 본격적으로 다룹니다.
 
 ### 4.3 명령 FSM — Bank 별 상태 머신
 
@@ -259,15 +248,15 @@ CELL -> BUF: "① Prefetch n bit (BL = n)"
 BUF -> DQ: "② Bank Group 별 독립 I/O\n같은 BG: tCCD_L (느림)\n다른 BG: tCCD_S (빠름)"
 ```
 
-- 한 번의 column access 가 BL beat 의 데이터 전송으로 변환되고,
-- MC scheduler 가 연속 access 를 다른 BG 로 분산하면 tCCD_S 로 이어붙임.
-- 두 layer 의 곱 = peak bandwidth 효율.
+한 번의 column access 가 BL 개수만큼의 beat 로 변환되므로, 내부 셀 어레이의 느린 동작 속도를 외부의 고속 DQ pin 이 감추는 구조입니다. 여기에 MC scheduler 가 연속 access 를 다른 BG 로 분산하면 tCCD_S 의 짧은 gap 으로 이어붙일 수 있어 효과적인 대역폭이 극대화됩니다. 결국 DDR 의 대역폭은 Prefetch 와 Bank Group Interleaving 이라는 두 layer 의 곱으로 결정됩니다.
 
 ---
 
 ## 5. 디테일 — 셀, Prefetch, Bank Group, Mode Register, Confluence
 
 ### 5.1 DRAM 셀 동작
+
+DRAM 셀의 구조는 1T1C — 트랜지스터 하나와 커패시터 하나 — 로 이루어져 있습니다. 이 단순한 구조 덕분에 bit 당 면적이 SRAM 의 6분의 1 수준에 불과하지만, 커패시터라는 소자의 본질적 특성이 세 가지 필수 동작을 요구합니다. 첫째, 읽기는 파괴적(destructive)이므로 읽은 직후 반드시 데이터를 재기록(restore)해야 합니다. 둘째, 커패시터는 시간이 지나면 전하가 누설되므로 주기적으로 refresh 를 통해 전하를 보충해야 합니다. 셋째, sense amplifier 가 bit-line 의 mV 단위 전압 차이를 증폭하는 데 시간이 필요하므로, ACT 후 tRCD 동안 은 아무 명령도 넣을 수 없습니다. 아래 다이어그램은 이 세 과정을 물리 수준에서 추적합니다.
 
 ```
 1T1C (1 Transistor, 1 Capacitor):
@@ -315,6 +304,8 @@ BUF -> DQ: "② Bank Group 별 독립 I/O\n같은 BG: tCCD_L (느림)\n다른 BG
 
 ### 5.3 DDR5 의 핵심 변경점 — 상세
 
+DDR4 에서 DDR5 로의 전환은 단순한 속도 향상이 아니라 아키텍처 전체가 바뀐 변화입니다. 5개의 핵심 변경점은 모두 "더 많은 병렬성 + 더 적은 오류" 라는 공통 목적에서 나옵니다. 각 변경점의 물리적 동기와 효과를 순서대로 살펴봅니다.
+
 ```
 1. 듀얼 Sub-Channel (2 × 32-bit)
    DDR4: 1 × 64-bit 채널 → 한 번에 64-bit 접근
@@ -353,6 +344,8 @@ BUF -> DQ: "② Bank Group 별 독립 I/O\n같은 BG: tCCD_L (느림)\n다른 BG
 
 ### 5.4 Prefetch 아키텍처 — DDR 대역폭의 핵심
 
+DRAM 셀 어레이의 내부 동작 주파수는 수백 MHz 에 불과하지만, 외부 DQ pin 은 DDR5 기준으로 수 GHz 로 동작합니다. 이 속도 간극을 메우는 것이 Prefetch 아키텍처입니다. 한 번의 column access 로 내부에서 n 비트를 한꺼번에 읽어 오고, 그것을 외부의 고속 클럭으로 순차 직렬 전송하는 방식입니다. DDR4 는 8n Prefetch 로 한 번에 8비트(BL8)를, DDR5 는 16n 으로 16비트(BL16)를 가져옵니다. 단, BL 이 커지면 작은 데이터를 요청할 때도 전체 burst 를 전송해야 하는 비효율이 생기므로, DDR5 는 Burst Chop(BL8) 옵션을 추가했습니다.
+
 ```
 Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
 
@@ -387,6 +380,8 @@ Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
 ```
 
 ### 5.5 Bank Group — 왜 존재하는가?
+
+Bank 만 있으면 될 것 같은데 왜 Bank Group 이라는 계층이 추가된 걸까요? 이유는 DRAM 내부의 I/O 회로 공유 때문입니다. 같은 Bank Group 안의 Bank 들은 I/O sense amplifier 와 데이터 경로를 물리적으로 공유합니다. 그 공유 회로가 재사용 준비를 마칠 때까지는 다음 CAS 명령을 넣을 수 없어서 tCCD_L(긴 간격)이 적용됩니다. 반면 다른 Bank Group 의 Bank 는 독립된 I/O 회로를 갖고 있어 tCCD_S(짧은 간격)만 기다리면 됩니다. MC 스케줄러가 연속 access 를 다른 BG 로 분산하는 것은 바로 이 tCCD_S 를 활용하는 전략이며, DDR5 에서 BG 가 4 개에서 8 개로 늘어난 것은 그 기회를 두 배로 늘린 것입니다.
 
 ```
 핵심 질문: Bank만 있으면 되지, 왜 Bank Group이라는 계층이 필요한가?
@@ -429,6 +424,8 @@ Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
 **면접 포인트**: tCL, tRCD, tRP가 "CAS Latency 22-22-22"처럼 스펙에 표기되는 세 수치이다. 이 값이 클수록 느리지만, 클럭이 빠르면 절대 시간(ns)은 유사하다.
 
 ### 5.7 LPDDR5 특징 (모바일/SoC)
+
+LPDDR5 는 DDR5 와 동세대이지만 타겟이 다릅니다. 서버·PC 용 DDR5 가 최대 대역폭을 추구하는 방향이라면, 모바일·차량용 LPDDR5 는 배터리 전력이 허용하는 한도 안에서 최대 성능을 내는 방향입니다. 그래서 전압을 1.05 V 까지 낮추고, 명령 클럭(CK)과 데이터 클럭(WCK)을 분리하여 데이터 버스만 선택적으로 고속 동작시키며, 부분 array self-refresh(PASR)로 사용하지 않는 bank 의 refresh 를 생략합니다. 아래 표는 DDR5 와의 수치 비교이며, 이어지는 절에서 LPDDR5 고유 기능들을 상세히 설명합니다.
 
 ```
 LPDDR5 vs DDR5 차이:
@@ -509,6 +506,8 @@ Samsung SoC에서의 LPDDR5:
 
 ### 5.8 DBI (Data Bus Inversion) — 전력 절감 기법
 
+고속으로 데이터를 전송할 때 DQ 핀이 0 과 1 사이를 자주 전환하면 스위칭 전류가 늘어나 전력을 낭비하고 동시 스위칭 노이즈(SSN)가 커집니다. DBI 는 이 문제를 "비트를 반전시키는" 매우 단순한 아이디어로 해결합니다. 전송할 8비트 중 '1' 이 5개 이상이면 전체를 반전하여 '1' 의 개수를 항상 4개 이하로 유지함으로써 스위칭 횟수를 줄입니다. 반전 여부는 DBI# 핀 하나로 수신측에 알려 주므로 데이터를 그대로 복원할 수 있습니다. 추가 핀 한 개로 약 15% 전력을 아끼는 "공짜 점심"에 가까운 기법으로, DDR5 에서는 기본 활성화되어 있습니다.
+
 ```
 문제: 고속 데이터 전송 시 DQ 핀의 전환(0→1, 1→0)이 많으면
      → 스위칭 전류 증가 → 전력 소모 + SSN(동시 스위칭 노이즈) 증가
@@ -534,6 +533,8 @@ DBI 원리:
 ```
 
 ### 5.9 Mode Register — DRAM 설정의 핵심
+
+DRAM 이 제 역할을 하려면 Burst Length, CAS Latency, ODT 값 등 수많은 동작 파라미터를 사전에 설정해야 합니다. 이 설정을 담는 것이 Mode Register 이고, MC 가 MRS(Mode Register Set) 명령으로 초기화 시 프로그래밍합니다. DDR4 에서는 MR0~MR6 의 7개로 충분했으나, DDR5 에서는 per-DRAM 주소지정, DCA(Duty Cycle Adjuster), ODT Latency 등 새로운 기능이 대거 추가되어 MR 수가 64개 이상으로 늘었습니다. Training 결과(VREF 값 등)도 MRS 를 통해 DRAM 에 최종 반영되므로, 초기화 순서 중 MRS 발행 순서가 JEDEC 스펙에 명시되어 있을 만큼 중요합니다.
 
 ```
 Mode Register = DRAM 디바이스의 동작 모드를 설정하는 내부 레지스터

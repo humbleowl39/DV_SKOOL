@@ -180,6 +180,8 @@ BUS -> CMISS
 
 ### 4.1 기본 TLB 엔트리
 
+TLB 가 단순히 "VA 를 PA 로 바꾸는 캐시" 라고 생각하면 중요한 부분을 놓칩니다. 실제 TLB entry 는 PA 뿐 아니라 page table walk 에서 얻은 권한(R/W/X) 과 캐시 속성(Attr), 그리고 어느 프로세스/VM 에 속하는지를 나타내는 ASID/VMID 를 한 묶음으로 담고 있습니다. 이 묶음이 있어야 "이 접근이 허용되는가"를 TLB hit 한 번으로 바로 판단할 수 있습니다. Size 필드는 4 KB 인지 2 MB 인지를 알아야 VPN 마스킹을 정확하게 할 수 있기 때문에 필요합니다.
+
 ```
 +------+------+------+------+----+----+----+----+------+-------+
 | VMID | ASID | VPN  | PPN  | V  | R  | W  | X  | Attr | Size  |
@@ -194,6 +196,8 @@ Size = Page 크기 (4KB/2MB/1GB)
 ```
 
 ### 4.2 TLB Lookup 과정
+
+VA 가 들어왔을 때 TLB 가 하는 일은 크게 세 단계입니다. 먼저 VA 에서 VPN 부분을 추출한 뒤, 보유한 entry 중 VMID, ASID, VPN 이 모두 일치하고 V=1 인 것을 찾습니다. 이때 Page 크기에 따라 VPN 의 유효 비트 수가 달라지므로 Size 를 고려한 마스킹이 필요합니다. 일치하는 entry 를 찾으면 PPN + 권한 + 속성을 즉시 반환하고, 찾지 못하면 Page Walk Engine 을 호출합니다.
 
 ```
 입력: VMID + ASID + VA
@@ -220,6 +224,8 @@ L1 -> L2: "miss"
 L2 -> PWE: "miss"
 ```
 
+L1 μTLB 와 L2 TLB 는 서로 다른 목적으로 존재합니다. μTLB 는 매 instruction 마다 ~1 cycle 안에 결과를 내야 하므로 fully-associative 구조로 설계하지만, 크기를 크게 만들면 CAM 검색 latency 가 늘어나 cycle time 을 침범합니다. 그래서 μTLB 는 작고 빠르게, L2 TLB 는 set-associative 로 더 크게 — 이 두 단계가 hit rate 와 latency 를 동시에 다룹니다.
+
 **L1 TLB (μTLB)**:
 
 - 크기: 32-64 엔트리
@@ -240,6 +246,8 @@ L2 -> PWE: "miss"
 - 결과를 L1, L2 에 모두 캐싱
 
 ### 4.4 IOTLB (IOMMU/SMMU 용)
+
+CPU 의 TLB 가 CPU core 의 메모리 접근을 캐싱하듯, IOMMU/SMMU 도 디바이스 DMA 의 변환 결과를 캐싱하는 IOTLB 를 갖습니다. 차이는 검색 키에 있습니다. CPU TLB 는 ASID + VPN 으로 찾지만, IOTLB 는 StreamID(어느 디바이스인지) 와 SubstreamID(어느 프로세스인지) 까지 복합 키로 사용합니다. 또한 GPU 나 DMA 의 접근 패턴은 CPU 와 달라 대용량 순차 burst 가 많으므로, Huge Page 엔트리의 비중이 높을수록 IOTLB 효율이 올라갑니다.
 
 디바이스(GPU, DMA, NIC) 의 주소 변환용 TLB:
 

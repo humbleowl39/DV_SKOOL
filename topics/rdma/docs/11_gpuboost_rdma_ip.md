@@ -200,7 +200,7 @@ A → B 로 4 KB WRITE. MTU 1 KB 라 4 packet.
 
 ### 4.1 5 + 1 wrapper
 
-5 wrapper (데이터 path) + 1 wrapper (MMU). 각자 II 와 책임이 다름.
+데이터 path 를 담당하는 5 개 wrapper 와 주소 변환을 담당하는 1 개 MMU wrapper 로 구성됩니다. 이들이 분리된 근본 이유는 각자의 timing 요구가 다르기 때문입니다. requester 는 host SQ 의 doorbell rate (~µs 단위) 에 맞추면 되지만, responder_frontend 는 wire 의 packet-per-cycle rate 에 맞춰야 합니다. completer_retry 는 timer 만료 시에만 활성화되는 sparse FSM 입니다. 이것을 한 monolithic RTL 로 합치면 가장 느린 II 가 전체를 결정하고, sparse 한 retry FSM 이 frontend 의 critical path 를 잠식하게 됩니다.
 
 ### 4.2 Wrapper 별 검증 1차/2차 신호
 
@@ -215,9 +215,7 @@ A → B 로 4 KB WRITE. MTU 1 KB 라 4 packet.
 
 ### 4.3 검증의 3-stage
 
-1. **Wrapper standalone** — 각 wrapper 분리 검증 (lib/.../submodule/).
-2. **Pair-wise** — `completer_frontend + completer_retry` 같은 강결합.
-3. **IP-top** — 두 노드 통합 (M08).
+wrapper 별 검증은 단계를 나눠서 진행하는 것이 효율적입니다. 처음에는 **wrapper standalone** 단계로, 각 wrapper 를 분리해 `lib/.../submodule/` 의 독립 환경에서 검증합니다. corner case 를 빠르게 잡기에 적합합니다. 다음으로 **pair-wise** 단계에서 강하게 결합된 쌍, 예를 들어 `completer_frontend + completer_retry` 또는 `responder_frontend + mmu_wrapper` 처럼 서로 의존하는 wrapper 들을 묶어 검증합니다. 마지막으로 **IP-top** 단계에서 두 노드를 통합한 `vrdmatb_top_env` 환경에서 system 시나리오를 검증합니다 (M08).
 
 ---
 

@@ -325,6 +325,8 @@ Page Table Entry (PTE)에 포함된 권한 비트:
 
 ### 5.4 캐시 속성 제어 (Memory Attributes)
 
+VA → PA 변환이 끝나도 한 가지 결정이 남습니다. 이 PA 가 가리키는 메모리를 캐시에 올릴 것인가, 아니면 버스로 직접 내려보낼 것인가 — 이것이 캐시 속성입니다. 일반 DRAM 이라면 캐싱해서 반복 접근 비용을 아껴야 하지만, MMIO 레지스터라면 캐싱하는 순간 쓰기 순서가 무너지고 하드웨어가 잘못된 값을 보게 됩니다. MMU 는 PTE 의 `AttrIdx[4:2]` 를 통해 이 결정을 인코딩하고, `MAIR_EL1` 레지스터가 그 인코딩을 실제 속성으로 풀어줍니다.
+
 | 속성 | 의미 | 용도 |
 |------|------|------|
 | Cacheable | 캐시에 저장 가능 | 일반 DRAM |
@@ -336,6 +338,8 @@ Page Table Entry (PTE)에 포함된 권한 비트:
 ARMv8 에서는 PTE 의 `AttrIdx[4:2]` 가 `MAIR_EL1` 의 8 슬롯 중 하나를 지칭하고, 그 슬롯의 8-bit 인코딩이 실제 attribute (`Device-nGnRnE`, `Normal WB` 등) 를 결정합니다. 즉 PTE 에는 attr 의 _이름_ 만, MAIR 에 attr 의 _내용_ 이 들어 있는 indirection 입니다.
 
 ### 5.5 MMU Enable / Disable 시퀀스
+
+MMU 를 켜는 순간은 생각보다 섬세한 전환입니다. 활성화 이전까지는 VA = PA 의 identity 모드로 동작하는데, `SCTLR_EL1.M` 을 1 로 바꾸면 그 다음 명령어부터 모든 주소 접근이 page table 을 거치게 됩니다. 따라서 전환 직전에 page table 과 TTBR, TCR, MAIR 를 모두 세팅해 두어야 하고, 활성화 직후 실행 중인 코드의 VA 가 그 table 에 identity 매핑되어 있어야 합니다. 그렇지 않으면 전환 순간 PC 가 가리키는 명령어 자체를 fetch 할 수 없어 즉시 Prefetch Abort 가 발생합니다.
 
 ```
 SCTLR_EL1.M (bit[0]) — MMU 활성화 제어:

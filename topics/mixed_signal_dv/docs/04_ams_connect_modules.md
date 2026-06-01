@@ -10,6 +10,8 @@
 
 ## 1. AMS Simulation 구조
 
+AMS 시뮬레이션을 처음 배울 때 가장 중요한 것은 "두 개의 시뮬레이터가 같은 시간 축 위에서 동시에 동작한다"는 그림을 머릿속에 잡는 것입니다. 한쪽에는 VCS나 Xcelium 같은 디지털 시뮬레이터가 SV testbench와 디지털 RTL을 이벤트 기반으로 처리하고, 다른 한쪽에는 FineSim, HSPICE, Spectre 같은 SPICE 시뮬레이터가 아날로그 넷리스트를 수치 적분으로 풀고 있습니다. 두 엔진은 각자 자신의 영역을 독립적으로 계산하지만, **동일한 wall-clock time**을 공유하면서 주기적으로 동기화 점을 맞춥니다.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                  AMS Simulation Environment                   │
@@ -30,17 +32,13 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-핵심 메커니즘:
-
-- 두 simulator가 **동일한 wall-clock time**을 공유
-- 매 동기화 점에서 connect module을 통해 신호 변환
-- 동기화 빈도 = 정확도 ↑ / 속도 ↓ trade-off
+동기화할 때마다 connect module이 두 도메인 사이의 신호를 변환합니다. 동기화를 자주 할수록 정확도는 올라가지만 두 엔진이 서로 기다리는 오버헤드가 커져 속도가 떨어집니다. 이 정확도 ↔ 속도 trade-off는 AMS 설정의 핵심 파라미터입니다.
 
 ## 2. Connect Module — 두 도메인의 다리
 
 ### 2.1 왜 필요한가
 
-디지털 신호(logic 0/1)와 아날로그 신호(전압/전류)는 표현이 다릅니다.
+디지털과 아날로그가 만나는 경계에는 반드시 번역이 필요합니다. 디지털 신호는 1'b1 또는 1'b0이지만, 아날로그 세계에서 "1"은 0.9 V인가요, 0.8 V인가요, 1.1 V인가요? 디지털의 X는 어떤 전압에 해당하나요? 디지털의 Z(tri-state)는 무한 임피던스를 의미하는데 이것을 어떻게 표현할까요?
 
 ```
 Digital:   1'b1 ─────── electrical: 0.9 V (VDD)?  0.8 V? 1.1 V?
@@ -49,7 +47,7 @@ Digital:   1'bX ─────── electrical: ?? (NaN risk!)
 Digital:   1'bZ ─────── electrical: tri-state (Hi-Z impedance)
 ```
 
-→ 변환 규칙(threshold, rise/fall time, drive strength)을 **connect module**이 정의합니다.
+이 번역 규칙 — threshold 전압, rise/fall time, drive strength — 을 정의하는 것이 **connect module**의 역할입니다. 규칙이 없으면 디지털의 "1"이 아날로그 측에 어떤 전압으로 나타나야 하는지 알 수 없고, 아날로그의 전압이 디지털 측에서 어떻게 0 또는 1로 해석되는지도 알 수 없습니다.
 
 ### 2.2 자동 삽입
 
@@ -208,18 +206,9 @@ endmodule
 
 ## 6. AMS의 강점과 약점
 
-### 강점
+AMS의 가장 큰 강점은 SPICE 수준의 정확도를 유지하면서 큰 디지털 부분과 작은 아날로그 부분을 함께 검증할 수 있다는 것입니다. 표준 언어(Verilog-AMS)를 기반으로 하기 때문에 특정 벤더에 종속되지 않는다는 장점도 있습니다.
 
-- **SPICE 정확도** + 디지털의 편리함
-- 큰 디지털 부분과 작은 아날로그 부분의 협동 검증 가능
-- 표준 언어 (vendor independent)
-
-### 약점
-
-- **SPICE 부분이 병목** — sense amp array처럼 큰 analog 영역이면 느림
-- 두 시뮬레이터 사이 **동기화 오버헤드**
-- Connect module 설정이 복잡 — discipline mismatch 추적 어려움
-- 디버그 도구가 RNM보다 부족 — 두 영역을 동시에 보는 waveform이 필요
+그러나 SPICE 부분이 언제나 병목입니다. sense amp array처럼 아날로그 블록이 크면 클수록 속도는 SPICE에 가까워지고 AMS의 효용이 줄어듭니다. 두 시뮬레이터 사이의 동기화 오버헤드도 무시할 수 없습니다. 또한 connect module 설정이 복잡하고, discipline mismatch가 발생했을 때 어디서 무엇이 잘못되었는지 추적하기 어렵습니다. 디지털과 아날로그 파형을 동시에 보는 debug 환경도 RNM보다 성숙도가 낮습니다. 이러한 약점들 때문에 AMS는 critical block의 sign-off와 spot check에 주로 쓰이고, 전체 회귀는 RNM으로 돌리는 패턴이 산업 표준이 되었습니다.
 
 ## 7. AMS vs RNM 결정 기준
 

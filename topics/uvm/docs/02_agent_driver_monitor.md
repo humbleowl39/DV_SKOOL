@@ -240,9 +240,11 @@ ACT -> ACT_USE { style.stroke-dash: 4 }
 PAS -> PAS_USE { style.stroke-dash: 4 }
 ```
 
-같은 `my_agent` 클래스를 두 위치 (입력측 = Active, 출력측 = Passive) 에 배치할 수 있어야 진정한 재사용. 따라서 Driver / Sequencer 는 Active 에서만 create — Passive 에서 create 하면 메모리/시뮬 낭비.
+실제 환경에서 AXI bridge 를 검증할 때, master 측 인터페이스는 우리가 직접 자극을 만들어 DUT 에 주입해야 하므로 Active 로 설정하고, slave 측 인터페이스는 DUT 가 어떤 응답을 만들어 내는지 관찰하는 역할이므로 Passive 로 쓰게 됩니다. 같은 `my_agent` 클래스를 두 위치 (입력측 = Active, 출력측 = Passive) 에 배치할 수 있어야 진정한 재사용입니다. 따라서 Driver 와 Sequencer 는 Active 모드에서만 `create` 해야 하며, Passive 모드에서 불필요하게 만들면 메모리와 시뮬레이션 시간을 낭비하게 됩니다.
 
 ### 4.3 Driver / Monitor / Sequencer 의 책임 분리
+
+Agent 안의 세 컴포넌트는 각자 엄격하게 다른 책임을 집니다. Driver 는 Sequencer 에서 transaction 을 받아 DUT 핀으로 변환해 구동하는 일만 하며, DUT 가 어떤 결과를 냈는지 예측하거나 비교하는 일에는 관여하지 않습니다. Monitor 는 반대로 DUT 핀을 sampling 하여 transaction 으로 복원하고 analysis port 로 내보내는 역할만 수행하며, 핀을 driving 하거나 sequence 를 시작하는 행위는 하지 않습니다. Sequencer 는 sequence 의 `start_item` / `finish_item` 요청을 받아 Driver 의 `get_next_item` 으로 넘겨 주는 중개자로, 자체적으로 자극을 생성하지 않고 중개만 합니다.
 
 | 컴포넌트 | 입력 | 출력 | 무엇을 안 함 |
 |---|---|---|---|
@@ -250,7 +252,7 @@ PAS -> PAS_USE { style.stroke-dash: 4 }
 | **Monitor** | DUT 핀 (vif) sampling | `analysis_port` 로 transaction broadcast | 핀 driving 안 함, sequence 시작 안 함 |
 | **Sequencer** | sequence 의 start_item / finish_item | driver 의 get_next_item | 자체 자극 생성 안 함 — 단순 중개 |
 
-이 분리가 깨지면 안티패턴 (다음 챕터에서) 가 됩니다.
+이 분리가 깨지면 Module 06 에서 다루는 안티패턴이 됩니다. 예를 들어 Driver 가 DUT 결과를 직접 비교하기 시작하면 같은 버그가 Driver 와 DUT 양쪽에 동시에 심어지게 되어 검출이 불가능해집니다.
 
 ---
 
@@ -296,6 +298,8 @@ endclass
 
 #### Driver 설계 원칙
 
+Driver 를 작성할 때 지켜야 할 핵심 원칙은 "프로토콜 규칙만 구현하고, DUT 의 내부 로직은 절대 넣지 않는다" 는 것입니다. Driver 가 DUT 와 같은 계산식을 가지면, DUT 에 버그가 있을 때 Driver 도 같은 방식으로 잘못된 기대값을 만들어 내어 오류를 검출하지 못합니다. 타이밍 면에서는 프로토콜 스펙의 VALID/READY 규칙을 정확히 따라야 하며, 같은 프로토콜이라면 DUT 가 달라도 Driver 를 그대로 재사용할 수 있어야 좋은 설계입니다.
+
 | 원칙 | 설명 |
 |------|------|
 | 프로토콜만 구현 | DUT 로직을 Driver 에 넣지 않음 |
@@ -336,6 +340,8 @@ endclass
 
 #### Monitor 설계 원칙
 
+Monitor 의 핵심 역할은 "눈으로 보되 손을 대지 않는 것" 입니다. DUT 의 핀 신호를 clock edge 마다 sampling 하여 transaction 으로 재구성하고, 그 결과를 analysis port 를 통해 Scoreboard 와 Coverage 로 broadcast 합니다. Monitor 는 Agent 가 Active 이든 Passive 이든 관계없이 항상 생성되어야 하는데, 자극 없이 관찰만 하는 Passive Agent 도 DUT 의 출력 신호를 sampling 해야 하기 때문입니다.
+
 | 원칙 | 설명 |
 |------|------|
 | 관찰만 (Passive) | DUT 신호를 읽기만, 구동하지 않음 |
@@ -344,6 +350,8 @@ endclass
 | Active / Passive 공통 | Agent 모드와 무관하게 항상 존재 |
 
 ### 5.3 Response 핸들링 — Driver ↔ Sequence 양방향
+
+기본적으로 Driver 와 Sequence 의 관계는 단방향입니다. Sequence 가 item 을 만들어 Driver 에 던지면 Driver 는 DUT 에 인가하고 끝납니다. 그런데 Read transaction 처럼 DUT 의 응답 데이터를 Sequence 가 받아 다음 자극 생성에 활용해야 하는 경우가 있습니다. 이때 `put_response` 를 사용하면 Driver 가 DUT 에서 읽은 데이터를 Sequence 로 돌려보낼 수 있고, Sequence 는 `get_response` 로 이를 받아 다음 단계의 자극을 결정하는 데 사용합니다. 이 양방향 흐름에서 가장 중요한 것은 `set_id_info(req)` 호출인데, 이것이 없으면 여러 Sequence 가 동시에 실행되는 환경에서 응답이 엉뚱한 Sequence 로 전달되는 silent bug 가 됩니다.
 
 ```systemverilog
 // 기본 Driver: 단방향 (Sequence → Driver)
@@ -396,6 +404,8 @@ D -> S: "item_done()" { style.stroke-dash: 4 }
     - 여러 Sequence 가 동시 실행 중일 때 Response 가 엉뚱한 Sequence 로 감
 
 ### 5.4 Pipelining Driver — 고성능 구동
+
+기본 `get_next_item → drive → item_done` 루프는 한 transaction 을 완전히 처리한 뒤에야 다음을 받기 시작하는 직렬 구조입니다. AXI 나 PCIe 처럼 DUT 가 여러 transaction 을 동시에 outstanding 으로 처리할 수 있는 프로토콜에서는 이 직렬 방식이 처리량 병목이 됩니다. 이런 경우 `try_next_item` 을 사용하면 "현재 새 item 이 있으면 가져오고, 없으면 null 을 반환하고 계속 진행" 하는 비차단 방식이 가능해져, DUT 의 파이프라인에 최대 부하를 줄 수 있습니다. 단, Pipelining Driver 는 프로토콜이 outstanding 을 허용할 때만 유효하며, APB 나 SPI 처럼 항상 완료를 기다려야 하는 프로토콜에 적용하면 protocol violation 이 됩니다.
 
 ```systemverilog
 // 문제: get_next_item → drive → item_done 루프는 직렬 처리
@@ -450,6 +460,8 @@ endclass
 ```
 
 ### 5.5 Sequencer Arbitration — 다중 Sequence 관리
+
+하나의 Sequencer 에 여러 Sequence 가 동시에 `start()` 되는 상황은 생각보다 자주 등장합니다. 예를 들어 정상 트래픽을 보내는 sequence 와 인터럽트를 흉내 내는 sequence 를 fork 로 동시에 실행할 때, 두 sequence 중 누가 먼저 Driver 에 item 을 전달할지를 결정하는 정책이 arbitration 입니다. 기본값인 `UVM_SEQ_ARB_FIFO` 는 요청이 들어온 순서대로 처리하므로 대부분의 경우 충분합니다. 긴급 sequence (예: 에러 주입, reset) 를 항상 먼저 처리해야 한다면 `UVM_SEQ_ARB_STRICT_FIFO` 를 쓰고 해당 sequence 에 높은 우선순위를 부여하면 됩니다.
 
 ```systemverilog
 // 하나의 Sequencer 에 여러 Sequence 가 동시에 start() 되면?

@@ -188,11 +188,7 @@ HV0 -> RS0
 HV1 -> RS1
 ```
 
-핵심 규칙:
-
-- **`vrdma_top_sequence` 는 stateless function set** — body() 가 없거나 minimal. 실제 verb 함수만 제공.
-- 멀티노드 verb 를 동시에 발행하려면 `fork-join_none` 으로 두 시퀀서에 동시에 `start_item / finish_item`.
-- per-QP state (예: outstanding count, error status) 는 `vrdma_sequencer` 가 보유. 시퀀스가 보유하면 시퀀스 재사용 시 stale 됨 ([Module 05](05_extension_principles.md) Stateless 원칙 참고).
+이 계층 구조에서 핵심 규칙은 다음과 같습니다. `vrdma_top_sequence` 는 **stateless function set** 으로 설계되어 있습니다. 즉 body() 가 없거나 minimal 하고, 실제 verb 함수만 제공합니다. 이렇게 stateless 로 유지해야 시퀀스를 여러 테스트에서 재사용할 때 이전 상태가 남아있는 stale state 문제가 생기지 않습니다. 멀티노드 verb 를 동시에 발행하려면 `fork-join_none` 으로 두 시퀀서에 동시에 `start_item / finish_item` 을 보내야 하는데, 이때 각 노드의 per-QP state (outstanding count, error status 등) 는 `vrdma_sequencer` 가 소유합니다. 만약 이 state 를 시퀀스에 두면 시퀀스를 재사용할 때마다 이전 실행의 값이 남아 있어 디버그하기 어려운 비결정적 동작이 발생합니다. 자세한 이유는 [Module 05](05_extension_principles.md) 의 Stateless 보존 원칙을 참고하세요.
 
 ---
 

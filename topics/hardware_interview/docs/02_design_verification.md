@@ -46,9 +46,11 @@ uvm_test
     └── uvm_scoreboard / uvm_subscriber / uvm_coverage
 ```
 
-- **Agent** = 한 인터페이스 (예: AXI master) 의 자극과 관찰 묶음. `is_active` 에 따라 *Active*(sqr+drv+mon) 또는 *Passive*(mon 만).
-- **Sequence** 는 component 가 아니라 `uvm_sequence_item` 들을 생성하는 *transient object*. Sequencer 에 `.start()` 로 띄움.
-- **Scoreboard** — Reference model 의 예상값과 monitor 가 잡은 실제값을 비교.
+**Agent** 는 AXI master 와 같이 *한 인터페이스 단위*로 자극 생성과 관찰을 하나로 묶은 컨테이너입니다. `is_active` 속성에 따라 sequencer+driver+monitor 를 모두 가진 *Active* 모드 또는 monitor 만 가진 *Passive* 모드로 동작합니다. Passive agent 는 DUT 버스를 건드리지 않고 관찰만 하므로, 예를 들어 scoreboard 에 데이터를 공급하는 read side 모니터링에 유용합니다.
+
+**Sequence** 는 component 트리에 고정 등록되지 않는 *transient object* 입니다. `uvm_sequence_item` 을 생성·제약·랜덤화한 뒤 sequencer 의 `.start()` 를 통해 driver 로 전달됩니다. 이 구조 덕분에 env 를 건드리지 않고 test 레이어에서만 자극 패턴을 바꿀 수 있습니다.
+
+**Scoreboard** 는 reference model 이 계산한 *예상값*과 monitor 가 DUT 에서 캡처한 *실제값*을 비교해 mismatch 를 검출합니다. driver 가 sequencer 를 통해 DUT 를 자극하는 동시에 predictor 에도 같은 transaction 을 알리면, predictor 가 예상 결과를 계산해 scoreboard 의 큐에 올려두고, monitor 가 실제 응답을 잡으면 그때 비교가 일어납니다.
 
 ### 1.3 Factory + Override — *왜* 중요?
 
@@ -244,6 +246,8 @@ endclass
 
 ## 6. CDC Verification
 
+CDC 검증은 문제가 *시뮬레이션마다 재현되지 않을 수 있다*는 점에서 일반 기능 검증보다 훨씬 까다롭습니다. 잘못된 동기화로 인한 오류는 특정 타이밍 조건에서만 나타나기 때문에 단순 directed test 로는 놓치기 쉽습니다. 아래 시나리오별로 TB 에서 어떤 방법으로 잡는지를 정리합니다.
+
 | 시나리오 | TB 에서 잡는 방법 |
 |----------|-------------------|
 | Pulse 가 dst clock 보다 짧음 | Coverage: pulse width < N, 의도적 random pulse 시퀀스 |
@@ -307,6 +311,8 @@ endgroup
 **인터뷰 정답**: "Code coverage 100% 는 *최소 조건*. Functional coverage 가 *진짜 검증 완성도*."
 
 ### 8.3 Coverage Closure 전략
+
+Coverage closure 는 일회성 작업이 아니라 *반복 루프*입니다. 먼저 functional coverage 리포트에서 hit 되지 않은 bin 을 식별하고, 그 bin 을 trigger 할 수 있는 constrained-random test 를 작성합니다. 제약만으로도 안 닫히는 bin 은 해당 조건을 직접 만들어주는 directed test 나 formal verification 으로 보완합니다. 마지막으로 설계 자체가 해당 상태에 도달할 수 없다고 확인된 bin 은 exclude 처리하되, 반드시 *왜 도달 불가능한지* 주석으로 정당화해야 리뷰어나 나중에 자신이 다시 볼 때 혼란이 없습니다.
 
 1. Functional cov 의 *un-hit bin* 식별
 2. 해당 bin 을 trigger 할 *constrained-random* test 작성

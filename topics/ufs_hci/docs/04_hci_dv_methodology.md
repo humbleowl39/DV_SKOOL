@@ -285,9 +285,11 @@ endgroup
 
 ### 5.3 HCI 초기화 검증 시나리오
 
-```
-HCI 초기화 시퀀스는 엄격한 순서를 요구 — 검증 필수
+HCI 초기화는 HCE → UCRDY 폴링 → DME_LINKSTARTUP → UTRLBA 설정 → UTRLRSR 활성 의 엄격한 순서를 요구합니다. 이 순서가 어긋나면 Doorbell 이 무시되거나 명령이 실종되므로, 검증에서는 golden sequence 와의 정합성 확인뿐 아니라 순서 위반을 주입했을 때 DUT 가 spec 에 정의된 동작을 하는지도 반드시 확인해야 합니다.
 
+주요 검증 항목은 다음과 같습니다.
+
+```
 주요 검증 항목:
 
   1. HCE Enable 시퀀스
@@ -634,9 +636,9 @@ HCI Protocol Checker가 상시 감시하는 항목:
 
 ### 5.8 Error Injection 방법론
 
-```
-목적: DUT의 에러 핸들링 경로가 정확히 동작하는지 검증
+에러 주입의 목적은 DUT 의 happy path 뒤에 숨어 있는 에러 핸들링 경로를 활성화해 정확성을 검증하는 것입니다. 에러 유형마다 DUT 내부에서 활성화되는 codepath 가 다르기 때문에, 주입 지점과 방법을 계층별로 구분해야 coverage 의 빈틈 없이 모든 경로를 커버할 수 있습니다.
 
+```
 에러 주입 지점과 방법:
 
   1. Device 응답 에러 (Device Agent에서 주입)

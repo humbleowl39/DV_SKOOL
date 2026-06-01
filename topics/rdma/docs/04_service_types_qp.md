@@ -48,9 +48,11 @@
 - **워크로드 A**: 분산 KV store. 노드 1000 개가 _서로 1:1_ 로 작은 메시지 (~100 B) 를 자주 교환. 1 query/response 당 평균 latency 가 중요.
 - **워크로드 B**: Service discovery. 노드 1000 개가 _모두에게_ "내 IP/port" 를 1 회씩 multicast. 작은 메시지, 손실 허용.
 
-워크로드 A 를 **RC** (Reliable Connection) 로 짜면? **1000 × 1000 = 100 만 connection** 의 메타데이터를 _모든 노드_ 가 보관해야 함. QP 1 개당 ~1 KB 메모리 → **노드당 1 GB** 의 connection state 만으로 메모리 폭발.
+워크로드 A 를 **RC** (Reliable Connection) 로 짜면 어떻게 되는지 따져봅시다. 노드 1000 개가 서로 1:1 connection 을 맺으면 **1000 × 1000 = 100 만 connection** 의 메타데이터를 _모든 노드_ 가 보관해야 합니다. QP 하나가 ~1 KB 의 메모리를 차지하므로, **노드당 1 GB** 가 connection state 만으로 사라집니다. 학습이나 KV 처리에 쓸 메모리가 그만큼 줄어드는 것입니다.
 
-워크로드 B 를 **RC** 로 짜면? 1000 × 1000 RC 면 위와 같음. 그리고 multicast 가 _안 됨_ — RC 는 1:1 만 가능.
+워크로드 B 를 RC 로 짜면 같은 메모리 문제 위에, multicast 가 _애초에 불가_ 라는 벽이 또 있습니다. RC 는 1:1 connection 만 만들 수 있어서, "모두에게 한 번씩" 을 구현하려면 peer 마다 별도 메시지를 보내야 합니다.
+
+이 두 한계가 서비스 타입을 4 개로 나누게 만든 이유입니다. 한 마디로, **신뢰성을 누가 어떻게 책임지느냐** 와 **연결을 아예 만들 것이냐** 는 두 축을 서로 다르게 배합한 결과가 RC / UC / UD / XRC 입니다.
 
 **그래서 service type 이 4 개**:
 
@@ -220,11 +222,7 @@ A 노드의 QPN = `0x0123`, B 노드의 QPN = `0x0456`. RC service 로 양방향
 
 ### 4.2 FSM 진행의 일반 규칙
 
-- **단계 skip 금지**: Reset → RTR 직접 점프 시도 → 거부.
-- **상태마다 필수 attribute 정해져 있음** — Modify 시 missing attribute 면 호출 실패.
-- **Err 진입은 자동** — async error (PSN error, retry exhausted, RNR exhausted, MR access violation) 발생 시 자동 진입. in-flight WR 모두 flush + WC error.
-- **Err 에서 복구는 Reset 만**.
-- **State transition 은 하드웨어가 enforce** — sw 가 우회 못함.
+FSM 을 움직이는 규칙은 크게 세 가지 원칙으로 묶을 수 있습니다. 첫째, **단계 skip 은 불가**합니다. Reset 에서 RTR 로 바로 점프하려 하면 즉시 거부됩니다. 둘째, **상태마다 필수 attribute 가 사전에 정해져 있어**, Modify 호출 시 하나라도 빠지면 그 자리에서 실패합니다. 셋째, **Err 상태 진입은 자동**이며, PSN 오류 · retry 소진 · RNR 소진 · MR access 위반 같은 async error 가 발생하면 hardware 가 즉시 QP 를 Err 로 끌어내리고 in-flight WR 을 전부 flush + WC error 처리합니다. 이 상태에서 벗어나는 길은 **Modify(Reset) 하나뿐** 이며, 이 모든 transition rule 은 software 가 우회할 수 없도록 **hardware 가 강제** 합니다.
 
 ---
 

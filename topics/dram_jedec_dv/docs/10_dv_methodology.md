@@ -69,7 +69,7 @@ flowchart TB
 
 ## 2. Memory Reference Model — 핵심 설계 결정
 
-DRAM 검증의 *척추*는 memory reference model 입니다.
+DRAM 검증의 척추는 memory reference model입니다. scoreboard가 실제 DUT의 동작과 비교할 때 "예상값"을 계산해주는 golden model이기 때문입니다.
 
 ### 2.1 두 가지 전략
 
@@ -78,7 +78,7 @@ DRAM 검증의 *척추*는 memory reference model 입니다.
 | **Cycle-accurate model** | 모든 timing을 모델링 (tRCD, tRP, bank FSM 포함) | 정확하지만 느림. controller IP의 timing model에 의존성 ↑ |
 | **Functional model** | data integrity만 추적 (mem[addr]=data) — timing은 SVA가 별도 검증 | 빠르고 깔끔. 권장. |
 
-**권장**: **Functional model + 별도 SVA timing checker**의 *2분 분리*.
+이 두 전략의 차이를 생각해보면, cycle-accurate model은 타이밍 위반 자체도 reference model이 잡으려 하는데, 이것은 책임을 하나의 컴포넌트에 너무 많이 몰아주는 설계입니다. functional model은 "데이터가 맞는가"만 묻고, "타이밍이 맞는가"는 SVA에 완전히 위임합니다. 두 역할을 분리하면 각자의 디버그가 훨씬 쉬워집니다. 권장 방식은 **Functional model + 별도 SVA timing checker의 2분 분리**입니다.
 
 ### 2.2 Functional model skeleton
 
@@ -144,7 +144,7 @@ endclass
 
 ## 3. Coverage 카테고리 6가지 — 모두 통합
 
-DRAM 검증에서 *coverage closure*는 다음 6가지 카테고리가 *모두* 채워져야 의미가 있습니다.
+DRAM 검증에서 coverage closure는 다음 6가지 카테고리가 모두 채워져야 의미가 있습니다. 어느 하나가 빠지면 검증되지 않은 동작 경로가 남습니다. 예를 들어 command coverage만 채우고 timing coverage를 무시하면, 명령 자체는 모두 발급되었지만 corner timing 상황에서의 동작은 전혀 검증되지 않은 상태가 됩니다.
 
 ### 3.1 Command Coverage (Ch05)
 
@@ -206,28 +206,23 @@ DRAM 검증에서 *coverage closure*는 다음 6가지 카테고리가 *모두* 
 
 ## 4. SVA 패턴 — 3 분류
 
+SVA를 작성할 때 "어떤 종류의 검사인가"를 분류해두면 관리가 쉬워집니다. 아래 3가지 카테고리로 나누면 각 assertion의 목적이 명확해지고, 나중에 assertion fail이 발생했을 때 어느 계층의 문제인지 즉시 좁혀낼 수 있습니다.
+
 ### 4.1 Timing Violation Assertions
 
-- tRCD/tRP/tRC/tRAS/tRRD/tFAW/tCCD_L/S 위반 catch
-- tREFI 9 deferred 초과 catch
-- preamble length 위반 catch
+타이밍 제약을 위반했을 때 즉시 fail을 내는 assertion입니다. tRCD/tRP/tRC/tRAS/tRRD/tFAW/tCCD_L/S 위반, tREFI 9 deferred 초과, preamble length 위반을 catch합니다. 이 assertion이 없으면 timing 위반이 데이터 오류로 나타날 때까지 수십 us를 더 기다려야 합니다.
 
 > Ch06 §5 참조
 
 ### 4.2 Command Order Assertions
 
-- ACT→ACT without PRE (same bank)
-- PRE→ACT within tRP
-- RD→WR within tRTW
-- WR→RD within tWTR
+명령 순서의 논리적 정확성을 검사하는 assertion입니다. DRAM state machine이 허용하지 않는 명령 순서를 즉시 catch합니다. ACT→ACT without PRE(same bank), PRE→ACT within tRP, RD→WR within tRTW, WR→RD within tWTR를 다룹니다.
 
 > Ch05 §6 참조
 
 ### 4.3 Training Protocol Assertions
 
-- CBT entry MR 발급 후 일반 traffic 발급 금지
-- WCK2CK leveling 단계에서 RD/WR 금지
-- training mode 진입/종료 절차의 *정확한 sequence*
+초기화 및 훈련 시퀀스의 절차적 정확성을 검사하는 assertion입니다. CBT entry MR 발급 후 일반 traffic 발급 금지, WCK2CK leveling 단계에서 RD/WR 금지, training mode 진입/종료 절차의 정확한 sequence를 다룹니다. 이 assertion이 없으면 training이 완료되지 않은 상태에서 normal traffic이 시작되어 silent data corruption이 발생할 수 있습니다.
 
 > Ch08 §6 참조
 

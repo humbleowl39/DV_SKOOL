@@ -220,6 +220,8 @@ uint64_t bar_size(int bar_index) {
 
 ### 4.2 Enumeration 4 단계
 
+OS 나 firmware 가 PCIe 토폴로지를 처음 발견하는 과정은 네 단계로 이루어집니다. 먼저 Bus 0 의 모든 (Device, Function) 조합에 CfgRd0 를 보내 Vendor ID 를 읽습니다. 0xFFFF 가 아닌 값이 돌아오면 device 가 존재한다는 뜻입니다. Type 1 (Bridge/Switch) 을 발견하면 그 downstream 에 새 Bus 번호를 할당하고 DFS 로 재귀적으로 파고 들어갑니다 — 이것이 Bus number 할당 단계입니다. 모든 device 를 발견한 뒤에는 각 EP 의 BAR 를 sizing 하고 OS 의 메모리 풀에서 적절한 base 주소를 배정합니다. 마지막으로 Cap Pointer 를 따라가며 어떤 기능(PM, MSI-X, AER 등)을 지원하는지 목록을 만드는 Capability discovery 로 마무리됩니다.
+
 | 단계 | 무엇을 | TLP |
 |---|---|---|
 | **Discovery** | Bus 0 부터 DFS 로 모든 (B,D,F) scan | CfgRd0 (Vendor ID 확인) |
@@ -465,6 +467,8 @@ Type 1 의 차이:
 
 ### 5.6 Function-Level Reset (FLR)
 
+driver 가 멈추거나 충돌했을 때 전체 시스템을 재부팅하지 않고 해당 function 만 초기화할 수 있는 수단이 FLR 입니다. SW 가 PCIe Capability 의 Device Control register 에 있는 Initiate FLR bit 를 set 하면 해당 function 은 logical reset 상태로 진입합니다. 진행 중이던 in-flight TLP 는 모두 drop 되고, Configuration register 의 일부가 reset 됩니다 — 단, BAR 처럼 재할당이 필요 없는 일부 register 는 보존됩니다. FLR 개시 후 100 ms 를 기다리면 SW 가 해당 function 을 다시 사용할 수 있습니다. 이것이 **driver crash / hang recovery** 의 표준 메커니즘이며, 검증 시 FLR 후 100 ms wait 를 지키지 않으면 device 가 정상 복구됐다고 착각하는 경우가 흔합니다.
+
 ```
    Device Control register 의 Initiate FLR bit set
        │
@@ -477,8 +481,6 @@ Type 1 의 차이:
        ▼
    100 ms 후 SW 가 다시 사용 가능
 ```
-
-→ **Driver crash / hang recovery** 의 표준 메커니즘.
 
 ### 5.7 Configuration Request Retry Status (CRS)
 

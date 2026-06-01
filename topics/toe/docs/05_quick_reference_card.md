@@ -132,6 +132,8 @@
    "왜 이 결정?"          → 개념 축 + Module deep-dive
 ```
 
+실전에서 면접관이나 동료는 "한 줄 답변" 다음에 거의 반드시 "왜 그렇게요?" 로 follow-up 합니다. 카드의 답변은 그 follow-up 을 받을 준비가 된 _시작 문장_ 이어야 하고, 그 깊이는 해당 Module 에서 옵니다.
+
 ### 4.3 카드 → Module 매핑 (참조 매트릭스)
 
 | 카드 항목 | 해당 Module |
@@ -183,6 +185,8 @@ TIME_WAIT: 2 × MSL (120초)
 Checksum Offload ⊂ TSO/LRO ⊂ TOE ⊂ RDMA (TCP 우회)
 (부분)            (중간)      (전체)  (다른 범주)
 ```
+
+오른쪽으로 갈수록 CPU 개입이 줄지만 구현 복잡도가 높아집니다. RDMA 는 TCP 자체를 우회하므로 포함 관계 바깥의 별도 범주이며 socket API 호환성이 없습니다. TOE 는 socket API 를 유지하면서 CPU 부하를 최대한 줄이는 지점입니다.
 
 ### 5.5 면접 골든 룰
 

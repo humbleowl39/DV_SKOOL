@@ -197,6 +197,8 @@ L2 PTE 가 Table descriptor 였다면 L3 까지 한 번 더 read → 총 4 mem a
 
 ### 4.2 Multi-level 의 산수
 
+이 문제를 해결하는 핵심 관찰은 단순합니다. 대부분의 프로세스는 전체 256 TB 주소 공간 중 실제로는 수십 MB 정도만 사용합니다. 그렇다면 사용하지 않는 영역의 하위 테이블을 아예 만들지 않으면 됩니다. 이것이 sparse 구조의 본질이고, 각 레벨의 테이블 하나가 정확히 4 KB(하나의 page) 가 되도록 설계하면 OS 의 메모리 관리 체계와 자연스럽게 맞아떨어집니다.
+
 ```
 핵심 관찰:
   대부분의 프로세스는 전체 주소 공간의 극히 일부만 사용한다.
@@ -253,6 +255,8 @@ L3E -> PPN
 > 총 **4번** 의 메모리 접근 필요 → 이것이 TLB 가 필수적인 이유.
 
 ### 4.5 Block Descriptor — 중간 레벨 종료
+
+4-level walk 를 항상 마지막 L3 까지 내려가야 할 이유는 없습니다. GPU 의 frame buffer 나 대용량 MMIO 영역처럼 수 GB 를 연속으로 매핑해야 하는 경우, L1 또는 L2 에서 walk 를 일찍 끝내는 Block Descriptor 를 쓰면 됩니다. PTE[1:0] 이 `0b01` 이면 "이 entry 가 바로 최종 PA 블록" 임을 의미하고, 그 순간 walk engine 은 나머지 레벨을 건너뜁니다. 결과적으로 TLB 한 entry 가 1 GB 또는 2 MB 전체를 커버하게 되어 hit rate 도 오르고 walk 비용도 줄어듭니다.
 
 ```
 Level 1에서 Block Descriptor:
@@ -483,6 +487,8 @@ TLB Entry:
 ```
 
 ### 5.10 Page Table Walk 의 성능 비용
+
+레벨이 하나 늘어날수록 DRAM 접근이 한 번씩 더 추가됩니다. DDR4 기준으로 DRAM 한 번 접근이 약 100 ns 이므로 4-level walk 는 ~400 ns 가 됩니다. 반면 TLB Hit 는 ~1 cycle(~0.5 ns) 이니 miss 와 hit 의 차이가 800배에 달합니다. 이 숫자는 추상적으로 느껴지지만, TLB miss rate 가 1% 라고 해도 effective access time 이 히트만 있을 때의 9배가 된다는 뜻입니다.
 
 | 레벨 수 | 메모리 접근 횟수 | 대략적 시간 (DDR4) |
 |---------|----------------|-------------------|

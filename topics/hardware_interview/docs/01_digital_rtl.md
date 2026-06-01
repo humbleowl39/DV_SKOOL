@@ -75,8 +75,7 @@ end
 | **Mealy** | `out = f(state, input)` | 입력에 *즉시* 반응 (조합) | 출력은 *전이 화살표* 위에 |
 
 **트레이드오프**:
-- Moore — 출력이 *flop* 에서 나옴 → glitch 없음, 타이밍 closure 쉬움. **단점**: 1-cycle latency.
-- Mealy — 출력이 *조합* → 빠르고 상태 수 적음. **단점**: input glitch 가 출력으로 전파, STA 어려움.
+Moore 는 출력이 *flop* 에서 나오기 때문에 glitch 없이 clean 한 신호가 나오고 타이밍 closure 도 용이합니다. 그 대신 상태가 바뀐 *다음 클럭*에야 출력이 나오므로 1-cycle latency 가 생깁니다. 반면 Mealy 는 출력이 *조합 회로*로 만들어지기 때문에 현재 입력에 즉시 반응해 상태 수도 적어집니다. 하지만 input 에 glitch 가 있으면 그대로 출력으로 전파되고, STA 도 복잡해집니다.
 
 **인터뷰 정답 템플릿**: "산업에서는 출력에 1-cycle latency 가 허용되면 Moore 가 안전. 응답 latency 가 critical 하면 Mealy + output flop 으로 절충."
 
@@ -101,8 +100,7 @@ $$ t_{ck \to q} + t_{logic} + t_{su} \le T_{clk} - t_{skew} \quad \text{(Setup)}
 
 $$ t_{ck \to q} + t_{logic} \ge t_{hold} + t_{skew} \quad \text{(Hold)} $$
 
-- **Setup violation** — 다음 클럭 엣지까지 도착 못함. *주파수 낮춰* 해결 가능.
-- **Hold violation** — 같은 클럭 엣지에 너무 *빨리* 도착해 이전 값을 덮어씀. *주파수와 무관*. **fix 가 어렵다** (logic 추가 / buffer 삽입).
+Setup violation 은 데이터가 *다음 클럭 엣지까지* 도착하지 못하는 경우로, 주파수를 낮추면 사이클 시간이 늘어나므로 해결 여지가 있습니다. Hold violation 은 반대로 데이터가 같은 클럭 엣지에 *너무 빨리* 도착해 이전 사이클의 값을 덮어쓰는 문제입니다. 주파수를 높이거나 낮춰도 타이밍 관계가 변하지 않아 **주파수와 무관**하며, logic 추가나 buffer 삽입으로 경로를 늘려야 해서 **fix 가 더 어렵습니다**.
 
 ### 3.2 Clock Insertion / Skew / Uncertainty
 

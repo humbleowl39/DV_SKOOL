@@ -45,15 +45,13 @@
 
 당신은 RDMA NIC RTL 을 검증해야 합니다. 첫 번째 본능 — 일반 ASIC DV 처럼 "**DUT 에 stimulus 보내고, output 비교**" 하면 되겠다.
 
-하지만 첫 시도부터 막힙니다:
+하지만 첫 시도부터 막힙니다.
 
-- **stimulus 는 어디서 오는가?** RDMA NIC 의 input 은 _wire 위의 패킷_ + _PCIe 위의 host 메모리/MMIO_. 두 가지를 _동시에_ 모델링해야 함.
-- **output 은 어떻게 비교하는가?** RDMA WRITE 의 output 은 _wire 패킷_ + _peer 메모리의 변경_ + _CQE_. 셋 다 봐야 함.
-- **scoreboard 는 무엇을 비교하는가?** 단순 transaction 비교가 아닌 _"peer memory 의 region X 가 sender 의 lbuf 와 bit-exact 인가?"_ — 즉 _system-level_ semantics.
+먼저 stimulus 가 두 갈래입니다. RDMA NIC 의 input 은 _wire 위의 패킷_ 과 _PCIe 위의 host 메모리/MMIO_ 두 가지인데, 이 둘을 동시에 모델링해야 비로소 하나의 완전한 stimulus 가 됩니다. 다음으로 output 비교도 세 곳을 봐야 합니다. RDMA WRITE 의 결과는 _wire 패킷_ 이 제대로 나갔는지, _peer 메모리의 해당 region_ 이 올바르게 변경됐는지, 그리고 _CQE_ 가 정확한 status 로 생성됐는지 세 곳을 모두 확인해야 합니다. 특히 scoreboard 의 핵심은 단순 transaction 비교가 아니라 _"peer memory 의 region X 가 sender 의 lbuf 와 bit-exact 인가?"_ 처럼 system-level semantics 를 검증하는 것입니다.
 
-**그래서 RDMA-TB 는 _DV 환경 자체가 두 노드 + 그 사이 네트워크 + 양쪽 host 메모리_ 를 모델링** 합니다. RTL 외 모델 (host model, MMU model, network model, memory model) 이 _RTL 만큼 큼_.
+이 세 문제의 합이 **RDMA-TB 가 _DV 환경 자체로서 두 노드 + 그 사이 네트워크 + 양쪽 host 메모리_ 를 모델링** 해야 하는 이유입니다. 그래서 host model, MMU model, network model, memory model 같은 RTL 외 모델이 _RTL 자체만큼 커집니다_.
 
-다음 결정은 _어디에 코드를 넣는가_:
+다음 결정은 _어디에 코드를 넣는가_ 입니다. 이 결정이 중요한 이유가 있습니다. base 가 비대해지면 feature 하나 추가할 때마다 모든 시나리오가 그 무게를 함께 집니다. 반대로 ext 가 비대해지면 유사한 코드가 각 feature 폴더에 흩어져 sharing 이 안 됩니다. 그래서 판단 기준은 딱 하나입니다. "다른 feature 를 검증할 때도 이 코드가 필요한가?" 필요하면 `base/`, 아니면 아래 표를 따릅니다.
 
 | 새 feature 의 성격 | 어디로? |
 |--------------------|---------|
@@ -62,7 +60,7 @@
 | Project-independent VIP | `external/` |
 | Sub-IP TB 만 사용 | `submodule/` |
 
-이 분류가 **"새 feature 를 어디에 넣을지" 의 결정 트리** — base 가 비대해지면 모두가 무거워지고, ext 가 비대해지면 sharing 안 되는 부분이 늘어남.
+이 분류가 **"새 feature 를 어디에 넣을지" 의 결정 트리** 입니다.
 
 또한 새 feature 추가 시 "어디에 코드 넣지?" 의 즉답이 어렵습니다 — base / ext / external / submodule 의 분류가 이 결정의 backbone. 이 모듈이 그 결정 트리를 명문화합니다.
 

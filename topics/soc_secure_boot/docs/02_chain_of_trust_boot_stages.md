@@ -236,6 +236,8 @@ BL33 -> OS
 
 ### 5.2 단계별 요약 테이블
 
+각 단계는 저장 위치, 실행 메모리, Exception Level 이 모두 다릅니다. BL1 은 Mask ROM 에 있으므로 변경이 불가능하고 internal SRAM 만 사용하는 반면, BL2 부터는 Flash 에 있어 현장 업데이트가 가능하고 DRAM 초기화 이후에는 DRAM 도 활용할 수 있습니다. Exception Level 은 신뢰 경계를 나타냅니다 — BL1 과 BL31 이 EL3 에서 실행되어 최고 권한을 갖고, BL32 는 S-EL1 에서 TEE 를 담당하며, BL33 은 Non-Secure EL1/2 에서 일반 부트로더로 동작합니다.
+
 | 단계 | 저장 위치 | 실행 메모리 | Exception Level | 핵심 역할 | 업데이트? |
 |------|----------|-----------|-----------------|----------|----------|
 | BL1 | Mask ROM | Internal SRAM | Secure EL3 | HW 초기화 + BL2 인증 | 불가 (ROM Patch 만) |
@@ -276,6 +278,8 @@ TKC -> BL3C
 
 #### BL2 검증 시퀀스 (상세)
 
+BL2 를 검증하는 과정은 단일 서명 확인이 아니라 인증서 체인을 단계적으로 올라가는 여정입니다. 먼저 OTP 에서 ROTPK 해시를 읽어, Root Certificate 안에 담긴 공개키의 해시가 그 값과 일치하는지 확인합니다 — 이것이 PK 인증입니다. 그 다음 Root Key 로 Trusted Key Certificate 의 서명을 검증하고, Trusted Key 로 BL2 Content Certificate 의 서명을 검증합니다. 마지막으로 Certificate 안에 기록된 BL2 해시와 실제 로드된 이미지의 해시를 비교해 무결성을 확인합니다. 여섯 단계가 모두 통과돼야 비로소 BL2 실행이 허용됩니다.
+
 1. OTP 에서 ROTPK 해시 읽기
 2. Root Certificate 의 공개키를 해시 → OTP 해시와 비교
 3. 일치 → Root Key 로 Trusted Key Certificate 의 서명 검증
@@ -283,7 +287,7 @@ TKC -> BL3C
 5. Certificate 내의 BL2 해시와 실제 BL2 이미지 해시 비교
 6. 모두 통과 → BL2 실행 허용
 
-**왜 다중 계층 인증서인가?** 키 교체 (Key Rotation) 와 폐기 (Revocation) 를 위해서. ROTPK 가 직접 이미지를 서명하면 키 침해 시 OTP 를 변경해야 하는데 이는 불가능. 중간 키를 두면 ROTPK 를 건드리지 않고도 키를 교체 가능.
+**왜 다중 계층 인증서인가?** 키 교체 (Key Rotation) 와 폐기 (Revocation) 를 위해서입니다. ROTPK 가 직접 이미지를 서명하면 키 침해 시 OTP 를 변경해야 하는데 이는 물리적으로 불가능합니다. 중간 키 계층을 두면 ROTPK 는 변경하지 않고도 중간 키만 새로 발급해 교체할 수 있습니다.
 
 ### 5.4 Secure Boot vs Verified Boot vs Measured Boot
 

@@ -42,7 +42,7 @@
 
 ## 1. Why care? — 이 카드가 왜 필요한가
 
-DRAM 4 모듈을 끝까지 읽으면 머릿속에 _세 묶음_ 이 남습니다 — (1) 명령 시퀀스 `ACT → RD/WR → PRE → REF`, (2) timing 묶음 `tRCD / tCL / tRP / tRAS / tRC / tFAW / tRFC / tREFI`, (3) DDR4↔DDR5 의 6 가지 차이축. 면접 / 코드 리뷰 / waveform 분석 중에 _어느 묶음의 어느 행_ 을 펼칠지 5 초 안에 결정해야 합니다.
+DRAM 4 모듈을 끝까지 읽으면 머릿속에 _세 묶음_ 이 남습니다. 첫째는 명령 시퀀스 `ACT → RD/WR → PRE → REF` 라는 stateful flow 이고, 둘째는 `tRCD / tCL / tRP / tRAS / tRC / tFAW / tRFC / tREFI` 라는 timing 묶음이며, 셋째는 DDR4 에서 DDR5 로 바뀐 6가지 차이축(Sub-Ch / BG 증가 / Prefetch / ECC / Same-bank REF / CA 버스)입니다. 실무와 면접에서는 이 세 묶음 중 어느 묶음의 어느 행을 5초 안에 꺼낼 수 있느냐가 숙련도를 가릅니다.
 
 이 카드는 본문이 아니라 **본문을 다 읽은 뒤의 _index_** 입니다. 카드의 각 표 항목은 "이 줄을 보면 어느 본문 모듈의 어디로 점프할지" 가 1:1 매핑됩니다. 카드만 외우면 가짜 마스터리 — capacitor 의 _왜_ 가 빠진 숫자 묶음은 follow-up 에서 즉시 깨집니다.
 

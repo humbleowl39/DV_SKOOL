@@ -337,6 +337,8 @@ Layer 3: 테스트별 제약 (Test class에서 factory override 또는 config)
 
 #### 분포 전략 (Distribution)
 
+처음에는 균등 분포로 넓게 탐색하고, 커버리지 보고서를 보면서 비어 있는 cross bin을 향해 분포를 좁혀가는 방식이 실용적입니다. 예를 들어 JUMBO × BROADCAST cross가 오래도록 채워지지 않으면, 해당 조합만 생성하는 directed constraint를 Layer 2 또는 Layer 3 수준에서 추가합니다.
+
 ```
 커버리지 홀에 따른 분포 조정:
 

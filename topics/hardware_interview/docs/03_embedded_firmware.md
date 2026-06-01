@@ -42,6 +42,8 @@
 
 ### 1.2 RTOS vs Bare-metal
 
+임베디드 시스템을 설계할 때 가장 먼저 결정해야 하는 구조적 선택이 RTOS 사용 여부입니다. 단일 제어 루프만 필요하고 코드가 수 KB 수준이라면 bare-metal 이 단순하고 예측 가능합니다. 하지만 센서 읽기, 통신 처리, UI 갱신을 *동시에* 처리해야 하는 복잡한 시스템에서는 bare-metal 의 `while(1)` 루프가 점점 분기로 얽히고, 우선순위가 다른 작업들을 직접 관리해야 하는 부담이 생깁니다. 이때 RTOS 의 스케줄러와 task 추상화가 큰 역할을 합니다.
+
 | 항목 | Bare-metal | RTOS (FreeRTOS, Zephyr) |
 |------|------------|-------------------------|
 | 구조 | `main()` 안에 while(1) + ISR | Task + Scheduler |
@@ -186,9 +188,7 @@ uint32_t bswap32(uint32_t x) {
 
 ### 4.2 Mutex vs Semaphore
 
-- **Mutex** — 0/1 binary, *소유 개념 있음* (lock 한 자만 unlock 가능). 일반적인 critical section 보호.
-- **Counting Semaphore** — N 카운트, *소유 개념 없음*. Resource pool 관리, producer-consumer counting.
-- **Binary semaphore** — semaphore 의 특수 형태. mutex 와 비슷하지만 *소유* 가 없어 ISR 에서 signal 가능.
+Mutex 와 semaphore 는 둘 다 "접근 제어"를 하지만 *목적과 소유 개념*에서 근본적으로 다릅니다. **Mutex** 는 lock 을 건 태스크만 unlock 할 수 있는 *소유 개념*을 가지며, 0/1 이진 값으로 하나의 critical section 을 보호하는 데 씁니다. 반면 **Counting Semaphore** 는 소유 개념이 없고 N 카운트를 가지기 때문에 여러 슬롯짜리 resource pool 을 관리하거나 producer-consumer 카운팅에 적합합니다. **Binary semaphore** 는 카운트가 0/1 인 semaphore 의 특수 형태로, 소유가 없으므로 ISR 에서 signal 을 보내고 task 가 wait 하는 패턴에 자주 씁니다. Mutex 를 ISR 에서 사용하면 안 되는 이유가 바로 여기에 있습니다.
 
 ### 4.3 Atomic Operations
 
@@ -255,11 +255,15 @@ memmove(dst, src, n);  // 겹쳐도 안전
 ### 5.4 `malloc` — 임베디드에서 안전한가?
 
 **보통 *피함*** — 이유:
+임베디드에서 `malloc` 을 피하는 핵심 이유는 *예측 불가능성*입니다. 반복적인 할당·해제가 누적되면 heap 이 fragmentation 되어 충분한 총량의 메모리가 있어도 큰 chunk 를 요청했을 때 실패할 수 있습니다. 또한 할당 latency 가 호출마다 달라지기 때문에 timing 이 중요한 제어 루프에서 사용하기 어렵고, out-of-memory 발생 시 임베디드 환경에서는 복구 절차가 마땅치 않습니다.
+
 - Fragmentation → 시간이 갈수록 큰 chunk 못 받음
 - 결정적이지 않은 latency
 - Out-of-memory 시 복구 어려움
 
 **대안**:
+이런 이유로 임베디드에서는 메모리를 컴파일 타임에 모두 결정하는 *static 할당*을 우선으로 고려합니다. 동적 크기가 필요하다면 *memory pool* — 동일 크기의 chunk 를 N 개 미리 확보해 두는 방식 — 로 fragmentation 을 원천 차단합니다. 크기가 다양하게 필요하면 *buddy allocator* 처럼 2의 제곱 단위 chunk 로 관리해 fragmentation 을 줄이는 대안을 씁니다.
+
 - *Static 할당* — 컴파일 타임에 모든 메모리 결정
 - *Memory pool* — 같은 크기 chunk 를 미리 N 개 할당 → fragmentation 없음
 - *Buddy allocator* — 2의 제곱 크기 chunk, fragmentation 적음
@@ -269,6 +273,8 @@ memmove(dst, src, n);  // 겹쳐도 안전
 ## 6. Cache & Coherency — 펌웨어 관점
 
 ### 6.1 Locality
+
+캐시가 효과를 발휘하는 이유는 프로그램의 접근 패턴이 *locality* 를 갖기 때문입니다. **Temporal locality** 는 방금 접근한 데이터를 곧 다시 접근하는 성질로, loop counter 나 함수 호출 프레임이 대표적입니다. **Spatial locality** 는 인접한 주소를 연달아 접근하는 성질로, 배열 순차 순회가 여기에 해당합니다. 캐시 라인이 한 번 로드될 때 인접 데이터까지 함께 올라오는 이유가 바로 spatial locality 를 활용하기 위해서입니다.
 
 - **Temporal** — 최근 접근 데이터를 곧 다시 접근 (loop counter, function call frame)
 - **Spatial** — 인접 주소를 곧 접근 (array iteration)

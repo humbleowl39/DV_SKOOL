@@ -211,6 +211,10 @@ Phase 3: LLM Gap Detection
 
 ### 5.1 왜 Common Task 가 누락되는가 — 문제의 구조
 
+SoC 안에 IP 가 50~200 개 있고, 각 IP 가 sysMMU · Security · DVFS · Clock Gating · Power Domain · Reset · Interrupt 등 공통 검증 항목 7 개를 받아야 한다고 해봅시다. 담당 엔지니어 수십 명이 각자 맡은 IP 의 Common Task 를 개별적으로 관리하게 되면, 특정 IP 에 DVFS 검증이 빠졌는지, 새로 추가된 IP 에 Security 항목이 등록됐는지를 전체 수준에서 일관되게 파악하기가 어렵습니다.
+
+그 결과를 시각적으로 표현하면 다음과 같습니다.
+
 ```
 SoC 내 IP 수: 50~200개
 각 IP에 공통 적용되는 검증 항목:
@@ -233,10 +237,9 @@ SoC 내 IP 수: 50~200개
   IP_2: ☑☐☑☑☑☐☑  (Security, Power 누락!)
   ...
   IP_N: ☐☑☑☐☑☑☑  (sysMMU, DVFS 누락!)
-
-  → 엔지니어 수십 명이 각자 담당 IP의 Common Task를 관리
-  → 수백 개 조합에서 3~5%가 누락 (Human Oversight)
 ```
+
+수백 개의 조합에서 3~5% 가 누락되고, DVCon 2025 데이터에 따르면 이 누락의 96.30% 는 기술적 어려움이 아니라 단순한 Human Oversight 입니다. 엔지니어가 잊어버리거나 새 IP 추가 시 매트릭스를 갱신하지 않은 것입니다.
 
 ### 5.2 누락 원인 분류 (DVCon 논문 데이터)
 
@@ -251,69 +254,31 @@ SoC 내 IP 수: 50~200개
 
 #### 1. sysMMU 연동 검증
 
-```
-SoC 내 대부분의 DMA-capable IP는 sysMMU를 통해 메모리 접근
+SoC 내 대부분의 DMA-capable IP 는 Virtual Address 로 메모리 요청을 발행하고, sysMMU 가 이를 Physical Address 로 변환합니다. 이 경로가 제대로 검증되지 않으면 IP 가 잘못된 물리 주소에 접근해 데이터가 조용히 오염되거나, Page Fault 처리가 이루어지지 않아 DMA 가 무한 루프에 빠집니다.
 
-검증 항목:
-  - IP → sysMMU → Memory 경로의 주소 변환 정확성
-  - Page Fault 발생 시 IP의 에러 처리
-  - sysMMU Bypass 모드 동작
-  - TLB Invalidation 후 재접근
-  - Secure/Non-Secure 접근 제어
-
-누락 시 영향:
-  - IP가 잘못된 물리 주소에 접근 → 데이터 오염
-  - Page Fault 무한 루프 → 시스템 행(hang)
-```
+검증해야 할 항목은 다섯 가지입니다. IP → sysMMU → Memory 경로의 주소 변환이 정확한지, Page Fault 발생 시 IP 가 graceful 하게 에러를 처리하는지, sysMMU Bypass 모드에서 VA == PA 로 동작하는지, TLB Invalidation 후 재접근 시 새 매핑을 사용하는지, 그리고 Secure/Non-Secure 접근 제어가 올바른지입니다. 특히 Bypass → Enable 전환 중에 진행 중인 트랜잭션이 보호되는지가 실리콘 버그의 주요 원천으로, §5.9 에서 실전 사례로 다시 다룹니다.
 
 #### 2. Security / Access Control
 
-```
-각 IP의 레지스터와 메모리 영역에 대한 접근 권한:
+각 IP 의 레지스터와 메모리 영역에 접근 권한이 올바르게 설정돼 있는지를 확인하는 항목입니다. TrustZone 기반 SoC 에서는 Normal World (Non-Secure) 가 Secure IP 의 레지스터에 접근하는 것이 차단돼야 하며, 이 차단이 이루어지지 않으면 보안 인증 자체가 무의미해집니다.
 
-검증 항목:
-  - Secure IP에 Non-Secure 접근 → 차단 확인 (TZPC)
-  - 레지스터별 접근 권한 (RO/WO/RW × EL × S/NS)
-  - Firewall 설정 후 불법 접근 차단
-  - 보안 레지스터 Lock (한번 설정 후 변경 불가)
-
-누락 시 영향:
-  - Normal World에서 Secure 레지스터 접근 가능 → 보안 붕괴
-  - 잘못된 접근 권한 → 실리콘 보안 인증 실패
-```
+검증 항목은 크게 네 가지입니다. Secure IP 에 Non-Secure 접근 시 TZPC 가 이를 차단하는지, 레지스터별 접근 권한 (RO/WO/RW, Exception Level, Secure/Non-Secure) 이 스펙과 일치하는지, Firewall 설정 후 불법 접근이 차단되는지, 그리고 보안 레지스터 Lock 기능이 동작하는지입니다. 한 번 설정된 보안 Lock 이 다시 해제될 수 있다면 그것 자체가 취약점이 됩니다. Security Common Task 가 누락되면 Normal World 에서 Secure 레지스터에 자유롭게 접근할 수 있게 되어 실리콘 보안 인증 (Security Certification) 에서 탈락합니다.
 
 #### 3. DVFS (Dynamic Voltage Frequency Scaling)
 
-```
-전압/주파수 동적 변경 시 IP 정상 동작:
+DVFS 는 전력 절감을 위해 전압과 주파수를 동적으로 변경하는 기능입니다. 문제는 이 전환이 이루어지는 바로 그 순간에 진행 중인 트랜잭션이 있다는 것입니다. 클럭 전환 중 glitch 가 발생하거나 진행 중인 burst 가 중단되면, 데이터 오류가 발생하는데 재현 조건이 타이밍 의존적이어서 간헐적으로만 나타납니다 — 실리콘에서 이런 버그를 만나면 디버그에 수 주가 걸릴 수 있습니다.
 
-검증 항목:
-  - 클럭 변경 중 IP 동작 (Glitch-free?)
-  - 변경 완료 후 IP 기능 정상
-  - 변경 중 진행 중인 트랜잭션 보호
-  - 최저/최고 주파수에서의 동작
-
-누락 시 영향:
-  - 클럭 전환 중 데이터 오류 → 간헐적 버그 (재현 어려움)
-```
+검증 항목은 네 가지입니다. 클럭 변경 중 IP 동작이 Glitch-free 한지, 변경 완료 후 IP 기능이 정상 복귀하는지, 변경 중 진행 중인 트랜잭션이 보호되는지, 그리고 최저/최고 주파수 양 극단에서도 정상 동작하는지입니다. DVFS 검증이 누락된 IP 는 성능 모드 전환 중 데이터가 조용히 손실되는 간헐적 버그를 내재한 채 출하됩니다.
 
 #### 4. Clock Gating / Power Gating
 
-```
-IP Idle 시 클럭/전원 차단 + 복구:
+전력 최적화를 위해 idle 상태의 IP 에 클럭이나 전원을 차단하는 기능입니다. 차단 자체보다 **복귀** 경로가 핵심 검증 대상입니다 — wake-up 요청이 들어왔을 때 클럭이 정해진 시간 안에 복귀하지 않으면 IP 가 응답 불가 상태가 됩니다. 이 때 외부에서는 IP 가 "죽었다" 고 보이지만 원인은 clock gating 복구 실패입니다.
 
-검증 항목:
-  - Idle 감지 → Clock Gate 활성화 → IP 상태 유지
-  - Wake-up 요청 → Clock 복귀 → 즉시 동작 가능
-  - Power Gate: 상태 저장 → 전원 차단 → 복원
-  - Isolation Cell 동작 (꺼진 IP 출력이 버스 오염 방지)
-
-누락 시 영향:
-  - Clock Gate 후 복귀 실패 → IP 죽음
-  - Isolation 미동작 → 버스 X 전파 → 시스템 불안정
-```
+검증 항목은 네 가지입니다. Idle 감지 후 Clock Gate 가 활성화되는 동안 IP 내부 상태가 보존되는지, Wake-up 요청 시 클럭이 복귀해 즉시 동작 가능한지, Power Gate 에서는 상태 저장 → 전원 차단 → 복원 흐름이 온전한지, 그리고 Isolation Cell 이 꺼진 IP 의 출력을 클램프해 버스에 X 가 전파되지 않는지입니다. Isolation 이 미동작하면 꺼진 IP 의 floating 출력이 버스 전체를 불안정 상태로 만들어 downstream 의 모든 IP 가 오동작합니다.
 
 ### 5.4 CCTV Coverage Model (개념)
+
+CCTV 를 SystemVerilog covergroup 으로 구현하면 매트릭스의 각 cell 이 자동으로 추적됩니다. covergroup 의 구조는 세 개의 coverpoint 와 그 교차 (cross) 로 이루어집니다.
 
 ```
 [CG_CCTV] Common Task Coverage Matrix
@@ -335,13 +300,19 @@ IP Idle 시 클럭/전원 차단 + 복구:
   // NOT_TESTED가 0개 = Gap 없음
 ```
 
+`cp_result` 에 `NOT_TESTED` 를 `illegal_bins` 로 설정하면, 매트릭스에 미검증 cell 이 남아 있을 때 coverage tool 이 자동으로 경고를 발생시킵니다. 반대로 Crypto 에 sysMMU 가 불필요한 것처럼 정당한 N/A 조합은 `ignore_bins` 로 선언해 false gap 을 방지합니다.
+
 ### 5.5 기존 방법의 한계
+
+CCTV 자동화 이전에는 세 가지 방법이 사용됐는데, 각각 고유한 한계를 가집니다. 다음 표는 그 한계를 정리한 것입니다.
 
 | 방법 | 한계 |
 |------|------|
 | **JIRA/Confluence 수동 추적** | SoC 규모 확장 시 관리 불가, 엔지니어 의존 |
 | **IP-XACT 자동화** | 구조 정보만 → "이 IP에 sysMMU가 필요한가?"의 시맨틱 판단 불가 |
 | **체크리스트 기반** | 새 IP/Feature 추가 시 갱신 누락, 레거시 의존 |
+
+핵심 문제는 IP-XACT 가 "이 IP 에 AXI Master 포트가 있다" 는 구조적 사실은 알려주지만, "따라서 sysMMU 검증이 필요하다" 는 시맨틱 판단은 IP Spec 의 텍스트를 읽어야만 내릴 수 있다는 점입니다. 이 간극을 메우는 것이 Module 03 에서 다루는 Hybrid Extraction (IP-XACT + Spec 텍스트) + LLM Gap Detection 파이프라인입니다.
 
 ### 5.6 코드 예시 — CCTV Coverage Matrix (SystemVerilog)
 

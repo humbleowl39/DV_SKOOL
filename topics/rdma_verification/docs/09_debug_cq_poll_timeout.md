@@ -245,30 +245,23 @@ QID 분기 순서 — **14–17 → 8 → 10/11 → PHASE**.
 
 #### Step 1 — 어떤 CQ 에서 타임아웃인지 확인
 
-- 로그의 `CQ number` 필드, `cq_handler` 인스턴스 이름
-- 멀티 CQ 환경이면 어느 CQ 인지 결정
+먼저 로그의 `CQ number` 필드와 `cq_handler` 인스턴스 이름으로 "어느 CQ 에서 timeout 이 났는가" 를 확인합니다. 멀티 CQ 환경이라면 특정 CQ 만 stuck 인 경우가 많으므로, 이 단계에서 범위를 좁히면 이후 QID 추적의 대상도 좁아집니다.
 
 #### Step 2 — DUT 가 WQE 를 처리했는지 확인
 
-- [Module 07 QID](07_h2c_c2h_qid_map.md) 적용:
-  - QID 14–17 (`RDMA_CMD_H2C_QID`): WQE descriptor fetch 가 일어났나? — DUT 가 SQ doorbell 인식?
-  - QID 8 (`RDMA_REQ_H2C_QID`): Requester payload fetch 가 일어났나? — WQE 처리 시작?
-- 둘 다 0 회라면 DUT 가 SQ 자체를 모름
+범위가 정해졌으면 [Module 07 QID](07_h2c_c2h_qid_map.md) 매트릭스를 적용합니다. QID 14–17 (`RDMA_CMD_H2C_QID`) 에서 WQE descriptor fetch 가 한 번이라도 일어났는지 확인합니다. 이 QID 에 활동이 없다면 DUT 가 SQ doorbell 자체를 인식하지 못한 것이므로 BAR / RAL 레지스터 쓰기를 추적해야 합니다. QID 14–17 은 정상인데 QID 8 (`RDMA_REQ_H2C_QID`) 에 활동이 없으면 WQE descriptor 는 받았지만 처리를 시작하지 못한 것이므로 DUT WQE parser 로 범위를 좁힙니다.
 
 #### Step 3 — CQE 가 생성되었는지 확인
 
-- DUT 내부 completion engine FSM 추적
-- 패킷은 나갔지만 CQE 가 안 만들어졌다면 completion 로직 버그 의심
+QID 8 까지 정상이고 패킷도 나갔다면, 이제 completion engine 이 CQE 를 만들었는지 확인합니다. C2H QID 10–11 (`COMP_C2H_QID`) 에 활동이 없다면 DUT 의 completion engine FSM 이 trigger 를 못 받은 것으로 볼 수 있습니다. 패킷 송신까지 완료됐는데 CQE 가 없다는 것이므로, DUT completion engine 의 trigger 신호를 fsdb 에서 추적합니다.
 
 #### Step 4 — Phase bit 동기화 확인
 
-- TB 의 expected `PHASE` vs DUT 가 쓴 phase bit
-- CQ depth / wrap-around 후에 phase bit 토글 누락 의심
+C2H QID 10–11 에 활동이 있다면, CQE 가 host 메모리에 기록은 됐지만 TB 의 expected PHASE 와 DUT 가 쓴 phase bit 가 불일치한 상태일 수 있습니다. CQ 가 wrap-around 된 이후 DUT 가 phase bit 를 토글하지 않으면 TB 는 영원히 phase 일치를 확인하지 못합니다. CQ depth 와 wrap 로직을 점검합니다.
 
 #### Step 5 — C2H tracker active 상태 확인
 
-- 타임아웃이 fire 했다면 `c2h_tracker::active = 0`
-- 그러나 c2h_tracker 가 false-active 상태로 남아 있다면 `monitorErrCQ` (try_once=1) 만 fire 가능
+마지막으로, 타임아웃이 실제로 발동했다면 그 시점에 `c2h_tracker::active = 0` 이었다는 뜻입니다. 반대로 c2h_tracker 가 false-active 상태로 남아 있다면 try_cnt 이 limit 을 넘어도 타임아웃 조건을 만족하지 못해 무한 대기가 됩니다. 이때는 `monitorErrCQ` (try_once=1) 만 발동 가능합니다. 로그에서 `c2h_tracker.*active` 를 grep 해 시점을 확인합니다.
 
 ```bash
 # 로그 검색 키워드

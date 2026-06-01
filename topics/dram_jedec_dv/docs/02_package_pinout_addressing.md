@@ -20,9 +20,9 @@
 
 ## 1. 왜 패키지·핀아웃이 DV에 중요한가
 
-DV 엔지니어가 testbench에서 다루는 *interface*는 결국 *물리 핀의 추상화*입니다. DDR5의 2-cycle command는 CA[6:0] 핀이 2클럭에 걸쳐 *서로 다른 정보*를 전달한다는 의미이며, 이는 monitor와 driver의 sampling 시점을 결정합니다.
+DV 엔지니어가 testbench에서 다루는 interface는 결국 물리 핀의 추상화입니다. 핀 정의를 정확히 이해해야 driver가 올바른 cycle에 올바른 핀을 drive하고, monitor가 정확한 시점에 신호를 sampling할 수 있습니다. 예를 들어 DDR5의 2-cycle command는 CA[6:0] 핀이 2 클럭에 걸쳐 서로 다른 정보를 전달한다는 의미입니다. monitor가 이를 모르고 1 클럭만 capture하면 명령이 반만 decode되고, 잘못된 주소로 scoreboard가 채워지게 됩니다.
 
-또한 controller IP가 *configurable* 한 경우, 같은 RTL이 *다른 ballout/organization* (x4 vs x8 vs x16)을 지원할 수 있습니다. 이 경우 DV는 각 organization마다 *별도 sanity*와 *cross coverage*를 준비해야 합니다.
+또한 controller IP가 configurable한 경우 같은 RTL이 x4, x8, x16 등 다른 organization을 지원합니다. organization이 다르면 DQ 버스 폭, DM/TDQS 지원 여부, bank 구성이 모두 달라지므로, DV는 각 organization별로 별도 sanity 테스트와 cross coverage를 준비해야 합니다.
 
 ---
 
@@ -143,7 +143,7 @@ LPDDR4는 *패키지 옵션이 매우 많은* 것이 특징입니다. 같은 die
 
 ### 4.2 LPDDR4 의 Dual-Channel Die
 
-LPDDR4 die는 *기본적으로 dual-channel*. 각 channel은 16-bit. SoC가 2개 channel을 양쪽에서 access 가능.
+LPDDR4 die는 기본적으로 dual-channel 구조입니다. 하나의 die 안에 독립적인 CA, CK, CKE, CS, DQ 버스를 각각 갖춘 두 채널이 공존하고, SoC는 두 채널을 병렬로 활용해 실질 대역폭을 두 배로 늘릴 수 있습니다.
 
 ```
 LPDDR4 Die (Dual Channel)
@@ -154,6 +154,8 @@ LPDDR4 Die (Dual Channel)
     ├── 8 banks
     └── DQ_B[15:0], CA_B[5:0], CK_B_t/c, CKE_B, CS_B
 ```
+
+두 채널이 완전히 독립적이라는 점이 DV에서 중요합니다. 채널 A가 self-refresh에 진입한 상태에서도 채널 B는 정상적인 read/write 명령을 수행할 수 있습니다. 따라서 시나리오 설계 시 각 채널의 독립 동작뿐 아니라, 한 채널이 전력 절약 모드에 있을 때 다른 채널이 정상 동작하는 cross-channel 독립성도 반드시 커버해야 합니다.
 
 !!! info "DV 시사점 — channel independence"
     채널 A와 채널 B는 *완전히 독립적*. 채널 A가 self-refresh 중에도 채널 B는 정상 동작 가능. DV scenario에서 *cross-channel 독립성*을 cover해야 합니다.
@@ -175,7 +177,7 @@ LPDDR5 추가:
   RDQS_t/c    ← Read DQS (LPDDR4의 DQS 역할 분리)
 ```
 
-WCK는 **CK 대비 빠른 클럭** (예: CK=400MHz, WCK=1.6GHz, 4× ratio). 데이터 전송 시점에 WCK가 사용되고, CK는 command 전송용으로 분리됩니다.
+LPDDR4까지는 하나의 CK가 command 타이밍과 data 타이밍을 모두 담당했습니다. 그런데 데이터 전송 속도가 올라갈수록 command와 data의 클럭 요구 사항이 달라져서 단일 클럭으로 양쪽을 만족시키기 어려워졌습니다. LPDDR5는 이를 WCK를 별도로 추가함으로써 해결했습니다. CK는 command 버스 동기화에 집중하고, WCK는 데이터 전송에 특화된 빠른 클럭으로 동작합니다. WCK는 CK 대비 4× 또는 2× 빠른데(예: CK=400MHz, WCK=1.6GHz), 이 두 클럭이 정확히 정렬되어야 CAS WCK2CK Sync 비트가 의미를 갖습니다. 정렬이 틀어지면 데이터 corruption이 발생하므로 WCK2CK leveling이 필수 훈련 단계로 추가됩니다.
 
 ### 5.2 LPDDR5 Bank 구조 — 3가지 모드
 
@@ -198,7 +200,7 @@ LPDDR5는 *bank organization을 mode register로 선택* 가능:
 
 ### 6.1 DDR5 어드레싱 분해 (대표)
 
-DDR5의 예시 (16Gb x8 device 가정):
+DDR5에서 특정 데이터를 접근하려면 4개의 좌표를 모두 지정해야 합니다. Bank Group이 어떤 묶음인지를 결정하고, 그 안에서 Bank를 선택하고, 해당 bank 내 Row를 활성화한 뒤, Column으로 실제 데이터 위치를 지정합니다. DDR5의 예시 (16Gb x8 device 가정):
 
 | 차원 | 비트 수 | 비고 |
 |---|---|---|
@@ -208,6 +210,8 @@ DDR5의 예시 (16Gb x8 device 가정):
 | Column | 10 | 1K columns per row (BL16 기준) |
 
 총 = BG[2:0] + BA[1:0] + Row[16:0] + Col[9:0] = 32-bit logical address
+
+이 4축 구조가 중요한 이유는 timing parameter에 직접 영향을 주기 때문입니다. 같은 BG 안의 다른 bank끼리 연속 명령을 내리면 `tCCD_L`(Long)을 지켜야 하고, 다른 BG라면 더 짧은 `tCCD_S`(Short)가 적용됩니다. BG를 활용해 명령을 교차 발급하면 실질 대역폭을 높일 수 있고, DV는 이 조합을 모두 coverage로 잡아야 합니다.
 
 > 정확한 비트 수는 device 용량(8Gb/16Gb/32Gb)과 organization(x4/x8/x16)에 따라 다릅니다. JESD79-5C §2.7 표를 참조하세요.
 

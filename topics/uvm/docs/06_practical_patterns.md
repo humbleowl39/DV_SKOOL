@@ -280,6 +280,8 @@ BAD: "나쁜 환경 (God Env)" {
 
 ### 5.1 패턴 1: Config Object 패턴
 
+환경이 커지면 `vif`, `is_active`, `timeout`, `enable_coverage` 같은 설정을 각각 별도의 `config_db set` 으로 전달하는 코드가 수십 개로 불어납니다. 각 필드마다 경로와 이름을 따로 관리해야 하므로 오타 위험이 그만큼 늘어나고, 새 설정이 추가될 때마다 set/get 쌍을 코드 여러 군데에 추가해야 합니다. Config Object 패턴은 관련 설정을 하나의 `uvm_object` 에 묶어 `set/get` 을 컴포넌트당 단 한 번으로 줄이는 방식입니다. 새 설정이 필요하면 Config Object 에 필드를 하나 추가하면 끝이고, 다른 SoC 로 포팅할 때는 Config Object 인스턴스 하나의 필드 값만 교체하면 환경 전체의 동작이 바뀝니다.
+
 ```
 문제: config_db set/get 가 수십 개 → 관리 불가, 오타 위험
 
@@ -298,6 +300,8 @@ BAD: "나쁜 환경 (God Env)" {
 ```
 
 ### 5.2 패턴 2: Base Test + 상속 패턴
+
+Test 를 작성하다 보면 공통 부분이 보이기 시작합니다. 모든 test 에서 env 를 만들고, vif 를 설정하고, reset 을 기다리는 코드가 반복됩니다. Base Test 상속 패턴은 이 공통 부분을 `base_test` 에 한 번 작성하고, 각 시나리오별 test 는 `base_test` 를 상속하여 시나리오 로직만 추가하는 방식입니다. `derived_test` 의 `build_phase` 에서 `super.build_phase(phase)` 를 빠뜨리면 base 가 만든 env, config_db 설정, factory override 가 모두 무효가 되어 시뮬레이션은 돌지만 환경이 전혀 초기화되지 않은 상태가 되므로, 모든 derived test 의 `*_phase` 첫 줄에 `super` 호출을 빠뜨리지 않는 것이 이 패턴의 철칙입니다.
 
 ```systemverilog
 class base_test extends uvm_test;
@@ -339,6 +343,8 @@ endclass
 
 ### 5.3 패턴 3: Layered Sequence 패턴
 
+프로토콜이 복잡해질수록 "파일 읽기" 같은 응용 계층의 동작을 실제 핀 신호로 변환하기까지 여러 단계가 필요합니다. UFS 를 예로 들면, "파일 읽기" 라는 의미는 SCSI 읽기 명령으로 표현되고, 그 SCSI 명령은 UFS Command UPIU 와 Data-In UPIU 로 변환되며, 이것이 Driver 에 의해 실제 핀 신호로 바뀝니다. Layered Sequence 는 이 각 계층을 별도의 sequence 로 분리하여, 응용 계층에서는 "파일 읽기" 만 알고 하위 프로토콜 변환은 하위 sequence 에 위임하는 방식입니다. 덕분에 응용 계층의 시나리오는 수정 없이 하위 프로토콜만 교체하거나, 반대로 프로토콜 레벨 sequence 를 다른 응용 시나리오에서 재사용할 수 있습니다.
+
 ```
 높은 추상 레벨 → 낮은 추상 레벨로 변환:
 
@@ -355,6 +361,8 @@ endclass
 ```
 
 ### 5.4 패턴 4: Parameterized Agent
+
+같은 AXI 프로토콜을 쓰더라도 데이터 폭이 32-bit 인 레지스터 인터페이스와 512-bit 인 DCMAC 인터페이스를 별도의 Agent 클래스로 만드는 것은 코드 중복입니다. Parameterized Agent 는 데이터 폭과 주소 폭을 SystemVerilog 의 parameter 로 추상화하여, 하나의 Agent 클래스로 폭이 다른 여러 인터페이스를 모두 커버하는 방식입니다. 인스턴스화 시점에 파라미터만 다르게 지정하면 되므로, 새 폭의 인터페이스가 추가되어도 Agent 코드 자체는 수정할 필요가 없습니다.
 
 ```systemverilog
 class generic_axi_agent #(int DATA_W = 32, int ADDR_W = 32)
@@ -455,6 +463,8 @@ endclass
 ```
 
 ### 5.10 From Scratch 환경 구축 체크리스트
+
+처음 환경을 구축할 때 가장 흔한 실수는 어디서부터 시작해야 할지 몰라 순서가 뒤섞이는 것입니다. 아래 15단계는 여러 프로젝트에서 검증된 순서로, 각 단계가 다음 단계의 기반이 됩니다. Interface 와 Item 이 없으면 Driver 와 Monitor 를 작성할 수 없고, Driver 와 Monitor 가 없으면 Agent 를 구성할 수 없는 식으로 의존 관계가 있습니다. 한 단계를 완성하고 컴파일이 통과하는 것을 확인한 다음 다음 단계로 넘어가면 디버그 범위가 항상 "마지막 추가 단계" 로 좁혀져 있어 문제 해결이 빠릅니다.
 
 ```
 사내 / 사외 프로젝트에서 반복한 환경 구축 순서:

@@ -254,11 +254,7 @@ DRV -> CT: "mr_reg_ap"
 DRV -> SB: "mr_reg_ap"
 ```
 
-이 그림이 디버깅의 지도입니다:
-
-- `E-SB-MATCH-*` (data mismatch) → comparator 가 잘못된 데이터를 봤거나 받지 못함 → driver→handler 단계 확인
-- `F-C2H-MATCH-*` (PA 매칭 실패) → c2h_tracker 가 expected PA 큐를 만들지 못함 → `mr_reg_ap` / `qp_reg_ap` 가 도달했는지 확인
-- `F-CQHDL-TBERR-0003` (Unexpected error CQE) → cq_handler 단계의 분류 실패 → cqe 의 wc_status 확인
+이 그림이 디버깅의 지도입니다. `E-SB-MATCH-*` (data mismatch) 가 뜨면 comparator 가 잘못된 데이터를 받았거나 아예 받지 못했다는 의미이므로, driver → handler 단계에서 `issued_wqe_ap.write` 가 정상적으로 호출됐는지 거꾸로 추적합니다. `F-C2H-MATCH-*` (PA 매칭 실패) 는 c2h_tracker 가 expected PA 큐를 만들지 못한 것이므로, `mr_reg_ap` 와 `qp_reg_ap` 가 init_seq 시점에 c2h_tracker 에 도달했는지 확인합니다. `F-CQHDL-TBERR-0003` (Unexpected error CQE) 는 cq_handler 가 CQE 를 분류하는 단계에서 문제가 생긴 것이므로, cqe 의 wc_status 가 expected_error 와 일치하는지 점검합니다.
 
 ### 4.4 Stateless `*_handler` 의 역할
 

@@ -261,23 +261,20 @@ AXI -> RQ
 
 ### 5.3 Bank-level Parallelism + BG Interleaving
 
+Bank-level Parallelism 의 핵심은 "서로 다른 Bank 는 완전히 독립적으로 동작한다"는 물리적 사실입니다. Bank 0 이 tRCD 를 기다리는 동안 Bank 1 은 이미 RD 명령을 실행할 수 있고, Bank 2 는 PRE 를 진행할 수 있습니다. MC 스케줄러는 이 독립성을 최대한 활용하여 여러 Bank 의 ACT → RD → PRE 시퀀스를 파이프라인처럼 겹쳐 실행하고, 그 결과 대역폭 활용을 극대화합니다.
+
 ```
 Bank 0: ACT ── RD ── PRE
 Bank 1:    ACT ── RD ── PRE
 Bank 2:       ACT ── RD ── PRE
 Bank 3:          ACT ── RD ── PRE
-
-→ 여러 Bank의 명령을 파이프라인처럼 겹쳐서 실행
-→ 하나의 Bank가 tRCD 대기 중에 다른 Bank에서 데이터 전송
-→ 대역폭 활용 극대화
-
-Bank Group Interleaving (DDR4/5):
-  같은 BG 내 Bank: tCCD_L (긴 간격)
-  다른 BG의 Bank:  tCCD_S (짧은 간격) ← 더 빠름
-  → 다른 BG로 분산 → 처리량 향상
 ```
 
+여기에 Bank Group 의 계층이 추가되면 인터리빙 효율이 더 올라갑니다. 같은 BG 내 Bank 들은 I/O 회로를 공유하므로 연속 CAS 사이에 tCCD_L 이라는 긴 간격이 필요하지만, 다른 BG 의 Bank 에서 받은 CAS 는 독립 회로를 사용하므로 tCCD_S 의 짧은 간격으로 이어붙일 수 있습니다. 따라서 MC 스케줄러가 연속 access 를 다른 BG 로 분산할수록 처리량이 높아집니다 — DDR5 에서 BG 수를 8개로 늘린 이유가 바로 이 분산 기회를 늘리기 위해서입니다.
+
 ### 5.4 QoS (Quality of Service) / Arbitration
+
+실제 SoC 에서는 CPU, GPU, DMA, Display, ISP 같은 여러 마스터가 동시에 메모리를 요청합니다. 그런데 이들의 요구사항은 서로 충돌합니다. CPU 는 캐시 미스 지연을 최소화해야 하므로 낮은 latency 를 원하고, GPU 는 큰 블록을 연속으로 전송해야 하므로 높은 bandwidth 를 원하며, Display 는 1 프레임 단위로 반드시 데이터를 확보해야 하므로 보장된 bandwidth 와 deadline 이 필요합니다. FR-FCFS 같은 스케줄러만으로는 이 다양한 요구를 모두 충족할 수 없습니다 — 우선순위 없이 Row Hit 만 따르면 Display 처럼 랜덤 패턴을 쓰는 마스터가 굶어 죽게(starvation) 되기 때문입니다. 그래서 MC 에는 QoS Arbiter 가 별도로 존재하여 마스터별 우선순위, 대역폭 할당, aging 승격, Urgent 처리를 담당합니다.
 
 ```
 문제: SoC에는 여러 마스터(CPU, GPU, DMA, Display, ISP...)가 동시에
@@ -332,6 +329,8 @@ MC Arbiter 구조 (간략):
 ```
 
 ### 5.5 Read-Write Turnaround — 숨은 성능 병목
+
+DQ 버스는 단방향이 아니라 양방향입니다. Read 는 DRAM → MC 방향, Write 는 MC → DRAM 방향으로 데이터가 흐릅니다. 그러므로 Read 다음에 Write 를 발행하거나, Write 다음에 Read 를 발행하려면 버스 방향을 전환하는 시간이 반드시 필요합니다. Write → Read 전환 시 tWTR, Read → Write 전환 시 tRTW 라는 대기 시간이 삽입됩니다. 그리고 이 전환이 빈번하게 일어날수록 유효 대역폭이 줄어듭니다. MC 가 Write Batching 을 통해 Write 요청을 모아 연속으로 발행하는 이유가 바로 이 전환 횟수를 최소화하기 위해서입니다.
 
 ```
 문제: Read와 Write는 데이터 방향이 반대 (DQ 버스 양방향)
@@ -400,6 +399,8 @@ Read-After-Write Hazard:
 
 ### 5.7 Address Mapping (인터리빙)
 
+물리 주소의 어느 비트를 Rank·BG·Bank·Row·Col 에 할당하느냐에 따라 연속 주소가 어느 Bank 에 분산되는지가 결정되고, 그 결과가 workload 의 Row Hit 률과 대역폭을 크게 바꿉니다. 순차 접근이 주를 이루는 경우에는 같은 Row 에 연속으로 접근하는 패턴이 유리하여 Row 인터리빙이 적합하고, 랜덤 접근이 많은 경우에는 연속 주소를 다른 BG 로 분산하는 Bank Group 인터리빙으로 tCCD_S 를 활용하는 것이 유리합니다. SoC 의 주요 마스터(CPU 캐시 라인 순차 패턴, GPU 랜덤 텍스처 패턴)가 혼재하기 때문에 실무에서는 매핑 방식을 configurable 레지스터로 설계하고 테스트 후 결정합니다.
+
 ```
 물리 주소를 Rank/BG/Bank/Row/Col로 매핑하는 방식:
 
@@ -420,6 +421,8 @@ Read-After-Write Hazard:
 
 ### 5.8 Refresh 관리
 
+커패시터가 전하를 잃지 않으려면 tREFI 마다 REF 명령을 발행해야 합니다. 그런데 DDR4 의 All-Bank Refresh 는 하나의 REF 명령이 나가는 동안 모든 Bank 가 tRFC(~350 ns) 동안 완전히 묶입니다. tREFI 는 7.8 µs 이므로 이 비율만 해도 대역폭의 약 4.5% 가 refresh 에 소비됩니다. 게다가 MC 가 트래픽이 바쁠 때 refresh 를 뒤로 미루다(postpone) 가 JEDEC 허용 한도인 8개를 초과하면 한꺼번에 8개의 REF 가 직렬로 발행되는 "refresh storm" 이 발생해 BW 가 절벽처럼 떨어집니다. 이를 완화하기 위해 한가한 시점에 미리 refresh 를 당겨(pull-in) 발행하거나, DDR5 의 Same-Bank Refresh 처럼 특정 Bank 만 refresh 하는 동안 나머지를 계속 사용하는 방식이 도입되었습니다.
+
 ```
 문제: Refresh 중 해당 Bank(또는 전체)에 접근 불가 → 성능 저하
 
@@ -438,6 +441,8 @@ MC의 Refresh 최적화:
 ```
 
 ### 5.9 DRAM 초기화 시퀀스
+
+전원을 켠 직후 DRAM 은 사용 가능한 상태가 아닙니다. MC 가 정해진 순서대로 초기화 절차를 밟아야 비로소 첫 번째 ACT 명령을 발행할 수 있습니다. 이 절차는 크게 다섯 단계로 나뉩니다. 먼저 전원이 안정화될 때까지 충분히 기다린 뒤(Phase 1), CKE 를 HIGH 로 올려 DRAM 을 활성화하고 MRS 명령으로 Burst Length, CAS Latency, ODT 등의 동작 파라미터를 프로그래밍합니다(Phase 2). 다음으로 ZQ Calibration 을 통해 출력 임피던스를 초기 보정하고(Phase 3), Write Leveling 부터 VREF Training 까지 전체 training 시퀀스를 실행합니다(Phase 4). 마지막으로 refresh 를 시작하면 DRAM 이 정상 동작 상태에 들어갑니다(Phase 5). MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며 이 순서를 지키지 않으면 DRAM 이 예상치 않은 상태에 빠질 수 있습니다.
 
 ```
 전원 인가 후 DRAM을 사용하기까지 MC가 수행하는 초기화 절차:

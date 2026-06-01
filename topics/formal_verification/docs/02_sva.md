@@ -425,18 +425,9 @@ Property 는 "검사할 것이 없었으므로" 자동으로 PASS 한다.
   → 버그가 있어도 발견하지 못함!
 ```
 
-**Vacuous Pass 가 위험한 이유 3가지**:
+Vacuous Pass 가 특히 위험한 이유는 세 가지 경로로 조용히 진입하기 때문입니다.
 
-```
-1. 시뮬레이션: 테스트가 해당 조건을 트리거하지 않으면 Vacuous Pass
-   → 100% assertion pass 인데 실제로는 아무것도 검증 안 됨
-
-2. Formal: Assume 이 과도하여 Antecedent 조건을 배제하면 Vacuous PROVEN
-   → PROVEN 이라고 안심했지만 실제 환경에서는 버그 존재
-
-3. 설계 변경: 이전엔 발생하던 조건이 RTL 변경 후 불가능해짐
-   → Assertion 이 조용히 Vacuous 로 전환 → 커버리지 구멍
-```
+시뮬레이션에서는 테스트 stimulus 가 antecedent 조건을 한 번도 트리거하지 않아도 assertion 이 PASS 로 통과합니다. "100% assertion pass" 가 사실상 아무것도 검증하지 않은 상태가 되는 것입니다. Formal 에서는 assume 이 지나치게 강해서 antecedent 조건 자체를 탐색 공간에서 제외하면 Vacuous PROVEN 이 나옵니다 — 도구가 PROVEN 을 보고하지만 실제 환경에는 버그가 남아 있습니다. 세 번째는 설계 변경입니다. 이전에는 발생하던 조건이 RTL 수정 후 불가능해지면, assertion 은 조용히 vacuous 상태로 전환되어 커버리지 구멍이 생깁니다 — 아무도 경고를 받지 못한 채로.
 
 **방지법** — Cover 로 Antecedent 도달성 확인:
 
@@ -518,17 +509,9 @@ assert property (@(posedge clk)
 );
 ```
 
-```
-                    시뮬레이션 종료 시       Formal 에서
-  strong sequence:  미완료 → FAIL           차이 없음 (무한 시간 탐색)
-  weak sequence:    미완료 → 무시 (vacuous)  차이 없음
+시뮬레이션 종료 시점에서 두 키워드의 차이가 드러납니다. strong sequence 는 시뮬레이션이 끝날 때까지 미완료이면 FAIL 로 처리하고, weak sequence 는 미완료를 조용히 무시합니다 (vacuous). Formal 에서는 엔진이 무한 시간을 가정하므로 두 경우 모두 차이가 없습니다.
 
-  기본값: property 안의 sequence 는 weak 이 기본
-  → 시뮬레이션에서 시간 내 완료 보장이 필요하면 strong 명시
-
-  실무 팁: 시뮬레이션에서 liveness 검증이 필요하면 strong 사용
-          Formal 전용 assertion 이면 s_eventually 사용
-```
+property 안의 sequence 는 기본값이 weak 입니다. 시뮬레이션에서 완료를 반드시 보장해야 한다면 strong 을 명시해야 합니다. 실무에서는 시뮬레이션 liveness 검증이 필요하면 `strong(##[1:N] ack)` 처럼 유한 bound 와 함께 strong 을 사용하고, Formal 전용 assertion 이라면 `s_eventually` 로 표현합니다.
 
 ### 5.8 멀티 클럭 Assertion
 
@@ -543,13 +526,7 @@ assert property (
 // clk_a 의 posedge 에서 req 확인 → 다음 clk_b 의 posedge 기준으로 0~3 cycle 내 ack
 ```
 
-```
-주의사항:
-  1. 멀티 클럭 assertion 은 시뮬레이션에서 지원되지만, Formal 도구마다 제약이 다름
-  2. CDC 검증은 보통 전용 도구 (Spyglass CDC, Meridian CDC) 를 사용
-  3. SVA 멀티 클럭은 동기화 로직의 프로토콜 검증에 유용
-  4. 클럭 간 전환 시 ##1 로 "다음 클럭 엣지까지 대기" 하는 의미
-```
+멀티 클럭 assertion 을 사용할 때는 몇 가지 제약을 염두에 두어야 합니다. 시뮬레이션에서는 지원되지만 Formal 도구마다 지원 범위가 다르므로, 사용 전에 도구의 제약을 확인해야 합니다. CDC 검증은 일반적으로 Spyglass CDC, Meridian CDC 같은 전용 도구가 담당하며, SVA 멀티 클럭은 동기화 로직의 프로토콜 수준 검증에 보조적으로 활용됩니다. 클럭 간 전환 시 `##1` 은 "다음 클럭 엣지까지 대기" 를 의미합니다.
 
 ### 5.9 면접 골든 답변 4종
 

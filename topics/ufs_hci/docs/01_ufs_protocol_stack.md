@@ -321,6 +321,8 @@ UNI -> PHY: "시리얼 데이터"
 
 ### 5.5 UniPro DL Layer — 프레임과 Flow Control
 
+UniPro DL 레이어는 UPIU 를 물리 라인에 내려보내기 전에 SOF·헤더·CRC·EOF 로 감싸 무결성을 확보하고, credit 기반 흐름 제어로 수신 버퍼 초과를 막습니다.
+
 ```
 UniPro DL Frame:
 +------+--------+--------+---------+-----+
@@ -334,6 +336,8 @@ UniPro DL Frame:
   CRC-16: Header + Data의 무결성 검증
   EOF: End of Frame
 ```
+
+TX 는 수신 측이 발행한 크레딧(AFC) 범위 안에서만 프레임을 내보낼 수 있습니다. RX 가 프레임을 수신하고 버퍼를 소비한 뒤 AFC 프레임으로 크레딧을 돌려주면 TX 는 그 양만큼 추가 전송 자격을 얻습니다. CRC 에러가 검출되면 RX 는 NAK 을 보내고, TX 는 해당 프레임을 자동으로 재전송합니다 — 이 재전송은 HCI 나 driver 에 노출되지 않는 link-level 투명 처리입니다.
 
 ```
 Credit 기반 흐름 제어:
@@ -390,13 +394,11 @@ UFS에서 L3(Network Layer)는 단순화:
 
 ```
 L1.5 = UniPro와 M-PHY 사이의 인터페이스 어댑터
+```
 
-역할:
-  1. UniPro 프레임을 M-PHY Symbol로 변환
-  2. Gear/Lane 설정을 M-PHY 파라미터로 변환
-  3. Power Mode 전환 시 M-PHY 제어 시퀀스 생성
-  4. Lane 간 Skew 보정 (2-Lane 모드)
+L1.5 는 UniPro 의 DL 프레임과 M-PHY 의 심볼 스트림 사이를 중개하는 얇은 어댑터 계층입니다. UniPro 는 "이 데이터를 Gear 3, 2-Lane 으로 보내라" 는 의미의 지시를 내리고, L1.5 는 그 지시를 M-PHY 가 이해하는 아날로그 파라미터와 심볼 인코딩 시퀀스로 변환합니다. 2-Lane 모드에서 레인 간 도착 타이밍이 미세하게 벌어지는 skew 도 이 계층이 보정합니다.
 
+```
   DL Frame → L1.5가 Symbol 인코딩 → M-PHY TX로 전달
   M-PHY RX → L1.5가 Symbol 디코딩 → DL Frame으로 재구성
 ```

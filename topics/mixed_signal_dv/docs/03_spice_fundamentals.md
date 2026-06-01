@@ -12,21 +12,15 @@
 
 **SPICE** = **S**imulation **P**rogram with **I**ntegrated **C**ircuit **E**mphasis
 
-- 1973년 UC Berkeley의 Nagel이 박사학위 논문으로 개발 (BCSC ERL Memo, 1975)
-- 전기 회로의 동작을 수치적으로 시뮬레이션하는 도구
-- 모든 상용 SPICE (HSPICE, Spectre, FineSim, Eldo 등)는 원조 Berkeley SPICE의 후예
+SPICE를 배우는 이유는 단순합니다. mixed-signal 검증에서 RNM 모델이 SPICE를 "근사"한다고 했을 때, 그 근사의 기준이 되는 것이 SPICE이기 때문입니다. RNM 모델을 올바르게 작성하고 그 한계를 이해하려면, 먼저 SPICE가 무엇을 어떻게 계산하는지 알아야 합니다.
+
+SPICE는 1973년 UC Berkeley의 Nagel이 박사학위 논문으로 개발했습니다(BCSC ERL Memo, 1975). 전기 회로의 동작을 수치적으로 시뮬레이션하는 도구로, HSPICE, Spectre, FineSim, Eldo 등 오늘날의 모든 상용 SPICE 시뮬레이터는 이 원조 Berkeley SPICE의 후예입니다.
 
 ## 2. SPICE가 푸는 것 — 회로 = 노드 + 컴포넌트
 
 ### 2.1 기본 법칙
 
-- **KCL (Kirchhoff's Current Law)**: 노드에 들어오는 전류의 합 = 나가는 전류의 합
-- **KVL (Kirchhoff's Voltage Law)**: 폐회로에서 전압 강하의 합 = 0
-- **Element law**: 각 컴포넌트의 V-I 관계
-    - 저항: V = IR
-    - 캐패시터: I = C·dV/dt
-    - 인덕터: V = L·dI/dt
-    - MOSFET: I_D = f(V_GS, V_DS, V_BS, W, L, model) — BSIM
+SPICE가 풀어내는 것의 핵심은 세 가지 물리 법칙입니다. **KCL(Kirchhoff's Current Law)**은 모든 노드에서 들어오는 전류의 합과 나가는 전류의 합이 같다는 법칙이고, **KVL(Kirchhoff's Voltage Law)**은 임의의 폐회로에서 전압 강하의 합이 0이라는 법칙입니다. 그리고 각 소자는 자신만의 V-I 관계(**element law**)를 가집니다. 저항은 V = IR이고, 캐패시터는 I = C·dV/dt이며, 인덕터는 V = L·dI/dt입니다. MOSFET은 훨씬 복잡해서 게이트·드레인·소스·벌크 전압과 트랜지스터 크기 및 BSIM 모델 파라미터의 함수로 드레인 전류가 결정됩니다.
 
 ### 2.2 연립 비선형 방정식
 
@@ -46,26 +40,15 @@ G·v(t) + C·dv(t)/dt = i_source(t)
 
 ### 2.3 Newton-Raphson — 비선형 풀이
 
-선형 시스템은 한 번에 풀리지만, MOSFET I-V는 매우 비선형 → **반복법** 필요:
+저항과 캐패시터만 있는 선형 회로는 한 번의 행렬 연산으로 풀립니다. 그러나 MOSFET의 I-V 특성은 매우 비선형적이므로 반복법이 필요합니다. SPICE는 **Newton-Raphson** 방법을 씁니다. 먼저 노드 전압의 초기 추측 v⁰를 잡고, 회로 방정식의 잔차 F(v⁰)와 Jacobian J를 계산해 다음 추측값을 구합니다. 이것을 잔차가 허용 오차보다 작아질 때까지 반복합니다.
 
 ```
 v^(k+1) = v^(k) - J^(-1)(v^(k)) · F(v^(k))
 ```
 
-매 timestep:
+수렴하면 다음 timestep으로 넘어가고, 발산하면 timestep을 줄이고 재시도합니다.
 
-1. 초기 추측 v⁰ 선택
-2. F(v⁰) 계산 (회로 식의 잔차)
-3. J (Jacobian) 계산 후 선형 시스템 풀이
-4. v¹로 갱신
-5. ||F|| < tolerance가 되면 수렴 — 다음 timestep으로
-6. 발산하면 timestep 축소 후 재시도
-
-**수렴 실패** = SPICE의 가장 흔한 오류. 원인:
-
-- 초기 bias가 너무 멀리 있음 (`.ic` 또는 source ramp-up으로 해결)
-- 회로에 latch-up · 무한 loop gain 등 불안정 구조
-- numerical tolerance가 너무 빡빡 (`.option reltol=1e-3` 등 완화)
+**수렴 실패**는 SPICE를 처음 쓸 때 가장 자주 만나는 오류입니다. 초기 bias 조건이 실제 동작점에서 너무 멀면 Newton-Raphson이 수렴하지 못하는데, 이런 경우 `.ic`로 초기 조건을 힌트하거나 source를 0에서 천천히 ramp-up하면 해결됩니다. 회로 자체에 latch-up이나 무한 loop gain 같은 불안정 구조가 있거나 `.option reltol`이 너무 빡빡하게 설정된 경우에도 수렴 실패가 일어납니다.
 
 ## 3. SPICE 분석 5종
 
@@ -142,18 +125,9 @@ C_load out 0 10f
 
 ## 6. SPICE의 강점과 약점
 
-### 강점
+SPICE의 가장 중요한 강점은 **트랜지스터 레벨 정확도**입니다. 실리콘에서 일어나는 노이즈, 공정 변동, 온도, 전원 노이즈, 크로스토크 같은 2차 효과까지 모두 분석할 수 있으며, 그 때문에 tape-out 전 마지막 sign-off 기준으로 사용됩니다.
 
-- **트랜지스터 레벨 정확도** — Silicon에 가장 가까움
-- 모든 회로 현상 분석 가능 (노이즈, 공정 변동, 온도, 전원 noise, crosstalk)
-- **Sign-off 기준** — Tape-out 전 마지막 검증
-
-### 약점
-
-- **느림**: O(N²) ~ O(N³). 1만 트랜지스터 이상은 비현실적
-- **메모리 사용량 큼**: 노드/branch 수에 비례
-- **수렴 문제**: 빈도 있게 발생
-- **stimulus 표현 한계**: 복잡한 디지털 시나리오 못 씀
+그러나 정확도에는 대가가 따릅니다. 계산 복잡도가 회로 크기 N에 대해 O(N²) ~ O(N³)이기 때문에, 1만 트랜지스터를 넘어가면 시뮬레이션 시간이 비현실적으로 늘어납니다. 노드와 브랜치 수에 비례해 메모리도 폭발적으로 증가합니다. 수렴 문제도 빈도 있게 발생하며, 무엇보다도 디지털 시나리오를 SPICE netlist로 표현하기가 매우 불편합니다. "reset 후 1000 클록 랜덤 데이터 인가" 같은 시나리오를 SPICE로 쓰면 파일이 수천 줄이 됩니다. 이러한 약점들이 RNM이 필요한 구조적 이유입니다.
 
 ## 7. Fast SPICE — 속도의 벽을 넘기
 
@@ -167,6 +141,8 @@ C_load out 0 10f
 
 ### 7.2 5가지 가속 기법
 
+Fast SPICE는 정확도를 크게 희생하지 않으면서 속도를 높이는 여러 기법을 조합합니다.
+
 | 기법 | 설명 | 정확도 영향 |
 |------|------|-----------|
 | **Matrix partitioning** | 회로를 작은 부분으로 쪼개 독립적으로 풀기 | 작음 (경계 처리 주의) |
@@ -175,7 +151,7 @@ C_load out 0 10f
 | **Adaptive time step** | 신호가 안정적일 땐 큰 step, 변화 클 땐 작은 step | 일반 SPICE도 사용 |
 | **Hierarchical isomorphism** | 동일 회로 반복 사용 시 한 번만 풀기 | 작음 (DRAM cell array에 매우 효과적) |
 
-→ DRAM 검증에서 **10~100× 속도 향상**.
+DRAM 검증에서 **hierarchical isomorphism**이 특히 효과적입니다. DRAM cell array는 수억 개의 동일한 구조가 반복됩니다. 한 셀의 특성을 한 번만 계산하고 나머지는 재사용하면 계산량이 극적으로 줄어듭니다. 이 기법들을 조합하면 DRAM 검증에서 **10~100× 속도 향상**이 가능합니다.
 
 ### 7.3 Fast SPICE 도구
 

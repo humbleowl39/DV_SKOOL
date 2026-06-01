@@ -9,6 +9,8 @@
 
 ## 1. 한 장의 비교표
 
+세 가지 시뮬레이션 세계를 처음 접할 때 가장 중요한 질문은 "이것들이 어떻게 다른가"입니다. 신호 표현 방식이 다르고, 시간을 다루는 방법이 다르며, 그 차이가 속도와 정확도의 근본적인 차이로 이어집니다.
+
 | 항목 | Digital sim | SPICE | RNM (Real Number Modeling) |
 |------|------------|-------|---------------------------|
 | 신호 표현 | logic (0/1/X/Z) | 실수 전압/전류 | **실수값 (`real`)** |
@@ -21,7 +23,7 @@
 | 메모리 사용 | 작음 | 큼 (노드 수 비례) | 작음 |
 | 도구 종속성 | 낮음 | SPICE engine 필요 | **낮음 (SV 표준 기능)** |
 
-> RNM이 산업 표준이 된 핵심 이유: **digital simulator만으로 동작** + **SV 표준 기능이라 vendor lock-in 없음**.
+RNM이 단순히 SPICE와 디지털 sim의 중간이 아니라, 산업 표준 위치를 차지하게 된 데에는 두 가지 결정적 이유가 있습니다. 첫째, **별도의 SPICE 엔진 없이 일반 디지털 시뮬레이터만으로 동작**합니다. 둘째, IEEE 1800-2012 표준에 정의된 `nettype` 기능이 기반이므로 **특정 벤더에 종속되지 않습니다**. 이 두 가지가 맞물려 라이센스 비용 없이 nightly 회귀를 수천 시드로 돌릴 수 있는 현실을 만듭니다.
 
 ## 2. 세 세계의 그림 — 한 칩 안에서 어떻게 공존하나
 
@@ -56,6 +58,8 @@
 
 ### 3.1 AMS (Analog Mixed-Signal Simulation)
 
+AMS는 디지털 시뮬레이터와 SPICE 시뮬레이터를 동시에 실행하면서 두 도메인을 connect module로 연결하는 방식입니다. 디지털 측은 VCS 같은 이벤트 기반 엔진이, 아날로그 측은 FineSim이나 HSPICE 같은 SPICE 엔진이 각자 자신의 영역을 계산하고, 경계에서는 D2A·A2D connect module이 0/1 논리 신호를 실수 전압으로, 또는 그 반대로 변환합니다.
+
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                  AMS Simulation Environment                   │
@@ -72,11 +76,11 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-- 두 시뮬레이터(digital + SPICE)를 결합
-- 경계에 connect module로 변환
-- **정확하지만 SPICE 부분이 병목** → 느림
+AMS의 강점은 SPICE 수준의 정확도를 유지하면서 디지털 testbench와 함께 동작한다는 점입니다. 단점은 SPICE 부분이 여전히 병목이라는 것입니다. 아날로그 블록이 크면 클수록 시뮬레이션 속도가 SPICE에 가까워집니다.
 
 ### 3.2 RNM (Real Number Modeling)
+
+RNM은 SPICE 엔진을 아예 사용하지 않습니다. 아날로그 동작을 SystemVerilog의 `real` 타입과 `nettype` 기능으로 근사해서, **디지털 시뮬레이터 하나**만으로 모든 것을 처리합니다.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -93,9 +97,7 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-- **하나의 simulator(digital)만 사용**
-- analog 동작을 SV의 `real`/`nettype`으로 표현
-- **빠르지만 모델 정확도에 의존**
+모든 신호가 이벤트 기반으로 처리되므로 SPICE의 수치 적분 오버헤드가 없습니다. 결과적으로 SPICE 대비 1000배 이상 빠른 경우도 있습니다. 정확도는 모델 품질에 달려 있는데, 잘 작성된 RNM 모델은 DRAM sense amp의 동작이나 DLL의 lock 거동을 SPICE 결과와 높은 일치도로 재현할 수 있습니다.
 
 ### 3.3 결정 트리
 
@@ -200,14 +202,11 @@ VAMS 시절엔 `wreal` 한 종류만 있었습니다. SV-2012부터 `nettype`이
 
 실제 SoC tape-out 흐름은 **한 레벨로 통일하지 않고** 섞어 씁니다 — Block-level은 Spice signoff + RNM behavioral acceptance, Subsystem은 RNM이 주력 + 일부 Spice cosim spot check.
 
-> Partition을 적을 때 "PLL을 RNM으로 갈음"이라고만 적으면 안 됩니다. **"PLL lock time, divider 정합성은 RNM으로 보고 phase noise는 보지 않는다"**까지 명시해야 false-pass risk가 추적됩니다. 이 한 줄이 silicon bring-up에서 모델 gap의 책임을 명확히 합니다.
+파티션을 결정할 때 중요한 것은 "어느 블록을 어떤 도구로"만이 아닙니다. 그 블록에서 **무엇을 보고 무엇을 보지 않는지**를 명시해야 false-pass 위험이 추적됩니다. "PLL을 RNM으로 갈음"이라고만 적으면 안 됩니다. "PLL lock time과 divider 정합성은 RNM으로 검증하고, phase noise는 이 검증 범위에서 제외한다"까지 적어야 silicon bring-up에서 모델 gap의 책임 소재가 명확해집니다. 이 한 줄 차이가 실제 불량 분석 시 수 주의 시간을 절약합니다.
 
 ## 9. RNM이 DRAM 산업에서 표준이 된 4가지 이유
 
-1. **DRAM 셀 수가 너무 많다** — 1Gb 칩이면 10⁹ cell. SPICE 불가.
-2. **Sense amp 동작은 정확도 필요** — 그런데 SPICE는 느림. RNM이 voltage 표현하면서 빠른 유일 해법.
-3. **표준 SV 기능** — `nettype`만 있으면 됨. 별도 라이선스/도구 불필요.
-4. **UVM과 공존** — stimulus·coverage·assertion에 UVM/SV를 그대로 활용 가능.
+왜 DRAM 산업은 RNM을 선택했을까요? 네 가지 이유가 맞물려 있습니다. 첫째, 1Gb 칩의 셀 수가 10⁹개에 달해 SPICE로는 불가능합니다. 둘째, sense amp 동작은 전압을 표현해야 하는데 SPICE는 너무 느리고 digital sim은 전압을 모릅니다 — RNM이 전압을 표현하면서 빠른 유일한 해법입니다. 셋째, `nettype`은 IEEE 1800 표준에 포함된 기능이라 별도 라이선스나 도구 없이 일반 디지털 시뮬레이터만으로 구현됩니다. 넷째, stimulus, coverage, assertion에 UVM과 SV를 그대로 활용할 수 있어 기존 디지털 DV 팀이 환경을 갑자기 뒤집지 않아도 됩니다.
 
 ## 10. 대표 문제 — 한 SerDes 검증 task 분해
 

@@ -183,6 +183,8 @@ void enable_aspm_l0s_l1(uint8_t bus, uint8_t dev, uint8_t func) {
 
 ### 4.1 D-state — Device 의 SW 가 본 power state
 
+D-state 는 OS 와 driver 가 device 의 전력 상태를 어떻게 이해하는지를 나타냅니다. device 가 완전히 깨어 있는 **D0** 에서 시작해, driver 나 OS 가 절전을 요청하면 단계적으로 깊은 상태로 내려갑니다. D1 과 D2 는 spec 상에는 존재하지만 대부분의 device 가 구현하지 않아 실제로는 거의 보이지 않습니다. **D3hot** 은 OS sleep 시 흔히 사용되는 상태로, Aux power 덕분에 Configuration Space 는 살아 있어 wakeup 신호(PME)를 보낼 수 있지만 MMIO 나 IO TLP 에는 응답하지 않습니다. **D3cold** 는 board-level 전원이 차단되어 Configuration Space 조차 사라지는 가장 깊은 상태이며, side-band Wake# 신호로만 깨울 수 있습니다.
+
 ```
    D0 (Active)
         │ device 정상 동작, 전력 full
@@ -212,6 +214,8 @@ void enable_aspm_l0s_l1(uint8_t bus, uint8_t dev, uint8_t func) {
 
 ### 4.3 D ↔ L 매핑 (독립이지만 보통 연동)
 
+D-state 와 L-state 는 서로 독립적인 두 축이지만 실무에서는 보통 같이 깊어집니다. D0 인 device 가 idle 시간이 길어지면 ASPM 이 link 를 L0s 또는 L1 으로 끌어내리고, OS 가 device 를 D3hot 으로 보내면 link 도 L1 또는 L2 로 전환됩니다. 그러나 두 축이 항상 연동되지는 않습니다. 같은 link 위에 여러 function 이 있는 MFD(Module 06) 의 경우, 한 function 이 D3hot 이어도 다른 function 이 D0 로 깨어 있으면 link 는 L0 에 머물 수 있습니다. "방마다 자고 깸이 달라도 복도는 하나" 의 비유가 이 독립성을 잘 표현합니다. 검증 시 이 두 축을 짝지어 모든 조합을 확인하는 것이 중요한 이유입니다.
+
 | D-state | 권장 L-state | 실제 발생 가능 조합 |
 |---------|-------------|---------------------|
 | D0      | L0 (또는 ASPM L0s/L1) | D0 + L0, D0 + L0s, D0 + L1 모두 가능 |
@@ -219,9 +223,9 @@ void enable_aspm_l0s_l1(uint8_t bus, uint8_t dev, uint8_t func) {
 | D3hot   | L1 또는 L2    | Config space 는 살아 있으므로 link 가 완전히 죽지는 않음 |
 | D3cold  | L3 (link off) | board power 자체가 차단 |
 
-→ **독립적인 두 축** 인 이유: 같은 link 위에 _MFD_ (Module 06) 처럼 여러 function 이 있으면 각 function 의 D-state 는 다르지만 L-state 는 link 하나. "방마다 자고 깸이 달라도 복도는 하나" 의 비유 그대로.
-
 ### 4.4 AER Error 의 3 등급
+
+PCIe error 를 하나의 카테고리로 묶어 처리하면 LCRC 가 가끔 틀리는 단발 노이즈와 link 가 통째로 죽는 치명적 상황이 같은 경보 수준을 받는 문제가 생깁니다. AER 은 이를 방지하기 위해 error 를 세 등급으로 분류합니다. **Correctable** 은 hardware 가 자동으로 복구한 수준 — DLL 의 replay 가 LCRC error 를 조용히 해결합니다. **Uncorrectable Non-Fatal** 은 특정 transaction 이 손상됐지만 link 나 시스템 전체는 살아 있어 driver 가 recovery 를 시도할 수 있습니다. **Uncorrectable Fatal** 은 link 자체나 시스템 무결성이 위협받는 상황으로, OS 가 link retrain 이나 secondary bus reset 을 수행하거나 최악의 경우 panic 으로 이어집니다.
 
 | 등급 | 의미 | Message | 처리 주체 | 예 |
 |------|------|---------|-----------|-----|

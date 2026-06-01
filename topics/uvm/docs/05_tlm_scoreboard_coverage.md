@@ -258,26 +258,20 @@ FIFO: "uvm_tlm_analysis_fifo" {
 }
 ```
 
-**`uvm_analysis_imp`**
+`uvm_analysis_imp` 와 `uvm_tlm_analysis_fifo` 는 같은 analysis port 로부터 transaction 을 받는다는 점은 같지만, 처리 방식이 근본적으로 다릅니다.
 
-- `write()` 는 function → 시간 소비 (`#`, `@`) 불가
-- Monitor 의 run_phase 안에서 직접 호출됨
-- 단순한 비교에 적합
+`uvm_analysis_imp` 의 `write()` 는 function 으로 정의되어 있기 때문에 시간을 소비하는 `#delay` 나 `@(posedge clk)` 를 사용할 수 없습니다. Monitor 의 `run_phase` 가 `ap.write(item)` 을 호출하는 순간 동기적으로 실행되고 곧바로 반환됩니다. 단순한 카운터 업데이트나 플래그 체크처럼 즉시 처리할 수 있는 로직에 적합합니다.
 
-**`uvm_tlm_analysis_fifo`**
+반면 `uvm_tlm_analysis_fifo` 는 analysis port 로 들어온 item 을 내부 큐에 버퍼링해 두고, Scoreboard 의 `run_phase` 에서 `get()` 으로 꺼내는 방식입니다. `get()` 은 task 이므로 시간을 자유롭게 소비할 수 있고, Monitor 와 Scoreboard 가 완전히 비동기로 동작합니다. 입력 Monitor 와 출력 Monitor 의 두 데이터를 시간차를 두고 매칭해야 하는 경우처럼 복잡한 비교 로직에서는 `analysis_fifo` 가 사실상 필수입니다.
 
-- FIFO 가 중간에서 버퍼링
-- Scoreboard 의 run_phase 에서 get() (task) → 시간 제어 가능
-- Monitor 와 Scoreboard 가 완전 비동기 (디커플링)
-- 실무에서 가장 많이 사용하는 패턴
-
-**사용 지침**
-
-- 단순 카운터 / 플래그 업데이트 → `analysis_imp`
-- 비교 로직, 순서 대기, 복잡한 처리 → `analysis_fifo`
-- 다중 포트 수신 후 매칭 → `analysis_fifo` (필수)
+| 포트 타입 | 처리 방식 | 언제 |
+|-----------|----------|------|
+| `analysis_imp` | function (즉시) | 단순 카운터/플래그 업데이트 |
+| `analysis_fifo` | task (비동기) | 비교 로직, 순서 대기, 다중 source 매칭 |
 
 ### 4.3 In-Order vs Out-of-Order 비교 전략
+
+Scoreboard 의 비교 전략은 DUT 가 순서를 보장하는가에 따라 결정됩니다. 단순 FIFO 나 파이프라인처럼 입력 순서와 출력 순서가 반드시 같은 DUT 라면 expected 큐와 actual 큐를 push_back / pop_front 로 순서대로 비교하는 In-Order 방식이 가장 단순하고 효율적입니다. 그러나 AXI 처럼 ID 가 다른 transaction 이 다른 순서로 돌아올 수 있는 프로토콜에서 In-Order 를 쓰면, 실제로 올바른 결과임에도 순서 차이만으로 mismatch 를 쏟아냅니다. 이런 경우 expected 를 Associative Array 에 `transaction ID` 나 `address` 를 키로 저장하고, actual 이 도착할 때 해당 키로 매칭하는 Out-of-Order 방식을 써야 합니다.
 
 ```
 In-Order Scoreboard:
@@ -599,6 +593,8 @@ endgroup
 
 ### 5.8 Coverage 설계 원칙
 
+Covergroup 을 잘못 설계하면 100% 라는 숫자를 달성해도 실제 중요한 조합이 빠진 채 "검증 완료" 로 처리되는 위험이 생깁니다. 좋은 Coverage 설계의 핵심은 프로토콜과 기능 관점에서 의미 있는 bin 분류, 그리고 단일 변수가 아닌 조합(Cross)을 통한 진짜 코너 케이스 포착입니다. `illegal_bins` 는 프로토콜에서 허용하지 않는 값이 DUT 에서 나왔을 때 자동으로 잡아 주는 assertion 의 역할도 하며, `ignore_bins` 는 구조적으로 발생할 수 없는 조합을 커버리지 목표에서 제외하여 목표를 현실적으로 만드는 데 씁니다. Cross bin 의 수가 폭발적으로 많아지는 경우 `cross_auto_bin_max` 와 `ignore_bins` 를 활용하여 실질적으로 중요한 조합에 집중해야 합니다.
+
 | 원칙 | 설명 |
 |------|------|
 | 의미 있는 Bin | 프로토콜 / 기능 관점에서 의미 있는 분류 |
@@ -611,6 +607,8 @@ endgroup
 | Cross 폭발 방지 | `cross_auto_bin_max`, `ignore_bins` 로 불필요 조합 제거 |
 
 ### 5.9 Coverage Closure 전략
+
+Coverage closure 는 단번에 이루어지지 않습니다. 점진적으로 접근해야 효율적이며, 각 단계마다 어느 bin 이 채워졌고 어느 bin 이 남았는지를 분석하면서 다음 단계를 결정합니다. 먼저 `seed=0` 의 directed smoke test 로 기본 경로가 동작하는지 확인하고 (~30%), 설정 조합 sweep 으로 구성의 다양성을 채웁니다 (~60%). 그 다음 constrained random 을 100개 이상의 seed 로 돌려 코너 케이스를 누적하면 (~85%), 어느 bin 이 구조적으로 안 채워지는지가 명확해집니다. 남은 hole 은 둘 중 하나입니다. 설계상 발생 불가능한 것이라면 waive 처리하고, 시나리오가 없어서 안 채워진 것이라면 targeted sequence 를 추가합니다.
 
 ```
 1. Directed Smoke (seed=0)        → 기본 경로 확인 → ~30%

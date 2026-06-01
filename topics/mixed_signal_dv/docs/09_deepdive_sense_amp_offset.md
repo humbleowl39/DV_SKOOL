@@ -11,7 +11,7 @@
 
 ## 1. Offset이란 무엇이고 왜 중요한가
 
-**Offset voltage (Vos)**: Differential amplifier의 두 입력에 같은 voltage를 줘도 출력이 한쪽으로 치우치는 현상. 입력 환산 등가전압.
+**Offset voltage (Vos)**는 differential amplifier의 두 입력에 같은 전압을 줬을 때 출력이 이상적인 중간 값이 아닌 한쪽으로 치우치는 현상입니다. 입력 환산 등가전압으로 표현합니다.
 
 ```
    V+ = V- = Vcm  (common-mode)
@@ -20,26 +20,15 @@
    →  equivalent: V+ - V- = Vos
 ```
 
-DRAM에서의 중요성:
-
-- Sense amp가 검출하는 신호 = `v_shared - VPRE` (약 60~100 mV)
-- 만약 Vos = 50 mV면 실제 검출 가능 범위 = 100 - 50 = 50 mV
-- 만약 Vos = 110 mV면 → **read fail**
-
-→ 모든 sense amp의 worst case offset이 sensing margin보다 작아야 yield 확보.
+이것이 DRAM에서 치명적인 이유는 sense amplifier가 검출해야 하는 신호 자체가 매우 작기 때문입니다. bit cell의 charge sharing 후 BL 전압 변화 — 즉 DRAM이 읽어야 하는 "신호" — 는 약 60~100 mV 수준입니다(Ch06의 계산 참고). 만약 sense amp의 offset이 50 mV라면 실제 검출 가능한 범위는 100 - 50 = 50 mV로 줄어듭니다. offset이 110 mV라면 신호 방향과 반대로 라치되어 **read fail**이 발생합니다. 1Gb DRAM에는 10억 개의 sense amp가 있습니다. 모든 sense amp의 worst case offset이 sensing margin보다 작아야 yield를 확보할 수 있습니다.
 
 ## 2. Offset의 3가지 Source
 
 ### 2.1 Random Mismatch (지배적)
 
-같은 layout으로 제작한 두 transistor가 process 변동으로 차이를 보임:
+sense amp의 핵심은 차동 쌍(differential pair)입니다. 두 NMOS 트랜지스터를 같은 레이아웃으로 제작해도 실리콘 제조 과정의 미세한 변동 때문에 두 소자의 특성이 조금씩 달라집니다. 이 차이가 offset의 주원인입니다. 가장 큰 기여를 하는 것은 threshold voltage(Vth) mismatch이며, transconductance parameter(β) mismatch, oxide thickness 변동, doping 변동이 추가됩니다.
 
-- Vth (threshold) mismatch — 가장 큰 기여
-- β (transconductance parameter) mismatch
-- Oxide thickness 변동
-- Doping 변동
-
-**Pelgrom's Law** (Pelgrom et al., JSSC 1989):
+이 현상을 정량화하는 식이 **Pelgrom's Law**(Pelgrom et al., JSSC 1989)입니다.
 
 ```
 σ(ΔVth) = AVT / sqrt(W × L)
@@ -53,16 +42,11 @@ DRAM에서의 중요성:
 
 ### 2.2 Systematic Mismatch
 
-- Layout 비대칭 (배선 길이 차이 → resistance 차이)
-- Well proximity effect
-- STI stress 비대칭
-- Layout regular 해야 줄어듦 → **common centroid** 배치
+random mismatch는 제조 공정의 무작위성에서 오지만, systematic mismatch는 레이아웃 설계의 비대칭성에서 옵니다. 두 트랜지스터가 레이아웃 상에서 다른 위치에 있으면 배선 길이 차이로 저항이 달라지거나, well proximity effect, STI(Shallow Trench Isolation) 응력 비대칭 등이 발생합니다. 이를 줄이기 위해 **common centroid** 배치를 사용하여 두 트랜지스터가 대칭적인 환경에 놓이도록 합니다.
 
 ### 2.3 Operating Conditions
 
-- VDD 변동
-- Temperature gradient
-- Substrate noise
+VDD 변동, temperature gradient, substrate noise도 sense amp의 실효 offset에 영향을 줍니다. 이 요인들은 칩마다, 측정 시점마다 달라지므로 worst-case 검증 시 이 변동 범위를 포함해야 합니다.
 
 ## 3. Pelgrom AVT — Process 별 값
 

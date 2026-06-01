@@ -63,10 +63,12 @@
 
 ### 2.1 Floorplan 결정 사항
 
-1. **Die size** — 면적 = Σ cell area / utilization 목표 (보통 60~80%)
-2. **Macro 배치** — SRAM, PLL, IP. *Critical path 고려* — 자주 통신하는 macro 는 가까이.
-3. **IO ring** — Pad cell 배치. ESD / signal / power pad 균등 분배.
-4. **Channel** — Macro 사이 routing 공간 확보.
+Floorplan 은 물리 설계의 첫 번째 공간 배치 결정으로, 이 단계의 선택이 이후 placement, CTS, routing 의 난이도를 좌우합니다. 면적 추정부터 시작해 macro 위치, IO 배치, routing 공간까지 순서대로 결정합니다.
+
+1. **Die size** — 전체 cell 면적의 합을 utilization 목표(보통 60~80%) 로 나눠 die 크기를 산정합니다. Utilization 이 너무 높으면 routing congestion 이 심해지고, 너무 낮으면 면적 낭비입니다.
+2. **Macro 배치** — SRAM, PLL, IP 블록은 크기가 크고 이동이 어렵기 때문에 먼저 고정합니다. 자주 통신하는 macro 는 가까이 두어 critical path 의 wire delay 를 줄입니다.
+3. **IO ring** — Pad cell 은 ESD, signal, power pad 를 균등하게 분배해야 wire congestion 과 signal integrity 문제를 줄일 수 있습니다.
+4. **Channel** — Macro 사이에 routing 공간을 충분히 확보해야 place-and-route 단계에서 병목이 생기지 않습니다.
 
 ### 2.2 Power Plan (PG mesh)
 
@@ -134,9 +136,11 @@ CTS 직후 hold violation 다수 발생 → **buffer 삽입** 으로 launch path
 
 ### 4.2 Static (Leakage) Power
 
-Sub-threshold + gate + junction leakage. 28nm 이하에서 *총 power 의 30%+*.
+Sub-threshold + gate + junction leakage 의 합으로, 28nm 이하 공정에서는 총 소비전력의 30% 이상을 차지할 수 있어 무시할 수 없습니다.
 
 **대응**:
+Leakage 를 줄이는 핵심은 *필요한 곳에만 빠른 소자를 쓰고, 나머지는 느리고 새는 소자를 억제*하는 전략입니다. **Multi-Vt** 는 이를 가장 효과적으로 구현합니다. critical path 에는 threshold 가 낮아 속도는 빠르지만 leakage 가 많은 LVT(Low-Vt) 셀을 쓰고, timing 여유가 있는 non-critical path 는 threshold 가 높아 느리지만 leakage 가 적은 HVT(High-Vt) 셀로 채웁니다. **Power gating** 은 한 단계 더 나아가 사용하지 않는 블록의 전원을 sleep transistor 로 아예 차단하는 방법입니다. **Body biasing** 은 reverse body bias 를 인가해 threshold 를 높여 leakage 를 줄이는 회로 수준의 기법입니다.
+
 - **Multi-Vt** — Critical path 는 LVT(빠름, 새기 많음), non-critical 은 HVT(느림, 새기 적음)
 - **Power gating** — 사용 안 하는 블록의 *전원 자체 차단* (sleep transistor)
 - **Body biasing** — Reverse body bias 로 Vth 증가
@@ -154,7 +158,7 @@ Sub-threshold + gate + junction leakage. 28nm 이하에서 *총 power 의 30%+*.
 - **Leaf-level gating** — flop 직전 gate (가장 흔함, 합성 자동).
 - **Coarse gating** — 큰 블록 단위 (수동, 더 큰 절약).
 
-**효과**: 사용 안 하는 flop 에 clock 미공급 → clock load + flop dynamic power 모두 절약.
+**효과**: 사용하지 않는 flop 에 clock 이 공급되지 않으면, 그 flop 의 clock 네트워크 dynamic power 와 flop 내부의 switching 소비 모두 절약됩니다. 특히 대규모 register file 이나 data path 에서 clock gating 이 적용되면 전체 chip dynamic power 를 20~40% 줄이는 경우도 흔합니다.
 
 ### 4.4 Multi-bit Flip-Flop (MBFF)
 
