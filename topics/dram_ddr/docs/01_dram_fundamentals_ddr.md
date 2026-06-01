@@ -258,33 +258,16 @@ BUF -> DQ: "② Bank Group 별 독립 I/O\n같은 BG: tCCD_L (느림)\n다른 BG
 
 DRAM 셀의 구조는 1T1C — 트랜지스터 하나와 커패시터 하나 — 로 이루어져 있습니다. 이 단순한 구조 덕분에 bit 당 면적이 SRAM 의 6분의 1 수준에 불과하지만, 커패시터라는 소자의 본질적 특성이 세 가지 필수 동작을 요구합니다. 첫째, 읽기는 파괴적(destructive)이므로 읽은 직후 반드시 데이터를 재기록(restore)해야 합니다. 둘째, 커패시터는 시간이 지나면 전하가 누설되므로 주기적으로 refresh 를 통해 전하를 보충해야 합니다. 셋째, sense amplifier 가 bit-line 의 mV 단위 전압 차이를 증폭하는 데 시간이 필요하므로, ACT 후 tRCD 동안 은 아무 명령도 넣을 수 없습니다. 아래 다이어그램은 이 세 과정을 물리 수준에서 추적합니다.
 
-```
-1T1C (1 Transistor, 1 Capacitor):
+<figure markdown style="background:#ffffff; padding:14px 10px; border-radius:8px;">
+  ![1T1C NMOS DRAM 셀 단면 구조](assets/img/dram_1t1c_cell.svg){ width="620" }
+  <figcaption><b>1T1C NMOS 셀의 단면 구조</b> — <b>word line</b>이 access transistor의 poly-silicon gate를 제어하고, gate가 열리면 <b>bit line</b>의 N+ 확산영역과 <b>capacitor</b>가 도통한다. capacitor 전하의 유무가 0/1이며, 이 전하가 bit line으로 흘러나오는 순간 원본이 파괴(destructive read)된다.<br><small>출처: Wikimedia Commons, 저자 Cyferz — CC BY-SA 3.0 / GFDL (원본 무수정). 원본 파일: <i>Original 1T1C DRAM design.svg</i></small></figcaption>
+</figure>
 
-  Word Line (Row 선택)
-       |
-       +--[Transistor Gate]
-       |
-  Bit Line ----+---- [Capacitor] ---- GND
-  (Column)     |
-               저장된 전하 = 0 또는 1
+이 단순한 구조 위에서 세 가지 동작이 일어납니다.
 
-  읽기:
-    1. Word Line 활성화 → Transistor ON
-    2. Capacitor 전하가 Bit Line으로 흘러나옴
-    3. Sense Amplifier가 미세한 전압 차이 감지 → 0/1 판정
-    4. 읽기는 파괴적(Destructive Read) → 자동 재쓰기(Restore) 필요
-
-  쓰기:
-    1. Word Line 활성화
-    2. Bit Line에 원하는 전압 인가
-    3. Capacitor 충전/방전
-
-  Refresh:
-    커패시터 전하가 시간이 지나면 누설 → 주기적으로 읽고 재쓰기
-    DDR4: 64ms 주기 (tREFI = ~7.8μs)
-    DDR5: 32ms 주기 (온도에 따라 변동)
-```
+- **읽기(Read)** — word line을 활성화해 transistor를 켜면, capacitor에 갇혀 있던 미세 전하가 bit line으로 흘러나옵니다. sense amplifier가 이 mV 단위 전압 차이를 감지해 0/1을 판정하는데, 이 과정에서 capacitor의 원본 전하가 소실되므로(**destructive read**) 판정 직후 같은 값을 즉시 다시 써 넣는 **restore**가 자동으로 뒤따릅니다.
+- **쓰기(Write)** — word line을 활성화한 뒤 bit line에 원하는 전압을 인가하면, 도통된 transistor를 통해 capacitor가 그 전압까지 충전되거나 방전됩니다.
+- **Refresh** — capacitor는 시간이 지나면 전하가 누설되므로, 데이터를 잃기 전에 주기적으로 읽고 다시 써 넣어야 합니다. DDR4는 64 ms 주기(`tREFI` ≈ 7.8 µs 간격), DDR5는 32 ms 주기(온도에 따라 가변)를 요구합니다.
 
 ### 5.2 DDR 세대별 비교 — full table
 
