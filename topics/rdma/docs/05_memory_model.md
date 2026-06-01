@@ -44,18 +44,16 @@
 
 ### 1.1 시나리오 — 보안 사고가 한 번에 1000 노드를 망친다
 
-당신은 분산 KV store 를 RDMA WRITE 로 구현했습니다. 작동합니다. 그런데 한 노드의 메모리가 _이상하게_ 변조되어 갑니다 — application 이 안 쓴 메모리 영역까지.
+분산 KV store 를 RDMA WRITE 로 구현하고 막상 돌려보면 잘 동작합니다. 그런데 어느 날 한 노드의 메모리가 application 이 쓰지도 않은 영역까지 이상하게 변조되기 시작합니다. 추적해 보면 외부 공격자가 R_Key 를 어떤 경로로 알아내고, 그 키를 이용해 노드의 임의 주소에 RDMA WRITE 를 쏘고 있는 상황입니다.
 
-추적해 보니: 외부 attacker 가 _R_Key 를 알아냈고_, 그 노드의 _임의 주소_ 에 RDMA WRITE 를 쏘는 중입니다.
-
-**RDMA 의 보안 모델**: "**키만 보면 누구든 접근 가능**". TCP 처럼 connection 자체가 인증 단위가 _아니다_. 그래서 **키가 곧 권한 토큰** 이고, 키 위조/유출 = 보안 사고. 다중 방어층이 필요:
+이 사고가 가능한 이유는 RDMA 의 인증 모델이 TCP 와 근본적으로 다르기 때문입니다. TCP 는 connection 자체가 인증 단위여서 연결이 맺어진 상대만 데이터를 보낼 수 있지만, RDMA 는 **키가 곧 권한 토큰**입니다. R_Key 만 알면 연결 상태와 무관하게 접근이 허용되므로, 키 유출은 곧 보안 사고입니다. 따라서 RDMA 는 키 하나에 의존하지 않고 다음 네 가지 방어층을 겹쳐 사용합니다.
 
 1. **PD 격리** — 다른 PD 의 MR 은 못 봄.
 2. **Access flag 제한** — Remote Read 만 줄지, Remote Write 도 줄지.
 3. **Range 제한** — MR base + len 범위 안에서만.
 4. **R_Key 자체의 lifetime 제한** — Memory Window 패턴.
 
-이 다섯이 **하드웨어가 패킷 수신 시점에 _즉시_ 검증** 해야 합니다 (SW 가 끼면 latency 가 망가짐). 그래서 5-step 검증이 _hardware ASIC 레벨_ 로 명세돼 있습니다.
+이 네 가지 검증 단계는 **하드웨어가 패킷 수신 시점에 즉시** 처리해야 합니다. SW 가 끼는 순간 µs 단위 latency 목표가 무너지기 때문에, 5-step 검증이 _hardware ASIC 레벨_ 로 명세돼 있습니다.
 
 **RDMA 의 모든 데이터 path 는 "주소 + key" 의 쌍으로 표현** 됩니다. local 측 sg_list 는 (`addr`, `length`, `lkey`), remote 측 RDMA WRITE 의 RETH 는 (`remote_va`, `length`, `rkey`). 이 키 검증과 IOVA → PA 변환을 누가 어떻게 하는지가 RDMA 보안과 성능의 핵심.
 
@@ -505,7 +503,7 @@ MW 는 **MR 의 부분 영역에 대해 일시적으로 다른 R_Key 를 발급*
         Step 1, 2 가 80% 의 케이스. read-back 으로 빠르게 확인.
 
 !!! question "🤔 Q3 — MR dereg 의 race (Bloom: Evaluate)"
-    당신은 _RDMA WRITE in-flight_ 중에 MR 을 dereg 한다. 어떤 race 가 발생할 수 있는가? RDMA-TB 가 이걸 검증해야 하는 이유는?
+    _RDMA WRITE in-flight_ 상태에서 MR 을 dereg 하면 어떤 race 가 발생할 수 있는가? 그리고 RDMA-TB 가 이 시나리오를 반드시 검증해야 하는 이유는?
 
     ??? success "정답"
         Race: **R_Key 는 invalidate 됐지만 DMA 가 _이미 wire 위_ 에 있는 경우**.

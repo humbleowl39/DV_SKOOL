@@ -45,7 +45,7 @@
 
 ### 1.1 시나리오 — "Spec 이 _매주_ 바뀐다"
 
-당신은 사내 IP RDMA spec 으로 LLM 에 도메인 지식을 넣고 싶습니다. Spec 이 _매주_ 갱신됩니다 (review feedback, bug fix, new feature). 세 옵션:
+사내 IP RDMA spec 으로 LLM 에 도메인 지식을 주입하고 싶은데 spec 이 _매주_ 갱신된다고 합시다 (review feedback, bug fix, new feature). 이때 가능한 세 가지 옵션을 비교합니다.
 
 | 옵션 | 비용 | 갱신 시간 | 운영 |
 |------|-----|---------|------|

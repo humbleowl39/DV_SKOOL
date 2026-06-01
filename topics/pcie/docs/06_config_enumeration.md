@@ -44,16 +44,9 @@
 
 ### 1.1 시나리오 — _lspci 안 보임_
 
-당신은 새 PCIe device. Link up (LTSSM L0), 그런데 _`lspci`_ 에 _안 보임_. Driver 인식 못함.
+새 PCIe device 를 연결했는데 LTSSM 은 L0 에 있지만 `lspci` 목록에 보이지 않고 driver 도 인식하지 못하는 경우가 있습니다. 진단은 단계적으로 진행합니다. LTSSM 이 L0 임을 확인했다면 다음으로 Configuration Space read 를 시도합니다. 응답이 all 0xFF 로 돌아온다면 device 가 Configuration Read TLP 에 응답하지 않은 것이며, 원인은 Endpoint type field 누락 또는 BDF mismatch 가 가장 흔합니다. 이 경우 device 의 Configuration Space header (offset 0x00–0x3F) 에 Vendor ID, Device ID 등이 정확히 구현되어 있는지 확인해야 합니다.
 
-진단 순서:
-1. LTSSM = L0? → OK.
-2. Configuration Space read 시도 → _all 0xFF_.
-3. 원인: Device 가 _Configuration Read TLP_ 에 _응답 안 함_ (Endpoint type field 누락 또는 BDF mismatch).
-
-해법: Device 의 _Configuration Space header_ (offset 0x00 - 0x3F) 에 _Vendor ID, Device ID_ 등을 정확히 channel.
-
-**Configuration Space 가 OS / firmware 의 _첫 device 식별 메커니즘_** — 잘못되면 _전체 기능 무효_.
+Configuration Space 는 OS 와 firmware 가 device 를 처음 식별하는 유일한 메커니즘입니다. 이 영역이 잘못 구현되면 그 이후의 모든 기능이 동작하지 않습니다.
 
 **Bring-up 시 device 가 enumerate 되지 않으면 어떤 기능도 안 동작** 합니다. Configuration Space 가 OS / firmware 가 device 를 발견하고 자원 (memory range, IO range, IRQ) 을 할당하는 표준 메커니즘. 검증/설계 결정의 첫 관문.
 

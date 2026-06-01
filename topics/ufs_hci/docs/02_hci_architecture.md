@@ -45,24 +45,19 @@
 
 ### 1.1 시나리오 — UTRD _1 bit_ 의 silent corruption
 
-당신은 UFS storage. Driver 가 _UTRD descriptor_ 에 _data buffer address_ 작성:
+UFS storage 를 검증하는 환경을 상상해 봅시다. Driver 가 UTRD descriptor 에 다음과 같이 data buffer address 를 작성합니다.
+
 ```
 UTRD field: data_addr[63:0] = 0x1000_0000_0000_0000
 ```
 
-HCI 가 _bit 32_ 만 0 으로 해석:
+그런데 HCI 가 bit 32 만 0 으로 잘못 해석해 실제로는 다음 주소를 사용합니다.
+
 ```
 실제 사용: 0x0000_0000_0000_0000
 ```
 
-결과: data 가 _wrong physical address_ 에 write → memory corruption → 다른 process 데이터 깨짐.
-
-증상:
-- 일부 sector 만 corrupt.
-- _시뮬에서 안 잡힘_ (test 가 _high address_ 안 씀).
-- _Production_ 에서 _수 시간_ 후 발견.
-
-UTRD parsing 의 _1 bit_ 가 _silent corruption_. JEDEC spec 의 _모든 field_ 정확히 해석돼야 안전.
+데이터가 잘못된 물리 주소에 write 되면서 다른 프로세스의 메모리가 조용히 망가집니다. 이 버그는 시뮬레이션에서 test 가 high address 영역을 쓰지 않으면 잡히지 않고, production 에서 수 시간이 지난 뒤에야 발견됩니다. UTRD parsing 한 비트의 오해가 silent corruption 으로 이어지는 것입니다. JEDEC spec 의 모든 필드를 정확히 해석해야만 이런 경로가 차단됩니다.
 
 **HCI 는 SW 와 UFS HW 사이의 _표준 contract_** (JEDEC JESD223) 입니다. 어떤 OS, 어떤 driver 를 쓰더라도 이 contract 만 지키면 명령이 통합니다. 그래서 HCI 를 검증한다는 것은 곧 **driver-side (register / UTRD) ↔ device-side (UPIU)** 양방향 contract 를 검증한다는 뜻입니다.
 

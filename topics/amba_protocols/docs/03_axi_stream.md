@@ -44,7 +44,7 @@
 
 ### 1.1 시나리오 — 왜 AXI 가 _아니라_ AXI-Stream 인가?
 
-당신은 AI 가속기의 _weight loader_ 를 설계합니다. DDR 에서 weight 를 _연속적으로_ 읽어서 가속기로 보냄. AXI 와 AXI-Stream 의 차이가 결정적:
+AI 가속기의 _weight loader_ 를 설계하는 상황을 생각해 봅시다. DDR 에서 weight 를 _연속적으로_ 읽어서 가속기로 흘려보낼 때, AXI 와 AXI-Stream 의 차이가 결정적입니다.
 
 | 차원 | AXI (memory-mapped) | AXI-Stream |
 |------|---------------------|------------|
@@ -55,7 +55,7 @@
 | **응답** | B/R 채널 | 없음 |
 | **면적 (양 endpoint)** | ~30K gates | ~3K gates |
 
-가속기 weight loader 는 **주소가 필요 없음** — DDR 의 한 영역을 _연속적_ 으로 읽기만 함. AXI 의 5 채널 = _10× 면적 낭비_. AXI-Stream 은 _주소 없는 단방향 stream_ 이라 _훨씬 작고 빠름_.
+가속기 weight loader 는 DDR 의 한 영역을 _연속적_ 으로 읽기만 할 뿐 매 transaction 마다 주소를 계산해 발행할 필요가 없습니다. AXI 의 5 채널을 붙이면 인터페이스가 약 10배 더 많은 면적을 차지하는 낭비가 생깁니다. _주소 없는 단방향 스트림_ 인 AXI-Stream 은 면적도 훨씬 작고 데이터 흐름도 단순합니다.
 
 **AXI-Stream 은 데이터 패스의 공용어** 입니다. AI 가속기의 weight/activation 흐름, DSP filter chain, 네트워크 IP 의 packet 흐름이 모두 AXI-Stream 으로 이동합니다. memory-mapped 와 다른 사고방식이 필요 — **주소가 없는 대신 TLAST 로 데이터의 경계를 표시** 합니다.
 
@@ -508,9 +508,7 @@ Cycle | TDATA | TVALID | TREADY | 전송? | 설명
   5   |  D2   |   1    |   1    |  ✓   | TREADY 복귀 → D2 전송
   6   |  D3   |   1    |   1    |  ✓   | D3 전송 (TLAST=1)
 
-핵심: Cycle 3~4에서 TDATA=D2, TVALID=1 유지.
-      데이터 손실 없음, 순서 보존.
-      총 소요: 6 cycles (stall 없으면 4 cycles)
+Cycle 3~4 에서 TDATA=D2 와 TVALID=1 이 모두 유지되어야 합니다. 이 hold 규칙이 지켜져야 데이터 손실 없이 순서가 보존됩니다. stall 이 없으면 4 cycle 에 끝나지만 이 시나리오는 총 6 cycle 이 필요합니다.
 ```
 
 #### 문제 3: TID/TDEST 라우팅

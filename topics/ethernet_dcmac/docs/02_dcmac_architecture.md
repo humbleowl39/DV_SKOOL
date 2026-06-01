@@ -45,14 +45,7 @@
 
 ### 1.1 시나리오 — _Single lane OK_, _Multi-lane FAIL_
 
-당신의 DCMAC 검증. 100G 단일 lane mode 모든 test 통과. 200G 4-lane 모드로 옮기니 _ random 시간에 frame skew error_.
-
-추적:
-- Lane 0, 1, 2, 3 의 _PCS alignment marker_ 가 _다른 시점_ 도착.
-- DCMAC 의 _lane reorder buffer_ 가 _이 skew 를 흡수_ 해야 함.
-- Bug: reorder buffer 가 _expected 보다 작은 depth_.
-
-**Multi-lane bug 는 단일 lane test 에서 _절대_ 안 잡힘**. 다른 시나리오 필요.
+DCMAC 을 100G 단일 lane 모드로 검증하면 모든 test 가 통과합니다. 그런데 동일한 DUT 를 200G 4-lane 모드로 전환하는 순간 random 한 타이밍에 frame skew error 가 발생하기 시작합니다. 원인을 추적하면, Lane 0 ~ 3 의 PCS alignment marker 가 서로 다른 시점에 도착하고 있고, DCMAC 의 lane reorder buffer 가 이 skew 를 흡수해야 하지만 buffer depth 가 예상보다 작아서 넘쳐버리는 것입니다. 이 bug 는 단일 lane test 에서 절대 재현되지 않으며, multi-lane 구성 전용 시나리오가 있어야만 발견됩니다.
 
 DCMAC 검증 환경의 모든 신호 이름 — `tx_axis_tdata`, `rx_axis_tuser`, `pause_req`, `pcs_align_status`, `gt_txusrclk2` — 는 이 모듈의 5 블록 중 하나에 속합니다. 어느 블록의 신호인지 모르면 **scoreboard 위치 / SVA bind 모듈 / coverage 도메인** 자체가 잘못 설정됩니다.
 

@@ -44,7 +44,7 @@
 
 ### 1.1 시나리오 — _8 개월 vs 1 주_
 
-당신은 SoC 검증. 새 SoC release 마다 TB 작성 _4 주_, 검증 8 개월 → 다음 SoC 시작.
+SoC 검증 팀이 새 SoC release 마다 TB 를 처음부터 작성하는 데 _4 주_, 검증 사이클에 8 개월을 쓰고 나서야 다음 SoC 개발을 시작할 수 있다면, 프로젝트가 겹칠 때마다 일정이 압박받습니다.
 
 DVCon 2025 데이터 [Cadence / Synopsys] 에 따르면 Config-driven TB + AI Gap discovery 를 도입했을 때 TB 작성 기간이 4 주에서 1 주로 단축되고, 8 개월 검증 사이클을 1.5 개월 줄일 수 있었습니다.
 

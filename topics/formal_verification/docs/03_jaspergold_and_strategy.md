@@ -44,24 +44,23 @@
 
 ### 1.1 시나리오 — _False PROVEN_
 
-당신은 JasperGold 로 _arbiter fairness_ 증명. 결과 **PROVEN**. Sign-off.
+JasperGold 로 _arbiter fairness_ 를 증명해 **PROVEN** 결과를 받고 sign-off 했다고 가정합시다. 그런데 silicon 이후 _starvation bug_ 가 발견됩니다. 어디서 잘못됐을까요?
 
-Silicon 후: _starvation bug_. 어떻게?
+조사해 보면, 작성했던 assume 이 문제입니다.
 
-조사: 당신이 작성한 assume:
 ```
 assume property (@(posedge clk) req[0] |=> $past(req[0]));
 ```
-의도: "req[0] 가 _계속_ assert 됨" 가정.
 
-실제 의미: **req[0] 가 한 cycle 후 _반드시_ assert** — _너무 강한_ 제약. Real spec: req[0] 가 _가끔만_ assert. 당신의 assume 이 _real world 보다 강한 가정_ 으로 입력 공간 _축소_ → arbiter 의 _real-world starvation 시나리오_ 가 _제외_ → PROVEN.
+의도는 "req[0] 가 _계속_ assert 됨" 을 가정하는 것이었지만, 실제 의미는 "req[0] 가 한 cycle 후 _반드시_ assert 된다" — 즉 너무 강한 제약입니다. 실제 spec 은 req[0] 가 _가끔만_ assert 되는데, 이 assume 이 real world 보다 강한 가정으로 입력 공간을 축소했기 때문에 arbiter 의 real-world starvation 시나리오가 탐색 대상에서 제외됐고, 결과적으로 PROVEN 이 나온 것입니다.
 
-**이게 _silent false PROVEN_** — 가장 위험한 Formal 함정.
+이것이 **silent false PROVEN** — 가장 위험한 Formal 함정입니다. 도구는 아무 경고도 주지 않고 PROVEN 을 보고했지만, 실제로는 spec 보다 좁은 입력 공간만 검증한 결과였습니다.
 
-방어:
-- **Assume audit**: 모든 assume 이 _real spec_ 과 _strictly weaker_ or _equal_ 인지 검토.
-- **Cover** for each assume: assume 이 _real 가능한 입력_ 을 _제외하지 않는지_ 검증.
-- **Assume reduction strategy**: 처음엔 약한 assume, BOUNDED 면 단계적 강화.
+방어 전략은 세 가지입니다.
+
+- **Assume audit**: 모든 assume 이 _real spec_ 과 _strictly weaker_ 또는 equal 인지 검토.
+- **Cover** for each assume: assume 이 _real 가능한 입력_ 을 _제외하지 않는지_ cover 로 확인.
+- **Assume reduction strategy**: 처음엔 약한 assume 으로 시작하고, BOUNDED 결과가 나올 때 단계적으로 강화.
 
 **Formal 도구 사용은 "PROVEN 받기" 와 다릅니다**. 실무에서 BOUNDED 를 PROVEN 으로 만드는 작업이 시간의 80% 를 차지하고, Assume 작성과 audit 가 검증 신뢰성의 핵심입니다. Module 01/02 에서 본 property 가 처음에는 거의 항상 BOUNDED 또는 false-CEX 로 시작합니다 — 이를 **Convergence 전략** 으로 수렴시키는 것이 Formal 엔지니어의 역량입니다.
 

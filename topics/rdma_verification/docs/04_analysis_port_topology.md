@@ -43,9 +43,8 @@
 
 ### 1.1 시나리오 — _새 scoreboard_ 추가 _$1 줄_
 
-당신은 RDMA-TB 에 _새 검증_ 추가: "WRITE size 분포 통계".
+RDMA-TB 에 "WRITE size 분포 통계" 같은 새 검증을 추가해야 한다고 가정해 봅시다. 가장 먼저 떠오르는 방법은 driver 코드 안에 hook 을 끼워 넣는 것입니다.
 
-**Naive**: driver 코드에 _hook 추가_:
 ```sv
 // driver 안
 task post_send(...);
@@ -55,12 +54,10 @@ task post_send(...);
 endtask
 ```
 
-문제:
-- Driver 코드 _변경_ → 다른 test 영향.
-- 새 검증 N 개 → driver 가 N hook 들고 _진흙_ 됨.
-- 다른 사람이 같은 시점 변경 → merge conflict.
+그런데 이 방식은 driver 코드를 변경하므로 다른 테스트에 영향을 줄 수 있습니다. 새 검증이 N 개로 늘어나면 driver 는 N 개의 hook 을 떠안아 복잡해지고, 여러 사람이 동시에 같은 파일을 수정하면 merge conflict 도 생깁니다.
 
-해법: **Analysis Port (AP)** — driver 가 _broadcasting_:
+**Analysis Port (AP)** 는 이 문제를 구조적으로 해결합니다. driver 는 아무것도 바꾸지 않고 이미 항상 broadcasting 하고 있습니다.
+
 ```sv
 // driver 안 (변경 안 됨)
 ap_wqe_issued.write(item);  // broadcast
@@ -74,7 +71,7 @@ endfunction
 // connect: ap_wqe_issued → scoreboard.ap_imp
 ```
 
-새 scoreboard 추가 = **driver 코드 0 변경**. AP topology 알면 _어디에 tap_ 할지 즉답.
+새 scoreboard 를 추가하는 데 **driver 코드는 한 줄도 바꾸지 않습니다.** AP topology 를 알고 있으면 새 검증 컴포넌트가 어느 AP 를 구독해야 하는지 즉시 결정됩니다.
 
 RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/handler 가 broadcasting 하는 AP** 를 구독해서 동작합니다. AP 토폴로지를 알면 새 검증 컴포넌트 추가 시 어디에 tap 할지 결정할 수 있고, 디버깅 시 어느 단계에서 데이터가 끊겼는지 거꾸로 추적할 수 있습니다.
 
@@ -88,7 +85,7 @@ RDMA-TB 의 모든 횡단 검증 (comparator, tracker, scoreboard) 은 **driver/
     Driver = **방송국**. WQE 발행 / 완료 / CQE / QP 등록 / MR 등록 — 5 채널을 항상 송출. <br>
     Comparator/Tracker/Scoreboard = **구독자**. 자기가 관심 있는 채널만 골라서 청취. <br>
     Handler = **편집국**. 한 채널 (issued WQE) 을 받아 opcode 별로 sub-구독자에게 분배 (write / read / send / recv). <br>
-    핵심: 방송국은 누가 듣는지 모르고, 구독자가 더해져도 방송국 코드는 안 변함.
+    방송국은 누가 듣는지 알 필요가 없고, 구독자가 늘어도 방송국 코드는 전혀 바뀌지 않습니다.
 
 ### 한 장 그림 — 5 AP + derived AP
 

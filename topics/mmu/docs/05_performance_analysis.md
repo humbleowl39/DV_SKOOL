@@ -44,17 +44,11 @@
 
 ### 1.1 시나리오 — _0.1% miss ratio_ 의 SLA 위반
 
-당신은 100 Gbps NIC. _Functional_ 검증 모두 통과. 그런데 _운영_ 시 throughput _100 Gbps_ 가 아닌 _80 Gbps_.
+100 Gbps NIC 의 functional 검증이 모두 통과했는데 운영 환경에서 throughput 이 80 Gbps 에 머무르는 상황을 생각해 보겠습니다. 아무 오류도 없이 정상 동작하는데 왜 20 Gbps 가 사라졌을까요?
 
-추적:
-- TLB miss ratio: **0.5%** (vs ideal 0.1%).
-- Miss penalty: page walk ~400 ns.
-- 평균: hit 1 ns × 99.5% + miss 400 ns × 0.5% = **3 ns/translation**.
-- 64 byte packet @ 100 Gbps = _150 M translations/sec_.
-- 3 ns/trans → 동시 _3 nsec × 150M = 450 M cycle/sec_ TLB activity.
-- TLB bandwidth 한계 도달 → throughput cap _80 Gbps_.
+추적해 보면 TLB miss ratio 가 0.5% 로, ideal 의 0.1% 보다 5 배 높습니다. Miss penalty 가 page walk ~400 ns 이므로 평균 translation 비용을 계산하면 `1 ns × 99.5% + 400 ns × 0.5% = 3 ns/translation` 입니다. 64 byte packet 기준 100 Gbps 는 초당 150 M 개의 translation 을 요구하는데, 3 ns × 150 M = 초당 450 M cycle 분의 TLB activity 가 발생합니다. 이것이 TLB bandwidth 한계에 닿으면서 throughput 이 80 Gbps 로 꺾입니다.
 
-**0.1% miss ratio** vs **0.5%** 차이가 _20 Gbps_ SLA 위반.
+결국 **0.1% miss ratio 와 0.5% miss ratio 의 차이** 가 20 Gbps SLA 위반의 직접 원인입니다.
 
 검증 시 _functional pass_ 만 보지 말고 _miss ratio 측정_ + _ideal 대비 비교_ 필수.
 

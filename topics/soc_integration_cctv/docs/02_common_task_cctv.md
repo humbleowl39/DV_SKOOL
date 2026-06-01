@@ -44,20 +44,11 @@
 
 ### 1.1 시나리오 — _100 IP × 20 Task_ = _2000 셀_
 
-당신의 SoC 에 IP 100 개. 각 IP 가 _공통 task_ (sysMMU, Security, DVFS, Clock Gating, Reset, Interrupt 등) _20 종_ 적용 가능.
+IP 가 100 개인 SoC 에서 각 IP 에 _공통 task_ (sysMMU, Security, DVFS, Clock Gating, Reset, Interrupt 등) _20 종_ 이 적용된다고 하면, **전체 매트릭스는 100 × 20 = 2000 cell** 에 달합니다.
 
-**전체 매트릭스 = 100 × 20 = 2000 cell**.
+이것을 수동으로 추적하면 Excel sheet 를 만들어 업데이트할 때마다 cell 을 추가해야 하는데, DVCon 2025 데이터는 이 방식에서 **3–5% 가 누락** 된다는 것을 보여줍니다. 2000 cell 기준으로 60–100 cell 입니다. 누락의 96% 는 기술적 어려움이 아니라 단순한 human oversight — 잊어버렸거나 새 IP 추가 시 매트릭스를 갱신하지 않은 것입니다. 그리고 누락된 cell 1 개가 silicon 버그로 이어질 때 비용은 $1M+ 입니다.
 
-수동 추적:
-- Excel sheet 작성. _업데이트_ 마다 cell 추가.
-- 3-5% 누락 = 60-100 cell.
-- 누락 96% 는 _human oversight_ (잊어버림, 새 IP 추가 시 update 안 함).
-- 1 누락 cell = silicon bug risk → $1M+ 비용.
-
-해법: **CCTV (Common Task Coverage Verification)** — _자동화된 매트릭스_:
-- TB build 시 IP/task 자동 enumerate.
-- 각 cell 의 검증 _자동 실행_.
-- 빈 cell = _명시적 알람_.
+이 문제를 **CCTV (Common Task Coverage Verification)** 가 해결합니다. TB build 시 IP 와 task 를 자동 enumerate 하고, 각 cell 의 검증을 자동 실행하며, 빈 cell 은 _명시적 알람_ 으로 보고합니다.
 
 SoC 안의 IP 가 50~200 개로 늘어나면 **각 IP 가 받아야 하는 공통 검증** (sysMMU 연동, Security 접근 제어, DVFS, Clock Gating ...) 의 조합 수가 _수백~수천_ 으로 폭발합니다. 수동으로 추적하면 DVCon 2025 데이터로 **3~5% 가 누락** 되고, 이 누락의 **96.30% 가 단순한 Human Oversight** 입니다.
 

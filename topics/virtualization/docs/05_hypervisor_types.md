@@ -44,18 +44,11 @@
 
 ### 1.1 시나리오 — 같은 KVM 이 _Type 1 또는 Type 2_?
 
-당신은 hypervisor 선택. 옵션:
-- **VMware ESXi**: Type 1 (bare metal).
-- **KVM**: Type 2 (Linux 위) 또는 Type 1 (Linux 가 hypervisor 의 일부)?
-- **Hyper-V**: Type 1 (Windows 가 _management partition_).
-- **VirtualBox**: Type 2 (host OS 위 app).
+Hypervisor 를 선택할 때 가장 먼저 마주치는 질문은 "Type 1 인가 Type 2 인가" 입니다. VMware ESXi 는 bare metal 위에 직접 설치되는 Type 1, VirtualBox 는 host OS 위에서 애플리케이션처럼 동작하는 Type 2 입니다. Hyper-V 는 Windows Server 가 _management partition_ 역할을 하지만 hypervisor 가 먼저 부팅되므로 Type 1 로 분류합니다.
 
-KVM 의 _분류 모호_: Linux kernel module 형태로 _host OS 위_ 동작 (Type 2 같음), 하지만 Linux kernel 자체가 _가상화 ring -1 모드_ 진입 (Type 1 같음). 결과: **Hybrid**.
+KVM 은 이 분류의 경계를 흐립니다. Linux kernel module 형태로 host OS 위에서 동작한다는 점에서는 Type 2 처럼 보이지만, KVM 모듈이 로드되는 순간 Linux kernel 자체가 VMX root mode 로 진입하여 hypervisor 역할을 직접 수행합니다. 결과적으로 구조는 Type 2 이지만 trap 경로는 Type 1 과 동일합니다. 이것이 **Hybrid** 라고 불리는 이유입니다.
 
-분류가 _왜_ 중요?
-- **VM Exit handler 위치**: Type 1 = bare metal hypervisor 직접 처리. Type 2 = host OS 거쳐서 hypervisor. _Latency 차이_ 큼.
-- **Driver 접근**: Type 1 = 자체 driver. Type 2 = host OS 의 driver 재사용.
-- **Boot order**: Type 1 = hypervisor 가 boot 직후. Type 2 = host OS boot 후 hypervisor 시작.
+분류가 실용적으로 중요한 이유는 세 가지입니다. 첫째, VM Exit handler 의 위치가 다릅니다. Type 1 은 bare metal hypervisor 가 직접 처리하고, Type 2 는 host OS 를 경유하므로 latency 차이가 큽니다. 둘째, driver 접근 방식이 다릅니다. Type 1 은 자체 driver 를 내장해야 하고, Type 2 는 host OS 의 driver 를 재사용합니다. 셋째, 부팅 순서가 다릅니다. Type 1 은 부팅 직후 hypervisor 가 자리를 잡고, Type 2 는 host OS 가 먼저 올라온 뒤 hypervisor 앱이 시작됩니다.
 
 같은 "가상화" 라는 말 아래에 ESXi · Xen · KVM · Hyper-V · VirtualBox · VMware Workstation 이 모두 들어 있지만, 각자 **부팅 순서가 다르고 trap 의 종착지가 다릅니다**. 어떤 hypervisor 가 host OS 위에 앉는지 아니면 bare metal 위에 앉는지를 모르면, 같은 증상 (`KVM: entry failed`, `vmx_vmexit_handler` panic 등) 이 어디서 났는지 한 줄도 추적할 수 없습니다.
 
@@ -407,7 +400,7 @@ ARM VHE 이후:
 | **QEMU** (유저 프로세스) | 디바이스 에뮬레이션 (NIC, 디스크, VGA...), VM 생성/설정 UI |
 | **Linux Kernel** | 프로세스 스케줄링, 메모리 관리, HW 드라이버 |
 
-**핵심**: KVM 은 Linux 커널의 강력한 인프라(스케줄러, 드라이버, 메모리 관리)를 그대로 활용하면서, CPU/메모리 가상화만 HW 지원으로 수행. 이것이 KVM 이 빠르게 성장한 이유.
+KVM 이 빠르게 성장한 이유는 Linux 커널의 강력한 인프라 — 스케줄러, 드라이버, 메모리 관리 — 를 그대로 활용하면서 CPU 와 메모리 가상화만 HW 지원으로 수행하는 구조 덕분입니다. 중복 투자 없이 두 강점을 동시에 취한 설계입니다.
 
 ### 5.5 Xen 아키텍처
 

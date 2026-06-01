@@ -45,14 +45,11 @@
 
 ### 1.1 시나리오 — 왜 _SRAM 처럼_ 안 만들었나?
 
-당신은 CPU 와 메모리 설계자. SRAM (캐시) 은 _1 cycle_ 에 read/write. DRAM 은 _수십 cycle_ + 복잡한 timing. 왜?
+SRAM 캐시는 단 1 cycle 에 read/write 를 완료하는데 DRAM 은 왜 수십 cycle 을 기다려야 할까요? 그 답은 셀 구조의 근본적인 차이에 있습니다.
 
-**SRAM cell**: 6 transistor flip-flop. 영구 저장 (전원 켜진 동안). 빠름. **면적 크다**.
+SRAM 셀은 6개의 트랜지스터로 구성된 flip-flop 입니다. 전원이 켜져 있는 한 데이터를 영구적으로 유지하고, 읽기도 한 사이클에 마칩니다. 단점은 면적입니다. 6개의 트랜지스터를 한 셀에 묶으면 면적이 커지고, 이를 GB 단위로 집적하면 칩 원가가 현실적이지 않게 됩니다.
 
-**DRAM cell**: 1 transistor + 1 capacitor. _capacitor_ 에 charge 로 저장. **면적 1/6**. 단:
-- **Capacitor 누설**: 시간 지나면 data 사라짐 → _refresh 필요_.
-- **Destructive read**: 한 번 읽으면 _data 파괴_ → _restore 필요_.
-- **Sense amplifier 시간**: capacitor 의 미세 전하 감지에 시간 필요 → _tRCD_.
+DRAM 셀은 트랜지스터 하나와 capacitor 하나로 이루어져 있어 면적이 SRAM 의 약 1/6 에 불과합니다. 그러나 이 단순함은 세 가지 물리적 대가를 치릅니다. 첫째, capacitor 는 시간이 지나면 전하가 누설되어 데이터가 사라지므로 **주기적 refresh** 가 반드시 필요합니다. 둘째, 읽기 동작 자체가 capacitor 전하를 sense amplifier 쪽으로 끌어내면서 원래 데이터를 **파괴**하므로, 읽은 직후 동일 row 에 데이터를 복원(restore)해야 합니다. 셋째, capacitor 의 미세 전하를 sense amplifier 가 감지하는 데 물리적인 시간이 걸리는데, 이 대기 시간이 바로 **tRCD** 의 기원입니다.
 
 **Trade-off**:
 | 항목 | SRAM | DRAM |
@@ -62,7 +59,7 @@
 | Refresh | 불필요 | 필수 |
 | 비용/bit | 6× | 1× |
 
-**결과**: SRAM 으로는 _GB 단위_ 메모리 _경제적으로_ 불가능. DRAM 이 _수십 cycle latency_ 라는 _대가로_ _대용량_ 가능. 그래서 CPU 는 _SRAM 캐시 + DRAM main memory_ 의 hybrid.
+결국 SRAM 으로는 GB 단위 메모리를 경제적으로 구현할 수 없습니다. DRAM 은 수십 cycle 이라는 latency 대가를 치르는 대신 대용량을 저비용으로 제공하며, 그래서 CPU 는 SRAM 캐시와 DRAM main memory 를 함께 사용하는 hybrid 구조를 채택합니다.
 
 이후 모든 DRAM/DDR 모듈은 한 가정에서 출발합니다 — **"DRAM cell 은 capacitor 이므로 데이터가 시간에 따라 누설되고, 외부에서 한 번 읽으면 파괴되며, 따라서 모든 access 는 row open → column access → row close 라는 stateful 시퀀스를 거친다"**. Memory Controller (MC) 가 왜 그렇게 복잡한 스케줄러를 갖는지, PHY 가 왜 nano-second margin 을 보정해야 하는지, DV TB 가 왜 timing SVA 수십 개를 동시에 보는지 — 전부 이 한 가정의 파생입니다.
 
@@ -396,9 +393,9 @@ Prefetch = DRAM 내부에서 한 번에 읽어오는 비트 수
   DDR5 전체 대역폭 계산 (4800 MT/s):
     4800 MT/s × 32-bit(Sub-Ch) × 2(Sub-Ch) = 38.4 GB/s (per channel)
 
-핵심: Prefetch가 클수록 → Burst 길이 증가 → 순차 접근 대역폭 향상
-     하지만 작은 데이터(< BL)만 필요할 때도 전체 Burst 전송 → 비효율
-     → DDR5는 BL16 외에 BL8도 지원 (Burst Chop)
+  Prefetch 가 클수록 Burst 길이가 길어져 순차 접근 대역폭이 향상된다.
+  단, 전송 단위(BL)보다 작은 데이터를 요청해도 전체 Burst 를 소비하는 비효율이 있어,
+  DDR5 는 BL16 외에 BL8(Burst Chop)도 지원한다.
 ```
 
 ### 5.5 Bank Group — 왜 존재하는가?
@@ -551,7 +548,7 @@ DBI 원리:
   DDR5: DBI 기본 활성화 (DC-DBI for Write, AC-DBI for Read)
   LPDDR5: DBI 기본 활성화
 
-핵심: DBI는 "공짜" 전력 절감 — 추가 핀 1개(DBI#)로 ~15% 전력 감소
+  DBI 는 핀 1개(DBI#)를 추가하는 것만으로 약 15% 전력을 절감하는 매우 효율적인 기법이다.
 ```
 
 ### 5.9 Mode Register — DRAM 설정의 핵심

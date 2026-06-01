@@ -44,19 +44,11 @@
 
 ### 1.1 시나리오 — _Silicon 후_ 에 발견된 _1 줄_ bug
 
-당신은 SoC 출시 직전. 모든 IP 의 IP-level DV 통과. 통합 후 system 시뮬도 통과. Tape-out → 6 주 후 silicon 도착.
+SoC 출시 직전, 모든 IP 의 IP-level DV 가 통과하고 통합 후 system 시뮬레이션도 통과했습니다. Tape-out 후 6 주가 지나 silicon 이 도착해 부팅을 시도했을 때 **fail** 이 떨어졌습니다. 원인을 추적해 보니 IP A 의 _interrupt_ 가 _wrong IRQ controller port_ 에 연결된 **1 줄 connectivity bug** 였습니다. IP 자체는 정상적으로 IRQ 를 발생시켰기 때문에 IP-level DV 는 이 오류를 발견할 수 없었습니다 — 연결 정보는 IP 단독 테스트벤치 안에 존재하지 않기 때문입니다.
 
-Silicon 부팅: **fail**. 추적:
-- IP A 의 _interrupt_ 가 _wrong IRQ controller port_ 로 connect.
-- 1 줄 connectivity bug.
-- IP-level DV 에서 _절대_ 안 잡힘 — IP 자체는 정상 IRQ 보냄. _연결_ 만 틀림.
+이 1 줄의 실수가 가져온 비용은 silicon revision 마스크 비용 $1–3M, 6 주의 시간 손실, 그리고 대안이 SW workaround 라면 그것이 제품 수명 내내 영구적으로 남는 기술 부채입니다.
 
-비용:
-- 1 silicon revision = $1-3M (mask cost).
-- 6 주 시간 손실.
-- 또는 SW workaround → 영구 부담.
-
-**1 줄 connectivity bug = $1M+ + 6 주**. 이게 SoC integration DV 가 _IP-level 만큼 critical_ 인 이유.
+**1 줄 connectivity bug = $1M+ + 6 주**. 이게 SoC integration DV 가 _IP-level 만큼 critical_ 인 이유입니다.
 
 **SoC integration bug 는 가장 비싸게 잡힙니다.** IP-level 은 모두 PASS 인데 통합 후 connectivity 한 줄 누락 → silicon revision 또는 software workaround. 이 단계에서 못 잡으면 **post-silicon debug 수 주 + 다음 tape-out 까지 1~3 개월** 의 비용이 따라옵니다.
 

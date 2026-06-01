@@ -43,14 +43,13 @@
 
 ### 1.1 시나리오 — 30 초 안에 _M08 또는 M11_?
 
-당신의 RDMA test fail. error log:
+RDMA test 가 실패하면 log 에 다음과 같은 줄이 찍힙니다.
+
 ```
 F-CQHDL-TBERR-0003: Unexpected error CQE
 ```
 
-5 분 vs 30 초:
-- **Naive (5 분)**: M08 (data integrity), M09 (CQ timeout), M10 (C2H tracker), M11 (error CQE) 를 _순서대로_ 펴서 _자기 케이스_ 찾기.
-- **Cheatsheet (30 초)**: §5.1 한 표:
+cheatsheet 없이 접근하면 M08, M09, M10, M11 을 순서대로 펴면서 자기 케이스를 찾아야 하므로 5 분이 걸립니다. 반면 cheatsheet 의 §5.1 한 표를 펼치면 30 초 만에 결론이 납니다.
   ```
   prefix       → 모듈
   E-SB-WRITE   → M08
@@ -59,7 +58,7 @@ F-CQHDL-TBERR-0003: Unexpected error CQE
   F-CQHDL-TBERR → M11
   ```
 
-이 _한 표_ 가 _하루에 수 번_ 사용. 누적 시간 절감 _수십 분/일_.
+이 표는 하루에도 수 번씩 쓰이며, 누적으로 수십 분/일의 디버그 시간을 절감합니다.
 
 M08–M11 은 4 대 디버그 케이스를 _각각_ 다룹니다. 그런데 실제 시뮬 fail 이 나면 (1) 어느 케이스인지 모르는 상태에서 (2) 5 분 안에 어느 모듈을 펼칠지 결정해야 합니다. M08–M11 을 매번 처음부터 다시 읽을 수는 없죠.
 

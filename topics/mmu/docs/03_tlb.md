@@ -44,17 +44,11 @@
 
 ### 1.1 시나리오 — _Stale TLB_ 의 silent corruption
 
-당신은 OS 에서 `mmap` 으로 file 을 mapping. 작업 후 `munmap`. 다른 process 가 _같은 VA 영역_ 에 _다른 file_ mmap. 잠시 후 **wrong file 의 데이터 access**.
+OS 에서 `mmap` 으로 파일을 매핑한 뒤 `munmap` 으로 해제했다고 가정하겠습니다. 이 시점에 다른 process 가 _같은 VA 영역_ 에 _다른 파일_ 을 mmap 하면 어떤 일이 벌어질까요? 잠시 후 그 process 가 해당 VA 를 읽으면 예상과 전혀 다른 파일의 데이터가 나옵니다.
 
-원인: **Stale TLB entry**.
-- 첫 mmap → TLB 에 VA → PA1 매핑.
-- munmap → page table 에서 매핑 제거. _그런데 TLB invalidate 안 함_.
-- 새 mmap → 새 매핑 (VA → PA2) 추가, 단 TLB 에 _구 entry (PA1)_ 잔존.
-- Access 시 TLB hit (구 entry) → _PA1 access_ → 다른 file 의 데이터.
+원인은 **stale TLB entry** 입니다. 첫 번째 `mmap` 시 TLB 에 VA → PA1 매핑이 채워집니다. `munmap` 이 page table 에서 그 매핑을 제거하지만, TLB invalidate 를 하지 않으면 구 entry(VA → PA1)가 TLB 에 그대로 남습니다. 이후 새 `mmap` 이 VA → PA2 매핑을 page table 에 추가해도, TLB hit 경로는 여전히 PA1 을 반환하므로 두 번째 파일을 읽어야 하는 접근이 첫 번째 파일의 물리 페이지를 건드리게 됩니다.
 
-해법: `munmap` 후 _반드시_ `tlb_invalidate(va)` 또는 `INVLPG` (x86) / `tlbi` (ARM).
-
-OS 의 _가장 자주 발생하는 bug_ 중 하나 — Linux 커널 history 에 수십 건.
+해결책은 단순하지만 놓치기 쉽습니다. `munmap` 직후 반드시 `tlb_invalidate(va)` — x86 에서는 `INVLPG`, ARM 에서는 `TLBI` — 를 호출해야 합니다. 이 누락은 Linux 커널 이력에 수십 건이 쌓여 있는, OS 에서 가장 자주 발생하는 버그 중 하나입니다.
 
 **TLB 는 MMU 성능의 90% 를 결정**합니다. Page walk 이 ~400 ns 인 반면 TLB hit 는 ~1 cycle (~0.5 ns) — _800 배_ 차이. Hit rate 가 99% 에서 95% 로 4%p 만 떨어져도 effective access time 이 4.5 ns 에서 20.5 ns 로 _4.6배_ 늘어납니다. 즉, TLB hit-rate 가 IPC 를 직접 결정.
 

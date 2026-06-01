@@ -44,19 +44,9 @@
 
 ### 1.1 시나리오 — _Link up 안 됨_
 
-당신은 새 SoC + PCIe device. Boot 시 _link 가 L0 진입 안 됨_. driver 가 _device 인식 못함_.
+새 SoC 와 PCIe device 를 연결하고 boot 했는데 link 가 L0 에 진입하지 못하고 driver 가 device 를 인식하지 못하는 상황을 가정합니다. LTSSM trace 를 확인하면 `Detect → Polling → Polling.Compliance` 에서 멈춰 있을 수 있습니다. 이 경우의 전형적인 원인은 RX 전기 신호가 threshold 보다 약해 polling 단계에서 peer 를 인식하지 못하는 것입니다. 해법으로는 Tx 의 pre-emphasis 에 해당하는 EQ preset 조정, Rx 의 amplification 에 해당하는 CTLE/DFE 조정, 또는 PCB trace length 단축을 순서대로 시도합니다.
 
-진단:
-- LTSSM trace 확인.
-- `Detect → Polling → Polling.Compliance` 에서 멈춤.
-- 원인: _RX 전기 신호_ 가 _threshold_ 보다 약함 → polling 단계에서 _peer 인식 실패_.
-
-해법:
-- **EQ preset** 조정 (Tx 의 pre-emphasis).
-- **CTLE/DFE** 조정 (Rx 의 amplification).
-- PCB **trace length** 짧게.
-
-**LTSSM 11 state 의 의미**: 각 state 가 _link bring-up_ 의 _한 단계_. 어디서 멈췄는지 = _문제의 layer_.
+LTSSM 11 state 의 의미는 각 state 가 link bring-up 의 한 단계를 담당한다는 점에 있습니다. 어느 state 에서 멈췄는지를 보면 문제가 어느 layer 에 있는지 즉시 좁혀집니다.
 
 | State | 의미 | 멈춤 원인 |
 |-------|------|---------|

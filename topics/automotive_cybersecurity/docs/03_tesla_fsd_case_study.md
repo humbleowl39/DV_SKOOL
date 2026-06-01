@@ -46,22 +46,9 @@
 
 ### 1.1 시나리오 — _$10K 짜리 FSD 옵션_ 을 _$0_ 으로 해킹
 
-2023 년 Berlin TU 의 연구팀이 **Tesla Model 3 의 FSD (Full Self-Driving) 옵션을 무료 활성화** 하는 방법 발표.
+2023 년 Berlin TU 의 연구팀이 **Tesla Model 3 의 FSD (Full Self-Driving) 옵션을 무료 활성화** 하는 방법을 발표했습니다.
 
-Tesla 의 보안 스택은 _업계 최고 수준_:
-- **L1 (Boot)**: SCS (Secure Computing Stack), Boot ROM, 신뢰 chain 완벽.
-- **L5 (Cloud)**: OTA 인증, signing, 강한 PKI.
-
-그런데:
-- **L2 (Communication)**: CAN bus 위 메시지 _인증 없음_ — SecOC 미적용.
-
-연구팀은:
-1. 차량에 OBD-II 진입 (법적 허용).
-2. CAN bus 에 _임의 메시지 ID 0x???_ 송신 → Region 변경 (US → CN).
-3. 다른 ID 송신 → FSD feature flag 켜기.
-4. FSD SoC 가 _보안 layer 통과 검증 없이_ 수용 → **무료 FSD 활성화**.
-
-_L1, L5 가 강해도 L2 가 비어 있으면_ — _금고 옆에 누구나 앉을 수 있음_.
+Tesla 의 보안 스택은 업계 최고 수준이었습니다. L1 에서는 SCS (Secure Computing Stack) 와 Boot ROM 으로 신뢰 chain 을 완성했고, L5 에서는 OTA 인증, 코드 서명, 강한 PKI 를 갖췄습니다. 그러나 L2, 즉 CAN bus 위의 메시지 인증은 완전히 비어 있었습니다 — SecOC 가 미적용된 상태였습니다. 연구팀은 이 빈틈을 통해 OBD-II 로 차량에 진입한 뒤, CAN bus 에 임의의 프레임을 송신해 Region 을 US 로 변경하고 FSD feature flag 를 켰습니다. FSD SoC 는 보안 layer 통과 검증 없이 이 프레임을 수용해 **무료 FSD 활성화** 로 이어졌습니다. L1 과 L5 가 강해도 L2 가 비어 있으면 금고 옆에 누구나 앉을 수 있는 상황이 됩니다.
 
 이론으로 배운 보안 메커니즘이 실제 어디에서 깨지는지 가장 빠르게 배우는 방법은 **공개된 케이스 스터디 분석** 입니다. Tesla FSD 사례는 _"비싼 보안 IP (SCS) 를 넣었는데도 한 줄 잘못된 가정 (CAN = 신뢰) 때문에 무력화"_ 된 대표 예시입니다.
 

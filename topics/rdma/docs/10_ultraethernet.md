@@ -47,13 +47,7 @@
 
 ### 1.1 시나리오 — RoCEv2 가 50000 GPU 에서 _부서지는_ 순간
 
-당신은 50000 GPU AI 클러스터를 운영합니다. RoCEv2 로 시작했는데:
-
-- **PFC storm**: 한 link 의 incast 가 cascading PAUSE → 1000 link 가 일시 정지 → 학습 step time 폭주.
-- **DCQCN 의 한계**: 50000 sender 가 동시에 ECN 신호 받으면 _전부 동시에 감속_ → throughput collapse → 회복 후 다시 incast.
-- **Single-path**: ECMP 가 _flow-level_ 분산만, _packet-level_ 안 됨. 한 큰 flow 가 한 path 에 쏠림 → tail latency 폭주.
-
-**RoCEv2 의 _lossless 가정_** 이 hyperscale 에서 한계. 운영 비용 (PFC 관리, ECN tune) 도 큼.
+50000 GPU AI 클러스터를 RoCEv2 로 운영하면 규모가 커질수록 세 가지 문제가 동시에 터집니다. 한 link 의 incast 가 cascading PAUSE 를 일으켜 1000 개 link 가 일시 정지하는 PFC storm 이 발생하고, 50000 개 sender 가 ECN 신호를 동시에 받으면 전부 동시에 감속하여 throughput 이 collapse 한 뒤 회복하자마자 또다시 incast 로 이어지는 DCQCN 동기화 문제가 생깁니다. 여기에 ECMP 는 flow-level 분산만 해서 한 큰 flow 가 단일 path 에 쏠리고 tail latency 가 폭주합니다. 이 세 문제의 공통 원인은 RoCEv2 의 **lossless 가정**입니다. packet 을 절대 떨어뜨려선 안 된다는 전제가 hyperscale 에서 운영 복잡도를 감당하기 어려운 수준으로 만든 것입니다.
 
 **Ultra Ethernet Consortium (UEC, 2023)** 이 내놓은 해법은 발상의 전환입니다. RoCEv2 가 "packet 을 절대 떨어뜨리지 않아야 한다"는 전제에서 출발한다면, UEC 는 "**lossy 는 허용하되 message 단위의 완결성만 보장하자**" 고 뒤집습니다. packet drop 을 비정상이 아닌 정상 상황으로 받아들이고, 그 대신 여러 path 에 _packet-level_ 분산을 기본으로 깔며, 순서 보장은 _메시지 전체_ 가 도착했는지 여부로만 판단합니다. 그 결과 PFC 라는 네트워크 전체의 운명을 좌우하는 메커니즘에 의존하지 않아도 되게 됩니다.
 

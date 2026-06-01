@@ -43,7 +43,7 @@
 
 ### 1.1 시나리오 — 어떤 ASIC 도 _혼자_ 검증되지 않는다
 
-당신은 RDMA NIC RTL 을 검증해야 합니다. 첫 번째 본능 — 일반 ASIC DV 처럼 "**DUT 에 stimulus 보내고, output 비교**" 하면 되겠다.
+RDMA NIC RTL 을 처음 검증할 때의 자연스러운 첫 번째 본능은 일반 ASIC DV 와 같은 방식, 즉 "**DUT 에 stimulus 를 보내고 output 을 비교한다**" 입니다.
 
 하지만 첫 시도부터 막힙니다.
 
@@ -646,7 +646,7 @@ Log file 위치는 `mrun` 의 `vsim/<test>/run.log`. FSDB 는 `vsim/<test>/wave.
 ### 7.1 자가 점검
 
 !!! question "🤔 Q1 — 새 feature 배치 결정 (Bloom: Evaluate)"
-    당신은 _Memory Window Type 2_ 검증을 추가해야 한다. base / ext / external / submodule 중 어디에 가야 하는가? 그리고 _왜_?
+    _Memory Window Type 2_ 검증을 새로 추가한다면 base / ext / external / submodule 중 어디에 배치해야 하는가? 그리고 그 이유는 무엇인가?
 
     ??? success "정답"
         **`ext/mw_test/`** (또는 `lib/ext/feature/mw/`).

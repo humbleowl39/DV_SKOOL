@@ -44,20 +44,11 @@
 
 ### 1.1 시나리오 — _O(1) 공간_ 의 가치
 
-당신은 면접에서 hash map (O(N) space) 으로 문제 풀었음. 면접관:
+면접에서 hash map O(N) space 풀이를 제시하면, 면접관은 종종 이렇게 되묻습니다.
 
 > "**O(1) space 로 풀 수 있나요?**"
 
-이 후속 질문에 _답하지 못하면_ — Hash Map _solution 만 외운_ 인상. 답하면 — _패턴 사고_ 가 깊다는 인상.
-
-**Two Pointers** 가 답인 경우 30%:
-- 배열이 _정렬됨_.
-- 두 위치 (start, end) 만 추적 → O(1) extra space.
-- 한 pointer 이동 = O(1), 전체 N 번 이동 = O(N) 시간.
-
-**Sliding Window** 의 가치 (연속 부분 배열 문제):
-- "K-길이 부분 배열" → _하나씩 옮겨_, 새 element 추가 / 빠진 element 제거.
-- _다시 합산 X_, O(1) per step → 전체 O(N).
+이 후속 질문에 답하지 못하면 패턴을 외운 것처럼 보이고, 답할 수 있으면 패턴의 원리를 이해하고 있다는 인상을 줍니다. **Two Pointers** 는 배열이 정렬되어 있을 때 두 위치(start, end)만 추적하므로 O(1) extra space 로 동작합니다. 한 pointer 이동이 O(1) 이고 전체 N 번 이동하므로 시간 복잡도는 O(N) 이고, hash map 풀이의 30% 정도는 이 방식으로 대체할 수 있습니다. **Sliding Window** 는 "K-길이 부분 배열" 처럼 연속 구간이 문제일 때 새 원소를 추가하고 빠진 원소를 제거하는 O(1) 갱신으로 전체를 O(N) 에 처리합니다.
 
 Two Pointers / Sliding Window 는 **추가 메모리 없이** O(N) 으로 풀리는 강력한 도구입니다. Hash Map 풀이의 30% 는 정렬만 가능하면 Two Pointers 로 _O(1) 공간_ 에 다시 풀 수 있고, "연속 부분 배열 / 부분 문자열" 류 문제는 거의 모두 Sliding Window 로 일반화됩니다.
 
@@ -225,7 +216,7 @@ S2 -> SW2: "가변 크기"
        max_len = max(max_len, right-left+1) ← record
 ```
 
-핵심: "window 조건" 을 _글로 명세_ 하고 (예: "윈도우 안에 중복 문자가 없다") 그 invariant 를 _깨지지 않게 유지_ 하는 것이 코드의 전부입니다.
+가변 Sliding Window 코드의 전부는 "window 조건" 을 _글로 명세_ 하는 것에서 시작합니다. 예를 들어 "윈도우 안에 중복 문자가 없다" 처럼 invariant 를 먼저 적고 나면, expand 와 shrink 어느 쪽에서 무엇을 해야 그 invariant 를 유지하는지가 자연스럽게 결정됩니다.
 
 ---
 

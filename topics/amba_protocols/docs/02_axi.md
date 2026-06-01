@@ -46,7 +46,7 @@
 
 ### 1.1 시나리오 — AHB 가 GPU-DDR transaction 에서 죽는다
 
-당신은 CPU + GPU + DDR controller 의 SoC. AHB 로 연결:
+CPU 가 RAM 에서 100 라인을 읽고 GPU 가 frame buffer 에 200 라인을 쓰는 SoC 를 AHB 로 연결하면 구조적인 throughput 문제가 발생합니다.
 
 ```
 CPU read 100 lines (RAM)        GPU write 200 lines (frame buffer)
@@ -56,10 +56,7 @@ CPU read 100 lines (RAM)        GPU write 200 lines (frame buffer)
    순차 처리: CPU read 끝나야 GPU write 가능 → throughput 절반
 ```
 
-**AHB 의 3 가지 병목**:
-1. **Read 와 Write 가 같은 채널** — 양방향 트래픽 막힘.
-2. **Address/Data 가 순차** — 다음 transaction address 가 _이전 data 끝난 후_.
-3. **Outstanding 한 개** — 응답 안 오면 master 가 _다음 request_ 못 보냄.
+근본 원인은 AHB 가 세 가지 병목을 구조적으로 갖고 있기 때문입니다. 첫째, Read 와 Write 가 같은 채널을 공유하므로 양방향 트래픽이 서로를 막습니다. 둘째, 다음 transaction 의 주소가 이전 데이터 전송이 끝난 뒤에야 발행될 수 있어 버스 활용률이 낮습니다. 셋째, 응답이 돌아오기 전까지 master 가 다음 요청을 보내지 못하는 outstanding 1개 제한이 대기 시간을 직접적으로 throughput 손실로 전환합니다.
 
 해법: **AXI 의 5 채널 분리**
 
@@ -619,7 +616,7 @@ AXI4:
 불가능한 순서:
   ✗ R(ID=0, 0x300) → R(ID=0, 0x100) → ...  ← 같은 ID=0 내 순서 위반!
 
-핵심: ID=0 끼리는 0x100 → 0x300 순서 고정. ID=1 은 어디에든 끼어들 수 있음.
+ID=0 끼리는 0x100 → 0x300 순서가 고정되고, ID=1 은 ID=0 응답들 사이 어디에든 끼어들 수 있습니다.
 ```
 
 #### 문제 3: Exclusive Access 성공/실패 판단

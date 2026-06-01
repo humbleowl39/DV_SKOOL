@@ -384,7 +384,7 @@ mrun clean
 !!! question "🤔 Q1 — RC vs UC 즉답 (Bloom: Apply)"
     "RC 와 UC 의 _재전송_ 차이?"
     ??? success "정답"
-        ACK/NAK 의 유무가 핵심:
+        RC 와 UC 의 재전송 차이는 ACK/NAK 메커니즘의 유무에서 비롯됩니다.
         - **RC** (Reliable Connected): ACK/NAK + PSN 단조 + 자동 재전송 → drop 무시 가능.
         - **UC** (Unreliable Connected): ACK 없음 → drop 시 데이터 손실, 상위가 복구.
         - **trade-off**: RC 는 retry HW + state machine 비용 ↑, UC 는 throughput ↑ + complexity ↓.

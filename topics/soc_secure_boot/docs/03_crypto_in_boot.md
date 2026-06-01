@@ -45,7 +45,7 @@
 
 ### 1.1 시나리오 — _RSA-4096_ 또는 _ECDSA P-384_?
 
-당신은 secure boot 설계자. Signature algorithm 선택:
+Secure boot 를 설계할 때 가장 먼저 마주치는 실질적 결정 중 하나가 서명 알고리즘 선택입니다. RSA-4096 과 ECDSA P-384 를 비교하면 아래와 같습니다.
 
 | 차원 | RSA-4096 | ECDSA P-384 |
 |------|---------|-------------|
@@ -56,15 +56,9 @@
 | PQC migration | 어려움 | 어려움 (둘 다 quantum 취약) |
 | 산업 표준 | 레거시 표준 | 새 표준 |
 
-선택 영향:
-- _BootROM 면적_ 작은 SoC → **ECDSA**.
-- _Legacy interop_ 필요 (예: 기존 PKI) → **RSA**.
-- _PQC 미래 대비_ → 두 종류 모두 지원 (algorithm agility).
+선택의 결과는 설계 맥락에 따라 갈립니다. BootROM 면적이 제한된 SoC 라면 ECDSA 가 유리하고, 기존 PKI 와의 레거시 호환성이 필요하다면 RSA 를 유지해야 합니다. PQC 전환을 미리 준비한다면 두 알고리즘을 모두 지원하는 algorithm agility 구조가 필요합니다.
 
-ROTPK 침해 시:
-- _Chain of trust 전체 무효_ — public key 위조 가능 → 가짜 signature 통과.
-- 영구 — OTP 의 ROTPK hash 변경 불가.
-- 해법: **Key revocation list** (revoked key 영구 mark).
+ROTPK 가 침해되면 파급 범위는 영구적입니다. 공격자가 private key 를 확보하면 임의의 BL2 를 정당한 것으로 서명할 수 있어 chain of trust 전체가 무효가 되고, OTP 의 ROTPK hash 는 변경 불가이므로 칩 단위 회복은 불가능합니다. 이를 대비하는 수단이 **Key revocation list** — 침해된 키를 OTP 에 영구 mark 하는 메커니즘입니다.
 
 Module 02 의 chain 은 _신뢰 전파_ 의 _구조_ 였습니다. 이번 모듈은 그 구조 위에 _도장_ 을 찍는 도구 — Hash, Signature, Key Hierarchy, Anti-rollback. 도구를 정확히 모르면 chain 의 어느 link 가 _왜_ 안전한지 설명하지 못합니다.
 

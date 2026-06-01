@@ -46,7 +46,7 @@
 
 ### 1.1 시나리오 — _Power-on 첫 1 ms_ 의 race
 
-당신은 secure boot 를 구현. 부팅 직후 secure UART 에 비밀 데이터를 print. _시뮬은 통과_, 그런데 실제 chip 에서 _가끔_ NS world 에서 그 비밀이 _보임_.
+Secure Boot 를 구현하고, 부팅 직후 Secure UART 에 비밀 데이터를 출력했습니다. 시뮬레이션은 통과했는데 실제 칩에서는 가끔 NS world 에서 그 비밀이 보이는 현상이 생깁니다.
 
 추적 결과:
 

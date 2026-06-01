@@ -44,13 +44,7 @@
 
 ### 1.1 시나리오 — DV 엔지니어의 _하루_
 
-당신은 DV 엔지니어. 오늘의 task:
-
-- **오전 (4 시간)**: 새 IP spec 30 페이지 읽고 V-Plan 항목 100 개 식별.
-- **점심 후 (2 시간)**: regression 20 개 fail 의 log 분석, root cause 분류.
-- **오후 (2 시간)**: 새 UVM testbench skeleton 코딩.
-
-_총 8 시간_. 그중 _창의적_ 인 부분은 _1 시간_ — 새 corner case 발견. 나머지 7 시간은 _기계적_ 으로 spec 읽기, log pattern matching, boilerplate 코딩.
+DV 엔지니어의 하루를 들여다보면 8 시간 업무 가운데 7 시간이 반복 작업으로 채워집니다. 오전 4 시간은 새 IP spec 30 페이지를 읽고 V-Plan 항목 100 개를 식별하는 일이고, 점심 후 2 시간은 regression 20 개 fail 의 log 를 분석해 root cause 를 분류하는 일이며, 오후 2 시간은 새 UVM testbench skeleton 을 코딩합니다. 이 7 시간은 spec 읽기, log pattern matching, boilerplate 코딩 같은 기계적 작업입니다. 진짜 창의적인 시간 — 새 corner case 를 발견하는 일 — 은 겨우 1 시간입니다.
 
 **AI 를 박을 위치**:
 

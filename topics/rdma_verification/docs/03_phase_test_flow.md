@@ -44,20 +44,9 @@
 
 ### 1.1 시나리오 — 첫 _verb_ 부터 _fatal_
 
-당신은 새 RDMA test 작성. main_phase 에서 `ibv_post_send` 호출 → **즉시 fatal**: "QP not in RTS state".
+새 RDMA 테스트를 작성하다 보면, `main_phase` 에서 `ibv_post_send` 를 호출하자마자 **즉시 fatal** 이 터지는 상황을 만납니다. 메시지는 "QP not in RTS state". QP 가 아직 Reset 상태이기 때문입니다. Init sequence — Modify(Init) → Modify(RTR) → Modify(RTS) — 가 실행되지 않아 QP 가 RTS 로 전이되지 못한 것입니다.
 
-원인: QP 가 _아직 Reset_ 상태. Init seq (Modify(Init) → Modify(RTR) → Modify(RTS)) 가 _실행 안 됨_.
-
-해법: **`post_configure_phase` 에서 init seq 자동 실행**.
-- build/connect: 자원 생성.
-- reset: 청소.
-- configure: 설정.
-- **post_configure: init seq 실행** ← 모든 QP 가 RTS 진입.
-- main: 정상 verb.
-- shutdown: outstanding drain.
-- check: 결과 검증.
-
-각 phase 의 _책임이 명확_ 해야 race 없음. RDMA-TB 의 핵심 패턴.
+해법은 **`post_configure_phase` 에서 init seq 를 자동 실행** 하는 것입니다. RDMA-TB 는 8 phase 각각에 명확한 책임을 부여합니다. build/connect 에서 자원을 생성하고, reset 에서 초기화하고, configure 에서 설정을 적용한 뒤, **post_configure 에서 init seq 를 실행해 모든 QP 를 RTS 로 진입** 시킵니다. 그 다음에야 main phase 에서 정상 verb 를 발행할 수 있고, shutdown 에서 outstanding 을 drain 하고, check 에서 결과를 검증합니다. 각 phase 의 책임이 이렇게 명확히 나뉘어 있어야 race 가 생기지 않으며, 이것이 RDMA-TB 의 핵심 패턴입니다.
 
 RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 가 잘못 구성되면 race / dead-lock 이 쉽게 생깁니다. 예를 들어 QP/CQ/MR 등록 (init seq) 이 정상 main_phase verb 보다 늦으면 첫 verb 부터 fatal. RDMA-TB 는 이를 해결하기 위해 phase 별 책임을 명확히 나눴고, `post_configure_phase` 에서 default sequence 로 HW 초기화를 자동 수행합니다.
 

@@ -564,7 +564,7 @@ R -> S: "ATOMIC_ACK PSN=N\nAETH + AtomicAckETH(orig_data)" { style.stroke-dash: 
 
 ### 5.6 Ordering Rules — Transaction Ordering
 
-IB spec §9.6 에는 transaction ordering 의 정밀한 규칙이 있음. 핵심:
+IB spec §9.6 에는 transaction ordering 에 관한 정밀한 규칙이 정의되어 있습니다. 검증 시 scoreboard 가 이 규칙을 정확히 반영해야 false positive 를 막을 수 있으므로, 아래 핵심 규칙을 파악해두어야 합니다.
 
 | 규칙 | 내용 |
 |------|------|
@@ -623,7 +623,7 @@ IB spec §9.6 에는 transaction ordering 의 정밀한 규칙이 있음. 핵심
     | Two-sided | SEND with Immediate | O | O | O (4 byte) |
     | Two-sided | SEND with Invalidate | O | O | (R_Key 운반) |
 
-    검증 핵심: **WRITE_WITH_IMM 은 one-sided 의 외형이지만 receiver RECV WQE 를 소모** 한다. RECV 부족 시 RNR. scoreboard 가 이를 단순 WRITE 처럼 처리하면 RNR injection 시 false fail.
+    검증 시 주의해야 할 점이 있습니다. **WRITE_WITH_IMM 은 외형상 one-sided 처럼 보이지만, 실제로는 receiver RECV WQE 를 소모합니다.** RECV WQE 가 부족하면 RNR 이 발생하므로, scoreboard 가 이를 단순 WRITE 로 취급하면 RNR injection 시나리오에서 false fail 이 납니다.
 
 ### 5.10 Confluence 보강 — CQE 의 PSN-related 필드 (DV spec)
 

@@ -44,21 +44,14 @@
 
 ### 1.1 시나리오 — _LCRC error_ vs _ECRC error_ 의 진단
 
-당신은 PCIe error log:
+PCIe error log 한 줄을 마주쳤다고 가정합니다.
 ```
 PCI Express: Correctable error: LCRC error
 ```
 
-이 한 줄이 _즉시_ 알려주는 것:
-- **L** in LCRC = _Link Layer_ → DLL (Data Link Layer) 책임.
-- **Correctable** → DLL 의 _ACK/NAK retry_ 가 자동 복구.
-- 즉 _복구됨_, 단 _frequency 증가_ 면 _PHY 신호 품질_ 문제 의심.
+이 줄이 담고 있는 정보는 layer 모델을 알면 즉시 풀립니다. LCRC 의 L 은 Link Layer, 곧 DLL(Data Link Layer)의 책임임을 뜻하고, Correctable 은 DLL 의 ACK/NAK retry 가 자동으로 복구했다는 상태입니다. 따라서 시스템은 이미 복구된 상태이지만, 이 오류가 빈도를 높이고 있다면 PHY 의 신호 품질을 의심해야 합니다. 반면 ECRC error 라면 E 가 End-to-end 를 의미하므로 Transaction Layer 의 일이 되고, Endpoint 의 TLP 생성 버그 또는 RC 의 수신 문제로 진단 방향이 전혀 달라집니다.
 
-vs _ECRC error_:
-- **E** = _End-to-end_ → Transaction Layer 책임.
-- _Endpoint 의 TLP 생성 또는 RC 의 receive_ 문제.
-
-**같은 "CRC error" 라도 layer 가 다르면 _완전히 다른 진단_**. Layer 모델 모르면 _혼동_ → 잘못된 RTL 영역 디버그.
+같은 "CRC error" 라도 어느 layer 의 CRC 인지에 따라 진단 경로가 완전히 갈립니다. Layer 모델 없이 두 오류를 동일 범주로 묶으면 엉뚱한 RTL 영역을 디버깅하게 됩니다.
 
 **모든 PCIe spec 의 기능 분류와 디버그 분류가 "어느 layer 의 일?"** 에서 출발합니다. AER (Module 07) 의 error class, retry 메커니즘 (Module 04), LTSSM (Module 05) 모두 layer 책임이 명확히 분리된 상태에서 정의됩니다.
 

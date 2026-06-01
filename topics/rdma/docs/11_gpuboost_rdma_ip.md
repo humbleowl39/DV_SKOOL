@@ -46,12 +46,7 @@
 
 ### 1.1 시나리오 — "scoreboard 가 fail 했는데 _누구_ 책임?"
 
-당신은 RDMA-TB 시뮬을 돌립니다. `WC_REM_ACCESS_ERR` 가 떴습니다. 즉시 두 후보:
-
-- **(a)** sender 의 _requester wrapper_ 가 잘못된 rkey 를 보냈다 (송신측 버그).
-- **(b)** receiver 의 _responder wrapper_ 가 valid rkey 를 잘못 reject 했다 (수신측 버그).
-
-이 분기를 즉답하려면 _두 wrapper 의 경계_ 와 _signal 흐름_ 을 알아야 합니다. 단순 spec 만으로 부족 — **구현의 ground truth** 가 필요.
+RDMA-TB 시뮬을 돌리다가 `WC_REM_ACCESS_ERR` 가 뜰 때, 이것이 sender 의 _requester wrapper_ 가 잘못된 rkey 를 보낸 송신측 버그인지, 아니면 receiver 의 _responder wrapper_ 가 valid rkey 를 잘못 reject 한 수신측 버그인지 즉답해야 할 때가 있습니다. 이 분기를 빠르게 판단하려면 두 wrapper 의 경계와 signal 흐름을 알아야 하는데, spec 만으로는 부족하고 **구현의 ground truth** 가 필요합니다.
 
 GPUBoost RDMA-IP 는 5 개 wrapper 분업 — **requester / completer / responder / cc / mmu**. 각 wrapper 가 _다른 II_ (handle rate) 와 _다른 latency budget_ 을 가지므로:
 

@@ -45,21 +45,9 @@
 
 ### 1.1 시나리오 — _Chain_ 의 _한 link_ 가 깨지면
 
-당신의 secure boot 가 _BL1 → BL2 → kernel_ 3 단계. 모든 단계에 서명 검증.
+BL1 → BL2 → kernel 세 단계 각각에 서명 검증이 있는 구조를 가정합시다. 공격자가 BL2 image 를 위조(custom code 삽입)하면 어떻게 됩니까? chain 이 온전하다면 BL1 이 BL2 서명 검증에서 FAIL 을 내고 boot 를 abort 합니다. 그러나 BL1 이 BL2 서명 검증 단계를 구현 누락이나 race condition 으로 skip 한다면, BootROM 은 BL1 서명 검증을 통과시키지만 BL1 은 위조된 BL2 를 그대로 실행합니다 — 결국 kernel 전체가 공격자 코드로 교체됩니다.
 
-**Attack 시도**: 공격자가 _BL2 image_ 를 위조 (custom code 삽입).
-
-정상 동작:
-1. BootROM 이 BL1 서명 검증 → OK → BL1 실행.
-2. BL1 이 BL2 서명 검증 → **FAIL** (위조됨) → boot abort.
-
-**Chain 의 한 link 누락 시나리오**: BL1 이 _BL2 서명 검증_ 단계를 _skip_ (구현 누락 또는 race condition).
-1. BootROM 이 BL1 서명 검증 → OK.
-2. BL1 이 BL2 _no verify_ → BL2 (위조됨) 실행 → kernel 위조.
-
-**결과**: HW RoT 가 강해도 _SW chain 의 한 link 누락_ 으로 전체 무효.
-
-검증의 핵심: **모든 link 가 _다음 단계 진입 전_ 서명 검증 통과** 확인.
+이 시나리오가 보여주는 것은 HW RoT 가 아무리 강해도 SW chain 의 한 link 가 빠지면 전체가 무효가 된다는 사실입니다. 따라서 검증이 확인해야 하는 invariant 는 하나입니다. **모든 link 가 다음 단계 진입 전에 서명 검증을 통과해야 한다.**
 
 HW RoT 만으로는 모든 것을 검증할 수 없습니다 — BootROM 면적이 한정되고, DRAM 도 안 켜져 있고, OS 의 모든 코드를 ROM 에 담을 수도 없습니다. 그래서 **trust 는 _전파_ 됩니다**: 한 단계 가 다음 단계의 서명을 확인한 뒤에만 제어권을 넘긴다는 릴레이.
 

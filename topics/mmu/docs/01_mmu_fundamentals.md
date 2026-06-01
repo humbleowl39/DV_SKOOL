@@ -44,20 +44,11 @@
 
 ### 1.1 시나리오 — _Process 격리_ 가 _없으면_?
 
-당신은 OS 설계자. 두 process 가 _동시 실행_:
-- **Process A**: 비밀번호 저장 (메모리 0x1000).
-- **Process B**: 게임. 일반 메모리 사용.
+OS 설계자 입장에서 생각해 보면, 두 process 가 물리 DRAM 주소를 직접 공유할 때 어떤 일이 생기는지 금방 알 수 있습니다. 비밀번호를 PA 0x1000 에 저장 중인 Process A 와 게임을 실행 중인 Process B 가 동시에 돌아간다면, B 가 버그나 악의적 코드로 0x1000 을 읽는 순간 A 의 비밀번호가 그대로 노출됩니다. 두 process 가 동시에 같은 주소에 쓰면 서로의 데이터를 오염시킵니다.
 
-만약 _MMU 없이_ 두 process 가 _직접_ DRAM 사용:
-- B 의 _임의 메모리 read_ (예: 버그, 또는 의도적 공격) → A 의 0x1000 의 비밀번호 _노출_.
-- 동시에 _쓰면_ → 서로 data corruption.
+MMU 는 이 문제를 각 process 에게 _독립된 가상 주소 공간_ 을 부여함으로써 해결합니다. 같은 VA 0x1000 이라도 Process A 에서는 PA 0x80000000, Process B 에서는 PA 0x90000000 으로 매핑되므로, 두 process 는 물리적으로 완전히 다른 메모리를 봅니다. 이 매핑을 process 별로 관리하는 것이 page table 이고, 그 덕분에 Process B 는 Process A 의 물리 주소를 아예 알 수 없습니다.
 
-**MMU 의 해법**:
-- 각 process 가 _자신의 VA space_ — 0x1000 이 A 에서는 PA 0x80000000, B 에서는 PA 0x90000000.
-- Page table 이 _VA → PA 매핑_ 을 process 별 관리.
-- 한 process 가 _다른 process 의 메모리_ 자체를 _주소조차_ 모름.
-
-이게 _OS 의 가장 근본적 보안_. UNIX/Linux/Windows/macOS 모두 _MMU 없이는 multi-user system 불가능_.
+이것이 OS 보안의 가장 근본적인 메커니즘입니다. UNIX/Linux/Windows/macOS 가 multi-user system 을 지원하는 것은 모두 MMU 위에서입니다.
 
 이 토픽의 모든 후속 모듈은 한 가정에서 시작합니다 — **"CPU 와 device 가 보는 주소(Virtual Address)는 실제 DRAM 주소(Physical Address)가 아니다"**. Page table 이 왜 multi-level 인지, TLB 가 왜 latency-critical 인지, IOMMU 가 왜 SoC 보안의 토대인지 — 모두 이 한 가정의 파생입니다.
 
@@ -208,13 +199,9 @@ ARMv8 Exception Level 별 Translation:
                        관리자 = Hypervisor
   EL3     별도 regime: TTBR0_EL3                               → Secure Monitor 전용
                        관리자 = Secure Firmware (TF-A 등)
-
-핵심:
-  - EL0 (User) 와 EL1 (Kernel) 은 같은 Stage 1 regime 을 공유
-    → TTBR0 = user-half, TTBR1 = kernel-half
-  - 가상화 켜지면 EL1 의 PA 는 _진짜 PA 가 아님_ — IPA → S2 walk 한번 더
-  - 각 regime 은 독립 page table + 독립 TLB tag (ASID/VMID)
 ```
+
+세 가지 사항을 기억해 두면 이후 오해를 줄일 수 있습니다. 첫째, EL0(User)와 EL1(Kernel)은 같은 Stage 1 regime 을 공유합니다 — TTBR0 가 user 공간, TTBR1 이 kernel 공간을 담당합니다. 둘째, 가상화(EL2)가 활성화되면 EL1 에서 보이는 PA 는 실제 물리 주소가 아닌 IPA(Intermediate PA)이고, Hypervisor 의 Stage 2 walk 를 한 번 더 거쳐야 진짜 PA 가 됩니다. 셋째, 각 regime 은 독립적인 page table 과 독립적인 TLB 태그(ASID/VMID)를 가지므로 서로 충돌하지 않습니다.
 
 ### 4.3 가상 주소가 해결하는 5가지 문제
 
@@ -389,13 +376,9 @@ ARMv8에서 Exception Level별 Translation Regime:
   | EL3    | Secure Monitor   | Secure Firmware    |
   |        | (별도 Translation)|                   |
   +--------+------------------+-------------------+
-
-핵심:
-  - EL0 (User) + EL1 (Kernel): 같은 Stage 1 Translation 공유
-    → TTBR0_EL1 = User 공간, TTBR1_EL1 = Kernel 공간
-  - EL2 (Hypervisor): Guest OS의 IPA를 실제 PA로 변환
-  - 각 Regime은 독립적인 Page Table + TLB 공간을 가짐
 ```
+
+이 표에서 주목할 구조는 세 가지입니다. EL0(User)와 EL1(Kernel)은 Stage 1 Translation 을 공유하되 주소 공간을 나눠 가집니다 — TTBR0_EL1 이 user 공간, TTBR1_EL1 이 kernel 공간을 담당합니다. EL2(Hypervisor)는 Guest OS 가 생성한 IPA 를 실제 PA 로 변환하는 Stage 2 를 추가로 수행합니다. 각 Regime 은 독립적인 page table 과 TLB 공간을 가지므로, regime 간 매핑이 서로 간섭하지 않습니다.
 
 ### 5.7 Secure vs Non-secure — TrustZone 과 MMU
 

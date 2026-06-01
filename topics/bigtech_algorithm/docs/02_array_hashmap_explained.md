@@ -46,16 +46,17 @@
 
 가장 흔한 면접 문제: "배열에서 합이 K 인 두 수 찾기".
 
-**Naive (O(N²))**:
+모든 쌍을 직접 확인하는 Naive 접근은 N=10⁵ 일 때 10¹⁰ 연산으로 100 초가 걸려 면접에서는 제출 자체가 의미가 없습니다.
+
 ```python
 for i in range(N):
     for j in range(i+1, N):
         if arr[i] + arr[j] == K:
             return (i, j)
 ```
-N=10⁵ 면 10¹⁰ 연산 → 100 초. 면접에서 _fail_.
 
-**Hash map (O(N))**:
+병목은 내부 루프가 "complement 가 이미 등장했는가?" 를 매번 처음부터 뒤지는 데 있습니다. 이 검색 하나를 hash map 의 O(1) lookup 으로 대체하면 전체 복잡도가 O(N) 으로 떨어지고, N=10⁵ 일 때 수 µs 에 통과합니다.
+
 ```python
 seen = {}
 for i, x in enumerate(arr):
@@ -63,9 +64,8 @@ for i, x in enumerate(arr):
         return (seen[K - x], i)
     seen[x] = i
 ```
-N=10⁵ 면 10⁵ 연산 → _수 µs_. _Pass_.
 
-**핵심 통찰**: "이전에 _본 적 있는_ 값을 _O(1)_ 에 확인" — 이게 hash map 의 모든 응용의 _공통 패턴_.
+이 전환의 본질은 "이전에 본 적 있는 값을 O(1) 에 확인한다" 는 것이며, 이것이 hash map 모든 응용에 공통으로 흐르는 패턴입니다.
 
 LeetCode Easy / Medium 문제의 **30~40 %** 는 hash map 단 하나로 O(N) 풀이가 가능합니다. "이전에 본 적 있는가?" 라는 질문이 등장하면 거의 항상 hash map 후보 — 면접 첫 풀이를 _시작하는 속도_ 가 hash map 신호 인지에 달려 있습니다.
 
@@ -263,7 +263,7 @@ foreach (seen[k]) ...   // 순회
 Brute Force:  매번 배열 전체를 검색 → O(n) × n번 = O(n²)
 Hash Map:     exists()로 O(1) 검색  → O(1) × n번 = O(n)
 
-핵심: Hash Map 의 Key = 나중에 찾고 싶은 값
+Hash Map 의 Key = 나중에 찾고 싶은 값
 ```
 
 이 전환이 가능한 이유는 Hash Map 이 검색 비용을 O(n) 에서 O(1) 로 낮추는 대신 O(n) 의 추가 메모리를 소비하기 때문입니다. 이미 지나쳐 온 원소들을 테이블에 보존하고, 이후 순회에서 complement 존재 여부를 배열을 다시 뒤지지 않고 한 번의 해시 계산으로 확인합니다. 결국 이중 루프의 내부 루프 전체를 한 번의 lookup 으로 대체하는 것이 O(n²) → O(n) 전환의 본질입니다.

@@ -45,9 +45,9 @@
 
 ### 1.1 시나리오 — 1000 GPU 가 한 link 에 _동시에_ 보낸다
 
-당신은 1000 GPU 의 _all-to-all_ 통신을 RDMA 로 짭니다. 평소엔 잘 동작합니다. 그런데 _all-reduce ring 의 한 step_ 에서 거의 _모든 GPU_ 가 _하나의 link_ 로 동시에 보내는 incast 가 발생합니다.
+1000 GPU all-to-all 통신을 RDMA 로 구성하면 평소에는 잘 돌아갑니다. 그런데 all-reduce ring 의 특정 step 에서 거의 모든 GPU 가 단 하나의 link 로 동시에 데이터를 보내는 incast 가 발생하는 순간, 상황이 완전히 달라집니다.
 
-다음 세 시나리오를 비교해보세요:
+아래 네 시나리오를 비교하면 메커니즘별 차이가 명확해집니다.
 
 | 시나리오 | Switch buffer | 결과 |
 |---------|-------|------|
@@ -56,13 +56,7 @@
 | **C. ECN+DCQCN 만** | mark CE bit → sender 점진 감속 | 반응 시간 ~ µs, 그동안 일부 drop 가능 |
 | **D. PFC + ECN + DCQCN** | 즉시 PFC 로 막고, ECN 신호로 sender 가 천천히 감속 | _이중 안전망_ — drop 0, deadlock risk 적음 |
 
-**왜 _3 가지 메커니즘이 동시에 필요_ 한가?**
-
-- **PFC** = 즉각성 (ns scale 의 hop PAUSE) — buffer overflow _직전_ 멈춤. 단점: deadlock risk.
-- **ECN** = 신호 (packet 단위 마킹) — sender 가 무엇이 일어났는지 _안다_. 단점: 반응 _이후_.
-- **DCQCN** = 적응형 rate control (µs scale) — sender 의 _점진_ 감속/가속 정책. ECN 없이는 신호가 없음.
-
-세 메커니즘의 _time scale_ 이 모두 다르기 때문에 _하나가 다른 것을 대체할 수 없습니다_. 마치 자동차의 ABS + ESP + 안전벨트 같은 _계층화된 안전망_.
+세 메커니즘을 동시에 써야 하는 이유는 각각이 다루는 시간 단위가 다르기 때문입니다. PFC 는 ns 단위로 hop-by-hop PAUSE 를 걸어 buffer overflow 를 막지만, 그 대가로 deadlock 위험을 내포합니다. ECN 은 packet 단위로 CE 비트를 마킹해 sender 가 혼잡을 인식하게 하지만, 신호를 받기까지 이미 혼잡이 시작된 뒤입니다. DCQCN 은 ECN 신호를 받아 µs 단위 rate 점진 감속과 회복을 수행하는데, ECN 신호가 없으면 작동 자체가 불가능합니다. 세 메커니즘의 time scale 이 각기 다르므로 어느 하나만으로 나머지를 대체할 수 없습니다. 자동차의 ABS, ESP, 안전벨트처럼 계층화된 안전망이 필요한 구조입니다.
 
 **RDMA 의 검증 가치는 "행복 경로" 가 아니라 "에러 경로"** 에 있습니다. 정상 packet 만 보내면 어떤 구현이든 어느 정도 동작 — 진짜 차이는 (1) congestion 발생 시 fairness 와 throughput 회복, (2) error 발생 시 정확한 status 보고와 QP recovery 입니다. RDMA-TB 의 `error_handling` vplan 이 9 시나리오로 거의 모든 error path 를 커버하는 이유.
 
@@ -682,7 +676,7 @@ retry 시 requester 가 _어떤 PSN 부터 재전송할지_ 를 정하려면 한
         디버그 순서: (1) receiver 의 _NAK syndrome_ 확인 → silent drop 인가 NAK 인가, (2) PFC counter 확인 → storm 인가, (3) retry_cnt / timeout 값 확인.
 
 !!! question "🤔 Q3 — RDMA-TB error 시나리오 설계 (Bloom: Evaluate)"
-    당신은 RDMA-TB 의 `error_handling` vplan 을 본다. S1~S9 시나리오가 _모든 fault class_ 를 커버하는지 어떻게 검증하시겠습니까?
+    RDMA-TB 의 `error_handling` vplan 에는 S1~S9 시나리오가 정의되어 있습니다. 이 시나리오들이 _모든 fault class_ 를 빠짐없이 커버하는지 어떻게 검증하겠습니까?
 
     ??? success "정답"
         Fault class matrix (§5 의 Requester A/B/C + Responder A/B/C/D/J) 를 _세로 축_, S1~S9 를 _가로 축_ 으로 표 작성. 각 (row, col) 셀에 "이 시나리오가 이 fault 를 cover 하나?" 표기.

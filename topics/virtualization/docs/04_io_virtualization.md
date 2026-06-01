@@ -44,7 +44,7 @@
 
 ### 1.1 시나리오 — _100 Gbps NIC_ 의 _4 가지_ 가상화 모델
 
-당신은 VM 에 100 Gbps NIC 제공해야 함. 4 가지 옵션:
+VM 에 100 Gbps NIC 를 제공해야 한다면, 선택할 수 있는 I/O 가상화 모델에 따라 실제로 달성 가능한 throughput 이 크게 달라집니다.
 
 | 모델 | Throughput | CPU overhead | 구현 | 시나리오 |
 |------|----------|------------|------|--------|
@@ -53,11 +53,7 @@
 | **Passthrough** (PCIe assign) | _100 Gbps_ | 작음 | NIC 완전 VM 소유 | _전용 VM, 단 1 VM_ |
 | **SR-IOV** | _90+ Gbps_ | 작음 | 1 NIC → N VF → N VM | _128 VM 동시_ |
 
-**핵심 트레이드오프**:
-- Emulation: 호환성 최고, 성능 최악.
-- VirtIO: 호환성/성능 balance.
-- Passthrough: _하나의 VM_ 만 사용 가능.
-- SR-IOV: _hardware support 필요_ — 모든 NIC 이 지원하는 건 아님. 단 _대규모 cloud_ 에서 _필수_.
+Emulation 은 기존 OS 드라이버를 그대로 쓸 수 있는 호환성이 최고지만, 레지스터 접근마다 VM Exit 을 유발하여 성능이 가장 낮습니다. VirtIO 는 shared ring buffer 와 batching 으로 VM Exit 횟수를 줄여 호환성과 성능을 균형 있게 제공합니다. Passthrough 는 bare metal 에 가장 가까운 성능을 내지만 NIC 하나를 단 하나의 VM 만 독점합니다. SR-IOV 는 NIC 하나를 여러 VF 로 분할하여 128 개 VM 이 동시에 쓸 수 있지만, NIC 자체가 SR-IOV 를 지원해야 하는 HW 의존성이 있습니다. 대규모 클라우드에서는 SR-IOV 가 사실상 필수입니다.
 
 CPU + Memory 가상화는 _상태_ 의 격리이고, I/O 가상화는 _이벤트 + 데이터 흐름_ 의 격리입니다. 100 Gbps NIC, NVMe SSD, GPU 같은 _고대역폭 디바이스_ 의 throughput 은 거의 전적으로 I/O 가상화 모델 선택에서 결정됩니다.
 

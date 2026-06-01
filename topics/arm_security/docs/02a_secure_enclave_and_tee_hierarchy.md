@@ -49,22 +49,9 @@
 
 ### 1.1 시나리오 — TrustZone 자체가 뚫리면?
 
-당신은 TrustZone 으로 결제 모듈을 보호. 안전. 그런데 _2018 Spectre_ 같은 CPU bug 가 발견 — _측면 채널_ 로 NS 가 S 메모리 _읽기 가능_.
+TrustZone 으로 결제 모듈을 보호했다고 해도, 2018 년 Spectre 같은 CPU 버그가 발견되면 캐시 측면 채널을 통해 Non-Secure 코드가 Secure 메모리를 읽어낼 수 있습니다. 실제로 2017 년 CVE-2017-15361(Infineon, TrustZone 안의 RSA 키 생성 약점), 2018 년 Spectre/Meltdown(캐시 측면 채널로 격리 우회), 2020 년 SMASH(TrustZone Rowhammer), 2022 년 ARMv9 CCA bug(PSCI handler 의 메모리 corruption) 처럼 TrustZone 의 격리가 우회된 사례는 꾸준히 등장했습니다.
 
-**실제 사례** (2017-2023):
-- **2017 CVE-2017-15361** (Infineon): TrustZone 안의 RSA 키 생성 약점.
-- **2018 Spectre/Meltdown**: 캐시 측면 채널로 격리 우회.
-- **2020 SMASH**: TrustZone Rowhammer.
-- **2022 ARMv9 CCA bug**: PSCI handler 의 메모리 corruption.
-
-**TrustZone 만으로 _불충분_**. 가장 중요한 비밀 (예: device root key, biometric template) 은 _별도 hardware_ 에 보관:
-
-**Secure Enclave** — _독립_ 한 작은 processor + 전용 RAM + 자체 boot ROM:
-- Main CPU 와 _상호 불신_ — Main CPU 가 망가져도 Enclave 는 안전.
-- Mailbox 로만 통신 (queue 기반).
-- Secure Channel Protocol (SCP03/SCP11) 로 모든 통신 암호화.
-
-Apple Secure Enclave Processor (SEP), Google Titan M, Samsung Knox 가 이 모델.
+이 사례들이 보여주는 것은 TrustZone 만으로는 충분하지 않다는 사실입니다. 가장 중요한 비밀(device root key, biometric template 등)은 Main CPU 와 cache, TLB, branch predictor 같은 마이크로아키텍처 자원조차 공유하지 않는 별도 하드웨어에 보관해야 합니다. 이것이 **Secure Enclave** 의 출발점입니다. Secure Enclave 는 독립된 소형 processor, 전용 RAM, 자체 boot ROM 으로 구성되며, Main CPU 가 망가져도 Enclave 는 안전합니다. 두 사이의 통신은 queue 기반 Mailbox 로만 이루어지고, 모든 메시지는 Secure Channel Protocol(SCP03/SCP11)로 암호화됩니다. Apple Secure Enclave Processor(SEP), Google Titan M, Samsung Knox 가 이 모델의 대표 구현입니다.
 
 Module 01-02 에서 _"TrustZone 이 Secure World 를 격리한다"_ 라고 했지만, **TrustZone 자체가 뚫리면 어떻게 되는가?** 라는 질문에는 답이 없습니다. 실제 사례 — Spectre 류의 캐시 부채널, OP-TEE 의 RCE 취약점, 또는 Trusted OS bug — 가 발생하면 Secure World 의 _모든_ 키와 데이터가 노출됩니다.
 

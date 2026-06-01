@@ -45,16 +45,9 @@
 
 ### 1.1 시나리오 — _하나의 GPU_, _64 VM_
 
-당신은 클라우드 운영자. NVIDIA A100 GPU 1 개를 _64 VM 에 분할_ 임대.
+클라우드 운영자가 NVIDIA A100 GPU 한 개를 64 개 VM 에 분할 임대하는 상황을 생각해봅니다. 각 VM 에 전체 GPU 시간 슬롯을 순서대로 할당하면, 한 VM 의 inference 작업이 GPU 연산 능력의 1% 만 사용해도 나머지 99% 시간 동안 다른 VM 이 차단됩니다. 결과적으로 95% 의 시간이 idle 로 낭비됩니다.
 
-순진한 해법: VM 마다 _전체 GPU 시간 슬롯_ 할당. 결과: 95% 시간이 _idle_ — 한 VM 의 inference 작업이 GPU 의 1% 만 사용해도 나머지 99% 시간 동안 _다른 VM 차단_.
-
-**해법: SR-IOV (Single Root I/O Virtualization)**:
-- 한 _Physical Function (PF)_ + 64 _Virtual Functions (VFs)_.
-- 각 VF 가 _독립적_ BAR + interrupt.
-- IOMMU 가 _VF 별 격리_ — VF 끼리 메모리 안 보임.
-
-결과: 64 VM 이 _동시에_ GPU 의 _다른 부분_ 사용. Utilization 80%+.
+이 문제를 푸는 메커니즘이 SR-IOV (Single Root I/O Virtualization) 입니다. 물리 하드웨어를 하나의 Physical Function (PF) 과 64 개의 Virtual Function (VF) 으로 나누고, 각 VF 는 독립적인 BAR 과 interrupt 를 가지며 IOMMU 가 VF 별로 격리하여 VF 끼리는 서로의 메모리를 볼 수 없습니다. 그 결과 64 개 VM 이 GPU 의 서로 다른 부분을 동시에 사용할 수 있고 utilization 이 80% 이상으로 올라갑니다.
 
 지금까지의 PCIe 는 **"한 host 의 한 EP 가 host memory 와 직접 대화"** 라는 단일 모델이었습니다. 그런데 _modern 데이터센터·AI·cloud_ 의 워크로드는 그 모델로는 풀리지 않습니다 — ① 한 GPU 를 64 개 VM 이 나눠 써야 하고 (SR-IOV), ② DMA 마다 IOMMU walk 가 일어나면 latency 가 못 견디고 (ATS), ③ NIC RX 가 host memory 거치지 않고 GPU memory 로 바로 들어가야 하며 (P2P), ④ DDR 슬롯이 부족해 메모리를 PCIe 슬롯에 꽂아야 합니다 (CXL).
 

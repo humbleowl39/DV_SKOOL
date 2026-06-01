@@ -44,26 +44,13 @@
 
 ### 1.1 시나리오 — _Guest_ 가 _ring 0_ 인 척하기
 
-당신은 hypervisor 설계자. Guest OS (Linux) 가 _자기가 ring 0 (kernel mode)_ 인 줄 알고 동작해야 함. 그런데:
+Hypervisor 를 설계한다는 것은 Guest OS (Linux) 가 자기가 ring 0 (kernel mode) 에 있다고 믿으면서 동작해야 한다는 전제를 지키는 것입니다. 그런데 Guest 가 `CR3` (page table base) 를 변경하면 hypervisor 의 메모리 매핑이 깨져 다른 VM 을 침해하고, `HLT` 를 실행하면 전체 시스템이 정지하며, `INVLPG` 를 실행하면 의도하지 않은 TLB 가 무효화됩니다. Guest OS 의 특권 명령어를 그냥 내버려 두면 격리 자체가 무너집니다.
 
-- Guest 가 `CR3` (page table base) 변경 시도 → _hypervisor 의 메모리 매핑 깨짐_ → 다른 VM 침해.
-- Guest 가 `HLT` (CPU halt) 실행 → _전체 시스템 정지_.
-- Guest 가 `INVLPG` (TLB invalidate) → _wrong TLB 영향_.
+소프트웨어로 이 문제를 푸는 첫 번째 시도는 Guest 코드를 실행 전에 스캔하여 sensitive instruction 을 hypervisor 핸들러 호출로 동적 재작성하는 방법이었습니다. 이것이 Binary Translation 입니다. 동작은 하지만 변환 오버헤드와 구현 복잡도가 크고, self-modifying code 처리가 어렵습니다. 두 번째 시도는 Guest OS 커널을 직접 수정하여 sensitive 명령어를 hypercall 로 대체하는 Para-virtualization 입니다. trap 오버헤드를 없앤 대신, 소스가 없는 Windows 처럼 변경 불가능한 OS 에는 적용할 수 없습니다.
 
-**순진한 해법 1 (소프트웨어)**: Guest 코드를 _스캔_ + sensitive instruction _재작성_. Slow, 복잡.
+Intel VT-x 와 AMD-V 는 이 문제를 하드웨어 레벨에서 근본 해결했습니다. CPU 에 _VMX root mode_ 와 _VMX non-root mode_ 를 추가하여 hypervisor 와 Guest 가 각자 자기 영역의 ring 0 을 갖도록 분리했습니다. Guest 는 non-root 의 ring 0 에서 자기가 최고 권한이라고 믿으면서 동작하고, sensitive instruction 이 실행되면 HW 가 자동으로 VM Exit 을 발생시켜 root mode 의 hypervisor 가 가로채서 emulate 합니다. 일반 명령어는 그대로 native 실행됩니다.
 
-**순진한 해법 2 (Paravirtualization)**: Guest OS 수정해서 sensitive 명령을 _hypercall_ 로 교체. 변경 불가능한 OS (Windows) 적용 안 됨.
-
-**Intel VT-x / AMD-V 의 해법**: **Ring -1 hypervisor**.
-- CPU 에 _root mode_ + _non-root mode_ 추가 (기존 ring 0-3 위).
-- Guest 가 non-root mode 에서 _자기가 ring 0_ 인 줄 알고 동작.
-- Sensitive instruction → _VM Exit_ → root mode 의 hypervisor 가 가로채서 emulate.
-- 일반 instruction → 그대로 native 실행. _대부분_ overhead 없음.
-
-**VMCS (Virtual Machine Control Structure)**: VM 별 _상태 보관 메모리 구조_.
-- Guest state: CR0, CR3, EIP, EFLAGS 등.
-- Host state: VM Exit 시 복원할 hypervisor 상태.
-- Control: 어떤 명령이 _exit 유발_ 할지.
+VM 별 상태는 **VMCS (Virtual Machine Control Structure)** 에 보관됩니다. VMCS 는 Guest state (CR0, CR3, EIP, EFLAGS 등), Host state (VM Exit 시 복원할 hypervisor 상태), VM-Execution Control (어떤 명령이 exit 을 유발할지) 의 세 영역으로 구성됩니다.
 
 CPU 가상화는 가상화의 **심장** 입니다. Memory / I/O 가상화도 결국 "Guest 가 sensitive 명령을 실행하면 어떻게 되는가" 의 변형이고, VMCS / VM Exit / EL 전환 같은 어휘는 이후 모듈 모든 그림에 등장합니다.
 

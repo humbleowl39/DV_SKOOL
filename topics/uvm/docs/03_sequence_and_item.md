@@ -44,17 +44,7 @@
 
 ### 1.1 시나리오 — _100 시나리오_ 가 _10 줄_ 로
 
-당신은 SoC 검증. 시나리오:
-- Test 1: AXI write 후 CPU read.
-- Test 2: AXI write + DMA + CPU read.
-- Test 3: AXI write + concurrent reset.
-- ... × 100.
-
-**Naive (sequence 없이)**: 각 test 가 _개별 SV file_, 500 줄씩 = **50000 줄 코드**.
-
-**UVM sequences**:
-- _Base sequence_: `axi_write_seq`, `axi_read_seq`, `dma_seq`, `reset_seq` (각 100 줄).
-- _Virtual sequence_: 위 base 들을 _조합_ 으로 시나리오 구성. **각 test 1-2 줄**.
+SoC를 검증하다 보면 "AXI write 후 CPU read", "AXI write에 DMA와 reset을 겹친 경우"처럼 수백 가지 시나리오를 다뤄야 합니다. sequence 없이 각 시나리오를 별도의 SystemVerilog test 파일로 작성하면, 시나리오 하나당 수백 줄이 필요해 전체가 수만 줄로 불어나고 재사용도 되지 않습니다. UVM은 이 문제를 계층 분리로 풉니다. `axi_write_seq`·`axi_read_seq`·`dma_seq`·`reset_seq` 같은 **기본 sequence**를 각각 한 번씩만 작성해 두면, **virtual sequence**가 이들을 시간·순서로 조합해 시나리오를 구성합니다. 그 결과 새 시나리오를 추가할 때 늘어나는 코드는 조합을 기술하는 한두 줄뿐입니다.
 
 ```
 class test_3 extends base_vseq;
@@ -69,7 +59,7 @@ endclass
 
 총 코드: ~1000 줄 (base) + 100 × 5 줄 (combinations) = **1500 줄** vs naive 50000 줄.
 
-**Sequence 의 핵심 가치**: _조합 가능성_. 시나리오 폭증 시 _코드 폭증 안 함_.
+Sequence의 핵심 가치는 **조합 가능성**에 있습니다. 시나리오 수가 폭증해도 코드는 조합 표현식만큼만 늘어납니다.
 
 검증 가치의 절반은 **자극의 다양성과 의도성** 에서 나옵니다. Sequence 가 부실하면 coverage 가 안 메워지고 (curated 가 아니라 우연이 채움), 너무 hard-coded 면 재사용이 안 됩니다 (시나리오 1 개당 sequence 1 개의 폭발).
 

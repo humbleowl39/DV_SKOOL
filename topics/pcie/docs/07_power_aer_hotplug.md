@@ -45,23 +45,11 @@
 
 ### 1.1 시나리오 — _laptop 배터리_ 1 시간
 
-당신은 laptop 디자이너. PCIe NVMe SSD 사용. _Idle 시_ ASPM 미지원:
-- SSD 가 _L0 (full power)_ 유지.
-- _수 W_ 소비 (idle 인데도).
-- Laptop _1 시간_ 배터리 cliff.
+PCIe NVMe SSD 를 탑재한 laptop 을 설계할 때 ASPM 을 지원하지 않으면, SSD 는 idle 상태에서도 L0(full power) 를 유지한 채 수 W 를 소비합니다. 그 결과 배터리가 1 시간 만에 소진됩니다. ASPM 을 지원하면 idle 감지 시 L1(low power) 로 전환되어 SSD 소비 전력이 0.1 W 수준으로 떨어지고, 동일 배터리로 5~6 시간을 쓸 수 있게 됩니다. 설정 하나의 차이가 사용자 경험을 수 배 갈라놓습니다.
 
-ASPM 지원 시:
-- Idle 감지 → L1 (low power) 전환.
-- SSD power _0.1 W_.
-- Laptop _5-6 시간_ 배터리.
+전력 관리 외에도 두 가지 임계 시나리오가 더 있습니다. AER 를 설정하지 않은 상태에서 Cpl timeout 같은 PCIe error 가 한 번 발생하면 커널 panic 으로 이어지지만, AER 가 올바르게 구성되어 있으면 device reset 후 복구됩니다. Hot Plug 처리가 누락된 상황에서 SSD 가 갑자기 뽑히면 driver 가 MMIO 를 시도하다 bus error 를 만나 OS 가 freeze 되지만, Hot Plug 를 제대로 구현하면 graceful 하게 처리됩니다.
 
-**ASPM 설정 차이 _하나_** 가 사용자 경험의 _수 배_ 차이.
-
-다른 두 critical scenario:
-- **AER (Cpl timeout)**: 한 PCIe error → AER 미설정 시 _커널 panic_, 설정 시 _device reset 후 복구_.
-- **Hot Plug (SSD 뽑힘)**: surprise removal → driver 가 _MMIO_ 시도 → bus error → _OS freeze_. Hot Plug 적절 구현 시 _graceful 처리_.
-
-이 _3 영역_ 이 _production 품질_ 의 진짜 결정자.
+이 세 영역 — 전력 관리, 오류 처리, Hot Plug — 이 production 품질을 실질적으로 결정합니다.
 
 지금까지의 모듈은 **"정상 동작 path"** 였습니다 — TLP 가 잘 만들어지고, ACK 가 잘 돌고, LTSSM 이 L0 에 머무는 happy path. 그런데 production 환경에서 PCIe IP / driver / OS 가 **품질의 차이를 드러내는 곳은 happy path 가 아니라** ① idle 시 전력을 얼마나 잘 빼는가 (ASPM), ② link error 가 났을 때 graceful 하게 처리되는가 (AER), ③ NVMe 가 갑자기 뽑혔을 때 driver 가 무한 reset loop 에 빠지지 않는가 (Hot Plug) 의 세 영역입니다.
 

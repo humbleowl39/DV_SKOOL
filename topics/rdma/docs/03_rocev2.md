@@ -44,7 +44,7 @@
 
 ### 1.1 시나리오 — "InfiniBand 사고 싶은데, 데이터센터에 깔린 Ethernet 은 어떡하지?"
 
-당신은 데이터센터 운영자입니다. 5000 대 서버에 _이미_ 10 GbE → 100 GbE Ethernet switch fabric 이 깔려 있고, IP 관리/모니터링/ACL 체계가 작동합니다. 그런데 _AI 학습 잡_ 을 위해 RDMA 가 필요해졌습니다.
+5000 대 서버에 이미 10 GbE → 100 GbE Ethernet switch fabric 이 깔려 있고 IP 관리/모니터링/ACL 체계가 운영되는 데이터센터에서, AI 학습 잡을 위해 RDMA 를 도입해야 하는 상황을 생각해 보겠습니다.
 
 세 가지 선택지가 있습니다:
 
@@ -560,7 +560,7 @@ RDMA-CM 의 핸드셰이크는 **UD QP1 (=GSI) 위의 MAD** 로 흘러간다. us
         이게 "**lossless ≠ 옵션, 사실상 필수**" 인 이유. PFC + ECN + DCQCN 의 deployment cost 가 정당화되는 정량 근거.
 
 !!! question "🤔 Q2 — ICRC mask 누락 디버그 (Bloom: Apply)"
-    당신은 RoCEv2 의 receiver 측 ICRC 검증을 구현 중. 모든 RC packet 이 fail 합니다. mask 누락이 의심됩니다. 어떤 영역을 _체크리스트로_ 확인하시겠습니까?
+    RoCEv2 receiver 측 ICRC 검증을 구현하는 중에 모든 RC packet 이 fail 하고 있습니다. mask 누락이 의심될 때, 어떤 영역을 _체크리스트로_ 확인해야 합니까?
 
     ??? success "정답"
         RoCEv2 ICRC mask 가 채워야 할 영역:

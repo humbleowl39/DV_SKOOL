@@ -44,21 +44,7 @@
 
 ### 1.1 시나리오 — _God Env_ 의 죽음
 
-당신은 _작은_ TB 시작. `env` 안에 모든 component 직접 instantiate. 작동 OK.
-
-6 개월 후:
-- 새 protocol 추가 → env 에 component 더 추가.
-- 새 sequence 추가 → env 가 sequencer ref 들고 시작.
-- 새 scoreboard → env 가 직접 connect.
-
-1 년 후: **env class 2000 줄**. 모든 component 의 _hidden coupling_:
-- env 에서 a 변경하면 b 도 깨짐 (test 가 그것에 의존).
-- 새 project 포팅 → env 통째로 _copy_ → 많은 변경 → 새 bug.
-
-해법: **Agent 캡슐화**:
-- env 는 _agent들의 컨테이너_ 만.
-- 각 agent 가 _자기 component_ 관리.
-- env 추가/변경이 _다른 agent 에 영향 없음_.
+처음 작은 TB를 시작할 때는 `env` 안에 모든 컴포넌트를 직접 instantiate하는 것이 가장 빠른 방법처럼 보입니다. 그런데 시간이 지나면서 새 프로토콜이 추가될 때마다 env에 컴포넌트가 붙고, 새 sequence가 필요하면 env가 sequencer 핸들을 직접 들고 시작하며, 새 scoreboard도 env가 직접 연결하는 식으로 커집니다. 1년 후에는 env 클래스가 2000줄에 달하면서 모든 컴포넌트 사이에 숨겨진 결합이 생깁니다. env의 한 곳을 수정하면 test가 의존하는 다른 부분이 함께 깨지고, 새 프로젝트에 포팅하려면 env를 통째로 복사한 뒤 수십 군데를 고쳐야 해서 새 버그가 따라옵니다. 이 문제의 해법은 **Agent 캡슐화**입니다. env는 agent들의 컨테이너 역할만 하고, 각 agent가 자신의 driver·monitor·sequencer를 스스로 관리하면, env에 새 agent를 추가해도 기존 agent에 영향이 없는 구조가 됩니다.
 
 UVM 안티패턴은 **처음에는 작동하지만 환경이 커지면 cascading failure** 를 만듭니다. 6 년+ 경력자도 새 프로젝트에서 자주 반복하는 실수가 있고, 코드 리뷰에서 근거 없이 "이건 좀..." 같은 피드백은 무력합니다.
 
@@ -498,7 +484,7 @@ endclass
 | 3 | Driver 도입 (기존 task 자극을 Sequence + Driver 로) | 같은 시드에서 같은 자극 인가 (signal-level diff) |
 | 4 | Sequence Library 정비 + Virtual Sequence | 기존 테스트 리스트와 1:1 매핑 + coverage 유지 |
 
-핵심: 한 번에 다 갈아엎지 않기. 각 단계에서 _기능 동등성_ 을 sanity 로 확인.
+각 단계를 완료할 때마다 기존 시뮬 결과와의 **기능 동등성**을 sanity로 확인합니다. 한 번에 전체를 갈아엎으면 어느 단계에서 문제가 생겼는지 추적하기 어렵기 때문에, 단계별 점진 전환이 UVM 마이그레이션의 표준 접근입니다.
 
 ---
 

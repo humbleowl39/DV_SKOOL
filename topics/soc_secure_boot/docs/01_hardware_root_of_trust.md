@@ -45,22 +45,11 @@
 
 ### 1.1 시나리오 — _신뢰_ 의 _첫 source_ 는 어디?
 
-당신은 Apple iPhone 의 secure boot 설계자. 모든 후속 단계 (BL1 → BL2 → kernel) 가 _서명 검증_ 으로 다음 단계 인증. 그런데:
+Apple iPhone 처럼 BL1 → BL2 → kernel 세 단계 모두 서명 검증으로 다음 단계를 인증하는 체계를 설계한다고 가정해 봅시다. 여기서 피할 수 없는 질문이 생깁니다. **첫 번째 검증자는 누가 검증하는가?**
 
-**문제: 첫 번째 검증자는 _누가_ 검증하나?**
+BL1 (첫 boot loader) 자체가 공격자에 의해 교체 가능하다면, BL1 은 가짜 서명 검증을 통과시키고 임의의 OS 를 로드할 수 있어 이후의 모든 체인이 의미를 잃습니다. 이 순환을 끊는 유일한 방법이 **HW RoT (Hardware Root of Trust)** — 제조 시점에 고정되어 runtime 에 절대 바꿀 수 없는 신뢰의 출발점입니다. 구체적으로 두 요소로 구성됩니다. **BootROM** 은 칩 제조 시 마스크 ROM 으로 구워지므로 실리콘 회로 자체를 교체하지 않는 한 코드를 바꿀 수 없습니다. **OTP (One-Time Programmable) fuse** 는 ROTPK (Root of Trust Public Key) 의 hash 만 저장하며, 한 번 비트를 blow 하면 물리적으로 되돌릴 수 없습니다. BootROM 이 OTP 에서 ROTPK hash 를 읽어 BL1 서명을 검증하는 것이 trust chain 의 첫 번째 link 입니다.
 
-만약 BL1 (첫 boot loader) 도 _공격자가 교체_ 가능하면 → BL1 이 _가짜 서명 검증_ 통과시키고 _임의 OS_ 로드 → 전체 보안 무효.
-
-**해법: HW RoT (Hardware Root of Trust)**:
-- **BootROM**: 칩 제조 시점에 _마스크 ROM_ 으로 박힘. _수정 절대 불가능_ — 실리콘 회로 자체.
-- **OTP (One-Time Programmable) fuse**: ROTPK (Root of Trust Public Key) 의 _hash_ 만 저장. _한 번 프로그램 후 변경 불가_.
-- BootROM 이 _OTP 의 ROTPK hash_ 를 _읽고_ BL1 서명 검증.
-
-**Immutability 의 근거**:
-- BootROM 코드 변경 → 칩 자체 교체 필요 (실리콘 수준).
-- OTP fuse 변경 → fuse 가 _영구 blown_, 물리적 변경 불가.
-
-이 _hardware 수준의 immutability_ 가 _신뢰의 anchor_. SW 만으로는 _절대_ 만들 수 없는 신뢰.
+이 _hardware 수준의 immutability_ 가 신뢰의 anchor 입니다. BootROM 코드를 바꾸려면 칩 자체를 교체해야 하고, OTP fuse 는 once blown 이면 물리적으로 변경 불가이므로 SW 만으로는 절대 만들 수 없는 신뢰입니다.
 
 이후 모든 secure boot 모듈은 **"제조 시점에 한 번 박아 둔 anchor 가 변하지 않는다"** 라는 한 가정에서 출발합니다. ROTPK hash, anti-rollback counter, JTAG lock, secure boot enable bit — 이 모든 것이 _immutable_ 이라는 약속이 깨지면 chain of trust, 서명 검증, 공격 방어가 차례로 무너집니다.
 
@@ -189,7 +178,7 @@ status_t verify_rotpk(const uint8_t *cert_pk, size_t pk_len) {
 | 신뢰 근거 | 순환: "이 SW 를 누가 검증?" | 제조 시점 고정, 순환 없음 |
 | Reset 후 상태 | 메모리 내용 보장 불가 | ROM/OTP 항상 동일 |
 
-**핵심 논리**: SW 는 순환 신뢰 문제를 만든다 — _검증자를 누가 검증하나?_ HW RoT 는 제조 시점에 고정되고 runtime 변경 불가능하므로 이 순환을 끊는다.
+SW 만으로 신뢰 체계를 세우면 반드시 "검증자를 누가 검증하나?" 라는 순환에 빠집니다. HW RoT 는 제조 시점에 코드와 키가 고정되고 runtime 에 변경이 불가능하기 때문에, 이 순환을 구조적으로 끊는 유일한 출발점이 됩니다.
 
 ### 4.3 Secure Boot Lifecycle 4 상태
 

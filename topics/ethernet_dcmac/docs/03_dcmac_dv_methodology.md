@@ -45,20 +45,9 @@
 
 ### 1.1 시나리오 — _Wire-side 끝단_ 의 DV 비용
 
-당신은 DCMAC verification 책임자. 두 가지 압박:
+DCMAC verification 책임자는 서로 충돌하는 두 가지 요구를 동시에 만족시켜야 합니다. 한쪽은 **400 Gbps line-rate 를 유지하면서 frame drop 이 0** 이어야 한다는 성능 요구이고, 다른 한쪽은 **Frame 무결성, FCS, IFG, Pause, PFC, FEC 를 모두 byte-level 로 검증** 해야 한다는 정확성 요구입니다. 둘을 분리해서 보면 각각 쉬워 보이지만, functional test 는 느린 트래픽으로 byte-level 무결성은 잡아도 line-rate corner case 를 놓치고, stress test 는 line-rate 만 유지하다가 frame 내용의 byte corruption 을 놓칩니다. 결국 두 가지를 **동시에** 검증해야 하는데, 이는 line-rate 트래픽을 흘리면서 매 frame 마다 byte-level scoreboard 를 돌려야 한다는 의미이므로 시뮬레이션 시간이 폭증합니다.
 
-1. **Line-rate (400 Gbps)** 가 _유지_ 되어야 함 — frame drop 0.
-2. **Frame 무결성, FCS, IFG, Pause, PFC, FEC** 모두 _byte-level_ 검증.
-
-이 둘이 _동시에_ 어려운 이유:
-
-- _Functional test_: 천천히 frame 보내 OK. → _line-rate corner case 누락_.
-- _Stress test_: Line-rate 만 — frame 내용 무시. → _byte corruption_ 누락.
-- **합쳐야 함**: line-rate 트래픽 + 매 frame _byte-level_ scoreboard. 시뮬 시간 폭증.
-
-또한 DCMAC 은 **silicon 직전 마지막 보루**:
-- TB 가 catch 못한 bug → silicon 후 _SerDes BER 통계_ 로만 보임.
-- BER 1e-12 = _하루 1 frame loss_ → 거의 _발견 불가_ 한 단계까지 잠복 가능.
+또한 DCMAC 은 TOE / IP / 다른 NIC subsystem 의 wire-side 끝단이라는 위치상 특수성이 있습니다. TB 가 발견하지 못한 bug 는 곧바로 wire 를 타고 나가 silicon 후 SerDes BER 통계로만 보이게 됩니다. BER 1e-12 수준이면 하루에 frame 1 개 손실로 환산되어 사실상 발견 불가능한 단계까지 잠복할 수 있습니다.
 
 DCMAC 검증의 핵심 어려움은 두 가지가 **동시에** 일어난다는 점입니다 — (1) **line-rate throughput 유지** 와 (2) **byte-level 무결성 / 프로토콜 / 흐름제어 모두 검증**. 한 쪽만 보면 통과하지만 동시에 두면 corner case 가 silent 로 누적됩니다 (예: pause + line-rate 가 같이 일어날 때 IFG underrun).
 

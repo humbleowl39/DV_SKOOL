@@ -45,13 +45,7 @@
 
 ### 1.1 시나리오 — _IFG 가 11 byte 면_?
 
-당신은 100G Ethernet MAC 을 검증. 모든 frame 정상, FCS 통과. 그런데 _peer 가 frame loss_ 보고.
-
-원인: **IFG 11 byte 발생** (12 byte 규정 위반).
-- Spec: 최소 IFG 12 byte (96 bit).
-- 11 byte → peer PHY 가 다음 frame 의 _preamble_ 인식 못함 → frame _drop_.
-
-11 byte vs 12 byte 의 _0.8% 차이_ — 시뮬에서 _대부분 통과_ 하지만 silicon 에서 _intermittent fail_.
+100G Ethernet MAC 검증이 한창인데 TX 측 모든 frame 이 정상 FCS 를 달고 나가고 있음에도 peer 에서 frame loss 가 보고되는 상황을 생각해 봅시다. 원인을 좁히면 **IFG 가 11 byte 로 줄어든 것** 이 문제입니다. 스펙은 최소 IFG 를 12 byte (96 bit) 으로 규정하는데, 이 한 byte 차이가 수신측 PHY 로 하여금 다음 frame 의 Preamble 을 제때 인식하지 못하게 만들고 결국 frame 을 무음으로 버리게 합니다. 0.8% 의 타이밍 오차이지만, 시뮬레이션에서는 대부분 통과해도 실리콘에서는 간헐적 실패로 나타나는 전형적인 패턴입니다.
 
 DCMAC 검증의 모든 트랜잭션은 **Ethernet frame 1 개** 단위로 출발합니다. Frame 의 어느 byte 가 PHY 영역이고 어느 byte 가 MAC 영역인지, FCS 가 어디부터 어디까지를 보호하는지, IFG 가 왜 12 byte 인지 — 이 어휘 없이 scoreboard / SVA / coverage 를 작성하면 거의 모든 비교가 silent 로 어긋납니다.
 

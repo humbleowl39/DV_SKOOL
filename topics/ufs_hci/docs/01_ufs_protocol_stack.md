@@ -44,21 +44,9 @@
 
 ### 1.1 시나리오 — _스마트폰 storage_ 의 _read latency_
 
-당신은 스마트폰 OEM. 사진 앱이 _느림_. 추적:
-- 앱이 _100 KB image_ read → UFS storage → 1 ms 소요.
-- _병렬_ 4 image read → 4 ms (1 ms × 4 순차).
+스마트폰 OEM 에서 사진 앱의 read latency 를 추적한다고 해 봅시다. 100 KB 이미지 하나를 읽으면 1 ms 가 걸리지만, 4 장을 순차로 읽으면 4 ms 가 됩니다. UFS 는 이 문제를 UTRD(UFS Transfer Request Descriptor) 의 32 슬롯으로 해결합니다. 32 개 명령을 동시에 in-flight 상태로 둘 수 있기 때문에, 4 장을 병렬로 요청하면 이론상 1 ms 안에 처리됩니다.
 
-UFS 의 _병렬화_:
-- UTRD (UFS Transfer Request Descriptor) 32 슬롯.
-- 32 command 동시 _in-flight_.
-- 4 image 병렬 → _1 ms_ (concurrent).
-
-그런데 _bug_: HCI 가 UTRD 슬롯을 _1 개만_ 사용 (multi-slot doorbell 누락).
-- 4 image 순차 → 4 ms.
-
-**원인 파악**: 5 계층 중 **HCI layer** 의 doorbell 구현 누락. _UPIU 잘 만들고_ _UniPro 잘 전송_ 해도 _HCI 슬롯 관리_ 가 _병목_.
-
-이게 5 계층 _책임 분리_ 의 중요성 — 한 계층의 문제가 _다른 계층의 우수성_ 을 무용지물로.
+그런데 HCI 가 multi-slot doorbell 을 구현하지 않아 슬롯을 1 개만 사용하는 버그가 있다면, 4 장은 다시 순차 4 ms 로 돌아옵니다. **원인은 5 계층 중 HCI layer 의 doorbell 구현 누락**입니다. UPIU 를 정확히 조립하고 UniPro 가 오류 없이 전송하더라도, HCI 슬롯 관리가 단일 직렬로 고정되면 그 우수성이 전혀 발휘되지 않습니다. 이것이 5 계층 _책임 분리_ 의 핵심 의미입니다. 한 계층의 결함은 다른 계층이 아무리 잘 동작해도 전체 성능을 무력화합니다.
 
 이후 모든 UFS HCI 모듈은 **"하나의 SCSI 명령이 어떻게 시리얼 라인 비트로 내려가고 다시 올라오는가"** 라는 한 질문에 답을 더해 갑니다. UTRD 가 왜 32 슬롯인지, doorbell 이 왜 SW/HW 분리의 핵심인지, gear 변경이 왜 그렇게 까다로운지 — 모두 이 5 계층 스택이 책임을 나눠 가지기 때문입니다.
 

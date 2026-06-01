@@ -45,11 +45,7 @@
 
 ### 1.1 시나리오 — 왜 _AXI 만_ 안 쓰고 APB/AHB 도 있나?
 
-당신은 SoC 를 설계합니다. CPU + DDR + UART + GPIO + Timer + USB Controller + Crypto + DMA + Ethernet MAC + ...
-
-첫 본능: "**AXI 하나로 통일**". 단순하고 일관성.
-
-실제로 해보면:
+SoC 에 CPU · DDR · UART · GPIO · Timer · USB Controller · Crypto · DMA · Ethernet MAC 을 올리는 순간 가장 먼저 떠오르는 설계 방향은 "AXI 하나로 통일" 입니다. 일관성도 있고 단순해 보입니다. 그런데 실제로 시도해 보면 심각한 면적 문제가 드러납니다.
 
 | Peripheral | Register 수 | 면적 | AXI master slave 추가 면적 | 면적 오버헤드 |
 |-----------|-----------|-----|---------------------------|-------------|
@@ -58,14 +54,9 @@
 | DDR controller | many | 200K gates | AXI master: 30K | 15% |
 | Ethernet MAC | many | 500K gates | AXI master: 30K | 6% |
 
-**UART/GPIO 같은 저속 peripheral 은 _AXI 인터페이스 자체_ 가 IP 본체보다 큼**. 면적/전력 낭비가 큼.
+UART 와 GPIO 같은 저속 peripheral 은 AXI 인터페이스 자체가 IP 본체보다 크기 때문에, 모든 IP 에 AXI 를 붙이면 인터페이스 로직이 면적과 전력을 지배합니다. 반면 DDR Controller 나 Ethernet MAC 은 IP 본체가 충분히 커서 AXI 오버헤드가 상대적으로 미미합니다.
 
-해법: **계층적 bus** —
-- **APB**: 저속 peripheral 용. 게이트 적음, 매우 단순. SETUP/ACCESS 2-phase.
-- **AHB**: 중속 (legacy IP, 일부 메모리). Pipelined address/data.
-- **AXI**: 고속 (DDR, CPU, DMA, 고대역 IP). 5채널, outstanding/OOO.
-
-**APB ↔ AXI bridge** 를 두고 high-speed 영역만 AXI, low-speed 는 APB 로 분리 → 면적 절감 70%+.
+이 분석에서 나온 해법이 **계층적 bus** 입니다. 저속 peripheral 에는 게이트 수가 극히 작은 **APB**(SETUP/ACCESS 2-phase)를 쓰고, 중속 legacy IP 와 일부 메모리 접근에는 파이프라인 주소/데이터 구조를 가진 **AHB**를, 고속 경로(DDR, CPU, DMA, 고대역 IP)에는 5채널 outstanding/OoO 를 지원하는 **AXI**를 배치합니다. APB ↔ AXI bridge 를 두어 high-speed 영역만 AXI 로 남기고 low-speed 를 APB 로 분리하면 전체 면적이 70% 이상 줄어듭니다.
 
 이후의 모든 AMBA 모듈은 한 가지 추상에서 출발합니다 — **"한 master 가 한 slave 의 register/memory 에 cycle-deterministic 하게 read/write 한다"**. AXI 의 5채널, AXI-Stream 의 TVALID/TREADY, exclusive monitor, ordering 까지 — 전부 이 가장 단순한 모델 (APB) 과 그 첫 확장 (AHB pipelined) 의 파생입니다.
 
@@ -592,8 +583,7 @@ Cycle  | HADDR | HWDATA | HREADY | 설명
   T4   |  A3   |  D2    |   1    | stall 해제 → A3 Addr + D2 Data
   T5   |  --   |  D3    |   1    | D3 Data Phase
 
-핵심: T2→T3에서 HREADY=0이면 HADDR(A2)와 HWDATA(D1) 모두 유지.
-이것을 틀리면(T3에서 A3로 바꾸면) → 가장 흔한 AHB 버그.
+T2→T3 구간에서 HREADY=0 이면 HADDR(A2) 와 HWDATA(D1) 가 모두 유지되어야 합니다. T3 에서 A3 로 바꾸는 것이 AHB 에서 가장 흔한 버그입니다.
 ```
 
 #### 퀴즈 (모듈 본문 연습용)

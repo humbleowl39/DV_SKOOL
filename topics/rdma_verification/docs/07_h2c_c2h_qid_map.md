@@ -44,22 +44,13 @@
 
 ### 1.1 시나리오 — _QID=5_ 가 _뭔지_ 모름
 
-당신은 fsdb 에서 _DMA transaction_ 발견:
+fsdb 를 열면 다음과 같은 DMA 트랜잭션이 수천 줄씩 찍혀 있습니다.
+
 ```
 h2c_qid = 5, addr = 0x80000000, size = 64B
 ```
 
-이 한 줄로 _어느 subsystem_ 활동인지 _즉시_ 알아야 함:
-- QID 0-3: Requester (송신측 work).
-- QID 4-5: Responder (수신측 work).
-- QID 6: CQE handler.
-- QID 7: Page table walk.
-- QID 8: CC notify.
-- ...
-
-만약 _QID 매핑_ 모름 → fsdb 의 _수천 DMA transaction_ 중 _어느 것이 어느 subsystem_ 인지 _heuristic_ 으로 추측 → 시간 낭비.
-
-매핑 알면 → "QID=5 = Responder = 수신측 데이터 write" 즉시 분류 → 디버그 _10 배 빠름_.
+이 한 줄을 보고 어느 서브시스템이 동작한 것인지 즉시 판단해야 합니다. QID 매핑을 모른다면 수천 건의 DMA 트랜잭션 중에서 어느 것이 Requester 의 것인지, 어느 것이 CQE handler 의 것인지 heuristic 으로 추측하는 수밖에 없어 시간을 크게 낭비합니다. 반대로 매핑을 알고 있으면 "QID=5 = Responder = 수신측 데이터 write" 라고 즉시 분류할 수 있고, 디버그 진입 시간이 크게 줄어듭니다.
 
 QDMA bypass 인터페이스는 모든 DMA 트랜잭션이 흐르는 단일 지점입니다. QID 만 보면 "지금 DUT 의 어느 서브시스템이 host 와 통신하는가" 를 즉시 알 수 있고, 4 대 디버그 케이스 (M08-M11) 에서 모두 활용됩니다.
 

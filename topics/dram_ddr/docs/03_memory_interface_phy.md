@@ -215,7 +215,7 @@ LPDDR5 는 추가로 **WCK2CK Training** + **CBT** (Command Bus Training).
                  → ZQ Short / periodic retraining
 ```
 
-핵심: **한 번 학습 → 영원 유지** 가 아닙니다. 운영 중 ZQ Short 가 수십 초마다, full retraining 이 주기적으로 또는 온도 임계 초과 시 trigger 됩니다.
+Training 은 특정 시점의 PVT 조건을 기준으로 margin 을 확보하는 작업입니다. 온도가 변하거나 전압이 흔들리면 그 기준이 어긋나므로, 한 번 학습한 결과를 영구히 재사용할 수는 없습니다. 그래서 ZQ Short 는 수십 초마다 impedance 를 재조정하고, full retraining 은 주기적으로 또는 온도가 임계값을 초과할 때 새로 trigger 됩니다.
 
 ---
 

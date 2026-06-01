@@ -45,22 +45,13 @@
 
 ### 1.1 시나리오 — 상용 VIP 가 _OOM_
 
-당신은 MMU 검증. 상용 VIP (Cadence / Synopsys) 사용 시도:
-- 4 KB granule × 1 GB address range = 250K page entries.
-- VIP 내부 모델: page entry 당 _~100 byte_ overhead.
-- 250K × 100 = **25 GB RAM**.
+MMU 검증을 시작할 때 가장 먼저 부딪히는 벽은 메모리입니다. 상용 VIP(Cadence / Synopsys)를 그대로 쓰면 4 KB granule × 1 GB address range = 250K page entries 를 처리해야 하는데, VIP 내부 모델이 page entry 당 ~100 byte 의 overhead 를 가집니다. 250K × 100 byte = **25 GB RAM** — 대부분 시뮬레이션 환경의 16 GB/job 한계를 훌쩍 넘어 OOM 으로 job 이 죽습니다.
 
-대부분 시뮬 환경: _16 GB / job_ 한계. → **OOM**.
+이 문제를 해결한 것이 **Custom Thin VIP** 입니다. PA, permission flag, LRU info — 검증에 꼭 필요한 정보만 남기면 page entry 당 10 byte 로 충분합니다. 250K × 10 byte = 2.5 GB 이므로 16 GB 제약 안에 안정적으로 들어옵니다.
 
-해법: **Custom Thin VIP**:
-- Page entry 당 _10 byte_ (8x 감소).
-- 250K × 10 = 2.5 GB → 16 GB 안에 OK.
+메모리 문제를 해결했다면 다음 과제는 성능 검증입니다. 기능 정확성만 보는 단일 reference model 로는 "DUT 가 충분히 빠른가"를 판단할 수 없습니다. 그래서 **Dual-Reference Model** 을 함께 씁니다. Functional model 이 모든 PTE 를 정확히 추적해 PA 의 정확성을 확인하고, Ideal model 이 최적 TLB/PWC 를 기준으로 DUT 의 성능 gap 을 자동으로 측정합니다.
 
-또한 _Dual-Reference Model_:
-- **Functional**: 모든 PTE 정확히 추적.
-- **Ideal**: 최적 TLB / PWC 모델 — DUT 의 _성능 gap_ 자동 측정.
-
-이 _Custom + Dual_ 패턴이 MMU DV 의 _시그니처_. 일반 IP 의 VIP 직접 사용 어려움.
+이 Custom + Dual 조합이 MMU DV 의 시그니처 패턴입니다. 상용 VIP 를 직접 쓰면 기능 검증은 가능하지만 stress 환경에서의 안정성과 성능 gap 측정이라는 두 축을 동시에 다루기 어렵습니다.
 
 **MMU 검증은 일반 IP 보다 복잡**합니다 — 기능 정확성 (주소 변환) + 성능 (TLB / throughput) + 프로토콜 (AXI / AXI-S) **3 축** 을 _동시_ 검증해야 하고, 상용 VIP 의 메모리 한계 때문에 large-dataset stress 시뮬에서 OOM 이 발생합니다. **Custom Thin VIP + Dual-Reference Model** 이 이 코스의 시그니처 패턴이며, 이력서 / 면접의 핵심 차별화 요소.
 
@@ -254,9 +245,9 @@ L2 -> L3
 문제: DUT가 VA=0x1000을 PA=0x8000으로 변환했다. 맞는가?
 → Page Table 내용을 직접 읽어서 Walk을 재현해야 판단 가능
 → SW Reference Model이 동일한 입력에 대해 Golden PA를 계산
-
-핵심: Reference Model = UVM 환경 내에서 Page Table Walk을 SW로 재현
 ```
+
+DUT 가 VA=0x1000 을 PA=0x8000 으로 변환했을 때 그 값이 맞는지 판단하려면, 검증 환경이 page table 내용을 독립적으로 읽어 walk 을 재현하고 golden PA 를 직접 계산해야 합니다. 이것이 SW Reference Model 의 역할입니다. UVM 환경 안에서 4-level page walk 을 소프트웨어로 구현해 두면, DUT 가 어떤 VA 를 가져오더라도 scoreboard 가 즉시 기대값을 계산해 비교할 수 있습니다.
 
 #### Reference Model 구조 (Pseudo-code)
 

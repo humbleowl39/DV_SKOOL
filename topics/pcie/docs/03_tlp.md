@@ -44,14 +44,9 @@
 
 ### 1.1 시나리오 — _Tag 가 _안 맞음_
 
-당신은 PCIe RC verification. Memory Read TLP 를 보내고 _Completion_ 기다림. 응답이 _다른 데이터_.
+PCIe RC 검증 환경에서 Memory Read TLP 를 보내고 Completion 을 기다리는데 응답으로 전혀 다른 데이터가 돌아오는 경우가 있습니다. 이 증상의 전형적인 원인은 Tag mismatch 입니다. Request TLP 의 Tag 필드는 해당 outstanding request 의 ID 역할을 하며, Completion 은 반드시 같은 Tag 값을 실어 와야 requester 가 어느 request 에 대한 응답인지 알 수 있습니다. RC 가 두 개의 서로 다른 요청에 동일한 Tag 를 할당하면 Completion 이 어느 request 를 위한 것인지 구별하지 못하고 data corruption 이 발생합니다.
 
-원인: **Tag mismatch**.
-- Request TLP 의 _Tag_ field 가 _outstanding request 의 ID_.
-- Completion 이 _같은 Tag_ 로 와야 매칭.
-- Bug: RC 가 두 요청에 _같은 Tag_ 할당 → completion 이 _어느 request_ 응답인지 모름 → data corruption.
-
-**Tag 의 핵심**: PCIe 는 **out-of-order completion** 허용 → request 와 completion 매칭에 _Tag 필수_.
+PCIe 는 out-of-order completion 을 허용하기 때문에, request 와 completion 을 대응시키려면 Tag 가 반드시 필요합니다.
 
 **TLP 는 PCIe 의 "데이터 path" 입니다.** 모든 driver, NIC, NVMe, GPU 의 통신은 결국 TLP. Header field 의 의미를 알아야 packet trace 를 읽을 수 있고 (검증/디버그), VIP coverage 를 설계할 수 있습니다.
 

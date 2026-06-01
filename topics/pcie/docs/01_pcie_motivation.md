@@ -45,19 +45,11 @@
 
 ### 1.1 시나리오 — PCI 가 _왜_ 폐기됐나?
 
-당신은 1990 년대 PC 디자이너. PCI bus 가 표준. 그런데 _2000 년대_ 그래픽 카드가 _32-bit / 33 MHz = 133 MB/s_ 한계에 부딪힘. 비디오 카드는 _수 GB/s_ 필요.
+1990 년대 PC 디자이너는 PCI bus 를 표준으로 쓰고 있었지만, 2000 년대에 접어들면서 그래픽 카드가 필요로 하는 대역폭이 32-bit / 33 MHz = 133 MB/s 를 이미 수 GB/s 규모로 넘어서기 시작했습니다. 가장 직관적인 대응은 PCI 의 폭을 늘리고 클럭을 올리는 것이었습니다. 실제로 PCI-X 를 64-bit, 133 MHz 로 올려 1 GB/s 를 달성했지만 그조차도 부족했고, 200 MHz 를 시도하자 32 lane 의 skew 가 critical path 가 되어 각 lane 의 trace length 를 정확히 맞춰야 했으며 PCB 비용이 폭증했습니다. 200 MHz 에서 32-bit + low skew 를 동시에 만족시키려면 trace 가 마더보드의 절반을 차지하게 되었습니다.
 
-순진한 해법: "PCI 폭 늘리기 + 클럭 올리기". 시도:
-- PCI-X 64-bit, 133 MHz → 1 GB/s. **여전히 부족**.
-- 200 MHz 시도 → _32 lane 의 skew_ 가 critical path → 각 lane 의 trace length _정확히 일치_ 필요. PCB 비용 폭증.
-- 200 MHz @ 32-bit + low skew → trace 가 _마더보드의 절반_ 차지. 면적 ↑.
+문제의 본질은 parallel bus 에서 lane skew 가 주파수의 제곱에 비례해 늘어난다는 데 있었습니다. 1990 년대 클럭 수준에서는 GB/s 가 가능했지만, GHz 영역에 진입하는 순간 이 skew 가 물리적 한계로 작용합니다.
 
-**근본 문제**: _parallel bus 는 lane skew_ 가 _frequency 의 제곱_ 으로 폭증. 1990 년대 SOC 에서는 GB/s 가능했지만, GHz 영역에서 한계.
-
-**PCIe 의 발상**: _Lane 을 독립_ 시키자.
-- 각 lane = _별도 differential pair_, _자체 clock 임베디드_.
-- Lane 간 skew? _상관 없음_ — packet 이 lane 끝에서 _재조립_.
-- N lane = N × 단일 lane bandwidth. _완전 scalable_.
+PCIe 의 발상은 lane 을 독립시키는 것이었습니다. 각 lane 은 별도 differential pair 로 자체 clock 을 데이터 안에 임베드하고, lane 간 skew 는 packet 이 lane 끝에서 재조립될 때 처리되므로 문제가 되지 않습니다. N 개의 lane 은 단순히 단일 lane bandwidth 의 N 배가 되므로 완전히 scalable 합니다.
 
 | | PCI (parallel) | PCIe (serial) |
 |---|----------------|---------------|

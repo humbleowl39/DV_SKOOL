@@ -44,21 +44,13 @@
 
 ### 1.1 시나리오 — _`E-SB-WRITE-...`_ 의 한 줄
 
-당신은 RDMA-TB regression fail. log:
+RDMA-TB regression 이 실패하면 log 에 다음과 같은 한 줄이 찍힙니다.
+
 ```
 [F-CQHDL-001] CQE poll timeout @ NODE_0 QP_3 at 1.2us
 ```
 
-이 한 줄을 보고:
-- **F**: Fatal 레벨.
-- **CQHDL**: Completion Queue Handler 컴포넌트.
-- **NODE_0**, **QP_3**: 어느 node + queue pair.
-
-즉시 `lib/base/component/env/cq_hdl_env.sv` 의 _QP_3 처리 로직_ 으로 이동. 1 분 안에 진단 시작.
-
-vs naive 디버그: log grep, 파일 찾기, 함수 추적 — 30 분.
-
-**Component hierarchy + error prefix 규약** 이 _디버그 시간 30 배_ 단축. RDMA-TB 의 _가장 큰 운영 가치_.
+이 한 줄에는 진단에 필요한 정보가 모두 담겨 있습니다. 첫 토큰 **F** 는 Fatal 심각도를, 두 번째 토큰 **CQHDL** 은 Completion Queue Handler 컴포넌트를 가리킵니다. 뒤에 붙은 **NODE_0**, **QP_3** 는 어느 노드의 어느 queue pair 에서 발생했는지를 알려줍니다. prefix 두 토큰만 읽으면 `lib/base/component/env/agent/handler/vrdma_cq_handler.svh` 의 QP_3 처리 로직으로 곧장 이동할 수 있고, 1 분 안에 진단이 시작됩니다. prefix 를 모르면 log 를 grep 하고 파일을 찾고 함수 호출 경로를 거슬러 올라가는 데만 30 분이 걸립니다. **Component hierarchy + error prefix 규약** 이 이 차이를 만들어 내며, 이것이 RDMA-TB 의 가장 큰 운영 가치입니다.
 
 디버깅의 80% 는 "이 에러가 어디서 나왔는지" 를 빠르게 찾는 것입니다. 모든 에러 메시지는 특정 컴포넌트에서 발생하므로, 컴포넌트 계층을 알면 에러 ID prefix (`E-DRV-...`, `E-SB-...`, `F-C2H-...`, `F-CQHDL-...`) 만 보고도 1초 만에 위치를 잡을 수 있습니다.
 

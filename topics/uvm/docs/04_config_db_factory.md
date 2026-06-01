@@ -44,14 +44,7 @@
 
 ### 1.1 시나리오 — _Project A 에서 B_ 로 _3 일_ 안에
 
-당신은 AXI verification 환경을 _1 년_ 작성. Project B 시작 — 같은 AXI 인터페이스, 다른 _data width / burst length / address width_.
-
-**Naive 포팅**: 모든 component 의 _hardcoded 값_ 추적 → 변경 → bug fix → 검증. **수 주**.
-
-**UVM config_db + factory**:
-- Width / burst / address 는 _config object_ 의 field → Project B 의 test 에서 _config 인스턴스_ 만 다르게.
-- 다른 _구현 변형_ (예: AXI4 vs AXI5 driver) → factory override 1 줄.
-- **3-5 일** 안에 포팅 완료.
+1년에 걸쳐 완성한 AXI 검증 환경을 Project B에 투입해야 하는 상황을 생각해 봅시다. 인터페이스는 같은 AXI이지만 data width·burst length·address width가 다릅니다. 모든 컴포넌트에 하드코딩된 파라미터를 일일이 추적해 수정하면 수주가 걸리고, 수정 과정에서 새 버그가 생길 위험도 높습니다. config_db와 factory를 활용하면 이 문제를 두 단계로 해소할 수 있습니다. width·burst·address 같은 설정 차이는 config object의 필드로 모아 두었다가 Project B의 test에서 인스턴스만 바꾸고, 구현 변형(예: AXI4 vs AXI5 driver)은 factory override 한 줄로 리디렉션합니다. 그 결과 포팅에 걸리는 시간이 수주에서 3–5일로 줄어듭니다.
 
 **비교**:
 

@@ -44,22 +44,9 @@
 
 ### 1.1 시나리오 — "_더 빠르게_?" 의 함정
 
-당신은 _Daily Temperatures_ 문제 풀이. 첫 시도 — 각 day 마다 _뒤에_ 더 따뜻한 day 찾기 → **O(N²)**.
+_Daily Temperatures_ 에서 각 day 마다 뒤를 전부 스캔하는 첫 번째 시도는 O(N²) 로 N=10⁶ 에서 timeout 입니다. 이 문제를 hash map 이나 two pointers 로 접근하면 패턴이 맞지 않아 역시 막힙니다. 적합한 패턴은 **Monotonic Stack** 입니다. "아직 답 못 찾은" index 를 stack 에 보관해 두었다가, 새 day _i_ 의 온도가 stack top 에 저장된 index 의 온도보다 높으면 pop 하면서 답을 채우는 방식입니다. 각 element 가 평생 push 한 번, pop 최대 한 번만 일어나므로 전체 비용은 amortized O(N) 입니다.
 
-면접관: "**N=10⁶ 이면 timeout. 더 빠르게?**"
-
-당신은 _hash map / two pointers_ 적용 시도. _안 됨_. 패턴이 다름.
-
-**답은 Monotonic Stack**:
-```
-stack 에 _아직 답 못 찾은_ index 저장.
-새 day i 의 temp > stack top index 의 temp 면 → pop + 답 채움.
-```
-Amortized O(N) — 각 element 가 stack 에 _한 번 push + 한 번 pop_.
-
-**Binary Search** 가 답인 경우:
-- **Monotonicity**: 어떤 함수 f(x) 가 _단조_. 정렬된 배열은 자명한 예.
-- _숨겨진_ monotonicity: "**parameter K 에 대한 yes/no 답이 단조**" — Binary search on answer.
+**Binary Search** 는 정렬된 배열 외에도 어떤 함수 f(x) 가 _단조_ 이기만 하면 적용 가능합니다. "parameter K 에 대한 yes/no 답이 단조" — 즉 어떤 임계점을 기준으로 한쪽에서는 항상 true, 다른 쪽에서는 항상 false 인 구조라면 Binary search on answer 로 풀 수 있습니다.
 
 Stack 은 **이전 상태를 미루어 두었다 다시 쓰는** 가장 단순하지만 강력한 도구이고, Binary Search 는 **단조성(monotonicity)** 만 있다면 어디든 통하는 보편 패턴입니다. 이 둘을 패턴으로 익히면 면접에서 "이게 stack/이진 탐색 문제인가?" 를 인지하는 시간이 크게 줄어듭니다.
 

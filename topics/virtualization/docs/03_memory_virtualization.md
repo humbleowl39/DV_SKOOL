@@ -44,18 +44,9 @@
 
 ### 1.1 시나리오 — VM 의 _TLB miss_ 가 _6 배_ 비싸다
 
-당신은 VM 에서 _memory-intensive_ 워크로드 (e.g., database). Bare metal 대비 _30% 느림_. 추적:
+VM 에서 memory-intensive 워크로드 (예: database) 를 실행했을 때 bare metal 대비 30% 느린 원인을 추적하면 대부분 TLB miss 비용으로 귀결됩니다. Bare metal 에서 TLB miss 시 page walk 는 4-level page table 을 순회하는 최대 4 회 메모리 접근으로 끝납니다. 그런데 shadow page table 을 쓰는 VM 에서는 Guest 가 PT 를 수정할 때마다 hypervisor 가 동기화를 위해 VM Exit 을 발생시켜 비용이 폭증합니다. EPT (Extended Page Tables) 로 넘어오면 VM Exit 문제는 해결되지만, Guest PT walk 의 각 단계마다 Host PT walk 가 중첩되어 worst-case 에서 **24 회** 메모리 접근이 필요합니다 [Wikipedia SLAT, 2025]. Bare metal 의 6 배에 달하는 비용입니다.
 
-**TLB miss 비용 (cycle)**:
-- Bare metal: page walk = _4 memory access_ (4-level page table).
-- VM with **shadow page table**: VM exit 마다 hypervisor 가 _PT 동기화_ → _수십 VM Exit_ + 비용 폭증.
-- VM with **EPT (Extended Page Tables)**: _Guest PT walk × Host PT walk_ = **24 memory access** [Wikipedia SLAT, 2025]. _6 배_.
-
-[VMware 측정: EPT 가 shadow PT 대비 _MMU-intensive workload 에서 600% 향상_].
-
-해법:
-- **Huge page (2 MB / 1 GB)**: page count 감소 → TLB miss 감소 → 6× 비용 영향 _최소화_.
-- 가상화 환경 _필수_ 옵션. 일반 환경에선 _선택_, 가상화는 _안 쓰면_ 손실 큼.
+VMware 측정에 따르면 EPT 가 shadow PT 대비 MMU-intensive workload 에서 600% 향상을 보인다는 결과도 있지만, EPT 자체의 worst-case cliff 는 여전히 존재합니다. 이 cliff 의 영향을 최소화하는 가장 효과적인 도구가 **huge page (2 MB / 1 GB)** 입니다. page 크기가 커질수록 TLB 한 entry 가 커버하는 영역이 넓어지고 walk 깊이가 줄어들어 miss 비용이 크게 감소합니다. 일반 환경에서는 선택 사항이지만, 가상화 환경에서는 쓰지 않을 경우 손실이 너무 크기 때문에 사실상 필수입니다.
 
 가상화 환경의 latency / bandwidth 병목의 _대부분_ 이 메모리 가상화에서 옵니다. 100 Gbps NIC 의 throughput 이 30% 떨어지는 가장 흔한 원인이 Stage-2 TLB miss 의 page walk 비용입니다. AI training 클러스터의 step time 에 ms 단위로 끼어드는 노이즈도 IPA → PA mapping 에서 옵니다.
 

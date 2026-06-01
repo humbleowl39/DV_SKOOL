@@ -45,17 +45,11 @@
 
 ### 1.1 시나리오 — _수십억 시나리오_ 를 _초_ 안에
 
-당신은 AXI bridge IP 의 _deadlock 부재_ 를 검증해야 합니다.
+AXI bridge IP 의 _deadlock 부재_ 를 검증하는 시나리오를 생각해 봅시다.
 
-**Simulation 접근**:
-- 100 시나리오 작성, 각각 100K cycle 시뮬.
-- 1 일 후: 95% 시나리오 통과. 그런데 _남은 5%_? 그리고 _아직 안 본_ corner case?
-- 일주일 후: 1000 시나리오 통과. 신뢰도 ~99%, 단 _수학적 보장_ 없음.
+시뮬레이션으로 접근하면, 100 개 시나리오를 작성해 각각 100K cycle 씩 돌릴 수 있습니다. 일주일 후에는 1000 개 시나리오가 통과해 신뢰도 ~99% 에 이르지만, 결정적인 한계가 남습니다 — "아직 보지 않은 corner case" 가 존재할 수 있으며, 시뮬레이션은 그 공백에 대해 수학적 보장을 제공하지 않습니다.
 
-**Formal 접근**:
-- AXI handshake 의 _deadlock-free property_ 한 줄 작성.
-- JasperGold 가 모든 가능한 입력 sequence 를 _수학적으로_ 탐색.
-- 30 분 후: **PROVEN** — _어떤 입력 시퀀스_ 에서도 deadlock 없음 _수학 증명_.
+Formal 은 이 문제를 근본적으로 다르게 풉니다. AXI handshake 의 _deadlock-free property_ 한 줄을 작성하면, JasperGold 가 모든 가능한 입력 시퀀스를 수학적으로 탐색합니다. 30분 후 **PROVEN** 이 나오면, 그것은 "이 1000 시나리오에서 안전" 이 아니라 "어떤 입력 시퀀스에서도 deadlock 이 없음" 이라는 수학적 증명입니다.
 
 **Trade-off**:
 | | Simulation | Formal |
@@ -303,29 +297,17 @@ Q3 -> F: "YES"
 
 ### 5.2 Formal Engine 의 동작 원리
 
+Formal Engine 은 회로를 "실행" 하는 것이 아니라 "논리적으로 추론" 합니다. 이 추론을 가능하게 하는 두 가지 핵심 기술이 있습니다.
+
+첫째는 **SAT (Boolean Satisfiability)** 입니다. 회로를 Boolean 수식으로 변환한 뒤, "이 Property 를 위반하는 입력 조합이 존재하는가?" 를 풀이합니다. 위반 조합이 존재하면 FAILED (그 조합이 반례), 존재하지 않으면 PROVEN 입니다.
+
 ```
-Formal Engine 은 수학적 알고리즘으로 회로의 모든 상태를 탐색한다.
-시뮬레이션처럼 "실행" 하는 것이 아니라, "논리적으로 추론" 하는 것이다.
-
-핵심 기술 2가지:
-
-1. SAT (Boolean Satisfiability)
-   - 회로를 Boolean 수식으로 변환
-   - "이 Property 를 위반하는 입력 조합이 존재하는가?" 를 풀이
-   - 존재하면 → FAILED (그 조합이 반례)
-   - 존재하지 않으면 → PROVEN
-
-   RTL →(변환)→ Boolean Formula →(SAT Solver)→ SAT (반례) / UNSAT (증명)
-
-2. SMT (SAT + Theory)
-   - SAT 에 "이론(Theory)" 을 추가: 비트벡터 연산, 배열, 산술 등
-   - 32-bit 덧셈을 비트 단위가 아닌 산술 이론으로 처리 → 효율 ↑
-   - 현대 Formal 도구 (JasperGold 등) 는 SAT + SMT 혼합 사용
-
-비유:
-  시뮬레이션 = "이 입력을 넣어보니 출력이 맞다"  (실험)
-  Formal     = "어떤 입력을 넣어도 출력이 맞을 수밖에 없다" (증명)
+RTL →(변환)→ Boolean Formula →(SAT Solver)→ SAT (반례) / UNSAT (증명)
 ```
+
+둘째는 **SMT (SAT + Theory)** 입니다. SAT 에 비트벡터 연산·배열·산술 같은 "이론(Theory)" 을 추가해, 32-bit 덧셈을 비트 단위가 아닌 산술 이론으로 처리함으로써 효율을 높입니다. 현대 Formal 도구 (JasperGold 등) 는 SAT 와 SMT 를 혼합해 사용합니다.
+
+시뮬레이션이 "이 입력을 넣어보니 출력이 맞다" 는 실험이라면, Formal 은 "어떤 입력을 넣어도 출력이 맞을 수밖에 없다" 는 증명입니다.
 
 ### 5.3 Formal 의 3대 핵심 기법
 
@@ -387,38 +369,20 @@ X -> R
 
 #### 5.3.3 Connectivity Checking (연결성 검증)
 
-```
-SoC 레벨: IP 간 연결이 설계 의도 (스펙 시트) 와 일치하는지
+SoC 를 통합할 때 수천 개 신호 연결은 수작업 실수를 피하기 어렵습니다 — 잘못된 비트 순서, 빠진 연결, 교차 연결 같은 오류가 발생하고, 시뮬레이션으로 이 모든 연결을 빠짐없이 검증하는 것은 비현실적입니다.
 
-  왜 필요한가?
-  - SoC 통합 시 수천 개 신호 연결 → 수작업 실수 불가피
-  - 잘못된 비트 순서, 빠진 연결, 교차 연결 등
-  - 시뮬레이션으로는 모든 연결을 검증하기 비현실적
+Connectivity Checking 은 이 문제를 Formal 로 해결합니다. 동작 방식은 세 단계입니다. 먼저 스펙 (CSV/Excel) 에서 IP 간 연결 규칙을 정의하고, Formal Engine 이 RTL 에서 실제 연결 경로를 추적하여, 스펙과 불일치하는 연결을 자동으로 보고합니다.
 
-  동작 방식:
-  1. 스펙 (CSV/Excel) 에서 연결 규칙 정의
-     | Source           | Destination              |
-     |------------------|--------------------------|
-     | IP_A.irq         | IntCtrl.input[5]         |
-     | DMA.addr[31:0]   | BusFabric.s2_addr[31:0]  |
+| Source | Destination |
+|--------|-------------|
+| IP_A.irq | IntCtrl.input[5] |
+| DMA.addr[31:0] | BusFabric.s2_addr[31:0] |
 
-  2. Formal Engine 이 RTL 에서 실제 연결 경로를 추적
-  3. 스펙과 불일치하는 연결을 자동 보고
-
-  JasperGold 의 Connectivity Verification (CON) 앱이 이를 자동화.
-  → SoC 통합 검증에서 가장 ROI 가 높은 Formal 기법 중 하나
-```
+JasperGold 의 Connectivity Verification (CON) 앱이 이 절차를 자동화하며, SoC 통합 검증에서 ROI 가 가장 높은 Formal 기법 중 하나로 꼽힙니다.
 
 ### 5.4 State Explosion 문제와 4 가지 대응 기법
 
-```
-Formal 의 근본 한계:
-
-  N-bit 레지스터 → 2^N 상태
-  10개 × 32-bit 레지스터 → 2^320 상태 → 탐색 불가능
-
-  이것이 Formal 의 "설계 크기 한계" 의 본질이다.
-```
+Formal 의 근본 한계는 상태 공간의 크기에서 옵니다. N-bit 레지스터는 2^N 개 상태를 가지므로, 32-bit 레지스터 10 개만 있어도 2^320 개 상태가 생겨 탐색이 불가능해집니다. 이것이 "설계 크기 한계" 의 본질입니다.
 
 #### 대응 기법 1: Abstraction (추상화)
 
@@ -592,7 +556,7 @@ SoC: "대규모 SoC" {
         대응: bound 가 _critical path_ 모두 cover 하는지 분석.
 
 !!! question "🤔 Q2 — Formal 적용 결정 (Bloom: Evaluate)"
-    당신은 verification lead. 어떤 IP 를 _Formal_ vs _Simulation_?
+    Verification lead 로서 어떤 IP 를 _Formal_ 로, 어떤 IP 를 _Simulation_ 으로 검증할지 결정 기준을 설명하라.
 
     ??? success "정답"
         **Formal 적합**:

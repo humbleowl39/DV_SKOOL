@@ -44,7 +44,7 @@
 
 ### 1.1 시나리오 — 같은 모델, 다른 답
 
-당신은 Claude Sonnet 으로 _SystemVerilog UVM testbench_ 를 만들고 싶습니다. 두 prompt:
+Claude Sonnet 으로 _SystemVerilog UVM testbench_ 를 만들어야 한다고 합시다. 두 가지 prompt 를 비교합니다.
 
 **Prompt A** (naive): `"UVM 테스트벤치 만들어줘"` (8 token)
 

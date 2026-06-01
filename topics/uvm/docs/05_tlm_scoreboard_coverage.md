@@ -45,16 +45,14 @@
 
 ### 1.1 시나리오 — _OoO AXI_ scoreboard 의 false fail
 
-당신은 AXI master agent 검증. Scoreboard: expected queue 에 _expected_, actual queue 에 _DUT 결과_, FIFO 비교.
-
-**문제**: AXI 는 _OoO 응답_ — Tag ID 다른 transaction 이 다른 순서 도착 가능.
+AXI master agent를 검증할 때 scoreboard에 expected queue와 actual queue를 두고 FIFO 순서대로 pop하여 비교하는 구조를 흔히 택합니다. 그런데 AXI는 서로 다른 ID를 가진 transaction이 발행 순서와 다른 순서로 응답을 돌려보내는 out-of-order 프로토콜입니다.
 
 ```
 Expected:  [W1(id=1), W2(id=2)]
 Actual:    [W2(id=2), W1(id=1)]   ← OoO 도착
 ```
 
-Naive FIFO pop_front 비교 → _mismatch_. False fail.
+이 경우 단순 FIFO pop_front 비교는 순서 차이를 내용 오류로 오인해 spurious mismatch를 만들어냅니다.
 
 해법: **Per-ID queue** scoreboard:
 ```

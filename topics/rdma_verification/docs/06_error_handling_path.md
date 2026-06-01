@@ -44,11 +44,7 @@
 
 ### 1.1 시나리오 — _하나의 에러_, _전체 fail_
 
-당신은 _intentional NAK_ 시나리오 작성. 한 QP 에 _rkey violation_ inject → NAK 받음 + WC error 확인.
-
-결과: **시뮬레이션 전체 FATAL**. 다른 _정상_ QP 의 verb 까지 fail.
-
-원인: Scoreboard 가 _하나의 NAK_ 를 _전역 fatal_ 로 처리 → 다른 QP 의 정상 시나리오까지 _abort_.
+의도된 NAK 시나리오를 작성한다고 해 봅시다. 한 QP 에 rkey violation 을 inject 해서 NAK 를 받고 WC error 를 확인하는 것이 목표입니다. 그런데 막상 시뮬을 돌리면 **시뮬레이션 전체가 FATAL** 로 종료되고, 다른 정상 QP 의 verb 까지 fail 로 처리됩니다. Scoreboard 가 하나의 NAK 를 전역 fatal 로 처리해 다른 QP 의 정상 시나리오까지 abort 시킨 것입니다.
 
 해법은 **에러 격리 (isolation)** 입니다. 가장 좁은 단위인 **per-cmd gate** 부터 시작합니다. 이번 NAK 는 의도된 것이므로 `expected_error=1` 로 표시하면 해당 cmd 하나만 fail 처리됩니다. 그런데 한 verb 가 에러를 받으면 그 QP 자체가 에러 상태로 전이될 수 있습니다. 이때 **per-QP gate** (`isErrQP()`) 가 개입해 그 QP 의 후속 verb 만 skip 시키고, 나머지 QP 의 정상 검증은 계속 진행합니다. 더 광범위한 fault injection 시나리오라면 **per-component gate** (`err_enabled`) 를 사용해 해당 comparator 또는 tracker 전체의 검증 수위를 완화할 수도 있습니다. 이 3 단위 게이트를 올바르게 조합해야 의도된 에러를 검증하면서도 다른 정상 시나리오를 오염시키지 않는 정밀한 에러 시나리오가 완성됩니다.
 
@@ -199,7 +195,7 @@ destroy_qp.setErrState(cmd.err);
 | `EntryPoint → chkSQErrQP(cmd)` | `qp.isErrQP() == 1` 면 skip | 에러 QP 로 가는 모든 후속 command 무시 (warning 로그) |
 | `completeOutstanding(cmd)` | `!t_qp.isErrQP()` 일 때만 `completed_wqe_ap.write(cmd)` (`vrdma_driver.svh:1327`) | 에러 QP 의 WQE 는 scoreboard 검증 대상에서 제외 |
 
-> 핵심: 한 번 ErrQP 로 마킹되면 이후 모든 verb 가 silently skip — 에러 cascading 차단
+한 번 ErrQP 로 마킹되면 이후 그 QP 로 가는 모든 verb 는 silently skip 되어 에러 cascading 이 차단됩니다.
 
 ### 5.2 경로 2: CQ Handler → Error CQE
 

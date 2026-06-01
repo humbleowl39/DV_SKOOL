@@ -422,7 +422,7 @@ endclass
 
 ### 5.5 Sub-Phase (run_phase 세분화)
 
-핵심: **`run_phase` 와 sub-phase 는 병렬 실행**. 둘 중 하나만 쓰는 것이 혼란을 방지.
+**`run_phase`와 sub-phase는 병렬로 실행**됩니다. 두 가지를 혼용하면 시뮬레이터가 어느 phase를 기다리는지 추론하기 어려워지므로, 한 프로젝트 안에서는 둘 중 하나만 사용하는 것이 혼란을 방지하는 표준 관행입니다.
 
 ```systemverilog
 // Sub-phase 활용 (SoC-level 통합 검증)
@@ -593,7 +593,7 @@ endclass
 !!! question "🤔 Q1 — Phase 가 9 단계인 이유 (Bloom: Analyze)"
     `build → connect → end_of_elaboration → start_of_simulation → run → extract → check → report → final`. 5 단계로 줄이지 않고 9 단계로 분리한 _이유_ 1 가지?
     ??? success "정답"
-        Phase 분리의 핵심:
+        9단계를 5단계로 줄이지 않은 데는 다음의 선후 관계 보장이 필요하기 때문입니다.
         - **선후 보장**: build (top→bottom) 와 connect (bottom→top) 가 _분리_ 되어 있어야 자식이 부모보다 먼저 생성 + 연결은 자식 핸들이 준비된 후.
         - **function vs task 구분**: build/connect/extract/check/report = function (time 0), run = task (time advance). 같은 phase 에 시간 진행 + 비진행 혼재 시 race.
         - **report vs final**: report 는 메시지 출력, final 은 dump close — 순서가 뒤집히면 dump 가 잘림.

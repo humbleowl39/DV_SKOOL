@@ -383,7 +383,7 @@ soc_secure_boot_ko Unit 7: BootROM DV
 !!! question "🤔 Q2 — 5 축 디버그 매핑 (Bloom: Analyze)"
     "Secure DMA 가 Non-Secure RAM 으로 write 되었다". 5 축 (TZPC/TZASC/GIC/SMMU/Cache) 중 어디?
     ??? success "정답"
-        Master 의 NS bit 가 SMMU/TZASC 까지 전파되었는지가 핵심:
+        이 문제의 진단 실마리는 master 의 NS bit 가 SMMU/TZASC 까지 올바르게 전파됐는지 여부입니다. 각 축에서 발생할 수 있는 원인은 다음과 같습니다.
         - **SMMU**: master 가 Secure 인데 outgoing transaction 의 NS bit 가 _NS=1_ 로 잘못 → SMMU 가 NS RAM 으로 route.
         - **TZASC**: TZASC 의 region permission 이 NS=1 도 허용 → write 통과.
         - **Cache**: NS attribute 가 LLC 까지 안 전파 → cache fill 시 NS line 으로 저장.

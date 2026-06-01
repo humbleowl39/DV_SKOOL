@@ -45,19 +45,7 @@
 
 ### 1.1 시나리오 — 같은 AXI agent, _Master_ + _Slave_
 
-당신은 AXI bridge 검증. 두 측면:
-- **AXI master agent**: bridge 의 master IF 에 stimulus.
-- **AXI slave agent**: bridge 의 slave IF 에서 응답.
-
-순진한 해법: 두 개의 _별도 agent class_ 작성. _200% 작업량_.
-
-UVM 해법: **같은 agent class** + `is_active` config:
-- `UVM_ACTIVE` → Driver + Sequencer + Monitor (stimulus).
-- `UVM_PASSIVE` → Monitor only (observe).
-
-같은 코드, _config 한 줄_ 차이. AXI bridge → 한 agent, master 측은 active, slave 측은 passive. 또는 양쪽 모두 active (양방향 traffic).
-
-또한 _PCIe RC vs EP_, _AXI master vs slave_ 같은 _dual role_ 모든 경우에 _같은 agent_ 재사용. UVM 재사용성의 _핵심_.
+AXI bridge를 검증할 때는 bridge의 master 인터페이스에 자극을 인가하는 측과, slave 인터페이스에서 응답을 내어주는 측을 모두 제어해야 합니다. 두 역할을 각각 별도의 agent 클래스로 작성하면 거의 동일한 코드가 두 배로 늘어나고, 한쪽을 수정할 때 다른 쪽도 따라 수정해야 하는 유지 비용이 생깁니다. UVM은 이 문제를 `is_active` 설정 하나로 풉니다. `UVM_ACTIVE` 모드에서는 Driver·Sequencer·Monitor를 모두 빌드해 자극을 인가하고, `UVM_PASSIVE` 모드에서는 Monitor만 빌드해 관찰만 합니다. 결과적으로 같은 agent 클래스 한 벌로 master 측과 slave 측을 모두 커버하며, _PCIe RC vs EP_, _AXI master vs slave_ 같은 dual-role 구성에도 동일하게 재사용됩니다.
 
 이후 검증 환경의 모든 _프로토콜 인터페이스_ 는 Agent 한 개로 캡슐화됩니다. Agent 의 설계가 잘못되면 — 예를 들어 Active / Passive 분리를 안 두면 — 같은 인터페이스를 다른 위치에서 (PCIe RC vs EP, AXI master vs slave) 검증할 때 Agent 를 새로 짜야 합니다. 그래서 이 모듈의 패턴 (Active/Passive 분기, Driver/Monitor 책임 분리, vif 전달) 은 _재사용성의 출발점_ 입니다.
 

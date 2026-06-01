@@ -44,22 +44,9 @@
 
 ### 1.1 시나리오 — _Mask ROM_ 의 _$50M bug_
 
-당신은 SoC OEM. BootROM 에 _1 bug_ 가 _tape-out 후_ 발견:
+SoC OEM 이 tape-out 후 BootROM 에서 버그 하나를 발견했다고 가정합시다. ROM patch path 가 malformed patch 를 거부하지 못해 공격자가 임의 코드를 ROM 영역에서 실행할 수 있고, 결과적으로 출시된 모든 디바이스에서 secure boot 가 우회됩니다. 선택지는 세 가지뿐입니다. Silicon respin 은 $30–50M 과 6개월, SW workaround 는 완전성에 의문이 남고 영구적인 부담, Recall 은 수억 달러 규모입니다. 어떤 선택을 해도 BootROM 버그 하나의 경제적 손실이 다른 IP 의 패치 가능한 버그와는 전혀 다른 차원입니다.
 
-- **Bug 종류**: ROM patch path 가 _malformed patch_ 거부 못함 → 공격자가 _임의 코드_ ROM 영역 실행 가능.
-- **영향**: 출시된 모든 device 가 secure boot 우회 가능.
-
-해법 옵션:
-1. **Silicon respin** ($30-50M, 6 개월).
-2. **SW workaround** (영구 부담, completeness 의문).
-3. **Recall** ($수억).
-
-이게 BootROM 의 _bug 비용_. 다른 IP 의 _patch 가능_ 한 bug 와 _완전히 다른_ economics.
-
-해결책: **Zero-defect 검증**.
-- 모든 boot path (Normal / Fallback / Recovery / Patch) × Boot device × OTP fuse combo.
-- _All combination cover_ 가 _필수_.
-- UVM + functional coverage + FI scenario 모두.
+이것이 **Zero-defect 검증** 이 절대 목표가 되는 이유입니다. 모든 boot path (Normal / Fallback / Recovery / Patch) × Boot device × OTP fuse 조합을 빠짐없이 cover 해야 하며, UVM 환경과 functional coverage, FI 시나리오가 세트로 갖춰져야 합니다.
 
 BootROM 은 **silicon 에 mask 로 영구 고정** 됩니다. Bug = silicon respin = 수개월 + 수십억. 다른 IP 는 patch / firmware update 가 가능하지만, BootROM 은 첫 부팅의 anchor 라서 _self-patch_ 도 자기 자신을 못 고칩니다.
 

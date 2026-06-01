@@ -45,17 +45,9 @@
 
 ### 1.1 시나리오 — _같은 IP, 다른 BW_
 
-당신은 SoC 디자이너. 같은 GPU IP 를 두 SoC 에 통합. _A SoC_ 에서 BW 80 GB/s, _B SoC_ 에서 BW 50 GB/s. 똑같은 IP 인데 _40% 차이_.
+같은 GPU IP 를 두 SoC 에 통합했을 때 _A SoC_ 에서 대역폭 80 GB/s, _B SoC_ 에서 50 GB/s 가 나온다면, 차이는 어디서 올까요? Memory channel 수·frequency·DDR rank 가 모두 동일하다면 원인은 한 곳으로 수렴합니다 — **Memory Controller 의 scheduling 정책**입니다.
 
-원인 추적:
-- Memory channel 수, frequency, DDR rank — _동일_.
-- 차이: **Memory Controller 의 scheduling 정책**.
-  - A: FR-FCFS (row hit 우선) + GPU 에 priority bin 할당.
-  - B: Round-robin (단순 fair).
-
-**FR-FCFS**: 같은 row 의 pending request 를 _먼저_ 처리 → row hit rate ↑ → row miss penalty (~42 cycle) 회피 → BW ↑.
-
-**Round-robin**: row 무시하고 ID 별 fair → row miss 폭증 → BW 폭락.
+A SoC 는 **FR-FCFS**(First Ready First Come First Served) 정책으로 같은 row 에 대기 중인 요청을 먼저 처리하고 GPU 에 priority bin 을 할당합니다. 이렇게 하면 row hit rate 가 올라가고 row miss 패널티(약 42 cycle)를 회피할 수 있어 대역폭이 높게 유지됩니다. B SoC 는 단순 round-robin 으로 row 상태를 무시하고 ID 별로 공평하게 발행하는데, 그 결과 row miss 가 빈발하여 대역폭이 크게 떨어집니다. 40% 차이는 알고리즘 한 줄의 결과입니다.
 
 Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지 봤습니다. 그러나 실제 SoC 에서는 **CPU + GPU + Display + DMA + ISP** 가 동시에 메모리에 access 하고, 각 요청은 bank conflict, refresh 충돌, R/W turnaround 라는 _시간_ 차원의 충돌을 겪습니다. **Memory Controller (MC) 는 이 모든 충돌을 해소하는 단일 결정자** — SoC 성능의 가장 직접적인 결정자입니다.
 

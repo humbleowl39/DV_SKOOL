@@ -44,23 +44,11 @@
 
 ### 1.1 시나리오 — Host-only DV 의 한계
 
-당신은 UFS HCI 검증을 _host side_ 만 수행:
-- Driver 가 UTRD 작성 → doorbell → HCI 처리 OK → response 받음.
-- Functional test 모두 통과.
+UFS HCI 검증을 host side 만으로 수행했다고 가정해 봅시다. Driver 가 UTRD 를 작성하고 doorbell 을 ring 하면 HCI 가 처리하고 response 가 돌아옵니다. functional test 는 모두 통과합니다. 그런데 silicon 이 나온 뒤, 특정 UPIU malformed 시나리오에서 HCI 가 hang 하는 문제가 발견됩니다. bug 를 추적하면 HCI 가 UPIU header field 의 reserved bit 를 잘못 해석했기 때문임이 밝혀집니다. 이 bug 는 host side test 로는 원천적으로 잡히지 않았습니다. host 는 항상 well-formed UPIU 만 생성하기 때문에, malformed 경로 자체가 자극되지 않았던 것입니다.
 
-Silicon 후:
-- 특정 _UPIU malformed_ 시나리오에서 _HCI hang_.
-- Bug 추적: HCI 가 _UPIU header field_ 의 _reserved bit_ 를 잘못 해석.
+이 사례가 보여주는 것이 바로 **dual-side DV** 의 필요성입니다. host side agent 가 UTRD / doorbell / IRQ 를 담당하는 한편, device side agent 는 정상 UPIU 뿐 아니라 reserved bit 값 변경과 같은 비정상 UPIU 도 생성합니다. dual-side scoreboard 는 양방향 변환에서 발생하는 silent corruption 을 포착합니다.
 
-이 bug 는 _host side test_ 에서 _안 잡힘_ — host 가 _well-formed UPIU_ 만 생성하므로.
-
-**Dual-side DV** 필요:
-- **Host side agent**: UTRD / doorbell / IRQ.
-- **Device side agent**: UPIU 생성 (정상 + 비정상). _Reserved bit 값 변경_ 등.
-
-Dual-side scoreboard 가 _양방향 변환_ 의 silent corruption 잡음.
-
-**UFS HCI 검증은 host-device 양방향** 입니다. driver-side (register / UTRD) 와 device-side (UPIU / UniPro) 가 모두 동시에 검증되어야 silent corruption 이 잡힙니다 — 한쪽만 검증하면 변환 오류가 그대로 통과. 특히 **error 복구 시나리오** (timeout, abort, reset) 는 production silicon 의 robustness 를 좌우 — happy path 는 곧 통과하지만 error path 는 silent bug 의 단골 source.
+**UFS HCI 검증은 host-device 양방향**으로 이루어져야 합니다. driver-side (register / UTRD) 와 device-side (UPIU / UniPro) 가 동시에 검증되어야만 변환 오류가 잡힙니다. 한쪽만 검증하면 그 사이에서 발생하는 변환 오류는 조용히 통과합니다. 특히 **error 복구 시나리오** (timeout, abort, reset) 는 production silicon 의 robustness 를 좌우하는 영역입니다. happy path 는 대부분 초기 smoke 에서 통과하지만, error path 는 검증 시나리오에 명시적으로 포함하지 않으면 silent bug 의 온상이 됩니다.
 
 이 모듈은 앞 세 모듈에서 정착시킨 어휘 (UTRD, UPIU, doorbell, IRQ, Task Tag) 를 **UVM env / sequence / scoreboard / SVA / coverage** 로 어떻게 매핑하는지 — 즉, _프로토콜 지식 → 검증 인프라_ 의 변환을 다룹니다.
 
