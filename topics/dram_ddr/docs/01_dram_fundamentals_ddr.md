@@ -258,8 +258,8 @@ BUF -> DQ: "② Bank Group 별 독립 I/O\n같은 BG: tCCD_L (느림)\n다른 BG
 
 DRAM 셀의 구조는 1T1C — 트랜지스터 하나와 커패시터 하나 — 로 이루어져 있습니다. 이 단순한 구조 덕분에 bit 당 면적이 SRAM 의 6분의 1 수준에 불과하지만, 커패시터라는 소자의 본질적 특성이 세 가지 필수 동작을 요구합니다. 첫째, 읽기는 파괴적(destructive)이므로 읽은 직후 반드시 데이터를 재기록(restore)해야 합니다. 둘째, 커패시터는 시간이 지나면 전하가 누설되므로 주기적으로 refresh 를 통해 전하를 보충해야 합니다. 셋째, sense amplifier 가 bit-line 의 mV 단위 전압 차이를 증폭하는 데 시간이 필요하므로, ACT 후 tRCD 동안 은 아무 명령도 넣을 수 없습니다. 아래 다이어그램은 이 세 과정을 물리 수준에서 추적합니다.
 
-<figure markdown style="background:#ffffff; padding:14px 10px; border-radius:8px;">
-  ![1T1C NMOS DRAM 셀 단면 구조](assets/img/dram_1t1c_cell.svg){ width="620" }
+<figure markdown>
+  ![1T1C NMOS DRAM 셀 단면 구조](assets/img/dram_1t1c_cell.svg){ width="620" style="background:#ffffff; padding:14px 10px; border-radius:8px;" }
   <figcaption><b>1T1C NMOS 셀의 단면 구조</b> — <b>word line</b>이 access transistor의 poly-silicon gate를 제어하고, gate가 열리면 <b>bit line</b>의 N+ 확산영역과 <b>capacitor</b>가 도통한다. capacitor 전하의 유무가 0/1이며, 이 전하가 bit line으로 흘러나오는 순간 원본이 파괴(destructive read)된다.<br><small>출처: Wikimedia Commons, 저자 Cyferz — CC BY-SA 3.0 / GFDL (원본 무수정). 원본 파일: <i>Original 1T1C DRAM design.svg</i></small></figcaption>
 </figure>
 
