@@ -122,6 +122,9 @@ BAD: "나쁜 환경 (God Env)" {
   BE -> BM2
   BE -> BSB
 }
+
+# 두 비교 클러스터를 세로로 스택 (가로 폭 축소 → 글자 가독성) — 정렬용 invisible edge
+GOOD -> BAD: { style.opacity: 0.0 }
 ```
 
 <div class="parallel-grid">
