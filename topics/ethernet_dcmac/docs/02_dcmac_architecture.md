@@ -118,28 +118,34 @@ RXMAC -> HOST_RX
 ```d2
 direction: down
 
-NETIN: "Network (in)" { shape: circle }
-SDIN: "SerDes RX"
-PCSIN: "PCS RX"
-RXMAC: "RX MAC"
-AXISRX: "AXI-S RX → TOE\n(PFC frame 안 올림)"
+RX_PATH: "RX Path (Line → Host)" {
+  direction: right
+  NETIN: "Network (in)" { shape: circle }
+  SDIN: "SerDes RX"
+  PCSIN: "PCS RX"
+  RXMAC: "RX MAC"
+  AXISRX: "AXI-S RX → TOE\n(PFC frame 안 올림)"
+  NETIN -> SDIN
+  SDIN -> PCSIN
+  PCSIN -> RXMAC
+  RXMAC -> AXISRX: "일반 data frame"
+}
 FCB: "Flow Control 블록\n② opcode=0x0101 (PFC)\npriority_enable_vector[3]=1\npause_time[3] = 0x0064"
-TXQ3: "TX MAC priority-3 queue\n③ scheduler: priority_3 만 정지\n(priority 0..2, 4..7 은 계속 송신)"
-TXMAC: "TX MAC"
-PCSOUT: "PCS TX"
-SDOUT: "SerDes TX"
-NETOUT: "Network (out)" { shape: circle }
+TX_PATH: "TX Path (Host → Line)" {
+  direction: right
+  TXQ3: "TX MAC priority-3 queue\n③ scheduler: priority_3 만 정지\n(priority 0..2, 4..7 은 계속 송신)"
+  TXMAC: "TX MAC"
+  PCSOUT: "PCS TX"
+  SDOUT: "SerDes TX"
+  NETOUT: "Network (out)" { shape: circle }
+  TXQ3 -> TXMAC
+  TXMAC -> PCSOUT
+  PCSOUT -> SDOUT
+  SDOUT -> NETOUT
+}
 
-NETIN -> SDIN
-SDIN -> PCSIN
-PCSIN -> RXMAC
-RXMAC -> AXISRX: "일반 data frame"
 RXMAC -> FCB: "① EtherType=0x8808 인식"
 FCB -> TXQ3
-TXQ3 -> TXMAC
-TXMAC -> PCSOUT
-PCSOUT -> SDOUT
-SDOUT -> NETOUT
 FCB -> TXQ3: "④ pause_time tick\n(단위 = 512 bit time)" { style.stroke-dash: 4 }
 ```
 
@@ -245,9 +251,12 @@ DCMAC: "DCMAC IP" {
     RX_PCS -> RX_MAC
     RX_MAC -> AXIS_RX
   }
-  CFG: "Configuration / Status Registers (AXI-Lite)\nMAC 주소·모드·통계 카운터·에러 상태\nRS-FEC 설정 · PTP 타임스탬프 · Flow Control 설정"
-  FC_ENG: "Flow Control Engine\nPause Frame 생성/처리\nPFC (Priority Flow Ctrl)"
-  PTP_ENG: "PTP / 1588 Engine\nTX Timestamp Capture\nRX Timestamp Capture"
+  SUPPORT: "제어 / 지원 블록" {
+    direction: right
+    CFG: "Configuration / Status Registers (AXI-Lite)\nMAC 주소·모드·통계 카운터·에러 상태\nRS-FEC 설정 · PTP 타임스탬프 · Flow Control 설정"
+    FC_ENG: "Flow Control Engine\nPause Frame 생성/처리\nPFC (Priority Flow Ctrl)"
+    PTP_ENG: "PTP / 1588 Engine\nTX Timestamp Capture\nRX Timestamp Capture"
+  }
 }
 ```
 
@@ -482,7 +491,7 @@ DV 관점:
 **MangoBoost Data Path:** Host ↔ TOE ↔ DCMAC ↔ PHY ↔ Network
 
 ```d2
-direction: down
+direction: right
 
 HOST: Host { shape: circle }
 TOE: TOE

@@ -440,7 +440,7 @@ L2 -- BUS
 ### 5.9 Tesla FSD 탈옥에 SecOC 가 있었다면? (Module 03 미리보기)
 
 ```d2
-direction: down
+direction: right
 
 DONGLE: "탈옥 동글" { style.stroke-dash: 6; style.stroke-width: 2 }
 BUS: "CAN Bus" { shape: oval }

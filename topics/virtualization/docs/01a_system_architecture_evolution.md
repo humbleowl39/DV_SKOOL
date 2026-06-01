@@ -173,7 +173,7 @@ hw_set_dma_addr(accel, dma_addr);
 ### 4.1 모든 단계 전이의 공통 구조
 
 ```d2
-direction: down
+direction: right
 L: "현 단계의\n결정적 한계"
 A: "HW/SW 추가물"
 N: "다음 단계"
