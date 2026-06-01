@@ -26,6 +26,8 @@
 
 **Related.** AtomicETH, AtomicAckETH, max_dest_rd_atomic.
 
+**Example.** CAS: compare\_add=0x01, swap=0x02 → 원격 값이 0x01 이면 0x02 로 교체 후 old value 반환.
+
 **See also.** [Module 06](06_data_path.md)
 
 ---
@@ -128,7 +130,11 @@
 
 **Source.** IB Spec 1.7, §4.1.1.
 
-**Related.** GUID, IPv6 mapping.
+**Related.** GUID, IPv6 mapping, GRH (SGID/DGID 필드).
+
+**Example.** RoCEv2 에서 GID 는 IPv6 주소 또는 IPv4-mapped IPv6 (::ffff:x.x.x.x) 로 표현된다.
+
+**See also.** [Module 02](02_ib_protocol_stack.md)
 
 ---
 
@@ -382,7 +388,9 @@
 
 **Source.** IB Spec 1.7, §7.6.5.
 
-**Related.** VL, QoS.
+**Related.** VL, QoS, Subnet Manager (SL→VL 매핑 테이블 배포).
+
+**Example.** SL=0 → VL0 (general data), SL=15 → VL15 (management, PFC 제외). 매핑은 SM 이 설정.
 
 **See also.** [Module 02](02_ib_protocol_stack.md)
 
@@ -392,7 +400,9 @@
 
 **Source.** IB Spec 1.7, §10.3.
 
-**Related.** WR, WQE.
+**Related.** WR, WQE, SRQ, CQ.
+
+**Example.** `ibv_post_send()` → SQ 에 WR enqueue; `ibv_post_recv()` → RQ 에 WR enqueue. RC SEND 수신 시 RQ 에 RECV WR 가 없으면 RNR NAK 이 발행된다.
 
 **See also.** [Module 04](04_service_types_qp.md)
 
@@ -420,7 +430,11 @@
 
 **Source.** IB Spec 1.7, §9.8.1.
 
-**Related.** RC, packet drop.
+**Related.** RC, UD, packet drop.
+
+**Example.** RDMA WRITE 는 UC 에서도 사용 가능하지만 패킷이 drop 되어도 재전송 없이 데이터 손실이 생긴다.
+
+**See also.** [Module 04](04_service_types_qp.md)
 
 ### UD (Unreliable Datagram)
 
@@ -428,7 +442,11 @@
 
 **Source.** IB Spec 1.7, §9.8.2.
 
-**Related.** DETH, Q_Key, multicast.
+**Related.** DETH, Q_Key, multicast, SRQ.
+
+**Example.** IPoIB, MAD 관리 트래픽, subnet multicast 가 UD 를 사용한다. MTU=1024 환경에서 UD 최대 payload ≈ 1024 − (BTH+DETH+ICRC) = 약 1008 byte.
+
+**See also.** [Module 04](04_service_types_qp.md)
 
 ---
 

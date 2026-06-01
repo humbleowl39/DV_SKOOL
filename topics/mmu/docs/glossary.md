@@ -8,13 +8,13 @@
 
 ### ASID (Address Space Identifier)
 
-**Definition.** Process별 가상 주소 공간을 구분하기 위한 TLB tag로, context switch 시 TLB 전체 flush를 회피하고 cold miss 폭증을 방지.
+**Definition.** Process별 가상 주소 공간을 고유하게 식별하기 위해 TLB entry에 부여되는 하드웨어 태그 값.
 
 **Source.** ARMv8 ARM, §D5.
 
 **Related.** VMID, TLB invalidation, context switch.
 
-**Example.** ARMv8: 8 또는 16-bit ASID. Linux는 PID와 매핑.
+**Example.** ARMv8: 8 또는 16-bit ASID. Linux는 PID와 매핑. context switch 시 ASID를 변경하는 것만으로 TLB 전체 flush 없이 이전 프로세스의 entry와 격리된다.
 
 **See also.** [Module 03 — TLB](03_tlb.md)
 
@@ -25,6 +25,8 @@
 **Source.** PCIe Spec, ATS extension.
 
 **Related.** SVM, PRI, Device TLB.
+
+**Example.** GPU가 ATS Translation Request를 IOMMU에 발행하면 IOMMU는 Translation Completion으로 PA를 반환하고, GPU는 이를 Device TLB에 저장해 이후 DMA에서 IOMMU를 우회한다.
 
 **See also.** [Module 04 — IOMMU/SMMU](04_iommu_smmu.md)
 
@@ -52,7 +54,7 @@
 
 **Related.** Stage 1, Stage 2, VMID.
 
-**Flow.** VA → (Stage 1, OS) → IPA → (Stage 2, hypervisor) → PA.
+**Example.** 게스트 OS는 IPA를 자신의 물리 주소로 인식하며 page table을 구성한다. 하이퍼바이저는 Stage 2를 통해 IPA→PA 매핑을 관리하며, 변환 흐름은 VA → (Stage 1, OS) → IPA → (Stage 2, hypervisor) → PA이다.
 
 **See also.** [Module 04](04_iommu_smmu.md)
 
@@ -88,7 +90,7 @@
 
 **Related.** TLB Miss, PWC, Walk Engine.
 
-**Cost.** 4-level walk = 4 memory accesses. PWC hit이면 1-2 access로 단축.
+**Example.** 4-level walk(ARMv8 4KB granule) = 최소 4번의 메모리 읽기. 각 읽기가 DRAM에 도달하면 walk 한 번에 수백 cycle이 소요되며, PWC hit이면 1-2 access로 단축된다.
 
 **See also.** [Module 02](02_page_table_structure.md), [Module 03](03_tlb.md)
 
@@ -99,6 +101,8 @@
 **Source.** Modern CPU microarchitecture.
 
 **Related.** Page Walk, TLB hierarchy.
+
+**Example.** 좁은 VA 범위를 순차 접근하면 L0/L1 PTE가 PWC에 유지되어 walk 시 L2·L3만 메모리에서 읽으면 된다. 반대로 완전 랜덤 VA 접근 패턴에서는 PWC hit rate가 거의 0에 수렴한다.
 
 **See also.** [Module 02](02_page_table_structure.md)
 
@@ -160,7 +164,7 @@
 
 **Related.** ASID/VMID tagging, set-associative, replacement policy.
 
-**Hierarchy.** micro-TLB (4-16 entries) → L1 TLB (수십) → L2 TLB (수천).
+**Example.** micro-TLB (4-16 entries, 1-cycle 접근) → L1 TLB (수십 entries) → L2 TLB (수천 entries). L1 miss가 L2 hit으로 해결되면 page walk를 회피할 수 있다.
 
 **See also.** [Module 03](03_tlb.md)
 
@@ -172,7 +176,7 @@
 
 **Related.** Stale TLB entry, TLB shootdown, IPI.
 
-**Variants.** TLBI VAE1 (VA-by), TLBI ASIDE1 (ASID-by), TLBI VMALLE1 (full).
+**Example.** 단일 PTE 변경 시 `TLBI VAE1`으로 해당 VA만 무효화하는 것이 `TLBI VMALLE1`(전체 flush)보다 훨씬 저렴하다. ASID 재사용 시에는 `TLBI ASIDE1`으로 해당 프로세스의 모든 entry를 한 번에 제거한다.
 
 **See also.** [Module 03](03_tlb.md)
 

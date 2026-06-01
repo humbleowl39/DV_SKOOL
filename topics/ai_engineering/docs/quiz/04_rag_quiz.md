@@ -9,50 +9,42 @@
 RAG 의 4-step 파이프라인은?
 
 ??? answer "정답 / 해설"
-    1. **Chunk** — 문서를 의미 단위로 분할.
-    2. **Index** — 임베딩 → vector DB 적재.
-    3. **Retrieve** — 질의를 임베딩 → top-k 검색 (+ re-rank).
-    4. **Generate** — 검색 결과를 prompt 에 합쳐 LLM 호출.
+    RAG의 4단계는 **Chunk → Index → Retrieve → Generate** 이며, 각 단계는 명확한 역할 분리를 가진다.
+
+    **Chunk**는 문서를 의미 단위로 분할하는 사전 처리 단계다. 여기서 잘못 자르면 이후 단계가 아무리 좋아도 품질이 회복되지 않으므로 가장 신중해야 한다. **Index**는 각 chunk를 임베딩 모델로 벡터화하고 vector DB에 적재해 검색 가능한 상태를 만든다. 이 두 단계는 보통 오프라인에서 미리 수행된다. 실시간 요청이 들어오면 **Retrieve** 단계가 질의를 같은 임베딩 모델로 벡터화하고 top-k 유사 chunk를 찾는다. re-ranker가 있으면 이 시점에 추가로 정렬한다. 마지막으로 **Generate**에서 검색된 chunk들을 prompt에 컨텍스트로 주입해 LLM이 사실에 근거한 답변을 생성하게 한다.
 
 ## Q2. (Understand)
 
 RAG 가 fine-tune 보다 운영 측면에서 유리한 시나리오를 설명하라.
 
 ??? answer "정답 / 해설"
-    - **자주 갱신되는 지식** : RAG 는 인덱스만 갱신하면 즉시 반영, fine-tune 은 매번 재학습.
-    - **출처 인용 필요** : RAG 는 검색된 문서 출처를 답변에 첨부 가능, fine-tune 은 어떤 데이터로 답이 나왔는지 추적 불가.
-    - **소량 데이터** : fine-tune 은 수천~수만 예시가 필요하지만 RAG 는 수십 문서로도 즉시 동작.
+    RAG가 fine-tune보다 운영 측면에서 유리한 상황은 세 가지 구조적 이유에서 비롯된다.
+
+    첫째, **자주 갱신되는 지식**이다. fine-tune은 지식이 모델 가중치에 내재화되어 있어 지식이 바뀌면 재학습이 필요하다. 반면 RAG는 vector DB 인덱스만 교체하면 즉시 새로운 지식이 반영되므로, 매주 바뀌는 정책·spec 같은 환경에서 결정적으로 유리하다. 둘째, **출처 인용이 필요한 도메인**이다. RAG는 어떤 문서에서 답변이 나왔는지 검색 결과를 그대로 제시할 수 있지만, fine-tune된 모델은 "이 답이 어떤 학습 데이터에서 나왔는지" 추적이 불가능하다. 법률·규제·안전 critical 도메인에서 출처 불명의 답변은 허용되지 않는다. 셋째, fine-tune은 수천~수만 개의 레이블 예시가 필요하지만 RAG는 수십 개의 문서만으로도 즉시 작동하므로, 데이터가 적을 때 유일한 현실적 선택이다.
 
 ## Q3. (Apply)
 
 Hybrid 검색 (dense + BM25) 에서 두 점수를 어떻게 결합할 것인가?
 
 ??? answer "정답 / 해설"
-    1. **Weighted sum** : `score = α * dense + (1-α) * bm25`. α 는 validation set 으로 튜닝.
-    2. **Reciprocal Rank Fusion (RRF)** : 각 검색의 rank 만 사용해 `1/(k+rank)` 합산. 점수 스케일 차이를 자연스럽게 흡수.
-    3. **Re-ranker 로 합치기** : 두 검색의 top-N 합집합을 cross-encoder 로 재정렬.
+    Hybrid 검색에서 dense와 BM25의 점수를 결합하는 방법은 세 가지이며, 각각 적합한 상황이 다르다.
 
-    RRF 가 대부분의 경우 robust 한 baseline.
+    **Weighted sum**(`score = α * dense + (1-α) * bm25`)은 가장 직관적이지만, dense score와 BM25 score의 스케일이 서로 달라서 α를 validation set으로 신중하게 튜닝해야 한다. 스케일을 잘못 맞추면 한쪽이 지배해 사실상 단일 검색과 다름없어진다. **RRF(Reciprocal Rank Fusion)**는 실제 점수가 아닌 순위(rank)만 사용해 `1/(k+rank)` 합산하므로, 두 검색의 스케일 차이 문제를 구조적으로 피할 수 있다. 튜닝 파라미터도 k 하나뿐이어서 대부분의 상황에서 가장 robust한 baseline이 된다. **Re-ranker 결합**은 두 검색의 top-N 합집합을 cross-encoder처럼 정밀한 모델로 다시 정렬하는 방식으로 가장 높은 품질을 낼 수 있지만, latency와 비용이 증가한다.
 
 ## Q4. (Analyze)
 
 RAG 응답이 부정확할 때 단계별 진단 순서를 제시하라.
 
 ??? answer "정답 / 해설"
-    1. **Retrieval check** : top-k 안에 정답 문서가 있는가? 없으면 → chunking, 임베딩 모델, hybrid 부족이 원인.
-    2. **Context window check** : 정답 문서가 너무 길어 truncation 됐는가?
-    3. **Prompt check** : 검색 결과를 LLM 이 무시하지 않도록 명확한 지시 ("Cite the source", "Answer only from the provided context") 가 있는가?
-    4. **Generation check** : 같은 컨텍스트로 GPT-4 등 더 강한 모델이 풀면 풀리는가? → LLM 한계.
+    RAG 부정확 진단의 원칙은 **"싸고 빠른 단계부터 차례로 좁혀가는 것"** 이다. 무작정 LLM이나 프롬프트부터 바꾸는 것은 근본 원인을 놓칠 수 있다.
 
-    이 순서는 **싸고 빠른 단계부터** 점검하는 원칙이다.
+    첫 번째로 **Retrieval check**를 한다. top-k 결과 안에 정답이 될 수 있는 문서가 실제로 있는지 확인한다. 없다면 문제의 원인은 chunking 방식, 임베딩 모델의 도메인 적합성, 또는 dense 검색으로는 잡기 어려운 query 패턴(약어, 코드 식별자)이므로 hybrid 추가를 고려한다. top-k에 정답 문서가 있다면 두 번째로 **Context window check**를 한다. 문서가 너무 길어 LLM 입력 시 중간이 잘렸다면, 정보가 있어도 모델이 못 보는 것이다. 세 번째로 **Prompt check**: "주어진 컨텍스트만으로 답해라"는 명확한 지시 없이는 LLM이 검색 결과를 무시하고 자신의 파라미터 지식으로 답하는 경향이 있다. 마지막으로 **Generation check**로, 같은 컨텍스트를 더 강한 모델(예: GPT-4)에 주었을 때 답이 나온다면 원래 모델의 reasoning 한계가 원인이다.
 
 ## Q5. (Evaluate)
 
 RAGAS 의 Faithfulness, Answer Relevance, Context Recall 이 각각 측정하는 바는?
 
 ??? answer "정답 / 해설"
-    - **Faithfulness** : 답변이 검색된 컨텍스트로부터 grounded 되어 있는가? (hallucination 측정)
-    - **Answer Relevance** : 답변이 질의에 적합한가? (off-topic 여부)
-    - **Context Recall** : 정답에 필요한 정보가 검색된 컨텍스트 안에 다 들어 있는가? (retrieval 품질)
+    RAGAS의 세 지표는 RAG 파이프라인의 서로 다른 실패 지점을 각각 측정하므로, 하나만 낮아도 어디가 문제인지 즉시 진단할 수 있다.
 
-    셋이 함께 측정되어야 어디가 깨졌는지 진단 가능. 한 가지만 보면 책임 소재가 흐려진다.
+    **Faithfulness**는 생성된 답변이 검색된 컨텍스트에 근거하는지를 측정한다. 이 값이 낮으면 모델이 컨텍스트를 무시하고 자신의 파라미터 지식으로 답한 것, 즉 hallucination이 발생한 것이다. 이 경우 prompt의 "컨텍스트에만 근거해 답하라"는 지시를 강화하거나 모델을 교체해야 한다. **Answer Relevance**는 답변이 질의 자체에 적절한지를 본다. 이 값이 낮으면 컨텍스트가 있어도 모델이 엉뚱한 방향으로 답변을 생성한 것이다. **Context Recall**은 정답을 만들기 위해 필요한 정보가 검색된 컨텍스트 안에 실제로 들어 있었는지를 측정한다. 이 값이 낮으면 retrieval 단계가 문제다. 세 지표를 함께 보면 "retrieval 문제인가, generation 문제인가, prompt 문제인가"를 명확히 분리해 진단할 수 있다.

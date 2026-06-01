@@ -197,6 +197,8 @@ endtask
 
 **Related.** Objection, run_phase 종료, phase.phase_done.set_drain_time().
 
+**Example.** `phase.drop_objection(this, "last tx done", 200);` — drop 후 200 시간 단위를 더 진행해 DUT 파이프라인의 마지막 응답이 Scoreboard에 도달할 시간을 확보합니다.
+
 **See also.** [Module 01](01_architecture_and_phase.md)
 
 ### DPI-C
@@ -294,9 +296,9 @@ endtask
 
 **Source.** UVM 1.2 Reference Manual, §9.
 
-**Related.** build_phase, run_phase, top-down vs bottom-up.
+**Related.** build_phase, run_phase, top-down vs bottom-up, Objection.
 
-**Example.** Phase 별 책임 분리 — build에서 컴포넌트 생성, connect에서 TLM 연결, run에서 시간 소비.
+**Example.** build에서 컴포넌트 생성(top-down), connect에서 TLM 포트 연결(bottom-up), run에서 시퀀스 실행(시간 소비), check에서 scoreboard 최종 검사, report에서 커버리지 리포트 출력.
 
 **See also.** [Module 01](01_architecture_and_phase.md)
 
@@ -330,6 +332,8 @@ endclass
 
 **Related.** Scoreboard, DPI-C, Predictor.
 
+**Example.** C++로 작성한 패킷 CRC 계산 함수를 DPI-C로 임포트해, Scoreboard가 Monitor에서 받은 실제 CRC와 레퍼런스 계산값을 비교합니다.
+
 **See also.** [Module 05](05_tlm_scoreboard_coverage.md)
 
 ### Regression
@@ -339,6 +343,8 @@ endclass
 **Source.** 검증 일반 관용 표현.
 
 **Related.** Coverage Closure, Seed, Test Suite.
+
+**Example.** 100개의 랜덤 시드로 동일 테스트를 돌려 커버리지 리포트를 병합(merge)하고, 미달 bin을 타겟 시퀀스로 보완하는 coverage closure 사이클.
 
 **See also.** [Module 05](05_tlm_scoreboard_coverage.md)
 

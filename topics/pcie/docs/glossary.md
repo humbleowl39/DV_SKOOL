@@ -14,6 +14,8 @@
 
 **Related.** NAK, Sequence Number, Replay Buffer.
 
+**Example.** `AckNak_Seq_Num = 42` 인 ACK DLLP 는 "Sequence 0~42 까지 모두 정상 수신"을 의미하며, sender 는 Replay Buffer 에서 0~42 를 retire 할 수 있다.
+
 **See also.** [Module 04](04_dllp_flow_control.md)
 
 ### ACS (Access Control Services)
@@ -66,7 +68,9 @@
 
 **Source.** PCIe Base Spec, Type 0/1 Configuration Header.
 
-**Related.** BAR sizing, Type bit, Prefetchable.
+**Related.** BAR sizing, Type bit, Prefetchable, MMIO.
+
+**Example.** BAR0 에 0xFFFFFFFF write 후 read 결과가 0xFFF00000 이면, type bit 마스크 후 `~R + 1` 로 1 MB 영역을 요청한 것이다.
 
 **See also.** [Module 06](06_config_enumeration.md)
 
@@ -77,6 +81,8 @@
 **Source.** PCIe Base Spec.
 
 **Related.** Requester ID, ARI, Routing.
+
+**Example.** `0000:01:00.0` 은 Domain 0, Bus 1, Device 0, Function 0 을 가리키는 lspci 표기다.
 
 **See also.** [Module 03](03_tlp.md), [Module 06](06_config_enumeration.md)
 
@@ -91,6 +97,8 @@
 **Source.** PCIe Base Spec, Completion Status.
 
 **Related.** Boot hang, Vendor ID = 0xFFFF.
+
+**Example.** NVMe 디바이스가 부팅 후 firmware 초기화 중일 때 CfgRd0 에 CRS 로 응답하면, SW 는 즉시 "디바이스 없음"으로 판단하지 않고 재시도해야 한다.
 
 **See also.** [Module 06](06_config_enumeration.md)
 
@@ -236,7 +244,9 @@
 
 **Source.** PCIe Base Spec, Data Link Layer.
 
-**Related.** ECRC, Replay Buffer.
+**Related.** ECRC, Replay Buffer, NAK.
+
+**Example.** Switch 를 두 번 경유하는 TLP 는 각 hop 의 수신 측에서 LCRC 가 검증·재계산되므로, 총 두 번 검증된다.
 
 **See also.** [Module 02](02_layer_architecture.md), [Module 04](04_dllp_flow_control.md)
 
@@ -440,7 +450,9 @@
 
 **Source.** PCIe Base Spec, TLP Header.
 
-**Related.** Outstanding NP, Cpl.
+**Related.** Outstanding NP, Cpl, MRRS.
+
+**Example.** 한 MRd 가 MPS 한계로 여러 CplD 로 분할되어도 모든 CplD 는 그 MRd 의 동일한 Tag 를 공유하므로 Requester 가 응답을 묶을 수 있다.
 
 **See also.** [Module 03](03_tlp.md)
 

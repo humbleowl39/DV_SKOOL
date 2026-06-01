@@ -17,6 +17,8 @@ RDMA-IP 의 5 wrapper 를 들고 각각의 1 줄 책임을 적어라.
 
     (+ `mmu_wrapper` — IOVA→PA 변환).
 
+    5개 wrapper 의 분리 원칙은 "송신(requester)과 수신(responder) 경로의 독립성 + 완료(completer) 와 재전송(retry) 의 타임라인 분리"다. requester 와 responder 를 합치면 데이터 경로와 ACK 경로가 얽혀 타이밍 분석이 복잡해지고, completer 와 retry 를 합치면 tight pipeline 의 frontend 에 sparse FSM 인 retry 가 끼어들어 critical path 가 늘어난다. 검증 환경은 이 5개 wrapper 각각에 대해 독립적인 서브모듈 TB 를 가질 수 있다는 이점도 있다.
+
 ## Q2. (Understand)
 
 `completer_frontend` 의 `m_comp_payload_drop1`, `drop2`, `drop3` 신호가 의미하는 바는?

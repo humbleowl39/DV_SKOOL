@@ -14,22 +14,17 @@
   </div>
 </div>
 
+## 이 토픽을 배워야 하는 이유
+
+현대 반도체 칩의 검증 엔지니어는 언젠가 이 벽에 부딪힙니다. DRAM의 bit-line 전압이 60 mV밖에 올라가지 않아서 sense amp가 제대로 동작하는지 확인해야 하는데, 순수 디지털 시뮬레이터는 전압을 0과 1로밖에 표현하지 못합니다. SPICE로 돌리자니 수억 개의 셀이 있어 시뮬레이션 완료까지 수 년이 걸립니다. 이 상황에서 어떻게 해야 할까요?
+
+이 토픽을 배우지 않으면, DLL 위상 정렬이 맞는지 timing margin을 정량화하지 못하고, IO buffer 임피던스 mismatch가 eye를 얼마나 좁히는지 계산하지 못하며, Pelgrom mismatch 통계가 칩 yield에 어떻게 연결되는지 추론할 수 없습니다. mixed-signal 블록을 검증 계획에서 "아날로그팀이 알아서 하는 것"으로 넘기게 되고, 그 경계에서 생기는 버그가 tape-out 이후 발견됩니다.
+
 ## 이 학습 자료가 다루는 것
 
-대부분의 실제 칩(DRAM, ADC, SerDes, PLL, Power IC)에는 디지털과 아날로그가 공존합니다. 그러나 두 도메인은 **시뮬레이션 패러다임이 완전히 다릅니다.**
+대부분의 실제 칩(DRAM, ADC, SerDes, PLL, Power IC)에는 디지털과 아날로그가 공존합니다. 그러나 두 도메인은 **시뮬레이션 패러다임이 완전히 다릅니다.** Digital simulator(VCS, Xcelium)는 logic 0/1/X/Z와 이벤트 기반 엔진으로 동작하여 빠르지만 실수 전압·노이즈·신호 천이를 표현하지 못합니다. SPICE(HSPICE, Spectre)는 실수 전압과 전류를 연속시간 수치 해석으로 정확하게 풀지만 회로 규모에 비례해서 극단적으로 느립니다. RNM(SystemVerilog `nettype real`)은 real 값을 이벤트 기반으로 처리하여 두 접근의 장점을 결합합니다.
 
-- **Digital simulator** (VCS, Xcelium): logic(0/1/X/Z) + 이벤트 기반 → 빠르지만 voltage·노이즈·천이를 표현 못함
-- **SPICE** (HSPICE, Spectre): 실수 전압/전류 + 연속시간 수치해석 → 정확하지만 매우 느림
-- **RNM** (SystemVerilog `nettype real`): real 값 + 이벤트 기반 → 빠르면서 voltage 표현 가능
-
-이 토픽은 **세 시뮬레이션의 위치와 trade-off**를 잡고, **RNM이 DRAM 검증의 표준이 된 이유**와 그 한계, 그리고 **각 mixed-signal 블록을 어떤 추상화 수준으로 모델링해야 하는지** 결정하는 능력을 길러줍니다.
-
-다른 토픽과의 차이:
-
-- 모든 챕터에 **Bloom's Taxonomy 학습 목표** + **퀴즈 매핑**
-- **DLL · IO Buffer · Sense Amp Offset** 3대 블록 deep-dive (RNM 코드 포함)
-- DVCon paper 인용한 **검증 방법론** (Ch10) — DMS, EEnet, UDN 등 최신 베스트 프랙티스
-- 모든 핵심 식(Pelgrom, charge sharing, reflection coefficient, Newton-Raphson) **dry-run** 포함
+이 토픽은 **세 시뮬레이션의 위치와 trade-off**를 잡고, **RNM이 DRAM 검증의 표준이 된 이유**와 그 한계, 그리고 **각 mixed-signal 블록을 어떤 추상화 수준으로 모델링해야 하는지** 결정하는 능력을 길러줍니다. 모든 챕터에 Bloom's Taxonomy 학습 목표와 퀴즈 매핑이 있고, DLL·IO Buffer·Sense Amp Offset 3대 블록의 deep-dive에는 실제 RNM 코드가 포함됩니다. DVCon paper를 인용한 검증 방법론 챕터(Ch10)에서는 DMS, EEnet, UDN 등 최신 베스트 프랙티스를 다루며, Pelgrom 공식·charge sharing·reflection coefficient·Newton-Raphson 같은 핵심 수식은 모두 손으로 계산할 수 있도록 dry-run이 제공됩니다.
 
 ## 학습 경로
 
@@ -175,44 +170,23 @@
 
 ## 학습 목표 (전체)
 
-이 토픽을 모두 학습하면 다음을 할 수 있게 됩니다 (Bloom's Taxonomy):
+이 토픽을 모두 학습하면 다음을 할 수 있게 됩니다 (Bloom's Taxonomy).
 
-### Remember
-- SPICE, AMS, RNM의 정의
-- Sense amp, DLL, IO buffer의 구성 요소
-- Pelgrom's law, charge sharing 식
+**Remember** 수준에서는 SPICE·AMS·RNM의 정의를 recall할 수 있고, Sense amp·DLL·IO buffer 각각의 구성 요소를 나열하며, Pelgrom's law와 charge sharing 수식을 쓸 수 있습니다.
 
-### Understand
-- 세 시뮬레이션 방법론의 속도/정확도 trade-off
-- DLL이 lock을 잡는 메커니즘
-- ZQ calibration의 필요성
-- Mismatch가 sense amp offset을 만드는 원리
+**Understand** 수준에서는 세 시뮬레이션 방법론의 속도·정확도 trade-off를 설명하고, DLL이 lock을 잡는 feedback 메커니즘과 ZQ calibration이 왜 주기적으로 필요한지를 인과 관계로 서술할 수 있습니다.
 
-### Apply
-- `nettype real` 기반 RNM 모듈 작성
-- Charge sharing 물리를 RNM 코드로 구현
-- DLL, IO buffer, SA의 RNM 모델 작성
-- Pelgrom's law 적용한 random offset 주입
+**Apply** 수준에서는 `nettype real` 기반 RNM 모듈을 직접 작성하고, charge sharing 물리를 RNM 코드로 구현하며, Pelgrom's law를 적용한 random offset 주입 패턴을 사용할 수 있습니다.
 
-### Analyze
-- DRAM read 경로를 분해하여 어느 블록을 어떤 방법으로 검증할지 결정
-- Lock failure 원인 진단 (harmonic lock 포함)
-- Eye opening의 IO 파라미터 영향 분석
+**Analyze** 수준에서는 DRAM read 경로를 7-stage로 분해하여 각 블록의 적합한 검증 패러다임을 결정하고, DLL lock failure의 원인(harmonic lock 포함)을 진단하며, eye opening에 영향을 미치는 IO 파라미터를 분석할 수 있습니다.
 
-### Evaluate
-- Sense margin이 yield에 미치는 영향 정량 평가
-- ODT 설정이 signal integrity에 미치는 영향 판단
-- 주어진 검증 task에 RNM vs SPICE 중 어떤 게 적합한지 결정
+**Evaluate** 수준에서는 sense margin이 yield에 미치는 영향을 Pelgrom 통계로 정량 평가하고, ODT 설정 변경이 signal integrity에 어떤 결과를 낳는지 판단하며, 주어진 검증 task에 RNM과 SPICE 중 어느 것이 적합한지 근거와 함께 결정할 수 있습니다.
 
-### Create
-- DRAM read 경로 RNM 모델을 설계하고 SA offset MC 검증까지 완성
-- 새로운 mixed-signal 블록(예: PLL, regulator)의 RNM testbench 아키텍처 설계
+**Create** 수준에서는 DRAM read 경로의 RNM 모델을 설계하고 SA offset Monte Carlo 검증까지 완성하며, PLL이나 regulator 같은 새로운 mixed-signal 블록의 RNM testbench 아키텍처를 처음부터 설계할 수 있습니다.
 
 ## 선수 지식
 
-- SystemVerilog 기초 (`logic`, `always`, `module`)
-- 기본 회로 (저항, 캐패시터, MOSFET 동작 개념)
-- UVM 경험 있으면 도움이 되나 필수 아님 — RNM은 inline TB가 더 흔함
+이 토픽의 시작에는 SystemVerilog의 기초인 `logic`, `always`, `module` 문법을 알고 있으면 충분합니다. 회로 이론은 저항·캐패시터의 동작과 MOSFET이 트랜지스터로서 스위칭한다는 개념을 이해하는 수준이면 됩니다. UVM 경험이 있으면 Ch12의 testbench 통합 챕터에서 도움이 되지만 필수는 아닙니다 — RNM 모델 대부분은 UVM 없이 inline TB로 작성됩니다.
 
 ## 참조 표준
 

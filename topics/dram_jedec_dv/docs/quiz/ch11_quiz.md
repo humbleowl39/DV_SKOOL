@@ -15,7 +15,7 @@
     - D. Coverage closure plan
 
 ??? answer "정답: B"
-    **Why**: V-Plan의 출발점은 *무엇을 검증할 것인가* — DUT 범위와 feature list. 그것 없이 TB 코드는 *목적 없는* 작업. (Ch11 §11.1)
+    **Why**: V-Plan은 검증의 지도입니다. 무엇을 검증할지(DUT 정의), 어느 수준까지 검증해야 하는지(검증 목표), 각 feature가 어떤 시나리오로 검증되는지(Feature→검증 항목 매핑)를 먼저 정의해야 합니다. A(UVM TB 코드 먼저)는 목적지 없이 달리는 것과 같습니다. C(SVA assertion 먼저)와 D(coverage closure plan 먼저)는 모두 V-Plan의 결과물이지 시작점이 아닙니다. DUT 정의 없이 TB나 SVA를 작성하면 검증 범위 내외가 불명확해져 쓸모없는 coverage와 누락된 coverage가 동시에 발생합니다. (Ch11 §11.1)
 
 !!! question "Q2. UVM driver 가 DDR5 2-cycle command 발급 시 핵심 동작은? `(Understand)`"
     - A. 1 cycle 동안만 CA[6:0] 전송
@@ -24,7 +24,7 @@
     - D. CA만 전송, CS_n은 무관
 
 ??? answer "정답: B"
-    **Why**: DDR5 2-cycle command. driver는 *2 cycles 모두* CS_n LOW + 각 cycle에 다른 CA[6:0] 인코딩. (Ch11 §11.3.2)
+    **Why**: DDR5 2-cycle command를 발급하려면 UVM driver가 2 cycles 연속으로 CS_n을 LOW로 유지하면서 각 cycle마다 서로 다른 CA[6:0] 인코딩을 구동해야 합니다. A(1 cycle만 CA 전송)는 명령의 절반만 전달하므로 ADDR이 불완전해집니다. C(4 cycles)는 DDR5 명령 구조에 맞지 않고, D(CS_n 무관)는 CS_n이 명령 경계와 rank 선택을 동시에 정의하므로 틀렸습니다. driver가 두 cycle을 정확히 구동하지 않으면 DRAM과 monitor가 명령을 잘못 해석해 후단 검증이 전부 무너집니다. (Ch11 §11.3.2)
 
 !!! question "Q3. Rowhammer scenario sequence의 *핵심 단계*는? `(Apply)`"
     - A. Random WR 만 발급
@@ -33,7 +33,7 @@
     - D. Refresh 명령 burst
 
 ??? answer "정답: B"
-    **Why**: Rowhammer 검증의 핵심은 *aggressor를 반복 ACT-PRE* 후 *victim 데이터 무결성*. controller가 RFM 명령을 발급해 victim을 *보호*했는지 검증. (Ch11 §11.5.3)
+    **Why**: Rowhammer 시나리오는 먼저 victim row에 known pattern을 써 두고, aggressor row를 반복적으로 hammer(ACT-PRE)한 다음, victim row를 다시 읽어 원본 pattern이 유지되었는지 검증하는 흐름입니다. 이 과정에서 controller가 RAA threshold 도달 시 RFM 명령을 발급해 victim을 보호했는지를 함께 확인합니다. A(random WR만)는 의도적 hammer가 없어 disturbance를 유발하지 못합니다. C(PRE만 반복)는 ACT 없이는 row 활성화가 일어나지 않아 hammer가 성립하지 않습니다. D(refresh burst)는 오히려 disturbance를 완화하므로 공격 시나리오가 아닙니다. (Ch11 §11.5.3)
 
 !!! question "Q4. LPDDR5 변형 적용 시 *추가/변경*되는 컴포넌트로 옳지 *않은* 것은? `(Remember)`"
     - A. WCK_t/c 핀 추가
@@ -42,7 +42,7 @@
     - D. Link ECC encoding 모델 추가
 
 ??? answer "정답: C"
-    **Why**: LPDDR5는 BG mode가 *옵션* (16B/8B/BG mode) — 축소가 아니라 *유연한 선택*. (Ch11 §11.7)
+    **Why**: LPDDR5 변형을 적용할 때 Bank Group이 4개로 "축소"된다는 C는 틀린 설명입니다. LPDDR5는 16 banks·8 banks·BG mode 중 하나를 MR로 선택하는 유연한 구조이지 고정 축소가 아닙니다. A(WCK_t/c 핀 추가)는 LPDDR5의 별도 데이터 클럭 도입에 따른 실제 변경이고, B(CBT 시퀀스 추가)는 LPDDR5의 command bus training 절차이며, D(Link ECC encoding 모델 추가)도 LPDDR5에서 실제로 필요한 컴포넌트이므로 모두 옳습니다. (Ch11 §11.7)
 
 ## 단답형
 

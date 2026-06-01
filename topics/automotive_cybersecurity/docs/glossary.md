@@ -12,8 +12,9 @@
 ### AUTOSAR
 - **Definition.** 차량 ECU 소프트웨어 아키텍처 표준으로, Classic Platform(MCU 기반 실시간)과 Adaptive Platform(POSIX 기반 고성능) 두 갈래의 사양을 정의한다.
 - **Source.** AUTOSAR Consortium specification.
-- **Related.** Classic Platform, Adaptive Platform, SecOC, BSW.
-- **Example.** Classic AUTOSAR 의 SecOC 모듈은 CAN 메시지에 MAC 을 부착하여 인증한다.
+- **Related.** Classic Platform, Adaptive Platform, SecOC, BSW, KeyM, CryIf.
+- **Why it matters.** SecOC, Secure Boot, HSM 인터페이스가 AUTOSAR BSW 모듈로 표준화되어 있어, 자동차 보안 기능을 구현할 때 이 사양을 이해하지 않으면 올바른 구성과 통합이 어렵다.
+- **Example.** Classic AUTOSAR 의 SecOC 모듈은 CAN 메시지에 MAC 을 부착하여 인증한다. KeyM 모듈은 HSM 내 키 수명주기(생성·갱신·폐기)를 관리한다.
 - **See also.** [Module 02 — Automotive SoC Security](02_automotive_soc_security.md).
 
 ---
@@ -48,8 +49,9 @@
 ### Defense in Depth
 - **Definition.** 단일 보안 통제에 의존하지 않고 여러 독립적 계층(물리·통신·OS·앱·클라우드) 의 통제가 직렬로 작용하도록 설계하는 보안 원칙.
 - **Source.** Common security architecture principle.
-- **Related.** Layered Security, Threat Modeling.
-- **Example.** Secure Boot(L1) → SecOC(L2) → Gateway(L3) → IDS(L4) 의 4계층 스택.
+- **Related.** Layered Security, Threat Modeling, HSM, SecOC, Secure Gateway, IDS.
+- **Why it matters.** 어떤 단일 통제도 영구적으로 유효하지 않으므로, 한 계층이 뚫려도 다음 계층이 방어할 수 있어야 차량 수명 10~20년을 커버할 수 있다.
+- **Example.** Secure Boot(L1) → SecOC(L2) → Gateway(L3) → IDS(L4) 의 4계층 스택. 각 계층은 서로 다른 위협 유형을 방어한다.
 - **See also.** [Module 04](04_attack_surface_and_defense.md).
 
 ---
@@ -59,8 +61,9 @@
 ### Freshness Value
 - **Definition.** SecOC 메시지에 포함되는 단조 증가 카운터/타임스탬프로, 동일한 메시지의 재전송(replay) 을 수신측이 거부할 수 있게 해 주는 값.
 - **Source.** AUTOSAR SecOC specification.
-- **Related.** SecOC, MAC, Replay Attack.
-- **Example.** 카운터가 이전 값보다 작거나 같은 메시지는 폐기.
+- **Related.** SecOC, MAC, Replay Attack, Truncated MAC.
+- **Why it matters.** MAC만으로는 과거에 합법적으로 인증된 메시지의 재전송을 막을 수 없다. Freshness Value가 없으면 공격자가 정상 메시지를 녹음해 반복 재전송하는 것만으로 차량을 잘못된 상태로 유도할 수 있다.
+- **Example.** 카운터가 이전 값보다 작거나 같은 메시지는 폐기. CAN 8바이트 환경에서는 Freshness를 truncate 하여 비트 수를 줄여 payload 공간을 확보한다.
 - **See also.** [Module 02](02_automotive_soc_security.md).
 
 ---
@@ -81,8 +84,9 @@
 ### IDS (Intrusion Detection System) — Automotive
 - **Definition.** 차량 네트워크의 트래픽 패턴을 모니터링하여 시그니처 또는 ML 모델로 비정상 메시지를 탐지하는 시스템.
 - **Source.** Common automotive security architecture.
-- **Related.** SecOC, Gateway, V-SOC.
-- **Example.** 정상 주기 100ms 인 메시지가 갑자기 1ms 주기로 발생 → 이상 탐지.
+- **Related.** SecOC, Gateway, V-SOC, DoS, Misbehavior Detection.
+- **Why it matters.** SecOC는 메시지 진위를 검증하지만 합법 ECU가 침해되거나 DoS flooding이 발생하면 무력화된다. IDS는 이처럼 SecOC가 막지 못하는 행동 기반 공격을 탐지하는 보완 계층이다.
+- **Example.** 정상 주기 100ms 인 메시지가 갑자기 1ms 주기로 발생 → 이상 탐지 후 V-SOC 보고.
 - **See also.** [Module 02](02_automotive_soc_security.md), [Module 04](04_attack_surface_and_defense.md).
 
 ### ISO/SAE 21434
@@ -167,8 +171,9 @@
 ### Sybil Attack
 - **Definition.** 한 공격자가 다수의 가짜 신원(노드) 을 만들어 다대다 시스템(예: V2X) 의 신뢰 모델을 왜곡하는 공격.
 - **Source.** Common distributed systems security taxonomy.
-- **Related.** V2X, Pseudonym Certificate, Misbehavior Detection.
-- **Example.** 한 차량이 20개의 가짜 차량으로 위장하여 가짜 정체 정보 broadcast.
+- **Related.** V2X, Pseudonym Certificate, Misbehavior Detection, SCMS, Linkage Authority.
+- **Why it matters.** 자율주행 차량이 V2X BSM을 신뢰해 주행 결정을 내리는 환경에서, Sybil 공격으로 가짜 정체·사고·긴급차량 정보가 주입되면 실제 사고로 이어질 수 있다.
+- **Example.** 한 차량이 20개의 가짜 차량으로 위장하여 가짜 정체 정보를 broadcast 하거나, 존재하지 않는 긴급차량을 신고하여 교통 흐름을 교란한다.
 - **See also.** [Module 04](04_attack_surface_and_defense.md).
 
 ---
@@ -178,8 +183,9 @@
 ### TARA (Threat Analysis & Risk Assessment)
 - **Definition.** ISO/SAE 21434 가 요구하는 활동으로, 자산 식별 → 위협 시나리오 → 영향/실현가능성 평가 → 위험 등급 산정 → 처리 방안 결정의 절차.
 - **Source.** ISO/SAE 21434:2021.
-- **Related.** STRIDE, Attack Tree, Threat Modeling.
-- **Example.** "OBD-II 포트를 통한 CAN 메시지 주입" 위협에 대해 영향=High/실현가능성=Medium → Risk=Medium.
+- **Related.** STRIDE, Attack Tree, Threat Modeling, CSMS, Asset.
+- **Why it matters.** TARA를 수행하지 않으면 어떤 보안 통제가 필요한지 우선순위를 결정할 근거가 없어 과잉 투자 또는 누락이 발생하며, UN R155 CSMS 인증의 핵심 요건이기도 하다.
+- **Example.** "OBD-II 포트를 통한 CAN 메시지 주입" 위협에 대해 영향=High/실현가능성=Medium → Risk=Medium → SecOC + Gateway 적용이라는 처리 방안 도출.
 - **See also.** [Module 04](04_attack_surface_and_defense.md).
 
 ---

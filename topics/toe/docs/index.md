@@ -22,6 +22,10 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
+## 왜 배우나
+
+100GbE 이상 고속 네트워크에서 host CPU가 TCP/IP 스택을 직접 처리하면 패킷 하나당 허용 사이클이 턱없이 부족해 네트워크 대역폭을 전혀 활용하지 못한다. TOE는 이 처리 부담을 NIC HW로 옮겨 CPU를 사용자 애플리케이션에 돌려주는 핵심 기술이다. TOE를 모르면 SmartNIC 검증 환경을 설계할 때 어떤 state와 어떤 error injection이 필요한지 판단할 수 없고, connection table·재전송·혼잡 제어 버그가 왜 silent corruption으로 이어지는지도 이해하기 어렵다.
+
 ## 🎯 학습 목표
 - **Trace** TCP/IP 스택 처리를 host SW vs TOE HW로 비교 추적
 - **Diagram** TOE의 connection state machine + segment processing pipeline

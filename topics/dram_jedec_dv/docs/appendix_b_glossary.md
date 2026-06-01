@@ -100,20 +100,23 @@
 <p class="glossary-field"><strong>Definition.</strong> The minimum number of clock cycles between an ACT command and the first RD or WR command to the same bank.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 speed bin tables; JESD79-4D §13.</p>
 <p class="glossary-field"><strong>Related.</strong> [[ACT]], [[tRP]], [[tRC]]</p>
+<p class="glossary-field"><strong>See also.</strong> <a href="../06_timing_preamble/">Ch06</a></p>
 </div>
 
 <div class="glossary-term">
 <h3 id="trp">tRP (Row Precharge time)</h3>
 <p class="glossary-field"><strong>Definition.</strong> The minimum number of clock cycles between a PRE command and the next ACT command to the same bank.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 speed bin tables.</p>
-<p class="glossary-field"><strong>Related.</strong> [[PRE]], [[ACT]]</p>
+<p class="glossary-field"><strong>Related.</strong> [[PRE]], [[ACT]], [[tRC]]</p>
+<p class="glossary-field"><strong>See also.</strong> <a href="../06_timing_preamble/">Ch06</a></p>
 </div>
 
 <div class="glossary-term">
 <h3 id="trc">tRC (Row Cycle time)</h3>
 <p class="glossary-field"><strong>Definition.</strong> The minimum cycle time between two consecutive ACT commands to the same bank, equal to tRAS plus tRP.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 speed bin tables.</p>
-<p class="glossary-field"><strong>Related.</strong> [[tRAS]], [[tRP]]</p>
+<p class="glossary-field"><strong>Related.</strong> [[tRAS]], [[tRP]], [[tRCD]]</p>
+<p class="glossary-field"><strong>See also.</strong> <a href="../06_timing_preamble/">Ch06</a></p>
 </div>
 
 <div class="glossary-term">
@@ -121,6 +124,7 @@
 <p class="glossary-field"><strong>Definition.</strong> The minimum time a row must remain active (between ACT and PRE) within the same bank.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 speed bin tables.</p>
 <p class="glossary-field"><strong>Related.</strong> [[ACT]], [[PRE]], [[tRC]]</p>
+<p class="glossary-field"><strong>See also.</strong> <a href="../06_timing_preamble/">Ch06</a></p>
 </div>
 
 <div class="glossary-term">

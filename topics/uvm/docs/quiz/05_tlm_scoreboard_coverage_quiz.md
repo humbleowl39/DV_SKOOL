@@ -14,14 +14,14 @@
 - [ ] D. blocking get/put
 
 ??? answer "정답 / 해설"
-    **B**. 한 번 connect된 모든 구독자(SB, Coverage, Logger 등)가 같은 트랜잭션을 각자의 `write()` 콜백으로 받음. 비동기/non-blocking.
+    **B**. `uvm_analysis_port`는 `write()` 한 번 호출로 연결된 모든 구독자(Scoreboard, Coverage Subscriber, Logger 등)에게 동일한 트랜잭션 핸들을 전달합니다. 각 구독자는 자신의 `write()` 콜백에서 독립적으로 처리하므로, Monitor 하나로 Scoreboard와 Coverage를 동시에 구동하는 팬아웃 구조가 가능합니다. A(1:1)는 `uvm_blocking_put_port` 같은 포인트-투-포인트 포트의 특성이고, C(N:1)는 여러 포트가 하나의 export에 연결되는 형태이며, D(blocking)는 analysis_port의 특성이 아닙니다.
 
 ## Q2. (Understand)
 
 In-order Scoreboard(단일 큐 + pop_front 비교)를 OoO 응답을 가진 AXI 트래픽에 적용하면 무엇이 잘못되는가?
 
 ??? answer "정답 / 해설"
-    AXI는 같은 ID 내 in-order, ID 간 OoO이 정상입니다. Master가 ID=0,1,2를 보내고 Slave가 ID=2,0,1로 응답하면, expected 큐 head는 0인데 actual로 2가 와서 첫 비교부터 mismatch. 수정: per-ID 큐(associative array `expected[id][$]`)를 두고 응답이 오면 해당 ID 큐의 front와 비교.
+    AXI 프로토콜에서 같은 AXI ID 내에서는 응답이 in-order이지만, 서로 다른 ID 간에는 out-of-order 응답이 허용됩니다. 단순 단일 큐 Scoreboard는 expected 큐에 삽입된 순서(ID=0, 1, 2)대로 pop_front해 비교하므로, DUT가 ID=2를 먼저 응답하면 expected queue의 첫 항목(ID=0)과 actual(ID=2)이 불일치해 false error를 발생시킵니다. 올바른 수정 방법은 `expected[int][$]` 형태의 per-ID associative 큐를 사용해, 응답이 오면 해당 ID의 큐 front와만 비교하는 것입니다.
 
 ## Q3. (Apply)
 
@@ -33,7 +33,7 @@ Coverage subscriber에서 covergroup 샘플링은 어디서 호출하는 것이 
 - [ ] D. `write()` 콜백 안
 
 ??? answer "정답 / 해설"
-    **D**. Monitor가 트랜잭션을 broadcast하면 subscriber의 `write(t)`가 호출됩니다. 거기서 `this.item = t; cg.sample();` 패턴으로 샘플링하면 sampling 시점이 트랜잭션 발생 시점과 정확히 일치.
+    **D**. Coverage Subscriber에서 covergroup은 Monitor가 트랜잭션을 broadcast할 때, 즉 `write(t)` 콜백이 호출되는 시점에 샘플링해야 합니다. 그래야 "이 트랜잭션이 발생했다"는 사실과 covergroup 샘플이 1:1로 대응됩니다. `build_phase`(A)나 `connect_phase`(B)에서는 아직 트랜잭션이 없어 샘플링이 무의미하고, `run_phase`의 `forever` 루프(C)는 트랜잭션 발생 시점과 polling 시점이 어긋날 수 있어 샘플 손실이 생깁니다.
 
 ## Q4. (Analyze)
 
@@ -52,7 +52,7 @@ endgroup
 - [ ] D. 1
 
 ??? answer "정답 / 해설"
-    **B**. cross는 곱집합이므로 4 × 2 = **8개 bin**. cp_a 단독 4 + cp_b 단독 2 + cross 8 = 총 14 coverage points.
+    **B**. `cross`는 두 coverpoint의 bin 집합에 대한 곱집합(Cartesian product)을 생성합니다. `cp_a`가 4개 bin, `cp_b`가 2개 bin이면 cross bin은 4 × 2 = 8개입니다. A(6)은 덧셈 착오이고, C(4)는 cp_a bin 수만 본 오답이며, D(1)는 cross 전체를 하나로 오해한 경우입니다. 참고로 covergroup 전체의 coverage point 수는 cp_a 4 + cp_b 2 + cross 8 = 총 14개입니다.
 
 ## Q5. (Evaluate)
 
@@ -64,4 +64,4 @@ Coverage closure 전략으로 가장 효과적인 순서는?
 - [ ] D. 위 셋 동시에 처음부터
 
 ??? answer "정답 / 해설"
-    **A**. (1) 시드 다양화로 baseline 커버리지 확보 → (2) 비어있는 hole을 cross 분석으로 식별 → (3) 그 hole만 정확히 채우는 타겟 시퀀스. 처음부터 타겟 시퀀스로 가면 baseline이 부족해 hole 식별이 어려움.
+    **A**. Coverage closure는 단계적으로 접근해야 합니다. 먼저 다양한 시드로 랜덤 regression을 돌려 기본적으로 도달 가능한 영역을 채우고, 그 결과 보고서에서 지속적으로 비어있는 bin을 cross 분석으로 찾아냅니다. 그 후에야 해당 bin만을 목표로 하는 constrained sequence를 작성하면 낭비 없이 closure를 달성할 수 있습니다. B처럼 처음부터 cross 분석을 하면 baseline이 없어 어떤 hole이 진짜 어려운 것인지 판단하기 어렵고, C처럼 타겟 시퀀스를 먼저 쓰면 어떤 시나리오가 필요한지 모른 채 작업하게 됩니다.

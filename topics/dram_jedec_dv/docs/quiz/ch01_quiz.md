@@ -15,7 +15,7 @@
     - D. RD 명령이 영향 주는 것은 cell이 아니라 row buffer만이다
 
 ??? answer "정답: B"
-    **Why**: DRAM cell의 cap charge는 sense amp로 감지되는 *순간 손실*된다. 그래서 sense amp가 동시에 복원하지만, 다른 row로 이동하려면 *PRE → ACT* 가 필요. 그래서 ACT/PRE 명령이 모든 DRAM timing의 *기초*가 된다. (출처: Ch01 §2.2)
+    **Why**: DRAM cell의 커패시터에 저장된 전하는 sense amplifier가 감지하는 순간 소멸됩니다. sense amplifier는 감지와 동시에 전하를 원래 상태로 복원하기 때문에 "destructive read지만 즉시 복구"가 이루어집니다. A가 틀린 이유는 읽기 자체가 cell에 영향을 준다는 점을 부정하기 때문이고, C는 PRE 없이 반복 읽기가 가능하다는 잘못된 주장입니다. D는 row buffer가 cell과 별개인 것처럼 설명하지만 row buffer는 cell로부터 데이터를 *끌어내서* 만들어지므로 cell이 영향받는 것이 맞습니다. 이 메커니즘이 ACT/PRE가 모든 DRAM timing의 출발점이 되는 이유입니다. (출처: Ch01 §2.2)
 
 !!! question "Q2. DDR4와 DDR5의 차이로 옳지 *않은* 것은? `(Remember)`"
     - A. DDR5는 DIMM당 2 channels 독립 동작
@@ -24,7 +24,7 @@
     - D. DDR5는 on-DIMM PMIC 도입
 
 ??? answer "정답: C"
-    **Why**: DDR5의 default Burst Length는 *BL16*. BL8은 DDR4의 default. BL32는 DDR5의 옵션. (Ch01 §4.1)
+    **Why**: DDR5의 default Burst Length는 BL16이므로 "DDR5는 BL8을 default로 사용"한다는 C가 틀린 설명입니다. BL8은 DDR4의 default였으며, BL32는 DDR5에서 선택적으로 지원하는 옵션입니다. A(DIMM당 2 채널 독립 동작), B(2-cycle command), D(on-DIMM PMIC)는 모두 DDR4 대비 DDR5에서 새롭게 도입된 실제 변화입니다. DV 관점에서 BL을 혼동하면 burst 데이터 캡처 창이 틀려지므로 monitor와 scoreboard가 동시에 잘못됩니다. (Ch01 §4.1)
 
 !!! question "Q3. JESD79와 JESD209의 분화 이유는? `(Understand)`"
     - A. 제조사 차이
@@ -33,7 +33,7 @@
     - D. JESD79가 신규, JESD209가 폐기됨
 
 ??? answer "정답: B"
-    **Why**: JESD79는 *최대 대역폭/용량* 우선의 메인스트림 DDR, JESD209는 *전력 효율* 우선의 저전력 DDR. 동일 vendor가 둘 다 만들지만 검증 환경은 *별도*. (Ch01 §3)
+    **Why**: JESD79는 서버·데스크탑용 최대 대역폭과 용량을 우선하는 메인스트림 DDR 계열이고, JESD209는 모바일·임베디드에서 전력 효율을 우선하는 저전력 DDR 계열입니다. A가 틀린 이유는 분화의 기준이 제조사가 아니라 용도와 전력 프로파일이기 때문입니다. C는 단방향/양방향의 구분이 아니며, D는 반대로 JESD209가 현재도 활발히 개발 중이므로 틀렸습니다. 동일한 메모리 vendor가 두 계열을 모두 생산하지만, DV 환경은 타이밍 파라미터·명령 체계·전원 시퀀스가 달라 별도로 구성해야 합니다. (Ch01 §3)
 
 !!! question "Q4. LPDDR5만의 특징을 모두 고르시오. `(Remember)`"
     - A. WCK Clocking 분리
@@ -42,7 +42,7 @@
     - D. Link ECC
 
 ??? answer "정답: A, B, D"
-    **Why**: A, B, D는 LPDDR5 신규. C(RFM MR58)는 DDR5의 신규 기능. LPDDR5는 ARFM/DRFM이 별도. (Ch01 §5.2)
+    **Why**: WCK Clocking 분리(A), DVFS(B), Link ECC(D)는 모두 LPDDR5에서 처음 도입된 기능입니다. C(RFM MR58)는 DDR5의 Rowhammer 완화 메커니즘으로, LPDDR5는 이와 별개로 ARFM(Adaptive)과 DRFM(Directed) 방식을 채택합니다. C를 "LPDDR5 특징"으로 고르면 틀리는 이유는 MR58이라는 주소 자체가 DDR5 스펙에 정의된 번호이기 때문입니다. LPDDR5의 refresh management는 같은 개념이지만 다른 메커니즘과 MR 주소를 사용합니다. (Ch01 §5.2)
 
 ## 단답형
 

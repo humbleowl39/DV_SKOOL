@@ -15,7 +15,7 @@
     - D. Refresh interval 조정
 
 ??? answer "정답: B"
-    **Why**: Training은 *sampling timing/Vref/duty/equalizer*를 보정. high-speed 신호의 eye opening 마진 확보. (Ch08 §1)
+    **Why**: Training의 목적은 PCB trace 길이 차이, 부하 변화, 온도 드리프트로 인해 발생하는 신호 타이밍 오차와 전압 마진 저하를 보정하는 것입니다. 이를 통해 수신측의 eye opening 마진을 확보합니다. A(ECC 강화)는 training과 별개의 메커니즘이고, C(메모리 용량 확장)는 training과 전혀 무관합니다. D(Refresh interval 조정)는 MR 설정으로 하는 것이지 training의 목적이 아닙니다. DV에서 training을 검증하지 않으면 normal path만 통과하고 recovery 경로는 커버가 안 됩니다. (Ch08 §1)
 
 !!! question "Q2. LPDDR5 의 *WCK2CK Leveling* 은 무엇을 정렬하는가? `(Remember)`"
     - A. DQ와 DQS
@@ -24,7 +24,7 @@
     - D. RDQS_t와 DQS_t
 
 ??? answer "정답: B"
-    **Why**: WCK (data 클럭) 가 CK (command 클럭) 와 정확히 align되어야 *CAS WCK Sync 비트*가 의미를 가짐. (Ch08 §5.3)
+    **Why**: LPDDR5에서 WCK는 데이터 전송에 사용되는 클럭이고 CK는 커맨드·어드레스에 사용되는 클럭으로, 두 클럭의 위상이 정렬되어야 CAS WCK Sync 비트가 올바른 타이밍 기준을 제공합니다. A(DQ와 DQS)는 DDR4·DDR5에서 주로 중요한 정렬 관계이고, C(CS_n과 ACT_n)는 DDR4의 핀 신호 조합이며 이 leveling과 무관합니다. D(RDQS_t와 DQS_t)는 LPDDR5의 다른 신호 관계입니다. WCK2CK 정렬이 틀리면 데이터 버스 전체의 타이밍 기준이 어긋나므로 데이터 integrity가 전반적으로 무너질 수 있습니다. (Ch08 §5.3)
 
 !!! question "Q3. DDR5에서 *Read Training Mode* 의 핵심 MR은? `(Remember)`"
     - A. MR0, MR1
@@ -33,7 +33,7 @@
     - D. MR58 (RFM)
 
 ??? answer "정답: C"
-    **Why**: Read Training Mode Settings(MR25), Read Pattern Data(MR26/27), Read Pattern Invert(MR28/29), LFSR Assignment(MR30), Pattern Address(MR31). (Ch08 §3.2)
+    **Why**: DDR5의 Read Training과 관련된 MR은 MR25~MR31 범위입니다. MR25는 Read Training Mode Settings, MR26/27은 Read Pattern Data, MR28/29는 Read Pattern Invert, MR30은 LFSR Assignment, MR31은 Pattern Address를 담당합니다. A(MR0/MR1)는 Burst Length·CAS Latency 등 기본 동작 파라미터이고, B(MR8)는 Preamble/Postamble 설정입니다. D(MR58)는 RFM(Refresh Management)과 관련된 레지스터이므로 training과 무관합니다. (Ch08 §3.2)
 
 !!! question "Q4. LPDDR5 CBT Mode1 에서 사용되는 *임시* MR 개수는? `(Remember)`"
     - A. 1
@@ -42,7 +42,7 @@
     - D. 5
 
 ??? answer "정답: C"
-    **Why**: LPDDR5 §4.2.2.1 Three Physical Mode Register. CBT 동안 임시 활성화. (Ch08 §5.2)
+    **Why**: LPDDR5 CBT Mode1에서는 Three Physical Mode Register라고 불리는 3개의 임시 MR이 활성화됩니다. 이 MR들은 CA 패턴 캡처 설정, 패턴 반전, 제어 비트를 각각 담당하며 CBT가 진행되는 동안만 유효합니다. A(1개)·B(2개)·D(5개)는 스펙의 "Three Physical"이라는 명칭에 맞지 않습니다. 이 임시 MR이 일반 MR과 접근 방식이 다르기 때문에 RAL 모델에서 별도 register block으로 관리하는 것이 DV 구현의 핵심 포인트입니다. (Ch08 §5.2)
 
 ## 단답형
 

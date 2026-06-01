@@ -22,6 +22,12 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
+## 왜 배우는가
+
+SoC가 전원을 켜는 순간부터 OS가 뜨기까지, 소프트웨어는 단 한 줄도 신뢰할 수 없는 상태에서 시작합니다. 이 공백을 메우는 것이 Secure Boot이며, 하드웨어에 물리적으로 고정된 신뢰 기반(Hardware Root of Trust)에서 출발해 각 단계가 다음 단계를 검증하는 체인을 만들어 냅니다. 이 체인이 한 곳이라도 끊기면 공격자는 OS 이전에 자신의 코드를 실행할 수 있고, 그 시점에서는 이후 모든 소프트웨어 보안이 의미를 잃습니다.
+
+DV 엔지니어에게 Secure Boot 이해는 선택이 아닙니다. BootROM은 mask ROM이라 tape-out 후 버그를 패치할 수 없으므로, 검증 단계에서 모든 failure mode를 빠짐없이 확인해야 합니다. 이 토픽을 학습하지 않으면 검증 시나리오 매트릭스의 구성 원리, OTP fuse program 체크리스트의 의미, fault injection 방어의 DV 표현 방법을 이해할 수 없어 sign-off 판단 근거를 갖추기 어렵습니다.
+
 ## 🎯 학습 목표
 - **Trace** 부팅 단계별 신뢰 체인 (BootROM → BL1 → BL2 → BL31 → kernel)
 - **Apply** Hardware Root of Trust 구현 (eFuse, OTP, secure key storage)

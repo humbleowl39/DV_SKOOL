@@ -15,7 +15,7 @@
     - D. 외부 cache
 
 ??? answer "정답: B"
-    **Why**: DDR5 on-die ECC는 DRAM array 내부의 데이터 정정. 링크 보호는 CRC. (Ch09 §3.1)
+    **Why**: DDR5 Transparency ECC는 DRAM 셀 내부, 즉 커패시터 누설이나 soft error(방사선 입자 등)로 인한 array 내 오류를 정정하는 메커니즘입니다. 컨트롤러에 "투명"하다는 의미는 ECC 동작 자체가 컨트롤러에 보이지 않고 DRAM 내부에서 처리된다는 뜻입니다. A(DRAM↔Controller 링크)는 CRC나 Link ECC가 담당하는 영역이고, C(PCB trace)와 D(외부 cache)는 Transparency ECC의 보호 범위 밖입니다. DV에서는 ECC 동작을 MR 통계 조회로 간접 확인해야 하며, 직접적인 bit flip injection 테스트로 검증합니다. (Ch09 §3.1)
 
 !!! question "Q2. LPDDR5 *Link ECC* 가 보호하는 영역은? `(Understand)`"
     - A. DRAM 셀
@@ -24,7 +24,7 @@
     - D. Self refresh 동안
 
 ??? answer "정답: B"
-    **Why**: LPDDR5 Link ECC는 DQ pin 상의 *링크 신호*를 보호. DDR5 transparency ECC와는 *보호 대상 다름*. (Ch09 §4.1)
+    **Why**: LPDDR5 Link ECC는 컨트롤러와 DRAM 사이의 DQ 링크, 즉 물리적 핀 위의 신호를 보호합니다. A(DRAM 셀)는 DDR5 Transparency ECC의 영역이고, C(컨트롤러 내부 cache)와 D(Self Refresh 동안)는 Link ECC의 동작 범위가 아닙니다. 두 메커니즘(DDR5 Transparency ECC와 LPDDR5 Link ECC)이 보호하는 영역이 전혀 다르다는 점이 이 주제의 핵심입니다. DV에서 이 차이를 이해하지 못하면 어느 ECC가 어떤 오류를 잡는지 시나리오 설계가 잘못됩니다. (Ch09 §4.1)
 
 !!! question "Q3. *hPPR vs sPPR* 의 핵심 차이는? `(Understand)`"
     - A. hPPR은 fast, sPPR은 slow
@@ -33,7 +33,7 @@
     - D. 동일 기능
 
 ??? answer "정답: B"
-    **Why**: hPPR = hard = fuse 변경 = 영구. sPPR = soft = 일시적. (Ch09 §2.3)
+    **Why**: hPPR(hard PPR)은 on-die fuse를 물리적으로 변경해 failing row를 spare row로 영구 redirect하므로 전원이 꺼졌다 켜져도 유지됩니다. sPPR(soft PPR)은 fuse를 건드리지 않고 일시적 redirect만 수행하므로 전원 사이클 시 원래 상태로 돌아갑니다. A(hPPR이 빠르다)는 반드시 맞는 말이 아니며 핵심 차이가 아닙니다. C(발급 주체 차이)는 틀렸는데, 두 PPR 모두 컨트롤러가 발급합니다. D(동일 기능)는 명백히 틀린 설명입니다. DV에서는 hPPR의 영속성 때문에 Guard Key 없이는 의도치 않은 영구 수정이 발생하지 않도록 검증해야 합니다. (Ch09 §2.3)
 
 !!! question "Q4. CRC가 *보호하는 데이터*는? `(Remember)`"
     - A. Write data
@@ -42,7 +42,7 @@
     - D. Mode register
 
 ??? answer "정답: A"
-    **Why**: DDR4/DDR5의 CRC는 *Write data*에만 표준화. Read 시에는 별도 보호 메커니즘. (Ch09 §5)
+    **Why**: DDR4와 DDR5 스펙에서 CRC는 Write data에만 적용됩니다. 컨트롤러가 데이터를 DRAM으로 쓸 때 CRC를 함께 전송하고, DRAM이 이를 검증해 불일치 시 ALERT_n으로 알립니다. B(Read data)는 CRC의 표준 적용 범위가 아닙니다. C(Both)는 Write에만 표준화되어 있으므로 틀렸고, D(Mode register)는 CRC가 아니라 CA Parity로 보호됩니다. Read data 무결성은 on-die ECC나 Link ECC 같은 별개의 메커니즘으로 다룹니다. (Ch09 §5)
 
 ## 단답형
 

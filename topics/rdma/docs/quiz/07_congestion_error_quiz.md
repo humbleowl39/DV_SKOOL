@@ -41,6 +41,8 @@ d) `WC_REM_INV_RD_REQ_ERR`
 
     `RNR_RETRY_EXC_ERR` 는 `RETRY_EXC_ERR` 와 별도 status — RNR 메커니즘 자체가 별도 카운터.
 
+    이 매칭을 기억하는 방법은 오류 이름 자체가 원인을 설명한다는 점을 활용하는 것이다. `RETRY_EXC_ERR` 는 "retry 횟수가 다 됐다"이고, 그 원인은 패킷이 사라져서(ACK timeout, PSN 오류, implied NAK) retry 를 반복했기 때문이다. `RNR_RETRY_EXC_ERR` 는 "receiver 가 준비가 안 된 상태가 너무 오래 지속됐다"이고, 이는 transport drop 과 별개의 application-level 문제다. 두 카운터를 분리하는 이유는 transport 신뢰성 문제(c1)와 peer application 느림(c2)을 구분해 디버깅 시 원인을 빠르게 좁히기 위해서다.
+
 ## Q2. (Understand)
 
 PFC 만 사용하고 ECN+DCQCN 을 안 쓰는 환경의 위험성을 두 가지 들어라.

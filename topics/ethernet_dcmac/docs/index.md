@@ -22,6 +22,10 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
+## 왜 배워야 하는가
+
+현대 데이터센터와 고성능 네트워크 장비에서 Ethernet은 단순한 패킷 전달 수단을 넘어, 라인 레이트(100G/400G)에서 무결성을 보장해야 하는 핵심 인프라다. DCMAC(Dense Cascade MAC)은 MAC·PCS·FEC 세 계층을 단일 하드 IP로 통합한 AMD/Xilinx의 고속 Ethernet IP로, 이를 제대로 검증하지 못하면 lane mismatch나 IFG 위반 같은 silent bug가 제품 출하 후 고객 현장에서만 드러난다. Ethernet 프레임 구조와 lane 동작 원리를 이해하지 못한 채 TB를 작성하면 "CRC가 맞으니 정상"이라는 잘못된 확신으로 치명적인 데이터 오염을 통과시키게 된다. 이 토픽은 프레임 구조·고속 Ethernet 규격·DCMAC 아키텍처·DV 전략을 순서대로 연결해, 검증 엔지니어가 "무엇을, 왜, 어떻게" 테스트해야 하는지 인과적으로 체득하도록 설계되었다.
+
 ## 🎯 학습 목표
 - **Diagram** Ethernet 프레임 구조와 OSI 1-2 layer 매핑
 - **Distinguish** GbE / 10GbE / 100GbE / 400GbE 차이와 DCMAC의 위치

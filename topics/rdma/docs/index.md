@@ -21,6 +21,10 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
+## 왜 RDMA 를 배워야 하는가
+
+현대 AI 클러스터에서 GPU 수백 대가 초당 수백 GB 의 gradient 를 교환할 때, OS 가 그 경로 위에 있다면 latency 는 10배 늘어나고 CPU core 는 데이터를 옮기는 데만 소모된다. RDMA 는 "OS 를 경유하지 않고 메모리에서 메모리로" 라는 원칙으로 이 병목을 제거한다. RDMA 를 모르면 RDMA-IP 검증 환경의 QP FSM, PSN/ACK/NAK, MR/R_Key 같은 핵심 메커니즘이 왜 그렇게 설계됐는지 이해할 수 없고, 버그를 찾더라도 어디서 어떤 WC status 가 나와야 정상인지 판단할 근거가 없다. 이 토픽은 프로토콜 이해 → 검증 전략 수립 → 실제 RDMA-IP 구현 분석의 순서로 그 판단력을 쌓는다.
+
 ## 🎯 학습 목표
 - **Explain** RDMA 가 왜 만들어졌고 — kernel bypass / zero-copy / OS bypass — 가 어떤 의미인지 설명할 수 있다.
 - **Diagram** InfiniBand 패킷 스택 (LRH/GRH/BTH/Payload/ICRC/VCRC) 과 RoCEv2 매핑 (Eth/IP/UDP/BTH) 을 그릴 수 있다.

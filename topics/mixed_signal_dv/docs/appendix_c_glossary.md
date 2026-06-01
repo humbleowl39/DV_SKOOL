@@ -384,6 +384,76 @@
 
 **Example.** `wreal_resolution wAverage average` declares that drivers of a `wreal` net are averaged at multi-driver junctions.
 
+## Bit Line
+
+**Definition.** A pair of complementary metal lines in a DRAM array that carry a cell's charge-shared voltage signal to the sense amplifier for detection and amplification.
+
+**Source.** Rabaey, *Digital Integrated Circuits*, DRAM chapter.
+
+**Related.** [[Sense amplifier]], [[Charge Sharing]], [[DRAM cell]].
+
+**Example.** A precharge circuit holds BL and BLB at V_pre = VDD/2 before each read, so the charge-shared delta is symmetric.
+
+## DRAM cell
+
+**Definition.** A one-transistor one-capacitor (1T1C) storage element in DRAM that stores a logic value as charge on the capacitor and is accessed via a word-line-controlled pass transistor.
+
+**Source.** JEDEC JESD79-5 (DDR5 SDRAM Standard).
+
+**Related.** [[Bit Line]], [[Charge Sharing]], [[Sense amplifier]].
+
+**Example.** A typical DRAM cell capacitor is 25–30 fF, storing a '1' at approximately VDD (e.g., 0.9 V for DDR5).
+
+## EEnet
+
+**Definition.** A Cadence-specific user-defined nettype that represents a circuit node as a `{voltage, impedance}` struct and resolves multiple concurrent drivers using a Thevenin equivalent network.
+
+**Source.** DVCon papers on UVM-DMS methodology; Cadence `EE_pkg` documentation.
+
+**Related.** [[UDN]], [[Resolution Function]], [[nettype]].
+
+**Example.** Two LDO outputs tied to the same rail are resolved via `EEnet` to a single Thevenin voltage without requiring a SPICE engine.
+
+## Jitter
+
+**Definition.** The deviation of a signal transition from its ideal position in time, characterized statistically as deterministic (bounded) or random (unbounded Gaussian) components.
+
+**Source.** JEDEC JESD65; IEEE 802.3 Jitter Annex.
+
+**Related.** [[PLL]], [[Eye Opening]], [[SerDes]].
+
+**Example.** A DDR5 DQ clock has a total jitter specification of ±70 ps under nominal conditions.
+
+## Phase Detector
+
+**Definition.** A circuit block that measures the phase difference between two periodic signals and produces an output proportional to that difference for use as an error signal in a feedback loop.
+
+**Source.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 15–16.
+
+**Related.** [[DLL]], [[PLL]], [[Loop Filter]].
+
+**Example.** A bang-bang phase detector in a CDR outputs a 1-bit early/late signal to steer the VCO.
+
+## SerDes (Serializer/Deserializer)
+
+**Definition.** A high-speed I/O circuit that converts parallel data to a serial bit stream for transmission and reconverts received serial data back to parallel form.
+
+**Source.** PCI Express Base Specification; IEEE 802.3 SerDes standards.
+
+**Related.** [[IBIS-AMI]], [[CDR]], [[Eye Opening]], [[LTSSM]].
+
+**Example.** A PCIe Gen5 SerDes transmits at 32 Gbps per lane over a PCB trace, requiring CTLE and DFE equalization at the receiver.
+
+## VCO (Voltage-Controlled Oscillator)
+
+**Definition.** An oscillator whose output frequency is a function of a control voltage, used as the frequency-generating element in a phase-locked loop.
+
+**Source.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 15.
+
+**Related.** [[PLL]], [[Phase Detector]], [[Jitter]].
+
+**Example.** A ring VCO in a DDR5 PLL is tuned from 2 GHz to 4 GHz by varying its control voltage from 0.3 V to 0.9 V.
+
 ## See also
 
 - [Korean mirror](appendix_c_glossary_ko.md)

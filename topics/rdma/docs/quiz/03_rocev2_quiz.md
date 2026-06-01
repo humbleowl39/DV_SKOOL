@@ -13,6 +13,8 @@ RoCEv2 의 UDP destination port 는?
 
     Source port 는 hash 기반으로 가변 — ECMP 분산용.
 
+    destination port 를 4791 로 고정하는 이유는 수신측 NIC 가 "이 패킷은 RDMA 트래픽이다"라는 것을 L4 헤더만 보고 즉시 판단하기 위해서다. 반면 source port 를 flow 별로 다르게 hash 하는 것은 ECMP 라우터가 5-tuple 을 보고 동일 QP 의 패킷들을 서로 다른 경로에 분산시킬 수 있도록 하기 위함이다. source port 를 고정하면 모든 RoCEv2 패킷이 같은 경로로만 흘러 ECMP 분산 효과가 사라진다.
+
 ## Q2. (Understand)
 
 RoCEv2 에서 "사라지는 것" 과 "그대로 남는 것" 을 각각 두 가지 이상 들어라.

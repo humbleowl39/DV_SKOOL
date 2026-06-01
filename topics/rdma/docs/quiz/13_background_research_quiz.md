@@ -13,6 +13,8 @@
     2. MultiPathing — multi-path RDMA 알고리즘, packet spraying 한계.
     3. AI-RNIC 동향 — 산업 백서 / 동향 정리.
 
+    3축의 배경을 이해하면 왜 이 조합인지 납득이 간다. AI training 은 사내 RDMA IP 의 가장 직접적인 end-use case 이므로 검증 우선순위를 정하는 기준이 된다. MultiPathing 은 RoCEv2 의 strict in-order 가정과 충돌하므로, 사내 IP 가 SACK 나 AR mode 를 지원하는 이유를 이해하려면 이 분야 논문을 알아야 한다. AI-RNIC 동향은 경쟁사 설계 결정과 표준화 흐름을 파악해 "우리가 선택하지 않은 길"을 이해하는 데 쓰인다.
+
 ## Q2. (Understand)
 
 Falcon · Programmable CC · ECE 가 각각 해결하려는 문제를 한 문장으로 적어라.

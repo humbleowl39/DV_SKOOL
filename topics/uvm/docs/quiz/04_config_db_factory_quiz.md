@@ -14,14 +14,14 @@
 - [ ] D. virtual interface의 실제 인스턴스
 
 ??? answer "정답 / 해설"
-    **B**. 두 번째 인자(`"env.agent.*"`)가 첫 번째 인자 기준의 상대 경로. `this`가 test이면 실제 경로는 `uvm_test_top.env.agent.*`. `null`을 주면 절대 경로처럼 동작.
+    **B**. `config_db::set`의 첫 번째 인자는 두 번째 인자(경로 문자열)의 기준점이 되는 컨텍스트입니다. `this`가 test 클래스 인스턴스이면 실제 full path는 `uvm_test_top.env.agent.*`로 해석됩니다. `null`을 전달하면 경로 문자열이 UVM 계층 최상위부터의 절대 경로로 동작합니다. A(set이 적용될 자식)는 두 번째 인자의 역할이고, C(받는 컴포넌트의 부모)와 D(virtual interface 인스턴스)는 이 인자와 무관합니다.
 
 ## Q2. (Understand)
 
 `config_db::get`의 반환값을 무시하면 왜 위험한가?
 
 ??? answer "정답 / 해설"
-    get이 실패해도 함수는 0을 반환하고 핸들은 NULL/default 그대로 둡니다. 이 상태에서 시뮬을 진행하면 silent default로 동작하다가 다운스트림에서 false error로 나타나 디버그가 어려워집니다. 항상 `if (!get(...)) `uvm_fatal(...)` 패턴 권장.
+    `config_db::get`이 실패하면 함수는 0(false)을 반환하지만 이미 선언된 핸들 변수는 null 또는 기본값인 채로 남습니다. 반환값을 무시하면 이 사실을 알 방법이 없으므로, 이후 코드가 null 핸들로 트랜잭션을 drive하거나 virtual interface에 접근하다가 전혀 다른 위치에서 segfault나 UVM_ERROR로 나타납니다. 실제 원인(경로 불일치, set 누락)과 증상이 수십 줄 떨어져 있어 디버그가 매우 어려워집니다. `if (!uvm_config_db#(...)::get(this, "", "vif", vif)) \`uvm_fatal(...)`` 패턴으로 즉시 오류를 발생시키면 원인을 build_phase에서 바로 포착할 수 있습니다.
 
 ## Q3. (Apply)
 
@@ -33,7 +33,7 @@
 - [ ] D. `uvm_factory::create("my_err_driver", "drv")`
 
 ??? answer "정답 / 해설"
-    **B**. type override는 모든 인스턴스에 적용. instance override는 특정 경로만. 설정 전달이 아니라 *생성 타입 변경*이므로 config_db는 부적절.
+    **B**. Factory의 type override는 등록된 특정 타입을 생성하는 모든 `type_id::create` 호출에 일괄 적용됩니다. 따라서 환경 전체에 흩어진 `my_driver` 인스턴스를 전부 `my_err_driver`로 교체하려면 이 방법이 가장 간결합니다. A(instance override)는 특정 경로의 단일 인스턴스만 변경하므로 "모든 환경"이라는 요건에 맞지 않습니다. C(config_db)는 설정값 전달 용도이지 생성 타입을 변경하지 않습니다. D의 `uvm_factory::create` 형식은 UVM API에 존재하지 않는 잘못된 표기입니다.
 
 ## Q4. (Analyze)
 
@@ -45,7 +45,7 @@
 - [ ] D. 위 모두 가능 — set 시점, 인스턴스 이름, 타입 모두 점검 필요
 
 ??? answer "정답 / 해설"
-    **D**. 모두 가능한 원인입니다. 디버그: `uvm_config_db::dump()` 호출, `factory.print()`, `uvm_top.print_topology()`로 가시화.
+    **D**. config_db get 실패의 원인은 세 가지가 독립적으로 또는 복합적으로 작용합니다. 첫째, set 경로의 인스턴스 이름이 `agent`인데 실제 이름이 `apb_agent`이면 wildcard `*`가 있어도 중간 경로 불일치로 매칭이 안 됩니다. 둘째, set이 build_phase보다 늦게 호출되면 get 시점에 값이 아직 없습니다. 셋째, set과 get의 parameterized 타입이 다르면 타입 불일치로 silently 실패합니다. 디버그 시 `uvm_config_db::dump()`로 set 기록을 출력하고, `uvm_top.print_topology()`로 실제 인스턴스 이름을 확인하는 것이 가장 빠릅니다.
 
 ## Q5. (Evaluate)
 
@@ -57,4 +57,4 @@
 - [ ] D. config_db로 전달되는 cfg 객체를 다른 타입으로 교체
 
 ??? answer "정답 / 해설"
-    **B**. 특정 인스턴스만 변형하고 다른 동일 타입은 정상 유지하려면 instance override가 정답.
+    **B**. instance override는 경로 문자열로 특정 컴포넌트 하나만 대상으로 삼기 때문에, `env.cpu_agent.driver`만 글리치 주입 버전으로 바꾸고 나머지 driver들은 원래 타입 그대로 유지할 수 있습니다. 만약 type override를 적용하면 환경 전체의 모든 `my_driver` 인스턴스가 교체되어 A의 시나리오가 됩니다. C(모든 sequence item 교체)와 D(config 객체 타입 교체)는 단일 인스턴스 격리가 필요 없으므로 type override가 더 적합합니다.

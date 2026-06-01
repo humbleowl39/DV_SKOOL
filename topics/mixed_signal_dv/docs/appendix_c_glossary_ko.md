@@ -384,6 +384,76 @@
 
 **예시.** `wreal_resolution wAverage average`는 `wreal` net의 multi-driver junction에서 driver들이 평균된다고 선언.
 
+## Bit Line
+
+**정의.** DRAM array에서 셀의 charge-shared 전압 신호를 sense amplifier로 전달하는 한 쌍의 상보 금속 배선.
+
+**출처.** Rabaey, *Digital Integrated Circuits*, DRAM chapter.
+
+**관련.** [[Sense amplifier]], [[Charge Sharing]], [[DRAM cell]].
+
+**예시.** Precharge 회로가 매 read 전에 BL·BLB를 V_pre = VDD/2로 유지하여 charge-shared 차이를 대칭적으로 만든다.
+
+## DRAM cell
+
+**정의.** 하나의 pass transistor(1T)와 하나의 캐패시터(1C)로 구성되어, word line이 켜질 때 캐패시터의 전하로 logic 값을 저장하는 DRAM의 기본 저장 단위.
+
+**출처.** JEDEC JESD79-5 (DDR5 SDRAM Standard).
+
+**관련.** [[Bit Line]], [[Charge Sharing]], [[Sense amplifier]].
+
+**예시.** 일반적인 DRAM cell capacitor는 25~30 fF이며 '1' 값은 약 VDD(DDR5의 경우 0.9 V)로 저장된다.
+
+## EEnet
+
+**정의.** 회로 노드를 `{voltage, impedance}` struct로 표현하고 여러 동시 driver를 Thevenin 등가 네트워크로 resolve하는 Cadence-specific user-defined nettype.
+
+**출처.** DVCon UVM-DMS 논문; Cadence `EE_pkg` 문서.
+
+**관련.** [[UDN]], [[Resolution Function]], [[nettype]].
+
+**예시.** 같은 rail에 연결된 두 LDO 출력을 EEnet으로 resolve하면 SPICE engine 없이도 단일 Thevenin voltage를 계산한다.
+
+## Jitter
+
+**정의.** 신호 천이가 이상적인 시간 위치에서 벗어나는 정도로, 통계적으로 결정론적(bounded) 성분과 무작위(Gaussian) 성분으로 구분된다.
+
+**출처.** JEDEC JESD65; IEEE 802.3 Jitter Annex.
+
+**관련.** [[PLL]], [[Eye Opening]], [[SerDes]].
+
+**예시.** DDR5 DQ clock은 nominal 조건에서 total jitter spec이 ±70 ps로 규정된다.
+
+## Phase Detector
+
+**정의.** 두 주기 신호의 위상 차이를 측정하여 피드백 루프의 오차 신호로 사용되는 출력을 생성하는 회로 블록.
+
+**출처.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 15~16.
+
+**관련.** [[DLL]], [[PLL]], [[Loop Filter]].
+
+**예시.** CDR의 bang-bang phase detector는 early/late 1-bit 신호를 출력하여 VCO를 조향한다.
+
+## SerDes (Serializer/Deserializer)
+
+**정의.** 병렬 데이터를 직렬 비트 스트림으로 변환하여 전송하고, 수신된 직렬 데이터를 다시 병렬로 복원하는 고속 I/O 회로.
+
+**출처.** PCI Express Base Specification; IEEE 802.3 SerDes 표준.
+
+**관련.** [[IBIS-AMI]], [[CDR]], [[Eye Opening]], [[LTSSM]].
+
+**예시.** PCIe Gen5 SerDes는 lane당 32 Gbps로 PCB trace를 통해 전송하며 수신 측에 CTLE·DFE 등화가 필요하다.
+
+## VCO (Voltage-Controlled Oscillator)
+
+**정의.** 출력 주파수가 제어 전압의 함수인 발진기로, phase-locked loop에서 주파수 생성 요소로 사용된다.
+
+**출처.** Razavi, *Design of Analog CMOS Integrated Circuits*, Ch. 15.
+
+**관련.** [[PLL]], [[Phase Detector]], [[Jitter]].
+
+**예시.** DDR5 PLL의 ring VCO는 제어 전압을 0.3~0.9 V 범위로 변화시켜 2~4 GHz 주파수를 생성한다.
+
 ## 참고
 
 - [English mirror](appendix_c_glossary.md)

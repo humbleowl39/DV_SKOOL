@@ -21,9 +21,11 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
-이 코스는 사내 RDMA IP 검증 환경(`RDMA-TB`)을 빠르게 이해하고, 4대 디버깅 케이스(Data Integrity, CQ Poll Timeout, C2H Tracker, Unexpected Error CQE)를 실전적으로 트리아지할 수 있도록 설계되어 있습니다.
+RDMA IP 검증 업무를 처음 맡은 엔지니어가 가장 먼저 부딪히는 벽은 **"시뮬 로그에 에러가 떴는데 어디서부터 봐야 하는지 모르겠다"** 는 막막함이다. `F-C2H-MATCH-0002` 가 무엇인지, `c2h_tracker` 가 왜 fatal 을 내는지, ErrQP 를 정리하지 않으면 무슨 일이 생기는지를 모르면 — 로그를 아무리 오래 읽어도 원인에 도달하지 못한다. 이 막막함의 실질적 원인은 **TB 아키텍처를 모른 채 디버깅을 시작하는 것**이다.
 
-기존 [RDMA (IB & RoCEv2)](../rdma/) 코스가 **프로토콜과 IBTA 스펙**을 다룬다면, 이 코스는 **TB 코드와 디버깅 워크플로**에 집중합니다. 모든 사실은 Confluence(Testbench Architecture, Debugging Cases)와 `RDMA-TB/lib` 코드에 그라운딩되어 있습니다.
+이 코스는 사내 RDMA IP 검증 환경(`RDMA-TB`)의 아키텍처를 먼저 쌓고, 그 위에서 4대 디버깅 케이스(Data Integrity, CQ Poll Timeout, C2H Tracker, Unexpected Error CQE)를 실전적으로 트리아지할 수 있도록 설계되어 있다. 아키텍처 7개 모듈을 마치면 에러 ID 하나만 봐도 어느 컴포넌트에서 어떤 경로로 발생했는지 즉시 좁힐 수 있게 된다.
+
+기존 [RDMA (IB & RoCEv2)](../rdma/) 코스가 **프로토콜과 IBTA 스펙**을 다룬다면, 이 코스는 **TB 코드와 디버깅 워크플로**에 집중한다. 모든 사실은 Confluence(Testbench Architecture, Debugging Cases)와 `RDMA-TB/lib` 코드에 그라운딩되어 있다.
 
 ## 🎯 학습 목표
 이 코스를 마치면 다음을 할 수 있습니다.

@@ -15,7 +15,7 @@
     - D. 32 ms
 
 ??? answer "정답: C"
-    **Why**: Normal temp 7.8 us, extended temp 3.9 us. (Ch07 §1.1)
+    **Why**: 일반 온도 범위에서 tREFI 표준값은 7.8 µs입니다. 온도가 높아지면 커패시터 누설이 빨라져 더 자주 refresh해야 하므로, 확장 온도(extended temperature) 범위에서는 절반인 3.9 µs로 줄어듭니다. A(1 µs)는 어떤 표준에도 해당하지 않는 값이고, B(3.9 µs)는 확장 온도에서의 값이며, D(32 ms)는 DRAM refresh와 무관한 값입니다. DV에서 온도 모드를 전환하는 시나리오를 검증할 때 tREFI가 올바르게 변경되는지 확인하는 것이 중요합니다. (Ch07 §1.1)
 
 !!! question "Q2. DDR5의 RFM에서 *RAA*는 무엇의 약어인가? `(Remember)`"
     - A. Refresh Acknowledgment
@@ -24,7 +24,7 @@
     - D. Refresh Allocation Algorithm
 
 ??? answer "정답: B"
-    **Why**: Rolling Accumulated ACT counter — controller가 ACT 누적 추적. threshold 도달 시 RFM 발급. (Ch07 §3.3)
+    **Why**: RAA는 Rolling Accumulated ACT counter의 약자입니다. 메모리 컨트롤러가 ACT 명령 횟수를 누적 추적하다가 임계값에 도달하면 RFM 명령을 발급하는 메커니즘에서 핵심 역할을 합니다. A(Refresh Acknowledgment)·C(Random Access Allocation)·D(Refresh Allocation Algorithm)은 실존하지 않는 용어입니다. "Rolling"이 붙은 이유는 슬라이딩 윈도우처럼 최근 ACT 누적이 중요하며, 오래된 ACT는 계산에서 빠지기 때문입니다. 이 카운터를 DV에서 모델링하지 않으면 RFM 발급 시점 coverage가 생기지 않습니다. (Ch07 §3.3)
 
 !!! question "Q3. Rowhammer 공격의 *물리적 원인*은? `(Understand)`"
     - A. 소프트웨어 버그
@@ -33,7 +33,7 @@
     - D. CRC 검출 실패
 
 ??? answer "정답: B"
-    **Why**: Aggressor row를 *너무 자주* 활성화하면 *인접 row의 cap charge*가 전기적 결합으로 *손실* → bit flip. (Ch07 §3.2)
+    **Why**: Rowhammer의 물리적 원인은 aggressor row를 반복 활성화할 때 발생하는 전기적 결합(capacitive/inductive coupling)입니다. 이 결합이 인접 row의 커패시터 전하를 조금씩 빼내 결국 bit flip을 유발합니다. A(소프트웨어 버그)는 원인이 아니라 rowhammer를 악용하는 공격의 수단입니다. C(컨트롤러의 잘못된 명령)는 틀렸는데, 의도적으로 정상적인 ACT 명령을 반복하는 것 자체가 문제이기 때문입니다. D(CRC 검출 실패)는 DQ 링크의 오류 검출 메커니즘이지 Rowhammer와 무관합니다. (Ch07 §3.2)
 
 !!! question "Q4. LPDDR5의 ARFM 과 DRFM 차이는? `(Understand)`"
     - A. ARFM은 controller 명시, DRFM은 DRAM 자율
@@ -42,7 +42,7 @@
     - D. 둘은 동일 메커니즘의 다른 이름
 
 ??? answer "정답: B"
-    **Why**: ARFM (Adaptive) — DRAM이 hot row를 monitor해서 hint, controller가 적응적 발급. DRFM (Directed) — controller가 정밀하게 row 지정. (Ch07 §5.2~5.3)
+    **Why**: ARFM은 DRAM이 내부에서 hot row를 감지해 컨트롤러에 힌트를 주면 컨트롤러가 그 힌트를 바탕으로 adaptive refresh를 발급하는 방식입니다. DRFM은 컨트롤러가 자체 추적한 정보로 특정 row를 직접 지정해 refresh를 요청하는 방식입니다. A는 ARFM과 DRFM의 역할을 뒤바꾼 오답입니다. C는 ARFM이 LPDDR5의 기능이므로 "D5에만 있다"는 설명이 틀렸습니다. D는 둘을 동일하게 취급하지만 발급의 주도권(DRAM 주도 vs 컨트롤러 주도)이 명확히 다릅니다. DV에서는 두 메커니즘을 각각 별도 시나리오로 검증해야 합니다. (Ch07 §5.2~5.3)
 
 ## 단답형
 

@@ -93,7 +93,8 @@ uvm_analysis_export #(vrdma_base_command) issued_wqe_ap;
 ### `flushQP`
 **Definition.** 특정 QP 와 관련된 comparator/tracker 의 pending 큐(write/read/send/recv/cqe 등)를 일괄 삭제하는 정리 메서드.
 **Source.** `vrdma_1side_compare.svh`, `vrdma_2side_compare.svh`, `vrdma_imm_compare.svh`.
-**Related.** `deregisterQP`, `err_enabled`, ErrQP.
+**Related.** `deregisterQP`, `err_enabled`, ErrQP, `RDMAQPDestroy`.
+**Example.** `RDMAQPDestroy(.err(1))` 호출 시 driver 가 `qp_reg_ap` 로 ErrQP 사실을 broadcast → comparator 가 `flushQP(qp_num)` 를 자동 호출해 pending 큐를 비운다.
 **See also.** [M06 — Error Handling Path](06_error_handling_path.md).
 
 ---
@@ -103,7 +104,8 @@ uvm_analysis_export #(vrdma_base_command) issued_wqe_ap;
 ### `gen_id` Pool
 **Definition.** RDMA-TB 가 MR Fast Register / Re-register 를 추적하기 위해 부여하는 generation identifier 의 풀.
 **Source.** `lib/base/component/pool/vrdma_gen_id_pool.svh`.
-**Related.** Fast Register, MR re-register race.
+**Related.** Fast Register, MR re-register race, `mr_reg_ap`.
+**Example.** MR 이 re-register 될 때 `gen_id` 가 갱신된다. 로그에서 두 `gen_id` 버전이 같은 MR 에 대해 다른 PA 를 가리키면 DUT PA cache 가 stale 상태임을 나타낸다.
 **See also.** [M02 — Component Hierarchy](02_component_hierarchy.md), [M08 — Data Integrity](08_debug_data_integrity.md).
 
 ---
@@ -113,7 +115,8 @@ uvm_analysis_export #(vrdma_base_command) issued_wqe_ap;
 ### Handler (`*_handler`)
 **Definition.** RDMA verb opcode 별 stateless forwarder 컴포넌트(send/recv/write/read/cq) 로, AP 라우팅만 수행하고 자체 state 를 보유하지 않는다.
 **Source.** `lib/base/component/env/agent/handler/vrdma_*_handler.svh`.
-**Related.** Stateless 보존 원칙, `cq_handler`.
+**Related.** Stateless 보존 원칙, `cq_handler`, driver, sequencer.
+**Example.** `vrdma_cq_handler` 는 CQE 를 수신해 `cqe_validation_cqe_ap` 로 broadcast 할 뿐, 내부에 QP 별 상태나 히스토리 큐를 유지하지 않는다.
 **See also.** [M02 — Component Hierarchy](02_component_hierarchy.md), [M05 — Extension 4원칙](05_extension_principles.md).
 
 ### H2C QID
@@ -187,7 +190,8 @@ uvm_analysis_export #(vrdma_base_command) issued_wqe_ap;
 ### RC (Reliable Connected)
 **Definition.** RDMA service type 중 하나로, 단일 connected QP 페어 간 packet ordering 과 reliable delivery 를 보장한다.
 **Source.** IBTA Volume 1 §9.7.4.
-**Related.** OPS/SR (Out-of-order / Reliable Datagram), C2H ordering.
+**Related.** OPS/SR (Out-of-order Packet Sending / Selective Repeat), C2H ordering, `E-C2H-MATCH-0001`.
+**Example.** RC QP 에서 `c2h_tracker` 는 FIFO 방식(index 0 만 체크)으로 C2H 순서를 검증한다. OoO 도착은 즉시 `E-C2H-MATCH-0001` (ordering violation) 을 발생시킨다.
 **See also.** [M10 — C2H Tracker Error](10_debug_c2h_tracker.md).
 
 ---

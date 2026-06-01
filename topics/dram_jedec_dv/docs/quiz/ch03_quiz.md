@@ -15,7 +15,7 @@
     - D. 순서 무관
 
 ??? answer "정답: B"
-    **Why**: JESD79-4D §3.3.1 이 명시하는 순서. 마지막에 MR0 (BL, CL, DLL reset). (Ch03 §2.1)
+    **Why**: JESD79-4D §3.3.1은 MR3 → MR6 → MR5 → MR4 → MR2 → MR1 → MR0 순서를 규정합니다. MR0이 마지막인 이유는 MR0에 DLL reset 비트가 포함되어 있어 다른 MR이 모두 설정된 이후에 DLL을 리셋해야 안정적인 동작이 보장되기 때문입니다. A(MR0 먼저)와 C(MR6 먼저, 역순)는 스펙 순서와 다르고, D(순서 무관)는 잘못된 주장입니다. DV에서 이 순서를 어기면 MRW가 silicon에서 조용히 잘못 적용되어 이후 RD/WR에서 간헐적 fail이 생길 수 있습니다. (Ch03 §2.1)
 
 !!! question "Q2. DDR5 power-up에서 LPDDR4/5와 *다른* 단계는? `(Understand)`"
     - A. RESET_n LOW
@@ -24,7 +24,7 @@
     - D. MRW
 
 ??? answer "정답: B"
-    **Why**: DDR5는 *CS training*이 power-up에 포함 (LPDDR4/5는 별도 CBT). (Ch03 §3.2)
+    **Why**: DDR5는 power-up 시퀀스 안에 CS training이 포함되어 있습니다. LPDDR4/5에서는 같은 목적의 교정을 CBT(Command Bus Training)라는 별도의 절차로 수행하므로, CS training이 power-up 안에 내장된 것이 DDR5만의 특징입니다. A(RESET_n LOW), C(CKE HIGH), D(MRW)는 DDR5와 LPDDR4/5가 모두 수행하는 공통 단계여서 "DDR5만 다른 단계"가 아닙니다. DV 관점에서 CS training을 UVM phase에 올바르게 배치하지 않으면 초기화 시퀀스 coverage가 빠집니다. (Ch03 §3.2)
 
 !!! question "Q3. LPDDR5의 dual VDD2 rail (Vdd2H/Vdd2L) 의 도입 이유는? `(Understand)`"
     - A. 보안 강화
@@ -33,7 +33,7 @@
     - D. PoP 패키지 호환
 
 ??? answer "정답: B"
-    **Why**: LPDDR5의 DVFS에서 *주파수에 따라 다른 전압*이 필요 — dual rail로 전환 빠름. (Ch03 §5.1)
+    **Why**: LPDDR5의 DVFS는 동작 주파수를 런타임에 전환하는데, 각 주파수 구간에 최적화된 전압 레벨이 다릅니다. Vdd2H(고주파 고전압)와 Vdd2L(저주파 저전압)을 분리하면 주파수 전환 시 필요한 전압 레일만 빠르게 변경할 수 있어 전환 속도와 전력 효율이 모두 향상됩니다. A(보안)·C(ECC)·D(PoP)는 dual VDD2의 도입 이유와 무관합니다. DV에서는 DVFS 전환 시나리오에서 두 전압 레일의 전환 순서와 timing이 올바른지를 반드시 검증해야 합니다. (Ch03 §5.1)
 
 !!! question "Q4. Power-up 후 CKE=0 상태에서 controller가 MRW를 발급하면? `(Analyze)`"
     - A. 정상 동작
@@ -42,7 +42,7 @@
     - D. ALERT_n 즉시 발생
 
 ??? answer "정답: B"
-    **Why**: CKE=0 동안 DRAM은 *Power-Down 또는 Self-Refresh* — 일반 명령 수락 안 함. 그러나 *조용히 drop* 되어 시뮬레이션은 *통과*하면서 silicon에서 fail. SVA로 *catch* 필요. (Ch03 §8 풀이)
+    **Why**: CKE=0 상태에서 DRAM은 Power-Down 또는 Self-Refresh 모드에 있으며, 이때 발급된 MRW는 DRAM이 수락은 하지만 정상적으로 해석하지 않거나 조용히 무시됩니다. A(정상 동작)는 틀렸는데, CKE=0일 때 DRAM은 일반 명령을 기대하지 않기 때문입니다. C(자동 재시도)는 DRAM에 그런 메커니즘이 없으므로 틀렸습니다. D(ALERT_n 즉시 발생)는 CA Parity나 CRC 오류에 반응하는 것이지 CKE 상태를 감시하는 것이 아닙니다. 가장 위험한 점은 시뮬레이션에서는 DRAM model이 조용히 통과시키면서 silicon에서만 fail이 드러난다는 것으로, SVA로 사전에 잡아야 합니다. (Ch03 §8 풀이)
 
 ## 단답형
 

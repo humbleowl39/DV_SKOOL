@@ -10,6 +10,8 @@
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
+LLM, RAG, Agent는 이제 DV 엔지니어의 일상 워크플로와 직접 맞닿아 있다. 이 토픽을 배우지 않으면 로그 분석·TB 코드 생성·회귀 triage를 수작업으로 반복하게 되고, AI 도구를 도입하더라도 언제 신뢰하고 언제 의심해야 하는지 판단 기준이 없다. 이 코스는 "어떻게 동작하는가(원리)"와 "언제 무엇을 선택하는가(전략)"를 함께 다뤄, DV 실무에서 AI를 올바르게 적용할 수 있는 판단력을 키운다.
+
 <!-- DV-SKOOL-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>

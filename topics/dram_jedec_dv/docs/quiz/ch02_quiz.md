@@ -15,7 +15,7 @@
     - D. 16
 
 ??? answer "정답: C"
-    **Why**: DDR5는 8 BG. DDR4가 4 BG. (Ch02 §3.4)
+    **Why**: DDR5는 device당 8 Bank Group을 가집니다. DDR4가 4 BG였으므로 두 배로 늘어났습니다. A(2)나 B(4)는 DDR4 이전 세대의 값이고, D(16)는 실제 존재하지 않는 선택지입니다. BG 수가 늘어난 이유는 다른 BG로 명령을 분산할 때 더 짧은 tCCD_S 제약을 활용할 수 있어 대역폭 효율이 높아지기 때문입니다. DV 관점에서 BG 수를 잘못 알면 tCCD_L과 tCCD_S가 적용되는 경계를 잘못 모델링하여 timing coverage에 구멍이 생깁니다. (Ch02 §3.4)
 
 !!! question "Q2. DDR5의 2-cycle command 에서 CS_n 의 동작 패턴은? `(Understand)`"
     - A. CS_n LOW 한 cycle만
@@ -24,7 +24,7 @@
     - D. CS_n 은 명령과 무관
 
 ??? answer "정답: B"
-    **Why**: 2-cycle command는 *2 cycles 연속 CS_n LOW*. 1-cycle 명령(NOP/DES)은 cycle 0만 LOW. (Ch02 §3.3 + Ch05 §2.2)
+    **Why**: DDR5의 2-cycle command는 CS_n이 2 cycles 연속 LOW를 유지합니다. 이 패턴이 "2-cycle 명령의 시그너처"이며, monitor는 이것을 보고 두 번째 cycle의 CA[6:0]까지 캡처해야 명령을 완성할 수 있습니다. A(1 cycle LOW)는 NOP/DES 같은 1-cycle 명령의 패턴이고, C는 존재하지 않는 패턴입니다. D는 CS_n이 명령 선택과 무관하다는 잘못된 주장으로, CS_n은 rank 선택과 동시에 명령 경계를 정의하는 핵심 신호입니다. (Ch02 §3.3 + Ch05 §2.2)
 
 !!! question "Q3. LPDDR4 의 die가 *기본적*으로 가지는 channel 수는? `(Remember)`"
     - A. 1
@@ -33,7 +33,7 @@
     - D. 8
 
 ??? answer "정답: B"
-    **Why**: LPDDR4 die는 dual-channel이 기본. 각 channel 16-bit. (Ch02 §4.2)
+    **Why**: LPDDR4 die는 기본적으로 dual-channel 구조이며 각 채널은 16-bit 폭을 가집니다. A(1채널)는 LPDDR 이전 세대의 구조이고, C(4채널)나 D(8채널)는 LPDDR4 단일 die 구조에 해당하지 않습니다. 이 dual-channel 구조는 DV에서 중요한데, 두 채널이 독립적으로 동작하므로 각 채널에 대한 독립적인 training·refresh·명령 시퀀스 검증이 필요하고, 채널 간 간섭 시나리오도 coverage에 포함되어야 합니다. (Ch02 §4.2)
 
 !!! question "Q4. LPDDR5의 Bank mode 선택지로 옳은 것을 모두 고르시오. `(Remember)`"
     - A. 16 banks mode
@@ -42,7 +42,7 @@
     - D. 32 banks mode
 
 ??? answer "정답: A, B, C"
-    **Why**: LPDDR5는 16B / 8B / BG mode 3가지를 *MR로 선택*. 32B는 없음. (Ch02 §5.2)
+    **Why**: LPDDR5는 16 banks mode, 8 banks mode, Bank Group mode의 세 가지 bank 구성 중 하나를 MR로 선택합니다. 32 banks mode(D)는 LPDDR5 스펙에 존재하지 않습니다. 세 가지 mode가 존재하는 이유는 애플리케이션의 접근 패턴과 전력 목표에 따라 최적 구성이 다르기 때문입니다. DV에서는 세 가지 모드 모두를 coverage bin으로 확보해야 하며, 모드 전환 시나리오에서 timing 파라미터가 올바르게 변경되는지도 검증 대상입니다. (Ch02 §5.2)
 
 ## 단답형
 

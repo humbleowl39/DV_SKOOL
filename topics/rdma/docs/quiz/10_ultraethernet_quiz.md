@@ -14,6 +14,8 @@ UEC 의 두 핵심 sublayer 는 무엇이며 각각 무엇을 담당하나?
 
     출처: Confluence *Packet Delivery Sublayer* (id=198378057), *Semantic Sublayer* (id=200179723).
 
+    두 계층을 나눈 이유는 "어떻게 패킷을 신뢰성 있게 보낼 것인가(PDS)"와 "무엇을 보낼 것인가(SES)"의 관심사가 다르기 때문이다. PDS 는 RoCEv2 의 BTH+PSN+ACK 메커니즘을 발전시킨 수준에서 작동하고, SES 는 그 위에서 MPI, NCCL, RDMA verbs 등 다양한 상위 API 를 수용한다. IB/RoCEv2 에서는 두 역할이 섞여 있었는데, UEC 는 이를 명시적으로 분리함으로써 새로운 시맨틱(예: AI collective)을 PDS 변경 없이 추가할 수 있게 한다.
+
 ## Q2. (Remember)
 
 PDS 가 정의하는 4 종 PSN 을 모두 들어라.
@@ -22,6 +24,8 @@ PDS 가 정의하는 4 종 PSN 을 모두 들어라.
     `clear_psn`, `cumulative_psn`, `ack_psn`, `sack`.
 
     Confluence: *PSN handling in UEC* (id=201163262).
+
+    UEC 가 IB/RoCEv2 의 단일 PSN 이 아닌 4종을 두는 이유는 out-of-order 패킷 도착과 selective retransmission 을 동시에 지원해야 하기 때문이다. `cumulative_psn` 은 연속 수신된 가장 큰 PSN 을, `sack` 은 중간에 구멍이 있어도 받은 패킷들의 비트맵을, `ack_psn` 은 실제로 ACK 를 보낼 기준 PSN 을, `clear_psn` 은 재전송이 필요 없어진 경계를 각각 담당한다. RC 의 go-back-N 과 달리 selective 재전송이 가능한 것은 이 4개 PSN 이 각자의 역할을 분담하기 때문이다.
 
 ## Q3. (Understand)
 

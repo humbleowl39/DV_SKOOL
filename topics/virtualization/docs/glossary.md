@@ -14,11 +14,15 @@
 
 **Related.** namespace, cgroup, image.
 
+**See also.** [Module 07](07_containers_and_modern.md)
+
 ### cgroup (Control Group)
 
 **Definition.** Linux의 자원 (CPU/메모리/IO) 사용 한도 + 우선순위를 group 단위로 강제하는 메커니즘.
 
 **Source.** Linux kernel.
+
+**Related.** namespace, Container.
 
 **See also.** [Module 07](07_containers_and_modern.md)
 
@@ -41,6 +45,10 @@
 **Definition.** AMD-V의 EPT 등가물. 동일 기능, 다른 명칭.
 
 **Source.** AMD architecture manuals.
+
+**Related.** EPT (Intel), Stage-2 (ARM), Shadow PT.
+
+**See also.** [Module 03](03_memory_virtualization.md)
 
 ---
 
@@ -66,7 +74,9 @@
 
 **Source.** Linux kernel.
 
-**Related.** QEMU, vCPU.
+**Related.** QEMU, vCPU, Hypervisor.
+
+**See also.** [Module 05](05_hypervisor_types.md)
 
 ### KSM (Kernel Same-page Merging)
 
@@ -85,6 +95,8 @@
 **Definition.** Container의 자원 격리 메커니즘 — PID, NET, MNT, UTS, USER, IPC, CGROUP namespace 등.
 
 **Source.** Linux kernel.
+
+**Related.** cgroup, Container.
 
 **See also.** [Module 07](07_containers_and_modern.md)
 
@@ -109,6 +121,8 @@
 **Source.** Virtualization literature.
 
 **Related.** EPT/NPT (HW 방식이 대체).
+
+**See also.** [Module 03](03_memory_virtualization.md)
 
 ---
 
@@ -136,13 +150,17 @@
 
 **Related.** VMCS, VMEXIT, AMD-V (등가).
 
+**See also.** [Module 02](02_cpu_virtualization.md)
+
 ### VMCS (Virtual Machine Control Structure)
 
 **Definition.** vCPU의 state를 저장하는 자료구조. GP register, control register, exit reason 등.
 
 **Source.** Intel SDM.
 
-**Related.** VMCB (AMD), vCPU.
+**Related.** VMCB (AMD), vCPU, VT-x.
+
+**See also.** [Module 02](02_cpu_virtualization.md)
 
 ### virtio
 

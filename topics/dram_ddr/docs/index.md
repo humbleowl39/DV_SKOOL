@@ -10,6 +10,8 @@
 </div>
 <!-- DV-SKOOL-HERO:end -->
 
+현대 SoC에서 DRAM 메모리 서브시스템은 CPU, GPU, NPU가 공유하는 유일한 대용량 저장소다. 메모리 컨트롤러(MC)가 JEDEC timing constraint를 한 사이클이라도 위반하면 데이터 손상이 발생하고, PHY training이 marginal한 상태로 초기화되면 정상 조건에서는 문제없다가 온도 변화 같은 PVT 스트레스에서 조용히 bit error를 낸다. 이런 결함은 테스트에서 잡지 못하면 field에서 재현하기 극히 어렵다. DRAM DV를 제대로 이해하지 못하면 timing assertion을 "왜 이렇게 복잡하게 만드나" 싶어 건너뛰게 되고, PHY training 검증을 PVT corner 없이 nominal만 돌리게 된다. 이 토픽은 DRAM cell 구조부터 DDR4/5 명령 프로토콜, MC 스케줄링, PHY training, 그리고 그것을 검증하는 방법론까지를 하나의 인과 흐름으로 연결한다.
+
 <!-- DV-SKOOL-TOC:start -->
 <div class="page-toc">
   <span class="page-toc-label">목차</span>
@@ -140,14 +142,10 @@
 
 ## 💡 학습 팁
 !!! tip "효율적 학습"
-    - **Timing parameter는 외워야**: tRCD, tRP, tCAS, tRAS 등은 면접/리뷰에서 즉시 떠올라야 함
-    - **DDR4 → DDR5 차이 주목**: 2-channel 분리(서버 BW)는 큰 변화. on-die ECC도 중요
-    - **PHY는 어려움**: training/leveling 부분은 시간 투자 + 실제 spec(JEDEC) 참고
+    tRCD, tRP, tCAS, tRAS 같은 timing parameter는 코드 리뷰나 면접에서 즉시 떠올릴 수 있어야 하므로 반복 암기가 필요하다. DDR4에서 DDR5로의 전환 중 가장 큰 변화는 2-channel 분리(서버 대역폭 확장)와 on-die ECC 표준화이므로, 두 차이가 검증 시나리오에 어떤 영향을 주는지 집중적으로 파악하는 것이 좋다. PHY training과 leveling은 아날로그 신호 특성이 섞여 있어 이해하는 데 시간이 걸리는 영역인데, 각 training 단계의 목적(무엇을 정렬하는가)을 먼저 이해한 뒤 실제 JEDEC spec을 참조하면 학습 효율이 높아진다.
 
 !!! warning "흔한 함정"
-    - **Refresh 누락**: tREFI 기간 내 모든 row를 한 번씩 refresh — 스케줄러 검증의 핵심
-    - **Bank conflict**: 같은 bank에 연속 access 시 ACT-PRE 사이클 강제 → throughput 저하
-    - **Training 실패**: PHY 초기화 안 끝났는데 traffic 시작 → silent corruption
+    Refresh 검증은 단순히 "REF 명령이 발행되는가"를 확인하는 것으로 끝나지 않는다. tREFI 기간 내 모든 row가 한 번 이상 refresh를 받았는지 카운터 기반 assertion으로 구조적으로 보장해야 한다. Bank conflict는 같은 bank에 연속 접근이 발생할 때 ACT-PRE cycle이 강제되어 throughput이 크게 저하되는데, 이를 성능 저하가 아닌 스케줄러 버그로 분류해 다뤄야 한다. PHY training이 완료되지 않은 상태에서 traffic을 시작하면 bit error가 발생하지만 즉각 드러나지 않고 특정 패턴에서만 나타나는 silent corruption 형태를 띠므로, training 완료 신호와 traffic 시작 시퀀스를 assertion으로 반드시 순서 보장해야 한다.
 
 <!-- DV-SKOOL-RELATED-TOPICS:start -->
 

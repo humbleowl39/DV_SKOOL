@@ -86,6 +86,10 @@
 
 **Related.** Response UPIU, error recovery.
 
+**Example.** Sense Key=0x3 (Medium Error), ASC=0x11, ASCQ=0x00 조합은 읽기 재시도 실패(Unrecovered Read Error)를 나타낸다.
+
+**See also.** [Module 03](03_upiu_command_flow.md)
+
 ---
 
 ## T — Task Tag
@@ -100,6 +104,8 @@
 
 **Critical.** Response의 Task Tag로 매칭. 매핑 오류 = wrong response → 데이터 corruption.
 
+**Example.** Driver가 Task Tag=7로 발행한 READ 명령에 대해 device가 Task Tag=7인 Response UPIU를 반환하면, driver는 해당 응답을 명령 7에 연결한다.
+
 **See also.** [Module 03](03_upiu_command_flow.md)
 
 ---
@@ -113,6 +119,8 @@
 **Source.** JEDEC JESD220 (UFS Spec).
 
 **Related.** Command/Response/Data In/Out/Task Mgmt/Query/NOP/Reject UPIU.
+
+**Example.** Command UPIU는 SCSI CDB를 payload로 포함하며, 공통 헤더에 Transaction Code, Task Tag, LUN 필드가 위치한다.
 
 **See also.** [Module 03](03_upiu_command_flow.md)
 

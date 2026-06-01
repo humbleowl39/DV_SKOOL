@@ -119,7 +119,9 @@ ap_handshake: assert property (@(posedge clk) valid |-> ##[1:5] ready);
 
 **Source.** Formal verification methodology.
 
-**Related.** State Explosion, Cut Point.
+**Related.** State Explosion, Cut Point, Abstraction, Helper Assertion.
+
+**Example.** 카운터 폭을 32-bit에서 4-bit로 abstract한 뒤 solver가 induction을 완성해 BOUNDED N=50이 PROVEN으로 전환된 경우.
 
 **See also.** [Module 03](03_jaspergold_and_strategy.md)
 
@@ -133,7 +135,9 @@ ap_handshake: assert property (@(posedge clk) valid |-> ##[1:5] ready);
 
 **Source.** Mathematical induction in formal verification.
 
-**Related.** PROVEN, BOUNDED.
+**Related.** PROVEN, BOUNDED, Helper Assertion, Abstraction.
+
+**Example.** Base case: reset 해제 직후 counter == 0 확인. Inductive step: counter == k이면 다음 사이클에 counter == k+1 또는 wrap 동작이 spec과 일치함을 증명.
 
 **Note.** Inductive step 실패 시 BOUNDED → invariant 강화 또는 abstraction 필요.
 
@@ -149,7 +153,9 @@ ap_handshake: assert property (@(posedge clk) valid |-> ##[1:5] ready);
 
 **Source.** IEEE 1800 §16.
 
-**Related.** Sequence, Implication, Assert.
+**Related.** Sequence, Implication, Assert, Cover.
+
+**Example.** `property p_ack; @(posedge clk) req |-> ##[1:5] ack; endproperty` — req 발생 후 1~5 사이클 안에 ack이 와야 함을 표현한 property.
 
 **See also.** [Module 02](02_sva.md)
 

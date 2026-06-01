@@ -14,14 +14,14 @@ Active Agent와 Passive Agent의 가장 큰 구조적 차이는?
 - [ ] D. Active만 Virtual Interface를 사용한다
 
 ??? answer "정답 / 해설"
-    **B**. Passive 모드는 외부에서 인가하는 traffic을 관찰만 하므로 Driver/Sequencer가 불필요. Monitor는 Active/Passive 양쪽 모두 보유.
+    **B**. Passive Agent는 이미 다른 마스터가 DUT를 구동하는 환경에서 트래픽을 관찰만 합니다. 따라서 자극을 인가하는 Driver와 항목을 중개하는 Sequencer가 필요 없고, Monitor만 존재합니다. A(phase 차이)는 사실이 아니며 두 모드 모두 동일한 phase에 참여합니다. C(Monitor의 독점)도 틀렸는데, Monitor는 Active Agent에도 반드시 존재합니다. D(virtual interface 독점)도 아닌데, Passive 모드에서도 신호 관찰을 위해 virtual interface를 사용합니다.
 
 ## Q2. (Understand)
 
 Driver의 `forever` 루프에서 `get_next_item / item_done` 짝이 lockstep이라는 의미를 설명하세요.
 
 ??? answer "정답 / 해설"
-    Sequencer는 한 시점에 하나의 트랜잭션만 driver에 전달합니다. `get_next_item`으로 빌려온 item은 driver가 처리 완료를 `item_done`으로 알리기 전까지 sequencer가 다음 item을 꺼내지 않습니다. 따라서 두 호출은 짝지어 사용해야 하며, 누락 시 두 번째 트랜잭션부터 sequencer가 대기 상태로 빠집니다.
+    `get_next_item`과 `item_done`은 하나의 트랜잭션을 처리하는 계약입니다. `get_next_item`을 호출하면 Sequencer는 다음 item을 Driver에게 "빌려주고" 대기 상태로 전환됩니다. Driver가 DUT에 신호를 인가한 뒤 `item_done`을 호출해야 비로소 Sequencer가 "반납받았다"고 인식하고 다음 item을 꺼낼 준비를 합니다. 만약 `item_done`을 누락하면 첫 트랜잭션 이후 Sequencer가 영원히 대기하므로, 두 번째 트랜잭션부터 시뮬레이션이 hang에 빠지게 됩니다.
 
 ## Q3. (Apply)
 
@@ -39,8 +39,7 @@ endfunction
 ```
 
 ??? answer "정답 / 해설"
-    `sqr = apb_sequencer::type_id::create("sqr", this);`
-    Active 모드에서는 Driver와 함께 Sequencer도 만들어야 함. 그렇지 않으면 driver가 sequence로부터 item을 받을 경로가 없음.
+    빠진 한 줄은 `sqr = apb_sequencer::type_id::create("sqr", this);`입니다. Active Agent에서 Driver는 `seq_item_port`를 통해 Sequencer로부터 트랜잭션을 받습니다. Sequencer 인스턴스가 없으면 connect_phase에서 `drv.seq_item_port.connect(sqr.seq_item_export)`가 null handle에 접근해 런타임 오류가 발생하고, 트랜잭션 공급 경로가 아예 존재하지 않게 됩니다.
 
 ## Q4. (Analyze)
 
@@ -52,7 +51,7 @@ Monitor가 절대 해서는 안 되는 동작은?
 - [ ] D. trans_collected 객체 생성
 
 ??? answer "정답 / 해설"
-    **C**. Monitor는 비침투적 관찰자입니다. DUT 입력을 driving하면 격리 원칙이 무너져 Active Driver와 충돌하거나 의도치 않은 자극이 인가됩니다.
+    **C**. Monitor의 역할은 DUT 신호를 수동적으로 샘플링해 트랜잭션으로 변환하는 것입니다. DUT 입력을 driving하면 두 가지 문제가 생깁니다. 첫째, Active Agent의 Driver와 동시에 같은 신호를 구동하면 multiple-driver 충돌이 발생합니다. 둘째, Passive 모드에서도 Monitor가 존재하는데 이 경우 자극 인가 주체가 없어야 하는 시나리오에서 의도치 않은 DUT 동작을 유발합니다. A(analysis_port 사용), B(clocking block 샘플링), D(트랜잭션 객체 생성)는 모두 Monitor의 정상적인 동작입니다.
 
 ## Q5. (Evaluate)
 
@@ -64,4 +63,4 @@ Monitor가 절대 해서는 안 되는 동작은?
 - [ ] D. AHB burst 트래픽 검증
 
 ??? answer "정답 / 해설"
-    **C**. APB는 outstanding 개념이 없고 매 트랜잭션이 SETUP→ACCESS→IDLE로 완료된 후 다음이 시작됩니다. Pipelining은 outstanding을 가정한 모델이라 APB에 적용 시 protocol 위반.
+    **C**. Pipelining Driver는 이전 트랜잭션의 응답을 기다리지 않고 다음 요청을 즉시 발행하는 모델로, AXI의 outstanding transaction이나 PCIe의 credit-based flow처럼 파이프라인을 허용하는 프로토콜에 적합합니다. 반면 APB는 SETUP → ACCESS → 완료의 단계가 끝난 뒤에야 다음 트랜잭션이 시작되는 단순 프로토콜로 outstanding 개념이 없습니다. Pipelining Driver를 APB에 적용하면 이전 사이클이 끝나기 전에 다음 psel·penable을 구동해 APB 프로토콜 위반이 발생합니다.

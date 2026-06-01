@@ -70,8 +70,8 @@
 ### LCA (Lowest Common Ancestor)
 - **Definition.** 트리에서 두 노드 X, Y 의 공통 조상 중 가장 깊은(낮은) 노드.
 - **Source.** Common tree algorithm literature.
-- **Related.** Tree Traversal, Tarjan's Algorithm, Euler Tour.
-- **Example.** Binary Tree LCA, BST LCA.
+- **Related.** Tree Traversal, DFS, Tarjan's Algorithm, Euler Tour.
+- **Example.** Binary Tree LCA (LeetCode #236), BST LCA (부모 방향 비교).
 - **See also.** [Module 05](05_tree_bfs_dfs_explained.md).
 
 ---
@@ -124,9 +124,9 @@
 ### Pattern Thinking (패턴 사고법)
 - **Definition.** 입력 형태와 제약을 보고 후보 알고리즘 패턴을 빠르게 좁힌 뒤 복잡도 목표를 정해 코드를 작성하는 5단계 풀이 절차.
 - **Source.** This course (Module 01).
-- **Related.** Big-O, Algorithm Family.
-- **Example.** N≤10⁴ + 부분 합 → "Two Pointers / Sliding Window 후보".
-- **See also.** [Module 01](01_big_o_explained.md).
+- **Related.** Big-O, Algorithm Family, Interview Strategy.
+- **Example.** N≤10⁵ + 연속 부분 합 → "Sliding Window 후보"; N≤10⁶ + lookup → "Hash Map 후보".
+- **See also.** [Module 01](01_big_o_explained.md), [Module 07](07_interview_strategy.md).
 
 ---
 
@@ -142,8 +142,8 @@
 ### Stack
 - **Definition.** Last-In-First-Out (LIFO) 순서로 push/pop 이 동작하는 자료구조.
 - **Source.** Common data structure literature.
-- **Related.** Recursion, Monotonic Stack.
-- **Example.** Valid Parentheses.
+- **Related.** Recursion, Monotonic Stack, DFS.
+- **Example.** Valid Parentheses, 재귀 DFS 의 명시적 변환, 함수 호출 스택.
 - **See also.** [Module 04](04_stack_binary_search_explained.md).
 
 ---

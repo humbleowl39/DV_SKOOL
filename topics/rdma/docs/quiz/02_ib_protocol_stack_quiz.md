@@ -13,6 +13,8 @@ IB 패킷의 일반 layout 을 순서대로 나열하라 (선택적 헤더는 `?
 
     LRH 와 BTH 는 필수, GRH 는 cross-subnet 또는 multicast 시, xTH 는 OpCode 별 0개 이상.
 
+    헤더 순서를 외울 때는 "link 계층 → routing 계층 → transport 계층 → data → 무결성" 이라는 레이어 원칙을 기억하면 된다. LRH 가 가장 바깥에 있는 것은 hop-by-hop 라우팅에 쓰이는 SLID/DLID 를 스위치가 빠르게 읽어야 하기 때문이며, VCRC 가 ICRC 뒤에 붙는 것은 hop 마다 재계산되는 링크 체크섬이기 때문이다.
+
 ## Q2. (Understand)
 
 ICRC 와 VCRC 가 분리된 이유는?
@@ -22,6 +24,8 @@ ICRC 와 VCRC 가 분리된 이유는?
     → 변경되는 영역을 빼고 계산되는 **ICRC 가 end-to-end 무결성** 을 보장.
     → 변경된 packet 의 link-level 무결성은 hop 마다 재계산되는 **VCRC** 가 보장.
 
+    만약 ICRC 가 LRH 전체를 포함해 계산된다면, 스위치가 DLID 를 정당하게 수정하는 순간 ICRC 가 깨지고 destination HCA 는 패킷을 버린다. 그래서 IB 는 "hop 마다 바뀌어도 되는 영역(LRH)"과 "절대 바뀌면 안 되는 영역(transport 이상)"을 분리해 각각 다른 CRC 가 담당하게 설계했다. VCRC 는 한 hop 의 물리 전송 오류만 잡으면 되므로 16-bit 로 충분하고, ICRC 는 양 끝단 간 신뢰성을 보장하므로 32-bit 를 쓴다.
+
 ## Q3. (Apply)
 
 LRH 의 PktLen 필드가 nominal 0x0030 (=48) 일 때, 패킷의 실제 byte 길이는?
@@ -30,6 +34,8 @@ LRH 의 PktLen 필드가 nominal 0x0030 (=48) 일 때, 패킷의 실제 byte 길
     **48 × 4 = 192 byte** (LRH 시작 ~ ICRC 끝까지). PktLen 의 단위는 4-byte word.
 
     VCRC (2 byte) 는 PktLen 에 포함되지 않음. 즉 wire 상의 실제 packet 은 192 + 2 = 194 byte.
+
+    PktLen 단위가 4-byte word 인 이유는 IB 패킷의 모든 헤더/페이로드가 4-byte 정렬되도록 설계되어 있기 때문이다. 따라서 PktLen 값 × 4 를 하면 항상 정수가 나온다. VCRC 가 PktLen 에 제외된 것은 VCRC 가 패킷 본문 내용에 의존하지 않고 "링크 위에서 전달된 비트 스트림"의 무결성만 확인하는 별도 메커니즘이기 때문이다. 검증 scoreboard 가 길이 비교를 할 때 이 2-byte 차이를 놓치면 false fail 이 난다.
 
 ## Q4. (Analyze)
 

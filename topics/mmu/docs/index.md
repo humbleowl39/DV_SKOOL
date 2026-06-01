@@ -23,6 +23,10 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
+## 왜 MMU를 배워야 하는가
+
+모든 현대 소프트웨어는 가상 주소 위에서 동작합니다. 커널, 드라이버, GPU 컴퓨팅 프레임워크가 서로 충돌하지 않고 같은 물리 메모리를 나눠 쓸 수 있는 것은 MMU가 각 주체에게 독립적인 가상 주소 공간을 제공하기 때문입니다. MMU를 이해하지 못하면 page fault의 진짜 원인을 추적하지 못하고, TLB miss가 성능을 어떻게 갉아먹는지 설명하지 못하며, IOMMU 없는 SoC에서 DMA 보안 구멍을 알아차리지 못합니다. 이 토픽은 주소 변환의 하드웨어 동작 원리에서 시작해, 4-level page table walk, TLB 관리, IOMMU/SMMU 격리, 성능 분석, 그리고 이 모든 것을 검증하는 DV 방법론까지 다룹니다. MMU를 이해한 엔지니어는 시스템 전체를 보는 눈이 달라집니다.
+
 ## 🎯 학습 목표
 - **Trace (분석)** 가상→물리 주소 변환의 multi-level page table walk 전 과정 추적
 - **Diagram (분석)** TLB, multi-level translation, IOMMU의 데이터 흐름과 캐시 계층 그리기

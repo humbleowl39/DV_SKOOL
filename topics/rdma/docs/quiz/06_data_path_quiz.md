@@ -14,6 +14,8 @@ RDMA WRITE 8KB 메시지를 MTU=4KB 환경에서 보낼 때, 송출되는 packet
 
     8KB 가 정확히 2 packet 으로 나뉘므로 MIDDLE 은 없음. 12KB 였으면 FIRST/MIDDLE/LAST 의 3 packet.
 
+    FIRST 와 LAST 만 있고 MIDDLE 이 없는 이유는 메시지가 MTU 의 정확한 2배일 때 첫 패킷과 마지막 패킷의 역할이 명확하게 갈리기 때문이다. RETH 는 FIRST 에만 포함되는데, 이 헤더가 원격 버퍼의 시작 주소와 전체 길이를 알려주는 역할을 하기 때문이다. MIDDLE 이 없다는 것을 패킷 디코더가 제대로 처리하지 못하면 scoreboard 에서 "MIDDLE 없이 LAST 가 왔다"를 오류로 판정하는 false fail 이 발생한다.
+
 ## Q2. (Understand)
 
 PSN 24-bit 의 window = 2^23 인 의미는?
@@ -26,6 +28,8 @@ PSN 24-bit 의 window = 2^23 인 의미는?
     - PSN ∈ [ePSN+1, ePSN+2^23-1] → 미래 (drop 또는 NAK Sequence Error)
 
     Window 가 절반 이유: modulo 산술에서 "어느 쪽이 과거고 미래인지" 를 명확히 분류 가능.
+
+    window 를 24-bit 전체(16M)가 아닌 절반(8M)으로 제한하는 이유는 모듈러 산술의 모호성 때문이다. PSN 공간이 환형(circular)이기 때문에 window 가 절반을 넘으면 특정 PSN 이 "과거 중복"인지 "미래 값"인지 구별할 수 없는 영역이 생긴다. window = 2^23 으로 제한하면 ePSN 을 기준으로 왼쪽 절반은 확실히 과거, 오른쪽 절반은 확실히 미래로 분류된다. 검증 환경에서 PSN 비교 함수를 단순 `>` 연산으로 작성하면 wrap-around 시점에 이 분류가 뒤집혀 버그가 생긴다.
 
 ## Q3. (Apply)
 

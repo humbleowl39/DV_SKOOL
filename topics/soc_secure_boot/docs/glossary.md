@@ -14,6 +14,10 @@
 
 **Related.** Version counter, OTP fuse, security patch.
 
+**Example.** OTP counter가 3이면 version 3 미만 이미지는 서명이 유효해도 거부된다.
+
+**See also.** [Module 03 — Crypto in Boot](03_crypto_in_boot.md)
+
 ### Attestation
 
 **Definition.** Device가 자신의 boot state를 외부에 증명하는 메커니즘으로, TPM PCR 또는 secure enclave가 서명한 measurement를 사용.
@@ -62,6 +66,12 @@
 
 **Source.** NIST PQC standardization.
 
+**Related.** PQC, ML-DSA, algorithm negotiation, OTP config.
+
+**Example.** Algorithm ID를 OTP 비트 필드로 저장해, RSA-3072(ID=0)와 ML-DSA-65(ID=1) 중 하나를 선택 가능하게 설계.
+
+**See also.** [Module 03 — Crypto in Boot](03_crypto_in_boot.md)
+
 ---
 
 ## E — eFuse / ECDSA
@@ -72,7 +82,11 @@
 
 **Source.** Silicon technology.
 
-**Related.** OTP, immutable storage.
+**Related.** OTP, immutable storage, ROTPK, lifecycle state.
+
+**Example.** ROTPK hash 32 bytes를 256개의 eFuse 비트로 저장; program 전 0, blow 후 1로 영구 고정.
+
+**See also.** [Module 01 — Hardware Root of Trust](01_hardware_root_of_trust.md)
 
 ### ECDSA
 
@@ -81,6 +95,12 @@
 **Source.** FIPS 186.
 
 **Common curves.** P-256, P-384, secp256k1.
+
+**Related.** RSA, PQC, nonce, TRNG, FIPS 186.
+
+**Example.** P-256 서명 크기는 64 bytes(r+s 각 32 bytes), RSA-3072 서명 크기는 384 bytes — 6배 차이.
+
+**See also.** [Module 03 — Crypto in Boot](03_crypto_in_boot.md)
 
 ---
 
@@ -160,7 +180,11 @@
 
 **Source.** PKCS #1, RFC 8017.
 
-**Related.** PKCS#1 v1.5, PSS padding.
+**Related.** PKCS#1 v1.5, PSS padding, ECDSA, PQC.
+
+**Example.** RSA-4096 서명 크기는 512 bytes이며, PSS padding 적용 시 랜덤 salt가 추가되어 동일 메시지라도 서명값이 매번 달라진다.
+
+**See also.** [Module 03 — Crypto in Boot](03_crypto_in_boot.md)
 
 ---
 
@@ -171,6 +195,12 @@
 **Definition.** Secure Hash Algorithm 2 family. Boot image hash + signature 계산에 사용.
 
 **Source.** FIPS 180-4.
+
+**Related.** Hash, ROTPK, image integrity, HMAC.
+
+**Example.** BootROM은 이미지 전체를 SHA-256으로 해시한 뒤, 그 값과 서명 내 hash를 비교해 무결성을 확인한다.
+
+**See also.** [Module 03 — Crypto in Boot](03_crypto_in_boot.md)
 
 ### Side-Channel Attack
 

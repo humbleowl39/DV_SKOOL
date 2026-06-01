@@ -105,7 +105,11 @@ READY  _______|‾‾‾|________
 
 **Related.** OoO, Throughput, ID.
 
+**Why.** Outstanding 없이 request → response → request → response 순서를 강제하면, 슬레이브의 처리 지연(latency)이 그대로 버스 유휴 시간으로 낭비됩니다. Outstanding이 허용되면 마스터가 응답을 기다리는 동안 다음 요청을 발행해 버스를 계속 사용하므로 처리량(throughput)이 latency에 덜 의존하게 됩니다.
+
 **Example.** Master가 AW0, AW1, AW2를 연속 발행하고 응답 B0, B1, B2를 비동기 수신.
+
+**See also.** [Module 02](02_axi.md)
 
 ### Out-of-Order (OoO)
 
@@ -114,6 +118,8 @@ READY  _______|‾‾‾|________
 **Source.** AMBA AXI Spec, §A5.
 
 **Related.** ID, Outstanding, Scoreboard per-ID queue.
+
+**Example.** Master가 ID=0, ID=1, ID=2로 AR을 발행했을 때 Slave가 ID=2 → ID=0 → ID=1 순서로 R 응답을 반환하는 것은 사양 위반이 아니다.
 
 **See also.** [Module 02](02_axi.md)
 
@@ -162,6 +168,8 @@ READY  _______|‾‾‾|________
 
 **Related.** APB, PSTRB, PPROT, AMBA 4.
 
+**Why.** PSTRB가 없으면 32-bit 레지스터의 일부 바이트만 수정하기 위해 Read-Modify-Write(RMW)가 필요하고, 그 사이에 HW 로직이 status bit를 변경하면 경쟁 조건이 발생한다. APB4는 byte-level 원자적 쓰기로 이 문제를 해결한다.
+
 **See also.** [Module 01](01_apb_ahb.md)
 
 ### HPROT (Protection Control)
@@ -170,7 +178,9 @@ READY  _______|‾‾‾|________
 
 **Source.** ARM IHI 0033 — AMBA AHB Protocol Specification.
 
-**Related.** AWPROT/ARPROT (AXI), Cacheable, Bufferable.
+**Related.** AWPROT/ARPROT (AXI), Cacheable, Bufferable, PPROT (APB4).
+
+**Example.** HPROT[1]=1이면 privileged(특권) 접근, HPROT[2]=1이면 bufferable 전송.
 
 **See also.** [Module 01](01_apb_ahb.md)
 
@@ -193,6 +203,8 @@ READY  _______|‾‾‾|________
 **Source.** ARM IHI 0033 — AMBA AHB Protocol Specification.
 
 **Related.** HTRANS, HBURST, AHB pipeline.
+
+**Example.** 슬레이브가 HREADY=0을 1 cycle 삽입하면 master는 HADDR/HWDATA를 유지하며 대기(wait state)한다. ERROR 응답은 반드시 2 cycle(HREADY=0 → HREADY=1)에 걸쳐 전달된다.
 
 **See also.** [Module 01](01_apb_ahb.md)
 

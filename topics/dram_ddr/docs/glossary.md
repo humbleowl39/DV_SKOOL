@@ -34,11 +34,13 @@
 
 ### Bank Group (BG)
 
-**Definition.** I/O 센스 앰프와 데이터 경로를 공유하는 bank들의 그룹으로, 같은 BG 내 연속 access는 tCCD_L (긴 간격), 다른 BG 간은 tCCD_S (짧음) 적용.
+**Definition.** I/O 회로와 데이터 경로 일부를 공유하는 bank들의 논리적 그룹으로, DDR4에서 도입된 JEDEC 개념.
 
 **Source.** JEDEC DDR4+.
 
-**Use.** Scheduler가 다른 BG로 분산 access → bandwidth ↑.
+**Related.** Bank, tCCD_S, tCCD_L, BLP.
+
+**Example.** 같은 BG 내 연속 접근에는 tCCD_L(긴 간격)이, 다른 BG 간 접근에는 tCCD_S(짧은 간격)가 적용된다. 스케줄러가 요청을 다른 BG로 분산하면 tCCD_S를 활용해 throughput을 높일 수 있다.
 
 **See also.** [Module 02](02_memory_controller.md)
 
@@ -82,11 +84,13 @@
 
 ### DFE (Decision Feedback Equalizer)
 
-**Definition.** 이전 비트의 ISI를 디지털로 제거해 수신단 eye를 복원하는 equalization 기법.
+**Definition.** 이전에 수신·판정된 비트들의 결과를 피드백으로 사용해 현재 수신 비트에 얹힌 ISI 성분을 디지털적으로 제거하는 수신단 equalization 기법.
 
 **Source.** Signal integrity literature.
 
 **Related.** CTLE, ISI, eye opening.
+
+**Example.** CTLE가 선형으로 전체 주파수 성분을 부스트하는 것과 달리, DFE는 이전 비트 패턴을 알고 있으므로 노이즈 증폭 없이 ISI만 선별 제거한다. PHY 수신단에서 CTLE + DFE를 함께 사용하는 경우가 많다.
 
 **See also.** [Module 03](03_memory_interface_phy.md)
 
@@ -148,11 +152,13 @@
 
 ### Row Hit
 
-**Definition.** 이미 active 상태인 row에 RD/WR access — PRE-ACT 회피로 throughput ↑.
+**Definition.** 요청 주소가 해당 bank에 이미 활성화된 row에 속해 ACT 없이 tCAS만으로 접근이 완료되는 상태.
 
 **Source.** Memory access patterns.
 
-**Related.** Row Buffer, Locality.
+**Related.** Row Buffer, Locality, Row Miss, tCAS.
+
+**Example.** 같은 캐시라인을 반복 접근하거나 순차 column 접근이 이어질 때 Row Hit가 연속 발생해 최고 throughput이 나온다. 반대로 다른 row로 전환하면 PRE + ACT 비용(tRP + tRCD)이 추가된다.
 
 **See also.** [Module 02](02_memory_controller.md)
 
@@ -162,11 +168,13 @@
 
 ### Training
 
-**Definition.** PHY의 timing margin을 PVT 변동에 맞춰 보정하는 일련의 캘리브레이션 (Write Leveling, Read DQ, CA, VREF 등).
+**Definition.** 전원 인가 또는 PVT 변화 후 PHY가 최적 timing margin을 찾기 위해 수행하는 일련의 캘리브레이션 절차.
 
 **Source.** JEDEC PHY spec.
 
-**Related.** ZQ Calibration, retraining, BL2.
+**Related.** ZQ Calibration, retraining, Write Leveling, CA Training, VREF Training.
+
+**Example.** Write Leveling은 CK와 DQS의 위상을 정렬하고, Read DQ Training은 read eye의 중앙점을 탐색한다. Training이 marginal pass로 완료되면 정상 조건에서는 동작하지만 PVT stress에서 bit error가 발생하는 silent corruption 위험이 있다.
 
 **See also.** [Module 03](03_memory_interface_phy.md)
 

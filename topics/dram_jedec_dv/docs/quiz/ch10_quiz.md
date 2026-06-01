@@ -15,7 +15,7 @@
     - D. SystemC TLM 만 사용
 
 ??? answer "정답: B"
-    **Why**: Cycle-accurate은 *느리고 controller IP timing model에 의존*. Functional + SVA 분리가 *빠르고 깔끔*. (Ch10 §2.1)
+    **Why**: Functional reference model(mem[addr]=data 수준)에 별도 SVA timing checker를 조합하는 방식이 최적입니다. Cycle-accurate 방식(A)은 시뮬레이션이 느려지고 컨트롤러의 timing model에 의존도가 높아져 false fail 가능성이 생깁니다. Hybrid(C)는 명확한 정의가 없으며 두 방식의 단점을 모두 가질 수 있습니다. SystemC TLM만 사용(D)하면 cycle 단위 timing 검증이 불가능합니다. B가 좋은 이유는 functional model은 빠른 시뮬레이션과 명확한 expected value 계산을 담당하고, timing 검증은 SVA가 독립적으로 처리하기 때문에 각 컴포넌트의 책임이 분리됩니다. (Ch10 §2.1)
 
 !!! question "Q2. Coverage 6 카테고리에 *포함되지 않는* 것은? `(Remember)`"
     - A. Command
@@ -24,7 +24,7 @@
     - D. Training
 
 ??? answer "정답: C"
-    **Why**: Layout/floorplan은 physical design 영역 — DRAM 검증 coverage에는 포함 X. 6 카테고리는 command/timing/MR/training/refresh/ECC. (Ch10 §3)
+    **Why**: Layout(physical floorplan)은 physical design 팀의 영역으로 DV coverage에 포함되지 않습니다. DV coverage의 6 카테고리는 command·timing·MR·training·refresh·ECC이며, 이는 모두 프로토콜 동작 및 기능적 검증 대상입니다. A(command), B(timing), D(training)은 모두 6 카테고리에 실제로 포함됩니다. 물리적 레이아웃은 DRC/LVS 같은 별개의 물리 검증 플로우로 다루므로 functional DV coverage에 넣으면 혼선이 생깁니다. (Ch10 §3)
 
 !!! question "Q3. SVA `bind` 의 *주 이점*은? `(Understand)`"
     - A. 실행 속도 향상
@@ -33,7 +33,7 @@
     - D. 시뮬레이션 라이센스 절약
 
 ??? answer "정답: B"
-    **Why**: bind는 elaboration 시점에 모듈을 부착 — RTL 자체는 *변경 안 됨*. checker 추가/제거가 깔끔. (Ch10 §4.4)
+    **Why**: SVA bind의 핵심 가치는 RTL 소스 파일을 한 줄도 수정하지 않고 assertion checker를 elaboration 시점에 부착할 수 있다는 점입니다. A(속도 향상)는 bind와 직접 관련이 없으며 오히려 checker 추가로 시뮬레이션이 약간 느려질 수 있습니다. C(coverage 자동 생성)는 bind가 제공하는 기능이 아니라 covergroup을 작성해야 하는 별개의 작업입니다. D(라이센스 절약)도 bind와 무관합니다. RTL을 수정하지 않아도 된다는 점은 IP 재사용과 PDK 제약이 있는 환경에서 매우 중요하며, checker를 제거할 때도 RTL을 건드리지 않고 bind 파일만 제외하면 됩니다. (Ch10 §4.4)
 
 !!! question "Q4. 3-Tier regression의 *Tier 2 단계*는? `(Remember)`"
     - A. Smoke directed (seed=0)
@@ -42,7 +42,7 @@
     - D. FPGA emulation
 
 ??? answer "정답: B"
-    **Why**: Tier 1 = smoke, Tier 2 = constrained-random, Tier 3 = hole filling. (Ch10 §5.1)
+    **Why**: 3-Tier regression에서 Tier 1은 smoke directed(seed=0으로 기본 동작 확인), Tier 2는 constrained-random(100 seeds × 여러 테스트로 코너 케이스 탐색), Tier 3은 coverage hole directed(남은 구멍을 겨냥한 직접 테스트)입니다. A(smoke directed)는 Tier 1, C(coverage hole directed)는 Tier 3, D(FPGA emulation)은 regression tier와 별개의 플랫폼 개념입니다. Tier 2가 constrained-random인 이유는 Tier 1의 기본 경로가 통과된 후 다양한 시드로 예상치 못한 조합을 찾아내는 단계이기 때문입니다. (Ch10 §5.1)
 
 ## 단답형
 

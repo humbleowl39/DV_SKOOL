@@ -15,7 +15,7 @@
     - D. MR0~MR254 (255개)
 
 ??? answer "정답: D"
-    **Why**: DDR5는 MR 공간이 *최대 MR254*까지 확장. DDR4는 MR0~MR6 (7개)였음. DCA per-DQ + DFE per-tap 으로 영역이 커짐. (Ch04 §1)
+    **Why**: DDR5는 MR0부터 MR254까지 최대 255개의 MR 공간을 가집니다. DDR4가 MR0~MR6 단 7개였던 것과 비교하면 엄청난 확장입니다. 이렇게 많아진 이유는 DFE의 tap별 계수, DCA의 DQ핀별 설정, RFM 관련 통계 레지스터 등 DDR5의 고속화에 따른 per-lane·per-tap 보정 파라미터가 대거 추가되었기 때문입니다. A·B·C는 모두 실제 DDR5의 MR 공간보다 훨씬 작은 값이므로 틀립니다. DV 관점에서 250+ MR을 모두 RAL로 모델링하고 카테고리별 coverage를 설계하는 것이 Ch04의 핵심 주제입니다. (Ch04 §1)
 
 !!! question "Q2. MRR (Mode Register Read)이 *직접 명령*으로 지원되기 시작한 표준은? `(Remember)`"
     - A. DDR3
@@ -24,7 +24,7 @@
     - D. LPDDR4
 
 ??? answer "정답: C (DDR5)"
-    **Why**: DDR4는 MPR(Multi-Purpose Register)을 통한 *간접* 방식. DDR5부터 *MRR이 직접 명령*. LPDDR4/5는 MRR을 가짐. (Ch04 §1.1)
+    **Why**: DDR5에서 처음으로 MRR(Mode Register Read)이 직접 명령으로 지원됩니다. DDR4는 특정 MR 값을 읽으려면 MPR(Multi-Purpose Register)을 경유하는 간접 방식을 사용했기 때문에 A와 B는 틀렸습니다. 흥미롭게도 LPDDR4와 LPDDR5는 DDR5보다 먼저 MRR을 직접 명령으로 채택했으므로 D도 틀립니다. DDR5의 직접 MRR 도입은 runtime MR 상태 조회가 훨씬 단순해졌다는 의미이며, DV에서 RAL의 frontdoor read 경로가 명확해졌습니다. (Ch04 §1.1)
 
 !!! question "Q3. RFM 관련 MR로 옳은 것을 모두 고르시오. `(Remember)`"
     - A. MR58 (Refresh Management)
@@ -33,7 +33,7 @@
     - D. MR4 (Refresh Settings)
 
 ??? answer "정답: A, B, C, D"
-    **Why**: 모두 refresh 관련. MR4가 기본 refresh, MR58~60이 RFM/DRFM/PASR. (Ch04 §2.2)
+    **Why**: 네 가지 모두 refresh 관련 MR입니다. MR4는 기본 refresh 동작(tREFI 모드, tRFC 선택 등)을 제어하는 전통적인 레지스터이고, MR58(Refresh Management), MR59(RAA counter, DRFM/ARFM 설정), MR60(PASR 관련)은 DDR5에서 Rowhammer 완화와 저전력 refresh를 위해 추가된 레지스터들입니다. 모두 refresh 메커니즘과 직접 연결되어 있으므로 DV에서 refresh coverage를 설계할 때 이 MR들을 빠짐없이 포함시켜야 합니다. (Ch04 §2.2)
 
 !!! question "Q4. *Init-only* MR을 *런타임에 변경*하려는 시도에 대한 적절한 대응은? `(Evaluate)`"
     - A. DRAM이 무시하므로 SVA 불필요
@@ -42,7 +42,7 @@
     - D. Warning만 출력
 
 ??? answer "정답: B"
-    **Why**: init-only MR (예: MR3, MR13)을 runtime에 변경하면 *spec violation*. 시뮬레이션은 *통과*할 수 있지만 silicon 동작 미정의. SVA로 *즉시* catch해야 함. (Ch04 §5.2)
+    **Why**: Init-only MR은 power-up 시퀀스 중 한 번만 설정 가능하고 runtime 변경은 spec violation입니다. DRAM이 명령을 무시하더라도 그 사실 자체를 아는 메커니즘이 없으므로 A(SVA 불필요)는 위험한 선택입니다. C(자동 reset)는 DRAM에 그런 메커니즘이 없으므로 틀렸고, D(Warning만)는 violation을 정확히 명시하지 않아 불충분합니다. SVA로 즉시 assertion fail을 발생시켜야 하는 이유는 silicon에서 init-only MR 재기록의 결과가 미정의(undefined behavior)이기 때문에 시뮬레이션에서 반드시 잡아야 합니다. (Ch04 §5.2)
 
 ## 단답형
 

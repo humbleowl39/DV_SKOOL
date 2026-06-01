@@ -83,6 +83,7 @@
 - **Source.** Common LLM failure mode.
 - **Related.** RAG, Faithfulness, Grounding.
 - **Example.** 존재하지 않는 SystemVerilog 시스템 함수 이름을 자신 있게 호출.
+- **Why it matters.** DV 도메인에서 hallucination은 존재하지 않는 신호 이름이나 잘못된 타이밍 조건으로 나타나 엔지니어를 잘못된 디버그 방향으로 이끌 수 있으므로, RAG나 인용 강제 prompt로 grounding을 보장해야 한다.
 - **See also.** [Module 04](04_rag.md).
 
 ---
@@ -112,6 +113,7 @@
 - **Source.** Shazeer et al., 2017; Mixtral.
 - **Related.** Sparse model, Top-K routing.
 - **Example.** Mixtral 8x7B 는 47B 총 파라미터 중 토큰당 13B 만 사용.
+- **Why it matters.** 동일한 추론 성능을 dense 모델보다 낮은 연산 비용으로 달성할 수 있어, on-prem LLM 배포 시 GPU 예산 계획에 직접 영향을 준다.
 - **See also.** [Module 01](01_llm_fundamentals.md).
 
 ---
@@ -159,6 +161,7 @@
 - **Source.** Information retrieval literature.
 - **Related.** Cross-encoder, BM25, Hybrid Search.
 - **Example.** ANN top-20 → cross-encoder → top-5.
+- **Why it matters.** ANN은 속도를 위해 근사치를 반환하므로 top-k에 노이즈가 섞인다. re-ranking은 LLM에 전달되는 최종 컨텍스트의 신호 대 잡음비를 높여 RAG 전체 품질에 직접적으로 영향을 미친다.
 - **See also.** [Module 04](04_rag.md).
 
 ---

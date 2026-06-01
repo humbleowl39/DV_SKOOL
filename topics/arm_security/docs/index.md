@@ -22,6 +22,10 @@
 </div>
 <!-- DV-SKOOL-TOC:end -->
 
+## 왜 배워야 하는가
+
+스마트폰, 자동차 ECU, 데이터센터 서버까지 ARM 기반 SoC가 보안의 핵심을 담당하는 시대가 됐다. DV 엔지니어가 이 구조를 모르면 "Secure Monitor가 왜 EL3에 영구 거주해야 하는가", "DMA 마스터가 왜 TZASC를 우회하는가" 같은 설계 의도를 이해하지 못해 검증 시나리오를 제대로 구성할 수 없다. 반대로 이 코스를 완주하면 권한 계층·보안 경계·부팅 체인을 구조적으로 파악하게 되어, 보안 기능 검증 시 경계 조건과 침해 시나리오를 스스로 도출할 수 있게 된다.
+
 ## 🎯 학습 목표
 - **Diagram** ARMv8 4-level Exception Level (EL0-EL3) 구조와 TrustZone 격리
 - **Trace** Secure / Non-secure World 전환 흐름과 SMC instruction

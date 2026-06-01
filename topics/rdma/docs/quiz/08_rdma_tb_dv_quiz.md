@@ -41,6 +41,8 @@ RDMA-TB 의 `lib/` 분류 4 가지를 들어라.
     3. **external/** — 3rd party VIP wrapper (예: VPFC)
     4. **submodule/** — Sub-IP 전용 verification (design hierarchy 따라; MMU/PTW/TLB, RQ fetcher, CRC)
 
+    이 4분류의 핵심 설계 원칙은 "공통 변경의 영향 범위를 최소화"하는 것이다. base 를 수정하면 모든 test 에 영향이 가므로 신중해야 하고, ext 에 새 feature 를 추가할 때는 다른 ext 와 base 를 건드리지 않아야 한다. external 과 submodule 을 별도로 두는 이유는 각각 "우리가 소유하지 않은 코드"와 "DUT 계층 구조를 따라가는 코드"라는 책임 경계 때문이다. 이 구조를 모르면 새 시나리오를 어디에 추가해야 할지 판단하지 못한다.
+
 ## Q2. (Understand)
 
 `vrdmatb_top_env` 에 포함되는 env 의 종류를 5 개 이상 들어라.
