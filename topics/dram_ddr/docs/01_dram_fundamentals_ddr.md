@@ -269,6 +269,45 @@ DRAM 셀의 구조는 1T1C — 트랜지스터 하나와 커패시터 하나 —
 - **쓰기(Write)** — word line을 활성화한 뒤 bit line에 원하는 전압을 인가하면, 도통된 transistor를 통해 capacitor가 그 전압까지 충전되거나 방전됩니다.
 - **Refresh** — capacitor는 시간이 지나면 전하가 누설되므로, 데이터를 잃기 전에 주기적으로 읽고 다시 써 넣어야 합니다. DDR4는 64 ms 주기(`tREFI` ≈ 7.8 µs 간격), DDR5는 32 ms 주기(온도에 따라 가변)를 요구합니다.
 
+그런데 셀 하나만 봐서는 `Row Buffer` 가 어디서 나오는지 보이지 않습니다. 실제 DRAM 에서 셀은 **2차원 격자**로 깔리고, 같은 행의 셀들은 하나의 **word line** 을, 같은 열의 셀들은 하나의 **bit line** 을 공유합니다. 그래서 word line 하나를 활성화하면 그 행의 모든 셀이 **동시에** 자기 bit line 으로 전하를 토해내고, 각 bit line 끝의 **sense amplifier 가 그 값을 latch** 합니다. 한 행 전체를 받아내는 이 **sense amplifier 의 배열이 곧 Row Buffer** 입니다 — 별도의 메모리가 아니라 "지금 열린 row 를 붙들고 있는 sense amp 들의 모음" 입니다. 이후 Column 주소는 이 Row Buffer 안에서 어느 칸을 DQ 로 내보낼지만 고르므로, 같은 row 안의 연속 접근(Row Hit)이 그토록 빠른 것입니다.
+
+```d2
+direction: down
+
+RowDec: "Row Decoder\n(한 번에 word line 1개만 활성화)" { style.fill: "#e8f0fe" }
+
+WL0: "Word line 0" { style.fill: "#fff4e5" }
+WL1: "Word line 1" { style.fill: "#fff4e5" }
+
+C00: "1T1C"
+C01: "1T1C"
+C10: "1T1C"
+C11: "1T1C"
+
+BL0: "Bit line 0" { style.fill: "#e6f4ea" }
+BL1: "Bit line 1" { style.fill: "#e6f4ea" }
+
+SA0: "Sense Amp 0\n= Row Buffer" { style.fill: "#fce8e6" }
+SA1: "Sense Amp 1\n= Row Buffer" { style.fill: "#fce8e6" }
+
+IO: "Column Decoder / MUX → DQ (I/O)"
+
+RowDec -> WL0
+RowDec -> WL1
+WL0 -> C00
+WL0 -> C01
+WL1 -> C10
+WL1 -> C11
+C00 -> BL0
+C10 -> BL0
+C01 -> BL1
+C11 -> BL1
+BL0 -> SA0
+BL1 -> SA1
+SA0 -> IO
+SA1 -> IO
+```
+
 ### 5.2 DDR 세대별 비교 — full table
 
 | 항목 | DDR4 | DDR5 | LPDDR5 |
