@@ -16,6 +16,9 @@ export default defineConfig({
 			// D2 binary v0.7.1 silently no-ops on deeply nested labeled containers;
 			// use the bundled D2.js (WASM) engine instead, which renders them correctly.
 			experimental: { useD2js: true },
+			// Generate SVGs locally (committed to public/d2); skip on CI to avoid
+			// running the WASM engine on memory-limited runners (OOM).
+			skipGeneration: !!process.env.CI,
 		}),
 		starlight({
 			title: 'DV SKOOL',
