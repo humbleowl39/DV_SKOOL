@@ -1,0 +1,73 @@
+---
+title: "DRAM JEDEC Deep-Dive — DV 실무자용"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 DRAM JEDEC DV를 배워야 하는가
+
+메모리 컨트롤러 IP를 검증하는 엔지니어가 JEDEC 스펙을 직접 읽지 않으면 무슨 일이 생길까요? tRCD 위반이 DRAM model을 그냥 통과해 silicon에서 간헐적 data corruption으로 터지거나, Rowhammer 시나리오를 아예 테스트 계획에서 누락하거나, DDR5 2-cycle command를 1-cycle로 디코딩하는 monitor가 아무 경고 없이 통과하는 일이 발생합니다. 이 자료는 "스펙을 알아야 검증할 수 있다"는 출발점에서, JEDEC 표준 4종(DDR4·DDR5·LPDDR4·LPDDR5)을 **DV 엔지니어의 시각**으로 재구성합니다.
+
+스펙을 모르면 막히는 것들이 구체적으로 있습니다. Init 순서를 틀리면 MRW가 DRAM에 조용히 drop 되고, Bank Group을 모르면 tCCD_L/tCCD_S coverage hole이 생기며, RFM MR을 모르면 Rowhammer regression이 통과해도 아무 의미가 없습니다. 이 자료는 각 챕터마다 "스펙의 이 부분이 DV에서 이런 구멍을 만든다"는 인과를 명시하므로, 학습 후에는 V-Plan 작성·SVA 설계·coverage 분류를 스펙 근거와 함께 진행할 수 있습니다.
+
+## 이 학습 자료가 다루는 것
+
+스펙 원문을 직접 인용하면서 **DV 엔지니어가 실제로 무엇을 검증해야 하는지**를 잇는 것이 이 자료의 목적입니다. 단순한 스펙 요약이 아니라:
+
+- 모든 챕터에 **DV Application** 섹션 (coverage / SVA / scoreboard 규칙)
+- 모든 챕터에 **대표 문제 dry-run** (timing 계산, 시나리오 trace, 코드 추적)
+- DDR4↔DDR5, LPDDR4↔LPDDR5 **비교 표**
+- Ch11은 **DV 전용** end-to-end 예시 (UVM 스켈레톤 + SVA bind + 시나리오 라이브러리 + sign-off 체크리스트)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Ch01. DRAM 기본 원리와 JEDEC 표준 지형도" href="./01_dram_jedec_landscape/" />
+	<LinkCard title="Ch02. 패키지·핀아웃·어드레싱" href="./02_package_pinout_addressing/" />
+	<LinkCard title="Ch03. 초기화·Reset·Power 시퀀스" href="./03_init_reset_power/" />
+	<LinkCard title="Ch04. Mode Register 깊이 분석" href="./04_mode_registers/" />
+	<LinkCard title="Ch05. Command·Truth Table·Burst Operation" href="./05_commands_burst/" />
+	<LinkCard title="Ch06. Timing 파라미터·Preamble·Postamble" href="./06_timing_preamble/" />
+	<LinkCard title="Ch07. Refresh·tREFI/tRFC·Refresh Management (RFM)" href="./07_refresh_rfm/" />
+	<LinkCard title="Ch08. Training — CA / DQ / DQS / Read DQ Calibration" href="./08_training/" />
+	<LinkCard title="Ch09. 신뢰성·ECC·CRC·PPR" href="./09_reliability_ecc_crc/" />
+	<LinkCard title="Ch10. DV Methodology 통합 — Spec → TB → Coverage" href="./10_dv_methodology/" />
+	<LinkCard title="Ch11. DDR5/LPDDR5 검증 프로젝트 실전 (End-to-End)" href="./11_dv_project_endtoend/" />
+	<LinkCard title="Ch12. DRAM Vendor 설계검증 — Mixed-Signal · STA · Custom Circuit · DFT" href="./12_vendor_dv_mixed_signal_sta/" />
+	<LinkCard title="부록 A. JEDEC Spec 빠른 참조 (Quick Reference)" href="./appendix_a_quick_reference/" />
+	<LinkCard title="Appendix B. Glossary" href="./appendix_b_glossary/" />
+	<LinkCard title="부록 C. SVA / Coverage 예제 모음" href="./appendix_c_sva_coverage_examples/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 참조 스펙 (4종)
+
+| 표준 | 문서 | 비고 |
+|---|---|---|
+| DDR4 SDRAM | JESD79-4D | Mode Register, FGR, hPPR/sPPR, CRC, CA Parity |
+| DDR5 SDRAM | JESD79-5C.01 v1.31 (2024-07) | MR0~MR254, DFE, RFM(MR58/59), Transparency ECC |
+| LPDDR4 | JESD209-4E | CA/DQ VREF Training, CBT, PPR |
+| LPDDR5/5X | JESD209-5C | WCK Clocking, DVFS, Link ECC, ARFM/DRFM, Per-pin DFE |
+
+> 본 자료의 인용은 학습 목적의 **요약·참조**이며, 스펙 원문의 복제가 아닙니다. 정밀한 수치/타이밍 표는 항상 원본 JEDEC 문서를 우선으로 합니다.
+
+## 챕터 요약
+
+## 사전 지식 (Prerequisites)
+
+- SystemVerilog 기본 (always_ff, interface, modport, class)
+- UVM 1.2 핵심 (uvm_sequence_item, uvm_driver, uvm_monitor, uvm_scoreboard, uvm_config_db)
+- 디지털 회로 기본 (synchronous design, setup/hold, clock domain)
+- DRAM 또는 DDR 기초가 있으면 Ch01~Ch03은 빠르게 통과 가능
+
+## 다음 단계
+
+- Ch01부터 순차 학습: [Ch01. DRAM 기본 원리와 JEDEC 표준 지형도](./01_dram_jedec_landscape/)
+- 빠른 참조가 필요하다면: [부록 A. JEDEC Spec 빠른 참조](./appendix_a_quick_reference/)
+- 용어가 헷갈리면: [부록 B. Glossary](./appendix_b_glossary/)
+- 퀴즈로 자가 점검: [퀴즈 인덱스](./quiz/)

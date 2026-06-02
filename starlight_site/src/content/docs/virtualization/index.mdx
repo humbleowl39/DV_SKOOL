@@ -1,0 +1,49 @@
+---
+title: "Virtualization"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 배우나
+
+가상화는 "물리 서버 1대에 여러 OS를 안전하게 동시에 올린다"는 단순한 목표에서 출발하지만, 그 한 줄을 실현하기 위해 CPU·메모리·I/O 전 계층에 걸친 하드웨어와 소프트웨어 메커니즘이 맞물립니다. 이 메커니즘을 모르면 "왜 VM은 격리되는데 container는 커널을 공유하는가", "왜 SR-IOV passthrough는 빠른데 live migration이 안 되는가" 같은 실무 판단을 근거 없이 내리게 되고, 결국 성능·격리·밀도 사이의 트레이드오프를 잘못 잡아 시스템을 과도하게 무겁게 만들거나 보안 구멍을 남기게 됩니다.
+
+이 코스는 시스템 아키텍처가 고정 기능 HW에서 가상화까지 진화한 흐름을 따라가며, 각 가상화 메커니즘이 "어떤 문제를 풀기 위해 등장했는가"를 인과적으로 연결합니다. 그 결과 새로운 가상화 기술을 마주쳤을 때도 그것이 해결하려는 병목과 감수하는 트레이드오프를 스스로 추론할 수 있게 됩니다.
+
+## 🎯 학습 목표
+- **Trace** 시스템 아키텍처 진화 (HW only → process → kernel/user → 가상화)
+- **Diagram** CPU / 메모리 / I/O 가상화의 각 layer 동작
+- **Distinguish** Type 1 vs Type 2 hypervisor, strict vs passthrough
+- **Apply** Container (Docker/K8s) 와 hypervisor 가상화의 trade-off
+- **Plan** Modern infrastructure (microVM, gVisor, kata-containers) 적합성
+
+## 📋 사전 지식
+- OS 기본 (process, kernel/user mode)
+- CPU 권한 모드 (ring, EL)
+- 가상 메모리 ([MMU 코스](../../mmu/) 참고)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — Virtualization Fundamentals" href="./01_virtualization_fundamentals/" />
+	<LinkCard title="Module 01A — System Architecture Evolution" href="./01a_system_architecture_evolution/" />
+	<LinkCard title="Module 02 — CPU Virtualization" href="./02_cpu_virtualization/" />
+	<LinkCard title="Module 03 — Memory Virtualization" href="./03_memory_virtualization/" />
+	<LinkCard title="Module 04 — I/O Virtualization" href="./04_io_virtualization/" />
+	<LinkCard title="Module 05 — Hypervisor Types" href="./05_hypervisor_types/" />
+	<LinkCard title="Module 06 — Strict vs Passthrough" href="./06_strict_vs_passthrough/" />
+	<LinkCard title="Module 07 — Containers & Modern Virtualization" href="./07_containers_and_modern/" />
+	<LinkCard title="Module 08 — Quick Reference Card" href="./08_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집**](./glossary/)
+- 📝 [**퀴즈**](./quiz/)
+- 📋 **코스 개요**

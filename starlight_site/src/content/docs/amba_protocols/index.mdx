@@ -1,0 +1,66 @@
+---
+title: "AMBA Protocols"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 AMBA 프로토콜을 배우는가
+
+현대 SoC는 CPU, GPU, DMA, 메모리 컨트롤러, 수백 개의 주변 장치가 하나의 칩 위에서 공존합니다. 이 컴포넌트들이 서로 데이터를 주고받으려면 공통된 약속, 즉 인터커넥트 프로토콜이 필요합니다. AMBA(APB/AHB/AXI/AXI-Stream)는 ARM이 정의하고 업계 전반이 채택한 사실상의 표준으로, 현재 출하되는 거의 모든 모바일·서버·AI 칩의 내부 버스가 이 프로토콜 위에서 동작합니다.
+
+이 프로토콜을 모르면 검증 엔지니어가 정작 필요한 순간에 막힙니다. 슬레이브가 응답을 늦게 보내는 것이 wait state인지 프로토콜 위반인지 판단하지 못하고, AXI outstanding 트랜잭션에서 scoreboard가 왜 mismatch를 내는지 이해하지 못하며, AXI-Stream 수신 측이 패킷 경계를 어떻게 인식하는지 설명하지 못합니다. AMBA를 배우는 것은 단순히 신호 이름을 외우는 것이 아니라, SoC 내부의 데이터 흐름을 읽고 버그를 빠르게 찾아내는 언어를 익히는 과정입니다.
+
+## 🎯 학습 목표
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Distinguish (분석)** APB / AHB / AXI / AXI-Stream의 핵심 차이를 핸드셰이크·신호·용도 기준으로 구분
+- **Diagram (분석)** AXI 5채널 구조와 VALID/READY 핸드셰이크 타이밍을 화이트보드로 그리며 설명
+- **Apply (적용)** Burst (FIXED/INCR/WRAP), Outstanding, ID 기반 OoO 트래픽을 시나리오로 작성
+- **Implement (생성)** AXI-Stream의 TUSER/TKEEP/TLAST를 활용한 패킷 전송 검증 환경 설계
+- **Evaluate (평가)** SoC 통합 시 어느 인터페이스에 어느 프로토콜을 쓸지 trade-off 기반 결정
+
+## 📋 사전 지식
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **디지털 회로 기본**: 클럭 도메인, 동기 회로, FIFO
+- **Handshake 개념**: ready/valid 류 흐름 제어
+- **SystemVerilog 인터페이스 기본** (검증 적용 시)
+
+UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
+
+순차 학습 권장 (APB→AHB→AXI는 점진적 복잡도 증가):
+
+**언제 어느 프로토콜?** APB = 레지스터 접근, AHB = 레거시 중간 성능, AXI = 고성능 메모리/IP 인터커넥트, AXI-Stream = 패킷/프레임 데이터 패스.
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — APB & AHB" href="./01_apb_ahb/" />
+	<LinkCard title="Module 02 — AXI (Advanced eXtensible Interface)" href="./02_axi/" />
+	<LinkCard title="Module 03 — AXI-Stream" href="./03_axi_stream/" />
+	<LinkCard title="Module 04 — Quick Reference Card" href="./04_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집 (Glossary)**](./glossary/) — AMBA 핵심 용어 ISO 11179 형식 정의
+- 📝 [**퀴즈 (Quizzes)**](./quiz/) — 챕터별 5문항 (Bloom mix)
+- 📋 **코스 개요 & 컨셉 맵** — AMBA 진화 역사와 SoC 적용 매핑
+
+## 💡 학습 팁
+:::tip[효율적 학습]
+- **APB는 빠르게**: 가장 단순. SETUP→ACCESS 2단계 핸드셰이크만 이해하면 됨
+- **AXI는 깊게**: 5채널 분리 + outstanding이 핵심. VALID/READY 데드락 패턴 반드시 숙지
+- **AXI-Stream은 모델 차이로**: 주소 없는 데이터 패스 — memory-mapped와 다른 사고방식
+:::
+:::caution[흔한 버그]
+- **VALID 데드락**: Source가 READY 기다리며 VALID 안 올림 (절대 금지)
+- **WSTRB 누락**: AXI write에서 strobe 무시 → DUT가 잘못된 바이트 덮어씀
+- **AxLEN 오프셋**: AXI4 burst length는 N-1 인코딩 (16-beat = AxLEN=15)
+:::

@@ -1,0 +1,42 @@
+---
+title: "TOE (TCP/IP Offload Engine)"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 배우나
+
+100GbE 이상 고속 네트워크에서 host CPU가 TCP/IP 스택을 직접 처리하면 패킷 하나당 허용 사이클이 턱없이 부족해 네트워크 대역폭을 전혀 활용하지 못한다. TOE는 이 처리 부담을 NIC HW로 옮겨 CPU를 사용자 애플리케이션에 돌려주는 핵심 기술이다. TOE를 모르면 SmartNIC 검증 환경을 설계할 때 어떤 state와 어떤 error injection이 필요한지 판단할 수 없고, connection table·재전송·혼잡 제어 버그가 왜 silent corruption으로 이어지는지도 이해하기 어렵다.
+
+## 🎯 학습 목표
+- **Trace** TCP/IP 스택 처리를 host SW vs TOE HW로 비교 추적
+- **Diagram** TOE의 connection state machine + segment processing pipeline
+- **Apply** TX/RX path, ARP, checksum offload, RSS 시나리오 매핑
+- **Plan** TOE DV 환경 (packet generator, connection model, error injection)
+
+## 📋 사전 지식
+- TCP/IP 스택 (3-way handshake, sliding window, congestion control 기본)
+- NIC 동작 원리
+- AMBA AXI / AXI-Stream
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — TCP/IP & TOE Concept" href="./01_tcp_ip_and_toe_concept/" />
+	<LinkCard title="Module 02 — TOE Architecture" href="./02_toe_architecture/" />
+	<LinkCard title="Module 03 — TOE Key Functions" href="./03_toe_key_functions/" />
+	<LinkCard title="Module 04 — TOE DV Methodology" href="./04_toe_dv_methodology/" />
+	<LinkCard title="Module 05 — Quick Reference Card" href="./05_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집**](./glossary/)
+- 📝 [**퀴즈**](./quiz/)
+- 📋 **코스 개요**

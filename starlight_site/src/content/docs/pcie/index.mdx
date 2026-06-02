@@ -1,0 +1,51 @@
+---
+title: "PCI Express (PCIe)"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+오늘날 NVMe SSD, GPU, 네트워크 카드, AI 가속기는 거의 예외 없이 PCIe 로 호스트와 연결된다. PCIe 는 단순한 버스가 아니라 3개 계층, 패킷 포맷, 링크 훈련 상태 머신, 그리고 가상화·전원·오류 처리까지 아우르는 하나의 작은 프로토콜 스택이다. 이 구조를 모르면 "왜 BAR 가 1 MB 로 잡혔는지", "왜 링크가 x16 이 아니라 x8 로 떨어졌는지", "스코어보드의 Completion 이 왜 2개로 쪼개져 오는지"를 디버깅할 수 없다.
+
+검증 엔지니어에게 PCIe 지식의 공백은 곧 막다른 길이다. LTSSM 을 모르면 link-up 실패 로그를 읽을 수 없고, Flow Control credit 을 모르면 throughput 이 정체된 원인을 짚지 못하며, AER 분류를 모르면 어떤 오류가 무시 가능하고 어떤 오류가 치명적인지 판단할 수 없다. 이 토픽은 그 막다른 길을 하나씩 뚫어, TLP 한 줄을 보고 계층 전체의 동작을 머릿속에서 재구성할 수 있게 만드는 것을 목표로 한다.
+
+## 🎯 학습 목표
+- **Explain** PCI parallel → PCIe serial point-to-point 전환의 동기와 Gen1~Gen7 진화의 핵심을 설명한다.
+- **Diagram** Transaction / Data Link / Physical 3-layer 의 책임과 데이터 흐름을 그릴 수 있다.
+- **Decode** TLP header (Fmt/Type/Length/Address) 와 DLLP 의 type/sequence number 를 해독한다.
+- **Trace** LTSSM 의 11 상태 전이와 Gen3+ equalization 단계를 추적한다.
+- **Apply** Configuration Space (Type 0/1) 와 BAR sizing 을 이용해 enumeration 시퀀스를 직접 수행한다.
+- **Evaluate** Power state (D/L/ASPM), AER, Hot Plug 가 운영 안정성에 미치는 영향을 평가한다.
+- **Compare** SR-IOV, ATS+IOMMU, P2P, CXL.io/cache/mem 의 차이와 사용 시점을 비교한다.
+
+## 📋 사전 지식
+- 일반 디지털 시스템 (직렬/병렬 인터페이스, clock, encoding)
+- 메모리 매핑 IO, 인터럽트 (MSI/MSI-X) 기본
+- TCP/이더넷 등 layered protocol 경험 (선택)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — PCIe 동기와 진화" href="./01_pcie_motivation/" />
+	<LinkCard title="Module 02 — 3-Layer Architecture" href="./02_layer_architecture/" />
+	<LinkCard title="Module 03 — TLP (Transaction Layer Packet)" href="./03_tlp/" />
+	<LinkCard title="Module 04 — DLLP, Flow Control, ACK/NAK" href="./04_dllp_flow_control/" />
+	<LinkCard title="Module 05 — Physical Layer & LTSSM" href="./05_phy_ltssm/" />
+	<LinkCard title="Module 06 — Configuration Space & Enumeration" href="./06_config_enumeration/" />
+	<LinkCard title="Module 07 — Power Management, AER, Hot Plug" href="./07_power_aer_hotplug/" />
+	<LinkCard title="Module 08 — SR-IOV, ATS, P2P, CXL" href="./08_advanced/" />
+	<LinkCard title="Module 09 — Quick Reference Card" href="./09_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 참조 자료
+- **PCI Express Base Specification 6.0 / 7.0** — PCI-SIG (회원사 비공개, 일부 white paper 공개)
+- **PCI Express System Architecture (MindShare)** — 학습용 표준 참고서
+- **Linux Kernel `Documentation/PCI/`** — 공개, 실 구현 관점
+- **OS / Hypervisor IOMMU 문서** — Intel VT-d, ARM SMMU
+- **CXL Consortium Specifications** — CXL 1.1 / 2.0 / 3.0 / 3.1 (공개 white paper)

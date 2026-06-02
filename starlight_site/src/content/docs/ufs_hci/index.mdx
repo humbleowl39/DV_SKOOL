@@ -1,0 +1,51 @@
+---
+title: "UFS HCI"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+UFS HCI(Host Controller Interface)는 SW 드라이버와 UFS 장치 사이의 유일한 표준 계약입니다. UTRD 하나가 잘못된 메모리 주소를 가리키거나 Doorbell이 한 클럭 일찍 울리면, HCI는 오류 없이 동작하지만 데이터는 조용히 다른 LBA에 쓰입니다. 이런 silent corruption은 기능 테스트를 통과하고도 양산 후에야 드러나므로, HCI 레이어를 이해하고 검증하는 능력은 스토리지 SoC를 다루는 DV 엔지니어의 핵심 역량입니다.
+
+이 토픽을 학습하지 않으면 UTRD 구조나 Doorbell 흐름을 모르는 채로 DV 환경을 설계하게 되고, Task Tag 매칭 오류나 SW·HW 경쟁 조건 같은 가장 위험한 버그 카테고리를 커버리지 목표에 포함시키지 못합니다. M01에서 프로토콜 스택을 잡고, M02에서 HCI 내부 메커니즘을 파악한 뒤, M03에서 UPIU 흐름을 추적하고, M04에서 검증 전략을 직접 설계하는 순서로 진행하면 이 모든 문제를 체계적으로 해결할 수 있습니다.
+
+## 🎯 학습 목표
+- **Trace** UFS 프로토콜 스택 (UTP/UPIU/UniPro/MIPI M-PHY) 흐름 추적
+- **Diagram** HCI 아키텍처 (UTRD, UTMRD, doorbell)와 host ↔ device 통신 흐름
+- **Apply** UPIU command/response 흐름과 LU(Logical Unit) 관리 시나리오
+- **Plan** UFS HCI DV 환경 설계 (UFS device model, host driver, AXI host interface)
+
+## 📋 사전 지식
+- 스토리지 프로토콜 일반 (SATA, NVMe 비교)
+- AXI/AHB 인터커넥트
+- DMA / queue-based command 모델
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — UFS Protocol Stack" href="./01_ufs_protocol_stack/" />
+	<LinkCard title="Module 02 — HCI Architecture" href="./02_hci_architecture/" />
+	<LinkCard title="Module 03 — UPIU & Command Flow" href="./03_upiu_command_flow/" />
+	<LinkCard title="Module 04 — HCI DV Methodology" href="./04_hci_dv_methodology/" />
+	<LinkCard title="Module 05 — Quick Reference Card" href="./05_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집 (Glossary)**](./glossary/)
+- 📝 [**퀴즈 (Quizzes)**](./quiz/)
+- 📋 **코스 개요**
+
+## 💡 학습 팁
+:::tip[효율적 학습]
+5계층(Application / UTP·UPIU / UniPro / M-PHY / Storage)을 단순히 외우는 것이 아니라 각 계층이 인접 계층과 어떤 인터페이스로 연결되는지까지 파악해야 합니다. 이 구조를 알면 버그가 발생했을 때 어느 계층에서 문제가 생겼는지 바로 좁힐 수 있습니다.
+
+UPIU 형식을 이해할 때는 "SCSI CDB를 그대로 쓰지 않고 왜 캡슐화했는가"라는 질문에서 출발하세요. Task Tag, Query, NOP, Reject처럼 UFS-specific 요소를 추가해야 했기 때문이며, 이 추가 요소들이 DV 검증 포인트의 핵심이 됩니다.
+
+모든 명령 처리는 **Doorbell ring → UTRD fetch → command exec → Interrupt** 네 단계를 거칩니다. 이 흐름을 머릿속에서 동작시킬 수 있을 때 UTRD 필드가 왜 그런 값을 갖는지, interrupt aggregation이 어느 단계에 영향을 주는지를 자연스럽게 이해할 수 있습니다.
+:::

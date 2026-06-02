@@ -1,0 +1,128 @@
+---
+title: "Ch04 퀴즈 — Mode Register 깊이 분석"
+---
+
+<div class="chapter-context" data-cat="memory">
+  <a class="chapter-back" href="../"><span class="chapter-back-arrow">←</span><span class="chapter-back-icon">📚</span> 퀴즈 인덱스</a>
+  <span class="chapter-divider">›</span>
+  <span class="chapter-marker chapter-quickref-marker">CH 04</span>
+</div>
+
+## 객관식
+
+:::tip[Q1. DDR5의 MR 영역 크기는? `(Remember)`]
+- A. MR0~MR6 (7개)
+- B. MR0~MR15 (16개)
+- C. MR0~MR63 (64개)
+- D. MR0~MR254 (255개)
+:::
+<details>
+<summary>정답: D</summary>
+
+**Why**: DDR5는 MR0부터 MR254까지 최대 255개의 MR 공간을 가집니다. DDR4가 MR0~MR6 단 7개였던 것과 비교하면 엄청난 확장입니다. 이렇게 많아진 이유는 DFE의 tap별 계수, DCA의 DQ핀별 설정, RFM 관련 통계 레지스터 등 DDR5의 고속화에 따른 per-lane·per-tap 보정 파라미터가 대거 추가되었기 때문입니다. A·B·C는 모두 실제 DDR5의 MR 공간보다 훨씬 작은 값이므로 틀립니다. DV 관점에서 250+ MR을 모두 RAL로 모델링하고 카테고리별 coverage를 설계하는 것이 Ch04의 핵심 주제입니다. (Ch04 §1)
+
+</details>
+:::tip[Q2. MRR (Mode Register Read)이 *직접 명령*으로 지원되기 시작한 표준은? `(Remember)`]
+- A. DDR3
+- B. DDR4
+- C. DDR5
+- D. LPDDR4
+:::
+<details>
+<summary>정답: C (DDR5)</summary>
+
+**Why**: DDR5에서 처음으로 MRR(Mode Register Read)이 직접 명령으로 지원됩니다. DDR4는 특정 MR 값을 읽으려면 MPR(Multi-Purpose Register)을 경유하는 간접 방식을 사용했기 때문에 A와 B는 틀렸습니다. 흥미롭게도 LPDDR4와 LPDDR5는 DDR5보다 먼저 MRR을 직접 명령으로 채택했으므로 D도 틀립니다. DDR5의 직접 MRR 도입은 runtime MR 상태 조회가 훨씬 단순해졌다는 의미이며, DV에서 RAL의 frontdoor read 경로가 명확해졌습니다. (Ch04 §1.1)
+
+</details>
+:::tip[Q3. RFM 관련 MR로 옳은 것을 모두 고르시오. `(Remember)`]
+- A. MR58 (Refresh Management)
+- B. MR59 (DRFM, ARFM, RFM RAA Counter)
+- C. MR60 (Partial Array Self Refresh)
+- D. MR4 (Refresh Settings)
+:::
+<details>
+<summary>정답: A, B, C, D</summary>
+
+**Why**: 네 가지 모두 refresh 관련 MR입니다. MR4는 기본 refresh 동작(tREFI 모드, tRFC 선택 등)을 제어하는 전통적인 레지스터이고, MR58(Refresh Management), MR59(RAA counter, DRFM/ARFM 설정), MR60(PASR 관련)은 DDR5에서 Rowhammer 완화와 저전력 refresh를 위해 추가된 레지스터들입니다. 모두 refresh 메커니즘과 직접 연결되어 있으므로 DV에서 refresh coverage를 설계할 때 이 MR들을 빠짐없이 포함시켜야 합니다. (Ch04 §2.2)
+
+</details>
+:::tip[Q4. *Init-only* MR을 *런타임에 변경*하려는 시도에 대한 적절한 대응은? `(Evaluate)`]
+- A. DRAM이 무시하므로 SVA 불필요
+- B. SVA로 즉시 catch — assertion fail
+- C. controller가 자동으로 reset
+- D. Warning만 출력
+:::
+<details>
+<summary>정답: B</summary>
+
+**Why**: Init-only MR은 power-up 시퀀스 중 한 번만 설정 가능하고 runtime 변경은 spec violation입니다. DRAM이 명령을 무시하더라도 그 사실 자체를 아는 메커니즘이 없으므로 A(SVA 불필요)는 위험한 선택입니다. C(자동 reset)는 DRAM에 그런 메커니즘이 없으므로 틀렸고, D(Warning만)는 violation을 정확히 명시하지 않아 불충분합니다. SVA로 즉시 assertion fail을 발생시켜야 하는 이유는 silicon에서 init-only MR 재기록의 결과가 미정의(undefined behavior)이기 때문에 시뮬레이션에서 반드시 잡아야 합니다. (Ch04 §5.2)
+
+</details>
+## 단답형
+
+:::tip[Q5. UVM RAL을 DRAM MR에 적용했을 때 얻는 *3가지 이점*을 들어라. `(Apply)`]
+:::
+<details>
+<summary>예시 답안</summary>
+
+1. **Mirror value 자동 추적** — 코드에서 *직접* `ral.MR0.cl.get()` 같이 현재 값 조회 가능
+2. **Frontdoor/Backdoor 분리** — 일반 검증은 frontdoor, 빠른 setup은 backdoor
+3. **Built-in sequences** — `uvm_reg_hw_reset_seq`, `uvm_reg_bit_bash_seq` 등 자동 verification 시퀀스 활용 (단, MR이 일반 register와 다르므로 일부는 custom)
+4. (추가) Coverage 자동 적용 — `add_coverage(UVM_CVR_ALL)` (Ch04 §4.1, §4.2)
+
+</details>
+:::tip[Q6. MR access coverage를 작성할 때 *카테고리화*가 왜 중요한가? `(Analyze)`]
+:::
+<details>
+<summary>예시 답안</summary>
+
+- MR이 *250+개*이므로 *각 MR 1개씩* bin을 만들면 cover 보고가 폭발
+- 우선순위 카테고리(basic/ecc/odt/dca/refresh/dfe/...)로 묶으면 *의미 있는 측정* 가능
+- 카테고리 cross로 *기능적 통합*을 검증: 예) `cp_mr.refresh × cp_rw.write` — 모든 refresh MR이 *적어도 한 번 write* 되었는지 (Ch04 §4.4)
+
+</details>
+## 대표 문제
+
+:::tip[Q7. DDR5 controller가 MR4=8'b001_01_010 을 MRW 한 직후, *후속 RD/WR이 normal temp에서는 정상*이지만 *extended temp에서 timing violation*이 발생한다면 root cause는 무엇이고 어떻게 추적하는가? `(Analyze, Evaluate)`]
+:::
+<details>
+<summary>풀이 (debug 사고 + 검증 보완)</summary>
+
+
+**Step 1 — MR4 비트 해석** (Ch04 §3.1 표 기준, *학습용 모형*)
+- OP[2:0]=010 → Refresh Range 의 *어떤 모드* — extended temp일 가능성
+- OP[4:3]=01 → tRFC Mode 1
+- OP[7:5]=001 → tREFI mode (variable)
+
+**Step 2 — Symptom 분석**
+- Normal temp에서 OK → MR4 자체는 *문자 그대로* 적용됨
+- Extended temp에서 fail → tREFI를 *절반*으로 줄였어야 하는데 줄이지 않음
+- → Controller의 *temperature sensor 입력 처리*에 문제?
+- → 또는 *MR4의 refresh_range 비트*를 controller가 *읽지 않음*?
+
+**Step 3 — 추적 절차**
+1. RAL backdoor로 `ral.MR4.refresh_range.get()` → DRAM internal value 일치 확인
+2. Controller RTL의 *MR4 refresh_range 필드* 디코드 신호 trace → temperature mode 전환 시점에 *실제로 변경*되는지
+3. Refresh interval logic의 *count_target*이 normal vs extended에서 *다르게 설정*되는지
+4. timing checker 자체가 *temperature-aware*인지 (단순히 7.8us 고정이면 false fail)
+
+**Step 4 — 가능 root cause**
+- Controller가 MR4 의 refresh_range 비트를 *디코드는 하지만 적용 안 함*
+- Or 적용은 하지만 *temperature transition 시점 race*
+- Or DRAM model의 timing이 extended temp에서 *더 엄격*하게 평가됨
+- Or testbench의 timing checker가 *spec과 다른* 임계치
+
+**Step 5 — 검증 보완**
+1. directed test `test_mr4_extended_temp_walk`: MR4를 normal → extended로 전환 후 *refresh interval 측정*. 절반이 되는지 확인.
+2. covergroup `refresh_range_cg`: normal_temp / extended_temp 각각 bin
+3. SVA `a_trefi_extended_temp`: refresh_range == extended일 때 *tREFI가 절반*인지 동적 평가
+4. directed test `test_mr4_race_condition`: temperature transition 직전/직후에 *refresh 발급* — race 검출
+
+**DV 시사점**
+- MR이 *동작 모드를 바꾸는* 경우 (이 사례), MR 자체의 write/read 검증만으로는 부족
+- *MR 값에 따른 후속 동작*까지 *별도 시나리오*로 검증해야 함
+- "MR mirror = DRAM internal" 확인은 *필요조건*이지 *충분조건*이 아님
+
+</details>
+---
+

@@ -1,0 +1,54 @@
+---
+title: "RDMA (InfiniBand & RoCEv2)"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 RDMA 를 배워야 하는가
+
+현대 AI 클러스터에서 GPU 수백 대가 초당 수백 GB 의 gradient 를 교환할 때, OS 가 그 경로 위에 있다면 latency 는 10배 늘어나고 CPU core 는 데이터를 옮기는 데만 소모된다. RDMA 는 "OS 를 경유하지 않고 메모리에서 메모리로" 라는 원칙으로 이 병목을 제거한다. RDMA 를 모르면 RDMA-IP 검증 환경의 QP FSM, PSN/ACK/NAK, MR/R_Key 같은 핵심 메커니즘이 왜 그렇게 설계됐는지 이해할 수 없고, 버그를 찾더라도 어디서 어떤 WC status 가 나와야 정상인지 판단할 근거가 없다. 이 토픽은 프로토콜 이해 → 검증 전략 수립 → 실제 RDMA-IP 구현 분석의 순서로 그 판단력을 쌓는다.
+
+## 🎯 학습 목표
+- **Explain** RDMA 가 왜 만들어졌고 — kernel bypass / zero-copy / OS bypass — 가 어떤 의미인지 설명할 수 있다.
+- **Diagram** InfiniBand 패킷 스택 (LRH/GRH/BTH/Payload/ICRC/VCRC) 과 RoCEv2 매핑 (Eth/IP/UDP/BTH) 을 그릴 수 있다.
+- **Trace** QP FSM (Reset → Init → RTR → RTS → SQD/SQErr/Err) 과 PSN/ACK/NAK/Retry 흐름을 추적할 수 있다.
+- **Apply** Verbs API (Memory Registration, Post Send/Recv, Poll CQ) 를 시나리오에 맞춰 사용할 수 있다.
+- **Evaluate** PFC/ECN/DCQCN 기반 Congestion Control 과 Local ACK timeout/RNR/R-Key error 의 처리 전략을 평가할 수 있다.
+- **Plan** RDMA 검증 환경(`vrdmatb`) 의 환경/agent/scoreboard 구조를 기반으로 vplan + coverage 전략을 설계할 수 있다.
+
+## 📋 사전 지식
+- TCP/IP 와 Ethernet 기본
+- DMA, PCIe 기본 (memory-mapped IO)
+- UVM 1.2 / SystemVerilog / VCS / mrun (DV 모듈 한정)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — RDMA 동기와 핵심 모델" href="./01_rdma_motivation/" />
+	<LinkCard title="Module 02 — InfiniBand 프로토콜 스택" href="./02_ib_protocol_stack/" />
+	<LinkCard title="Module 03 — RoCEv2: Ethernet 위의 RDMA" href="./03_rocev2/" />
+	<LinkCard title="Module 04 — Service Types & QP FSM" href="./04_service_types_qp/" />
+	<LinkCard title="Module 05 — Memory Model: PD, MR, L_Key/R_Key, IOVA" href="./05_memory_model/" />
+	<LinkCard title="Module 06 — Data Path Operations" href="./06_data_path/" />
+	<LinkCard title="Module 07 — Congestion Control & Error Handling" href="./07_congestion_error/" />
+	<LinkCard title="Module 08 — RDMA-TB 검증 환경 & DV 전략" href="./08_rdma_tb_dv/" />
+	<LinkCard title="Module 09 — Quick Reference Card" href="./09_quick_reference_card/" />
+	<LinkCard title="Module 10 — Ultraethernet (UEC)" href="./10_ultraethernet/" />
+	<LinkCard title="Module 11 — GPUBoost / RDMA-IP Hardware Architecture" href="./11_gpuboost_rdma_ip/" />
+	<LinkCard title="Module 12 — FPGA Prototyping & Lab Manuals" href="./12_fpga_proto_manuals/" />
+	<LinkCard title="Module 13 — Background & Industry Research" href="./13_background_research/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 참조 자료
+- **InfiniBand Architecture Specification, Volume 1, Release 1.7** — IBTA, 2023-07-11
+- **Annex A17: RoCEv2 — RDMA over Converged Ethernet v2** — IBTA
+- **`RDMA-TB/`** — 사내 RDMA 2.0 verification environment
+- **`PROTOCOL_RULES.md`** — IB Spec 1.7 must-rule 카탈로그 (1079개 규칙)
+- **`ROCEV2_RULE_APPLICABILITY.md`** — IB 규칙의 RoCEv2 적용 여부 분류

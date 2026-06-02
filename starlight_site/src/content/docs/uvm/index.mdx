@@ -1,0 +1,79 @@
+---
+title: "UVM (Universal Verification Methodology)"
+description: UVM 방법론 — phase, agent, sequence, factory, TLM, coverage
+---
+
+import { CardGrid, LinkCard, Card } from '@astrojs/starlight/components';
+
+## 왜 UVM을 배워야 하는가
+
+ASIC이나 FPGA 설계가 수백만 게이트를 넘어서면 "코드를 짜고 시뮬레이션을 돌리는" 수준으로는 검증이 불가능합니다. 어디를 어떻게 테스트했는지 체계 없이는 "다 테스트했다"는 근거를 댈 수 없기 때문입니다. UVM은 이 문제를 구조로 해결합니다. Phase로 실행 순서를 강제하고, Agent로 재사용 가능한 자극 생성기를 캡슐화하며, Factory로 컴포넌트를 교체하고, TLM로 컴포넌트 간 통신을 느슨하게 연결합니다.
+
+UVM을 모르면 다음 상황에서 막힙니다. 새 프로젝트에서 이전 VIP를 그대로 가져다 쓸 수 없고, 시뮬레이션이 왜 끝나지 않는지 알 방법이 없으며, coverage 리포트가 "충분하다"는 판단 기준도 없습니다. 이 코스는 그 막힘을 하나씩 풀어줍니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Diagram (분석)** UVM 클래스 계층 전체와 Phase 실행 순서를 화이트보드로 그리며 설계 의사결정을 설명
+- **Design (생성)** Agent/Driver/Monitor 구조를 Active/Passive 모드를 구분해 설계
+- **Apply (적용)** Sequence + Virtual Sequence + Factory Override로 다양한 시나리오를 재사용 가능하게 구성
+- **Analyze (분석)** config_db 계층 전달, TLM 포트 연결, Scoreboard 비교 로직을 트레이스
+- **Evaluate (평가)** UVM 실무 패턴/안티패턴을 식별하고 코드 리뷰에서 근거 있는 피드백 제공
+
+## 사전 지식
+
+다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
+
+- **SystemVerilog 객체지향**: class, virtual function/task, polymorphism, parameterized class
+- **랜덤화**: `randomize()`, constraint, `rand`/`randc` 차이
+- **Interface & modport**: virtual interface 개념
+- **시뮬레이터 사용 경험**: VCS / Questa / Xcelium 중 하나로 +runtest, +UVM_TESTNAME 등의 경험
+
+부족한 부분이 있다면 [SystemVerilog IEEE 1800](https://standards.ieee.org/ieee/1800/) 사양서나 *SystemVerilog for Verification* (Spear) 1-7장을 먼저 보세요.
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. **코어(M01–M04)** 는 강한 의존이 있어 순차 학습이 필요하고, **심화(M05–M06)** 와 **참조(M07)** 는 토픽 단위로도 볼 수 있습니다.
+
+<CardGrid>
+	<LinkCard title="M01 · 아키텍처 & Phase" href="./01_architecture_and_phase/" description="코어 — 클래스 계층(uvm_object vs uvm_component)과 build→connect→run→cleanup phase 모델." />
+	<LinkCard title="M02 · Agent / Driver / Monitor" href="./02_agent_driver_monitor/" description="코어 — Active/Passive agent, driver-sequencer handshake, monitor 분석 포트." />
+	<LinkCard title="M03 · Sequence & Item" href="./03_sequence_and_item/" description="코어 — sequence item, body(), virtual sequence, 자극 생성 계층." />
+	<LinkCard title="M04 · config_db & Factory" href="./04_config_db_factory/" description="코어 — config_db 계층 전달, factory override로 구조 교체." />
+	<LinkCard title="M05 · TLM / Scoreboard / Coverage" href="./05_tlm_scoreboard_coverage/" description="심화 — TLM 포트 연결, 트랜잭션 레벨 비교, functional coverage." />
+	<LinkCard title="M06 · 실무 패턴 & 안티패턴" href="./06_practical_patterns/" description="심화 — 자주 나오는 패턴과 Phase·config_db·Factory 안티패턴." />
+	<LinkCard title="M07 · Quick Reference Card" href="./07_quick_reference_card/" description="참조 — 핵심 API·관용구 치트시트." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — 핵심 개념 + 예제 코드 + 다이어그램
+4. **워크스루 (Walkthrough)** — 단계별 실습 시나리오
+5. **연습문제** — 직접 풀어보는 문항 + 모범 답안
+6. **핵심 정리** — 5~7개의 압축된 takeaway
+7. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="UVM 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–8문항, Bloom 레벨 혼합." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **순서 고수**: Module 01–04는 강한 의존이 있으므로 순차 학습
+- **퀴즈 즉시**: 각 모듈 끝나면 바로 퀴즈 풀고 본문 재방문
+- **코드 직접 작성**: 본문 코드는 읽기만 말고 실제 시뮬레이터에서 컴파일/실행
+- **다이어그램 화이트보드**: 클래스 계층/Phase 흐름은 자기 손으로 그릴 수 있어야 함
+:::
+
+:::caution[안티패턴 경계]
+UVM 실무에서 가장 자주 발생하는 문제는 **Phase 오해**, **config_db 경로 불일치**, **Factory Override 누락**입니다. Module 06에서 별도 다룹니다.
+:::

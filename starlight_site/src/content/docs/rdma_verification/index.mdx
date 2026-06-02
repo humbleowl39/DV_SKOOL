@@ -1,0 +1,71 @@
+---
+title: "RDMA Verification"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+RDMA IP 검증 업무를 처음 맡은 엔지니어가 가장 먼저 부딪히는 벽은 **"시뮬 로그에 에러가 떴는데 어디서부터 봐야 하는지 모르겠다"** 는 막막함이다. `F-C2H-MATCH-0002` 가 무엇인지, `c2h_tracker` 가 왜 fatal 을 내는지, ErrQP 를 정리하지 않으면 무슨 일이 생기는지를 모르면 — 로그를 아무리 오래 읽어도 원인에 도달하지 못한다. 이 막막함의 실질적 원인은 **TB 아키텍처를 모른 채 디버깅을 시작하는 것**이다.
+
+이 코스는 사내 RDMA IP 검증 환경(`RDMA-TB`)의 아키텍처를 먼저 쌓고, 그 위에서 4대 디버깅 케이스(Data Integrity, CQ Poll Timeout, C2H Tracker, Unexpected Error CQE)를 실전적으로 트리아지할 수 있도록 설계되어 있다. 아키텍처 7개 모듈을 마치면 에러 ID 하나만 봐도 어느 컴포넌트에서 어떤 경로로 발생했는지 즉시 좁힐 수 있게 된다.
+
+기존 [RDMA (IB & RoCEv2)](../rdma/) 코스가 **프로토콜과 IBTA 스펙**을 다룬다면, 이 코스는 **TB 코드와 디버깅 워크플로**에 집중한다. 모든 사실은 Confluence(Testbench Architecture, Debugging Cases)와 `RDMA-TB/lib` 코드에 그라운딩되어 있다.
+
+## 🎯 학습 목표
+이 코스를 마치면 다음을 할 수 있습니다.
+
+- **Diagram** RDMA-TB 의 multi-node 환경 계층(`vrdmatb_top_env` → host/node/data/dma/network env)을 그릴 수 있다.
+- **Identify** `lib/base/component/` 디렉토리 11개의 역할(config / custom_phase / env / model / pool / test / util)을 식별할 수 있다.
+- **Trace** 한 테스트 시퀀스가 UVM phase(build → connect → reset → configure → post_configure → main → shutdown → check)를 따라 어떻게 실행되는지 추적할 수 있다.
+- **Apply** Analysis Port 1:N 브로드캐스트 구조에 새 subscriber를 추가하는 패턴(`drv.issued_wqe_ap`, `drv.cqe_ap`, `cq_handler.cqe_validation_cqe_ap`)을 적용할 수 있다.
+- **Evaluate** 새 컴포넌트 추가 시 4원칙(Open-Closed / Interface Stability / DRY via AP / Stateless 보존) 위반 여부를 평가할 수 있다.
+- **Debug** 4대 디버그 케이스(Data Mismatch, CQ Poll Timeout, C2H Tracker, Unexpected Error CQE)를 에러 메시지 ID와 QID(`H2C/C2H`)만 보고 트리아지할 수 있다.
+- **Promote** 의도된 에러 시나리오를 `expected_error` + `RDMAQPDestroy(.err(1))` 패턴으로 정상화할 수 있다.
+
+## 📋 사전 지식
+- [RDMA (InfiniBand & RoCEv2)](../rdma/) — 특히 Module 04 (Service & QP FSM), 05 (Memory Model), 06 (Data Path), 08 (RDMA-TB 검증 환경)
+- [UVM](../uvm/) — agent / sequence / sequencer / phase / TLM analysis port
+- VCS / mrun / SystemVerilog 1800 기본 구문
+
+### 1부 — 아키텍처
+
+### 2부 — 디버깅 케이스
+
+### 에러 ID prefix 빠른 인덱스
+
+| Prefix | 컴포넌트 | 모듈 |
+|--------|---------|-----|
+| `E-DRV-TBERR-*` | `vrdma_driver` | [M09 CQ Poll Timeout](./09_debug_cq_poll_timeout/) |
+| `F-CQHDL-TBERR-*` | `vrdma_cq_handler` | [M11 Unexpected Error CQE](./11_debug_unexpected_err_cqe/) |
+| `E-SB-MATCH-*` | comparator (1side / 2side / imm) | [M08 Data Integrity](./08_debug_data_integrity/) |
+| `F-C2H-MATCH-*` / `E-C2H-MATCH-*` | `vrdma_c2h_tracker` | [M10 C2H Tracker](./10_debug_c2h_tracker/) |
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — TB Overview & Multi-Node 구조" href="./01_tb_overview/" />
+	<LinkCard title="Module 02 — Component 계층 (`lib/base/component/`)" href="./02_component_hierarchy/" />
+	<LinkCard title="Module 03 — UVM Phase & Test Flow" href="./03_phase_test_flow/" />
+	<LinkCard title="Module 04 — Analysis Port Topology" href="./04_analysis_port_topology/" />
+	<LinkCard title="Module 05 — Adding New Components: 4원칙" href="./05_extension_principles/" />
+	<LinkCard title="Module 06 — Error Handling Path" href="./06_error_handling_path/" />
+	<LinkCard title="Module 07 — H2C / C2H QID Reference" href="./07_h2c_c2h_qid_map/" />
+	<LinkCard title="Module 08 — Debug Case 1: Data Integrity Error" href="./08_debug_data_integrity/" />
+	<LinkCard title="Module 09 — Debug Case 2: CQ Poll Timeout" href="./09_debug_cq_poll_timeout/" />
+	<LinkCard title="Module 10 — Debug Case 3: C2H Tracker Error" href="./10_debug_c2h_tracker/" />
+	<LinkCard title="Module 11 — Debug Case 4: Unexpected Error CQE" href="./11_debug_unexpected_err_cqe/" />
+	<LinkCard title="Module 12 — Debug Cheatsheet" href="./12_debug_cheatsheet/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 참조 자료
+- **Confluence — `RDMADV` space** — [Testbench Architecture](https://mangoboost.atlassian.net/wiki/spaces/RDMADV/pages/1224310992/Testbench+Architecture), [Debugging Cases](https://mangoboost.atlassian.net/wiki/spaces/RDMADV/pages/1334608001/Debugging+Cases) (source of truth)
+- **`RDMA-TB/lib/`** — RDMA IP 검증 환경 본체 (`base/`, `ext/`, `external/`, `submodule/` 4-layer)
+- **`RDMA-TB/lib/base/def/vrdma_defs.svh:75-88`** — H2C/C2H QID 단일 출처
+- **[용어집](./glossary/)** — 29 terms (ISO 11179 형식)
+- **[퀴즈 인덱스](./quiz/)** — 챕터별 학습 점검 (Bloom 단계 라벨)

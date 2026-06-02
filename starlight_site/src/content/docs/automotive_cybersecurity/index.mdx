@@ -1,0 +1,39 @@
+---
+title: "Automotive Cybersecurity"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+자동차는 이제 소프트웨어가 제동·조향·가속을 직접 제어하는 "바퀴 달린 컴퓨터"입니다. CAN 버스는 1983년 설계 당시 보안을 고려하지 않았고, 수십 개의 ECU가 인증 없이 메시지를 주고받습니다. 이 구조를 이해하지 못하면 자동차 SoC의 HSM이 왜 필요한지, SecOC와 Secure Gateway가 어떤 위협을 막는지, ISO/SAE 21434 TARA가 어떤 순서로 수행되는지 설명할 수 없습니다. Tesla FSD 탈옥 사례처럼 보안 IP가 있어도 적용 범위에 구멍이 있으면 차량이 침해됩니다. 이 토픽을 학습하면 "CAN이 왜 위험한가"에서 출발해 "어떤 계층을 어떻게 쌓아야 차량 수명 20년을 방어할 수 있는가"까지 인과 사슬을 따라 답할 수 있게 됩니다.
+
+## 🎯 학습 목표
+- **Diagram** CAN bus 동작과 보안 한계
+- **Apply** Automotive SoC 보안 (HSM, secure boot, OTA update)
+- **Analyze** Tesla FSD jailbreak 사례에서 배우는 보안 약점
+- **Plan** Attack surface map과 layered defense 전략
+
+## 📋 사전 지식
+- 임베디드 시스템 기본
+- 네트워크 / 보안 일반 ([SoC Secure Boot](../../soc_secure_boot/) 참고)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — CAN Bus Fundamentals" href="./01_can_bus_fundamentals/" />
+	<LinkCard title="Module 02 — Automotive SoC Security" href="./02_automotive_soc_security/" />
+	<LinkCard title="Module 03 — Tesla FSD Case Study" href="./03_tesla_fsd_case_study/" />
+	<LinkCard title="Module 04 — Attack Surface & Defense" href="./04_attack_surface_and_defense/" />
+	<LinkCard title="Module 05 — Quick Reference Card" href="./05_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집**](./glossary/)
+- 📝 [**퀴즈**](./quiz/)
+- 📋 **코스 개요**

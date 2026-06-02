@@ -1,0 +1,49 @@
+---
+title: "DRAM / DDR"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+현대 SoC에서 DRAM 메모리 서브시스템은 CPU, GPU, NPU가 공유하는 유일한 대용량 저장소다. 메모리 컨트롤러(MC)가 JEDEC timing constraint를 한 사이클이라도 위반하면 데이터 손상이 발생하고, PHY training이 marginal한 상태로 초기화되면 정상 조건에서는 문제없다가 온도 변화 같은 PVT 스트레스에서 조용히 bit error를 낸다. 이런 결함은 테스트에서 잡지 못하면 field에서 재현하기 극히 어렵다. DRAM DV를 제대로 이해하지 못하면 timing assertion을 "왜 이렇게 복잡하게 만드나" 싶어 건너뛰게 되고, PHY training 검증을 PVT corner 없이 nominal만 돌리게 된다. 이 토픽은 DRAM cell 구조부터 DDR4/5 명령 프로토콜, MC 스케줄링, PHY training, 그리고 그것을 검증하는 방법론까지를 하나의 인과 흐름으로 연결한다.
+
+## 🎯 학습 목표
+- **Trace (분석)** DRAM cell의 charge → ROW activate → COL access → precharge 흐름을 ns 단위로 그릴 수 있다
+- **Distinguish (분석)** DDR4 vs DDR5의 핵심 차이(2-channel 분리, refresh, on-die ECC 등)를 식별
+- **Apply (적용)** Memory Controller의 read/write reordering, bank interleaving, refresh scheduling
+- **Implement (생성)** PHY 레벨의 DLL/PLL, training, write/read leveling 검증 시나리오 설계
+- **Plan (생성)** DRAM DV 환경에서 traffic generator, refcheck, performance reference 구조 설계
+
+## 📋 사전 지식
+- 디지털 회로 기본 (클럭, 동기 회로, FIFO)
+- AMBA AXI / AXI-S 기본 (host interface 측)
+- SoC 메모리 서브시스템 개요
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — DRAM Fundamentals + DDR4/5" href="./01_dram_fundamentals_ddr/" />
+	<LinkCard title="Module 02 — Memory Controller" href="./02_memory_controller/" />
+	<LinkCard title="Module 03 — Memory Interface / PHY" href="./03_memory_interface_phy/" />
+	<LinkCard title="Module 04 — DRAM DV Methodology" href="./04_dram_dv_methodology/" />
+	<LinkCard title="Module 05 — Quick Reference Card" href="./05_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집 (Glossary)**](./glossary/)
+- 📝 [**퀴즈 (Quizzes)**](./quiz/)
+- 📋 **코스 개요**
+
+## 💡 학습 팁
+:::tip[효율적 학습]
+tRCD, tRP, tCAS, tRAS 같은 timing parameter는 코드 리뷰나 면접에서 즉시 떠올릴 수 있어야 하므로 반복 암기가 필요하다. DDR4에서 DDR5로의 전환 중 가장 큰 변화는 2-channel 분리(서버 대역폭 확장)와 on-die ECC 표준화이므로, 두 차이가 검증 시나리오에 어떤 영향을 주는지 집중적으로 파악하는 것이 좋다. PHY training과 leveling은 아날로그 신호 특성이 섞여 있어 이해하는 데 시간이 걸리는 영역인데, 각 training 단계의 목적(무엇을 정렬하는가)을 먼저 이해한 뒤 실제 JEDEC spec을 참조하면 학습 효율이 높아진다.
+:::
+:::caution[흔한 함정]
+Refresh 검증은 단순히 "REF 명령이 발행되는가"를 확인하는 것으로 끝나지 않는다. tREFI 기간 내 모든 row가 한 번 이상 refresh를 받았는지 카운터 기반 assertion으로 구조적으로 보장해야 한다. Bank conflict는 같은 bank에 연속 접근이 발생할 때 ACT-PRE cycle이 강제되어 throughput이 크게 저하되는데, 이를 성능 저하가 아닌 스케줄러 버그로 분류해 다뤄야 한다. PHY training이 완료되지 않은 상태에서 traffic을 시작하면 bit error가 발생하지만 즉각 드러나지 않고 특정 패턴에서만 나타나는 silent corruption 형태를 띠므로, training 완료 신호와 traffic 시작 시퀀스를 assertion으로 반드시 순서 보장해야 한다.
+:::

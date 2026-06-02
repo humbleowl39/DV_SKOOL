@@ -1,0 +1,47 @@
+---
+title: "SoC Secure Boot"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 배우는가
+
+SoC가 전원을 켜는 순간부터 OS가 뜨기까지, 소프트웨어는 단 한 줄도 신뢰할 수 없는 상태에서 시작합니다. 이 공백을 메우는 것이 Secure Boot이며, 하드웨어에 물리적으로 고정된 신뢰 기반(Hardware Root of Trust)에서 출발해 각 단계가 다음 단계를 검증하는 체인을 만들어 냅니다. 이 체인이 한 곳이라도 끊기면 공격자는 OS 이전에 자신의 코드를 실행할 수 있고, 그 시점에서는 이후 모든 소프트웨어 보안이 의미를 잃습니다.
+
+DV 엔지니어에게 Secure Boot 이해는 선택이 아닙니다. BootROM은 mask ROM이라 tape-out 후 버그를 패치할 수 없으므로, 검증 단계에서 모든 failure mode를 빠짐없이 확인해야 합니다. 이 토픽을 학습하지 않으면 검증 시나리오 매트릭스의 구성 원리, OTP fuse program 체크리스트의 의미, fault injection 방어의 DV 표현 방법을 이해할 수 없어 sign-off 판단 근거를 갖추기 어렵습니다.
+
+## 🎯 학습 목표
+- **Trace** 부팅 단계별 신뢰 체인 (BootROM → BL1 → BL2 → BL31 → kernel)
+- **Apply** Hardware Root of Trust 구현 (eFuse, OTP, secure key storage)
+- **Identify** Secure Boot에 사용되는 암호 알고리즘 (RSA, ECDSA, SHA-256/384, AES)
+- **Analyze** 공격 표면 (fault injection, side-channel, supply chain)과 방어 메커니즘
+- **Plan** BootROM DV 검증 방법론 (시나리오 매트릭스, golden image, fault injection)
+
+## 📋 사전 지식
+- 암호 기본 (해시, 서명, 대칭/비대칭)
+- 부팅 sequence 일반 (POR, reset, boot loader)
+- ARM TrustZone 기본 ([ARM Security 코스](../../arm_security/) 참고)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — Hardware Root of Trust" href="./01_hardware_root_of_trust/" />
+	<LinkCard title="Module 02 — Chain of Trust & Boot Stages" href="./02_chain_of_trust_boot_stages/" />
+	<LinkCard title="Module 03 — Crypto in Boot" href="./03_crypto_in_boot/" />
+	<LinkCard title="Module 04 — Boot Device & Boot Mode" href="./04_boot_device_and_boot_mode/" />
+	<LinkCard title="Module 05 — Attack Surface & Defense" href="./05_attack_surface_and_defense/" />
+	<LinkCard title="Module 07 — Quick Reference Card" href="./06_quick_reference_card/" />
+	<LinkCard title="Module 06 — BootROM DV Methodology" href="./07_bootrom_dv_methodology/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집**](./glossary/)
+- 📝 [**퀴즈**](./quiz/)
+- 📋 **코스 개요**

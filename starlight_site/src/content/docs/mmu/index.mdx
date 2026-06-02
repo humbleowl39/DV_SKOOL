@@ -1,0 +1,58 @@
+---
+title: "MMU"
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 MMU를 배워야 하는가
+
+모든 현대 소프트웨어는 가상 주소 위에서 동작합니다. 커널, 드라이버, GPU 컴퓨팅 프레임워크가 서로 충돌하지 않고 같은 물리 메모리를 나눠 쓸 수 있는 것은 MMU가 각 주체에게 독립적인 가상 주소 공간을 제공하기 때문입니다. MMU를 이해하지 못하면 page fault의 진짜 원인을 추적하지 못하고, TLB miss가 성능을 어떻게 갉아먹는지 설명하지 못하며, IOMMU 없는 SoC에서 DMA 보안 구멍을 알아차리지 못합니다. 이 토픽은 주소 변환의 하드웨어 동작 원리에서 시작해, 4-level page table walk, TLB 관리, IOMMU/SMMU 격리, 성능 분석, 그리고 이 모든 것을 검증하는 DV 방법론까지 다룹니다. MMU를 이해한 엔지니어는 시스템 전체를 보는 눈이 달라집니다.
+
+## 🎯 학습 목표
+- **Trace (분석)** 가상→물리 주소 변환의 multi-level page table walk 전 과정 추적
+- **Diagram (분석)** TLB, multi-level translation, IOMMU의 데이터 흐름과 캐시 계층 그리기
+- **Apply (적용)** ARMv8 4-level translation 및 SMMU stage 1/2를 시나리오에 매핑
+- **Analyze (분석)** TLB miss penalty, page fault, page walk caching의 성능 영향 정량 분석
+- **Design (생성)** Dual-Reference Model 기반 MMU DV 환경 + Custom Thin VIP 설계
+
+## 📋 사전 지식
+- **CPU 아키텍처 기본**: 가상/물리 주소 개념, 명령어 사이클
+- **캐시 계층 이해**: L1/L2/L3, hit/miss, line size
+- **OS 메모리 관리 기초**: 프로세스별 가상 주소 공간, 페이지
+- **AMBA AXI** (Module 04 IOMMU에서 transaction 분석 시 도움)
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Module 01 — MMU 기본 개념 및 주소 변환" href="./01_mmu_fundamentals/" />
+	<LinkCard title="Module 02 — Page Table Structure" href="./02_page_table_structure/" />
+	<LinkCard title="Module 03 — TLB" href="./03_tlb/" />
+	<LinkCard title="Module 04 — IOMMU / SMMU" href="./04_iommu_smmu/" />
+	<LinkCard title="Module 05 — Performance Analysis" href="./05_performance_analysis/" />
+	<LinkCard title="Module 06 — MMU DV Methodology" href="./06_mmu_dv_methodology/" />
+	<LinkCard title="Module 07 — Quick Reference Card" href="./07_quick_reference_card/" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="핵심 용어 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검" />
+</CardGrid>
+
+## 📖 관련 자료
+- 📚 [**용어집 (Glossary)**](./glossary/) — MMU 핵심 용어 ISO 11179 형식
+- 📝 [**퀴즈 (Quizzes)**](./quiz/) — 챕터별 5문항 (Bloom mix)
+- 📋 **코스 개요 & 컨셉 맵**
+
+## 💡 학습 팁
+:::tip[효율적 학습]
+- **VA → PA 변환을 손으로**: 4-level walk을 화이트보드에서 직접 그릴 수 있어야 함
+- **TLB miss penalty 정량화**: page walk이 메모리 access N번 → 성능 영향 직관 형성
+- **SMMU와 MMU 차이**: CPU MMU는 cores 내장, SMMU는 SoC-level (DMA 마스터들 보호)
+:::
+:::caution[흔한 함정]
+- **TLB stale entry**: page table 업데이트 후 TLB invalidate 누락 → 잘못된 PA 사용
+- **IOMMU bypass**: pre-IOMMU SoC는 DMA가 시스템 메모리 무제한 access → 보안 hole
+- **ASID/VMID 충돌**: 다른 process/VM이 같은 VA를 다른 PA로 매핑할 때 ASID 비교 누락
+:::
