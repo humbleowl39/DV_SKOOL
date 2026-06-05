@@ -19,6 +19,7 @@ UVM을 모르면 다음 상황에서 막힙니다. 새 프로젝트에서 이전
 - **Design (생성)** Agent/Driver/Monitor 구조를 Active/Passive 모드를 구분해 설계
 - **Apply (적용)** Sequence + Virtual Sequence + Factory Override로 다양한 시나리오를 재사용 가능하게 구성
 - **Analyze (분석)** config_db 계층 전달, TLM 포트 연결, Scoreboard 비교 로직을 트레이스
+- **Implement (적용)** Register Layer(RAL)로 레지스터를 이름 기반으로 접근하고 mirror/predictor로 DUT 값을 추적
 - **Evaluate (평가)** UVM 실무 패턴/안티패턴을 식별하고 코드 리뷰에서 근거 있는 피드백 제공
 
 ## 사전 지식
@@ -34,7 +35,7 @@ UVM을 모르면 다음 상황에서 막힙니다. 새 프로젝트에서 이전
 
 ## 학습 모듈
 
-순서대로 학습을 권장합니다. **코어(M01–M04)** 는 강한 의존이 있어 순차 학습이 필요하고, **심화(M05–M06)** 와 **참조(M07)** 는 토픽 단위로도 볼 수 있습니다.
+순서대로 학습을 권장합니다. **코어(M01–M04)** 는 강한 의존이 있어 순차 학습이 필요하고, **심화(M05–M07)** 와 **참조(M08)** 는 토픽 단위로도 볼 수 있습니다.
 
 <CardGrid>
 	<LinkCard title="M01 · 아키텍처 & Phase" href="./01_architecture_and_phase/" description="코어 — 클래스 계층(uvm_object vs uvm_component)과 build→connect→run→cleanup phase 모델." />
@@ -43,7 +44,8 @@ UVM을 모르면 다음 상황에서 막힙니다. 새 프로젝트에서 이전
 	<LinkCard title="M04 · config_db & Factory" href="./04_config_db_factory/" description="코어 — config_db 계층 전달, factory override로 구조 교체." />
 	<LinkCard title="M05 · TLM / Scoreboard / Coverage" href="./05_tlm_scoreboard_coverage/" description="심화 — TLM 포트 연결, 트랜잭션 레벨 비교, functional coverage." />
 	<LinkCard title="M06 · 실무 패턴 & 안티패턴" href="./06_practical_patterns/" description="심화 — 자주 나오는 패턴과 Phase·config_db·Factory 안티패턴." />
-	<LinkCard title="M07 · Quick Reference Card" href="./07_quick_reference_card/" description="참조 — 핵심 API·관용구 치트시트." />
+	<LinkCard title="M07 · Register Layer (RAL)" href="./07_register_layer_ral/" description="심화 — 레지스터 이름 기반 접근, mirror/desired, frontdoor/backdoor, adapter, explicit prediction." />
+	<LinkCard title="M08 · Quick Reference Card" href="./08_quick_reference_card/" description="참조 — 핵심 API·관용구 치트시트." />
 </CardGrid>
 
 ## 코스 운영 방식

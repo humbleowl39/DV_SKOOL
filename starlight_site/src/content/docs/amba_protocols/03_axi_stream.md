@@ -675,5 +675,5 @@ Stream 의 _slave 가 가끔 backpressure_ (TREADY=0 several cycles). Master 가
 ## 다음 단계
 
 - 📝 [**Module 03 퀴즈**](../quiz/03_axi_stream_quiz/)
-- ➡️ [**Module 04 — Quick Reference Card**](../04_quick_reference_card/)
+- ➡️ [**Module 04 — ACE / CHI Coherency**](../04_ace_chi_coherency/)
 

@@ -34,7 +34,23 @@ title: "MMU 용어집"
 
 ---
 
-## I — IOMMU / IPA
+## A2 — ATC
+
+### ATC (Address Translation Cache)
+
+**Definition.** ATS 를 통해 IOMMU 로부터 받은 IOVA→PA 변환 결과를 device 자체에 저장하는 device-측 translation cache.
+
+**Source.** PCIe ATS Specification.
+
+**Related.** ATS, IOTLB, invalidation.
+
+**Example.** GPU 가 ATS Translation Request 로 받은 PA 를 ATC 에 캐싱한 뒤 AT=Translated DMA 를 발행하면 IOMMU 의 translation stage 를 우회한다. unmap 시 IOMMU 가 `ATC_INV`(Invalidate Request) 를 device 로 보내 ATC entry 를 제거하고 `SYNC` 로 완료를 보장해야 stale-access 가 차단된다.
+
+**See also.** [Module 04 — IOMMU/SMMU](../04_iommu_smmu/)
+
+---
+
+## I — IOMMU / IOTLB / IPA
 
 ### IOMMU (Input-Output MMU)
 
@@ -47,6 +63,18 @@ title: "MMU 용어집"
 **Example.** GPU/NIC/DMA의 시스템 메모리 access 격리. 가상화 환경에서 VM 간 메모리 보호.
 
 **See also.** [Module 04](../04_iommu_smmu/)
+
+### IOTLB (I/O Translation Lookaside Buffer)
+
+**Definition.** IOMMU 내부에서 device 의 IOVA→PA 변환 결과를 캐싱하는 고속 cache 로, device·PASID 식별자를 포함한 복합 키로 색인되는 IOMMU 의 hot path.
+
+**Source.** ARM SMMU Spec, Intel VT-d Spec.
+
+**Related.** IOTLB invalidation (`TLBI`), PWC, ATC, StreamID/PASID.
+
+**Example.** (StreamID, ASID, VMID, VPN) 복합 키로 색인되며 entry size 도 4 KB/2 MB/1 GB 로 다양하다. stale IOTLB entry 는 freed page 가 DMA 로 reachable 한 보안 문제이므로 모든 unmap 은 `TLBI` → `SYNC` 짝으로 무효화해야 한다.
+
+**See also.** [Module 04 — IOMMU/SMMU](../04_iommu_smmu/)
 
 ### IPA (Intermediate Physical Address)
 
@@ -62,7 +90,19 @@ title: "MMU 용어집"
 
 ---
 
-## P — Page Table / PTE / Page Walk / PWC
+## P — PASID / Page Table / PTE / Page Walk / PWC
+
+### PASID (Process Address Space ID)
+
+**Definition.** 하나의 device 안에서 여러 독립 주소 공간(보통 CPU process 단위)을 구분하기 위해 부여되는 식별자로, PCIe 에서 최대 20 bit 폭을 가진다.
+
+**Source.** PCIe PASID Specification; ARM SMMUv3 (SubstreamID).
+
+**Related.** SVM/SVA, ATS, PRI, Context Descriptor, StreamID.
+
+**Example.** ARM SMMUv3 의 SubstreamID 가 PASID 에 대응하며, PASID 로 device 의 한 context 를 특정 CPU process 의 page table 에 묶으면 accelerator 가 application 과 같은 포인터를 dereference 하는 SVM 이 성립한다. CUDA Unified Memory, OpenCL SVM, oneAPI USM 이 이 위에 선다.
+
+**See also.** [Module 04 — IOMMU/SMMU](../04_iommu_smmu/)
 
 ### Page Table
 
@@ -107,6 +147,22 @@ title: "MMU 용어집"
 **Example.** 좁은 VA 범위를 순차 접근하면 L0/L1 PTE가 PWC에 유지되어 walk 시 L2·L3만 메모리에서 읽으면 된다. 반대로 완전 랜덤 VA 접근 패턴에서는 PWC hit rate가 거의 0에 수렴한다.
 
 **See also.** [Module 02](../02_page_table_structure/)
+
+---
+
+## R — Interrupt Remapping
+
+### Interrupt Remapping
+
+**Definition.** IOMMU 가 device 의 MSI/MSI-X 인터럽트 write 를 Interrupt Remapping Table 로 검증·재매핑하여 인가된 vector 만 지정된 CPU 로 전달하는 보안 기능.
+
+**Source.** Intel VT-d Spec, ARM GIC/SMMU integration.
+
+**Related.** MSI/MSI-X, ACS, DMA attack, IOMMU group.
+
+**Example.** MSI 는 결국 device 의 메모리 write 이므로 통제 없이 두면 악성 device 가 임의 vector 를 임의 CPU 에 주입해 권한 상승/DoS 가 가능하다. remapping table 이 이 injection 경로를 닫는다.
+
+**See also.** [Module 04 — IOMMU/SMMU](../04_iommu_smmu/)
 
 ---
 
@@ -212,3 +268,9 @@ title: "MMU 용어집"
 | **MAIR** | Memory Attribute Indirection Register | 메모리 속성 |
 | **NS** | Non-Secure | TrustZone non-secure 표시 |
 | **PRI** | Page Request Interface | IOMMU의 SVM page fault 협력 |
+| **PASID** | Process Address Space ID | device 내 process별 주소 공간 식별 (≤20bit) |
+| **ATC** | Address Translation Cache | ATS 의 device-측 translation cache |
+| **IOTLB** | I/O TLB | IOMMU 내부 IOVA→PA cache |
+| **ACS** | Access Control Services | PCIe P2P 라우팅 통제 (IOMMU group 경계) |
+| **TDISP** | TEE Device Interface Security Protocol | confidential computing 의 device 신뢰 확장 |
+| **vIOMMU** | virtualized IOMMU | guest 전용 IOMMU (nested translation) |

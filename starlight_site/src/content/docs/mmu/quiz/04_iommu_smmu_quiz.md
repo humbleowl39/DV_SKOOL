@@ -85,3 +85,40 @@ IOMMU page fault가 CPU page fault와 다르게 비동기로 처리되는 이유
 비동기 처리가 불가피한 근본 이유는 CPU와 디바이스의 실행 모델이 다르기 때문입니다. CPU는 하나의 명령어가 완전히 완료되어야 다음으로 넘어가는 순차 실행 모델이므로, fault 발생 시 그 명령어를 stall하고 핸들러를 실행한 후 재개하는 것이 자연스럽습니다. 반면 DMA 컨트롤러는 수십~수백 개의 트랜잭션을 독립적으로 in-flight 상태로 관리하며, 그 중 하나의 fault를 처리하는 동안 나머지를 멈출 이유가 없습니다. 이런 구조에서 동기 처리를 강제하면 하드웨어 큐 관리와 재시도 메커니즘이 극도로 복잡해지므로, event queue + interrupt 기반 비동기 처리가 현실적인 설계입니다.
 
 </details>
+
+## Q6. (Apply)
+
+어떤 IOVA 범위를 device 에서 unmap 하는 SW 흐름을 작성하려 한다. `TLBI`(또는 `ATC_INV`)만 보내고 `SYNC` 를 빠뜨렸을 때 발생할 수 있는 보안 문제와, 올바른 명령 시퀀스를 설명하세요.
+
+<details>
+<summary>정답 / 해설</summary>
+
+`SYNC` 를 빠뜨리면 invalidation 이 device(특히 ATS device 의 ATC)까지 _완료되기 전_ 에 SW 가 다음 단계(물리 페이지 재할당 등)로 진행할 수 있습니다. 그 사이 device 는 여전히 옛 IOVA→PA 매핑을 캐싱하고 있으므로, 이미 해제되어 다른 용도로 재할당된 물리 페이지를 DMA 로 read/write 할 수 있습니다. 즉 **stale IOTLB/ATC entry = freed page 가 DMA 로 reachable** 한 use-after-free 형태의 메모리 침해입니다.
+
+올바른 시퀀스:
+```
+1. TLBI_*           ← IOTLB 에서 해당 매핑 제거
+2. ATC_INV (ATS면)  ← device 의 ATC 에도 Invalidate Request 전송
+3. SYNC             ← 위 invalidation 들이 device 까지 완료됐음을 보장하는 fence
+4. (SYNC 완료 후에만) 물리 페이지 재할당
+```
+
+CPU TLB 는 owner core 가 스스로 비우지만 IOMMU cache 는 공유 자원이라 SW 가 명시적으로 무효화해야 하고, 이 invalidation round-trip 이 unmap latency 의 실체이자 streaming 워크로드의 주요 성능 비용입니다.
+
+</details>
+
+## Q7. (Evaluate)
+
+데이터 경로(DMA read/write) 격리만으로는 IOMMU 의 보안이 완성되지 않는다. interrupt remapping, ACS, vIOMMU(nested), pre-boot DMA protection 이 각각 어떤 공격면을 닫는지 평가하세요.
+
+<details>
+<summary>정답 / 해설</summary>
+
+- **Interrupt remapping**: MSI/MSI-X 는 결국 device 의 메모리 write 이므로, 통제 없으면 악성 device 가 임의 vector 를 임의 CPU 에 주입해 권한 상승/DoS 가 가능. Interrupt Remapping Table 이 vector 를 검증·재매핑해 이 injection 경로를 닫는다.
+- **ACS (Access Control Services)**: 두 function 이 IOMMU 를 거치지 않고 직접 P2P 통신하면 격리가 무의미. ACS 가 peer-to-peer 라우팅을 통제하며, 그 가능 여부가 Linux IOMMU group(독립 assign 가능한 최소 device 집합) 경계를 결정한다.
+- **vIOMMU / nested**: guest 가 자기 IOMMU(Stage 1)를 갖되 그 table walk 자체가 host Stage 2 로 다시 변환되어, passthrough device 를 소유한 VM 도 host/다른 VM 의 PA 에 닿지 못하게 막는다.
+- **Pre-boot DMA protection**: IOMMU 가 프로그래밍되기 _전_ 부팅 초기 window 가 Thunderbolt/PCIe evil-maid DMA 에 노출되므로, reset 직후부터 default-deny 상태를 유지해 그 구멍을 닫는다.
+
+종합하면 IOMMU 의 위협 모델은 "버그 있는 device" 를 넘어 "위조 인터럽트, P2P 우회, 신뢰 불가 hypervisor(TDISP), 부팅 초기 노출" 까지 확장되며, 각 기능이 서로 다른 공격면을 담당한다.
+
+</details>

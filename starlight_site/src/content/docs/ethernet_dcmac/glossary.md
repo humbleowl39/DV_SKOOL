@@ -78,6 +78,38 @@ title: "Ethernet DCMAC 용어집"
 
 ---
 
+## E — Encapsulation
+
+### Encapsulation (캡슐화)
+
+**Definition.** 송신 장치에서 데이터가 OSI 계층을 아래로 내려가며 각 계층이 자신의 헤더를 덧붙여 하위 계층의 PDU로 감싸는 과정.
+
+**Source.** ISO/IEC 7498-1; HDG `osi_7_layer_spec.md:94-100`.
+
+**Related.** OSI, PDU, frame, decapsulation.
+
+**Example.** L7 데이터에 L4가 TCP 헤더(segment), L3가 IP 헤더(packet), L2 Ethernet이 DA/SA/Type 헤더와 FCS(frame)를 차례로 덧붙인다. 수신측은 역순으로 헤더를 벗긴다(decapsulate).
+
+**See also.** [Module 01](../01_ethernet_fundamentals/)
+
+---
+
+## O — OSI
+
+### OSI 7 Layer Model
+
+**Definition.** ISO가 정의한 7개 추상 계층의 네트워킹 참조 모델로, 각 계층이 자기 역할만 책임지고 바로 위·아래 계층하고만 통신하도록 관심사를 분리한 개념 틀.
+
+**Source.** ISO/IEC 7498-1 (1984); HDG `osi_7_layer_spec.md:9-17`.
+
+**Related.** Encapsulation, TCP/IP, Data Link (L2), Physical (L1).
+
+**Example.** DCMAC은 L2(Data Link, MAC)와 L1(Physical, PCS/PMA/PMD)에 해당하며, 위쪽 payload는 L3/L4가 캡슐화해 넘긴 불투명 바이트로 취급한다. "L2 switch", "L3 router", "L7 LB"의 숫자가 이 계층 번호다.
+
+**See also.** [Module 01](../01_ethernet_fundamentals/)
+
+---
+
 ## P — PCS / PHY / PFC
 
 ### PCS (Physical Coding Sublayer)
@@ -131,6 +163,18 @@ title: "Ethernet DCMAC 용어집"
 **Example.** 검증에서는 codeword당 symbol error 수를 0, 7(경계 내), 8(경계 초과), 14(최대 패리티 수)로 parametrize해 각각 정상 수신 / 정상 수신 / drop / drop을 확인한다.
 
 **See also.** [Module 02](../02_dcmac_architecture/)
+
+### RoCE (RDMA over Converged Ethernet)
+
+**Definition.** RDMA를 표준 Ethernet 위에서 동작시키는 프로토콜로, NIC이 CPU 개입 없이 원격 노드 메모리를 직접 읽고 쓰게 한다.
+
+**Source.** HDG `network_history_spec.md:158-164`.
+
+**Related.** RDMA, PFC, ECN, lossless network, InfiniBand.
+
+**Example.** RoCE는 손실에 민감하므로 PFC와 ECN으로 무손실(lossless)을 보장해야 하며, 이것이 데이터센터에서 PFC가 필수인 진짜 이유다.
+
+**See also.** [Module 01](../01_ethernet_fundamentals/)
 
 ---
 

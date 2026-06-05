@@ -1,0 +1,74 @@
+---
+title: "CXL (Compute Express Link)"
+description: CXL — PCIe 위 cache-coherent 인터커넥트, Flex Bus, 3 프로토콜, 디바이스 타입, ARB/MUX, 세대 비교
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 CXL을 배우는가
+
+AI/ML 워크로드가 커지면서 서버 한 대에 꽂을 수 있는 메모리 용량과 가속기 간 데이터 공유 방식이 시스템 성능의 병목이 되었습니다. CPU 메인보드의 DIMM 슬롯은 물리적으로 제한되어 있어 RAM을 무한정 늘릴 수 없고(Memory Wall), GPU·NPU 같은 가속기와 CPU가 데이터를 주고받을 때마다 PCIe TLP를 통한 복사가 일어나 지연이 쌓입니다. CXL(Compute Express Link)은 이 두 문제를 동시에 푸는 인터커넥트입니다. PCIe와 똑같은 물리 슬롯·핀을 그대로 쓰면서, 그 위에 Load/Store 기반의 캐시 일관성(cache coherency) 프로토콜을 얹어 CPU와 가속기, 그리고 외부 메모리가 마치 하나의 메모리 공간을 공유하는 것처럼 동작하게 만듭니다.
+
+CXL을 모르면 다음 상황에서 막힙니다. 가속기가 호스트 메모리를 직접 캐싱하는데 왜 일관성이 깨지지 않는지 설명하지 못하고, 같은 물리 링크 위에 세 가지 프로토콜(.io / .cache / .mem)이 어떻게 섞여 흐르는지 추적하지 못하며, 검증 엔지니어로서 어느 채널·어느 트랜잭션을 scoreboard로 잡아야 하는지 판단하지 못합니다. 이 코스는 PCIe 위에서 출발해 Flex Bus, 3 프로토콜, 디바이스 타입과 coherency, ARB/MUX 다중화, 그리고 검증 관점까지 인과적으로 풀어냅니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** CXL이 PCIe 위에서 등장한 동기(Memory Wall, 가속기 일관성)와 Flex Bus가 PCIe 인프라를 재사용하는 방식을 설명
+- **Differentiate (분석)** CXL.io / CXL.cache / CXL.mem 세 프로토콜의 채널 구조·방향·용도와 디바이스 타입 Type 1/2/3을 구분
+- **Trace (분석)** D2H/H2D, M2S/S2M 채널을 따라 한 읽기 요청과 Bias 전환(BISnp) 트랜잭션의 흐름을 단계별로 추적
+- **Analyze (분석)** ARB/MUX·vLSM·ALMP가 세 프로토콜을 단일 링크로 다중화하고 가상 링크 상태를 관리하는 메커니즘을 분석
+- **Evaluate (평가)** CXL 세대별(1.1~3.1) 차이를 근거로 DV 관점의 검증 우선순위와 coverage 항목을 판단
+
+## 사전 지식
+
+다음 항목을 알고 있어야 본문이 매끄럽게 읽힙니다:
+
+- **PCIe 기본**: 3-layer 프로토콜 스택(Transaction/Data Link/Physical), TLP, LTSSM 링크 트레이닝 — [PCIe 코스](../pcie/) 참고
+- **캐시 일관성 기초**: MESI류 상태, snoop, directory의 개념
+- **메모리-맵 I/O**: Load/Store 의미, 주소 공간, cacheline 단위 접근
+
+부족한 부분이 있다면 [PCIe 코스](../pcie/)를 먼저 보고, 캐시 일관성은 *A Primer on Memory Consistency and Cache Coherence* (Nagarajan et al.)를 참고하세요.
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. **동기(M01)** 와 **Flex Bus·프로토콜(M02)** 은 이후 모든 모듈의 토대이고, **디바이스 타입·coherency(M03)**, **ARB/MUX·패브릭(M04)**, **세대·DV(M05)** 는 그 위에 쌓입니다.
+
+<CardGrid>
+	<LinkCard title="M01 · 왜 CXL인가" href="./01_motivation/" description="동기 — Memory Wall, 가속기 일관성, PCIe 물리 계층 위의 coherent 확장." />
+	<LinkCard title="M02 · Flex Bus & 3 프로토콜" href="./02_flexbus_protocols/" description="프로토콜 스택, Flex Bus 협상, CXL.io / CXL.cache / CXL.mem 채널 구조." />
+	<LinkCard title="M03 · 디바이스 타입 & Coherency" href="./03_device_types_coherency/" description="Type 1/2/3, HDM-H/D/DB, Bias-based coherency, BISnp." />
+	<LinkCard title="M04 · ARB/MUX & 패브릭" href="./04_arbmux_fabric/" description="vLSM, ALMP, 다중화, DCD, MLD/G-FAM, 멀티레벨 스위칭." />
+	<LinkCard title="M05 · 세대 비교 & DV 관점" href="./05_generations_dv/" description="CXL 1.1~3.1 진화, 검증 포인트와 coverage 전략." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — 시나리오 → 직관 → 작은 예 → 일반화 → 디테일 → 흔한 오해
+4. **핵심 정리** — 압축된 takeaway + 자가 점검
+5. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="CXL 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **PCIe 먼저**: CXL은 PCIe 물리/링크 위에 얹힌다. PCIe 3-layer를 모르면 Flex Bus가 와닿지 않음
+- **프로토콜 3개를 분리해서**: .io는 PCIe 그대로, .cache는 가속기→호스트 일관성, .mem은 호스트→메모리 — 용도부터 구분
+- **채널 방향 외우기**: D2H/H2D(.cache), M2S/S2M(.mem)의 방향과 Req/Rsp/Data 분리를 손으로 그려보기
+- **세대 표 활용**: CXL 1.1→3.1 변화(BISnp, 256B Flit, PBR, DCD)는 표로 한눈에 비교
+:::
+
+:::caution[흔한 혼동]
+CXL은 PCIe를 "대체"하는 것이 아니라 그 위에 얹히는 **대안 프로토콜**입니다. Flex Bus는 부팅 시 협상으로 PCIe 모드인지 CXL 모드인지를 결정하며, 협상 실패 시 PCIe로 폴백합니다. M02에서 이 협상 과정을 다룹니다.
+:::

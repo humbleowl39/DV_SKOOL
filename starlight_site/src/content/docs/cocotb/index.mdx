@@ -1,0 +1,71 @@
+---
+title: "cocotb (Python 기반 검증)"
+description: cocotb — Python coroutine 기반 cosimulation 검증 프레임워크, UVM과의 비교와 트레이드오프
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 cocotb를 배우는가
+
+검증 방법론을 UVM 하나로만 알고 있으면, 정작 "이 블록은 Python으로 며칠 만에 검증할 수 있는데 왜 SystemVerilog로 몇 주를 쓰는가"라는 질문 앞에서 답을 갖지 못합니다. cocotb(COroutine-based COsimulation TestBench)는 테스트를 Python으로 작성하고 DUT는 그대로 Verilog/SystemVerilog/VHDL로 두는 프레임워크로, OpenTitan(Google/lowRISC), Western Digital, Tenstorrent, Groq 같은 곳이 실제 양산 검증 플로우에 채택하고 있습니다. UVM의 대체재가 아니라, 검증 엔지니어가 상황에 맞는 카드를 꺼낼 수 있게 해 주는 또 하나의 도구입니다.
+
+cocotb를 모르면 다음 순간에 막힙니다. IP·블록 레벨을 빠르게 prototyping해야 하는데 UVM 환경 구축 오버헤드 때문에 시작조차 못 하고, DSP·ML 가속기 검증에서 NumPy/PyTorch 레퍼런스 모델을 SystemVerilog로 다시 짜느라 시간을 낭비하며, 시뮬레이터 라이선스 없이 CI를 돌리는 방법을 떠올리지 못합니다. 이 코스는 cocotb가 *무엇이고*, *어떻게 동작하며*, *언제 쓰는 것이 옳은지*를 UVM과 끊임없이 대조하며 풀어줍니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** cocotb가 무엇인지, "coroutine 기반 cosimulation"이라는 이름의 각 단어가 의미하는 바를 설명
+- **Differentiate (분석)** cocotb와 UVM을 언어·표준·라이선스·학습곡선·생태계 기준으로 구분
+- **Trace (분석)** `@cocotb.test()` → `await RisingEdge(dut.clk)` → 시뮬레이터 재개로 이어지는 cosimulation 제어 흐름을 단계별로 추적
+- **Apply (적용)** UVM의 구조(test/env/driver/monitor/scoreboard)를 cocotb의 Python 등가물로 매핑
+- **Evaluate (평가)** 주어진 검증 과제(IP 블록, SoC full-sim, 상용 VIP 필요 등)에 cocotb가 적합한지 trade-off 기반으로 판단
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **Python 기본**: class, 함수, `import`, dict/list — 그리고 `async`/`await` 문법에 대한 최소한의 노출
+- **HDL 시뮬레이션 경험**: clock/reset, RisingEdge 같은 이벤트, DUT 신호 read/write의 개념
+- **UVM에 대한 기본 이해**: test/env/agent/driver/monitor/scoreboard 구조 (비교 기준으로 쓰임)
+
+UVM 구조가 낯설다면 [UVM 코스](../uvm/)를 먼저 훑어보세요. cocotb 챕터는 UVM과의 대조로 설명을 풀어갑니다.
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. 1장에서 cocotb의 정체와 UVM 대비 위치를 잡고, 2장에서 동작 원리(coroutine + cosimulation)를 들여다본 뒤, 3장에서 실무 의사결정(언제 쓰나)을 다룹니다.
+
+<CardGrid>
+	<LinkCard title="01 · cocotb란 + vs UVM" href="./01_what_is_cocotb/" description="cocotb의 정의(COroutine-based COsimulation TestBench)와 UVM과의 언어·표준·라이선스·생태계 비교." />
+	<LinkCard title="02 · Coroutine & Cosimulation 아키텍처" href="./02_coroutine_cosimulation/" description="async/await coroutine 모델과 VPI를 통한 cosimulation 제어 흐름, UVM 구조의 Python 매핑." />
+	<LinkCard title="03 · 언제 쓰나 + DV 트레이드오프" href="./03_when_to_use_tradeoffs/" description="cocotb가 적합한 경우와 부적합한 경우, 실사용 사례, 검증 도구 지형에서의 위치." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — Why care? → Intuition → 작은 예 → 일반화 → 디테일 → 흔한 오해 → 핵심 정리
+4. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="cocotb 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **UVM과 끊임없이 대조**: cocotb의 모든 개념은 "UVM의 무엇에 해당하는가"로 잡으면 빠르게 이해됨
+- **coroutine부터**: 2장의 `async`/`await`와 "한 번에 하나의 coroutine만 active"라는 원칙이 전체를 관통
+- **선택은 trade-off**: cocotb냐 UVM이냐는 종교 문제가 아니라 IP 규모·VIP 가용성·팀 자산 기반의 결정
+:::
+
+:::caution[흔한 오해]
+- **"cocotb가 UVM을 대체한다"** — 아닙니다. 상용 VIP(PCIe/DDR)와 대규모 SoC full-sim은 여전히 UVM 영역입니다.
+- **"Python이니 멀티스레드처럼 병렬 실행된다"** — 아닙니다. 어느 순간에도 active coroutine은 하나뿐이라 SV와 동일한 race 동작을 보입니다.
+:::

@@ -1,0 +1,75 @@
+---
+title: "NVMe / NVMe-oF"
+description: NVMe 프로토콜 — SQ/CQ 큐 모델, doorbell, Admin/IO/Fabric 커맨드, NVMe-oF over RDMA
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 NVMe / NVMe-oF를 배우는가
+
+스토리지가 회전 디스크(HDD)에서 플래시 SSD로 넘어오면서, 정작 매체는 빨라졌는데 인터페이스가 발목을 잡는 상황이 생겼습니다. SATA/SAS는 본래 느린 HDD를 전제로 설계된 프로토콜이라 큐가 하나뿐이고 그 안에 명령을 최대 32개밖에 못 넣습니다. 멀티코어 CPU가 동시에 수만 건의 I/O를 쏟아내도 이 좁은 통로 하나로 줄을 세워야 하니, SSD의 잠재력이 그대로 묻혀 버립니다. NVMe(Non-Volatile Memory Express)는 이 병목을 없애기 위해 PCIe 위에서 처음부터 플래시를 겨냥해 다시 설계된 인터페이스입니다. 최대 64K개의 큐, 큐당 64K개의 명령이라는 압도적 병렬성으로 SSD를 CPU에 직접 붙입니다.
+
+검증 엔지니어 입장에서 NVMe를 모르면 정작 필요한 순간에 막힙니다. host와 controller가 host 메모리의 ring buffer(SQ/CQ)와 doorbell 레지스터로 어떻게 명령을 주고받는지 설명하지 못하면, 시뮬레이션이 왜 멈췄는지(doorbell을 안 울렸나? CQ를 안 비웠나?)를 판단할 수 없습니다. 또한 NVMe-oF가 등장하면서 스토리지 프로토콜이 네트워크 패브릭(RDMA/RoCEv2) 위로 확장되었기 때문에, 이제는 NVMe 큐 한 쌍이 RDMA QP 한 쌍에 어떻게 매핑되고 capsule이 RDMA SEND/RECV로 어떻게 운반되는지까지 알아야 원격 스토리지 IP(예: NRT, NVMe RDMA Target)를 검증할 수 있습니다. 이 코스는 그 흐름을 단계별로 풀어줍니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** NVMe가 SATA/SAS 대비 병렬성·지연·CPU 오버헤드 측면에서 왜 유리한지, 그 차이가 어디서 오는지 설명
+- **Trace (분석)** host가 SQ tail doorbell을 울리고 controller가 CQ에 CQE를 쓴 뒤 host가 CQ head doorbell로 응답을 소비하는 한 명령의 전 과정을 추적
+- **Differentiate (분석)** Admin / IO / Fabric 세 커맨드 분류의 역할과, Fabric 커맨드(opcode 0x7F)가 NVMe-oF 환경에서만 쓰이는 이유를 구분
+- **Apply (적용)** In-Capsule Data(ICD)와 Out-of-line(SGL + RDMA Read/Write) 데이터 전송 모델을 write/read 시나리오에 맞게 선택
+- **Evaluate (평가)** NVMe-oF over RDMA 검증 환경에서 polling vs interrupt, capsule 크기, OoO completion 등 설계 결정을 근거 있게 판단
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **PCIe 기본**: NVMe controller는 PCIe 장치이므로 BAR, memory-mapped register, MSI/MSI-X 개념이 필요합니다. [PCIe 코스](../pcie/) 참고.
+- **Ring buffer (circular queue)**: head/tail 포인터, wrap-around, empty/full 판정.
+- **RDMA 기본** (4장에 필요): QP(Queue Pair), SEND/RECV, RDMA Read/Write, Memory Region. [RDMA 코스](../rdma/) 참고.
+- **메모리-맵 IO**: 레지스터 offset과 doorbell write 의미.
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. 1–2장은 NVMe의 기본 동기와 큐 메커니즘이라 강하게 이어지고, 3–4장은 커맨드와 패브릭 확장으로 점진적으로 넓어집니다.
+
+<CardGrid>
+	<LinkCard title="01 · 왜 NVMe인가 — vs SATA/SAS" href="./01_motivation_vs_sata_sas/" description="플래시 SSD를 위한 인터페이스. 병렬성(64K×64K) · 지연 · CPU 오버헤드 관점의 SATA/SAS 비교." />
+	<LinkCard title="02 · SQ/CQ 큐 메커니즘 & Doorbell" href="./02_sq_cq_doorbell/" description="host↔controller ring buffer 한 쌍, tail/head doorbell, polling vs interrupt, BAR0 capability 레지스터." />
+	<LinkCard title="03 · 커맨드 분류 — Admin / IO / Fabric" href="./03_command_set_admin_io_fabric/" description="controller 설정·관리(Admin), Read/Write 데이터(IO), 패브릭 전용 Connect/Property(Fabric, opcode 0x7F)." />
+	<LinkCard title="04 · NVMe-oF over RDMA" href="./04_nvmeof_over_rdma/" description="QP=NVMe 큐쌍, capsule transport, In-Capsule Data vs Out-of-line, DV 레퍼런스(polling/scoreboard)." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — Why → Intuition → 작은 예 → 일반화 → 디테일 → 흔한 오해 → 핵심 정리
+4. **다이어그램 / 코드 / 표** — D2 그림과 SystemVerilog/C 예제
+5. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="NVMe / NVMe-oF 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+	<LinkCard title="UFS / HCI 코스" href="../ufs_hci/" description="모바일 스토리지 — UPIU 커맨드 흐름과 HCI 비교 관점." />
+	<LinkCard title="RDMA 코스" href="../rdma/" description="NVMe-oF의 transport 기반 — QP, SEND/RECV, RDMA Read/Write." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **큐 모델을 손으로 그려라**: SQ/CQ ring buffer의 head/tail이 어떻게 움직이는지, doorbell이 어느 쪽을 갱신하는지 화이트보드로 그릴 수 있어야 2장 이후가 풀립니다.
+- **PCIe를 먼저**: NVMe는 PCIe 위에 얹힙니다. BAR/MSI가 흐릿하면 [PCIe 코스](../pcie/)를 먼저 보세요.
+- **4장은 RDMA와 함께**: NVMe-oF는 RDMA QP·capsule 개념이 전제입니다. [RDMA 코스](../rdma/)와 교차로 읽으면 이해가 빠릅니다.
+:::
+
+:::caution[흔한 함정]
+- **Doorbell 누락**: SQE를 메모리에 써놓고 SQ tail doorbell을 안 울리면 controller는 명령이 온 줄 모릅니다 — 시뮬 hang.
+- **CQ phase tag 오해**: polling 환경에서 CQE 유효성은 phase bit으로 판정합니다. head 포인터만 보면 안 됩니다(2장).
+- **OoO completion**: 서로 다른 명령의 completion이 발행 순서와 다르게 올 수 있습니다 — scoreboard를 단일 큐로 짜면 오탐(4장).
+:::

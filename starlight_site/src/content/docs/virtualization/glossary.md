@@ -170,7 +170,31 @@ title: "Virtualization 용어집"
 
 **Source.** virtio specification (OASIS).
 
-**Related.** vring, vhost.
+**Related.** vring, vhost, Virtqueue.
+
+**See also.** [Module 04](../04_io_virtualization/)
+
+### Virtqueue
+
+**Definition.** Guest driver와 device가 공유하는 메모리 기반 큐 자료구조로, split ring에서는 descriptor table·available ring·used ring의 세 영역과 네 index로 구성된다.
+
+**Source.** OASIS VirtIO v1.2 §3; HDG `virtio_spec.md`.
+
+**Related.** Split Ring, Packed Ring, Descriptor Table, vring.
+
+**Example.** virtio-net의 TX는 `[0] virtio_net_hdr + NEXT → [1] payload`의 descriptor chain 하나를 available ring에 올리고 doorbell을 kick한다.
+
+**See also.** [Module 04](../04_io_virtualization/)
+
+### Packed Ring
+
+**Definition.** VirtIO 1.1이 도입한 virtqueue 형식으로, 단일 descriptor 배열에 available/used 상태를 각 entry의 flags(AVAIL/USED 비트 + wrap counter)에 인라인으로 담는 구조이다.
+
+**Source.** OASIS VirtIO v1.2 §5; HDG `virtio_spec.md`.
+
+**Related.** Split Ring, Virtqueue.
+
+**Example.** DMA 엔진이 세 영역 대신 하나의 연속 ring만 읽으므로 cache locality가 좋아 SmartNIC 같은 HW backend에 유리하다.
 
 **See also.** [Module 04](../04_io_virtualization/)
 

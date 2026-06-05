@@ -1,0 +1,244 @@
+---
+title: "Module 06 — 보호 · 보안: Ring · Domain · Access Matrix"
+---
+
+:::tip[학습 목표]
+이 모듈을 마치면:
+
+- **Differentiate** security(목표)와 protection(메커니즘), 그리고 mechanism vs policy 의 설계 분리를 구분할 수 있다.
+- **Explain** least privilege·compartmentalization·defense in depth 원칙과 그것이 피해를 어떻게 제한하는지 설명할 수 있다.
+- **Trace** protection ring 사이를 gate(syscall)/trap/interrupt 로만 넘어가는 경로와, 그것이 M01 dual-mode 를 어떻게 일반화하는지 추적할 수 있다.
+- **Explain** domain·access right·access matrix 가 "누가 무엇에 무엇을 할 수 있는가"를 어떻게 표현하는지 설명할 수 있다.
+- **Design** least privilege·access matrix 관점에서 device 격리(IOMMU) 정책을 설계할 수 있다.
+:::
+:::note[사전 지식]
+- [Module 01](../01_os_overview/) — dual-mode, privileged instruction, trap
+- [Module 03](../03_memory_paging_tlb/) — page table protection bit, IOMMU 의 device 주소 번역
+- (출처) Silberschatz, *Operating System Concepts* 10th ed., Ch.16–17
+:::
+---
+
+## 1. Why care? — device 격리(IOMMU)는 access matrix 의 하드웨어판이다
+
+DV 엔지니어가 IOMMU 나 confidential computing·TrustZone 류 격리 기능을 검증할 때, 그 바탕에 깔린 발상은 OS 의 protection 이론과 똑같습니다. "각 device 가 접근할 수 있는 메모리를 가둔다"는 per-device isolation 은 곧 access matrix 의 한 행(domain)을 하드웨어로 구현한 것입니다. M01 의 dual-mode 도 사실 가장 단순한 두 단계 ring, 두 domain 일 뿐입니다.
+
+이 모듈은 그 일반화를 줍니다 — least privilege 가 왜 피해를 제한하는지, ring 이 왜 gate 로만 넘어가야 무결성이 지켜지는지, access matrix 가 정책을 어떻게 표현하는지. 이 틀이 있으면 IOMMU 검증에서 "이 device 가 자기 domain 밖 메모리에 접근하면 막히는가", "권한 상승(privilege escalation)이 차단되는가" 같은 체크포인트가 이론적 근거를 갖습니다.
+
+---
+
+## 2. Intuition — 한 줄 비유와 한 장 그림
+
+:::tip[💡 한 줄 비유]
+**Protection ring** ≈ **동심원으로 된 보안 건물**.<br>
+가장 안쪽(ring 0, kernel)이 모든 권한을 갖고, 바깥(ring 3, user)일수록 권한이 적습니다. 바깥에서 안으로는 *아무 문으로나* 못 들어가고, 미리 정해진 검문소(gate=`syscall`)로만, 그것도 정해진 진입점으로만 올라갈 수 있습니다 — 그래서 안쪽의 무결성이 지켜집니다.
+:::
+### 한 장 그림 — ring 계층과 진입점
+
+```d2
+direction: right
+
+R3: "ring 3\nuser (EL0)"
+R0: "ring 0\nkernel (EL1)"
+RM1: "ring -1\nhypervisor (EL2)"
+
+R3 -> R0: "gate (syscall) / trap / interrupt\n정해진 진입점만"
+R0 -> RM1: "VM exit / hypercall"
+RM1 -> R0: "VM entry"
+R0 -> R3: "return (낮은 권한으로)"
+```
+
+### 왜 이 디자인인가 — Design rationale
+
+시스템이 secure 하다는 것은 *모든 상황에서 자원이 의도대로만 쓰이는* 상태입니다(Ch.16.1). 완벽한 보안은 불가능하므로, 위반을 드물게 만드는 메커니즘(protection)을 둡니다. kernel 은 자원·하드웨어 접근을 관리하는 신뢰·특권 구성요소라 user 보다 높은 특권으로 돌아야 하고, 이 특권 분리에 하드웨어 지원(ring)이 필요합니다(Ch.17.3). ring 사이를 *정해진 gate 로만* 넘게 하는 이유는, 아무 데로나 올라가면 높은 ring 의 무결성이 무너지기 때문입니다 — 이것이 M01 의 "system call 이 유일한 통로"를 일반화한 것입니다.
+
+---
+
+## 3. 작은 예 — security 위반의 분류와 용어 가르기
+
+먼저 무엇을 지키는지(security)와 무엇으로 지키는지(protection)를 가릅니다(Ch.16.1).
+
+### 단계별 다이어그램
+
+```d2
+direction: down
+
+SEC: "**security = 목표**\n자원이 의도대로만 쓰임"
+PROT: "**protection = 메커니즘**\n그 목표를 떠받침\n(ring, domain, access matrix)"
+SEC -> PROT: "무엇으로 지키나"
+```
+
+### security 위반 분류 (CIA + α)
+
+| 위반 | 내용 |
+|------|------|
+| **breach of confidentiality** | 허가 없이 읽음 |
+| **breach of integrity** | 허가 없이 고침 |
+| **breach of availability** | 허가 없이 파괴 |
+| theft of service | 자원 무단 사용 |
+| **denial of service (DoS)** | 정당한 사용을 막음 |
+
+공격 기법: 신분 사칭 **masquerading**, 유효 통신 되풀이 **replay**, 사이에 끼는 **man-in-the-middle**, 권한 이상을 얻는 **privilege escalation**. 책은 **threat**(위반 가능성)와 **attack**(실제 시도)을 구분하고, 보안을 physical·network·OS 등 *여러 수준*에서 함께 챙겨야 한다고 말합니다(Ch.16.1).
+
+:::note[여기서 잡아야 할 두 가지]
+**(1) security 와 protection 은 다른 층위다.** security 는 *목표*, protection 은 그것을 이루는 *메커니즘*입니다(Ch.16.1). DV 에서 우리가 검증하는 것은 대개 protection 메커니즘(ring 게이팅·격리 로직)이고, 그것이 지키려는 security 목표는 spec 이 정의합니다.<br>
+**(2) privilege escalation 이 핵심 위협** — IOMMU·ring 검증에서 "낮은 권한이 높은 권한 자원에 접근하면 막히는가"가 직접적인 테스트 대상입니다.
+:::
+---
+
+## 4. 일반화 — least privilege · ring · domain · access matrix
+
+### 4.1 Mechanism vs policy 와 least privilege (Ch.17.1–17.2)
+
+중요한 설계 분리가 **mechanism vs policy** — 메커니즘은 *어떻게*, 정책은 *무엇을* 정합니다. 정책은 자주 바뀌므로, 일반적 메커니즘으로 분리해 두면 정책이 바뀌어도 메커니즘을 안 고쳐도 됩니다(Ch.17.1).
+
+가장 핵심 원칙이 **least privilege** — 프로그램·사용자·시스템에 *맡은 일에 딱 필요한 만큼*의 권한만 줍니다(Ch.17.2). 그래야 악성 코드가 한 곳을 뚫어도 피해가 권한 범위로 제한됩니다. 이를 보강하는 것이 각 구성요소를 개별 권한으로 가두는 **compartmentalization** 과, 한 겹이 뚫려도 다음 겹이 막는 **defense in depth** 입니다.
+
+### 4.2 Protection ring (Ch.17.3)
+
+ring 0 이 모든 특권을 갖고 안쪽일수록 특권이 큽니다. ring 사이는 아무 데로나 못 넘고 **gate**(예: Intel 의 `syscall` 명령)나 trap·interrupt 를 통해서만, 그것도 미리 정해진 진입점으로만 올라갑니다.
+
+| 아키텍처 | 구현 |
+|----------|------|
+| **Intel** | user=ring 3, kernel=ring 0, 가상화용 hypervisor=ring -1 |
+| **ARM** | USR/SVC 모드 출발 → ARMv7 에 신뢰 실행 환경 **TrustZone** 추가 |
+| **ARMv8 (64-bit)** | 네 **exception level**: EL0 user, EL1 kernel, EL2 hypervisor, EL3 secure monitor |
+
+즉 M01 의 dual-mode 가 ring 의 가장 단순한 두 단계이고, hypervisor 가 그보다 높은 ring(-1/EL2)에 앉습니다(M01·가상화와 연결).
+
+### 4.3 Domain 과 access right (Ch.17.4)
+
+ring 이 특권을 *계층*으로 나눈다면, 더 일반화한 것이 **domain** 입니다. 시스템을 process 와 **object**(CPU·memory·disk 같은 하드웨어 + file·program·semaphore 같은 소프트웨어)의 모음으로 보고, 각 object 는 정해진 연산으로만 접근됩니다.
+
+- **access right** = `<object, rights-set>` 쌍.
+- **domain** = 그런 access right 의 모음. 한 process 는 자기 domain 이 허용한 object·연산만 쓸 수 있습니다.
+
+**need-to-know**(지금 필요한 것만 접근)는 *정책*이고 least privilege 는 그것을 이루는 *메커니즘*으로 볼 수 있습니다. dual-mode(kernel/user)는 가장 단순한 두 domain 이며, 더 정교한 격리(UNIX 의 user 별, Android 의 app 별 UID)가 그 위에 얹힙니다.
+
+---
+
+## 5. 디테일 — Access matrix 와 device 격리
+
+### 5.1 Access matrix (Ch.17.5)
+
+domain 과 object 의 관계를 추상화하면 **access matrix** 가 됩니다 — 행은 domain, 열은 object, 칸 `access(i,j)` 는 domain Dᵢ가 object Oⱼ에 할 수 있는 연산 집합입니다. 이 행렬이 "누가 무엇에 무엇을 할 수 있는가"라는 정책을 표현하는 일반 틀입니다.
+
+```d2
+direction: down
+M: "Access Matrix" {
+  grid-columns: 4
+  h0: ""
+  h1: "object: F1 (file)"
+  h2: "object: Printer"
+  h3: "object: Mem region"
+  d1: "domain D1"
+  d1f1: "read, write"
+  d1p: "—"
+  d1m: "read"
+  d2: "domain D2 (device)"
+  d2f1: "—"
+  d2p: "print"
+  d2m: "read, write"
+}
+```
+
+### 5.2 Device 격리 = access matrix 의 하드웨어판 (DV 연결)
+
+device 마다 접근 가능한 메모리를 가두는 per-device isolation(IOMMU)은 §4 domain/access right 발상의 하드웨어판입니다(HDG: `iommu.md` 와 연결). 한 device 를 하나의 domain 으로 보면, IOMMU 의 page table 이 그 domain 의 access right(어느 메모리 영역에 read/write 가능한가)를 인코딩합니다 — M03 의 protection bit·valid-invalid bit 이 device 측에서 똑같이 동작하는 셈입니다.
+
+```d2
+direction: right
+DEV: "Device\n(domain D)"
+IOMMU: "**IOMMU**\nper-device page table\n= access right 인코딩"
+MEM: "허용된 메모리 영역만"
+DEV -> IOMMU: "device address"
+IOMMU -> MEM: "번역 + 보호 (위반은 차단/fault)"
+```
+
+confidential computing·TrustZone 류는 이 격리를 device·VM 경계로 넓힌 것입니다(Ch.17.3 의 trusted execution 일반화).
+
+---
+
+## 6. 흔한 오해 와 DV 디버그 체크리스트
+
+### 흔한 오해
+
+:::danger[❓ 오해 1 — 'security 와 protection 은 같은 말이다']
+**실제**: security 는 *목표*(자원이 의도대로 쓰임), protection 은 그 목표를 떠받치는 *메커니즘*입니다(Ch.16.1). 우리가 검증하는 ring·격리 로직은 protection 이고, 그것이 막아야 할 security 위반은 spec 이 정의합니다.<br>
+**왜 헷갈리는가**: 일상어로 둘 다 "보안"이라 번역돼서.
+:::
+:::danger[❓ 오해 2 — 'ring 사이는 권한만 맞으면 어디로든 넘을 수 있다']
+**실제**: ring 사이는 *정해진 gate(syscall)/trap/interrupt* 를 통해, *미리 정해진 진입점*으로만 올라갑니다(Ch.17.3). 임의 지점 진입을 허용하면 높은 ring 의 무결성이 무너집니다.<br>
+**왜 헷갈리는가**: "권한이 충분하면 자유롭게"라는 단순 모델 때문 — 진입점 제약이 핵심.
+:::
+:::danger[❓ 오해 3 — 'least privilege 는 그냥 권한을 적게 주는 권고일 뿐이다']
+**실제**: least privilege 는 *피해를 권한 범위로 제한*하는 능동적 방어 원칙입니다(Ch.17.2). compartmentalization·defense in depth 와 함께, 한 곳이 뚫려도 전체가 무너지지 않게 합니다.<br>
+**왜 헷갈리는가**: "최소 권한 = 불편한 제약"으로만 보여서 — 실제론 피해 격리 장치.
+:::
+### DV 디버그 체크리스트
+
+| 증상 | 1차 의심 | 어디 보나 |
+|---|---|---|
+| 낮은 ring 코드가 높은 ring 자원에 접근됨 | ring 게이팅/진입점 제약 누락 | gate(syscall) 처리, mode/EL 전이 로직 (privilege escalation) |
+| device 가 자기 domain 밖 메모리에 접근 | IOMMU page table/access right 누락 | per-device 번역·보호, valid bit (M03 연결) |
+| 권한 변경이 정책 변경마다 코드 수정 필요 | mechanism/policy 미분리 | 정책을 데이터(테이블)로 분리했는가 |
+| 한 컴포넌트 침해가 전체로 번짐 | compartmentalization 부재 | 컴포넌트별 권한 경계, defense in depth |
+| hypervisor 권한을 guest 가 획득 | ring -1/EL2 경계 위반 | VM exit/entry 게이팅, EL 전이 (가상화와 연결) |
+
+---
+
+## 7. 핵심 정리 (Key Takeaways)
+
+- **security = 목표, protection = 메커니즘.** 위반은 CIA(confidentiality/integrity/availability) + theft/DoS. 공격: masquerading·replay·MITM·privilege escalation.
+- **least privilege 가 핵심 원칙** — 딱 필요한 권한만 줘 피해를 제한. compartmentalization·defense in depth 로 보강. mechanism/policy 분리.
+- **protection ring** — ring 0(kernel)~3(user), gate/trap/interrupt 의 정해진 진입점으로만 넘어감. dual-mode 는 가장 단순한 두 ring. Intel(ring -1) / ARM(TrustZone, EL0–EL3).
+- **domain·access right·access matrix** — domain = `<object, rights-set>` 모음, access matrix(행=domain, 열=object)가 정책의 일반 틀. dual-mode 는 가장 단순한 두 domain.
+- **device 격리(IOMMU) = access matrix 의 하드웨어판** — per-device page table 이 domain 의 access right 를 인코딩. confidential computing 은 이를 device·VM 경계로 확장.
+
+:::caution[실무 주의점]
+- IOMMU/ring 검증에서 privilege escalation(낮은 권한이 높은 자원 접근)이 차단되는지 직접 테스트하세요 — silent pass 가 곧 보안 구멍입니다.
+- device 격리를 "한 device = 한 domain" 으로 모델링하면, M03 의 page table protection 검증 기법을 그대로 재사용할 수 있습니다.
+:::
+### 7.1 자가 점검
+
+:::tip[🤔 Q1 — ring 진입점 (Bloom: Trace)]
+user(ring 3) 코드가 kernel(ring 0) 기능을 쓰려 한다. 왜 함수 포인터로 kernel 코드 임의 지점에 점프할 수 없고, 어떤 경로만 허용되나?
+<details>
+<summary>정답</summary>
+
+- ring 사이는 임의 점프가 불가능하고 **gate(예: Intel `syscall`)·trap·interrupt** 를 통해, *미리 정해진 진입점*으로만 올라갈 수 있다(Ch.17.3).
+- 이유: 임의 지점 진입을 허용하면 user 가 kernel 내부의 권한 검사·setup 코드를 *건너뛰고* 위험한 지점에 바로 들어가 높은 ring 의 무결성이 무너진다.
+- 정해진 진입점에서만 들어오게 하면 그곳에서 인자·권한 검증을 강제할 수 있다(M01 의 system call 진입점과 같은 발상).
+
+</details>
+:::
+:::tip[🤔 Q2 — IOMMU 격리 설계 (Bloom: Design)]
+여러 device 가 한 시스템 메모리를 공유하는 SoC 에서, 각 device 가 자기 버퍼만 건드리도록 access matrix 관점으로 격리 정책을 설계하라. IOMMU 가 무엇을 인코딩하나?
+<details>
+<summary>정답</summary>
+
+- 각 device 를 하나의 **domain** 으로 본다(Ch.17.4). access matrix 의 한 행 = 그 device 가 접근 가능한 메모리 object 와 권한(read/write).
+- **IOMMU 의 per-device page table** 이 그 행을 인코딩한다 — device 가 낸 주소를 번역하되, 자기 domain 에 없는 영역이면 valid-invalid/protection bit 으로 차단/fault(M03 연결).
+- least privilege 적용: 각 device 에 *자기 버퍼만* 매핑(need-to-know 정책), 나머지는 unmapped → 침해 시 피해가 그 device 버퍼로 제한.
+- 검증 포인트: device 가 자기 domain 밖 주소를 내면 IOMMU 가 막는지(privilege escalation 차단)를 직접 테스트.
+
+</details>
+:::
+### 7.2 출처
+
+**Internal (HDG)**
+- `os_protection_security_spec.md` — security/protection 구분, CIA·공격, least privilege, ring, domain/access matrix (Ch.16–17 정독 요약)
+- `os_concepts_guide.md` — 시리즈 6번 "어떻게 가두는가"
+
+**External**
+- Silberschatz et al. *Operating System Concepts*, 10th ed. — **Ch.16 Security**(§16.1 security/위반/공격), **Ch.17 Protection**(§17.1 mechanism/policy, §17.2 least privilege, §17.3 ring, §17.4 domain, §17.5 access matrix)
+
+---
+
+## 다음 모듈
+
+이 코스의 마지막 모듈입니다. 배운 개념을 다시 점검하려면:
+
+→ [용어집 (Glossary)](../glossary/) — OS 핵심 용어 ISO 11179 형식 정의<br>
+→ [퀴즈 모음 (Quizzes)](../quiz/) — 챕터별 이해도 점검
+
+[퀴즈 풀어보기 →](../quiz/06_protection_security_quiz/)

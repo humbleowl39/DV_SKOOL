@@ -1,0 +1,74 @@
+---
+title: "Memory Consistency & Cache Coherence"
+description: 일관성 모델 vs 캐시 일관성, snooping/MESI, directory, IO-coherency·LLC PoC
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 일관성/코히런스를 배우는가
+
+현대 SoC는 CPU 여러 코어, GPGPU, NPU, DMA, NIC가 하나의 물리 메모리를 공유합니다. 이들은 저마다 로컬 캐시(L1/L2)를 두고 같은 주소를 복사해 들고 있기 때문에, 한 마스터가 어떤 값을 갱신하면 다른 마스터가 들고 있는 사본은 그 순간 "오래된(stale)" 값이 됩니다. 이 사본들이 자동으로 동기화되지 않으면 멀티스레드 프로그램은 조용히 잘못된 값을 읽고, 그 버그는 재현조차 어렵습니다. **Cache Coherence**는 바로 이 사본 동기화를 하드웨어가 투명하게 처리하는 메커니즘이고, **Memory Consistency**는 그 위에서 프로그래머가 의존하는 "로드/스토어가 어떤 순서로 보이는가"라는 계약입니다.
+
+이 둘을 구분하지 못하면 검증 엔지니어는 정작 필요한 순간에 막힙니다. ACE의 snoop 응답이 왜 dirty 데이터를 끌어오는지, directory 기반 인터커넥트에서 왜 broadcast 대신 targeted snoop이 나가는지, IO-coherent NIC가 cache flush 없이도 최신 패킷을 읽는 이유가 무엇인지 설명하지 못합니다. 이 코스는 "무엇(consistency)"과 "어떻게(coherence)"를 먼저 분리한 뒤, snooping·directory·IO-coherency·LLC PoC를 차례로 풀어내고 각 지점에서 DV가 무엇을 확인해야 하는지까지 연결합니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Differentiate (분석)** Memory Consistency(programmer-visible 계약)와 Cache Coherence(투명한 하드웨어 메커니즘)를 가시성·범위·역할 기준으로 구분
+- **Explain (이해)** SWMR / Data-Value invariant가 왜 coherence의 정의 그 자체인지 설명
+- **Trace (분석)** snooping 프로토콜에서 한 store가 MESI/MOESI 상태 전이와 peer 무효화로 이어지는 경로를 추적
+- **Differentiate (분석)** broadcast snooping과 directory 기반 추적의 확장성 trade-off를 비교
+- **Implement (적용)** IO-coherent DMA/NIC 시나리오와 LLC back-invalidation을 검증 시퀀스로 구성
+- **Evaluate (평가)** inclusive LLC + snoop filter 설계에서 DV가 잡아야 할 corner case를 식별하고 우선순위화
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **캐시 기본**: cache line, hit/miss, write-back vs write-through, dirty bit
+- **멀티코어 개념**: shared address space, 코어별 private cache
+- **인터커넥트 핸드셰이크**: VALID/READY류 흐름 제어 — [AMBA 코스](../amba_protocols/) 참고
+- **검증 기초**: scoreboard / reference model 개념 — [UVM 코스](../uvm/) 참고
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. **M01**이 전체의 개념 틀(무엇 vs 어떻게)을 세우므로 먼저 읽고, 이후 메커니즘(M02 snooping → M03 directory → M04 IO/LLC)으로 깊어집니다.
+
+<CardGrid>
+	<LinkCard title="M01 · Consistency vs Coherence" href="./01_consistency_vs_coherence/" description="무엇(consistency)과 어떻게(coherence)의 분리, SWMR/Data-Value invariant, HSA 예시." />
+	<LinkCard title="M02 · Snooping & MESI/MOESI" href="./02_snooping_mesi_moesi/" description="버스 스누핑, MESI 4상태와 MOESI의 Owned 상태, store가 일으키는 상태 전이와 무효화." />
+	<LinkCard title="M03 · Directory & 확장성" href="./03_directory_scalability/" description="broadcast의 한계, directory(snoop filter)로 targeted snoop, 확장성 trade-off." />
+	<LinkCard title="M04 · IO-Coherency & LLC PoC" href="./04_io_coherency_llc/" description="DMA/NIC one-way coherency, LLC as Point of Coherence, snoop filter + back-invalidation, DV 관점." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — Why care? → Intuition → 작은 예 → 일반화 → 디테일
+4. **흔한 오해 + DV 디버그 체크리스트**
+5. **핵심 정리** — 압축된 takeaway + 자가 점검 + 출처
+6. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="일관성/코히런스 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **개념 먼저 분리**: "consistency = 무엇, coherence = 어떻게"를 한 문장으로 말할 수 있을 때까지 M01을 반복
+- **상태 전이 직접 그리기**: MESI/MOESI 다이어그램은 화이트보드로 직접 그릴 수 있어야 함
+- **DV 관점으로 읽기**: 각 메커니즘마다 "여기서 scoreboard/checker가 무엇을 확인하나"를 메모
+- **AMBA와 교차 학습**: ACE/CHI 채널은 [AMBA AXI 모듈](../amba_protocols/02_axi/)과 함께 보면 신호 단위까지 연결됨
+:::
+
+:::caution[흔한 혼동]
+가장 자주 발생하는 오해는 **"coherence가 shared memory 동작을 정의한다"** 는 착각입니다. coherence는 *단일 주소*의 사본만 동기화할 뿐, *여러 주소 간 순서*는 consistency 모델이 정의합니다. M01에서 이 경계를 명확히 합니다.
+:::

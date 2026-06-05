@@ -1,0 +1,64 @@
+---
+title: "DPU / SmartNIC"
+description: 데이터센터 인프라 오프로드 프로세서 — DPU의 등장 배경, 오프로드 도메인, DV 연관
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 DPU / SmartNIC를 배우는가
+
+데이터센터의 서버 CPU는 애플리케이션만 실행하지 않습니다. 네트워크 패킷을 분류하고, 가상 스위치를 돌리고, 스토리지 I/O를 중계하고, 트래픽을 암호화하고, 가상 머신과 컨테이너를 관리하는 인프라 소프트웨어도 같은 CPU 위에서 돕니다. 워크로드가 단일 서버에서 끝나던 시절에는 이 비용이 눈에 띄지 않았지만, 수천 대의 서버와 GPU가 한 클러스터로 묶이고 데이터가 서버 사이를 끊임없이 오가는 AI·클라우드 시대에는 이 인프라 처리가 CPU 코어를 통째로 잡아먹는 세금(datacenter tax)이 됩니다.
+
+DPU(Data Processing Unit)는 바로 이 세금을 별도의 프로그래머블 프로세서로 옮기기 위해 등장했습니다. NIC가 체크섬 같은 고정 오프로드를 제공하던 단계에서, 프로그래밍 가능한 SmartNIC를 거쳐, 네트워킹·스토리지·보안·가상화를 독립적으로 처리하는 인프라 프로세서로 진화한 흐름의 종착점입니다.
+
+검증 엔지니어에게 DPU는 추상적인 마케팅 용어가 아니라, 우리가 검증하는 RDMA·TOE·Ethernet IP가 실제로 어디에 통합되어 누구를 위해 동작하는지를 설명하는 상위 지도입니다. 이 지도가 없으면 "왜 이 NIC가 NVMe-oF도 처리하지?", "왜 호스트와 격리가 검증 요구사항에 들어오지?" 같은 질문에서 막힙니다. 이 코스는 그 지도를 그려 줍니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** DPU가 데이터센터 인프라 오프로드 프로세서로 등장한 배경을 CPU 자원·성능·격리 관점에서 설명
+- **Differentiate (분석)** NIC / SmartNIC / DPU를 역할·프로그래머빌리티·오프로드 범위 기준으로 구분
+- **Classify (이해)** 네트워킹 / 스토리지 / 보안 / 가상화의 네 오프로드 도메인을 각 대표 기능으로 분류
+- **Analyze (분석)** RDMA·TOE·Ethernet 같은 개별 IP가 DPU 데이터 패스 안에서 어떻게 묶이는지 추적
+- **Evaluate (평가)** 주어진 워크로드(AI 클러스터 / 금융 / 베어메탈)에 어떤 오프로드 구성이 적합한지 trade-off로 판단
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **컴퓨터 시스템 기본**: CPU / 메모리 / I/O의 역할 분담, 가상화(하이퍼바이저, VM)의 개념
+- **네트워크 기본**: Ethernet, TCP/IP 계층, NIC의 역할
+- **PCIe 개념**: 호스트와 디바이스를 연결하는 인터커넥트라는 정도의 이해
+
+개별 프로토콜 깊이는 [RDMA](../rdma/), [Ethernet](../ethernet_dcmac/) 코스를 함께 보면 좋습니다.
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. M01에서 "왜 등장했는가"를 잡고, M02에서 "무엇을 오프로드하는가"를 도메인별로 본 뒤, M03에서 "이것이 우리가 검증하는 IP와 어떻게 연결되는가"로 마무리합니다.
+
+<CardGrid>
+	<LinkCard title="M01 · DPU란 무엇이며 왜 등장했는가" href="./01_what_is_dpu/" description="데이터센터 tax, 계산/저장/통신 관점, NIC→SmartNIC→DPU 진화, GPU와의 평행 관계." />
+	<LinkCard title="M02 · 오프로드 도메인 4가지" href="./02_offload_domains/" description="Networking / Storage / Security / Virtualization — 각 도메인이 무엇을 CPU에서 가져오는가." />
+	<LinkCard title="M03 · 데이터센터에서의 DPU와 DV 연관" href="./03_dpu_in_datacenter_and_dv/" description="RDMA·TOE·Ethernet을 묶는 상위 관점, 호스트 격리, 검증이 보장해야 할 것." />
+</CardGrid>
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="DPU 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **개념의 지도로 사용**: DPU는 개별 프로토콜이 아니라 그것들을 묶는 컨테이너입니다. 세부 신호보다 "어느 도메인의 어떤 기능인가"를 먼저 잡으세요.
+- **이름에 휘둘리지 말기**: DPU / IPU / SmartNIC는 벤더마다 다르게 부릅니다. 명칭보다 "무엇을 오프로드하는가"로 비교하세요.
+- **자기 IP와 연결**: 본인이 검증 중인 RDMA / TOE / Ethernet IP가 M02의 어느 도메인에 속하는지 매핑해 보면 코스 가치가 두 배가 됩니다.
+:::
+
+:::caution[흔한 오해]
+- **"DPU = 빠른 NIC"** — 대역폭만 높인 NIC가 아니라, CPU가 하던 인프라 작업을 가져와 격리·가속하는 독립 프로세서입니다.
+- **"DPU는 고정 규격"** — 표준화된 단일 하드웨어가 아니라, 제품마다 오프로드 범위·프로그래머빌리티가 다릅니다.
+:::

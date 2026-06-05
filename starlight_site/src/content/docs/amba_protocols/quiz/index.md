@@ -9,7 +9,8 @@ title: "AMBA Protocols 퀴즈"
 - **Module 01** — [Unit 1: APB & AHB](./01_apb_ahb_quiz/)
 - **Module 02** — [Unit 2: AXI (Advanced eXtensible Interface)](./02_axi_quiz/)
 - **Module 03** — [Unit 3: AXI-Stream](./03_axi_stream_quiz/)
-- **Module 04** — [AMBA Protocols — Quick Reference Card](./04_quick_reference_card_quiz/)
+- **Module 04** — [Unit 4: ACE / CHI Coherency](./04_ace_chi_coherency_quiz/)
+- **Module 05** — [AMBA Protocols — Quick Reference Card](./05_quick_reference_card_quiz/)
 
 ## 사용법
 

@@ -1,0 +1,75 @@
+---
+title: "HW/SW Interaction (하드웨어/소프트웨어 상호작용)"
+description: 디바이스 레지스터, MMIO/PMIO, 인터럽트, 폴링 — 소프트웨어가 하드웨어를 다루는 네 가지 메커니즘
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 HW/SW Interaction을 배우는가
+
+소프트웨어는 트랜지스터를 직접 만지지 못합니다. 운영체제는 그 사이에 **디바이스 드라이버**라는 번역 계층을 두어, "이 블록을 읽어라", "이 패킷을 보내라" 같은 고수준 요청을 하드웨어가 알아듣는 레지스터 write/read, 인터럽트 acknowledge, DMA 설정으로 옮깁니다. 드라이버가 반복하는 일은 결국 두 가지뿐입니다. 레지스터를 써서 **디바이스를 구동**하고, 인터럽트나 폴링으로 **디바이스에 반응**하는 것입니다. 이 둘의 약속이 곧 디바이스의 프로그래밍 모델입니다.
+
+검증 엔지니어에게 이 주제는 결코 소프트웨어만의 이야기가 아닙니다. 우리가 만드는 RTL의 레지스터 맵, 인터럽트 출력, 도어벨 입력이 바로 드라이버가 두드리는 그 접점이기 때문입니다. MMIO 영역에 캐시가 걸리면 드라이버 write가 디바이스에 영영 도달하지 않을 수 있고, 메모리 배리어가 빠지면 디스크립터가 준비되기 전에 도어벨이 울려 디바이스가 쓰레기를 읽습니다. level/edge 트리거를 헷갈리면 인터럽트가 영영 사라지거나(missed edge) 영영 멈추지 않습니다(stuck level). 이 모든 것이 RTL 버그이거나 드라이버 버그이며, 둘을 구분해 내는 것이 DV의 일입니다. 이 코스는 그 접점의 동작 원리와, 그것을 레지스터·드라이버 레벨에서 어떻게 검증하는지를 다룹니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** 디바이스 레지스터의 다섯 가지 기능 분류(control/status/interrupt/data/pointer)와 MMIO·PMIO가 CPU 주소 공간을 다루는 방식의 차이를 설명
+- **Differentiate (분석)** I/O 레지스터의 side-effect가 일반 메모리와 어떻게 다른지, 그리고 캐싱·재정렬이 왜 I/O를 깨뜨리는지 구분
+- **Apply (적용)** compiler barrier / read·write·full 메모리 배리어를 올바른 위치에 배치해 디바이스 접근 순서를 보장
+- **Differentiate (분석)** level vs edge 트리거, MSI, 도어벨, IPI의 동작과 적용 맥락을 구분
+- **Evaluate (평가)** 주어진 워크로드에 폴링·인터럽트·하이브리드(인터럽트 후 임계 폴링) 중 무엇이 적합한지 latency·CPU 비용 trade-off로 판단
+- **Design (생성)** 레지스터·드라이버 레벨에서 side-effect, 인터럽트, 폴링 핸드셰이크를 검증하는 시나리오를 설계
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **CPU 기본 동작**: load/store 명령, 주소 공간, 명령어 경계(instruction boundary) 개념
+- **레지스터/메모리-맵 IO 기본**: 오프셋, access policy(RW/RO/W1C) — [UVM RAL 모듈](../uvm/07_register_layer_ral/)에서도 다룸
+- **버스 프로토콜 한 트랜잭션의 구조** (addr/data/read·write) — [AMBA 코스](../amba_protocols/) 참고
+- **캐시·OoO 실행의 존재**: 정확한 동작까지는 필요 없고, "CPU가 메모리 연산을 재정렬·캐싱한다"는 사실 인지
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. 01→02는 강하게 이어지고(레지스터의 side-effect가 배리어의 동기), 03→04는 "디바이스가 나에게 알린다(인터럽트) vs 내가 디바이스를 본다(폴링)"의 대비 구조입니다.
+
+<CardGrid>
+	<LinkCard title="01 · 디바이스 레지스터 & MMIO/PMIO" href="./01_registers_mmio_pmio/" description="프로그래밍 모델의 출발점 — 레지스터 분류, 통합 주소 공간(MMIO) vs 격리 I/O(PMIO), 왜 MMIO가 지배적인가." />
+	<LinkCard title="02 · Side-effect & 메모리 배리어" href="./02_side_effects_barriers/" description="I/O 레지스터가 RAM과 다른 이유, 캐싱·재정렬이 I/O를 깨뜨리는 원리, uncached 매핑과 barrier() / rmb / wmb / mb." />
+	<LinkCard title="03 · 인터럽트 (level/edge/MSI/doorbell/IPI)" href="./03_interrupts/" description="디바이스가 CPU에 알리는 방식 — level vs edge 트리거, MSI, 도어벨(역방향 알림), IPI, 마스킹/NMI, 인터럽트 스톰과 coalescing." />
+	<LinkCard title="04 · 폴링 & 하이브리드 + DV 관점" href="./04_polling_hybrid_dv/" description="CPU가 동기적으로 상태를 샘플링하는 폴링, 폴링 vs 인터럽트 trade-off, 인터럽트 후 임계 폴링 하이브리드, 그리고 이 모두를 레지스터/드라이버 레벨에서 검증하는 법." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — 시나리오 동기 → 직관(비유 + 다이어그램) → 작은 예 → 일반화 → 디테일
+4. **흔한 오해 + DV 디버그 체크리스트** — 자주 빠지는 함정과 첫 실패 증상별 추적
+5. **핵심 정리** — 압축된 takeaway + 자가 점검 + 출처
+6. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="HW/SW Interaction 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **드라이버의 두 가지 일로 묶기**: "구동(레지스터 write)"과 "반응(인터럽트/폴링)"이라는 두 축으로 모든 메커니즘을 정리
+- **side-effect를 항상 의식**: 레지스터는 RAM처럼 보이지만 read/write에 부작용이 있다는 점이 거의 모든 버그의 뿌리
+- **DV로 환산하며 읽기**: 각 메커니즘마다 "이걸 RTL/드라이버 레벨에서 어떻게 검증하지?"를 스스로 물어보기 (04장이 그 답을 모음)
+:::
+
+:::caution[가장 자주 나오는 함정]
+- **uncached 매핑 누락**: MMIO에 캐시가 걸려 write가 디바이스에 안 닿거나 stale read
+- **배리어 누락**: 디스크립터 write가 도어벨 write보다 늦게 디바이스에 도달
+- **edge 인터럽트의 missed edge**: 마스킹이 길어 펄스를 놓침 — status 래치 없으면 영영 분실
+:::

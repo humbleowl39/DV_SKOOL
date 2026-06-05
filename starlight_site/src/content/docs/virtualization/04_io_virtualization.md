@@ -9,6 +9,8 @@ title: "Module 04 — I/O Virtualization"
 - **Apply** SR-IOV 의 PF/VF 분리, IOMMU 의 역할을 적용할 수 있다.
 - **Identify** VirtIO 의 vring + queue 메커니즘이 어떻게 batching 으로 VM Exit 을 일정하게 유지하는지 식별한다.
 - **Trace** 한 패킷이 VirtIO front-end driver → vring → host vhost backend → wire 까지 흐르는 path 를 추적할 수 있다.
+- **Describe** split ring 의 세 영역 (descriptor table / available ring / used ring) 과 네 index (`avail_idx`/`last_avail_idx`/`used_idx`/`last_used_idx`) 가 empty/full 을 어떻게 판정하는지 설명할 수 있다.
+- **Differentiate** split ring 과 packed ring 을 cache locality / HW backend 적합성 관점에서 구분하고, PCI transport·feature negotiation·초기화 시퀀스의 역할을 설명할 수 있다.
 - **Decide** 시나리오 (개발 / 범용 / 고성능 / 저지연) 에 따른 적합한 I/O 가상화 방식을 결정할 수 있다.
 :::
 :::note[사전 지식]
@@ -359,6 +361,137 @@ VirtIO:     여러 요청을 Virtqueue 에 모아서 한 번에 알림 (batching
 | 표준화된 인터페이스 | 물리 HW 대비 여전히 오버헤드 |
 | 디바이스 공유 가능 | |
 
+### 5.2.1 VirtIO 심화 — Virtqueue 의 내부 구조와 프로토콜
+
+앞의 §3 에서 한 패킷이 ring 을 흐르는 _큰 그림_ 을 봤다면, 여기서는 그 ring 이 메모리 위에서 _실제로_ 어떻게 생겼고, driver 와 device 가 어떤 규칙으로 그것을 공유하는지를 풀어 설명합니다. DV 관점에서 BaseNIC 같은 virtio-net HW backend 를 검증하려면 이 자료구조의 byte-level 동작과 index 규칙을 정확히 알아야 합니다. (Internal: `mbshell_tb_env` — BaseNIC 의 TB 는 여기 기술된 virtqueue 프로토콜을 직접 구동)
+
+#### 왜 VirtIO 가 _표준_ 이 되었는가
+
+VirtIO 이전에는 hypervisor 마다 (Xen, KVM, VMware) 자기만의 가상 디바이스 드라이버를 따로 출하했습니다. 같은 guest 커널이 KVM 위에서는 KVM 전용 NIC/disk 드라이버를, Xen 위에서는 또 다른 드라이버를 필요로 했기 때문에, "hypervisor × 디바이스 타입 × guest OS" 의 조합마다 드라이버가 폭발적으로 늘어났습니다. VirtIO 는 이 문제를 하나의 _표준 인터페이스_ 로 풀었습니다. guest 의 `virtio-net` 드라이버 하나가 KVM, Xen, QEMU, 그리고 virtio-net 스펙을 구현한 SmartNIC HW 까지 — 밑단 backend 가 무엇이든 — 그대로 동작합니다. "paravirtualized" 라는 말의 의미는, guest 드라이버가 자신이 가상 환경에 있음을 _알고_ host 와 협력한다는 것입니다. e1000 같은 full emulation 처럼 host 가 모든 레지스터 접근을 가짜로 흉내 낼 필요가 없습니다.
+
+#### Split Ring 의 메모리 레이아웃
+
+Split ring (v1.0 부터 필수, v1.2 에서도 지배적) 은 queue 하나당 _세 개_ 의 연속된 메모리 영역으로 구성됩니다. queue 크기 Q 는 반드시 2 의 거듭제곱이어야 합니다 (`queue_size`).
+
+```d2
+direction: down
+
+DT: "**Descriptor Table** (Q × 16 byte)\nD[0] D[1] D[2] ... D[Q-1]\n각 entry: addr / len / flags / next\n→ 실제 데이터 버퍼를 가리키는 포인터 배열" {
+  style.fill: "#e3f2fd"
+}
+AV: "**Available Ring** (driver 소유)\nflags / avail_idx / ring[0..Q-1]\nring[i % Q] = head descriptor index\n→ driver 가 '이거 처리해줘' 라고 올리는 곳" {
+  style.fill: "#fff3e0"
+}
+US: "**Used Ring** (device 소유)\nflags / used_idx / {id, len}[0..Q-1]\nid = head desc index, len = 사용 byte 수\n→ device 가 '처리 끝났어' 라고 돌려주는 곳" {
+  style.fill: "#e8f5e9"
+}
+DT -> AV: "driver 가 desc 작성 후\nhead index 를 avail 에 push"
+AV -> US: "device 가 처리 후\n결과를 used 에 push"
+US -> DT: "driver 가 used 회수 →\ndescriptor 해제 (재사용)"
+```
+
+세 영역이 분리된 이유는 _소유권_ 을 명확히 나누기 위해서입니다. Descriptor Table 은 데이터 버퍼의 포인터 배열이고, Available Ring 은 driver → device 방향의 작업 지시함, Used Ring 은 device → driver 방향의 완료 통지함입니다. 한 방향씩만 쓰는 single-writer 규칙 덕분에 lock 없이도 안전하게 공유됩니다.
+
+#### 네 개의 Index — empty/full 판정의 핵심
+
+이 프로토콜을 지배하는 것은 네 개의 index 입니다. 둘은 driver 가, 둘은 device 가 소유하며, 같은 ring 을 양쪽이 서로 다른 index 로 추적합니다.
+
+| Index | 소유자 | 의미 |
+|-------|--------|------|
+| `avail_idx` | Driver | available ring 에 _다음에 쓸_ 슬롯. driver 가 desc 를 올릴 때마다 ++ |
+| `last_avail_idx` | Device | available ring 에서 _다음에 읽을_ 슬롯. ring 에 안 보이는 device 내부 값 |
+| `used_idx` | Device | used ring 에 _다음에 쓸_ 슬롯. device 가 완료할 때마다 ++ |
+| `last_used_idx` | Driver | used ring 에서 _다음에 읽을_ 슬롯. driver 내부 값 |
+
+핵심 규칙은 **index 가 wrap 하지 않고 단조 증가** 하며, 실제 슬롯은 `idx % Q` 로 계산한다는 것입니다. 이 덕분에 별도의 flag 없이도 ring 의 empty/full 을 판정할 수 있습니다. device 입장에서 처리할 게 남았는지는 `avail_idx != last_avail_idx` 한 줄로 알 수 있고, driver 입장에서 회수할 게 있는지는 `used_idx != last_used_idx` 로 압니다. §6 의 "virtio queue full silent drop" 오해가 바로 이 index 비교를 backend 가 어떻게 다루느냐와 직결됩니다.
+
+#### Descriptor 의 4 필드
+
+Descriptor Table 의 각 entry 는 16 byte 이고 다음 4 필드로 이루어집니다.
+
+| 필드 | 폭 | 설명 |
+|------|-----|------|
+| `addr` | 64-bit | 버퍼의 **guest-physical address** (이 값을 IOMMU 가 host PA 로 변환 — §3 ⑦) |
+| `len` | 32-bit | 버퍼 길이 (byte) |
+| `flags` | 16-bit | `NEXT`=1 (chain 계속), `WRITE`=2 (device 가 쓰는 버퍼), `INDIRECT`=4 |
+| `next` | 16-bit | `NEXT` 가 set 일 때 다음 descriptor 의 index |
+
+여기서 `WRITE` flag 의 방향이 헷갈리기 쉽습니다. flag 는 _device 관점_ 입니다. virtio-net TX 에서 driver 가 보낼 패킷은 device 가 _읽어야_ 하므로 `WRITE` flag 가 없고 (device-readable), RX 에서 미리 깔아두는 빈 버퍼는 device 가 패킷을 _써넣어야_ 하므로 `WRITE` flag 를 답니다. virtio-net 의 TX descriptor chain 은 `[0] virtio_net_hdr (12 byte) + NEXT` → `[1] packet payload` 의 두 entry 로, RX 는 둘 다 `WRITE` flag 를 단 채 미리 게시됩니다. virtio-blk 는 `[0] 요청 헤더(READ/WRITE, sector) → [1] 데이터 버퍼 → [2] status byte(1 byte, WRITE)` 의 세 entry 한 chain 이 한 I/O 요청입니다.
+
+#### Memory Barrier — weak-memory 아키텍처의 함정
+
+§3 의 step ②–④ (descriptor 작성 → avail_ring 갱신 → kick) 사이에는 반드시 memory barrier 가 들어가야 합니다. ARM, RISC-V 같은 weak-memory 아키텍처에서는 CPU 가 store 순서를 재배열할 수 있어, barrier 가 없으면 device 가 `avail_idx` 증가를 먼저 관측하고도 descriptor 내용은 아직 옛 값인 상태를 읽을 수 있습니다. driver 는 (1) descriptor 작성 후 wmb, (2) avail_idx 증가 후 wmb, (3) 그 다음 doorbell kick 의 순서를 지켜야 합니다. device 측도 used_ring 작성과 used_idx 증가 사이에 wmb 를 넣습니다. 이 barrier 누락은 x86 (strong memory model) 에서는 _우연히 동작_ 하다가 ARM SmartNIC 으로 옮기면 깨지는 전형적 버그입니다.
+
+#### Packed Ring — HW backend 를 위한 단일 ring
+
+VirtIO 1.1 은 split ring 의 대안으로 **packed ring** 을 도입했습니다. 세 영역을 따로 두는 대신, descriptor 하나의 배열만 쓰고 available/used 상태를 각 entry 의 `flags` 안에 (`AVAIL`/`USED` 비트를 wrap counter 로 토글) 인라인으로 담습니다.
+
+```d2
+direction: right
+
+SPLIT: "**Split Ring** (v1.0)" {
+  D: "Descriptor Table"
+  A: "Available Ring"
+  U: "Used Ring"
+  D -> A: "3개 영역\n별도 cache line"
+  A -> U
+}
+PACKED: "**Packed Ring** (v1.1+)" {
+  P: "단일 Descriptor Array\nflags 안에 AVAIL/USED 상태\n(wrap counter 로 toggle)"
+}
+SPLIT -> PACKED: "DMA 엔진이\n1개 연속 ring 만 읽음\n→ cache locality ↑"
+```
+
+split ring 은 한 요청을 처리하는 데 세 개의 분리된 메모리 구조를 건드려 cache pressure 가 큽니다. packed ring 은 DMA 엔진이 단일 연속 ring 만 읽으면 되므로 cache locality 가 좋아 **HW 구현 (SmartNIC) 에 특히 유리** 합니다. BaseNIC 같은 HW backend 를 검증할 때 split/packed 양쪽 모드를 모두 커버해야 하는 이유가 여기에 있습니다.
+
+#### PCI Transport — virtqueue 는 어떻게 _발견_ 되는가
+
+VirtIO 는 transport 에 독립적입니다. 같은 virtqueue 구조가 PCI, MMIO (임베디드), Channel I/O (IBM s390) 위에서 동일하게 동작합니다. VM/SmartNIC 에서 가장 흔한 **PCI transport** 에서는 device 가 Vendor ID `0x1AF4` 로 식별되고, BAR 에 매핑된 다섯 개의 capability 구조로 자신을 노출합니다.
+
+| Capability | 역할 |
+|------------|------|
+| `VIRTIO_PCI_CAP_COMMON_CFG` | feature bits, queue 선택, `device_status` 레지스터 |
+| `VIRTIO_PCI_CAP_NOTIFY_CFG` | 큐별 doorbell 레지스터 (§3 의 ④ kick 이 쓰는 곳) |
+| `VIRTIO_PCI_CAP_ISR_CFG` | legacy 인터럽트 상태 |
+| `VIRTIO_PCI_CAP_DEVICE_CFG` | device 고유 config (virtio-net 의 MAC 주소 등) |
+| `VIRTIO_PCI_CAP_PCI_CFG` | PCI config space 경유의 대체 레지스터 접근 |
+
+§6 디버그 체크리스트의 "`virtqueue_kick` 후 응답 없음 → notify 주소 매핑" 항목이 바로 `VIRTIO_PCI_CAP_NOTIFY_CFG` 의 `queue_notify_off` 계산을 가리킵니다.
+
+#### Feature Negotiation — 하위 호환의 메커니즘
+
+초기화 중 driver 와 device 는 **feature bitmap** 을 협상합니다. (1) device 가 `device_feature_select`/`device_feature` 로 지원 feature 를 게시하고, (2) driver 가 읽어서 자기가 지원하는 집합으로 마스킹한 뒤 `driver_feature` 에 쓰고, (3) driver 가 `device_status` 에 `FEATURES_OK` 를 set 하면 device 가 여전히 set 인지 확인합니다. 만약 device 가 `FEATURES_OK` 를 clear 하면 협상된 집합이 지원 불가라는 뜻이므로 driver 는 중단해야 합니다. 이 메커니즘 덕분에 v1.2 device 가 v1.0 driver 와도 동작합니다 — v1.0 feature 만 협상하면 되기 때문입니다. §4.2 에서 다룬 `VIRTIO_F_EVENT_IDX`, packed ring 사용 여부, virtio-net 의 multiqueue(`VIRTIO_NET_F_MQ`) 도 모두 이 비트맵으로 켜집니다.
+
+#### 초기화 시퀀스 — device_status 의 단계 진행
+
+driver 는 `device_status` 레지스터에 정해진 순서대로 비트를 써넣어야 합니다. 이 순서를 어기면 device 가 I/O 를 받지 않습니다.
+
+```d2
+direction: right
+
+R: "RESET (0)"
+A: "ACKNOWLEDGE\n(driver 가 device 인식)"
+D: "DRIVER\n(driver 가 구동법 앎)"
+F: "(feature negotiation)"
+FO: "FEATURES_OK\n(협상 집합 수락)"
+DO: "DRIVER_OK\n(device live — I/O 시작 가능)"
+R -> A -> D -> F -> FO -> DO
+FO -> FAIL: "device 가 clear 하면" { style.stroke-dash: 4 }
+FAIL: "FAILED → RESET 재시작" { style.fill: "#ffcdd2" }
+```
+
+`DRIVER_OK` 가 set 되기 _전_ 에 virtqueue 에 I/O 를 올리면 device 가 무시합니다. 검증 시 "init 직후 첫 패킷이 사라진다" 류의 증상은 이 시퀀스의 step 누락 (특히 `FEATURES_OK` 와 `DRIVER_OK` 사이) 을 먼저 의심해야 합니다.
+
+#### VirtIO 의 trade-off — 공짜가 아니다
+
+VirtIO 의 이점은 명확합니다. 하나의 통합 드라이버가 모든 hypervisor·SmartNIC·시뮬레이터에서 동작하고, 현대 `vhost-net`/`vhost-user` 에서는 버퍼를 guest-physical address 로 공유해 host 에서 데이터 복사가 없는 zero-copy I/O 가 가능하며, `AVAIL_NO_INTERRUPT`/`USED_NO_NOTIFY` flag 로 driver 와 device 가 알림 빈도를 독립적으로 조절할 수 있습니다. 그러나 대가도 있습니다. driver 와 device 가 _반드시_ 메모리 공간을 공유해야 하고 (VM 은 guest RAM, HW 디바이스는 host-mapped BAR 또는 peer DMA), 앞서 본 memory barrier 오버헤드가 weak-memory 아키텍처에서 발생하며, split ring 은 큐당 세 영역으로 cache pressure 가 큽니다 (이 마지막 항목이 packed ring 도입의 동기).
+
+| 이점 | 대가 |
+|------|------|
+| 통합 드라이버 (hypervisor/HW/sim 무관) | driver↔device 메모리 공유 필수 |
+| zero-copy (vhost-net/vhost-user) | weak-memory 에서 barrier 오버헤드 |
+| 알림 빈도 독립 조절 (coalescing) | split ring 의 세 영역 cache pressure (→ packed ring) |
+
 ### 5.3 방법 3: 디바이스 Pass-through
 
 #### 개념
@@ -543,6 +676,9 @@ DPDK: 모든 것을 user-space 에서 처리 (polling 기반)
 | virtio queue full 인데 silent drop | `VIRTIO_F_EVENT_IDX` notification suppression | vhost stat 의 queue full counter, notify suppression flag |
 | Passthrough VM 의 DMA latency spike | IOMMU TLB miss → page walk | IOTLB hit rate, IOMMU hugepage 사용 |
 | Live migration 후 NIC link down | VF state extract / restore 미지원 | vendor 의 migration support, virtio-net 으로 fallback |
+| virtio init 직후 첫 패킷이 사라짐 | `device_status` 시퀀스 미완 (FEATURES_OK/DRIVER_OK 누락) | driver 의 device_status write 순서, FEATURES_OK 재확인 여부 |
+| ARM SmartNIC 에서만 desc 내용이 옛 값 | driver 의 memory barrier 순서 누락 (x86 에선 우연히 통과) | desc write→wmb→avail_idx++→wmb→kick 순서, weak-memory model |
+| HW backend 가 packed ring 모드에서 hang | split/packed feature 협상 불일치 | feature bitmap 의 packed ring 비트, COMMON_CFG 의 negotiated set |
 
 ---
 
@@ -550,6 +686,10 @@ DPDK: 모든 것을 user-space 에서 처리 (polling 기반)
 
 - **3 가지 모델**: Emulation (호환 ↑, 성능 ↓) / VirtIO (batching 으로 VM Exit 일정) / Passthrough (bare metal 성능, IOMMU 필수).
 - **VirtIO = vring + kick**: descriptor table 에 batch 로 채우고 notify 1 회 → VM Exit 1 회로 N 패킷.
+- **Split ring = 3 영역 + 4 index**: descriptor table(포인터 배열) / available ring(driver→device) / used ring(device→driver), 그리고 `avail_idx`/`last_avail_idx`·`used_idx`/`last_used_idx` 의 `idx % Q` 비교로 empty/full 판정.
+- **Packed ring** 은 단일 ring 에 AVAIL/USED 상태를 인라인 → cache locality ↑, HW/SmartNIC backend 에 유리.
+- **PCI transport + 초기화 순서**: Vendor ID `0x1AF4`, 5 개 capability (COMMON/NOTIFY/ISR/DEVICE/PCI_CFG), `device_status` 의 RESET→ACK→DRIVER→FEATURES_OK→DRIVER_OK 단계. `DRIVER_OK` 전의 I/O 는 무시됨.
+- **Feature negotiation** 으로 하위 호환 (`FEATURES_OK` 확인) — `VIRTIO_F_EVENT_IDX`, MQ, packed ring 모두 이 비트맵으로 협상.
 - **SR-IOV**: 1 PCIe device → 1 PF + N VF. PF=관리, VF=데이터. NIC 1 개로 128 VM.
 - **IOMMU = 가상화의 전제**: DMA 격리 + 주소 변환. 없으면 passthrough 가 보안 붕괴.
 - **DPDK = 커널 bypass + polling + zero-copy**. 고성능 NFV / 패킷 브로커의 표준.
@@ -559,6 +699,8 @@ DPDK: 모든 것을 user-space 에서 처리 (polling 기반)
 - **virtio queue full silent drop** — `VIRTIO_F_EVENT_IDX` 와 backend 의 notify suppression 동작을 항상 검증.
 - **IOMMU group 의 ACS** 가 깨져 있으면 같은 group 의 모든 device 가 한 VM 에 묶여야 함 — pass-through 단위가 의도와 달라질 수 있다.
 - **vhost backend 의 user-space fallback** 이 silent — `lsmod | grep vhost` 로 첫 검증.
+- **weak-memory barrier 순서** (desc write → wmb → avail_idx++ → wmb → kick) — x86 에서는 우연히 동작하다 ARM SmartNIC 에서 깨진다. virtio HW backend 검증 시 필수 점검.
+- **`DRIVER_OK` 전 I/O 는 silent 무시** — 초기화 시퀀스 (RESET→ACK→DRIVER→FEATURES_OK→DRIVER_OK) 의 step 누락이 "첫 패킷 사라짐" 으로 나타난다.
 :::
 ### 7.1 자가 점검
 
@@ -589,15 +731,31 @@ ACS (Access Control Services) 미보장 → group 단위로만 격리 보장:
 
 </details>
 :::
+:::tip[🤔 Q3 — virtqueue index 와 silent drop (Bloom: Analyze)]
+HW virtio-net backend 를 검증하는데, driver 가 패킷을 enqueue 했다고 보고하지만 device 가 처리하지 않는다. split ring 의 어느 index 를 먼저 보겠는가?
+<details>
+<summary>정답</summary>
+
+`avail_idx` 와 device 내부 `last_avail_idx` 의 관계를 본다:
+- device 가 처리할 게 있는지는 `avail_idx != last_avail_idx` 로 판정. 둘이 같으면 device 는 "새 작업 없음" 으로 본다.
+- **증상 1 (barrier 누락)**: driver 가 `avail_idx++` 를 했지만 descriptor 내용 write 가 weak-memory 에서 재배열돼 device 가 옛 desc 를 읽음 → driver 의 wmb 순서 (desc write → wmb → avail_idx++ → wmb → kick) 검증.
+- **증상 2 (kick 누락/주소 오류)**: `avail_idx` 는 올라갔지만 doorbell (`VIRTIO_PCI_CAP_NOTIFY_CFG` 의 `queue_notify_off`) 이 잘못된 주소로 가 device 가 wake 안 됨.
+- **증상 3 (init 미완)**: `DRIVER_OK` 가 set 되기 전 enqueue → device 가 모두 무시.
+- DV 체크: `avail_idx`, `last_avail_idx`, `used_idx`, `last_used_idx` 4 개를 매 트랜잭션마다 로그/스코어보드로 추적하면 어느 단계에서 멈췄는지 즉시 드러난다.
+
+</details>
+:::
 ### 7.2 출처
 
-**Internal (Confluence)**
+**Internal (HDG / Confluence)**
+- HDG `virtio_spec.md` (VirtIO Overview) — virtqueue split/packed ring 레이아웃, 4 index 규칙, descriptor 필드, PCI transport capability, feature negotiation, 초기화 시퀀스, trade-off
+- HDG `mbshell_tb_env.md` (BaseNIC TB 환경) — BaseNIC 이 virtio-net 을 구현하며 TB 가 본 절의 virtqueue 프로토콜을 직접 구동
 - `I/O Virtualization Strategy` — Emulation/VirtIO/SR-IOV 선택 매트릭스
 - `IOMMU Group / ACS` — passthrough granularity 가이드
 
 **External**
 - PCI-SIG *Single Root I/O Virtualization (SR-IOV) Specification*
-- OASIS *Virtual I/O Device (VIRTIO)* spec v1.2
+- OASIS *Virtual I/O Device (VIRTIO) Version 1.2* — §3 (split ring), §5 (packed ring), §4.1 (PCI transport), §3 device init / feature negotiation
 - Intel *VT-d* + ACS — DMA remapping + isolation
 
 ---

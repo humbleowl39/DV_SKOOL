@@ -48,7 +48,19 @@ Mask 처리 (모두 0xFF):
 **이유**: 이 필드들은 hop 별로 변경 (TTL 감소, ECN 마킹, checksum 재계산) 되므로, ICRC 가 end-to-end 보존되려면 변경 가능 영역을 input 에서 빼야 함. 8-byte placeholder (IB 의 LRH 자리) 도 모두 0xFF 로 대체.
 
 </details>
-## Q4. (Analyze)
+## Q4. (Apply)
+
+RoCEv2 의 UDP source port 에 대해, 동일한 QP 가 연속으로 100 개의 패킷을 보냈다. source port 값은 어떻게 나타나야 검증이 PASS 인가? "패킷마다 다른 hash 값" 을 기대하면 왜 틀리는가?
+
+<details>
+<summary>정답 / 해설</summary>
+
+**100 개 패킷 모두 _같은_ source port** 여야 한다. 사내 rdma_spec 의 RoCEv2-specific 규칙은 **"same QP → same source port"** 로, source port 는 _QP(flow) 단위_ 로 결정되는 식별자다.
+
+"패킷마다 다른 값" 을 기대하면 틀리는 이유: source port 의 목적은 _서로 다른 flow_ 사이에 entropy 를 주어 ECMP 라우터가 여러 path 로 분산하게 하는 것이지, _한 flow 안에서_ 패킷을 흩뿌리는 것이 아니다. 오히려 한 flow 의 패킷이 매번 다른 source port 를 가지면 서로 다른 path 로 흩어져 도착 순서가 뒤바뀌고, RC 의 PSN reorder/retry 부담이 폭증한다. 따라서 올바른 기대값은 "**한 QP 안에서 불변, QP 가 다르면 분산**" 이다.
+
+</details>
+## Q5. (Analyze)
 
 IB GRH 의 어떤 필드가 RoCEv2 에서 "NOT-APPLICABLE" 이 되는가? 왜?
 
@@ -60,7 +72,7 @@ IB GRH 의 어떤 필드가 RoCEv2 에서 "NOT-APPLICABLE" 이 되는가? 왜?
 그 외 GRH 필드 대부분은 **MODIFIED** (IPv6 Traffic Class, Flow Label, Hop Limit, Source/Dest IP 등으로 매핑). 이들은 의미는 유사하지만 위치/크기/의미가 IP 표준에 맞춰 변형됨.
 
 </details>
-## Q5. (Evaluate)
+## Q6. (Evaluate)
 
 "RoCEv2 deployment 에서 PFC 만 enable 하고 ECN/DCQCN 을 안 쓰면 충분하다" 는 주장에 대해 평가하라.
 

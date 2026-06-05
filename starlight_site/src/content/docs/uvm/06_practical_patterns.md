@@ -560,6 +560,6 @@ Test 의 `run_phase` 만 raise/drop 하라는 규칙. 만약 sequence 안에서 
 
 ## 다음 모듈
 
-→ [Module 07 — Quick Reference Card](../07_quick_reference_card/): 인터뷰 / 코드 리뷰 / 디버그 중에 빠르게 펴보는 _치트시트_. 정독은 Module 01-06 으로 끝내고, 마지막에 한 장으로 정리.
+→ [Module 07 — Register Layer (RAL)](../07_register_layer_ral/): 레지스터를 _이름_ 으로 접근하고 mirror 로 DUT 값을 추적하는 UVM 레지스터 추상화 계층. CSR 검증의 핵심.
 
 [퀴즈 풀어보기 →](../quiz/06_practical_patterns_quiz/)

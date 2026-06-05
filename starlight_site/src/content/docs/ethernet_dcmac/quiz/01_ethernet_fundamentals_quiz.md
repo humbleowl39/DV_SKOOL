@@ -72,3 +72,31 @@ Jumbo frame (9000+ bytes)의 trade-off는?
 **해설.** Jumbo frame의 핵심 장점은 같은 데이터를 전송할 때 필요한 프레임 수가 줄어들어 헤더/FCS 오버헤드 비율이 낮아지고 CPU 인터럽트 횟수도 감소한다는 것이다. 그러나 9000 byte 프레임이 전송되는 동안 같은 port를 쓰는 다른 소형 프레임은 그 시간 동안 대기해야 하므로 latency variance가 커진다. 가장 흔한 운영 실수는 end-to-end 경로의 모든 장비(스위치 포함)에서 jumbo를 활성화하지 않아 중간 노드에서 IP fragmentation이나 silently drop이 발생하는 경우다. 검증 환경에서는 9000 byte 경계 바로 아래와 위(8999, 9000, 9001 bytes)를 반드시 테스트해야 한다.
 
 </details>
+
+## Q6. (Understand)
+
+OSI 7 계층에서 DCMAC(Ethernet MAC + PHY)은 어느 계층(들)에 해당하며, 위쪽 인터페이스로 들어오는 payload는 어떻게 다뤄야 하나?
+
+<details>
+<summary>정답 / 해설</summary>
+
+- **계층**: L2 (Data Link) + L1 (Physical). MAC 부분이 L2, PCS/PMA/PMD 가 L1.
+- **payload 취급**: L3(IP)/L4(TCP)가 이미 캡슐화해 넘긴 **불투명한 바이트 덩어리** → scoreboard는 **byte-exact** 로만 비교, 내용을 IP/TCP로 해석하지 않는다.
+
+**해설.** OSI 모델은 각 계층이 자기 역할만 책임지고 바로 위·아래 계층과만 대화하는 관심사의 분리를 핵심으로 한다. 캡슐화(encapsulation) 과정에서 데이터는 송신 시 7계층을 아래로 내려가며 각 계층의 헤더를 덧붙이는데, DCMAC의 AXI-Stream으로 들어오는 payload에는 이미 L4 TCP 헤더와 L3 IP 헤더가 다 붙어 있다. DCMAC(L2)은 그 바깥에 Ethernet 헤더(DA/SA/Type)와 FCS만 두르고, L1에서 bit stream으로 내보낸다. 따라서 검증에서 payload 내부의 IP checksum 같은 상위 계층 무결성은 DCMAC의 책임 밖이며, 이 경계를 흐리면 검증 범위가 무한히 번진다. 디버그 시에도 "항상 L1부터 위로" 원칙에 따라 lane lock(L1) → frame 무결성/CRC(L2) 순으로 격리한다.
+
+</details>
+
+## Q7. (Analyze)
+
+현대 switched/full-duplex Ethernet에서도 CSMA/CD가 충돌을 감지하며, 데이터센터에서 PFC가 "필수"인 이유는 단지 Pause frame보다 세밀하기 때문이다 — 이 두 진술을 각각 평가하라.
+
+<details>
+<summary>정답 / 해설</summary>
+
+- **CSMA/CD 진술**: 틀림. 1992년 full-duplex와 switch 도입으로 충돌 자체가 사라져 현대 Ethernet에 CSMA/CD는 사실상 없다. 64-byte 최소 frame 등 일부 규칙만 호환성 유물로 남았다.
+- **PFC 진술**: 불완전/틀림. PFC가 데이터센터 필수인 진짜 이유는 **RoCE(RDMA over Converged Ethernet)의 무손실 요구**다.
+
+**해설.** Ethernet은 1973년 Metcalfe의 CSMA/CD(공유 매체에서 충돌을 감지·재전송)로 시작했지만, full-duplex와 switch가 등장하면서 각 링크가 점대점 전이중이 되어 충돌이 원천적으로 사라졌다. 그래서 현대 Ethernet은 "이름만 같은 다른 프로토콜"에 가깝다. PFC(802.1Qbb)는 단순히 Pause frame(802.3x)을 priority별로 쪼갠 개선이 아니라, east-west 트래픽 폭증으로 도입된 RDMA가 Ethernet 위 RoCE로 정착하면서 loss-sensitive한 RoCE 트래픽에 lossless를 보장해야 했기 때문에 PFC+ECN이 구조적 전제 조건이 된 것이다. Pause frame은 포트 전체를 멈춰 head-of-line blocking을 일으키므로, RoCE만 보호하고 best-effort는 흐르게 하려면 priority별 PFC가 필요하다. DCMAC이 PFC를 정확히 구현·검증해야 하는 동기가 바로 이 데이터센터 무손실 네트워크 요구다.
+
+</details>

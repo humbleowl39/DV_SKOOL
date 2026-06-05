@@ -17,6 +17,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 - **Diagram (분석)** AXI 5채널 구조와 VALID/READY 핸드셰이크 타이밍을 화이트보드로 그리며 설명
 - **Apply (적용)** Burst (FIXED/INCR/WRAP), Outstanding, ID 기반 OoO 트래픽을 시나리오로 작성
 - **Implement (생성)** AXI-Stream의 TUSER/TKEEP/TLAST를 활용한 패킷 전송 검증 환경 설계
+- **Analyze (분석)** ACE/ACE-Lite/CHI 의 coherency 확장과 snoop 트랜잭션이 AXI 위에 어떻게 얹히는지 추적
 - **Evaluate (평가)** SoC 통합 시 어느 인터페이스에 어느 프로토콜을 쓸지 trade-off 기반 결정
 
 ## 📋 사전 지식
@@ -30,7 +31,7 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 
 순차 학습 권장 (APB→AHB→AXI는 점진적 복잡도 증가):
 
-**언제 어느 프로토콜?** APB = 레지스터 접근, AHB = 레거시 중간 성능, AXI = 고성능 메모리/IP 인터커넥트, AXI-Stream = 패킷/프레임 데이터 패스.
+**언제 어느 프로토콜?** APB = 레지스터 접근, AHB = 레거시 중간 성능, AXI = 고성능 메모리/IP 인터커넥트, AXI-Stream = 패킷/프레임 데이터 패스, ACE/CHI = 캐시 일관성이 필요한 멀티코어·이기종 인터커넥트.
 
 ## 학습 모듈
 
@@ -38,7 +39,8 @@ UVM 검증 환경에서의 프로토콜 적용은 [UVM 코스](../uvm/) 참고.
 	<LinkCard title="Module 01 — APB & AHB" href="./01_apb_ahb/" />
 	<LinkCard title="Module 02 — AXI (Advanced eXtensible Interface)" href="./02_axi/" />
 	<LinkCard title="Module 03 — AXI-Stream" href="./03_axi_stream/" />
-	<LinkCard title="Module 04 — Quick Reference Card" href="./04_quick_reference_card/" />
+	<LinkCard title="Module 04 — ACE / CHI Coherency" href="./04_ace_chi_coherency/" />
+	<LinkCard title="Module 05 — Quick Reference Card" href="./05_quick_reference_card/" />
 </CardGrid>
 
 ## 코스 자료

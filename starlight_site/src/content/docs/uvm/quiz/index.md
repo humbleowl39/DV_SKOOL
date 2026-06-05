@@ -12,7 +12,8 @@ title: "UVM 퀴즈"
 - **Module 04** — [Unit 4: config_db & Factory](./04_config_db_factory_quiz/)
 - **Module 05** — [Unit 5: TLM, Scoreboard, Coverage](./05_tlm_scoreboard_coverage_quiz/)
 - **Module 06** — [Unit 6: UVM 실무 패턴 & 안티패턴](./06_practical_patterns_quiz/)
-- **Module 07** — [UVM — Quick Reference Card](./07_quick_reference_card_quiz/)
+- **Module 07** — [Register Layer (RAL)](./07_register_layer_ral_quiz/)
+- **Module 08** — [UVM — Quick Reference Card](./08_quick_reference_card_quiz/)
 
 ## 사용법
 
