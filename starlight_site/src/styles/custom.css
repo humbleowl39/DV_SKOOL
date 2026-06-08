@@ -413,6 +413,7 @@
 .cat-proto { --cat-c: #8b5cf6; }
 .cat-mem   { --cat-c: #f59e0b; }
 .cat-soc   { --cat-c: #ef4444; }
+.cat-found { --cat-c: #64748b; }
 .cat-app   { --cat-c: #14b8a6; }
 
 /* Landing hero: tighten the oversized splash padding (default clamps up to 10rem)
