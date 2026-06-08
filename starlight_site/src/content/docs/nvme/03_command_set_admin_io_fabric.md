@@ -63,7 +63,7 @@ NRT DV(NVMe-oF over RDMA) 환경의 전형적 bring-up 순서를 봅니다.
 ```d2
 direction: down
 
-S1: "**① Fabric: Connect**\nadmin QP(qid=5) 활성화\n→ admin 큐 쌍 수립"
+S1: "**① Fabric: Connect**\nadmin QP 활성화 (NRT DV: qid=5,\n표준 로컬 NVMe는 qid=0)\n→ admin 큐 쌍 수립"
 S2: "**② Admin: Identify / 설정**\ncontroller·namespace 정보 취득\nIO 큐 생성"
 S3: "**③ IO: Write / Read**\nNVM Write로 데이터 적재\nNVM Read로 검증"
 S1 -> S2: "Connect 완료 후 admin cmd 가능"

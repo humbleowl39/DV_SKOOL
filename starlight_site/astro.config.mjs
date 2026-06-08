@@ -55,6 +55,7 @@ export default defineConfig({
 						{ label: 'Mixed-Signal DV', collapsed: true, items: [{ autogenerate: { directory: 'mixed_signal_dv' } }] },
 						{ label: 'cocotb (Python DV)', collapsed: true, items: [{ autogenerate: { directory: 'cocotb' } }] },
 						{ label: 'OOP & Design Patterns', collapsed: true, items: [{ autogenerate: { directory: 'oop_design_patterns' } }] },
+						{ label: 'CPU / Core Verification', collapsed: true, items: [{ autogenerate: { directory: 'cpu_dv' } }] },
 					],
 				},
 				{
@@ -96,6 +97,7 @@ export default defineConfig({
 					label: '컴퓨팅 기초 · Foundations',
 					items: [
 						{ label: 'Computer Architecture', collapsed: true, items: [{ autogenerate: { directory: 'computer_architecture' } }] },
+						{ label: 'ARM CPU (AArch64)', collapsed: true, items: [{ autogenerate: { directory: 'cpu_arm' } }] },
 						{ label: 'Operating Systems (for DV)', collapsed: true, items: [{ autogenerate: { directory: 'os_for_dv' } }] },
 						{ label: 'HW/SW Interaction', collapsed: true, items: [{ autogenerate: { directory: 'hw_sw_interaction' } }] },
 					],

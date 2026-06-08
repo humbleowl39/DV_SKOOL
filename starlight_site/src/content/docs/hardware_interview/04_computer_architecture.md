@@ -306,5 +306,7 @@ Renaming 으로 I3 의 r1 을 *physical p17* 같은 새 register 로 매핑 → 
 - *Computer Architecture: A Quantitative Approach* (Hennessy & Patterson) — 정석
 - *Modern Processor Design* (Shen & Lipasti) — OoO / 예측 심화
 - ARM Cortex-A Programmer's Guide
+- [DV SKOOL — Computer Architecture](https://humbleowl39.github.io/DV_SKOOL/computer_architecture/) — ISA·파이프라인·OoO·메모리 계층·성능 법칙 심화 코스
 - [DV SKOOL — MMU](https://humbleowl39.github.io/DV_SKOOL/mmu/) — TLB / 페이지 테이블 심화
+- [DV SKOOL — Operating Systems (for DV)](https://humbleowl39.github.io/DV_SKOOL/os_for_dv/) — process / scheduling / paging 배경
 - [Unit 4 퀴즈](../quiz/04_computer_architecture_quiz/) 로 자기 점검

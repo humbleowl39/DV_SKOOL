@@ -1,0 +1,82 @@
+---
+title: "ARM AArch64 (Arm 아키텍처)"
+description: ARM AArch64 — ISA, 레지스터/PSTATE, Exception Level, weak memory/배리어, MMU, 캐시/GIC, 마이크로아키텍처, 어셈블리 패턴
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 ARM CPU를 배우는가
+
+검증 엔지니어가 다루는 SoC의 한복판에는 거의 언제나 ARM 코어가 앉아 있습니다. AWS Graviton, NVIDIA Grace, 모바일 AP, 그리고 데이터센터 가속기 카드의 관리용 코어까지 — 펌웨어가 돌고, 인터럽트가 라우팅되고, MMIO 레지스터가 토글되는 그 무대가 ARM AArch64입니다. 코어가 어떤 특권 레벨에서 무슨 레지스터를 건드리는지, 메모리 쓰기가 다른 코어에 어떤 순서로 보이는지를 모르면, DUT가 "느린데 버그는 아닌" 동작과 "빠른데 사실은 틀린" 동작을 구분할 수 없습니다.
+
+이 지식이 없으면 다음 순간에 막힙니다. 펌웨어가 `SVC`로 커널에 진입했는데 어느 벡터 엔트리로 들어갔는지 추적하지 못하고, weakly-ordered 메모리에서 배리어가 빠진 lock-free 코드가 x86에서는 통과하다 ARM에서 희귀하게 깨지는 이유를 설명하지 못하며, `MSR`로 시스템 레지스터를 바꾸고 `ISB`를 빠뜨려 옛 컨텍스트로 명령이 실행되는 함정을 디버깅하지 못합니다. 이 코스는 ARM Architecture Reference Manual(ARM ARM)의 모델을 따라, ISA라는 하드웨어/소프트웨어 계약부터 어셈블리 수준의 실전 패턴까지를 인과의 사슬로 엮어 설명합니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** ARM이 load-store RISC로서 fixed-length 명령·31개 GPR·weak memory를 택한 이유와 그것이 x86 대비 어떤 trade-off인지 설명
+- **Identify (이해)** X0–X30/SP/PC와 PSTATE(NZCV/DAIF)·시스템 레지스터(ELR/SPSR/ESR/FAR/VBAR)가 각각 무엇을 담는지 식별
+- **Trace (분석)** EL0의 `SVC` 한 번이 벡터 테이블의 어느 엔트리로 들어가고 HW가 어떤 레지스터를 자동 저장하는지 단계별로 추적
+- **Apply (적용)** weakly-ordered 환경에서 DMB/DSB/ISB와 LDAR/STLR을 producer/consumer·MMIO·페이지테이블 시퀀스에 정확히 적용
+- **Differentiate (분석)** DMB(관측 순서)·DSB(완료 대기)·ISB(파이프라인 재-fetch)를 보장 범위와 비용 기준으로 구분
+- **Evaluate (평가)** ARM 코어가 끼인 SoC에서 마주치는 ordering/예외/캐시 mismatch가 DUT 버그인지 정상 동작인지 평가
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **ISA·파이프라인 기본**: 명령 인출/디코드/실행, 레지스터 파일 개념 — 부족하면 [Computer Architecture](../computer_architecture/)를 먼저
+- **이진수와 비트 분해**: 주소 비트 자르기, 마스크/시프트, 16진수
+- **C/어셈블리 감각**: load/store, 함수 호출 규약, 스택 프레임
+- **가상 메모리 직관**: VA→PA 번역, 페이지 테이블이 왜 존재하는지 — 깊은 내용은 [MMU](../mmu/)에서
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. **기초(M01–M04)** 는 ISA·레지스터·특권 모델·메모리 모델이라는 토대를 다지고, **시스템(M05–M06)** 은 주소 번역과 캐시/인터럽트로 확장하며, **심화(M07–M08)** 는 마이크로아키텍처와 실전 어셈블리 패턴으로 마무리합니다.
+
+<CardGrid>
+	<LinkCard title="M01 · 개요 & ISA" href="./01_overview_isa/" description="기초 — load-store RISC 철학, fixed-length, ARM 프로파일(A/R/M/Neoverse), ISA 버전 진화, AArch64 vs RISC-V vs x86." />
+	<LinkCard title="M02 · 레지스터 & PSTATE" href="./02_registers_pstate/" description="기초 — X0–X30/SP/PC/XZR, W 뷰의 zero-extend, PSTATE(NZCV/DAIF), 예외 처리 시스템 레지스터." />
+	<LinkCard title="M03 · Exception Level" href="./03_exception_levels/" description="기초 — EL0–EL3 특권 모델, SVC/HVC/SMC/ERET, 예외 진입 시 자동 저장, 0x80 단위 벡터 테이블." />
+	<LinkCard title="M04 · 메모리 모델 & 배리어" href="./04_memory_model_barriers/" description="기초 — weakly-ordered 모델, DMB/DSB/ISB, acquire/release(LDAR/STLR), LDXR/STXR vs LSE atomics." />
+	<LinkCard title="M05 · MMU & 주소 번역" href="./05_mmu_translation/" description="시스템 — TTBR0/1, granule, 다단계 페이지 워크, stage-1/2, ASID/VMID. (예정)" />
+	<LinkCard title="M06 · 캐시 & GIC" href="./06_caches_gic/" description="시스템 — PoU/PoC, CMO, inclusive/exclusive, GICv3 인터럽트 라우팅. (예정)" />
+	<LinkCard title="M07 · 마이크로아키텍처" href="./07_microarchitecture/" description="심화 — frontend/분기 예측, OoO backend, load-store unit, TLB/PTW. (예정)" />
+	<LinkCard title="M08 · 어셈블리 패턴" href="./08_assembly_patterns/" description="심화 — 컴파일된 코드 패턴, SIMD/NEON, 함수 프롤로그/에필로그, 캐시 관리 시퀀스. (예정)" />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — 동기 시나리오 → 직관(비유 + 다이어그램) → 작은 예 → 일반화 → 디테일
+4. **흔한 오해 & DV 디버그 체크리스트** — 검증 현장에서 마주치는 함정
+5. **핵심 정리** — 압축된 takeaway + 자가 점검 + 출처
+6. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="ARM AArch64 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+	<LinkCard title="MMU & 주소 번역" href="../mmu/" description="페이지 테이블·TLB 일반 원리를 ISA 중립적으로." />
+	<LinkCard title="Cache Coherence" href="../cache_coherence/" description="MESI/MOESI·스누핑·디렉터리 등 일관성 프로토콜 심화." />
+	<LinkCard title="ARM Security (TrustZone)" href="../arm_security/" description="Secure/Non-secure 월드·TEE·신뢰 부팅 심화." />
+	<LinkCard title="AMBA Protocols" href="../amba_protocols/" description="AXI/ACE/CHI 등 ARM 인터커넥트 프로토콜." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **계약으로 읽기**: ISA는 HW/SW 계약이다 — 새 명령·레지스터를 만나면 "누가(어느 EL) 무엇을 보장하나"를 먼저 물어라.
+- **예외는 손으로**: `SVC` → 벡터 엔트리 → 자동 저장 4레지스터 → 핸들러 → `ERET`의 흐름을 직접 그려 본다.
+- **배리어는 의도로**: DMB/DSB/ISB를 외우지 말고 "관측 순서? 완료? 파이프라인?" 중 무엇이 필요한지로 고른다.
+- **DV 연결 고리 의식**: 각 개념이 검증에서 어떤 ordering/예외 mismatch로 나타나는지 본문의 디버그 체크리스트를 챙긴다.
+:::
+
+:::caution[흔한 함정]
+ARM에서 가장 자주 생기는 오개념은 **"x86에서 돌던 lock-free 코드는 ARM에서도 안전하다"**(weak memory에서 store-store가 재정렬됨), **"`MSR` 다음 명령은 즉시 새 컨텍스트로 실행된다"**(ISB 없이는 옛 상태), **"벡터 엔트리에 긴 핸들러를 둘 수 있다"**(0x80 바이트 제한)입니다. M04·M02·M03에서 각각 바로잡습니다.
+:::

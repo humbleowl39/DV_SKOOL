@@ -135,7 +135,7 @@ LLC: "**Last Level Cache (LLC / SLC)**" {
 
 ### 4.3 Point of Coherence (PoC)의 의미
 
-PoC는 모든 메모리 observer(CPU, GPU, DMA)가 *같은 갱신 데이터를 보는 것이 보장되는 물리적 지점*입니다. IO-coherent 트래픽과 heterogeneous 트랜잭션에서 LLC가 흔히 이 PoC 역할을 맡아, 트랜잭션이 외부 DRAM에 영구 commit되기 *전에* 모든 관찰자의 뷰를 일치시킵니다 (출처: HDG §4). DMA read가 CPU dirty를 끌어오는 §3.1의 동작이 *어디서* 일어나는가에 대한 답이 바로 PoC=LLC입니다.
+PoC는 모든 메모리 observer(CPU, GPU, DMA)가 *같은 갱신 데이터를 보는 것이 보장되는 물리적 지점*입니다. IO-coherent 트래픽과 heterogeneous 트랜잭션에서 LLC가 흔히 이 PoC 역할을 맡아, 트랜잭션이 외부 DRAM에 영구 commit되기 *전에* 모든 관찰자의 뷰를 일치시킵니다 (출처: HDG §4). DMA read가 CPU dirty를 끌어오는 본문 §3 (A) 시나리오의 동작이 *어디서* 일어나는가에 대한 답이 바로 PoC=LLC입니다.
 
 ---
 

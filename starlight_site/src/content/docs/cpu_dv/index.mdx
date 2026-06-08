@@ -1,0 +1,80 @@
+---
+title: "CPU Design Verification (프로세서 검증)"
+description: 프로세서 DV — step-and-compare lockstep, RVFI/RVVI, UVM core env, riscv-dv 자극, riscv-formal, ISA coverage
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 왜 CPU DV를 배우는가
+
+프로세서는 검증 대상 중에서도 가장 잔인한 부류에 속합니다. AXI 슬레이브나 DMA 엔진은 "입력을 넣으면 정해진 출력이 나온다"는 비교적 좁은 계약을 가지지만, CPU 는 ISA 라는 거대한 계약 전체를 구현해야 합니다. 명령 하나하나가 architectural state — program counter, 범용 레지스터 파일, CSR(control/status register), privilege mode, 메모리 — 를 정해진 방식으로 바꿔야 하고, 그 상태 공간은 사실상 무한합니다. 게다가 현대 코어는 이 명령들을 파이프라인으로 겹쳐 실행하고, 분기를 추측 실행하며, 예외가 터지면 추측한 것을 모두 되돌려 정확한 상태로 복구해야 합니다. 이 모든 것을 "기능적으로 올바르게" 검증하는 것이 CPU DV 입니다.
+
+이 지식이 없으면 다음 순간에 막힙니다. 단순히 명령 몇 개를 directed test 로 돌려 PASS 를 봤다고 코어가 맞다고 착각하고, 두 register write 의 순서가 어긋난 미묘한 hazard 버그를 scoreboard 가 못 잡으며, CSR side-effect 나 privilege transition 버그가 깊은 실행 경로에서만 드러나는데도 그 경로에 도달하는 자극을 만들지 못합니다. 이 코스는 프로세서 검증의 표준 방법론 — reference model 과의 step-and-compare lockstep, retirement 시점의 commit monitor, ISA coverage — 을 인과의 사슬로 엮어 설명합니다. 구체적인 러닝 예제는 오픈소스 도구가 풍부한 RISC-V 를 쓰지만, 여기서 다루는 방법론은 ARM, MIPS, x86 등 어떤 ISA 의 코어에도 그대로 적용됩니다.
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Explain (이해)** 프로세서 검증이 왜 어려운지를 상태 공간·파이프라인·예외·메모리 오더링의 네 축으로 설명하고, simulation-based DV 의 5 단계를 구분
+- **Analyze (분석)** reference model(ISS) 과 RTL 을 retirement 시점에 비교하는 step-and-compare lockstep 이 첫 divergent instruction 을 어떻게 조기에 flag 하는지 추적
+- **Differentiate (분석)** RVFI(검증용 retire 신호 인터페이스) 와 RVVI(DV 서브시스템 통합 인터페이스) 가 각각 무엇을 노출하고 무엇을 묶는지 구분
+- **Implement (적용)** retire/commit monitor → scoreboard → golden predictor(DPI-C) 로 이어지는 UVM 코어 검증 환경의 데이터 흐름을 구성
+- **Apply (적용)** riscv-dv 같은 제약 랜덤 instruction generator 로 코너 케이스를 노리는 자극을 생성하는 전략을 적용
+- **Evaluate (평가)** riscv-formal 의 형식 검증과 시뮬레이션 기반 검증을 보완 관계로 평가하고, ISA coverage 와 특수 영역(privilege, 예외, memory ordering)의 closure 전략을 판단
+
+## 사전 지식
+
+다음을 알고 있으면 본문이 매끄럽게 읽힙니다:
+
+- **컴퓨터 구조 기본**: ISA, 5-stage 파이프라인과 hazard, OoO 실행과 retirement, 예외/precise interrupt — [Computer Architecture 코스](../computer_architecture/)의 M01–M03
+- **UVM 방법론**: agent/monitor/scoreboard, TLM analysis port, coverage — [UVM 코스](../uvm/)의 M01–M05
+- **형식 검증 감각**: assertion, bounded model checking 의 개념 — [Formal Verification 코스](../formal_verification/)
+- **C/DPI-C**: SystemVerilog 와 C 모델을 잇는 인터페이스 (golden predictor 연동에 사용)
+
+## 학습 모듈
+
+순서대로 학습을 권장합니다. **동기(M01)** 가 검증의 난이도를 규정하고, **핵심 방법론(M02–M04)** 이 step-and-compare → 인터페이스 → UVM 환경으로 이어지며, **자극·형식·커버리지(M05–M07)** 가 완전성을 채웁니다.
+
+<CardGrid>
+	<LinkCard title="M01 · 왜 CPU DV는 어려운가" href="./01_why_cpu_dv/" description="동기 — 상태 공간·파이프라인·예외·메모리 오더링, simulation-based processor DV 의 5 단계." />
+	<LinkCard title="M02 · Step-and-Compare Lockstep" href="./02_step_and_compare/" description="핵심 — reference model(ISS=Spike) 과 RTL 을 retirement 시점에 비교, 첫 divergence flag." />
+	<LinkCard title="M03 · RVFI & RVVI" href="./03_rvfi_rvvi/" description="핵심 — 검증용 retire 신호 인터페이스(RVFI) 와 DV 서브시스템 통합 표준(RVVI), retire monitor 가 보는 것." />
+	<LinkCard title="M04 · UVM 코어 검증 환경" href="./04_uvm_core_env/" description="핵심 — retire/commit monitor → scoreboard vs golden predictor(DPI-C), constrained-random + SVA + coverage." />
+	<LinkCard title="M05 · riscv-dv 자극 생성" href="./05_riscv_dv_stimulus/" description="자극 — 제약 랜덤 instruction generator 로 코너 케이스를 노리는 stream 생성 전략." />
+	<LinkCard title="M06 · riscv-formal 형식 검증" href="./06_riscv_formal/" description="형식 — RVFI 기반 명령 단위 형식 검증, 시뮬레이션과의 보완 관계." />
+	<LinkCard title="M07 · Coverage & 특수 영역" href="./07_coverage_special_areas/" description="완성 — ISA coverage, privilege/예외/memory ordering 같은 특수 영역의 closure." />
+</CardGrid>
+
+## 코스 운영 방식
+
+각 모듈은 다음 순서로 구성됩니다:
+
+1. **학습 목표** — 모듈 완료 후 할 수 있는 것 (Bloom's Taxonomy 동사)
+2. **사전 지식** — 본 모듈에 필요한 선행 학습 항목
+3. **본문** — 동기 시나리오 → 직관(비유 + 다이어그램) → 작은 예 → 일반화 → 디테일
+4. **흔한 오해 & 디버그 체크리스트** — 검증 현장에서 마주치는 함정
+5. **핵심 정리** — 압축된 takeaway + 자가 점검
+6. **퀴즈** — 이해도 점검 (별도 페이지)
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="CPU DV 핵심 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
+	<LinkCard title="Computer Architecture" href="../computer_architecture/" description="ISA·파이프라인·OoO·예외의 1차 원리 — CPU DV 의 토대." />
+	<LinkCard title="UVM" href="../uvm/" description="monitor/scoreboard/coverage — 코어 검증 환경의 빌딩 블록." />
+	<LinkCard title="Formal Verification" href="../formal_verification/" description="assertion·BMC — riscv-formal 의 배경." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **"무한 상태 공간"을 항상 떠올려라**: 프로세서 DV 의 모든 기법은 "directed test 로는 가망이 없는" 상태 공간을 어떻게 효율적으로 훑느냐의 답이다 — 새 기법을 만나면 "이게 상태 공간의 어느 부분을 채우나"를 먼저 물어라.
+- **reference model 이 채점관**: scoreboard 가 무엇을 expected 로 쓰는지 항상 의식하라. 직접 짠 기대값이 아니라 ISS(golden predictor) 가 그 역할을 한다.
+- **retirement 시점을 손으로**: 명령이 fetch → execute → retire 로 흐를 때 architectural state 가 "언제" 바뀌는지(retire 시점) 타이밍을 직접 그려 본다.
+- **RISC-V 예제 ↔ 일반 방법론 분리**: 본문의 Spike/RVFI/riscv-dv 는 도구 사례일 뿐이다. 방법론(reference-model lockstep, retire monitor, ISA coverage)은 ARM 등 다른 코어에도 동일하게 옮겨진다.
+:::
+
+:::caution[흔한 함정]
+프로세서 검증에서 가장 자주 생기는 오개념은 **"directed test 가 다 PASS 면 코어가 맞다"**(상태 공간의 극히 일부만 본 것), **"execution 순서대로 비교하면 된다"**(architectural state 는 retirement 시점에 in-order 로 확정된다), **"형식 검증이 시뮬레이션을 대체한다"**(둘은 보완 관계)입니다. M01·M02·M06 에서 각각 바로잡습니다.
+:::
