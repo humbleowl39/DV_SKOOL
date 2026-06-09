@@ -244,6 +244,14 @@ DD -- BUS
 | **Full-duplex per lane** | TX/RX 동시 송신 |
 | **Layered + packet** | TLP/DLLP/PHY layer 분리, 디버그/확장 용이 |
 
+:::note[embedded clock인데 왜 reference clock도 필요한가 — CDR vs ppm drift]
+"clock을 data에 임베드했다" 면 별도 clock이 아예 필요 없을 것 같지만, 실제로는 **refclk(보통 100 MHz)도 함께** 필요합니다. 둘은 역할이 다릅니다.
+
+수신 측 **CDR(Clock and Data Recovery)** 는 들어오는 data의 0↔1 transition(edge)에서 박자를 뽑아 "지금 sample하라" 는 시점을 만듭니다. 그런데 CDR가 *edge에서 박자를 맞춰도*, 송신기와 수신기의 **기준 주파수 자체가 미세하게 다르면**(crystal oscillator는 ppm 단위 오차가 있음) 문제가 남습니다. 송신기가 100.00 MHz로 보내는데 수신기 기준이 100.005 MHz라면, 두 clock 사이에 *서서히 누적되는 위상 차이(drift)* 가 생깁니다. 시간이 지나면 수신 buffer가 송신보다 조금 빠르거나 느리게 비워져, 결국 underflow/overflow가 납니다. 이 누적 drift를 흡수하려고 **elastic/drift buffer** 를 두고, 주기적으로 SKP 같은 보정 심볼을 넣고 빼서(Module 05) buffer 수위를 맞춥니다.
+
+여기서 **refclk의 역할** 이 드러납니다 — refclk는 송수신 PHY에 *공통의 base frequency 기준* 을 줍니다. 양 끝이 같은 refclk(Common Refclock)를 공유하면 ppm 오차가 사실상 같은 방향으로 움직여 drift가 최소화되고, 독립 refclk(SRIS, Separate Refclock with Independent SSC)를 쓰면 drift가 커져 더 깊은 elastic buffer와 잦은 SKP 보정이 필요합니다. 정리하면: **CDR는 "edge에서 sample 시점을 만든다", refclk는 "기준 주파수를 제공한다", elastic/drift buffer는 "남는 ppm drift를 흡수한다"** — 세 가지가 역할을 나눠 가지므로 embedded clock이어도 refclk가 사라지지 않습니다.
+:::
+
 ### 5.3 Topology 4 객체 상세
 
 ```d2
@@ -303,6 +311,15 @@ Gen5 까지는 TLP/DLLP 가 packet 단위로 가변 길이. Gen6 의 **FLIT (Flo
      2 bit / symbol → throughput 2× per symbol
      단, BER 악화 → FLIT + FEC 로 보완
 ```
+
+:::note[scrambling이 왜 필요한가 — DC balance와 EMI의 이중 역할]
+128b/130b 같은 encoding은 8b/10b처럼 DC balance를 *내장* 하지 않습니다(2-bit sync header만 붙임). 그래서 PCIe는 payload에 **scrambling** — 송신 데이터를 의사난수(LFSR) 패턴과 XOR — 을 적용하는데, 이는 단순 난독화가 아니라 두 가지 물리적 문제를 동시에 풉니다.
+
+- **EMI(전자파 간섭) 감소.** 만약 같은 비트 패턴이 반복되면(예: 0xAAAA… 같은 규칙적 신호), 그 주파수에 에너지가 집중되어 *날카로운 spectral peak* 이 생깁니다 — 이 peak가 곧 강한 EMI 방사이고, 규제 한계를 넘기기 쉽습니다. scrambling은 데이터를 의사난수로 흩어 같은 비트열이라도 매번 다른 패턴으로 보내므로, 에너지가 *넓은 주파수 대역에 고르게 퍼집니다(spectral spreading)*. peak가 낮아지니 EMI가 줄어듭니다.
+- **CDR 보조 (long run-length 제거).** CDR는 data의 transition(edge)에서 박자를 뽑는데, 0이나 1이 *오래 연속(long run)* 되면 edge가 없어 CDR가 박자를 잃습니다(drift). scrambling은 규칙적 패턴을 깨 0/1 transition이 충분히 자주 일어나게 만들어, CDR가 박자를 계속 유지하도록 돕습니다.
+
+즉 scrambling은 "EMI를 줄이는 spectral spreading" 과 "CDR를 돕는 transition 보장" 이라는 두 목적을 한 메커니즘으로 달성합니다. (이 PHY 동작의 세부는 Module 02/05에서 다룹니다 — 여기서는 *왜* 필요한지의 design rationale만 둡니다.)
+:::
 
 ### 5.5 Bandwidth 계산 예제
 

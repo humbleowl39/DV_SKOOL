@@ -267,6 +267,18 @@ Reference Model 구조:
 실무에서 가장 흔한 조합은 **C++ Reference Model + DPI-C** 입니다.
 ```
 
+:::note[메커니즘 — reference 와 DUT 를 "타이밍 무관" 하게 비교하는 방법 (transaction-level + FIFO 순서 매칭)]
+"타이밍 차이 OK, 데이터/프로토콜 차이 FAIL" 이 _어떻게_ 가능한가? 핵심은 비교를 **cycle 단위가 아니라 transaction 단위** 로 추상화하는 것입니다. reference model 은 RTL 처럼 매 cycle 신호를 흉내 내지 않고, "이 입력이 들어오면 _기대되는 TX segment 는 (seq, ack, flags, data) 다_" 라는 **transaction 수준의 expected** 만 산출합니다. DUT 가 실제로 그 segment 를 _몇 ns 에_ 내보냈는지는 신경 쓰지 않습니다.
+
+그 다음 scoreboard 는 expected 와 actual 을 각각 **analysis FIFO** 에 _도착 순서대로_ 쌓고, **앞에서부터 한 쌍씩 꺼내 비교(FIFO 순서 매칭)** 합니다. 두 FIFO 의 n 번째 항목끼리 필드를 대조하므로, 두 segment 가 5 ns 차이로 나오든 500 ns 차이로 나오든 — _순서만 같으면_ 같은 위치에서 만나 비교됩니다. 즉 cycle-timing 은 FIFO 가 흡수해 추상화하고, scoreboard 는 오직 "내용(seq/ack/flags/payload)과 순서" 만 본다 — 그래서 정상적인 타이밍 변동에는 false fail 이 없고, _데이터나 프로토콜이 틀어진_ 경우에만 mismatch 가 잡힙니다.
+:::
+
+:::note[메커니즘 — DPI-C 가 SV 에서 C++ 모델을 함수처럼 호출하는 원리]
+DPI (Direct Programming Interface) 는 SystemVerilog 와 C 사이의 함수 호출 경계입니다. C 함수를 SV 에서 부르려면 SV 쪽에 `import "DPI-C" function ...` 로 선언하고, 반대로 SV task/function 을 C 에서 부르려면 `export "DPI-C"` 합니다. 컴파일·elaboration 시 시뮬레이터가 이 선언들을 묶어, **SV 코드의 함수 호출이 곧바로 링크된 C/C++ 함수의 호출로 연결** 되도록 ABI(인자 전달·반환)를 매칭합니다. 그래서 reference model 쪽에서는 `expected = toe_ref_step(input_segment);` 같은 _평범한 함수 호출_ 한 줄로 C++ 모델을 돌리고 그 결과를 SV 객체로 받아올 수 있습니다 — IPC 나 소켓 없이 같은 프로세스 안에서 직접 호출입니다.
+
+이 메커니즘 덕분에 **검증된 Linux TCP 스택의 C 코드를 (적절히 래핑해) 거의 그대로 reference 로 재사용** 할 수 있습니다 — TCP 의 미묘한 RFC corner 동작을 SV 로 다시 구현해 버그를 새로 만드는 대신, _이미 수십 년 검증된_ 구현을 golden model 로 끌어다 쓰는 것입니다. (대가는 §디버그 체크리스트의 "DPI-C 외부 함수가 non-deterministic" 같은 재현성 관리입니다.)
+:::
+
 ### 5.2 Scoreboard 설계 — 트랜잭션 레벨 비교
 
 ```

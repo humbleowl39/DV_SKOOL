@@ -42,6 +42,8 @@ DRAM.DQ_IO -> DRAM.Array: "셀-I/O 사이 (on-die ECC가 보호)"
 
 같은 "ECC"라는 단어를 쓰더라도 보호 대상이 완전히 다릅니다. DDR5의 Transparency ECC는 셀 내부를 보호하고 controller에게는 투명하게 동작하는 반면, LPDDR5의 Link ECC는 DQ 핀과 controller 사이 링크를 보호합니다. DV는 두 가지를 별도로 설계하고 검증해야 합니다. 한 가지만 검증하고 다른 것을 빠뜨리면 보호되지 않는 오류 경로가 생깁니다.
 
+_왜 on-die ECC 가 있는데도 system(외부) ECC 가 여전히 필요한가_ 는 둘이 _서로 다른 오류 영역_ 을 덮기 때문입니다 — 보호 범위가 겹치지 않습니다. **On-die ECC** 는 셀 array 안에서 발생하는 _소규모 soft error_ (셀 미세화로 생긴 단일 비트 누설·교란)를 칩 내부에서 조용히 정정하는 것이 목적이고, 그 능력은 "워드 안 1-bit 정정" 수준에 머뭅니다. 반면 **system ECC** 는 on-die 가 다루지 못하는 영역을 책임집니다 — (1) DQ 링크를 건너는 동안 생긴 전송 오류, (2) 한 워드 안에서 동시에 여러 비트가 틀어지는 multi-bit 오류, (3) DRAM 칩 하나가 통째로 죽어도 데이터를 복구해야 하는 **chipkill** 같은 device 단위 장애입니다. 즉 on-die ECC 는 _셀 한 칩 내부_ 의 잔잔한 오류를, system ECC 는 _칩 경계를 넘는·대규모_ 오류를 맡아, 둘이 합쳐져야 셀에서 controller 까지의 전체 경로가 빈틈없이 보호됩니다. 그래서 데이터센터·서버는 on-die ECC 를 기본으로 깔면서도 외부 SECDED/chipkill ECC 를 함께 사용하는 것입니다.
+
 ---
 
 ## 2. DDR4 의 신뢰성 메커니즘 — 기본 셋
@@ -170,6 +172,8 @@ DV는 *이 순서를 정확히* 모델링해야 scoreboard가 옳음.
 
 DDR5에서도 CRC는 유효. *Write CRC만 표준화* (Read CRC는 일반적 X).
 
+_왜 CRC 가 write data 만 보호하는가_ 는 "손상이 발견됐을 때 누가 무엇을 할 수 있는가" 의 비대칭에서 나옵니다. **Write** 의 경우 데이터가 controller → DRAM 으로 흘러 _DRAM cell 에 안착하면 되돌릴 수 없습니다_. 만약 링크에서 손상된 값이 그대로 cell 에 써지면, 나중에 그것을 읽을 때는 이미 늦어 — 손상 사실조차 알 수 없는 silent corruption 이 됩니다. 그래서 DRAM 이 burst 를 받자마자 CRC 로 검사해, 손상이면 cell 에 쓰기 _전에_ ALERT_n 으로 controller 에 알리고 재전송하게 막는 것이 필수입니다. 반대로 **Read** 는 데이터가 DRAM → controller 로 오는데, 받는 쪽이 controller 입니다. controller 는 자체 system ECC 와 재시도(re-read) 수단을 이미 갖고 있어, 링크에서 손상된 read 값을 자기 쪽에서 검출·정정하거나 다시 읽으면 됩니다 — 원본은 DRAM 에 멀쩡히 남아 있으므로 되돌릴 수 있습니다. 즉 write 는 "도착 전에 막지 않으면 영구 손상" 이라 link CRC 가 꼭 필요하고, read 는 "받는 controller 가 알아서 처리 가능" 하므로 별도 read CRC 를 표준화하지 않은 것입니다.
+
 ### 5.1 Write CRC 동작
 
 ```
@@ -264,6 +268,8 @@ endclass
 ```
 
 ### 7.2 Multi-bit error injection
+
+_왜 SECDED 는 single 은 정정(correct)하고 double 은 검출(detect)만 하는가_ 는 syndrome 의 분별력 한계에서 나옵니다. ECC 디코더는 받은 코드워드에 check matrix 를 곱해 **syndrome** 이라는 짧은 비트열을 얻는데, syndrome 은 "어떤 비트(들)가 뒤집혔는가" 의 지문 역할을 합니다. SECDED 코드는 **단일 비트** 가 뒤집힌 경우 각 비트마다 _서로 다른 고유한_ syndrome 이 나오도록 설계됩니다 — 그래서 syndrome 만 보면 정확히 몇 번째 비트가 틀렸는지 위치를 특정해 그 비트를 뒤집어 정정할 수 있습니다. 그런데 **두 비트** 가 동시에 뒤집히면, 그 둘의 효과가 합쳐진 syndrome 이 _어떤 단일 비트의 syndrome 과 같아 보이거나_ 다른 이중 비트 조합과 충돌합니다 — syndrome 만으로는 "single 인지 double 인지", "어느 두 비트인지" 를 유일하게 가려낼 수 없습니다. 잘못 추측해 정정하면 오히려 멀쩡한 비트를 망가뜨리므로, SECDED 는 추가된 패리티 한 비트(overall parity)로 "오류 비트 수가 홀수냐 짝수냐" 를 구분해 — double(짝수) 인 경우 위치는 모르지만 _존재는_ 알리는 detect-only 로 처리합니다. 위치를 특정할 수 없으니 정정은 포기하고 상위 계층에 보고하는 것입니다.
 
 ```systemverilog
 // 2-bit 에러 — SECDED 가정 시 detect만 가능 (correct 불가)

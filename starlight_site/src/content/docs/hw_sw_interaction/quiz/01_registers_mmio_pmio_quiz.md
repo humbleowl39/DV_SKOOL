@@ -18,7 +18,7 @@ title: "Quiz — 01: 디바이스 레지스터 & MMIO/PMIO"
 <details>
 <summary>정답 / 해설</summary>
 
-**C**. HDG 스펙이 드는 다섯 분류는 Control / Status / Interrupt / Data / Address(pointer)입니다. Cache는 레지스터 분류가 아니라 CPU의 메모리 계층 요소이며, 오히려 MMIO 영역에서는 *비활성화(uncached)* 해야 하는 대상입니다(2장). A·B·D는 모두 정식 분류에 속합니다.
+**C**. 디바이스 레지스터의 다섯 분류는 Control / Status / Interrupt / Data / Address(pointer)입니다. Cache는 레지스터 분류가 아니라 CPU의 메모리 계층 요소이며, 오히려 MMIO 영역에서는 *비활성화(uncached)* 해야 하는 대상입니다(2장). A·B·D는 모두 정식 분류에 속합니다.
 
 </details>
 

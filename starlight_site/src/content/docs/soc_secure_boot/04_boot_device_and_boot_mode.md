@@ -354,7 +354,7 @@ UFS 는 3계층 프로토콜 스택을 가집니다:
 - **UniPro** (링크 계층): 핸드셰이크와 Gear 협상 필요
 - **UFS Transport** (전송 계층): SCSI 명령어 세트
 
-M-PHY 캘리브레이션만으로도 PVT 변동에 대한 아날로그 튜닝으로 수 ms 가 소요됩니다.
+M-PHY 캘리브레이션만으로도 PVT 변동에 대한 아날로그 튜닝으로 수 ms 가 소요됩니다. _무엇을_ 맞추는지 몇 가지로 구체화하면(확인 필요, 깊이 자제): (1) **CDR(Clock-Data Recovery) lock** — 수신 직렬 스트림에서 클럭을 복원해 비트 경계 한가운데에서 샘플하도록 위상을 잠그는 과정, (2) **라인 임피던스 / 종단(termination)** — 반사를 줄이도록 출력 드라이버·종단 저항을 기준값에 맞춤(eMMC의 ZQ calibration과 같은 취지), (3) **전압 스윙·equalization** — 고속에서 손실로 닫힌 eye를 열도록 송신 스윙과 수신 EQ를 조정. 이들이 PVT(공정·전압·온도)로 칩·보드마다 달라지므로 부팅 시점에 아날로그로 튜닝해야 하고, 이 아날로그 수렴 과정이 수 ms를 차지합니다.
 
 ### 5.3 Boot Image Format — FIP (Firmware Image Package)
 
@@ -494,6 +494,8 @@ SoC (BootROM/TEE)                    UFS/eMMC RPMB 컨트롤러
 
   → 단조증가 카운터가 과거 요청의 재사용을 원천 차단
 ```
+
+핵심은 **counter 가 HMAC _입력_ 에 포함** 된다는 결합입니다. `HMAC(Key, Addr‖Data‖Counter)`처럼 counter가 MAC 계산에 들어가므로, 같은 Addr·Data라도 counter가 다르면 MAC 자체가 완전히 달라집니다. 따라서 공격자가 과거 패킷을 그대로 재전송하면 _그 패킷의 MAC은 옛 counter로 계산된 값_ 이라, 현재 counter로 재계산한 MAC과 불일치 → MAC 검증에서 먼저 걸립니다(counter 비교 이전에 이미 무효). 공격자는 HMAC key가 없어 새 counter에 맞는 MAC을 다시 만들 수도 없습니다. 즉 "counter를 MAC에 묶음 + key 비밀"이 합쳐져, 과거 패킷이 _MAC째_ 죽는 것이 replay 차단의 회로입니다.
 
 #### RPMB 활용 사례
 

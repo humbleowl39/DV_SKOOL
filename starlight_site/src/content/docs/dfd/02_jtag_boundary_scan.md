@@ -141,6 +141,8 @@ IRPATH -> IDLE
 
 TAP FSM은 16개 상태를 가지며, 핵심은 **DR scan 경로**와 **IR scan 경로**가 거의 대칭이라는 점입니다. 두 경로 모두 Capture → Shift → Exit1 → Update의 4단계를 거치고, Shift 상태에 머무는 동안 TDI/TDO로 비트가 직렬 이동합니다. Select-DR-Scan에서 TMS=1을 한 번 더 주면 Select-IR-Scan으로 넘어가 IR scan을 하게 됩니다. Test-Logic-Reset은 어느 상태에서든 TMS=1을 5번 주면 도달하는 안전 복귀점입니다.
 
+**왜 하필 "5번"인가 — FSM 그래프 거리.** 16-state FSM에서 _TMS=1로 갈 수 있는 간선만_ 따라가는 부분 그래프를 그리면, 모든 상태가 결국 Test-Logic-Reset으로 흘러들도록 설계되어 있습니다(TLR은 TMS=1 자기루프 — 한번 들어오면 계속 머묾). 이때 TLR에서 _가장 먼_ 상태에서 TMS=1만 밟아 TLR까지 가는 최단 경로의 길이가 정확히 **5** 입니다(예: Shift/Exit/Update 계열의 깊은 상태 → Exit → Update → Select-DR → Select-IR → TLR). 따라서 어느 상태에서 출발하든 TMS=1을 5번 연속 주면 _반드시_ TLR에 도달합니다 — 시작 상태를 모르더라도 reset이 보장되므로, 디버거가 "상태가 꼬였을 때 무조건 복귀"하는 안전장치로 씁니다.
+
 ### 4.2 Data Register 종류
 
 IR에 어떤 instruction을 싣느냐에 따라 TDI↔TDO 사이에 연결되는 DR이 달라집니다.
@@ -155,6 +157,8 @@ IR에 어떤 instruction을 싣느냐에 따라 TDI↔TDO 사이에 연결되는
 ### 4.3 boundary scan — JTAG의 원래 임무
 
 JTAG이 처음 정의된 이유는 boundary scan입니다. 칩의 각 IO 핀 옆에 boundary scan cell을 두고, 이 cell들을 하나의 긴 shift register로 연결합니다. EXTEST instruction을 IR에 싣고 이 register에 패턴을 shift하면, 칩 핀을 외부 회로처럼 구동/관찰할 수 있어 PCB의 납땜 불량이나 단선을 칩을 떼지 않고 검사합니다. SAMPLE은 정상 동작 중 핀 값을 capture만 합니다. 현대 SoC에서 같은 TAP 인프라가 boundary scan과 디버그(DAP access) 양쪽에 _재사용_됩니다.
+
+**EXTEST가 핀을 _가로채는_ 회로 — mux intercept.** "핀을 외부 회로처럼 구동"이 가능한 이유는, boundary scan cell이 코어 로직과 실제 핀 사이의 정상 경로에 **mux로 끼어들기** 때문입니다. 각 출력 핀 앞에 mux가 하나 있어, 평소(정상 동작/SAMPLE)에는 _코어 로직의 신호_ 를 핀으로 통과시키지만, EXTEST 중에는 mux의 select가 바뀌어 _scan cell에 shift해 둔 값_ 을 핀으로 내보냅니다. 입력 핀 쪽도 대칭으로, EXTEST 중에는 외부 핀 값을 cell이 capture해 코어로는 격리합니다. 즉 cell은 정상 데이터 경로 위에 얹힌 "전환 스위치 + 관찰점"이며, EXTEST는 그 스위치를 scan 측으로 넘겨 핀을 강제 구동/관찰합니다. 정상 동작(EXTEST 아님)에서는 mux가 코어 경로를 그대로 통과시켜 cell이 회로 동작을 방해하지 않습니다.
 
 ### 4.4 daisy chain — 여러 TAP을 한 체인으로
 
@@ -208,6 +212,23 @@ SWD: "**SWD (Serial Wire Debug)**\nSWCLK + SWDIO\n2핀" {
 ```
 
 핀이 극히 부족한 디바이스(소형 MCU 등)에서는 JTAG의 4~5핀도 부담입니다. **SWD(Serial Wire Debug)** 는 ADI가 정의한 2핀(SWCLK 클럭 + SWDIO 양방향 데이터) 대안으로, JTAG을 대체하면서도 _같은 DAP_를 노출합니다. 즉 물리 프로토콜만 다르고 그 너머의 디버그 세계(DP/AP, ROM table, CoreSight)는 완전히 동일합니다. SWJ-DP는 JTAG와 SWD를 핀에서 자동 선택하는 DP 변종입니다([N03](../03_adi_dap_coresight/)에서 다룸).
+
+### 5.4 scan cell은 왜 2단(shift FF + update latch)인가
+
+§3의 "Capture → Shift → Update" 3단계는 FSM 상태일 뿐 아니라 _각 scan cell 회로_ 의 구조와 직접 대응합니다. 셀 하나는 **두 개의 저장 소자**로 이루어집니다.
+
+```
+                 ┌──────────────┐        ┌──────────────┐
+ capture/TDI ───►│  Shift FF    ├──TCK──►│ Update latch │───► (DR 출력/핀 구동)
+                 │ (1단: 이동용) │        │ (2단: shadow)│
+                 └──────┬───────┘        └──────────────┘
+                        └──► TDO (다음 셀의 TDI로)
+```
+
+- **1단 — shift flip-flop**: Capture-DR에서 값(IDCODE 비트, 핀 상태 등)을 병렬 로드하고, Shift-DR 동안 매 TCK마다 옆 셀로 한 칸씩 이동시킵니다. TDI→shift FF→TDO 사슬이 곧 scan chain입니다.
+- **2단 — update(shadow) latch**: Update-DR 상태에서만 1단의 현재 값을 받아 _출력_ 으로 반영합니다.
+
+**왜 굳이 2단인가?** Shift 동안에는 1단 FF의 값이 매 TCK마다 마구 바뀝니다(체인을 따라 비트가 흐르므로). 만약 출력이 1단을 직접 보고 있다면, EXTEST로 핀을 구동하는 경우 _shift하는 내내 핀이 중간 비트값으로 덜덜 떨려_ 외부 회로에 글리치를 줍니다. 2단 update latch가 있으면 Shift 중 출력은 _직전 Update에서 확정된 값_ 으로 **안정 유지** 되고, 모든 비트를 다 밀어 넣은 뒤 Update-DR 한 순간에만 새 값이 일제히 반영됩니다. 즉 "준비(Shift)"와 "반영(Update)"을 분리해, 직렬로 채우는 과도 상태가 출력/핀에 새어 나가지 않게 하는 것이 2단 구조의 이유입니다. IR도 같은 이유로 shift단 + update단을 가져, Update-IR 순간에만 새 instruction이 확정됩니다.
 
 ---
 
@@ -280,9 +301,6 @@ SWD: "**SWD (Serial Wire Debug)**\nSWCLK + SWDIO\n2핀" {
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `DFD` (Confluence import, `wiki/common/dfd_spec.md`) — §1 JTAG: 신호 표, TAP controller/IR/DR/daisy chain 개념, SWD 설명
 
 **External**
 - IEEE Std 1149.1 — Standard Test Access Port and Boundary-Scan Architecture (TAP FSM, IR/DR, boundary scan)

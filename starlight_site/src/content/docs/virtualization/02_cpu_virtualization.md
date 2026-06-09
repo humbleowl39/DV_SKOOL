@@ -199,6 +199,12 @@ static int handle_rdmsr(struct vcpu *vcpu) {
 
 §3 의 ⑥ 단계에서 "VMCS 에 EAX/EDX 기록" 한다는 게 곧 VM 의 register state 가 _메모리에 살고 있다_ 는 뜻입니다.
 
+:::note[VMCS 가 _메모리_ 에 있는데 왜 `VMREAD`/`VMWRITE` 로만 접근하나]
+VMCS 는 메모리에 할당된 4 KB 구조이지만, hypervisor 는 그것을 일반 `struct` 처럼 `vmcs->guest_rip` 으로 직접 읽고 쓸 수 _없습니다_. 반드시 전용 명령 `VMREAD`/`VMWRITE` 로 필드 인코딩 번호를 지정해 접근해야 합니다. 왜 이런 우회를 강제할까요?
+
+이유는 **HW 가 VMCS 를 implementation-specific 한 포맷으로 캐싱** 하기 때문입니다. 성능을 위해 CPU 는 현재 활성 VMCS 의 필드를 on-chip 에 자기만 아는 레이아웃으로 보관합니다 — 메모리 안의 바이트 배치는 마이크로아키텍처마다 다르고 문서화되지 않습니다. 만약 SW 가 메모리 오프셋으로 직접 접근하면 그 캐시와 메모리 사본이 어긋나 일관성이 깨집니다. `VMREAD`/`VMWRITE` 는 "필드 번호" 라는 _추상_ 인터페이스를 강제함으로써, 실제 저장 위치(on-chip 캐시냐 메모리냐, 어느 오프셋이냐)를 HW 가 자유롭게 결정할 수 있게 합니다. 즉 전용 명령은 _캐싱 자유도를 보존하기 위한 추상화 계약_ 입니다 — 그래서 VMCS 는 "메모리에 있지만 메모리처럼 다루면 안 되는" 구조입니다. (ARM 이 VM 상태를 일반 메모리 + 일반 load/store 로 두는 것과 대비됩니다 — §5.6.)
+:::
+
 ---
 
 ## 5. 디테일 — VT-x, ARM EL, VMCS, VHE, Context Switch
@@ -264,6 +270,14 @@ Guest OS 코드 (원본)              변환된 코드 (실행되는 것)
 | HW 지원 없이 동작 | 변환 오버헤드 (첫 실행 시) |
 | Guest OS 수정 불필요 | 구현 복잡도 높음 |
 | Non-privileged Sensitive 해결 | 자기 수정 코드 (self-modifying code) 처리 어려움 |
+
+:::note[Binary Translation 이 _왜_ self-modifying code 에 약한가]
+"변환 결과를 캐시" — 위 동작 원리 4 번 — 이 바로 약점의 뿌리입니다. BT 는 한 번 변환한 코드 블록을 _translation cache_ 에 저장해 두고 재실행 때 재변환을 건너뜁니다. 성능의 핵심이지만, 이는 "원본 Guest 코드가 변하지 않는다" 는 가정에 기댑니다.
+
+self-modifying code(실행 중 자기 명령을 덮어쓰는 코드 — JIT 컴파일러, 일부 커널 부트 코드)는 이 가정을 깹니다. Guest 가 원본 메모리의 명령 바이트를 바꿔도, BT 엔진의 translation cache 에는 _옛 버전을 변환한 결과_ 가 그대로 남아 있어, CPU 는 갱신된 코드가 아니라 낡은 번역을 실행합니다 — 즉 캐시와 원본의 _동기화가 깨지는_ 것이 메커니즘입니다.
+
+그래서 BT 엔진은 변환한 코드 영역을 write-protect 해 두고, Guest 가 그 영역에 쓰면 fault 를 받아 해당 translation 을 무효화·재변환해야 합니다. 이 추적 비용이 self-modifying code 가 많을수록 폭증합니다. VT-x 는 _매 실행마다 HW 가 직접 trap_ 하므로 translation cache 자체가 없어 이 문제에서 자유롭습니다.
+:::
 
 ### 5.4 방법 2 — Para-virtualization (Guest OS 수정)
 
@@ -398,6 +412,14 @@ ARM 은 처음부터 가상화를 고려한 Exception Level 설계.
 | 전환 비용 | VM Exit/Entry (~수천 cycle) | EL 전환 (~수백 cycle, 상대적 경량) |
 | 가상화 역사 | 후천적 추가 (2005) | 설계 시 포함 (ARMv7/v8) |
 | 2-stage translation | EPT | Stage 1 (EL1) + Stage 2 (EL2) |
+
+:::note["처음부터 4 단계" 가 _구조적_ 이점인 이유 — 복제 vs 추가]
+"후천적 추가 vs 설계 시 포함" 은 단순히 역사 순서의 차이가 아니라, _권한 계층을 만드는 방식_ 의 차이이고 그것이 곧 state-save 비용 차이의 근원입니다.
+
+**x86 의 문제는 "Ring 0 이 하나뿐" 이었다는 점입니다.** OS 는 Ring 0 을 점유하도록 설계됐는데 hypervisor 도 Ring 0 이 필요했습니다(§5.1 의 충돌). VT-x 는 새 권한 _층_ 을 추가하는 대신, Ring 0~3 전체를 **VMX root / non-root 로 _복제_** 하는 길을 택했습니다 — 즉 같은 4 개 ring 세트가 두 벌 생긴 것입니다. Guest 는 non-root 의 ring 0~3 를, hypervisor 는 root 의 ring 0~3 를 갖습니다. 이 _모드 전체의 복제_ 때문에 root↔non-root 를 넘을 때는 두 세계의 머신 상태를 통째로 맞바꿔야 하고, 그래서 그 상태를 담을 VMCS 라는 HW 관리 구조가 필요하며 전환이 무겁습니다.
+
+**ARM 은 권한을 _추가_ 했습니다.** EL0 < EL1 < EL2 < EL3 — hypervisor 용 EL2 를 OS 의 EL1 _위_ 에 새 층으로 얹었을 뿐, 아래 층을 복제하지 않았습니다. EL1 과 EL2 는 서로 다른 _층_ 이라 동시에 공존하므로, 전환 시 통째로 맞바꿀 "복제된 두 세계" 가 없습니다. 그 결과 ARM 은 VM 상태를 전용 HW 구조 대신 _일반 메모리 + 일반 load/store_ 로 SW 가 필요한 만큼만 저장·복원할 수 있고(§4.3 의 VMCS 비교), 이것이 EL 전환이 상대적으로 경량인 _구조적_ 이유입니다. "복제로 우회한 x86" 과 "층을 추가한 ARM" 의 차이가 곧 state-save 비용의 차이입니다.
+:::
 
 ### 5.7 ARM VHE (Virtualization Host Extensions, v8.1+)
 
@@ -560,11 +582,6 @@ VHE: Host kernel _전체_ 를 EL2 에서 실행 → EL1↔EL2 전환 _제거_.
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `KVM Performance Tuning` — VM Exit 분포 + tight loop 핫스팟
-- `ARM Virtualization (EL2/VHE)` — VHE 적용 가이드
-
-**External**
 - Intel SDM Vol 3C, *VMX Operation* — VMCS 필드 매핑
 - ARM ARMv8-A *Virtualization Host Extensions* (DDI0487) — VHE 정의
 

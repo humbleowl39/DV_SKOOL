@@ -15,7 +15,7 @@ title: "RAS 용어집"
 
 **Definition.** 에러 정정 메커니즘(예: SEC-DED ECC)이 검출과 동시에 정정에 성공해 데이터가 정상화된 에러.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (1) Reliability.
+**Source.** Arm® RAS System Architecture (Reliability).
 
 **Related.** ECC, Uncorrectable Error, Reliability, scrubbing.
 
@@ -31,7 +31,7 @@ title: "RAS 용어집"
 
 **Definition.** 정정 불가능한 에러를 검출 시점에 즉시 처리하지 않고, 해당 데이터가 실제로 소비될 때까지 처리를 미루는 에러 처리 방식.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (2) Availability (Data Poisoning).
+**Source.** Arm® RAS System Architecture (Availability, Data Poisoning).
 
 **Related.** Poison Bit, Uncorrectable Error, Availability.
 
@@ -47,7 +47,7 @@ title: "RAS 용어집"
 
 **Definition.** 데이터에 코드 비트를 추가해 read 시 비트 에러를 검출하고 일부를 정정할 수 있게 하는 에러 보호 기법.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (1) Reliability.
+**Source.** Arm® RAS System Architecture (Reliability); 일반 ECC 이론.
 
 **Related.** SEC-DED, Parity, Corrected Error, Uncorrectable Error.
 
@@ -59,7 +59,7 @@ title: "RAS 용어집"
 
 **Definition.** RAS-node에서 에러의 type과 valid 상태를 기록하는 표준 error record 레지스터(Arm RAS 아키텍처 계열).
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (3) Serviceability; Arm® RAS System Architecture (정확한 비트 필드는 사양 재확인 필요).
+**Source.** Arm® RAS System Architecture (Serviceability; 정확한 비트 필드는 사양 재확인 필요).
 
 **Related.** Error Record, RAS Node, W1C, ERR<n>ADDR.
 
@@ -75,7 +75,7 @@ title: "RAS 용어집"
 
 **Definition.** 특정 레지스터를 프로그래밍해 runtime에 가짜 에러를 주입함으로써 물리적 고장 없이 내부 RAS 로직·인터럽트·telemetry 경로를 검증하는 HW 기능.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (3) Serviceability (Fault Injection Model).
+**Source.** Arm® RAS System Architecture (Serviceability, Fault Injection).
 
 **Related.** RAS Node, Error Record, ERR<n>CTLR, fault injection sequence.
 
@@ -87,7 +87,7 @@ title: "RAS 용어집"
 
 **Definition.** 고장 시 현장에서 개별적으로 교체 가능한 하드웨어 단위.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (3) Serviceability.
+**Source.** Arm® RAS System Architecture (Serviceability).
 
 **Related.** Serviceability, Telemetry, Error Record.
 
@@ -103,7 +103,7 @@ title: "RAS 용어집"
 
 **Definition.** 데이터의 1의 개수의 짝/홀을 1비트로 기록해 단일 비트 에러를 검출하는(정정은 불가능한) 저비용 에러 보호 기법.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (1) Reliability; IEEE 일반 디지털 이론.
+**Source.** Arm® RAS System Architecture (Reliability); 일반 디지털 논리 이론.
 
 **Related.** ECC, control path, FSM, Reliability.
 
@@ -115,7 +115,7 @@ title: "RAS 용어집"
 
 **Definition.** 정정 불가능한 에러가 검출된 데이터에 부착되어, 그 데이터가 신뢰 불가임을 버스 전파 중에도 표시하는 태그.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (2) Availability (Data Poisoning).
+**Source.** Arm® RAS System Architecture (Availability, Data Poisoning).
 
 **Related.** Deferred Error, Uncorrectable Error, Availability.
 
@@ -131,7 +131,7 @@ title: "RAS 용어집"
 
 **Definition.** Reliability, Availability, Serviceability — 서버급 하드웨어의 시스템 의존성을 구성하는 세 기둥.
 
-**Source.** HDG `wiki/common/ras_spec.md` Overview, §2; Arm® RAS System Architecture.
+**Source.** Arm® RAS System Architecture.
 
 **Related.** Reliability, Availability, Serviceability, SDC.
 
@@ -143,7 +143,7 @@ title: "RAS 용어집"
 
 **Definition.** 에러 발생 시 type/address/timestamp를 memory-mapped 레지스터에 자동 기록하고 인터럽트를 발생시키는 표준화된 RAS 기록 단위.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (3) Serviceability; Arm® RAS System Architecture (ERR<n>STATUS 계열).
+**Source.** Arm® RAS System Architecture (Serviceability; ERR<n>STATUS 계열).
 
 **Related.** Error Record, ERR<n>STATUS, Telemetry, Fault Injection.
 
@@ -155,7 +155,7 @@ title: "RAS 용어집"
 
 **Definition.** 명시된 기간 동안 하드웨어가 실패나 미처리 에러 없이 의도된 기능을 지속적으로 수행하는 능력.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (1) Reliability.
+**Source.** Arm® RAS System Architecture (Reliability).
 
 **Related.** ECC, Parity, Corrected Error.
 
@@ -171,7 +171,7 @@ title: "RAS 용어집"
 
 **Definition.** Single Error Correction, Double Error Detection — 1-bit 에러는 정정하고 2-bit 에러는 검출하는 표준 ECC 구현.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (1) Reliability; Hamming code 일반 이론.
+**Source.** Arm® RAS System Architecture (Reliability); Hamming code 일반 이론.
 
 **Related.** ECC, syndrome, Corrected Error, Uncorrectable Error.
 
@@ -183,7 +183,7 @@ title: "RAS 용어집"
 
 **Definition.** 하드웨어 에러가 검출·보고되지 않은 채 오염된 데이터가 시스템에 전파되어 결과 무결성이 깨지는 현상.
 
-**Source.** HDG `wiki/common/ras_spec.md` §1 (Preventing Silent Data Corruption).
+**Source.** Arm® RAS System Architecture (Preventing Silent Data Corruption).
 
 **Related.** Uncorrectable Error, ECC, Parity, RAS.
 
@@ -195,7 +195,7 @@ title: "RAS 용어집"
 
 **Definition.** 에러 발생 시 결함 컴포넌트를 효율적으로 진단·위치·수리해 유지보수 시간을 최소화하는 능력.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (3) Serviceability.
+**Source.** Arm® RAS System Architecture (Serviceability).
 
 **Related.** Error Record, RAS Node, Telemetry, FRU, Fault Injection.
 
@@ -207,7 +207,7 @@ title: "RAS 용어집"
 
 **Definition.** 결함이 존재하는 상황에서도 시스템이 계속 동작(up-time)할 수 있는 능력.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (2) Availability.
+**Source.** Arm® RAS System Architecture (Availability).
 
 **Related.** Fault Isolation, Data Poisoning, Deferred Error.
 
@@ -223,7 +223,7 @@ title: "RAS 용어집"
 
 **Definition.** 검출은 되었으나 정정 메커니즘(예: SEC-DED ECC)으로 복구할 수 없는 에러.
 
-**Source.** HDG `wiki/common/ras_spec.md` §2 (1) Reliability, (2) Availability.
+**Source.** Arm® RAS System Architecture (Reliability, Availability).
 
 **Related.** SEC-DED, Poison Bit, Deferred Error, SDC.
 

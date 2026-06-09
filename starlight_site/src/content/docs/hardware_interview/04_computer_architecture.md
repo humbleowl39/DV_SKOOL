@@ -230,6 +230,10 @@ VA[11:0]  = page offset (4 KB page)
 
 **현대 L1**: VIPT (alias-free 한 사이즈로 제한). L2+: PIPT.
 
+**왜 "index 가 page offset 안" 이면 alias 가 없나 — VA/PA 가 공유하는 비트.** VIPT 는 _가상 주소(VA)로 index 를 뽑아 set 을 고르면서 동시에 TLB 로 변환해 얻은 물리 주소(PA)로 tag 를 비교_ 하는, 둘을 병렬화한 구조다. 문제는 같은 물리 페이지를 가리키는 서로 다른 VA(aliasing) 가 _다른 set_ 에 들어가면 같은 데이터가 캐시에 두 벌 생겨 일관성이 깨진다는 것이다. 핵심 통찰은 **주소 변환이 page 단위로만 일어난다** 는 점이다 — VA 와 PA 는 _page offset 비트(하위 12 비트, 4 KB 기준)가 항상 동일_ 하고, 변환은 그 위(page number)만 바꾼다. 따라서 index 로 쓰는 비트가 _전부 page offset 범위 안_ 에 들어가면, 그 index 비트들은 VA 든 PA 든 _값이 같다_ — 어떤 VA 로 접근하든 같은 물리 주소는 항상 _같은 set_ 으로 매핑되어 alias 가 원천적으로 생기지 않는다. 반대로 index 가 page offset 경계(비트 12)를 넘어가면, 그 초과 비트는 VA 와 PA 에서 _다를 수 있어_ 같은 PA 가 VA 에 따라 다른 set 으로 흩어진다 — 이것이 alias 다.
+
+이 조건을 식으로 옮긴 것이 §6 Q5 의 `cache_size_per_way ≤ page_size` 다. way 당 크기 = `(set 수) × (line 크기)` 이고, index+offset 비트가 곧 way 당 크기의 로그이므로, "index+offset 가 page offset(12비트) 이내" = "way 당 크기 ≤ page 크기" 와 같은 말이다. 그래서 더 큰 L1 을 원하면 set(=index) 을 늘리는 대신 _way 수_ 를 늘리거나(전체 크기는 키우되 index 비트는 그대로) huge page 로 offset 범위 자체를 넓혀야 한다.
+
 ### 5.4 Synchronization Primitives — Hardware 측면
 
 - **Test-and-set / xchg** — atomic. 가장 단순한 lock.

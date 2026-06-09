@@ -212,6 +212,8 @@ TrustZone 은 강력하지만, 그 격리의 전제가 "같은 CPU 와 메모리
 
 Secure Enclave 가 TrustZone 과 결정적으로 다른 점은 자원의 _공유 여부_ 입니다. Enclave 는 전용 프로세서, 전용 SRAM, 전용 Crypto Accelerator 를 가지며 시스템 DRAM 을 전혀 사용하지 않습니다. 외부와의 통신은 Mailbox 하나로만 제한되어 있어, Main CPU 측이 Mailbox 를 거치지 않고 Enclave 내부 메모리나 레지스터를 읽을 수 있는 경로 자체가 없습니다. Key Box 와 Crypto Accelerator 는 내부 wire 로만 연결되어 암호화 결과만 외부로 나오고, 평문 키는 Enclave 경계를 넘지 않습니다.
 
+**평문 키가 _못 나가는_ 데이터패스 메커니즘.** "내부 wire 로만 연결"의 핵심은, Key Box 의 키 출력이 **Crypto Accelerator 의 키 입력에만 hardwired** 되어 있고 _CPU 레지스터나 시스템 버스로 가는 read 경로 자체가 회로에 없다_ 는 점입니다. 즉 Key Box → Crypto의 키 배선은 enclave 내부 전용선이고, mailbox/APB 같은 외부에서 접근 가능한 레지스터 맵에는 그 키를 _읽어오는 주소가 매핑되어 있지 않습니다_. 그래서 enclave 펌웨어 자신조차 "키 값을 레지스터로 로드"할 수 없고, 할 수 있는 건 "이 인덱스의 키로 암복호하라"고 _지시_ 하는 것뿐 — Crypto 엔진이 그 키로 연산해 _결과(암호문/서명)만_ 외부로 내보냅니다. 데이터패스를 차단으로 보면: 키 → (전용 wire) → Crypto 입력은 _존재_, 키 → 버스/레지스터 read는 _배선 부재_. 따라서 enclave 펌웨어에 버그가 나거나 mailbox로 임의 명령을 보내도, 물리적으로 평문 키를 끄집어낼 경로가 없습니다. 이것이 "TrustZone이 100% 장악돼도 키는 산다"의 회로적 근거입니다.
+
 ```d2
 direction: down
 
@@ -259,6 +261,23 @@ TZ -- INT: "서로 신뢰하지 않음\n(mutually distrusting)" { style.stroke-d
 TZ -- EXT: "서로 신뢰하지 않음" { style.stroke-dash: 4 }
 INT -- EXT: "서로 신뢰하지 않음" { style.stroke-dash: 4 }
 ```
+
+### 5.5a Mailbox 인증 토큰의 검증 구조
+
+§3에서 enclave가 "OEM 키로 서명된 토큰을 검증한다"고 했는데, 그 토큰이 _무엇을 무슨 키로 덮고_, replay를 _어떻게_ 막는지를 한 단계 풉니다(구체 알고리즘은 구현마다 다름, 확인 필요 — 아래는 일반 구조).
+
+**토큰이 덮는 값과 키 종류.** 인증 토큰은 "이 요청이 권한 있는 발신자에게서, 변조 없이, 새로(fresh) 왔다"를 보장해야 하므로, _요청 내용 + nonce_ 를 한 덩어리로 묶어 인증값을 답니다.
+
+```
+   token = MAC_or_Sig( K, op ‖ args ‖ nonce )
+                       └┬┘  └──────┬───────┘
+                   덮는 키      커버하는 값(요청 전체 + freshness)
+```
+
+- **무슨 키인가 — 대칭 MAC vs 비대칭 서명**: 두 갈래가 있습니다. (1) **대칭 MAC**(예: CMAC/HMAC) — enclave와 정당한 요청자가 _사전 공유한 비밀키_ `K`로 토큰을 계산·검증. 빠르고 작지만 양쪽이 같은 비밀을 가져야 함. (2) **비대칭 서명** — OEM/요청자의 _private key_ 로 서명하고 enclave가 대응 _public key_ 로 검증. 키 공유가 필요 없고 부인방지가 되지만 무거움. "OEM 키로 서명된 토큰"이라는 서술은 (2)에 가깝지만, 세션 내 요청마다는 (1) 대칭 MAC를 쓰는 혼합도 흔합니다.
+- **무슨 값을 덮나**: 반드시 `op`(무슨 동작)와 `args`(어느 키 인덱스 등)를 포함해야, 공격자가 토큰은 그대로 두고 _요청 내용만 바꾸는_ 변조를 막습니다(토큰이 요청에 _바인딩_).
+
+**nonce 가 freshness 를 보장하는 방식.** 토큰 입력에 매 요청 _새로 발급되는 nonce_(또는 단조 증가 sequence number)를 넣습니다. enclave는 (a) 자신이 방금 발급한 challenge nonce인지, 또는 (b) sequence가 직전보다 큰지를 확인합니다. 그러면 공격자가 _과거에 정당했던 토큰_ 을 그대로 재전송해도(replay), 그 토큰은 _옛 nonce_ 로 계산된 값이라 enclave가 기대하는 현재 nonce와 안 맞아 MAC/서명 검증에서 떨어집니다. 공격자는 키가 없어 _새 nonce에 맞는_ 토큰을 다시 만들 수도 없습니다. 즉 "nonce를 인증값 입력에 묶음 + 키 비밀"이 합쳐져 replay가 토큰째 무효가 됩니다(§6의 "token verify disable", "sequence number 검증 누락" 항목이 이 검증을 점검).
 
 ### 5.6 Module 02 개념과의 매핑
 
@@ -382,6 +401,27 @@ External Secure Enclave 는 SPI/I2C 같은 외부 버스로 SoC 와 연결됩니
    - Freshness: 세션 키 + 시퀀스 번호 (재전송 차단)
    - 상호 인증: 양쪽이 서로의 정체를 검증
 ```
+
+**세션 키는 어떻게 합의되는가 — challenge-response 상호 인증.** 위에서 "세션 키 + 시퀀스 번호"라고 했는데, 그 세션 키가 _어디서 오는지_ 를 한 단계 풉니다(SCP03/SCP11 세부는 확인 필요 — 아래는 두 일반 패턴).
+
+- **패턴 A — 사전 공유 키 기반 KDF (대칭, SCP03류)**: 양쪽이 이미 _공유한 정적 비밀키_ 를 두고, 세션마다 서로 무작위 challenge(host random + card random)를 교환한 뒤, `세션키 = KDF(정적키, host_random ‖ card_random ‖ 라벨)` 로 _그 세션 전용 키_ 를 파생합니다. 매 세션 random이 달라 세션키가 매번 달라지고(같은 정적키라도), challenge가 양쪽 random을 모두 포함하므로 한쪽이 마음대로 세션키를 고정할 수 없습니다.
+- **패턴 B — 키 교환 (비대칭, SCP11류)**: ECDH 같은 키 합의로 _공유 비밀_ 을 즉석에서 만들고 거기서 세션키를 파생합니다. 정적 공유 비밀이 없어도 되고 전방 비밀성(forward secrecy)에 유리.
+
+**상호 인증의 challenge-response 흐름** (개념):
+
+```
+   Host (SoC SE)                         External SE
+   ──────────────                         ────────────
+   1. host_challenge(random) ───────────►
+   2.                        ◄─────────── card_challenge(random)
+                                          + card_cryptogram = MAC(세션키, challenges)
+   3. card_cryptogram 검증  ── (External 이 진짜 키 보유 확인)
+   4. host_cryptogram = MAC(세션키, challenges) ──►
+   5.                        ◄── External 이 host_cryptogram 검증 (Host 도 정당 확인)
+   → 양쪽이 "같은 세션키를 유도했고 상대가 진짜다"를 cryptogram 으로 _상호_ 입증
+```
+
+핵심: 각자 상대의 challenge를 받아 _같은 세션키로 cryptogram(MAC)_ 을 만들어 보내고, 상대가 그걸 검증함으로써 "정당한 키를 가진 진짜 상대"임을 _양방향_ 으로 확인합니다. 한쪽만 인증하면 IC 교체 공격(가짜 External)을 못 막으므로 _상호_ 여야 합니다. 합의된 세션키로 이후 메시지를 AES-CCM/GCM 암호화 + 시퀀스 번호로 보호합니다.
 
 이것은 차량 보안의 SecOC (CAN 메시지에 MAC + Freshness) 와 동일한 원리를 물리 인터페이스 레벨에 적용한 것입니다.
 

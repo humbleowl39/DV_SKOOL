@@ -15,7 +15,7 @@ title: "DFD 용어집"
 
 **Definition.** 외부 디버그 프로브와 온칩 디버그 버스 사이의 표준 다리인 Debug Access Port(DAP)를 정의하는 Arm 아키텍처 사양.
 
-**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification (HDG `dfd_spec.md` §2).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** DAP, DP, AP, ADIv5, ADIv6.
 
@@ -27,7 +27,7 @@ title: "DFD 용어집"
 
 **Definition.** DAP의 시스템 측 인터페이스로, 외부 디버그 접근을 온칩 자원에 대한 접근으로 노출하는 컴포넌트.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §2).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** MEM-AP, JTAG-AP, DP, SELECT.
 
@@ -39,7 +39,7 @@ title: "DFD 용어집"
 
 **Definition.** invasive/non-invasive 및 secure/non-secure 디버그를 각각 enable하거나 차단하는 CoreSight 인증 입력 신호 집합.
 
-**Source.** Arm IHI 0029 (HDG `dfd_spec.md` §3 Authentication signals).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification.
 
 **Related.** Invasive Debug, Non-invasive Debug, Secure Debug, fuse/lifecycle.
 
@@ -55,7 +55,7 @@ title: "DFD 용어집"
 
 **Definition.** 칩 IO 핀 옆의 scan cell을 직렬 register로 연결해 핀 상태를 capture/제어함으로써 PCB 연결을 검사하는 JTAG 기능.
 
-**Source.** IEEE Std 1149.1 (HDG `dfd_spec.md` §1).
+**Source.** IEEE Std 1149.1 — Standard Test Access Port and Boundary-Scan Architecture.
 
 **Related.** TAP, EXTEST, SAMPLE, Data Register.
 
@@ -67,7 +67,7 @@ title: "DFD 용어집"
 
 **Definition.** daisy chain에서 해당 TAP을 1비트 지연으로만 통과시키도록 TDI와 TDO 사이에 1비트 register를 연결하는 JTAG instruction.
 
-**Source.** IEEE Std 1149.1 (HDG `dfd_spec.md` §1).
+**Source.** IEEE Std 1149.1 — Standard Test Access Port and Boundary-Scan Architecture.
 
 **Related.** Daisy Chain, Instruction Register, Data Register.
 
@@ -83,7 +83,7 @@ title: "DFD 용어집"
 
 **Definition.** DAP 너머에서 디버그 제어, cross-triggering, 실시간 trace를 제공하는 Arm의 온칩 디버그·trace IP family.
 
-**Source.** Arm IHI 0029 (HDG `dfd_spec.md` §3).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification.
 
 **Related.** ETM, CTI, ETR, ROM table, Trace Source/Link/Sink.
 
@@ -95,7 +95,7 @@ title: "DFD 용어집"
 
 **Definition.** halt/restart/trigger 이벤트를 코어와 trace 블록 사이에 라우팅해 멀티코어 동기 디버그를 가능하게 하는 CoreSight 제어 컴포넌트.
 
-**Source.** Arm IHI 0029 (HDG `dfd_spec.md` §3 Control).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification.
 
 **Related.** CoreSight, Invasive Debug, multi-core halt.
 
@@ -107,7 +107,7 @@ title: "DFD 용어집"
 
 **Definition.** MEM-AP에서 전송 size와 auto-increment 같은 버스 트랜잭션 속성을 지정하는 레지스터.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §2 Typical access flow).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** MEM-AP, TAR, DRW, SELECT.
 
@@ -123,7 +123,7 @@ title: "DFD 용어집"
 
 **Definition.** 하나의 Debug Port와 하나 이상의 Access Port로 구성되어, 외부 디버그 프로브와 온칩 디버그 버스를 잇는 ADI 정의 브리지.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §2).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** DP, AP, MEM-AP, ROM table.
 
@@ -135,7 +135,7 @@ title: "DFD 용어집"
 
 **Definition.** DAP의 물리 측 인터페이스로, JTAG 또는 Serial Wire 프로토콜을 처리하고 SELECT로 사용할 AP를 지정하는 컴포넌트.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §2 DAP architecture).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** JTAG-DP, SW-DP, SWJ-DP, AP.
 
@@ -151,7 +151,7 @@ title: "DFD 용어집"
 
 **Definition.** 코어별 instruction(및 선택적 data) 실행 trace 스트림을 생성하는 CoreSight trace source.
 
-**Source.** Arm IHI 0029 (HDG `dfd_spec.md` §3 Trace sources).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification.
 
 **Related.** Trace Source, ITM, STM, Funnel, ETR.
 
@@ -163,7 +163,7 @@ title: "DFD 용어집"
 
 **Definition.** trace 데이터를 각각 on-chip SRAM 버퍼(ETB), FIFO link(ETF), AXI 경유 시스템 DRAM(ETR)에 저장하는 CoreSight trace sink 변종.
 
-**Source.** Arm IHI 0029, Arm DDI 0480 (HDG `dfd_spec.md` §3 Trace sinks).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification; Arm DDI 0480.
 
 **Related.** TMC, TPIU, Trace Sink.
 
@@ -179,7 +179,7 @@ title: "DFD 용어집"
 
 **Definition.** 코어 실행에 직접 개입해 halt, single-step, breakpoint, 레지스터/메모리 write를 수행하는 디버그 동작 분류.
 
-**Source.** Arm IHI 0029 (HDG `dfd_spec.md` §3 Authentication signals).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification.
 
 **Related.** DBGEN, SPIDEN, Non-invasive Debug, CTI.
 
@@ -191,7 +191,7 @@ title: "DFD 용어집"
 
 **Definition.** 코어 실행을 멈추지 않고 trace 수집과 성능 카운터(PMU) 읽기로 관찰만 하는 디버그 동작 분류.
 
-**Source.** Arm IHI 0029 (HDG `dfd_spec.md` §3).
+**Source.** Arm IHI 0029 — Arm CoreSight Architecture Specification.
 
 **Related.** NIDEN, SPNIDEN, Invasive Debug, Trace.
 
@@ -207,7 +207,7 @@ title: "DFD 용어집"
 
 **Definition.** TCK/TMS/TDI/TDO(및 선택적 TRSTn) 핀과 TAP controller로 칩 내부 register에 직렬 접근하는 표준 테스트/디버그 access port.
 
-**Source.** IEEE Std 1149.1 (HDG `dfd_spec.md` §1).
+**Source.** IEEE Std 1149.1 — Standard Test Access Port and Boundary-Scan Architecture.
 
 **Related.** TAP, IR, DR, SWD, Boundary Scan.
 
@@ -223,7 +223,7 @@ title: "DFD 용어집"
 
 **Definition.** SELECT/CSW/TAR/DRW 레지스터를 통해 메모리-맵 시스템 버스(AHB/AXI/APB) 트랜잭션을 발행하는 Access Port 유형.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §2).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** AP, DAP, ROM table, APB-AP, CSW, TAR, DRW.
 
@@ -239,7 +239,7 @@ title: "DFD 용어집"
 
 **Definition.** MEM-AP의 base 주소에 위치해 SoC에 존재하는 CoreSight 컴포넌트들의 주소를 열거하는 디렉터리.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §2 ROM table).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** MEM-AP, DAP, ADIv6 hierarchical ROM table.
 
@@ -255,7 +255,7 @@ title: "DFD 용어집"
 
 **Definition.** SWCLK와 SWDIO 두 핀으로 JTAG와 동일한 DAP를 노출하는, ADI가 정의한 핀 절약형 디버그 프로토콜.
 
-**Source.** Arm IHI 0031 (HDG `dfd_spec.md` §1 Role in debug).
+**Source.** Arm IHI 0031 — Arm Debug Interface Architecture Specification.
 
 **Related.** SW-DP, SWJ-DP, JTAG, DAP.
 
@@ -267,7 +267,7 @@ title: "DFD 용어집"
 
 **Definition.** TMS 입력으로 구동되는 16-state FSM으로, IR scan과 DR scan을 Capture/Shift/Update 단계로 시퀀싱하는 JTAG 제어 블록.
 
-**Source.** IEEE Std 1149.1 (HDG `dfd_spec.md` §1 Key concepts).
+**Source.** IEEE Std 1149.1 — Standard Test Access Port and Boundary-Scan Architecture.
 
 **Related.** TMS, IR, DR, Test-Logic-Reset.
 

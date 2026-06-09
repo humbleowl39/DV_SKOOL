@@ -165,8 +165,22 @@ ARM의 설계 결정을 객관적으로 보려면 다른 ISA와 대조하는 것
 
 이 표의 행 하나하나가 이후 모듈의 주제입니다. Privilege 행은 M03(Exception Level), Memory Model 행은 M04(배리어), Interrupt Ctrl의 GIC는 M06으로 이어집니다.
 
-:::note[CISC도 내부는 RISC]
+#### ARM 은 왜 dedicated zero register 없이 31번을 SP/ZR 로 양분했나
+
+표의 GPR 행을 자세히 보면 ARM 과 RISC-V 의 설계 철학 차이가 드러납니다. RISC-V 는 `x0` 을 _상시 hardwired zero_ 로 못 박아 32개 중 한 칸을 항상 0 전용으로 씁니다(M01 computer_architecture). ARM 은 그렇게 하지 않고, 레지스터 인코딩의 **31번 자리를 명령 문맥에 따라 SP(stack pointer) 또는 ZR(zero register)로 양분**합니다 — 즉 31번이 어떤 명령에서는 SP 로, 어떤 명령에서는 XZR/WZR 로 해석됩니다.
+
+이 선택의 trade-off 는 이렇습니다. RISC-V 식 dedicated zero 는 _디코드가 단순_ 하지만(31번은 언제나 0) 범용 레지스터를 한 칸 _영구히_ 0 에 바칩니다. ARM 식 문맥 양분은 _zero register 의 표현력_(`cmp x0, xzr` 같은 0 관용구를 별도 명령 없이)을 누리면서도 그 인코딩 슬롯을 _SP 로도 재활용_ 해, 31개 범용 + SP + ZR 의 기능을 31개 인코딩 안에 욱여넣습니다. 대가는 디코드 복잡도입니다 — 어셈블러·디코더가 "이 명령에서 31번은 SP 인가 ZR 인가"를 명령별 규칙으로 판정해야 합니다(M02 오해3 에서 본 함정). 즉 ARM 은 _인코딩 공간 절약 + zero 관용구_ 를 디코드 규칙의 약간의 복잡도로 산 것입니다.
+
+#### NZCV 와 conditional execution — ARM 이 branchless 를 선호하는 ISA 철학
+
+표의 행에는 안 보이지만 ARM ISA 의 깊은 특징 하나가 **condition flag(NZCV) 중심 실행**입니다. ARM 의 많은 산술 명령은 결과에 따라 N/Z/C/V 플래그를 갱신할 수 있고, 그 플래그를 읽어 _분기 없이_ 동작을 바꾸는 명령군(`csel` conditional select, `b.cond` 조건 분기, AArch32 의 더 광범위한 predication)을 둡니다. 이것이 우연이 아니라 의도된 철학입니다.
+
+근거는 M07 에서 볼 _분기 예측 실패의 비용_ 입니다. 짧고 데이터 의존적인 조건(예: `max(a,b)`)을 진짜 분기로 컴파일하면, 예측이 어려운 분기일수록 misprediction flush(수십 사이클)가 잦습니다. ARM 은 이런 조건을 **flag + conditional select** 로 바꿔 _분기 자체를 없애_(branchless) mispredict 위험을 제거하도록 ISA 레벨에서 지원합니다 — `cmp; csel` 두 명령이면 분기 없이 둘 중 하나를 고릅니다(M08 csel 패턴). 즉 NZCV 를 ISA 깊숙이 둔 것은 "조건을 분기로 풀지 말고 데이터플로우로 풀라"는 성능 철학의 표현이며, 컴파일러가 ARM 에서 branchless 코드를 적극적으로 내는 이유입니다.
+
+:::note[CISC도 내부는 RISC — 단, RISC도 1:1은 아니다]
 현대 x86 CPU도 복잡한 CISC 명령을 내부적으로 **micro-op**으로 분해(crack)해 RISC 스타일 backend로 실행합니다. 그래서 "CISC vs RISC" 구분은 ISA 표면(디코드 복잡도, 명령 길이)에만 남아 있고, 마이크로아키텍처 레벨에선 거의 같은 그림입니다. ARM이 표면에서부터 단순하다는 점이 frontend 면적·전력에서 이점입니다.
+
+여기서 흔한 오해 하나를 미리 끊어야 합니다 — "ARM 은 RISC 니 모든 명령이 micro-op 하나(1:1)"가 아닙니다. ARM 도 _일부 복잡 명령_ 을 내부적으로 여러 micro-op 으로 crack 합니다. 대표적으로 두 레지스터를 한 명령으로 load/store 하는 **`LDP`/`STP`** 나 AArch32 의 다중 레지스터 전송 **`LDM`/`STM`** 은 메모리 접근을 여러 개 수행하므로 backend 에서 복수 micro-op 으로 쪼개지는 것이 보통입니다. RISC 의 이점은 "_대부분_ 의 명령이 단순해 평균 crack 비율이 낮다"이지 "_모든_ 명령이 1:1"이 아닙니다 — 그래서 ARM 코어도 frontend 에 micro-op crack 단계를 가집니다(M07 frontend). 검증·성능 분석에서 명령 수와 micro-op 수를 동일시하면 IPC/throughput 해석이 어긋납니다.
 :::
 
 ---
@@ -184,6 +198,12 @@ ARM의 설계 결정을 객관적으로 보려면 다른 ISA와 대조하는 것
 ### 5.3 ARM의 두 실행 상태 — AArch64 vs AArch32
 
 ARMv8 코어는 두 실행 상태를 가질 수 있습니다. **AArch64**는 64-bit 실행 상태로 A64 명령 집합(32-bit 고정 인코딩)을 쓰고, **AArch32**는 ARMv7 호환의 32-bit 실행 상태로 A32/T32(Thumb) 명령을 씁니다. 본 코스는 AArch64에 집중하지만, 한 코어가 EL마다 다른 실행 상태로 동작할 수 있다는 점(예: EL1은 AArch64, EL0은 AArch32)은 검증 시 환경 가정으로 반드시 확인해야 합니다.
+
+#### interworking 의 비용 — 실행 상태는 EL 경계에서만 바뀐다
+
+여기서 중요한 제약이 있습니다 — AArch64 와 AArch32 는 _같은 명령 스트림 안에서 자유롭게 섞어 쓸 수 없습니다._ x86 의 16/32/64-bit 모드 전환이나 ARMv7 의 `BX` 를 통한 ARM↔Thumb interworking 처럼 _함수 호출 단위로_ 상태를 바꾸는 것을, AArch64 는 허용하지 않습니다. **실행 상태 전환은 오직 EL 경계를 넘을 때만**(예외로 상위 EL 진입, 또는 `ERET` 로 하위 EL 복귀) 일어납니다. 예를 들어 EL1(AArch64) 커널이 EL0(AArch32) 응용을 실행하려면, EL0 로 내려가는 `ERET` 시점에 SPSR 의 실행 상태 비트로 AArch32 를 지정하는 식입니다.
+
+하드웨어적 이유는 두 실행 상태가 _레지스터 모델·명령 인코딩·PSTATE 구성이 근본적으로 다르기_ 때문입니다. AArch64 는 31개 64-bit GPR + 분리된 PC/SP 를, AArch32 는 16개 32-bit 레지스터(PC=R15 포함) + 모드별 banked 레지스터를 씁니다. 한 명령 흐름 중간에서 이를 전환하려면 레지스터 파일과 디코더를 _명령마다_ 재해석해야 해 파이프라인이 감당하기 어렵습니다. 그래서 ARM 은 전환을 _드물고 명확한_ EL 경계로 한정해, 그 시점에만 상태를 한꺼번에 바꾸도록 설계했습니다 — 검증에서 "AArch32 코드가 AArch64 컨텍스트에서 직접 호출되어 도는" 시나리오는 _불가능_ 하며, 상태 혼용 의심이 들면 EL 전환 경계부터 확인해야 합니다.
 
 ```asm
 // A64 (AArch64) — 32-bit fixed, 64-bit 레지스터

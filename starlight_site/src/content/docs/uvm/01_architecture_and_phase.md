@@ -281,6 +281,12 @@ VOID -> COMP_SIDE.COMP
 - task-phase (run / sub-phase) 만 시간 소비 가능.
 - 한 그룹의 모든 phase 가 끝나야 다음 그룹 시작.
 
+#### 왜 function 안에서는 `#`/`@`/`wait` 가 _컴파일 단계_ 에서 막히나
+
+"function-phase 는 시간 0" 이라는 규칙은 UVM 의 정책이 아니라 SystemVerilog _언어 차원_ 의 사실에서 옵니다. SystemVerilog 의 `function` 은 **호출 스택에서 즉시 반환** 하도록 정의되어 있습니다 — 호출한 쪽은 같은 시뮬레이션 시각에 반환값을 받아야 하므로, function 본문은 시간을 진행시킬 수 없습니다. 그래서 `#10ns` (delay), `@(posedge clk)` (event), `wait(cond)` 같은 _시간 제어 (timing control)_ 구문을 function 안에 쓰면 **컴파일 에러** 가 납니다. 이것은 런타임에 "무시" 되는 것이 아니라, 컴파일러가 "function 은 시간 진행 슬롯을 가질 수 없다" 는 규칙으로 _문법 단계에서_ 거부하는 것입니다.
+
+반대로 `task` 는 여러 시뮬레이션 시각에 걸쳐 살아 있을 수 있어 (호출자가 task 의 완료를 _기다림_), 그 안에서 `#`/`@`/`wait` 가 허용됩니다. UVM 이 build/connect/extract/check/report/final 을 `function void` 로, run + sub-phase 만 `task` 로 선언한 이유가 여기 있습니다 — phase 의 시간 소비 가능 여부가 곧 function/task 선택입니다. 따라서 build_phase 안에서 `@(posedge vif.clk)` 로 reset 을 기다리고 싶다면 그것은 _설계 실수_ 이며, 그 동작은 run_phase 또는 reset_phase (task) 로 옮겨야 합니다.
+
 ### 4.4 Phase 의 5 가지 핵심 규칙
 
 | 규칙 | 설명 | 위반 시 |
@@ -342,6 +348,18 @@ endclass
 - **drop 누락** → 시뮬레이션 무한 대기 (hang). 디버그 시 가장 짜증나는 증상.
 - 보통 `uvm_test` 에서만 raise/drop. 다른 컴포넌트가 raise 하면 종료 시점이 흩어져 트레이스 어려움.
 :::
+
+#### Objection 의 실체 — phase 단위 _공유 카운터_
+
+`raise_objection` / `drop_objection` 을 "안 끝남 / 끝남" 표시로만 외우면, 왜 drop 하나를 빠뜨린 것이 _전체 시뮬 hang_ 으로 번지는지가 안 보입니다. 메커니즘은 단순합니다 — 한 phase (예: run_phase) 에는 그 phase 에 대한 **하나의 정수 카운터** 가 있고, 이 카운터는 컴포넌트 트리 _전체_ 가 공유합니다. 누가 어디서 호출하든 `raise_objection` 은 이 공유 카운터를 +1, `drop_objection` 은 -1 합니다.
+
+UVM 의 phase 종료 조건은 "시간이 다 됐다" 가 아니라 **"이 공유 카운터가 0 에 도달하는 _이벤트_"** 입니다. 카운터가 0 이 되는 순간 UVM 이 그 이벤트를 받아 (drain / `phase_ready_to_end` 처리 후) 다음 phase 로 넘어갑니다. 그래서:
+
+- raise 가 N 번, drop 이 N-1 번이면 카운터가 1 에 머물러 _영원히_ 0 이 안 되고 → **hang**. `#500ns` 가 지나든 말든 시뮬은 안 끝납니다.
+- 한 컴포넌트가 raise 했는데 다른 컴포넌트가 drop 하면 카운터 산수는 맞을 수 있지만, _누가_ 종료를 미루고 있는지 추적이 어려워집니다 — 그래서 raise/drop 을 `uvm_test` 한 곳에 모으는 것이 표준입니다.
+- `+UVM_OBJECTION_TRACE` 옵션은 이 카운터의 매 +1/-1 을 시각·소스와 함께 찍어 주므로, hang 디버그의 1 차 도구입니다.
+
+즉 objection 은 "분산된 컴포넌트들이 _합의로_ phase 를 끝내는 reference-count" 이고, drop 누락은 그 합의가 영원히 안 이뤄지는 상태입니다.
 ### 5.3 Drain Time — 안전한 종료 보장
 
 **문제**: `drop_objection` 직후 `run_phase` 가 종료되면, DUT 파이프라인에 처리 중인 트랜잭션이 남아 있을 수 있음. → Scoreboard 가 expected 는 갖고 있지만 actual 을 못 받음 → false error.
@@ -389,6 +407,10 @@ endclass
 ```
 
 **호출 시점**: `run_phase` 의 모든 objection 이 drop 된 직후, UVM 이 각 컴포넌트의 `phase_ready_to_end()` 를 호출 → 컴포넌트가 추가 objection 가능 → 모두 drop 되면 진짜 종료.
+
+:::note[`fork...join_any; disable fork;` 가 하는 일 — 이 챕터 첫 등장]
+위 코드의 `fork ... join_any` 와 `disable fork` 는 "둘 중 먼저 끝나는 쪽" 패턴입니다. `fork` 는 안쪽 두 문장 (`wait(...)` 와 `#500ns`) 을 _병렬 자식 프로세스_ 로 띄웁니다. `join_any` 는 **이 중 _하나라도_ 완료되면** 즉시 다음 줄로 진행시킵니다 (`join` 이 _모두_ 완료를 기다리는 것과 대비). 그런데 join_any 를 통과한 뒤에도 나머지 자식 프로세스는 _아직 살아_ 있으므로, 바로 이어지는 `disable fork` 가 **현재 스코프에서 띄운 남은 자식 프로세스를 모두 죽입니다**. 결과적으로 이 관용구는 "조건 충족 (`expected_queue` 비워짐) _또는_ 500ns 타임아웃 중 먼저 오는 것에서 깨어나고, 남은 대기는 정리" 라는 안전 타임아웃을 구현합니다. 타임아웃 없이 `wait(...)` 만 두면 그 조건이 영원히 안 와 hang 이 될 수 있습니다.
+:::
 
 | | drain_time | phase_ready_to_end |
 |---|---|---|
@@ -530,7 +552,7 @@ endclass
 **왜 헷갈리는가**: 이름이 "phase 가 더 세분화된 버전" 처럼 들려서 — 실제로는 _대체_ 가 아니라 _병행_ 옵션.
 :::
 :::danger[❓ 오해 4 — '`new()` 로 컴포넌트를 만들어도 동작은 똑같다']
-**실제**: 동작은 비슷해 보이지만 **factory override 가 먹지 않습니다**. `type_id::create("name", parent)` 로 만들어야 type/instance override 가 적용 — Module 04 의 핵심.<br>
+**실제**: 동작은 비슷해 보이지만 **factory override 가 먹지 않습니다**. `type_id::create("name", parent)` 가 factory 테이블을 거쳐 _등록된 proxy_ 를 통해 객체를 만드는 _간접 생성_ 인 반면, `new()` 는 그 테이블을 _건너뛰고_ 컴파일 시점에 박힌 타입을 직접 생성하기 때문에 override 가 비집고 들어갈 틈이 없습니다. 이 create→lookup→proxy→new 사슬의 전모는 [Module 04 — config_db & Factory](../04_config_db_factory/) 에서 다룹니다.<br>
 **왜 헷갈리는가**: SystemVerilog 에서 `new` 가 표준 생성 방법이므로.
 :::
 :::danger[❓ 오해 5 — 'Phase 간에 시간이 흐른다']
@@ -565,6 +587,12 @@ endclass
 - function-phase 에 `#delay` 쓰지 말 것 — 컴파일 에러 또는 무시.
 - Component 생성은 항상 `type_id::create(...)` — `new()` 직접 호출 시 factory override 불가.
 :::
+
+#### 왜 `super.build_phase()` 는 _의무_ 인가 — SV 상속 디스패치의 사실
+
+일반 OOP 경험에서는 부모 메서드를 override 할 때 `super` 호출이 _선택_ 인 경우가 많아, UVM 에서도 습관적으로 빠뜨리기 쉽습니다. 그러나 UVM 의 phase 메서드에서는 의무입니다. 이유는 SystemVerilog 의 상속 디스패치 규칙에 있습니다 — 자식이 `build_phase` 를 override 하면, UVM 이 phase 를 실행할 때 호출되는 것은 **자식 구현 _하나뿐_** 입니다. SystemVerilog 도, UVM 도 부모 클래스의 같은 이름 메서드를 _자동으로 이어서_ 불러 주지 않습니다. 즉 "build_phase chain" 같은 자동 연쇄는 존재하지 않고, **`super.build_phase(phase)` 라는 _명시적 한 줄_ 이 곧 "부모 구현을 지금 실행" 이라는 호출** 입니다.
+
+그래서 base_test 가 `build_phase` 안에서 env 를 create 하고 config_db 를 set 하고 factory override 를 등록했다면, 그 코드는 _base 의 `build_phase` 본문_ 에 들어 있습니다. derived 가 `super.build_phase(phase)` 를 빼면 그 본문이 _한 번도 실행되지 않으므로_, env 도 없고 config 도 없고 override 도 없는 상태로 시뮬이 진행됩니다 (그러면서 UVM_FATAL 도 안 뜨는 silent 실패). 일반 OOP 의 "선택적 super" 직관이 UVM 에서 위험한 정확한 지점이 이것입니다.
 ### 7.1 자가 점검
 
 :::tip[🤔 Q1 — Phase 가 9 단계인 이유 (Bloom: Analyze)]

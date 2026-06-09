@@ -478,11 +478,6 @@ IOMMU 를 "보안 메커니즘" 으로만 설명하면 무엇이 빠지나?
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `Virtualization Curriculum` — M01–M07 매핑
-- `Interview Answer Patterns` — 양면 인용 사례
-
-**External**
 - Popek & Goldberg (1974) *Formal Requirements for Virtualizable Third Generation Architectures*
 - Intel *VT-x / VT-d Specifications*
 - ARM *Virtualization Extensions / SMMUv3*

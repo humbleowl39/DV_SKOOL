@@ -270,6 +270,12 @@ K -> U: "(lkey, rkey)" { style.stroke-dash: 4 }
 | 5. PD 묶기 | QP 의 PD 와 MR 의 PD 다르면 access 시 fail |
 | 6. Key 발급 | 24-bit key index + 8-bit tag (변형 가능) — 이전에 사용한 key 의 reuse 시 epoch 체크 필요 |
 
+:::note[메커니즘 — rkey 의 index+tag 가 use-after-free 를 막는 원리]
+rkey(또는 lkey) 는 보통 **24-bit index + 8-bit tag** 로 나뉩니다. index 는 NIC 안의 key table 에서 _몇 번째 슬롯_ 인지를 가리키는 직접 주소이고, tag 는 그 슬롯의 _현재 세대(generation/epoch)_ 를 나타내는 작은 값입니다. lookup 은 두 단계로 이뤄집니다: ① index 로 슬롯을 찾고, ② 패킷이 들고 온 tag 와 슬롯에 저장된 현재 tag 가 **일치하는지** 확인합니다.
+
+왜 이게 중요한가? key table 슬롯은 한정돼 있어서, MR 을 dereg 하면 그 index 슬롯이 **나중에 다른 MR 에 재사용** 됩니다. 만약 index 만으로 검증한다면, 옛 MR 의 rkey 를 들고 온 (혹은 유출된) stale 패킷이 _같은 index 를 재사용한 새 MR_ 에 접근해버립니다 — 전형적인 use-after-free. tag 가 이를 막습니다: dereg→재할당 때마다 tag 를 증가시키므로, 옛 rkey 의 tag 는 슬롯의 새 tag 와 **불일치** → 즉시 거부됩니다. 즉 index 는 "어디" 를, tag 는 "그게 아직 그 MR 이 맞는지" 를 검증하는 역할 분담입니다. 이것이 §5.6 의 "dereg 후 같은 IOVA 재등록" corner case 와 §5.8 의 invalidate 가 안전하게 동작하는 hardware 근거입니다.
+:::
+
 ### 5.2 Access Flag
 
 ```
@@ -313,6 +319,12 @@ HOST: "host memory"
 PKT -> ATS
 DMA -> HOST
 ```
+
+:::note[메커니즘 — PTW 가 다단계 page table 을 걷는 과정, 그리고 latency 가 변동하는 이유]
+가상주소(IOVA)→물리주소(PA) 매핑은 한 칸짜리 표가 아니라 **여러 level 의 page table 이 트리처럼 연결된 구조** 입니다. IOVA 의 비트들을 위에서부터 잘라 각 level 의 인덱스로 씁니다 — 예컨대 최상위 비트들로 1단계 표에서 entry 를 찾고, 그 entry 가 가리키는 _다음 level 표_ 의 base 주소에 다음 비트들을 인덱스로 더해 또 읽고… 를 leaf entry (실제 PA frame) 에 닿을 때까지 반복합니다. **PTW (Page Table Walker)** 가 하는 일이 바로 이 단계적 인덱싱입니다. 각 단계가 _메모리를 한 번씩 읽는_ 동작이므로, L 단계 page table 이면 한 번의 변환에 최악 L 번의 메모리 접근이 듭니다.
+
+여기서 **latency 변동** 이 생깁니다. 자주 쓰는 변환은 **TLB (변환 캐시)** 에 들어 있어 TLB hit 이면 한 사이클 수준으로 끝나지만, **TLB miss 면 PTW 가 전체 walk 를 수행** 해야 하고 그 walk 자체도 중간 level 표가 캐시에 있느냐 없느냐에 따라 걸리는 메모리 접근 횟수가 달라집니다. 그래서 같은 RDMA WRITE 라도 "TLB hit (빠름)" 과 "TLB miss → multi-level walk (느림)" 사이에서 처리 시간이 출렁입니다. 이것이 large MR·sparse access 패턴에서 tail latency 가 커지는 근본 원인이고, RDMA-TB 가 PTW/TLB 를 module-level 로 따로 떼어 _miss 시나리오와 walk 단계_ 를 집중 검증하는 이유입니다.
+:::
 
 RDMA-TB 의 sub-IP 검증 환경은 이 변환 chain 을 직접 검증:
 

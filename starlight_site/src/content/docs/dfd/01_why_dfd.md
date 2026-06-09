@@ -123,7 +123,7 @@ S1 -> S2 -> S3 -> S4 -> S5
 
 **보안 관점.** 디버그 인프라는 칩 내부를 들여다보는 강력한 통로이므로, 양산 칩에서 함부로 열리면 보안 키나 펌웨어가 유출될 수 있습니다. 그래서 DBGEN/NIDEN/SPIDEN/SPNIDEN 네 인증 신호가 invasive/non-invasive × secure/non-secure 조합별로 디버그를 게이팅하며, 이 신호들은 보통 fuse나 lifecycle 상태에서 구동됩니다.
 
-**가상화 관점.** 여러 게스트가 한 SoC를 공유하는 환경에서는 디버그 권한도 가상화 경계를 존중해야 합니다. 어떤 게스트의 디버그가 다른 게스트나 hypervisor의 상태를 볼 수 없어야 하며, secure world(예: TrustZone)의 디버그는 SPIDEN/SPNIDEN으로 따로 게이팅됩니다 (추론: HDG는 secure/non-secure 게이팅을 명시하나 가상화별 격리 메커니즘 세부는 명시하지 않음).
+**가상화 관점.** 여러 게스트가 한 SoC를 공유하는 환경에서는 디버그 권한도 가상화 경계를 존중해야 합니다. 어떤 게스트의 디버그가 다른 게스트나 hypervisor의 상태를 볼 수 없어야 하며, secure world(예: TrustZone)의 디버그는 SPIDEN/SPNIDEN으로 따로 게이팅됩니다.
 
 ### 4.3 디버그 동작과 필요한 인증
 
@@ -238,9 +238,6 @@ NONINV: "**Non-invasive**\n(trace/PMU)" {
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `DFD` (Confluence import, `wiki/common/dfd_spec.md`) — §0 intro(스택 조망), §3 CoreSight 보안 신호, §5 DFD 통합 체크리스트
 
 **External**
 - IEEE Std 1149.1 — Standard Test Access Port and Boundary-Scan Architecture

@@ -122,6 +122,7 @@ MON -> SB: "analysis_port_write"
 
 :::note[여기서 잡아야 할 두 가지]
 **(1) 정확성 fail 은 즉시 stop, 성능 fail 은 누적 회귀** — 두 _다른_ severity 의 fail 을 같은 scoreboard 가 분리 처리. 이게 dual-reference 의 본질입니다. <br>
+**(1-보강) 두 reference 가 _서로 다른 추상화 수준_ 이라 직교한다** — Functional model 과 Ideal model 이 둘 다 "reference" 라서 같은 종류로 보이기 쉽지만, 둘은 _검증 차원이 직교(orthogonal)_ 합니다. **Functional model 은 DUT 와 같은 TLB 크기·정책·walk 을 모델링한 _cycle/결과 등가_ 기준** 으로, "DUT 가 _옳은_ PA·fault 를 내는가"(correctness)를 봅니다. 반면 **Ideal model 은 무한 TLB·0-cycle walk 같은 _도달 불가능한 architectural 상한_** 으로, "DUT 가 이론 최적 대비 _얼마나 느린가_"(performance)를 봅니다. 추상화 수준이 다르기 때문에 한 모델로 다른 축을 대신할 수 없습니다 — Functional 로는 성능 상한을 알 수 없고(자기 자신이 DUT 만큼 느림), Ideal 로는 정확성을 검사할 수 없습니다(latency 만 의미 있고 PA 는 golden 으로만 쓰임). 그래서 correctness 와 performance 라는 _두 직교 축_ 을 동시에 덮으려면 reference 가 _반드시_ 둘이어야 합니다. <br>
 **(2) Monitor 는 RTL 을 _수정하지 않고_ pin-level 을 sniff** — 그래서 SVA 도 `bind` 로 외부 모듈에서 연결하는 게 표준. RTL 에 `$display` 또는 assertion 을 inline 하면 _제품 코드가 검증에 오염_ 됨.
 :::
 ---
@@ -426,6 +427,12 @@ c_fault_reported: cover property (p_fault_reported);
 ```
 
 **DV 활용**: 위 SVA들은 bind module로 DUT 외부에서 연결하여, RTL 수정 없이 검증한다. 모든 assert에 대응하는 cover를 두어 assertion이 실제로 활성화되었는지 확인한다.
+
+:::note[`bind` 가 RTL 을 _안 건드리는_ 메커니즘 — elaboration 시 이름 연결]
+"RTL 수정 없이 검증" 이 어떻게 가능한지는 SystemVerilog 의 `bind` 가 _언제·어떻게_ 작동하는지를 보면 분명합니다. `bind` 는 **elaboration(컴파일 후, 시뮬 시작 전 설계 계층을 조립하는 단계)** 에서 처리되는 지시문입니다. `bind <target_module> <checker_module> <inst>(.clk(clk), .req_valid(req_valid), ...)` 라고 적으면, elaborator 가 target 모듈의 _모든 인스턴스_ 안에 checker 모듈을 하나씩 _자식 인스턴스로 끼워 넣고_, 괄호 안의 포트를 target 의 _동일 이름_ 신호에 묶어(name-based connection) 줍니다.
+
+핵심은 이 모든 일이 **별도 파일(bind 문 + checker 모듈)에서** 일어나고, target RTL 의 소스 텍스트는 _한 글자도 바뀌지 않는다_ 는 점입니다. checker 는 마치 그 모듈 안에 있던 것처럼 내부 신호를 _읽기만_ 하므로, 제품 RTL 에 assertion 이나 `uvm_info` 를 inline 으로 박았을 때 생기는 _제품 코드 오염_(검증용 코드가 합성 대상에 섞임, 코드 리뷰/릴리즈 부담)이 원천적으로 사라집니다. 즉 "외부 연결" 은 비유가 아니라 elaboration 단계의 _실제_ 동작입니다 — bind 파일은 검증 빌드에만 포함하고 합성 빌드에서는 빼면 됩니다.
+:::
 
 ### 5.5 Constrained Random 전략
 
@@ -792,6 +799,14 @@ Agile 개발에서의 MMU 스펙 변경:
 **실제**: SVA 는 _temporal property_ 검증에 강하지만 _value-level_ 비교 (DUT.PA == ref_pa) 는 scoreboard 가 더 적합. 또 SVA 만으로는 _coverage closure_ 가 어려움 — vacuous pass (`req` 가 안 들어와서 assertion 이 trivially true) 위험. SVA + scoreboard + cover 의 _조합_ 이 표준.<br>
 **왜 헷갈리는가**: SVA 의 "always true" 의 강한 인상.
 :::
+
+#### vacuous pass 가 발생하는 _논리적_ 이유 — implication 의 정의
+
+vacuous pass 가 "왜" 생기는지는 SVA 의 implication 연산자 `|->` 의 _논리 정의_ 에서 곧장 따라 나옵니다. `A |-> B` 는 명제 논리의 함의(implication) `A ⇒ B` 와 같고, 진리표상 **A(antecedent)가 false 이면 B 와 무관하게 전체가 true** 입니다 — 이것을 _vacuously true(공허하게 참)_ 라고 부릅니다.
+
+MMU 예로 `(req_valid && tlb_hit) |-> ##1 resp_valid` 를 보면, 만약 시뮬 내내 `tlb_hit` 이 한 번도 1이 되지 않으면 antecedent 가 항상 false 이고, 따라서 이 assertion 은 _consequent(`resp_valid`)를 검사할 기회조차 없이_ 매 cycle PASS 로 집계됩니다. 리포트에는 "0 FAIL" 로 찍히지만, 실제로는 _아무것도 검증하지 않은_ 것입니다 — DUT 의 hit-응답 로직에 버그가 있어도 잡히지 않습니다.
+
+여기서 **cover 짝이 왜 필수인지** 가 논리적으로 도출됩니다. `cover property (req_valid && tlb_hit)` 를 함께 두면, antecedent 가 시뮬에서 _실제로 한 번이라도 참이 되었는지_ 를 별도로 집계합니다. cover hit count 가 0 이면 그 assertion 은 vacuous 였다는 증거이므로, "assert PASS + cover hit ≥ 1" 두 조건이 모두 충족돼야 비로소 _의미 있는 검증_ 으로 sign-off 할 수 있습니다.
 :::danger[❓ 오해 4 — 'Reference model 은 RTL 과 1:1 일치해야 한다']
 **실제**: 두 종류의 reference 가 _다른 목적_ 에 쓰입니다. **Functional model** 은 RTL 의 _기능_ 과 1:1 (PA 정확). **Ideal performance model** 은 RTL 보다 _빠른_ 이론 상한 (무한 TLB, 0-cycle walk). 둘이 1:1 이면 성능 갭 측정 자체가 불가능.<br>
 **왜 헷갈리는가**: "reference" 라는 단어가 _golden_ 의 의미로 단순화돼서.

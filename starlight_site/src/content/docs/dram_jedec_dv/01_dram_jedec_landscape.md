@@ -162,6 +162,8 @@ DDR5 -> LPDDR5: 개념 공유 {style.stroke-dash: 5}
 
 두 계열이 분리된 근본 이유는 사용 환경이 요구하는 최적화 방향이 정반대이기 때문입니다. 서버나 데스크탑은 전원이 항상 공급되므로 전력보다는 최대 대역폭과 용량이 우선됩니다. 그래서 **JESD79 (DDR)**는 전압을 비교적 높게 유지하고, ECC를 시스템(DIMM 또는 컨트롤러) 레벨에서 처리하는 구조를 택합니다. 반면 스마트폰이나 IoT 기기는 배터리로 동작하기 때문에, 동작하지 않는 시간에 전력을 최대한 아껴야 합니다. 그래서 **JESD209 (LPDDR)**는 저전압 설계, 더 정교한 power-down 모드, package-on-package 형태를 채택합니다.
 
+LPDDR 의 선택이 모두 _전력의 두 성분_ 을 겨냥한다는 점을 보면 설계 갈림이 더 또렷해집니다. 칩 전력은 크게 **동적 전력**(신호가 토글할 때마다 capacitance 를 충방전하며 소비, 대략 전압의 제곱에 비례)과 **누설 전력**(아무 일을 안 해도 트랜지스터가 새며 흘리는 전류)으로 나뉩니다. LPDDR 이 전압을 0.5–0.3 V 까지 끌어내리는 것은 동적 전력이 전압 제곱에 비례하므로 작은 전압 강하만으로도 큰 절감을 얻기 때문이고 — 모바일은 항상 켜져 있는 화면 갱신 등으로 토글이 잦습니다. 반대로 deep sleep·PASR 같은 **세분화된 절전 모드** 는 누설 전력을 겨냥합니다 — 스마트폰은 대부분의 시간 동안 메모리가 idle 인데, 그 idle 시간에 새어 나가는 누설을 줄이려면 안 쓰는 영역의 refresh 를 끄고(PASR) 코어를 가능한 한 깊게 재워야 합니다. 서버는 메모리가 거의 항상 바쁘고 전원이 넉넉해 이 누설 최적화의 이득이 작으므로, 같은 기능을 굳이 넣지 않는 것입니다.
+
 두 계열은 세대별로 개념을 공유합니다. DDR5가 도입한 온다이 ECC 개념은 LPDDR5의 Link ECC와, DDR5의 RFM은 LPDDR5의 ARFM/DRFM과 서로 영향을 주고받으며 발전했습니다.
 
 > **DV 시사점**: 동일한 "DDR" 이라 부르더라도, JESD79 vs JESD209는 *서로 다른 표준*입니다. 동일 vendor가 둘을 모두 만들고 controller IP도 둘을 모두 다루지만, 검증 환경은 *별도* 입니다.
@@ -194,7 +196,7 @@ DDR5 -> LPDDR5: 개념 공유 {style.stroke-dash: 5}
 1. **2-cycle command** — 명령 자체가 2 클럭에 걸쳐 전송됩니다. CA[6:0] 7개 핀으로는 DDR5가 요구하는 주소 비트와 OPCODE를 1 클럭에 담을 수 없기 때문에 2 클럭으로 나눈 것입니다. 그 결과 monitor는 2 클럭 윈도우를 모아야 명령을 reconstruct할 수 있고, SVA의 타이밍 가정도 1-cycle 기반에서 다시 설계해야 합니다.
 2. **DFE (Decision Feedback Equalization)** — 8400 MT/s 이상의 고속 신호에서 ISI(심볼 간 간섭)를 보상하기 위해 DDR5 receiver에 DFE가 내장됩니다. MR21~MR22, MR111~MR116 등에 설정하며, 훈련 단계에서 DV는 sweep 시나리오가 필요합니다. (Ch08)
 3. **RFM (Refresh Management)** — controller가 추적하는 `RAA (Rolling Accumulated ACT) counter`가 threshold에 도달하면 RFM 명령을 발급해야 합니다. 동일 row를 반복 access하면 인접 row에 bit flip이 생기는 Rowhammer 취약점을 JEDEC 표준 수준에서 대응하는 메커니즘입니다. (Ch07)
-4. **Transparency ECC** — DRAM 내부에서 ECC 인코딩·디코딩이 자동으로 이루어져 controller에게는 투명하게 보입니다. 그러나 MR15에서 임계 threshold를 설정하고 MR16~MR20으로 에러 통계를 조회할 수 있으므로, DV는 이 통계가 정확히 갱신되는지 검증해야 합니다. (Ch09)
+4. **Transparency ECC** — DRAM 내부에서 ECC 인코딩·디코딩이 자동으로 이루어져 controller에게는 투명하게 보입니다. 그러나 MR15에서 임계 threshold를 설정하고 MR16~MR20으로 에러 통계를 조회할 수 있으므로, DV는 이 통계가 정확히 갱신되는지 검증해야 합니다. (Ch09) — _왜 하필 DDR5 세대에 on-die ECC 가 들어왔는가_ 는 셀 미세화의 인과로 설명됩니다. 공정이 미세해질수록 storage capacitor 의 물리적 크기가 줄고, 그만큼 한 셀이 저장할 수 있는 **전하량(charge)이 작아집니다**. 저장 전하가 적으면 '1' 과 '0' 을 가르는 전하 마진이 좁아지고, 알파 입자·우주선·인접 셀 누설 같은 작은 교란만으로도 그 좁은 마진을 넘어 비트가 뒤집히는 **soft error 빈도가 올라갑니다**. 즉 "셀이 작아짐 → 저장 전하 감소 → 전하 마진 축소 → soft error 증가" 라는 사슬이 임계점에 이르자, DRAM 이 출하 시점부터 칩 내부에서 단일 비트를 스스로 정정하지 않으면 안정적으로 동작하기 어려워졌고, 그래서 JEDEC 이 DDR5 에서 on-die ECC 를 기본 사항으로 끌어들인 것입니다.
 5. **DCA (Duty Cycle Adjuster)** — 고속 신호에서 clock/strobe의 duty cycle이 50%에서 벗어나면 eye가 비대칭해집니다. DCA는 이를 fine-tune하는 회로로, MR42~MR48과 MR103~MR254 영역에서 DQ 핀별로 설정합니다.
 
 ---

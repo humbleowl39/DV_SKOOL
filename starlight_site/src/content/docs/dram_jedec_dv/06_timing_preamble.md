@@ -80,6 +80,10 @@ DRAM 검증의 절반은 protocol, 나머지 절반은 timing입니다. Protocol
   4 ACT in tFAW window
 ```
 
+:::note[tRAS 의 하한은 cell restore 시간에서 나온다]
+위 그림에서 tRAS 는 "ACT 후 같은 bank 의 PRE 까지 최소 active 시간" 이라는 _규칙_ 으로 보이지만, 그 최소값은 셀 물리에서 나옵니다. Ch01 에서 보았듯 read 는 destructive — ACT 로 word-line 을 열면 셀 전하가 bit-line 으로 흩어지고, sense amplifier 가 그 값을 latch 한 뒤 같은 word-line 이 열려 있는 동안 셀 capacitor 에 원래 값을 **되써넣습니다(restore)**. 이 restore 가 capacitor 를 다음 refresh 까지 버틸 만큼 충분히 충전하는 데에는 물리적 시간이 걸립니다. 만약 restore 가 끝나기 전에 PRE 로 word-line 을 닫아 버리면 셀에 _덜 충전된_ 약한 전하만 남아, 누설로 인해 데이터를 일찍 잃을 위험이 생깁니다. 그래서 ACT→PRE 사이에 "restore 완료 보장 시간" 인 tRAS 가 하한으로 강제되는 것입니다 — tRAS 는 임의의 숫자가 아니라 sense amp 가 cell 을 다시 채우는 데 필요한 시간입니다.
+:::
+
 ---
 
 ## 3. DDR5 의 timing 변화 — 무엇이 달라졌나
@@ -114,6 +118,8 @@ DDR5는 *Write 연속*에 더 세밀한 timing이 추가되었습니다:
 ### 4.1 Read Preamble — host의 DQS 인식
 
 DRAM이 RD 응답을 보낼 때, DQS_t/c는 burst 시작 전에 정해진 패턴을 먼저 보여줍니다. host receiver는 이 preamble 패턴을 감지하고 자신의 sampling timing을 잡습니다. preamble이 없으면 receiver는 burst의 첫 bit가 언제 시작되는지 알 수 없어 데이터를 놓칩니다. 고속 신호에서는 eye가 좁아지므로, sampling timing을 더 정확히 잡기 위해 preamble을 길게 설정하기도 합니다.
+
+_왜 preamble 이 있어야 receiver 가 첫 에지를 잡을 수 있는가_ 는 strobe 가 평소 Hi-Z(idle) 상태라는 데서 나옵니다. DQS 는 burst 가 없을 때 구동되지 않고 종단 저항에 의해 어중간한 전압(또는 Hi-Z)에 떠 있습니다. 이 상태에서 데이터의 첫 비트와 _동시에_ DQS 가 갑자기 토글하기 시작하면, receiver 내부의 strobe 입력 버퍼와 DLL/지연 회로가 안정 상태에 이르기 전이라 그 첫 latching edge 를 놓치거나 잘못된 시점에 잡습니다 — 정지해 있던 시계가 첫 똑딱임을 신뢰할 수 없는 것과 같습니다. preamble 은 실제 데이터가 오기 _전에_ DQS 를 먼저 정해진 패턴으로 토글시켜, receiver 가 (1) "지금부터 strobe 가 온다" 는 것을 인지하고 (2) 입력 버퍼·게이팅 회로를 미리 깨워 안정시킬 시간을 줍니다. 그래서 첫 데이터 비트가 도착할 때는 이미 receiver 가 준비된 상태가 되어 첫 에지부터 정확히 sample 할 수 있는 것입니다.
 
 > 출처: JESD79-5C.01 §4.4.1
 
@@ -393,6 +399,8 @@ DDR4 명령은 1-cycle.
 - 고속 (DDR5-5200 이상)에서는 **2tCK preamble 미지원** → 3tCK/4tCK 필수
 - DDR5-7600 이상에서 tRPST1.5 가 1.300으로 *살짝 증가*
 - tDQSH_pre/tDQSL_pre 범위가 *고속에서 좁아짐* — 더 정확한 duty cycle 필요
+
+_왜 고속에서는 2tCK preamble 로는 부족한가_ — preamble 이 receiver 를 깨우는 데 필요한 시간은 _절대 시간(ns)_ 단위인데, tCK 는 속도가 오를수록 짧아지기 때문입니다. 위 §4.1 에서 보았듯 preamble 의 역할은 idle 상태의 strobe 입력 버퍼와 게이팅·DLL 회로가 안정 상태에 도달할 _물리적 시간_ 을 벌어 주는 것입니다. 이 안정화 시간은 회로의 물리 특성이 정하므로 클럭이 빨라진다고 비례해서 줄지 않습니다. 그런데 2tCK preamble 의 길이는 2 × tCK 이므로, 고속에서 tCK 가 절반으로 줄면 그 2tCK 가 가리키는 절대 시간도 절반으로 짧아져 receiver 안정화에 모자라게 됩니다. 그래서 같은 안정화 시간을 확보하려면 더 많은 클럭 — 3tCK 또는 4tCK — 으로 preamble 을 늘려야 하고, 그 결과 5200 MT/s 이상에서는 2tCK 모드가 빠지고 3/4tCK 가 필수가 되는 것입니다.
 
 ### 8.5 §4.4.3 — Preamble/Postamble Timing (원문 인용)
 

@@ -26,6 +26,8 @@ title: "Ch05. Command·Truth Table·Burst Operation"
 
 DRAM이 받을 수 있는 명령은 놀랍게도 매우 적습니다. 메모리 컨트롤러가 수백 가지 복잡한 시나리오를 처리하는 것처럼 보여도, 결국 DRAM 핀 레벨에서 주고받는 명령은 아래 7개의 조합으로 표현됩니다. 이 명령들의 순서와 타이밍이 곧 DRAM 프로토콜입니다.
 
+_왜 단 7개로 충분한가_ 는 DRAM 의 모든 접근이 하나의 패턴으로 환원되기 때문입니다. 1T1C 셀과 destructive read 라는 물리(Ch01) 때문에, 어떤 read 든 write 든 결국 **row 를 연다(ACT) → 그 안에서 column 을 골라 데이터를 주고받는다(RD/WR) → row 를 닫는다(PRE)** 라는 단일 시퀀스를 거칠 수밖에 없습니다. 여기에 capacitor 누설을 메우는 REF, 동작 모드를 설정·조회하는 MRW/MRR 만 더하면 DRAM 이 해야 할 일이 전부 덮입니다. SSD 처럼 "정렬·검색·매핑" 같은 고수준 의미 연산이 없고 — DRAM 은 그저 주소가 가리키는 셀을 충실히 열고 닫을 뿐이라 — 명령 집합이 이 한 패턴을 표현하는 최소한으로 작아지는 것입니다. (ZQ·power-down 같은 보조 명령은 이 핵심 패턴을 _유지_ 하기 위한 부수 동작입니다.)
+
 | 명령 | 약어 | 기능 |
 |---|---|---|
 | Activate | ACT | row 활성화 (sense amp으로 row buffer 로드) |
@@ -563,6 +565,8 @@ endgroup
 
 → **DDR5는 sequential 만 지원**. DDR4의 interleaved option 폐기.
 
+_왜 interleaved burst 를 폐기했는가_ — interleaved 순서는 옛 시절의 수요에서 나온 것인데 그 수요가 사라졌기 때문입니다. interleaved order 는 본래 시작 주소가 cache line 한가운데를 가리킬 때(misaligned), CPU 가 _가장 급한 word(critical word)_ 를 먼저 받고 나머지를 뒤섞인 순서로 채우도록 고안된 방식이었습니다. 그러나 현대 시스템에서는 cache line 이 항상 그 크기에 **정렬(aligned)** 되어 전송되고, DDR5 의 BL16 한 burst 가 정확히 64 B = 1 cache line 에 맞아떨어집니다 — 시작점이 늘 line 경계라 "한가운데부터 뒤섞어 시작" 할 이유가 없어진 것입니다. interleaved 를 빼면 controller·DRAM 양쪽의 burst 순서 디코딩 로직이 단순해지고 검증 표면도 줄어드므로, 수요가 사라진 기능을 정리해 sequential 하나로 통일한 것입니다.
+
 ### 10.5 Table 32 — Burst Order for READ (BL16, BC8)
 
 > 출처: JESD79-5C.01 §4.2 Table 32
@@ -609,6 +613,8 @@ DDR5의 **3가지 Precharge mode**:
 3. **PREpb (Per-Bank)**: 정확히 하나의 bank 만 precharge
 
 → DV는 *3가지 PRE mode 모두* cover해야 함. PREsb는 DDR4에 없던 신기능 — 동기적 precharge 필요할 때.
+
+_왜 DDR5 에서 PREsb(same-bank precharge)가 새로 필요해졌는가_ 는 DDR5 가 도입한 **same-bank 단위 동작들과 짝을 이루기** 때문입니다. DDR5 는 REFsb(same-bank refresh)처럼 "모든 bank group 에서 _같은 번호의 bank_ 만" 골라 동작시키는 메커니즘을 새로 들였습니다 — 한 bank 번호 집합만 묶어 refresh 하는 동안 나머지 bank 는 계속 쓰게 해 refresh stall 을 줄이려는 것입니다. 그런데 이런 same-bank 동작을 걸려면, 그 대상이 되는 same-bank 집합을 _한 명령으로 동시에_ precharge 해 일관된 출발 상태로 만들 수단이 필요합니다. bank 하나씩 PREpb 로 닫으면 타이밍이 어긋나 동기성이 깨지고, PREab 로 전부 닫으면 살려 두고 싶은 다른 bank 까지 닫혀 버립니다. PREsb 는 정확히 "여러 BG 에 걸친 같은 번호 bank 만 한꺼번에 precharge" 를 제공해, REFsb 같은 bank-그룹 단위 동작과 동기적으로 맞물리도록 한 신규 명령입니다.
 
 ### 10.7 §4.3 — Precharge Behavior (원문 인용)
 

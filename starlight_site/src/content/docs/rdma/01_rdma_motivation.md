@@ -190,6 +190,32 @@ ibv_poll_cq(cq, 1, &wc);              // ⑧ 까지 끝나면 status=SUCCESS
 **(1) 양 노드의 CPU 가 거의 안 쓰임** — A 는 post_send + poll_cq, B 는 0회. 이게 RDMA 의 본질. <br>
 **(2) "원격 메모리 주소" 가 미리 약속돼야 한다** — RDMA 는 _주소를 알고 직접 쓰는_ 모델. 그래서 connection setup (control path) 과 data 전송 (data path) 이 분리됩니다.
 :::
+
+#### 메커니즘 1 — Doorbell MMIO 가 실제로 하는 일 (Step ③)
+
+Step ③ 의 "도어벨 MMIO 1번" 은 단순히 "신호를 보낸다" 가 아니라, _구체적으로_ **SQ 의 producer pointer (tail) 값을 NIC 의 BAR 영역에 write** 하는 동작입니다. 흐름은 이렇습니다:
+
+1. App 이 WQE 를 SQ ring buffer (host memory) 의 다음 슬롯에 채워 넣는다. 이 시점엔 NIC 가 아직 모릅니다.
+2. App 이 NIC 의 MMIO doorbell register (PCIe BAR 안의 한 주소) 에 **새 tail 값** 을 write 한다.
+3. 이 write 가 PCIe 를 타고 NIC 에 도달하면, NIC 는 "내가 알던 tail 보다 producer pointer 가 앞섰다 → 새 WQE 가 생겼다" 를 인식하고, host memory 에서 WQE 를 **DMA fetch** 합니다.
+
+즉 doorbell 은 _데이터를 옮기는_ write 가 아니라 **"여기까지 WQE 가 찼다" 는 포인터 갱신** 입니다. 이게 kernel bypass 의 물리적 실체입니다 — syscall 없이, user-space 에서 BAR 주소에 한 번 store 하면 NIC 가 깨어납니다. (구현에 따라 doorbell write 는 write-combining 영역으로 매핑돼 여러 store 가 하나의 PCIe transaction 으로 묶이기도 합니다 — 확인 필요한 디테일이지만 핵심은 "포인터를 BAR 에 쓴다" 입니다.)
+
+#### 메커니즘 2 — Scatter-Gather: 흩어진 버퍼를 하나의 stream 으로 (sg_list)
+
+위 코드의 `sg_list` 와 `num_sge` 를 보세요. 한 WQE 는 **여러 개의 SGE (Scatter-Gather Element)** 를 가질 수 있습니다 — 각 SGE 는 `(addr, length, lkey)` 한 쌍입니다. 왜 여러 개가 필요한가? Application 의 데이터가 메모리에 **연속으로 놓여 있지 않은** 경우가 흔하기 때문입니다 (예: 헤더는 한 버퍼, 페이로드는 다른 버퍼).
+
+NIC 의 DMA 엔진은 한 WQE 를 처리할 때 **sg_list 를 순서대로 순회 (descriptor walk)** 합니다: SGE[0] 의 addr 에서 length 만큼 DMA read → SGE[1] 의 addr 에서 length 만큼 DMA read → … 그리고 이렇게 읽어들인 조각들을 **하나의 연속된 payload stream 으로 이어 붙여** 패킷에 싣습니다. 수신 측에서는 반대로, 도착한 stream 을 RECV WQE 의 sg_list 가 가리키는 여러 버퍼에 **흩어서 (scatter)** DMA write 합니다.
+
+이게 "zero-copy 인데도 흩어진 데이터를 보낼 수 있는" 이유입니다 — SW 가 미리 한 버퍼로 memcpy 해 모을 필요 없이, NIC 가 DMA 단계에서 gather/scatter 를 직접 합니다.
+
+#### 메커니즘 3 — 왜 MR 등록에 "pinning" 이 전제인가 (Step ①)
+
+Step ① 의 `ibv_reg_mr` 가 메모리를 **pin** 한다고 했습니다. 왜 핀이 필수일까요? 핵심은 **NIC DMA 는 물리주소 (PA) 로 동작한다** 는 사실입니다.
+
+App 이 다루는 주소는 가상주소 (VA) 지만, NIC 가 실제로 메모리에 read/write 하려면 그 VA 에 대응하는 PA 를 알아야 합니다. MR 등록 시점에 OS 가 VA→PA 매핑을 NIC (의 translation table) 에 알려줍니다. 그런데 일반적인 OS 는 메모리 압박이 생기면 페이지를 **swap-out 하거나 다른 PA 로 이동** 시킬 수 있습니다 (page migration). 만약 NIC 가 기억하던 PA 의 페이지가 그 사이에 옮겨지면, NIC 는 **이미 다른 데이터가 들어찬 stale PA** 에 DMA 를 해버립니다 → silent corruption.
+
+그래서 MR 등록은 해당 페이지들을 **pin (= swap/이동 금지로 PA 고정)** 합니다. PA 가 고정돼야 NIC 가 CPU 개입 없이 안전하게 DMA 할 수 있고, 이것이 zero-copy 의 전제 조건입니다. 동시에 이게 MR 등록이 _비싼_ control-path 동작인 이유 — 대량 메모리를 핀하면 OS 의 페이지 관리 유연성이 줄기 때문에, 데이터 패스에서가 아니라 connection setup 단계에서 미리 해두는 것입니다.
 :::tip[🤔 잠깐 — 만약 step ⑥ 에서 B 의 CPU 를 깨우려면?]
 위 그림에서 B 의 CPU 는 한 번도 안 깨워졌습니다. 만약 B 의 application 이 "데이터 도착했음" 을 알아야 한다면 (예: 메시지 큐에 새 항목 push), A 는 어떤 opcode 를 써야 할까요?
 

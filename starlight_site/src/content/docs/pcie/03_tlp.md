@@ -281,6 +281,15 @@ PCIe Base Spec 에서 Fmt/Type 인코딩은 Section "Transaction Layer Specifica
 - Switch 는 주소 검사 안 함 → 같은 주소도 섞을 수 있음.
 - 책임은 **sender** 에게. 순서가 중요한 제어 명령에는 절대 RO 금지.
 :::
+
+:::note[ATTR 의 두 bit — RO 와 NS 의 의미와 위험]
+TLP header 의 ATTR 2 bit 는 각각 ordering 과 coherency 의 *완화* 를 선언하는 hint 입니다. 둘 다 "성능을 위해 보장을 일부 포기" 하는 것이라, 잘못 쓰면 조용한 데이터 버그를 만듭니다.
+
+- **RO (Relaxed Ordering).** 기본 PCIe ordering 은 producer-consumer 무결성을 위해 strong ordering 을 강제합니다(앞의 Write-passes-Read 규칙). RO=1 은 "이 TLP 들 사이엔 그런 순서 의존이 없으니 자유롭게 재배치해도 된다" 는 선언입니다. *언제 안전한가* — 서로 *독립적인 데이터* 일 때입니다. 예: 큰 DMA 버퍼의 서로 다른 영역을 여러 TLP 로 쓰는데, 그 조각들 사이엔 "먼저/나중" 의미가 없는 경우. 재배치를 허용하면 switch/RC 가 throughput 을 높입니다. *위험* — 만약 그 TLP 들 사이에 실제로는 순서 의존(예: 데이터 write 후 완료 flag write)이 있는데 RO 를 켜면, flag 가 데이터보다 먼저 보여 consumer 가 미완성 데이터를 읽습니다. RO 의 안전성 판단 책임은 전적으로 *sender* 에게 있습니다.
+- **NS (No Snoop).** 기본적으로 host 로 향하는 메모리 접근은 CPU 캐시와의 coherency 를 위해 snoop 됩니다(host 가 그 line 의 dirty 사본을 들고 있으면 그것을 반영). NS=1 은 "이 접근은 snoop 을 생략해도 된다" 는 선언으로, snoop 경로를 건너뛰어 latency 와 host 측 coherency 트래픽을 줄입니다. *언제 안전한가* — 그 메모리 영역이 CPU 캐시에 caching 되지 않음이 보장될 때(예: 드라이버가 non-cacheable 로 매핑한 DMA 영역). *위험* — CPU 가 그 영역을 캐시에 들고 있는데 NS 로 snoop 을 생략하면, device 는 DRAM 의 stale 값을 읽거나 device 의 write 가 CPU 캐시와 어긋나 coherency 가 깨집니다. NS 역시 "정말 non-coherent 해도 되는가" 의 판단을 sender/소프트웨어가 책임집니다.
+
+검증에서 RO/NS 는 coverage 와 위험 시나리오의 핵심입니다 — RO=1 TLP 가 실제로 재배치돼도 결과가 맞는지, NS=1 인데 host 캐시에 사본이 있는 위험 케이스를 잡는지를 확인해야 합니다.
+:::
 ### 5.4 Routing 상세 — Type 0 vs Type 1 Configuration TLP
 
 ```d2
@@ -324,6 +333,22 @@ CMP -> REQ: "CplD Tag=5, ByteCount=64, LowAddr=0x1C0, 64 B" { style.stroke-dash:
 | **Cpl Status** | Successful / Unsupported Request (UR) / Configuration Request Retry (CRS) / Completer Abort (CA) |
 
 → **Max Read Request Size** (MRRS) 가 한 번의 MRd 가 요청할 수 있는 최대 byte. Completer 의 **Max Payload Size** (MPS) 가 한 Completion packet 의 최대 payload — 이 둘의 mismatch 가 split 갯수를 결정.
+
+:::note[Tag 수는 왜 무한정 못 늘리나 — outstanding NP = completion buffer 예약]
+Tag 를 늘리면 더 많은 NP 를 동시에(outstanding) 던질 수 있어 throughput 이 오를 것 같지만, Tag 수에는 *물리적 상한* 이 있습니다 — 그 상한을 정하는 것이 **completion buffer** 입니다.
+
+MRd 같은 NP 를 하나 발행한다는 것은 "그 응답(Completion)이 언젠가 돌아올 텐데, 그걸 받아 둘 자리를 내가 미리 비워 둔다" 는 약속입니다. PCIe 의 flow control 상 requester 는 *자신이 받을 completion 을 담을 buffer 가 있다고 보고* NP 를 내보내야 하고(completion 은 보통 무한 credit 으로 광고되므로 — Module 04), 그 buffer 는 requester 안의 유한한 SRAM 입니다. 따라서 *동시에 떠 있을 수 있는 NP 의 개수* 는 곧 *그 completion 들을 한꺼번에 받아 둘 buffer 용량* 과 묶입니다. Tag 는 그 outstanding NP 하나하나를 식별하는 라벨이므로, "동시 outstanding 수 = 필요한 completion buffer 크기 = 필요한 Tag 수" 가 한 사슬로 엮입니다.
+
+그래서 Tag 를 256 → 1024(extended Tag)로 늘리려면, requester 는 그만큼 많은 in-flight completion 을 받아 둘 buffer 도 함께 키워야 합니다 — buffer 없이 Tag 만 늘리면, 응답이 몰려 들어올 때 받아 둘 자리가 없어 link 가 막히거나 completion 을 흘립니다. 즉 Tag 수를 무한정 못 늘리는 이유는 인코딩 비트가 아니라 *완료 데이터를 보관할 on-chip 메모리 비용* 입니다. (그래서 device 는 자기가 감당 가능한 Tag 수를 capability 로 광고합니다.)
+:::
+
+:::note[MPS/MRRS는 어떻게 link 양단에서 협상·강제되나]
+MPS 와 MRRS 는 한쪽이 마음대로 정하는 값이 아니라, *hierarchy 전체* 가 합의해야 하는 값입니다. 특히 MPS 는 강한 제약이 있습니다 — **시스템의 모든 참여자(RC, 중간 switch, endpoint)가 지원하는 MPS 의 *최소값* 으로 통일** 해야 합니다.
+
+왜 최소값일까요? TLP 하나가 RC → switch → EP 처럼 여러 hop 을 거치는데, 경로상 어느 한 노드라도 그 payload 크기를 받을 buffer 가 없으면 그 노드에서 처리가 불가능합니다. 가장 작은 MPS 를 가진 노드가 경로의 *병목* 이므로, 전체를 그 최소값에 맞춰야 어떤 TLP 도 경로 어디서든 안전하게 처리됩니다. enumeration(Module 06) 단계에서 OS/firmware 가 각 device 의 MPS capability 를 읽어, hierarchy 전체의 최소값을 골라 모든 device 의 MPS *control* 레지스터에 그 값을 프로그램합니다.
+
+그럼 누군가 이 합의를 어기고 더 큰 payload 를 보내면? 그 TLP 는 수신 측에서 **Malformed TLP** 로 처리됩니다 — payload 길이가 협상된 MPS 를 초과하면 spec 위반으로 간주되어 에러(AER 의 Malformed TLP, 보통 Fatal 급)로 보고되고 폐기됩니다. 즉 MPS 는 "최소값으로 통일" 이라는 *협상* 과, "초과 시 Malformed" 라는 *강제* 의 두 단계로 지켜집니다. (MRRS 는 read 요청 크기 상한이라 강제 양상은 다르지만, 마찬가지로 각 device 의 control 레지스터로 설정됩니다.)
+:::
 
 ### 5.6 ECRC — End-to-End CRC
 

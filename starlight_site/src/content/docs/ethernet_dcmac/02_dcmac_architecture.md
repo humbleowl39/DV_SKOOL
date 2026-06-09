@@ -129,6 +129,16 @@ FCB -> TXQ3: "④ pause_time tick\n(단위 = 512 bit time)" { style.stroke-dash:
 | ⑥ | RX MAC | host 의 AXI-S RX 에는 **올리지 않음** | PFC frame 은 host 가 보지 않아도 됨 |
 | ⑦ | (반대 방향) | data frame 은 RX MAC 에서 FCS 검증 후 tuser.bad_fcs=0 으로 host 송출 | data path 는 PFC 와 독립 |
 
+:::note[메커니즘 — pause_time 의 단위가 왜 "512 bit-time" 이고 실제 정지 시간은 어떻게 구하나]
+PFC frame 의 `pause_time[prio]` 필드(16-bit)는 _초_ 가 아니라 **quanta** 단위입니다. 1 quanta = **512 bit-time**, 즉 "512 비트를 그 link 속도로 전송하는 데 걸리는 시간" 입니다. 따라서 실제 정지 시간은:
+
+```
+정지 시간 = pause_time × 512 ÷ line_rate(bit/s)
+```
+
+예로 100 Gbps(1e11 bit/s) link 에서 pause_time = 0x0064(=100)이면 → 100 × 512 ÷ 1e11 = **약 512 ns** 정지입니다. **왜 굳이 bit-time 단위인가?** PFC frame 은 다양한 속도(10/25/100/400 Gbps)의 link 에서 같은 포맷으로 쓰여야 하는데, 만약 pause_time 을 _절대 시간(ns)_ 으로 정의하면 속도가 바뀔 때마다 "이 시간 동안 몇 byte 가 흘러가는가" 가 달라져 buffer 설계가 link 마다 제각각이 됩니다. 반면 **bit-time 단위는 _전송량(=비트 수) 기준_ 이라 속도와 무관하게 "이만큼의 데이터 분량만큼 멈춰라" 라는 의미가 일정** 합니다 — 빠른 link 는 같은 quanta 를 짧은 절대시간에, 느린 link 는 긴 절대시간에 소화하지만, _멈추는 동안 흘렀을 데이터 양_ 은 동일합니다. 그래서 송수신 buffer 의 여유(headroom) 계산이 속도에 독립적으로 일관되게 표현됩니다. 검증에서는 line_rate 와 pause_time 으로 _기대 정지 cycle 수_ 를 역산해, counter tick-down 이 정확히 0 에서 재개하는지 확인합니다.
+:::
+
 ```c
 // 검증 환경 측의 sequence body (line agent 가 PFC frame 주입)
 class pfc_inject_seq extends dcmac_base_seq;
@@ -173,6 +183,12 @@ endclass
 | Segmented (line) | DCMAC ↔ PCS/PHY | block (64b multi-segment) | always-running pipeline | per-segment SOP/EOP control bit |
 
 → 같은 frame 이 위쪽에서는 **24 beat × 512-bit AXI-S** 로, 아래쪽에서는 **N segment / cycle 의 multi-segment block** 으로 표현됩니다. 같은 byte sequence 의 두 표현.
+
+:::note[메커니즘 — segmented 인터페이스가 IFG 의 빈 사이클을 채워 line-rate 를 유지하는 원리]
+왜 단순한 "한 cycle = 한 frame" 버스로는 400 Gbps line-rate 를 못 채울까? frame 들 사이에는 최소 **12 byte 의 IFG(Inter-Frame Gap)** 와 Preamble 이 들어가고, frame 길이는 byte 단위라 버스 폭(예: 한 cycle = 64 byte)의 배수가 아닐 수 있습니다. 그래서 frame A 가 끝나는 cycle 의 _뒷부분 byte 들_ 과 그 다음 IFG 만큼이 "쓸모없이 비는" 슬롯이 됩니다. 작은 frame 이 연속될수록 이 낭비가 누적돼 실효 대역폭이 line-rate 아래로 떨어집니다.
+
+**segmented 인터페이스** 는 한 bus cycle(beat)을 여러 개의 작은 **segment** 로 쪼개고, 각 segment 마다 독립적인 **SOP/EOP(start/end-of-packet) 제어 비트** 를 둡니다. 그래서 한 beat 안에서 **frame A 의 EOP segment 바로 다음 segment 부터 frame B 의 SOP** 를 배치할 수 있습니다 — 즉 "frame A 의 꼬리 + frame B 의 머리" 가 _같은 cycle_ 에 공존하도록 **packing** 합니다. IFG 는 별도 데이터 칸을 차지하는 게 아니라 segment 경계의 제어 정보로 표현되므로 빈 사이클을 만들지 않습니다. 결과적으로 작은 frame 이 연속돼도 버스가 매 cycle 꽉 차게 채워져 line-rate 가 유지됩니다. (검증 관점에서는 한 beat 에 EOP+SOP 가 같이 있는 _back-to-back 작은 frame_ 시나리오가 segment 경계 처리의 핵심 corner 입니다.)
+:::
 
 ### 4.3 Multi-port mode 의 내부 매핑
 

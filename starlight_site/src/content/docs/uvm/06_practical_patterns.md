@@ -347,6 +347,12 @@ generic_axi_agent #(32, 32)  narrow_agent; // 32-bit 데이터
 → DCMAC (512-bit), 레지스터 (32-bit) 모두 커버
 ```
 
+:::note[typedef 전개의 이면 — 파라미터가 다르면 _별개 타입_]
+`typedef generic_axi_item #(DATA_W, ADDR_W) item_t;` 는 파라미터를 받아 그에 맞는 item/driver 타입을 _전개_ 합니다. 편리하지만 대가가 있습니다 — SystemVerilog 에서 **파라미터 조합마다 컴파일 시점에 _독립된 타입_ 이 생성** 됩니다. `generic_axi_agent#(512,40)` 와 `generic_axi_agent#(32,32)` 는 _서로 호환되지 않는 별개 타입_ 이고, 그 안의 `item_t` 도 각각 다른 타입입니다.
+
+그래서 factory override 나 타입 호환에 제약이 생깁니다 — 한 폭에 건 `set_type_override` 는 다른 폭의 특수화에 _적용되지 않고_, 폭이 다른 두 agent 사이엔 item 을 직접 주고받을 수 없습니다. 이것은 [Module 04 의 config_db type key](../04_config_db_factory/) 가 parameterized 타입에서 매칭에 실패하는 것과 _같은_ 근본 — "파라미터 다르면 다른 타입" — 입니다. 재사용 이점과 이 타입 분리 제약은 동전의 양면입니다.
+:::
+
 ### 5.5 안티패턴 1: config_db 경로 하드코딩
 
 ```systemverilog
@@ -392,6 +398,12 @@ task body();
   start_item(next_item); finish_item(next_item);
 endtask
 ```
+
+:::note[왜 `#delay` 가 스케줄러 차원에서 깨지나]
+`#100ns` 는 **절대 시간 (absolute time)** 을 기다립니다 — 시뮬레이터 타임휠에서 "지금부터 100ns 뒤" 에 깨어나라는 지시일 뿐, DUT 가 _무엇을 하고 있는지_ 와 무관합니다. 그래서 clock 주기가 10ns→5ns 로 바뀌거나 emulator 의 timing 이 다르면, 같은 `#100ns` 가 _다른 개수의 사이클_ 에 대응해 시나리오가 통째로 어긋납니다. 반면 `@(posedge clk iff vif.ready)` 나 `wait(event)` 는 **이벤트 동기 (event-synchronized)** — DUT 가 실제로 준비된 _그 순간_ 에 깨어나므로 clock 주기와 무관하게 항상 옳습니다.
+
+더 미묘한 문제는 _같은 시각_ 안의 race 입니다. handshake 는 valid/ready 가 정해진 region 에서 안정되어 race 가 없지만, `#0` 이나 부정확한 `#delay` 는 같은 time slot 안에서 _delta-cycle_ 단위로 다른 프로세스와 평가 순서가 엇갈려 (driver 의 NBA 갱신 전인지 후인지에 좌우) 매 실행마다 결과가 달라지는 flaky 의 주범이 됩니다. 즉 `#delay` 는 (1) 절대 시간 종속으로 _환경이 바뀌면_ 깨지고, (2) delta-cycle race 로 _같은 환경에서도_ 흔들립니다. (SV 스케줄러 region 의 자세한 동작은 [Module 02 §3.1](../02_agent_driver_monitor/) 참고.)
+:::
 
 ### 5.8 안티패턴 4: $display / $finish 사용
 
@@ -462,6 +474,47 @@ endclass
 | 4 | Sequence Library 정비 + Virtual Sequence | 기존 테스트 리스트와 1:1 매핑 + coverage 유지 |
 
 각 단계를 완료할 때마다 기존 시뮬 결과와의 **기능 동등성**을 sanity로 확인합니다. 한 번에 전체를 갈아엎으면 어느 단계에서 문제가 생겼는지 추적하기 어렵기 때문에, 단계별 점진 전환이 UVM 마이그레이션의 표준 접근입니다.
+
+### 5.12 `function` vs `function automatic` — static vs automatic 저장 수명
+
+UVM 코드 곳곳에서 task/function 이 fork 로 동시 실행되고, sequence 가 재귀적으로 sub-sequence 를 부르며, 같은 메서드가 여러 transaction 에 대해 겹쳐 돕니다. 이것이 _안전하게_ 돌아가는 이유는 SystemVerilog 의 **저장 수명 (storage lifetime)** 규칙에 있습니다 — 이것을 모르면 "혼자선 멀쩡한데 fork 하면 값이 섞이는" 디버그 지옥을 만납니다.
+
+#### static 저장 vs automatic 저장
+
+함수/태스크의 지역 변수가 메모리에서 _어떻게 사는지_ 에 두 모드가 있습니다.
+
+- **static 저장**: 그 변수의 메모리가 _한 벌_ 만 존재하고 **모든 호출이 공유** 합니다. 호출이 끝나도 값이 남고, 두 번째 호출은 첫 호출이 남긴 값을 봅니다. 동시에 두 곳에서 같은 함수를 부르면 _같은 메모리_ 를 건드려 값이 섞입니다.
+- **automatic 저장**: 호출할 때마다 **그 호출 전용 stack frame** 이 새로 잡혀, 각 호출이 _자기만의_ 지역 변수 사본을 가집니다. 호출이 끝나면 사라집니다. 그래서 같은 함수가 여러 번 겹쳐 돌아도 (재귀, fork 로 띄운 여러 인스턴스) 서로 간섭하지 않습니다 — 이것이 **reentrancy (재진입 가능)** 입니다.
+
+module/`program` 스코프의 함수는 _기본이 static_ 이라 명시적으로 `function automatic` 으로 선언해야 reentrant 해집니다. 반면 **class 안에 선언된 메서드는 SystemVerilog 규정상 _기본이 automatic_** 입니다 — 그래서 UVM 의 컴포넌트 메서드, sequence 의 `body()`, driver 의 task 들이 별도 키워드 없이도 fork·재귀에서 안전한 것입니다.
+
+#### static 이 깨뜨리는 구체 예 — 재귀
+
+module-scope 의 static 함수로 팩토리얼을 짜면 망가지는 고전 예입니다.
+
+```systemverilog
+// BAD: static (module scope 기본) — 재귀가 깨짐
+function int fact_bad(int n);
+  int result;              // static: 모든 호출이 공유하는 _한 개_
+  if (n <= 1) return 1;
+  result = n * fact_bad(n - 1);  // 안쪽 호출이 같은 result 를 덮어씀
+  return result;
+endfunction
+
+// GOOD: automatic — 호출마다 독립 stack frame
+function automatic int fact_ok(int n);
+  int result;              // automatic: 호출마다 새 사본
+  if (n <= 1) return 1;
+  result = n * fact_ok(n - 1);
+  return result;
+endfunction
+```
+
+`fact_bad` 는 `result` 가 _한 벌_ 뿐이라, 재귀로 들어간 안쪽 호출이 바깥 호출의 `result` 를 덮어써 엉뚱한 값을 냅니다. `fact_ok` 는 각 재귀 깊이가 자기 `result` 를 가져 올바릅니다. **fork 로 같은 함수를 동시에 띄우는 경우도 정확히 같은 함정** 입니다 — static 이면 동시에 도는 두 프로세스가 한 지역 변수를 공유해 값이 섞이고, automatic 이면 각 프로세스가 자기 frame 을 가져 안전합니다. UVM 환경에서 sequence 를 fork 로 병렬 실행하거나 재귀적 layered sequence 를 쓰는데 값이 오염된다면, module-scope 의 static helper 함수를 의심하고 `automatic` 을 붙이는 것이 1 차 처방입니다.
+
+### 5.13 `new()` 직접 호출 금지의 메커니즘 (재확인)
+
+이 챕터는 안티패턴을 총괄하므로, 가장 흔한 `= new(` 안티패턴의 _기전_ 을 다시 못박습니다. `type_id::create` 는 factory 테이블을 _조회_ 해 등록된 proxy 를 거쳐 객체를 만드는 **간접 생성** 이라, 그 테이블에 걸린 override 가 반영됩니다. `new()` 는 그 테이블을 _보지 않고_ 컴파일 시점 타입을 직접 생성하므로 override 가 끼어들 틈이 없습니다 — 그래서 `= new(` 한 줄이 derived test 의 모든 `set_type_override` 를 무력화합니다. create→lookup→proxy→new 사슬의 전모는 [Module 04 §4.3](../04_config_db_factory/) 에 있습니다.
 
 ---
 

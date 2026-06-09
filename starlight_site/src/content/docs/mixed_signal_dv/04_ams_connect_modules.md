@@ -200,6 +200,10 @@ endmodule
 - `<+`가 KCL을 자동으로 적용
 - 단지 식을 contribute하면 simulator가 노드 평형을 잡음
 
+**`<+` 가 _어떻게_ KCL 을 자동으로 푸는가 — 각 contribution = 노드 방정식의 한 항.** `<+` 는 대입(`=`)이 아니라 _기여(contribution)_ 연산자다. `I(node) <+ expr` 한 줄은 "이 가지(branch)가 해당 노드로 `expr` 만큼의 전류를 흘려보낸다" 는 _항 하나_ 를 그 노드의 KCL 방정식에 _더하는_ 선언이다. 시뮬레이터는 회로 전체의 모든 `<+` contribution 을 모아 각 노드마다 "들어오는 전류의 합 = 나가는 전류의 합 (KCL)" 이라는 연립방정식을 자동으로 구성한다. 위 예에서 `out` 노드에는 저항 가지의 `(V(in)−V(out))/R` 와 캐패시터 가지의 `C·ddt(V(out))` 두 contribution 이 모여, 시뮬레이터가 "두 전류가 평형을 이루는 V(out)" 을 _미지수로_ 풀어낸다 — 우리가 V(out) 을 직접 대입하는 게 아니라, contribution 들이 정의한 _제약_ 을 만족하는 노드 전압을 solver 가 찾는 것이다.
+
+핵심은 이 solver 가 [Module 03](../03_spice_fundamentals/) 의 SPICE 와 _동일한 엔진_ 이라는 점이다 — `<+` 로 쌓인 식들이 결국 같은 노드 방정식 행렬(필요시 Newton-Raphson + Jacobian)로 풀린다. 그래서 `<+` 는 "회로 방정식을 직접 쓰는 게 아니라, 각 소자가 기여하는 항만 선언하면 KCL 평형은 solver 가 책임진다" 는 선언적(declarative) 표현이며, 이것이 Verilog-AMS 로 SPICE-like 정확도를 얻는 대가(=SPICE 와 같은 수치 풀이 비용)와도 직결된다.
+
 ## 6. AMS의 강점과 약점
 
 AMS의 가장 큰 강점은 SPICE 수준의 정확도를 유지하면서 큰 디지털 부분과 작은 아날로그 부분을 함께 검증할 수 있다는 것입니다. 표준 언어(Verilog-AMS)를 기반으로 하기 때문에 특정 벤더에 종속되지 않는다는 장점도 있습니다.

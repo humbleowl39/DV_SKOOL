@@ -375,6 +375,14 @@ TLB Miss: 최대 25 회 메모리 접근 (수백 cycle)
 → TLB 크기와 캐싱 전략이 매우 중요
 ```
 
+:::note[TLB 가 _어떻게_ 25 회 cliff 를 평소엔 숨기나 — combined entry]
+"TLB hit 이면 1 cycle" 이라고 했는데, 가상화에서 TLB 가 실제로 _무엇을_ 담는지가 cliff 가 평소에 안 보이는 이유의 핵심입니다.
+
+가상화 TLB entry 는 Stage-1 결과(GVA→IPA)나 Stage-2 결과(IPA→PA)를 따로 담지 않고, **최종 GVA→HPA(즉 GVA→PA) 를 _직접_** 담습니다 — 이것을 combined(또는 merged) translation 이라 합니다. 그래서 한 번 walk 를 마치고 나면 그 결과가 TLB 에 통째로 들어가고, 같은 페이지를 다시 접근할 때는 TLB 가 GVA 를 보고 _두 stage 를 모두 건너뛰어_ 곧장 HPA 를 내놓습니다.
+
+즉 25 회 walk 는 _이 combined entry 를 _만들기 위한_ miss 1 회_ 의 비용일 뿐이고, 이후의 모든 hit 는 stage 수와 무관하게 1 cycle 입니다. 워크로드의 working set 이 TLB 안에 들어가면 25 회 cliff 는 거의 보이지 않다가, working set 이 TLB 용량을 넘기는 순간(VM 다수·큰 메모리·낮은 locality) capacity miss 가 늘며 cliff 가 드러납니다. 그래서 huge page 가 결정적입니다 — entry 하나가 더 넓은 영역을 덮으면 같은 working set 을 더 적은 entry 로 담아 miss 자체를 줄이기 때문입니다.
+:::
+
 ### 5.5 Stage 1 vs Stage 2 최적화 비교
 
 TechForum 슬라이드에서 강조한 핵심 포인트.
@@ -397,6 +405,17 @@ Stage 2 가 병목인 이유:
   → TLB miss 시 page walk 비용이 큼
   → 이것이 latency / bandwidth 민감 시스템의 핵심 병목
 ```
+
+:::note[Stage 2 의 locality 가 _구체적으로_ 왜 낮은가]
+"VM 간 분산" 이라는 결과만으로는 부족합니다. 근본 원인은 **hypervisor 가 host 물리 frame 을 _임의로_ 골라 IPA 에 붙인다** 는 데 있습니다.
+
+Guest 가 보기에 IPA 0x0..0x4000 은 _연속_ 입니다. 하지만 hypervisor 가 이 네 IPA page 를 채울 때, 실제 host frame 은 그 순간 free list 에서 잡히는 대로 — 예컨대 PA 0x9_2000, 0x3_7000, 0xC_1000, 0x0_8000 처럼 — 흩어진 곳에서 가져옵니다. 이렇게 되는 이유가 둘입니다.
+
+- **단편화(fragmentation)** — 시스템이 오래 돌면 free 물리 frame 이 여기저기 흩어져, 연속 IPA 에 연속 PA 를 줄 만한 큰 덩어리가 남아 있지 않습니다.
+- **NUMA 배치** — 여러 메모리 노드가 있으면 hypervisor 는 vCPU 가 도는 노드 근처 frame 을 우선 고르는데, 이 정책이 IPA 순서와 무관하게 PA 를 결정합니다.
+
+핵심 인과는 — **IPA 공간의 인접성이 PA 공간의 인접성으로 _보존되지 않는다_** 는 것입니다. Stage-1 은 Guest OS 가 한 프로세스의 working set 을 의도적으로 가까이 배치하므로 spatial locality 가 살아 있지만, Stage-2 매핑은 위처럼 무작위에 가까워 인접한 IPA 가 멀리 떨어진 PA 로 가고, 그래서 Stage-2 page table 자체의 접근에도 locality 가 없어 PWC/TLB 가 덜 먹히는 것입니다. huge page 가 Stage-2 에서 특히 값진 이유도 여기 있습니다 — 큰 연속 host 덩어리 하나를 통째로 매핑하면 이 무작위성을 강제로 줄이기 때문입니다.
+:::
 
 ### 5.6 Huge Page 로 TLB 효율 개선
 
@@ -444,6 +463,16 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
 
 둘 다 SW 정책. HW 는 그대로지만 _hypervisor 가 Stage-2 mapping 을 동적으로 바꿔서_ 효과를 만듭니다.
 
+:::note[KSM 의 dedup + COW 가 Stage-2 에서 _어떻게_ 동작하나]
+"Stage-2 mapping 을 동적으로 바꾼다" 가 KSM 에서 구체적으로 어떤 흐름인지 풀면, 이것이 [mmu 코스의 COW](../../mmu/05_performance_analysis/) 와 _같은 메커니즘_ 임이 드러납니다.
+
+1. **dedup(병합)** — hypervisor(KVM 의 ksmd)가 주기적으로 page 들의 내용을 스캔해 _바이트가 동일_ 한 page 들을 찾습니다. 여러 VM 이 같은 OS 이미지·공유 라이브러리를 올리면 동일 내용 page 가 흔합니다. 같은 내용이 발견되면 그 page 들의 **Stage-2 entry 를 모두 _하나의 host PA_ 로 다시 가리키게** 하고, 남는 중복 frame 을 회수합니다. 이때 그 공유 entry 는 **read-only + write-protect** 로 표시됩니다.
+
+2. **COW(쓰기 시 분기)** — 어떤 VM 이 이 공유 page 에 _write_ 를 시도하면, write-protect 때문에 **Stage-2 permission fault** 가 발생해 hypervisor 로 trap 됩니다. hypervisor 는 새 host frame 을 하나 할당해 내용을 복사하고, _그 VM 의_ Stage-2 entry 만 새 PA(쓰기 가능)로 갱신한 뒤 재개합니다. 다른 VM 들은 여전히 원본 공유 page 를 봅니다.
+
+즉 "같은 내용이면 한 PA 로 모으고, 누군가 쓰면 fault 로 분기" — 이것은 OS 의 fork COW 와 정확히 같은 fault-on-write 패턴이며, 차이는 그 page table 이 프로세스 단위 Stage-1 이 아니라 VM 단위 **Stage-2** 라는 점뿐입니다. 그래서 KSM 의 위험도 같은 곳에서 옵니다 — write 가 잦은 page 를 잘못 병합하면 COW fault 가 폭주해 오히려 느려집니다.
+:::
+
 ### 5.9 면접 단골 Q&A
 
 **Q: 2-stage translation 에서 최악의 메모리 접근이 25 회인 이유는?**
@@ -482,7 +511,8 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
 :::
 :::danger[❓ 오해 5 — 'TLB invalidate 는 한 vCPU 에만 하면 된다']
 **실제**: ARM `TLBI VMALLE1IS` / Intel `INVEPT` 는 inner-shareable broadcast 가 필요. IPI 가 모든 vCPU / PE 에 도달하지 않으면 일부 코어가 stale entry 사용 → silent corruption.<br>
-**왜 헷갈리는가**: bare metal 의 TLBI 가 local 만으로 충분했던 경험.
+**왜 헷갈리는가**: bare metal 의 TLBI 가 local 만으로 충분했던 경험.<br>
+**한 단계 더**: TLBI 가 broadcast 되어도 _완료 순서_ 가 보장되는 것은 아닙니다 — TLBI 뒤에 `DSB` fence 를 두어 다른 코어의 무효화 완료를 _기다려야_ 합니다. 이 순서 문제의 하드웨어 뿌리(write 가 store buffer 에 지연 commit 되어 다른 코어가 옛 값을 보는 메커니즘)는 [computer_architecture — Memory Hierarchy](../../computer_architecture/04_memory_hierarchy/) 의 store buffer / memory reorder 설명을 참조하세요. 여기서는 "broadcast 만으로는 부족하고 fence 가 필요하다" 만 잡으면 됩니다.
 :::
 ### DV 디버그 체크리스트 (Memory 가상화 brings up)
 
@@ -543,11 +573,6 @@ Inner Shareable 범위의 광역 invalidate 필요:
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `2-Stage Translation DV` — EPT/NPT 검증 사례
-- `Live Migration Dirty Tracking` — PML race 매트릭스
-
-**External**
 - ARM ARMv8-A *Virtualization* (Stage 2 Translation)
 - Intel SDM Vol 3C, *Extended Page Tables (EPT)*
 - "The Turtles Project" (OSDI 2010) — Nested virtualization + Shadow vs EPT 비교

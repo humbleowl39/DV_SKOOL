@@ -23,6 +23,8 @@ title: "Module 01 — Virtualization Fundamentals"
 
 클라우드 사업자가 데이터센터 서버 10,000 대를 운영한다고 가정합시다. 각 서버에 애플리케이션을 하나씩만 설치하면 평균 CPU 사용률은 **15%**, 메모리 사용률은 **30%** 에 머뭅니다. 애플리케이션이 idle 한 시간이 많기 때문입니다. 결과적으로 서버 자원의 85% 가 아무 일도 하지 않은 채 전력을 소비하는데, 이것이 수십억 달러 규모의 낭비입니다.
 
+이 **15%** 라는 숫자가 어디서 오는지가 핵심입니다. 서버는 _peak_ 부하를 견디도록 provisioning 됩니다 — 블랙프라이데이 트래픽, 월말 배치 작업 같은 최악의 순간에도 죽지 않아야 하기 때문입니다. 그런데 실제 부하는 대부분의 시간 동안 peak 의 일부에 불과합니다. 즉 _평균_ 활용률 = (평균 부하 / peak 용량) 이고, peak 을 기준으로 over-provision 하면 이 비율은 구조적으로 낮을 수밖에 없습니다. 한 워크로드의 idle 시간을 다른 워크로드의 busy 시간으로 메우는 것 — 이것이 consolidation 이 이득인 _근본 이유_ 입니다. 통계적으로 독립적인 N 개의 워크로드를 한 서버에 모으면, 모두가 동시에 peak 를 치지 않는 한 합산 peak 는 개별 peak 합보다 훨씬 작아지기 때문입니다.
+
 가상화는 이 문제를 서버 한 대 위에 수십 개의 VM 을 동시에 올리는 방식으로 풉니다. 각 VM 은 독립된 OS 와 애플리케이션을 갖고 서로 격리되어 있어, CPU 사용률을 80% 이상으로 끌어올릴 수 있습니다. 같은 서비스를 10,000 대가 아닌 2,000 대로 제공하게 되고, 전력·공간·비용이 5 배 절감됩니다.
 
 **가상화 없이는 현대 클라우드 자체가 불가능합니다.** AWS, GCP, Azure 모두 hypervisor 위에서 운영됩니다.
@@ -127,6 +129,16 @@ static inline void load_new_mm_cr3(pgd_t *pgdir) {
 **(1) Guest 는 VM Exit 이 일어났는지 _모른다_** — `MOV CR3, RAX` 다음 명령이 정상 실행되는 것처럼 보임. 이게 "Equivalence (동등성)" 조건의 실체.<br>
 **(2) Hypervisor 는 _가로챈 명령만_ 처리한다** — ADD / MOV / 일반 분기는 HW 에서 직접 실행. 이게 "Efficiency (효율성)" 조건. 99% 명령에 trap 이 끼면 가상화는 죽은 기술입니다.
 :::
+
+:::caution[VM Exit 한 번이 _왜_ 그렇게 비싼가 — 비용의 분해]
+②→⑥ 의 한 사이클은 흔히 수백~수천 cycle 규모로 인용됩니다 (정확한 값은 마이크로아키텍처마다 다름 — (추론)). 이 비용은 단일 원인이 아니라 여러 요소의 합입니다.
+
+- **아키텍처 상태 save/restore** — Exit 시 HW 가 Guest 의 레지스터/제어 상태를 VMCS 에 저장하고, Entry 시 Hypervisor(또는 다음 Guest)의 상태를 다시 로드합니다. 저장·복원할 필드가 많을수록 비용이 커집니다.
+- **Pipeline flush** — root↔non-root 전환은 권한·주소공간 경계를 넘으므로 in-flight 명령이 무효화되고 파이프라인이 비워진 뒤 다시 채워져야 합니다.
+- **간접 비용 (cache / TLB pollution)** — Hypervisor handler 코드가 실행되며 Guest 의 cache line 과 TLB entry 를 밀어냅니다. resume 후 Guest 는 _콜드_ 상태에서 다시 시작하므로, exit 자체의 cycle 보다 이 후폭풍이 더 클 수 있습니다.
+
+이 세 요소의 합이 "exit 한 번 = 수천 cycle" 의 정체입니다. 그래서 이후 모듈의 모든 최적화(EPT 로 메모리 exit 제거, Posted Interrupt 로 인터럽트 exit 제거, doorbell batching)는 한 문장으로 요약됩니다 — **exit 횟수를 줄여라.**
+:::
 ---
 
 ## 4. 일반화 — 3대 자원과 Popek-Goldberg 3조건
@@ -188,7 +200,7 @@ Efficiency   ──── 대부분의 Guest 명령은 HW 직접 실행 — trap
 
 ---
 
-## 5. 디테일 — Trap, Popek-Goldberg, 역사, Confluence
+## 5. 디테일 — Trap, Popek-Goldberg, 역사
 
 ### 5.1 왜 가상화가 필요한가 — 자원 활용률 관점
 
@@ -265,6 +277,16 @@ SENS -> NONPRIV
 ```
 
 이 마지막 칸의 존재 때문에 VMware 가 1998 년 **Binary Translation** 을 발명했고, Intel 이 2005 년 VT-x 로 **모든 sensitive 명령을 HW trap 대상** 으로 확장했습니다.
+
+:::tip[Popek-Goldberg 정리 — 한 줄 명제]
+§4.2 의 3 조건은 "올바른 가상화의 _목표_" 였습니다. Popek-Goldberg 가 1974 년에 실제로 증명한 _정리_ 는 그 목표를 언제 trap-and-emulate 만으로 달성할 수 있는지에 대한 한 줄 명제입니다.
+
+> **어떤 아키텍처가 trap-and-emulate 방식으로 가상화 가능하려면, 모든 sensitive 명령의 집합이 privileged 명령의 집합에 포함되어야 한다 (sensitive ⊆ privileged).**
+
+직관은 단순합니다. Hypervisor 가 HW 상태를 건드리는 명령(=sensitive)을 _전부_ 가로채려면, 그 명령들이 비특권 모드에서 실행될 때 _빠짐없이_ trap 을 일으켜야(=privileged) 합니다. 위 트리의 "Non-privileged Sensitive" 칸이 비어 있어야 한다는 뜻입니다.
+
+이 한 명제가 x86 의 역사 전체를 설명합니다 — x86 은 POPF·SGDT 같은 명령이 이 칸에 들어 있어 명제를 _위반_ 했고(그래서 순수 trap-and-emulate 불가), VT-x 는 새 모드(VMX non-root)를 추가해 sensitive 명령 전부를 trap 대상으로 만들어 명제를 _성립시킨_ 것입니다.
+:::
 
 ### 5.4 Trap-and-Emulate 메커니즘 (§3 의 형식적 일반화)
 
@@ -413,11 +435,6 @@ VT-x = mechanism, 격리 = policy:
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `Virtualization Fundamentals` — Popek/Goldberg 정의 + HW VT 매핑
-- `KVM Performance Tuning` — exit 분포 측정 가이드
-
-**External**
 - Popek & Goldberg (1974) *Formal Requirements for Virtualizable Third Generation Architectures*
 - Intel SDM Vol 3C, *VMX Operation* — VMCS / EPT 명세
 

@@ -15,7 +15,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** NVMe-oF 환경에서 NVMe 명령(64바이트)과 부속 데이터를 묶어 RDMA SEND/RECV로 운반하는 전송 단위.
 
-**Source.** HDG `nvme_dv_reference.md` §3.1; NVM Express over Fabrics Specification.
+**Source.** NVM Express over Fabrics Specification.
 
 **Related.** In-Capsule Data, RDMA SEND/RECV, Fabric Command, SGL.
 
@@ -27,7 +27,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** controller가 명령 처리 결과(CQE)를 기록하고 host가 소비하는, host 메모리에 위치한 circular ring buffer.
 
-**Source.** HDG `nvme_dv_reference.md` §1; NVM Express Base Specification 2.1 §4.
+**Source.** NVM Express Base Specification.
 
 **Related.** Submission Queue, CQE, CQ head doorbell, Phase Tag, Queue Pair.
 
@@ -39,7 +39,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** controller가 한 명령의 처리 결과를 담아 Completion Queue에 기록하는 항목으로, 상태 코드와 phase bit을 포함한다.
 
-**Source.** HDG `nvme_dv_reference.md` §1; NVM Express Base Specification 2.1 §4.
+**Source.** NVM Express Base Specification.
 
 **Related.** Completion Queue, Phase Tag, Status, Command Identifier.
 
@@ -55,7 +55,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** host가 controller의 BAR MMIO 레지스터에 큐 포인터(SQ tail 또는 CQ head)를 기록해 큐 상태 변화를 controller에 통지하는 메커니즘.
 
-**Source.** HDG `nvme_dv_reference.md` §1; NVM Express Base Specification 2.1 §3.
+**Source.** NVM Express Base Specification.
 
 **Related.** Submission Queue, Completion Queue, BAR0, MMIO.
 
@@ -71,7 +71,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** NVMe-oF 환경에서 큐 쌍 연결과 controller property 접근을 수행하기 위해 opcode 0x7F를 마커로 사용하고 sub-opcode로 실제 명령을 식별하는 NVMe 명령 분류.
 
-**Source.** HDG `nvme_dv_reference.md` §2.3; NVM Express over Fabrics Specification §6.
+**Source.** NVM Express over Fabrics Specification.
 
 **Related.** Connect, Property Get/Set, Disconnect, NVMe-oF, Capsule.
 
@@ -87,7 +87,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** 작은 write 데이터를 capsule 안에 inline으로 실어 RDMA SEND 한 번으로 전송하는 NVMe-oF 데이터 전송 모델.
 
-**Source.** HDG `nvme_dv_reference.md` §3.2.
+**Source.** NVM Express over Fabrics Specification.
 
 **Related.** Capsule, Out-of-line, SGL, RDMA SEND.
 
@@ -99,7 +99,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** IO 큐를 통해 실제 데이터를 읽고 쓰는 NVMe 명령 분류로, NVM Read/Write와 Flush·Compare 등의 변형을 포함한다.
 
-**Source.** HDG `nvme_dv_reference.md` §2.2.
+**Source.** NVM Express Base Specification.
 
 **Related.** Admin Command, NVM Read, NVM Write, io_type knob.
 
@@ -115,7 +115,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** admin 큐를 통해 controller를 설정·관리하는 NVMe 명령 분류로, Identify·Get Log Page·Create/Delete IO Queue 등을 포함한다.
 
-**Source.** HDG `nvme_dv_reference.md` §2.1.
+**Source.** NVM Express Base Specification.
 
 **Related.** IO Command, Identify, NVMe-oF Connect, admin queue.
 
@@ -131,7 +131,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** PCIe 버스에 연결된 비휘발성 스토리지 매체에 접근하기 위해 플래시 SSD를 전제로 설계된 논리 디바이스 인터페이스 사양.
 
-**Source.** HDG `nvme_basics_usage.md` "Overview"; NVM Express Base Specification 2.1.
+**Source.** NVM Express Base Specification.
 
 **Related.** PCIe, SATA/SAS, Submission Queue, Completion Queue, SSD.
 
@@ -143,7 +143,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** NVMe의 transport layer 추상화 위에서 NVMe 프로토콜을 네트워크 패브릭으로 확장해 원격 NVMe 스토리지를 로컬처럼 접근하게 하는 사양.
 
-**Source.** HDG `nvme_basics_usage.md` "NVMe over Fabrics"; HDG `nvme_dv_reference.md` §3.
+**Source.** NVM Express over Fabrics Specification.
 
 **Related.** RDMA, RoCEv2, Capsule, Fabric Command, Queue Pair.
 
@@ -159,7 +159,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** 큰 데이터를 capsule에 포함하지 않고 SGL과 RDMA Read/Write를 통해 별도로 전송하는 NVMe-oF 데이터 전송 모델.
 
-**Source.** HDG `nvme_dv_reference.md` §3.2.
+**Source.** NVM Express over Fabrics Specification.
 
 **Related.** In-Capsule Data, SGL, RDMA Read/Write, Capsule.
 
@@ -175,7 +175,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** CQE에 포함되어 controller가 Completion Queue를 한 바퀴 돌 때마다 토글되는 비트로, polling host가 해당 슬롯의 CQE가 새로 쓰인 유효한 항목인지 판정하는 표식.
 
-**Source.** HDG `nvme_dv_reference.md` §1; NVM Express Base Specification 2.1 §4.
+**Source.** NVM Express Base Specification.
 
 **Related.** CQE, Completion Queue, polling, wrap-around.
 
@@ -191,7 +191,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** Submission Queue와 Completion Queue를 한 쌍으로 묶어 host와 controller 간 명령 제출과 완료 통지를 담당하는 NVMe의 기본 통신 단위.
 
-**Source.** HDG `nvme_dv_reference.md` §1.
+**Source.** NVM Express Base Specification.
 
 **Related.** Submission Queue, Completion Queue, RDMA QP, doorbell.
 
@@ -203,7 +203,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** Submitter가 Tail을, Consumer가 Head를 갱신하며 포인터가 끝에서 처음으로 되돌아가는(wrap-around) 고정 크기 순환 큐 구조.
 
-**Source.** HDG `nvme_dv_reference.md` §1; Confluence NVMe 3.3 NVM Queue Models §3.3.1.5.
+**Source.** NVM Express Base Specification.
 
 **Related.** Submission Queue, Completion Queue, head, tail, doorbell.
 
@@ -219,7 +219,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** host가 controller에 보낼 명령(SQE)을 기록하는, host 메모리에 위치한 circular ring buffer.
 
-**Source.** HDG `nvme_dv_reference.md` §1; NVM Express Base Specification 2.1 §3, §4.
+**Source.** NVM Express Base Specification.
 
 **Related.** Completion Queue, SQE, SQ tail doorbell, Queue Pair.
 
@@ -231,7 +231,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Definition.** 데이터가 메모리에 흩어져 위치한 여러 영역을 가리키는 디스크립터 목록으로, Out-of-line 전송에서 RDMA Read/Write 대상 위치를 지정한다.
 
-**Source.** HDG `nvme_dv_reference.md` §3.2; NVM Express over Fabrics Specification.
+**Source.** NVM Express over Fabrics Specification.
 
 **Related.** Out-of-line Data, RDMA Read/Write, Capsule.
 

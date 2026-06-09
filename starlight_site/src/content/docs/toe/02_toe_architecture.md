@@ -121,6 +121,12 @@ ssize_t n = recv(sock, buf, 256, 0);   // returns 256
 **(1) Connection Table 이 모든 packet 의 통과점** — Step ③ 의 lookup 이 실패하면 그 packet 은 _그 어떤 처리도 받지 못함_. 즉 connection table 의 정확성이 RX path 의 모든 정확성을 좌우. <br>
 **(2) State update 가 atomic 해야 한다** — Step ⑤ 의 rcv_nxt/snd_una/retx buffer 갱신이 partial 로 끝나면 다음 packet 이 잘못된 state 를 봅니다. HW 구현에서는 single-write atomicity + per-conn lock 이 필요.
 :::
+
+:::note[메커니즘 — atomicity 가 깨지는 구체 race: TX/RX 가 같은 entry 를 동시에 RMW]
+한 connection 의 state 갱신은 본질적으로 **Read-Modify-Write (RMW)** 입니다 — entry 를 읽어(R) 새 값을 계산하고(M) 다시 쓰는(W) 3 박자입니다. 문제는 TOE 가 full-duplex 라 **같은 connection 의 TX pipeline 과 RX pipeline 이 동시에 같은 entry 를 만질 수 있다** 는 점입니다. 구체 시나리오: peer 로부터 ACK 가 도착해 **RX 경로가 `snd_una`(가장 오래된 미확인 seq)와 retx-pointer 를 전진** 시키려 entry 를 읽는 _그 순간_, **TX 경로는 새 segment 를 내보내며 `snd_nxt` 를 올리고 retx buffer 에 사본을 추가** 하려 같은 entry 를 읽습니다. 둘 다 _옛 값_ 을 읽은 뒤 각자 계산해 쓰면, 나중에 쓴 쪽이 상대의 갱신을 **덮어써(lost update)** — 예컨대 RX 의 retx-release 가 사라져 이미 ACK 된 데이터를 또 재전송하거나, snd_nxt/snd_una 가 어긋나 window 계산이 틀어집니다.
+
+그래서 entry 갱신은 **하나의 분리 불가능한 동작** 이어야 합니다 — 한 entry 의 모든 관련 필드를 _한 번의 write_ 로 묶거나(single-write atomicity), per-connection lock/arbiter 로 같은 entry 에 대한 TX·RX 접근을 직렬화합니다. 검증 관점에서는 _같은 connection_ 에 ACK 수신과 새 송신을 같은 cycle 창에 의도적으로 겹치게 만들어 lost-update 가 안 나는지 확인하는 것이 핵심 시나리오입니다.
+:::
 ---
 
 ## 4. 일반화 — TOE 의 네 기둥
@@ -258,6 +264,12 @@ State (TCP FSM):
 
 **실무**: 대부분의 TOE 는 **Hash Table** 사용 — 비용 효율적이고 충분히 빠름. 충돌은 체이닝으로 처리.
 
+:::note[메커니즘 — 충돌 chaining 이 어떻게 동작하고 왜 평균 O(1) 인가]
+hash table 은 4-tuple 을 hash 함수로 작은 정수 (bucket index) 로 줄여 그 bucket 에 entry 를 둡니다. 그런데 서로 다른 4-tuple 이 _같은 bucket index_ 로 떨어지는 **충돌(collision)** 은 통계적으로 피할 수 없습니다. **chaining** 은 이를 "한 bucket 에 여러 entry 를 _연결 리스트_ 로 매단다" 로 해결합니다. lookup 은 두 단계입니다: ① hash 로 bucket 을 O(1) 에 찾고, ② 그 bucket 의 chain 을 따라가며 각 entry 의 **4-tuple 전체를 정확히 비교(equality check)** 해 일치하는 것을 고릅니다. hash 가 같다고 connection 이 같은 건 아니므로 _반드시_ 4-tuple 전체를 비교해야 오인이 없습니다.
+
+평균 O(1) 인 이유는 **부하율(연결 수 ÷ bucket 수)을 낮게 유지** 하면 한 bucket 의 chain 길이 기대값이 작은 상수에 머물기 때문입니다 — 즉 ②의 선형 탐색이 평균 1~2 회 비교로 끝납니다. bucket 을 충분히 크게(연결 수 대비) 잡고 hash 가 고르게 퍼지면 긴 chain 은 드물어, CAM/TCAM 같은 비싼 병렬 매칭 없이도 "평균 O(1)" 을 얻습니다 (오해 3). 검증 관점에서는 _일부러 같은 bucket 으로 충돌하는 4-tuple 세트_ 를 주입해 chain 의 equality 비교와 삽입/삭제가 정확한지 확인하는 시나리오가 핵심입니다.
+:::
+
 ### 5.4 타이머 관리 아키텍처 — 수백만 연결의 RTO
 
 TOE 가 수백만 TCP 연결을 관리할 때, 각 연결별 RTO 타이머를 HW 에서 어떻게 효율적으로 구현하는지가 핵심 설계 과제다.
@@ -323,6 +335,14 @@ Timer Wheel 구조 예: 256 슬롯, 1 ms 해상도.
 - Level 0: 1 ms 해상도, 256 슬롯 (0~255 ms)
 - Level 1: 256 ms 해상도, 256 슬롯 (0~65 초)
 - Level 1 만료 → Level 0 으로 재등록 (cascade)
+
+:::note[메커니즘 — cascade 의 슬롯 재계산이 왜 정확도를 좌우하나]
+한 wheel 의 슬롯은 _자기 해상도_ 만큼만 시간을 구분합니다. Level 1 은 256 ms 해상도라, "이 timer 가 L1 의 어느 슬롯에 있다" 는 정보는 만료 시각을 **±256 ms 까지밖에** 짚지 못합니다 — 그 슬롯 _안의_ 정확한 ms 는 모릅니다. 그래서 단순히 L1 슬롯이 만료됐다고 timer 를 바로 fire 하면 최대 255 ms 의 오차가 생깁니다.
+
+cascade 는 이 오차를 없애는 동작입니다: **L1 슬롯이 만료되는 순간, 그 슬롯에 매달린 timer 들을 fire 하지 않고, 각 timer 의 _남은 시간_ 을 다시 L0 의 정확한 슬롯으로 환산해 재삽입** 합니다. 예를 들어 만료까지 300 ms 남은 timer 는 처음에 L1 슬롯 1 (256~511 ms 구간) 에 들어갑니다. L1 이 그 슬롯에 도달하면 (256 ms 경과 시점) 남은 시간은 300 − 256 = **44 ms** 이므로, 이제 L0 의 `(현재 + 44) % 256` 슬롯에 옮겨 담습니다. 그러면 L0 가 1 ms 해상도로 정확히 44 ms 뒤에 fire 합니다.
+
+즉 cascade 의 핵심은 "L1 만료 시점에 _남은 시간 = 원래 만료시각 − 현재시각_ 을 L0 슬롯 인덱스로 다시 계산" 하는 산수입니다. 이 환산식이 틀리면 (예: 경과 시간을 빼먹거나 wrap 처리를 잘못하면) timer 가 예상보다 일찍/늦게 fire 해 RTO 가 어긋나므로 — 디버그 체크리스트의 "RTO 가 의도값보다 길게 발생" 의 직접 원인이 cascade 슬롯 재계산 버그입니다.
+:::
 
 복잡도:
 

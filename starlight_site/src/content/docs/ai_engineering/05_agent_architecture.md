@@ -171,6 +171,10 @@ for step in range(MAX_STEPS):
 **(1) Loop 의 _종료 조건_ 이 본질** — `end_turn` (자연 종료), `max_steps` (강제), `budget` (비용), `loop detection` (같은 호출 반복) 의 네 가지가 모두 필요. 어느 하나라도 빠지면 §7 의 비용 폭주 위험.<br>
 **(2) Tool 결과는 _구조화된 형태_ 로 LLM 에 돌려줘야 함** — 단순 텍스트면 LLM 이 파싱 실패. JSON 또는 명확한 라벨 (`[FILE: x] [LINES: y-z]`) 가 안전.
 :::
+
+:::note[stateless LLM 이 _어떻게_ 상태를 갖는가 — observation 의 context 누적]
+ReAct loop 그림만 보면 "LLM 이 도구 결과를 기억한다" 처럼 보이지만, LLM 호출은 _stateless_ 입니다 — 매 `messages.create()` 는 이전 호출을 전혀 기억하지 못합니다. 그런데도 추론이 이어지는 이유는 위 코드의 두 `messages.append(...)` 에 있습니다. tool 을 실행한 뒤 그 **결과(observation)를 `tool_result` 로 `messages` 리스트에 _누적_** 하고, 다음 step 에서 `messages` _전체_ (user 목표 + 이전 assistant tool_use + 그 tool_result + …) 를 통째로 다시 전송합니다. 즉 "상태" 는 모델 안이 아니라 _대화 history 라는 외부 메모리_ 에 쌓이고, 매 호출마다 그 history 를 _재전송_ 함으로써 LLM 이 마치 이전 관찰을 이어받은 것처럼 다음 행동을 추론합니다. 이 때문에 step 이 늘수록 입력 토큰(=비용)이 history 길이만큼 _누적 증가_ 하며 ([Module 01](../01_llm_fundamentals/) 의 KV cache·context 비용과 직결), §7 의 loop detection 이 없으면 history 가 무한정 불어납니다.
+:::
 ---
 
 ## 4. 일반화 — 4 구성요소 와 주요 패턴
@@ -274,7 +278,7 @@ RAG 를 Agent 의 Tool 로 통합:
 
 Function Calling (구조화):
   LLM 이 구조화된 JSON 으로 도구 호출을 출력
-  → 파싱 불필요, 타입 안전, 100% 신뢰
+  → 파싱 불필요, JSON 형식(syntax)은 보장됨
 
 동작 흐름:
   1. 시스템이 사용 가능한 도구를 JSON Schema 로 정의
@@ -340,6 +344,12 @@ response = client.messages.create(
 #   "input": {"log_path": "vsim/sim_out/run.log"}
 # }
 ```
+
+:::note[JSON 형식이 _왜_ 보장되는가 — 제약된 디코딩(constrained decoding), 그러나 "100% 신뢰" 는 아니다]
+단순 프롬프트("JSON 으로 답해줘")는 LLM 이 자유롭게 토큰을 생성하므로 따옴표 누락·trailing comma 같은 형식 오류가 섞일 수 있습니다. Function calling 이 _형식_ 을 보장하는 메커니즘은 **constrained decoding(제약된 디코딩)** 입니다 — 매 토큰을 생성할 때, 제공된 JSON Schema 의 문법(grammar)상 _그 자리에 올 수 있는 토큰만_ 후보로 남기고 나머지는 확률 0 으로 마스킹합니다. 그래서 모델은 schema 를 위반하는 토큰을 _애초에 뽑을 수 없고_, 출력은 항상 파싱 가능한 valid JSON 이 됩니다.
+
+다만 보장되는 것은 **형식(syntax)과 타입까지** 입니다 — _어떤_ 도구를 부를지, 인자 _값_ 이 옳은지는 여전히 LLM 의 확률적 추론입니다. 존재하지 않는 파일 경로, 잘못된 test 이름, 의미상 틀린 인자는 schema 를 통과해도 얼마든지 생성됩니다 (§6 오해 참조). 즉 constrained decoding 은 "파싱 실패" 를 없앨 뿐 "판단 오류" 를 없애지 못하므로, 도구 실행 _전_ 입력 validate 가 필수입니다. 이것이 "100% 신뢰" 가 과장인 이유입니다.
+:::
 
 ```
 Parallel Tool Calling:

@@ -163,6 +163,10 @@ endgroup
 
 CSR 은 RAL 로도 다루는 영역입니다 — 레지스터 모델·mirror·access policy 검증은 [UVM M07 RAL](../../uvm/07_register_layer_ral/)과 직접 연결됩니다. CPU 의 CSR 은 단순 레지스터가 아니라 _privilege·예외와 얽힌_ 상태이므로, RAL 검증 위에 privilege cross 를 얹어야 합니다.
 
+**WARL/WLRL 필드 — illegal write 가 "에러"가 아닌 경우.** CSR 검증에서 가장 헷갈리는 것이 WARL(Write-Any-Read-Legal)·WLRL(Write-Legal-Read-Legal) 필드입니다. 일반 RW 필드는 쓴 값이 그대로 읽히지만, **WARL 필드는 _어떤_ 값을 써도 하드웨어가 그것을 _legal 값으로 변환(legalize)_ 해서 저장**합니다. 예를 들어 어떤 모드 필드에 지원하지 않는 인코딩을 쓰면, 하드웨어는 에러를 내는 대신 _가장 가까운 legal 값_ 이나 _기존 값 유지_ 로 떨어뜨립니다 — 즉 "illegal write 가 trap 이 아니라 조용한 정규화"입니다.
+
+이것이 coverage·비교에 주는 함의는 두 가지입니다. (1) **비결정성**: "write X → read Y(≠X)"가 _정상_ 이므로, scoreboard 가 "쓴 값 == 읽은 값"을 단순 비교하면 false fail 이 납니다 — legalize 규칙을 reference model(ISS)이 알아야 하고, 비교는 ISS 가 산출한 _legalized_ 값과 해야 합니다. 게다가 legalize 결과가 _구현 정의_ 인 필드도 있어, 그런 필드는 RAL 의 access policy 를 RW 가 아니라 WARL 로 모델링하고 "예측 불가" 영역은 비교에서 빼거나 RTL→ISS 동기화합니다([M02 §4.3](../02_step_and_compare/) 의 구현정의 처리와 동형). (2) **coverage 표적**: WARL 필드는 "_legal 값_ 을 썼을 때"뿐 아니라 "_illegal 값을 써서 legalize 가 발동했을 때"를 별도 bin 으로 잡아야 합니다 — legalize 로직 자체가 검증 대상이기 때문입니다.
+
 ### 4.2 Privilege mode & Exception
 
 3 장의 transition 모델이 본체입니다. 추가로 exception 은 _진입 architectural state_ 를 본다: trap 진입 시 `mcause`/`mepc`/`mtval`/`mstatus`(MPP/MPIE) 가 spec 대로 기록됐는가. step-and-compare([M02](../02_step_and_compare/))가 이 CSR 들을 ISS 와 대조해 _값_ 을, coverage 가 _전이 발생_ 을 측정합니다.
@@ -183,6 +187,13 @@ INT -> B4
 ```
 
 1.1 의 버그가 바로 이 영역입니다. 인터럽트는 _언제 오느냐_(어느 명령 경계)가 corner 이므로, "interrupt × 명령 타입" cross 와 "interrupt × 파이프라인 상태(stall/flush 중)" cross 를 설계합니다. 우선순위·중첩(nested) 인터럽트, 인터럽트 직후 복귀 정확성도 transition 으로 잡습니다.
+
+**"× 파이프라인 상태" cross 를 _구현_ 하는 두 방법.** 이 cross 의 어려움은 "측정"이 아니라 "_생성_"입니다. 인터럽트를 "_특정 명령이 특정 stage 에 있을 때_" 도착시키려면 단순 랜덤 주입으로는 거의 못 맞춥니다. 두 가지 hook 전략이 있습니다.
+
+- **확률적 주입(probabilistic injection)** — 인터럽트 주입 컴포넌트([M04 §5.3](../04_uvm_core_env/))가 _무작위 사이클_ 에 인터럽트를 걸고, 그 순간의 파이프라인 상태를 coverage 가 _관찰_ 해 cross bin 을 채웁니다. 구현이 단순하고 코어 내부에 결합되지 않지만, 드문 정렬(예: load-use stall 한복판)에 인터럽트가 떨어질 확률이 낮아 그 bin 은 오래 안 채워집니다.
+- **RTL probe 기반 표적 주입(directed injection)** — 코어 내부 신호(예: 특정 stage 의 valid·stall 신호)를 _비침투적으로 probe_ 해서, "지금 load 가 MEM stage 에서 stall 중"이라는 _조건이 참인 사이클에만_ 인터럽트를 assert 합니다. 원하는 정렬을 _의도적으로_ 만들 수 있어 희귀 cross 를 빠르게 채우지만, probe 가 코어 내부 신호명에 결합되어 리비전에 취약하고 합성 코어엔 없는 가시성을 요구합니다.
+
+실무 절충: 대부분의 cross 는 확률적 주입 + 다수 시드로 채우고, 끝까지 0 인 _희귀 정렬_ bin 만 RTL probe 기반 표적 주입으로 마무리합니다 — [M05](../05_riscv_dv_stimulus/) 의 "랜덤으로 못 채우는 hole 은 directed 로"와 같은 분업입니다. 어느 방법이든 주입 사실은 [M03 `rvfi_intr`](../03_rvfi_rvvi/) 로 retire 에 표시되어 reference model 이 같은 경계에서 trap 하게 해야 합니다.
 
 ### 4.4 MMU / Virtual Memory
 
@@ -209,6 +220,10 @@ MH: "**Multi-hart**\nhart 간 race\natomic(AMO/LR-SC)\n메모리 일관성"
 ```
 
 OoO 코어는 내부적으로 명령을 재정렬해도 _architectural 효과는 in-order_ 여야 합니다(precise exception). coverage 는 "재정렬이 실제로 일어났고, 그래도 retire 순서/예외가 정확한가"를 봅니다. multi-hart 는 hart 간 race·atomic(LR/SC, AMO)·일관성이 추가 축입니다. OoO 배경은 [Computer Architecture M03](../../computer_architecture/03_ooo_branch_prediction/)를, scoreboard 의 OoO 매칭은 [UVM M05](../../uvm/05_tlm_scoreboard_coverage/)의 per-key 큐 패턴을 참조하세요.
+
+**precise exception 을 _의도적으로_ 표적하는 법.** "재정렬이 일어난 상태에서 예외가 정확한가"는 당위지만, 그 시나리오를 _만드는_ 것이 핵심입니다. precise exception 버그는 **ROB 에 in-flight 명령이 많을 때**, 즉 _앞선 미완료 명령들 뒤에서_ 예외가 발생해 코어가 "예외 명령 _이전_ 은 모두 commit, _이후_ 추측은 모두 폐기"를 정확히 해야 할 때 터집니다. ROB 가 거의 빈 상태에서 나는 예외는 이 로직을 거의 자극하지 못합니다.
+
+그래서 자극을 _ROB 깊이를 채우도록_ 편향합니다: (a) **긴 지연 명령을 앞에 둠** — 캐시 미스를 유발하는 load 나 다중 사이클 연산(나눗셈 등)을 예외 발생 명령 _앞_ 에 배치해, 그것들이 미완료로 ROB 에 쌓인 상태에서 뒤의 명령이 예외를 내게 함. (b) **추측 깊이를 늘림** — 예측된 분기 뒤에 예외 가능 명령(misaligned·page fault·illegal)을 두어, 분기가 mispredict 로 판명될 때 _추측 경로의 예외_ 가 올바로 _폐기_ 되는지(잘못 commit 되지 않는지) 본다. (c) coverage 는 "예외 발생 시 ROB occupancy(또는 in-flight 명령 수)"를 coverpoint 로 잡아, _얕은_ 예외뿐 아니라 _깊은_ 예외 시나리오에 도달했는지 측정합니다. 이렇게 "예외 × in-flight 깊이" cross 를 채우는 것이 precise exception 검증의 표적입니다.
 
 ---
 
@@ -244,7 +259,25 @@ ImperasDV 는 _정답 모델_ 의 품질(특히 인터럽트·CSR·privilege 의
 
 closure 의 핵심은 _영역별로_ baseline → cross/transition → directed 보완을 반복하고, 명령 정확성처럼 _국소적_ 인 것은 formal([M06](../06_riscv_formal/))로 _증명_ 해 시뮬레이션 coverage 부담을 줄이는 분업입니다.
 
-### 5.4 escape 가 잦은 순서 (경험칙)
+### 5.4 litmus test 의 구조 — 동시성 검증의 표준 단위
+
+§4.5 에서 memory ordering 을 litmus test 로 검증한다고 했는데, litmus test 가 _무엇_ 인지를 짚어야 합니다. litmus test 는 메모리 모델을 _검증하기 위해 정형화된 아주 작은 동시성 프로그램_ 으로, 세 부분으로 구성됩니다.
+
+1. **초기 상태(initial state)** — 공유 변수와 레지스터의 시작값(보통 모두 0).
+2. **병렬 코드(per-thread code)** — 각 hart 가 동시에 실행할 _몇 줄짜리_ 명령 시퀀스. hart 간 동기화는 없습니다.
+3. **최종 조건(final condition)** — 실행 후 레지스터/메모리 값의 특정 조합이 _허용(allowed)_ 인가 _금지(forbidden)_ 인가. 이 판정 기준이 곧 메모리 모델입니다.
+
+대표 패턴 세 가지(외부 표준 지식):
+
+| litmus | 구조 | 무엇을 본다 |
+|---|---|---|
+| **MP (message passing)** | T0: `x=1; flag=1` / T1: `r1=flag; r2=x` | flag 가 보이면 x 도 보여야(`r1=1 ∧ r2=0` 이 허용되면 ordering 위반) — store→store / load→load 순서 |
+| **SB (store buffer)** | T0: `x=1; r1=y` / T1: `y=1; r2=x` | `r1=0 ∧ r2=0` 이 나오나 — store→load reorder(store buffer)가 허용되는가 |
+| **IRIW** | 두 writer + 두 reader | 두 reader 가 두 store 의 순서를 _다르게_ 관찰할 수 있나 — multi-copy atomicity |
+
+핵심은 litmus 가 "값이 맞나"가 아니라 "**이 최종 상태가 메모리 모델상 허용되는 결과 집합 안인가**"를 묻는다는 점입니다. 그래서 단순 scoreboard 비교가 아니라, 메모리 모델을 인코딩한 **모델 체커**(예: `herd` 같은 도구)가 "이 litmus 의 허용 결과 집합"을 _계산_ 하고, DUT 가 산출한 결과가 그 집합 안인지 대조합니다 — _금지된_ 결과가 한 번이라도 나오면 ordering 버그입니다([M01 오해 4](../01_why_cpu_dv/) 의 "허용된 재정렬 vs 틀린 순서"의 정밀판). DUT 는 실행마다(타이밍에 따라) _허용 집합 안의 다른_ 결과를 낼 수 있으므로, 같은 litmus 를 다수 시드/반복으로 돌려 _금지 결과가 안 나오는지_ 와 _허용 결과들을 다양하게 관찰했는지_(coverage) 둘 다 봅니다.
+
+### 5.5 escape 가 잦은 순서 (경험칙)
 
 특수 영역 중에서도 escape 가 잦은 순서는 대략 _인터럽트 경계 → privilege 전이 → memory ordering → MMU corner_ 입니다.(추론) 모두 _비동기·동시성·전이_ 라는 공통점이 있습니다 — 즉 "단일 명령으로 분해되지 않는" 영역일수록 위험합니다. coverage 설계 우선순위를 여기에 맞추는 것이 합리적입니다.
 

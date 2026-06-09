@@ -127,9 +127,34 @@ CP: "**Control Path** 오프로드" {
 
 네트워킹은 NIC 시절부터 오프로드의 출발점이었습니다. 초기 NIC의 체크섬·segmentation 같은 고정 오프로드가 SmartNIC의 프로그래머블 가상 스위칭·패킷 필터링으로 발전했고, DPU에서는 라우팅·오버레이·트래픽 정책까지 데이터 패스 엔진과 코어가 함께 처리합니다. 검증 관점에서 Ethernet·TOE(TCP Offload Engine) 같은 IP가 이 도메인의 핵심 구성요소입니다.
 
+:::note[메커니즘 — 가상 스위칭이 패킷을 분류·전달하는 방법: match-action table]
+물리 스위치가 MAC 주소표로 포트를 고르듯, 가상 스위치(vSwitch)는 **match-action table** 로 동작합니다. 동작은 두 단계입니다.
+
+- **Match(분류)**: 도착한 패킷에서 헤더 필드들을 뽑아 **flow key** 를 만듭니다 (예: src/dst MAC, src/dst IP, port, VLAN 등의 조합). 이 key 를 table 의 각 entry 와 비교해 일치하는 규칙을 찾습니다 — "이 패킷이 어떤 흐름에 속하는가" 를 결정하는 단계입니다.
+- **Action(전달/정책)**: 일치한 entry 에 묶인 동작을 실행합니다 — 특정 출력 포트나 VM 으로 전달(forward), 헤더 재작성, 드롭, 카운트, 또는 오버레이 캡슐화 같은 정책 적용입니다.
+
+즉 "flow key → action" 매핑 테이블 하나가 분류·전달·정책을 통합합니다. DPU 에서는 이 테이블 lookup 과 action 실행을 **데이터 패스 가속기** 가 line-rate 로 수행하고(자주·정형적이므로), 새 규칙을 _테이블에 채워 넣는 제어 로직_ 은 프로그래머블 코어가 맡습니다 — §4.1 의 data path/control path 분담이 vSwitch 안에서 그대로 나타납니다. (이 구조는 [TOE 의 connection table lookup](../../toe/02_toe_architecture/) 과 같은 "key→state/action" 패턴입니다.)
+:::
+
+:::note[메커니즘 — VXLAN overlay의 encapsulation: 물리망 위에 가상 L2를 얹기]
+오버레이(예: VXLAN)의 한 줄 정의는 **"L2 frame 을 UDP/IP 로 한 번 더 감싸 물리망 위에 가상 L2 네트워크를 얹는 것"** 입니다.
+
+문제 상황: 멀티 테넌트 클라우드에서 각 테넌트 VM 은 "우리끼리 같은 L2 네트워크에 있는 것처럼" 통신하고 싶지만, 물리적으로는 여러 rack·여러 IP 서브넷에 흩어져 있습니다. **encapsulation(encap)** 이 이를 해결합니다 — 송신 DPU 는 VM 이 만든 원래 이더넷 frame 을 _payload 로 통째로_ 넣고, 그 앞에 **VXLAN 헤더(테넌트를 구별하는 VNI 포함) + UDP + IP + 바깥쪽 이더넷 헤더** 를 새로 씌웁니다. 이제 이 패킷은 물리망 입장에서는 평범한 IP/UDP 패킷이라 _표준 라우팅으로_ 목적지 rack 까지 전달됩니다. 도착한 수신 DPU 는 **decapsulation(decap)** — 바깥 헤더들을 벗겨내고 원래 VM frame 만 꺼내 목적 VM 에 전달합니다.
+
+왜 multi-tenant 격리에 쓰이나? ① 바깥 헤더가 _물리망 주소_ 를 쓰므로 VM 의 내부 주소(MAC/IP)는 물리망에 노출·의존하지 않고 자유롭게 정할 수 있고, ② **VNI(VXLAN Network Identifier)** 가 테넌트마다 다른 가상 네트워크를 구분하므로, 같은 물리망을 공유해도 _다른 테넌트의 트래픽이 서로 섞이거나 보이지 않습니다_. DPU 는 이 encap/decap 을 데이터 패스에서 가속해, 호스트 CPU 가 매 패킷 헤더를 씌우고 벗기는 부담을 가져갑니다. (검증 관점: encap 후 헤더 필드 정확성, decap 후 원본 frame 무손실, VNI 기반 격리가 핵심.)
+:::
+
 ### 5.2 Storage — 로컬처럼 보이는 원격 스토리지
 
 스토리지 오프로드의 핵심은 NVMe-oF와 가상 스토리지 디바이스입니다. DPU는 VM/호스트에게 로컬 NVMe처럼 보이는 디바이스를 제공하면서, 실제로는 네트워크 너머의 원격 SSD에 NVMe-oF로 접근합니다. 여기에 스토리지 암호화가 더해져, 데이터가 디스크/네트워크에 머무는 동안 보호됩니다. 이 도메인은 §3에서 본 데이터 패스 처리 엔진(DMA·큐 관리)과 전용 가속기(압축·암호화·스토리지)에 크게 의존합니다.
+
+:::note[메커니즘 — DPU가 로컬 NVMe를 "흉내내는" 방법: device emulation]
+VM 이 _로컬 SSD 인 줄 알고_ 쓰는데 실제 디스크는 네트워크 너머에 있는 것이 어떻게 가능할까요? 핵심은 **device emulation** — DPU 가 PCIe 상에서 _진짜 NVMe 컨트롤러처럼 보이는 인터페이스_ 를 흉내 내는 것입니다.
+
+NVMe 디바이스는 표준 인터페이스를 갖습니다 — PCIe **BAR(레지스터 공간)** 에 컨트롤러 레지스터가 있고, host 가 거기에 **submission/completion queue** 를 만들어 "이 LBA 의 블록을 읽어라" 같은 NVMe 명령을 큐에 넣고 doorbell 을 칩니다. DPU 는 이 _BAR + queue 구조 전체를 자기 하드웨어로 emulate_ 합니다. 그래서 VM 의 표준 NVMe 드라이버는 평소처럼 명령을 큐에 넣고 doorbell 을 칠 뿐, 상대가 진짜 SSD 인지 DPU 의 흉내인지 _구별하지 못합니다_.
+
+doorbell 이 울리면 DPU 는 큐에서 NVMe 명령을 꺼내 **해석(parse)** 하고, "로컬 디스크 접근" 대신 그 요청을 **NVMe-oF 로 변환해 원격 타깃에 전달** 합니다. 원격에서 데이터가 돌아오면 (필요 시 복호화 후) VM 메모리에 DMA 하고, emulate 한 completion queue 에 완료를 적어 넣습니다 — VM 입장에선 "로컬 NVMe 가 응답했다" 와 동일합니다. 즉 _인터페이스(BAR/queue/doorbell)는 로컬처럼 emulate, 실제 I/O 는 NVMe-oF 로 원격 전달_ 하는 것이 이 마법의 정체입니다. 검증 관점에서는 emulate 한 NVMe 인터페이스가 표준 드라이버와 정확히 호환되는지(레지스터 의미, 큐 동작, doorbell 타이밍)가 핵심입니다.
+:::
 
 ### 5.3 Security — 데이터 패스에 얹힌 변환과 정책
 

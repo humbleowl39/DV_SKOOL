@@ -298,6 +298,12 @@ endclass
 :::danger[❓ 오해 5 — 'main_phase 에서 raise/drop_objection 안 써도 끝까지 돈다']
 **실제**: objection 안 올리면 phase 가 즉시 종료 → seq.start() 가 실행되기도 전에 main 끝남. raise/drop 페어 필수.
 :::
+
+:::note[메커니즘 — objection 이 phase 종료를 막는 원리 / sequencer-driver handshake]
+**objection = phase 종료 게이트**: UVM 의 각 run-time phase 에는 **objection 카운터** 가 있습니다. component 가 `phase.raise_objection(this)` 를 호출하면 카운터가 +1, `drop_objection(this)` 면 −1 됩니다. phase 는 **카운터가 0 이 될 때까지 끝나지 않습니다**. 그래서 main_phase 시작에서 raise → `seq.start()` (블로킹) 로 시퀀스가 다 돌 때까지 기다림 → 끝나면 drop 의 패턴이 필요합니다. raise 를 안 하면 카운터가 처음부터 0 이라 phase 가 _즉시_ 종료 신호를 받아, `seq.start()` 가 채 끝나기 전에 phase 가 닫혀 verb 들이 abort 됩니다. 이것이 "sequence 중간에 끊기지 않게" 만드는 메커니즘입니다.
+
+**sequencer-driver handshake (pull 모델)**: sequence 와 driver 사이의 transaction 전달은 **driver 가 당겨오는(pull)** 구조입니다. driver 는 run loop 에서 `seq_item_port.get_next_item(req)` 를 호출해 sequencer 에 _다음 item 을 요청_ 하고, sequencer 에 아직 item 이 없으면 **이 호출이 블로킹** 됩니다 (그래서 driver 가 busy-wait 하지 않음). sequence 가 `start_item/finish_item` 으로 item 을 내놓으면 `get_next_item` 이 그 item 을 반환하고, driver 가 그것을 DUT 에 인가합니다. 처리가 끝나면 driver 가 `item_done()` 을 호출해 **완료를 sequencer 에 통보** 하고, 그제서야 sequence 의 `finish_item` 이 반환됩니다. 즉 "sequence 가 내놓음 ↔ driver 가 당겨가 처리 ↔ item_done 으로 닫음" 의 blocking handshake 라서, sequence 와 driver 가 자연스럽게 보조를 맞춥니다. (RDMA-TB 의 CQ 폴링이 이 경로를 _안_ 쓰고 직접 호출인 이유가 오해 2.)
+:::
 ### DV 디버그 체크리스트
 
 | 증상 | 1차 의심 | 어디 보나 |

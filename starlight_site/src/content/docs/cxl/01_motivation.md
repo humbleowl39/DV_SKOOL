@@ -109,6 +109,20 @@ CXL: "CXL.cache 방식" {
 
 CXL.cache 흐름에서 핵심은 **GO(Global Observation)** 입니다. 호스트가 H2D Rsp로 GO-S를 보내기 전까지 디바이스는 데이터를 안전하게 사용할 수 없습니다. GO는 "이 트랜잭션이 시스템 전체에서 일관성 있게 관측되었다"는 보장이며, 이것이 PCIe DMA에는 없는 CXL의 일관성 계약입니다.
 
+:::note[coherency의 방향이 비대칭이다 — host-managed coherence]
+위 흐름을 자세히 보면 한 가지 비대칭이 드러납니다. 디바이스는 D2H Req("이 line 공유로 줘")를 *요청* 할 뿐, 그 요청이 시스템 전체에서 일관성 있게 처리되는지를 *판정* 하는 것은 호스트입니다. 즉 CXL.cache에서 디바이스는 호스트의 coherency 도메인에 **참여(participate)** 만 하고, coherency를 *주관* 하지 않습니다 — directory(누가 어느 line을 어떤 상태로 갖고 있나)와 home agent(요청을 직렬화하고 snoop을 발행하며 최종 권한을 부여하는 주체)를 **호스트가 소유** 합니다.
+
+왜 디바이스가 home agent가 아닐까요? coherency를 보장하려면 한 line에 대한 모든 요청이 *한 곳* 에서 직렬화되어야 합니다(앞 cache coherence 모듈의 ordering point 개념). 시스템에는 CPU 코어들, 다른 CXL 디바이스, 호스트 메모리가 모두 같은 주소 공간을 공유하는데, 이들 전체를 내려다보며 순서를 잡을 수 있는 것은 호스트의 home agent뿐입니다. 디바이스는 그 전역 그림을 못 보므로 home이 될 수 없고, 대신 "요청하고 → 호스트의 판정(GO)을 받고 → 그제서야 사용" 하는 client 역할을 맡습니다. GO가 *호스트* 에서 디바이스로(H2D) 흐르는 방향 자체가 이 비대칭 — host-managed coherence — 의 직접적 표현입니다.
+:::
+
+:::note[GO(권한)와 Data(값)가 왜 분리된 채널로 오나]
+H2D 응답을 보면 **GO(Rsp)** 와 **Data** 가 서로 다른 메시지/채널로 도착합니다. "권한 줄게(GO)" 와 "값은 이거야(Data)" 를 굳이 나눈 이유가 있습니다.
+
+coherency 결정(이 디바이스가 이 line을 Shared로 가져도 되는가)과 데이터 전송(그 line의 실제 64B 값을 옮기는 일)은 *성격이 다른 작업* 입니다. 권한 판정은 home agent가 directory를 보고 snoop을 정리하면 끝나는 빠른 논리 연산이고, 데이터는 그 값이 어디에 있느냐(호스트 메모리, 다른 캐시의 dirty 사본 등)에 따라 도착 시점이 들쭉날쭉합니다. 이 둘을 한 메시지로 묶으면 *느린 쪽에 빠른 쪽이 끌려갑니다* — 데이터가 준비될 때까지 권한 통지도 못 보냅니다.
+
+분리하면 둘을 **독립적으로 파이프라인** 할 수 있습니다. 권한(GO)을 먼저 확정해 보내 두고 데이터는 준비되는 대로 따로 보내거나, 반대로 데이터를 먼저 흘려보내고 GO로 "이제 써도 안전" 을 나중에 확정하는 식으로, 두 흐름이 서로의 latency에 묶이지 않습니다. coherence 결정과 값 전송을 따로 굴려 link 활용도와 처리량을 높이는 것이 채널 분리의 메커니즘적 이점입니다. (그래서 검증에서 "GO 전 데이터 사용 금지" 가 중요해집니다 — 데이터가 GO보다 먼저 도착할 수 있기 때문에, 디바이스는 GO를 본 시점에야 그 값을 안전하다고 믿어야 합니다.)
+:::
+
 :::note[여기서 잡아야 할 두 가지]
 **(1) CXL.cache는 접근 단위가 cacheline이고 일관성을 HW가 보장한다.** PCIe DMA처럼 SW가 flush/invalidate를 손으로 관리할 필요가 없어, 가속기가 호스트 데이터를 "자기 캐시처럼" 다룰 수 있습니다.<br>
 **(2) GO를 받기 전에는 데이터를 쓰면 안 된다.** GO는 일관성 관측의 약속이며, 검증 시 "GO 이전 데이터 사용"은 대표적인 프로토콜 위반 시나리오입니다.
@@ -222,10 +236,6 @@ CXL.io(=PCIe TLP)가 이미 메모리 읽기/쓰기 TLP를 지원하는데, 왜 
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `CXL Overview` (HDG common) §Overview, §2 디바이스 타입 — CXL 동기와 3 핵심 가치
-- `7. 세대별 진화와 CXL` (Confluence, PCIe seminar) §7.4 — Memory Wall, CXL 등장 배경
 
 **External**
 - *CXL 3.1 Specification* §1 (Introduction) — CXL Consortium

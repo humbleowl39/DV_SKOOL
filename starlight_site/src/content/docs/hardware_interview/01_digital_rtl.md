@@ -39,6 +39,8 @@ title: "Unit 1 — Digital Design / RTL"
 **왜?**
 순차 회로에서 *동시에* 여러 신호가 클럭 엣지에 갱신되어야 한다. `<=` 는 우변을 *같은 시간 슬롯* 에서 모두 평가한 뒤 다음 슬롯에서 좌변에 대입 — 모든 flop 이 *동시* 갱신.
 
+이 "평가 따로, 대입 따로" 는 SystemVerilog 스케줄러의 **region** 개념에서 나온다. 한 time slot 안에서 시뮬레이터는 정해진 순서의 region 들을 차례로 처리하는데, 핵심은 두 개다 — `<=` 의 _우변 평가_ 는 **Active region** 에서 (현재 값으로) 일어나고, _좌변 대입_ 은 그보다 나중인 **NBA(Non-Blocking Assignment) region** 에서 한꺼번에 일어난다. 그래서 같은 클럭 엣지의 모든 `<=` 가 _서로의 옛 값_ 을 읽고 평가를 끝낸 뒤에야 일제히 대입되므로, 코드 _작성 순서와 무관하게_ 모든 flop 이 동시에 갱신된 것처럼 보이고 race 가 사라진다. 반대로 `=`(blocking)는 Active region 에서 평가-대입이 즉시 끝나 다음 줄이 _새 값_ 을 보게 되므로 조합 논리에 맞다. 이 region 모델은 UVM TB 가 신호를 언제 driving/sampling 해야 race-free 한지의 토대와 같다 — 자세한 driver/monitor 의 clocking·sampling 타이밍은 [UVM Module 02 — Agent/Driver/Monitor](../../uvm/02_agent_driver_monitor/) 참조.
+
 ```systemverilog
 // ❌ 나쁜 예 — shift register 가 의도대로 안 됨
 always_ff @(posedge clk) begin
@@ -138,6 +140,8 @@ end
 
 - 2 단 (또는 3 단, MTBF 요구가 매우 엄격하면) flop 으로 metastability 가 정착할 시간 부여
 - **제약**: 1-bit 펄스만 안전. *multi-bit bus* 에는 못 씀 (각 비트가 *다른 사이클* 에 도착할 수 있음).
+
+**왜 2-FF 가 metastability 를 "해결" 하나 — 준안정점이 지수적으로 풀리는 물리.** FF 내부는 두 개의 inverter 가 서로 출력을 입력으로 받는 cross-coupled 구조다. 정상 동작에서는 이 양의 되먹임이 0 또는 1 의 안정점으로 빠르게 수렴시키지만, setup/hold 를 위반한 입력이 잡히면 회로가 0 과 1 사이의 _준안정점(metastable point)_ — 비유하면 언덕 꼭대기에 놓인 공 — 에 잠시 머문다. 핵심은 이 상태가 _영원히_ 가지 않는다는 것이다. 준안정점에서의 미세한 편차가 양의 되먹임으로 _지수적으로 증폭_ 되어, 준안정 상태에 남아 있을 확률이 시간 t 에 대해 `e^(−t/τ)` 로 줄어든다 (τ 는 회로의 되먹임 시정수). 즉 시간을 더 주면 줄 수록 아직 풀리지 않았을 확률이 기하급수적으로 0 에 가까워진다. 2-FF synchronizer 가 하는 일이 바로 _이 "시간" 을 한 클럭 주기만큼 벌어 주는_ 것이다 — 첫 FF 가 metastable 해져도 두 번째 FF 가 샘플링하기까지 한 주기 동안 `e^(−T_clk/τ)` 만큼 정착 확률을 높여, 두 번째 FF 가 안정된 0/1 을 받을 확률을 실용적 MTBF(평균 고장 간격) 수준으로 끌어올린다. MTBF 요구가 극히 엄격하면 단을 3 으로 늘려 정착 시간을 한 주기 더 주는 것도 같은 지수 논리다.
 
 ### 4.3 Multi-bit Bus — 두 가지 정석
 

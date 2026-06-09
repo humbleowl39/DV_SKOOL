@@ -83,6 +83,10 @@ Phase margin 60° 이상 확보.
 
 **Pole splitting** — Cc 가 p1 을 낮추고 동시에 p2 를 *높임* (좋은 부작용).
 
+**왜 Cc 하나가 두 pole 을 _반대 방향_ 으로 미나 — Miller effect 의 물리.** Cc 는 2단(gain 단)의 입력과 출력 사이에 걸린다. **Miller effect** 란, gain `−A_v` 를 가진 증폭단의 입력에서 본 feedback capacitor 가 _실제 용량의 (1+A_v) 배_ 로 _증폭되어_ 보이는 현상이다 — 출력이 입력의 반대로 크게 흔들리므로 Cc 양단 전압 변화가 커지고, 그만큼 입력단이 공급해야 할 전하가 늘어 입력에서는 `Cc·(1+A_v)` 짜리 거대한 capacitor 처럼 작동한다. pole 주파수는 `f = 1/(2π·R·C)` 라 C 가 커지면 주파수가 내려가므로, 이 _증폭된 입력 capacitance_ 가 1단 출력 노드의 pole p1 을 매우 낮은 주파수로 끌어내린다 (dominant pole 화).
+
+동시에 p2(2단 출력 노드)는 _높아진다_. Cc 가 고주파에서 1단 출력과 2단 출력을 _단락(short)_ 처럼 연결해 2단의 출력 저항을 실효적으로 낮추는 효과(되먹임에 의한 출력 임피던스 감소)를 주기 때문이다 — `R` 이 작아지니 `f=1/(2πRC)` 의 p2 가 위로 밀린다. 결과적으로 p1↓·p2↑ 로 두 pole 의 _간격이 벌어져_(splitting), unity-gain crossover 전까지는 p1 하나만 작용하는 −20 dB/dec 단일-pole 처럼 보여 phase margin 이 확보된다. 즉 "한 capacitor 가 두 pole 을 반대로 민다" 는 직관의 근거는 _입력측에서는 Miller 증폭, 출력측에서는 고주파 단락_ 이라는 같은 Cc 의 두 얼굴이다.
+
 ### 2.4 Slew rate vs Bandwidth — 차이
 
 - **Bandwidth (GBW)** — *small-signal* 한계. 작은 신호 (수 mV) 에서 frequency response.

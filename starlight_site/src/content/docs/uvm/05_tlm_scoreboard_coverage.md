@@ -198,6 +198,12 @@ endfunction
 **(1) Monitor 한 곳의 `ap.write` 가 Scoreboard 와 Coverage 양쪽으로 _동시에_ 도달한다.** 새 subscriber 를 추가해도 Monitor 코드는 _변경 없음_. 1:N 의 핵심 가치.<br>
 **(2) Scoreboard 의 write 는 _function_ 이므로 시간 소비 불가**. 만약 두 monitor 의 데이터를 매칭해야 한다 (입력 + 출력) 면 analysis_imp 한 개로는 부족 — analysis_fifo + run_phase task 에서 둘 다 get.
 :::
+
+:::note[`write` 가 _function_ 이라 fan-out 은 "동시" 가 아니라 _직렬_ 이다]
+"1:N broadcast" 라는 말이 모든 subscriber 가 _동시에 병렬로_ 받는다는 인상을 주지만, 메커니즘은 그렇지 않습니다. TLM 의 analysis 인터페이스는 **non-blocking 동기 호출** 로 정의되어 있습니다 — `write()` 는 시간을 소비하지 않는 _function_ 이고, publisher 의 `ap.write(item)` 한 번은 연결된 subscriber 들의 `write()` 를 **콜 스택에서 순차적으로 하나씩** 호출합니다. 즉 `ap.write(item)` 은 내부적으로 대략 `sb.write(item); cov.write(item); logger.write(item);` 처럼 _차례대로_ 부르고, 마지막 subscriber 의 write 가 끝나야 `ap.write` 가 리턴합니다 — 이 모든 일이 _같은 시뮬레이션 시각 (0 시간)_ 안에 직렬로 벌어집니다.
+
+이 사실이 두 가지를 설명합니다. 첫째, subscriber 의 `write` 안에서 `#delay` 나 `@(posedge clk)` 를 쓸 수 없는 이유 — function 이라 시간 진행이 금지됩니다 (시간이 필요하면 analysis_fifo). 둘째, 다음 §의 handle 공유 오염 — 직렬로 같은 객체 핸들을 차례로 건네므로, 앞 subscriber 가 그 객체를 _바꾸면_ 뒤 subscriber 는 바뀐 값을 봅니다.
+:::
 ---
 
 ## 4. 일반화 — TLM 포트 종류 와 Scoreboard 2 가지 매칭 전략
@@ -211,6 +217,12 @@ endfunction
 | `uvm_analysis_export` | 중간 전달 | 계층 경유 시 사용 |
 | `uvm_tlm_analysis_fifo` | 수신 (큐 + get task) | 시간 소비 / 매칭 / 비동기 처리 |
 | `uvm_seq_item_port` | 양방향 | Sequencer ↔ Driver |
+
+#### 1:N broadcast 에서 모든 subscriber 는 _같은 핸들_ 을 받는다
+
+위의 직렬 fan-out 에는 조용한 함정이 따라옵니다. `ap.write(item)` 이 넘기는 `item` 은 transaction _객체 자체_ 가 아니라 그 객체를 가리키는 **핸들 (참조)** 입니다. 그래서 scoreboard, coverage, logger 가 받는 것은 _복사본 N 개_ 가 아니라 **하나의 동일 객체를 가리키는 핸들 N 개** 입니다. 한 subscriber 가 `item.data = ...` 로 그 객체를 _변형 (mutate)_ 하면, 뒤이어 같은 핸들을 받은 다른 subscriber 는 _변형된_ 값을 보게 됩니다 — scoreboard 는 원본을, coverage 는 오염된 값을 보는 식의 silent 데이터 오염입니다.
+
+방어는 두 갈래입니다. (1) subscriber 의 `write()` 첫 줄에서 `clone()` 또는 `do_copy` 로 _자기 사본_ 을 떠서 작업하거나, (2) publisher 인 monitor 가 매 transaction 마다 `create` 로 _새 객체_ 를 만들어 broadcast 합니다 (송신측 보장이 더 깔끔). 어느 쪽이든 핵심은 "subscriber 는 받은 핸들의 객체를 _읽기만_ 하고 바꾸지 않는다" 는 규율입니다. 이 모든 것의 토대 — class 변수가 객체가 아니라 핸들이고 단순 대입은 핸들 복사라는 SV 사실, 그리고 deep/shallow copy 의 정확한 의미 — 는 [oop_design_patterns/01 — OOP 기둥](../../oop_design_patterns/01_oop_pillars_relationships/) 에서 다룹니다.
 
 ### 4.2 analysis_imp vs analysis_fifo
 
@@ -448,7 +460,17 @@ class my_coverage extends uvm_subscriber #(my_item);
 endclass
 ```
 
+:::note[`sample()` 트리거와 cross 곱집합 — 두 메커니즘]
+**`cg.sample()` 가 하는 일 — 이벤트 기반 평가.** covergroup 은 정의만으로는 _bin 의 틀_ 만 선언할 뿐, 카운트는 0 입니다. `cg.sample()` 호출이 곧 **"지금 이 순간의 coverpoint 표현식 값들을 _평가_ 해서, 해당하는 bin 의 카운트를 +1 하라"** 는 트리거입니다. 위 코드에서 `item = t;` 로 현재 transaction 을 가리킨 뒤 `cg.sample()` 을 부르면, `coverpoint item.addr[31:28]` 등이 그 시점의 `item` 값을 읽어 맞는 bin 을 올립니다. 그래서 sample 을 _안 부르면_ coverage 가 0 으로 남습니다 (오해 5). covergroup 을 `@(posedge clk)` 같은 이벤트에 직접 묶어 _자동_ sampling 하게 할 수도 있지만 (`covergroup cg @(posedge clk);`), monitor 의 write 콜백에서 _명시적으로_ 부르는 방식이 "의미 있는 transaction 이 도착한 시점" 에만 샘플해 노이즈를 줄이는 표준입니다.
+
+**cross 가 곱집합인 이유.** `cross cp_addr, cp_op` 는 두 coverpoint bin 의 _합집합_ 이 아니라 **데카르트 곱 (Cartesian product)** 으로 bin 을 만듭니다. `cp_addr` 가 {low, mid, high} 3 bin, `cp_op` 가 {wr, rd} 2 bin 이면, cross 는 (low,wr)(low,rd)(mid,wr)(mid,rd)(high,wr)(high,rd) — 즉 **3 × 2 = 6 개** 의 조합 bin 을 만듭니다. 단순히 3+2=5 가 아닙니다. 그래서 coverpoint 의 bin 수가 늘면 cross bin 은 _곱_ 으로 불어나고, 명시 bin 없이 auto bin 에 맡기면 폭발합니다 — `cross_auto_bin_max` (§5.5) 가 이 폭발을 막는 상한입니다.
+:::
+
 ### 5.5 Covergroup Option — 세밀한 제어
+
+:::note[`with function sample(...)` 구문이란]
+앞의 §5.4 covergroup 은 멤버 변수 `item` 을 sample 시점에 _미리 세팅_ 해 두고 인자 없는 `cg.sample()` 을 불렀습니다 (embedded covergroup). 아래의 `covergroup cg with function sample(my_item item);` 는 다릅니다 — covergroup 에 **인자를 받는 sample 함수** 를 정의해, 호출할 때 `cg.sample(some_item)` 처럼 _값을 직접 넘겨_ 임의 시점에 샘플하게 합니다. 멤버 변수에 의존하지 않으므로 외부에서 (예: scoreboard, 다른 컴포넌트) 원하는 값을 들고 와 샘플하기 좋고, 같은 covergroup 을 여러 source 로 재사용하기 쉽습니다. embedded (멤버 기반) 와 `with function sample` (인자 기반) 의 차이는 "샘플할 값을 _어디서_ 가져오나" — 멤버냐 인자냐 — 입니다.
+:::
 
 ```systemverilog
 covergroup cg with function sample(my_item item);

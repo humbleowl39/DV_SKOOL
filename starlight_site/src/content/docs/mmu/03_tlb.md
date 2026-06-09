@@ -197,6 +197,14 @@ L2 -> PWE: "miss"
 
 L1 μTLB 와 L2 TLB 는 서로 다른 목적으로 존재합니다. μTLB 는 매 instruction 마다 ~1 cycle 안에 결과를 내야 하므로 fully-associative 구조로 설계하지만, 크기를 크게 만들면 CAM 검색 latency 가 늘어나 cycle time 을 침범합니다. 그래서 μTLB 는 작고 빠르게, L2 TLB 는 set-associative 로 더 크게 — 이 두 단계가 hit rate 와 latency 를 동시에 다룹니다.
 
+#### μTLB 가 fully-assoc 인데 L2 가 set-assoc 인 _물리적_ 이유
+
+"작고 빠름 vs 크고 느림" 은 결과일 뿐이고, 그 뒤엔 회로 지연의 정량적 인과가 있습니다. fully-associative 검색은 [Module 01 의 CAM](../01_mmu_fundamentals/) 처럼 _모든 엔트리를 동시에_ 비교하므로, 비교 결과를 하나로 모으는 match 라인의 로드(부하)와 우선순위 인코더 지연이 **엔트리 수에 거의 비례** 해서 늘어납니다. 즉 fully-assoc 의 검색 latency ∝ (엔트리 수)에 가깝습니다.
+
+따라서 μTLB 를 1 cycle 안에 끝내려면 _cycle time 예산이 허용하는 엔트리 수 상한_ 이 생깁니다 — 보통 수십(32~64) 엔트리 규모입니다. 그 이상 키우면 동시 비교 회로가 1 cycle 을 넘겨 IPC 를 깎습니다. 이것이 μTLB 가 fully-assoc 인 채로 _작을 수밖에 없는_ 이유입니다.
+
+반대로 L2 TLB 는 수백~수천 엔트리가 필요한데, 그 규모를 fully-assoc 로 만들면 검색이 여러 cycle 로 폭발합니다. 그래서 L2 는 **set-associative** 를 씁니다 — index 비트로 먼저 한 set(예: 4~8 way)만 고른 뒤 그 set 안에서만 병렬 비교하므로, 동시 비교 대상이 엔트리 _총수_ 가 아니라 _way 수_ 로 고정됩니다. 검색 latency 가 용량과 무관하게 일정해지는 대신, 같은 set 으로 몰리는 conflict miss 를 감수합니다. 정리하면 — 1 cycle 예산이 μTLB 크기를, 용량 요구가 L2 의 구조(set-assoc)를 강제하는 것이고, 두 구조 차이는 _같은 latency 부등식의 양 끝_ 입니다.
+
 **L1 TLB (μTLB)**:
 
 - 크기: 32-64 엔트리
@@ -367,6 +375,14 @@ SW-Managed TLB (MIPS, SPARC):
 | DV 복잡도 | Walk Engine 검증 필요 | Exception 흐름 검증 필요 |
 | 대표 ISA | ARM, x86, RISC-V | MIPS, SPARC |
 
+#### SW-managed TLB 가 _근본적으로_ 사라진 이유
+
+"exception 오버헤드" 라는 한 단어 뒤에는 마이크로아키텍처 진화의 인과가 있습니다. SW-managed TLB 는 miss 가 날 때마다 **exception** 을 일으켜 OS 의 handler 로 점프합니다. 단순한 in-order 스칼라 CPU 에서는 이 점프 비용이 그럭저럭 감당할 만했습니다.
+
+문제는 superscalar / out-of-order(OoO) 프로세서에서 폭발합니다. OoO 코어는 수십~수백 개의 명령을 동시에 in-flight 로 들고 추측 실행(speculative execution)하는데, **exception 이 발생하면 그 시점 이후의 in-flight 명령을 모두 버리고 파이프라인을 통째로 drain(flush)** 해야 합니다. 깊은 파이프라인과 큰 reorder buffer 를 비웠다가 handler 실행 후 다시 채우는 비용은, 단순 stall 이 아니라 _그 코어가 쌓아둔 명령 수준 병렬성 전체를 한 번 날리는_ 비용입니다.
+
+반면 HW page walk 은 exception 이 아니라 **메모리 접근 한 묶음**일 뿐입니다 — walk engine 이 백그라운드에서 PTE 를 읽어오는 동안에도 코어는 _다른_ 독립 명령들을 계속 실행할 수 있어 파이프라인을 비울 필요가 없습니다. 즉 코어가 넓고 깊어질수록 "miss 마다 파이프라인 drain"(SW) 의 상대 비용이 "백그라운드 메모리 접근"(HW)보다 압도적으로 커졌고, 그 교차점을 지나면서 SW-managed 가 도태된 것입니다. 유연성(임의 PT 포맷)의 이점이 이 성능 격차를 더는 정당화하지 못하게 된 셈입니다.
+
 ### 5.4 TLB Prefetch / Speculative Walk
 
 ```
@@ -408,6 +424,12 @@ TLB Prefetch — Miss를 사전에 방지:
 | 권한 변경 | mprotect() 등 | 변경된 VA |
 | Unmap | 매핑 제거 | 제거된 VA |
 
+:::note[ASID 폭(8/16-bit)이 _왜_ 그 크기인가 — tag 비용 ↔ rollover 빈도]
+ASID 가 8-bit(256개) 또는 16-bit(65536개)로 정해진 것은 임의가 아니라 두 비용의 trade-off 결과입니다. ASID 비트는 _모든 TLB 엔트리의 tag 에 함께 저장_ 되므로, ASID 를 1 비트 늘리면 TLB 의 모든 way × 모든 set 에 1 비트씩 저장 면적이 늘어납니다 — tag 폭이 곧 SRAM/CAM 면적 비용입니다. 반대로 ASID 가 너무 좁으면 동시에 살아있는 process 수가 ASID 공간을 금세 소진해 **rollover**(번호 재사용을 위해 전체 TLB flush 를 강제하는 사건)가 자주 일어나, flush 후 cold miss 폭발로 성능이 깎입니다.
+
+따라서 ASID 폭은 **TLB tag 면적 비용 ↔ rollover 빈도(= 동시 active process 한도)** 사이의 균형점입니다. 8-bit 면 256개 process 가 동시에 TLB 를 공유할 수 있고, 그 이상은 OS 가 ASID 를 회수·재배정하며 rollover 를 처리합니다. 16-bit 는 면적을 더 쓰는 대신 rollover 를 사실상 거의 없게 만듭니다 — 큰 서버급 워크로드에서 16-bit 가 선호되는 이유입니다.
+:::
+
 #### ARMv8 TLB Invalidation 명령어
 
 ```
@@ -421,6 +443,21 @@ ISB                // 파이프라인 플러시
 ```
 
 **DV 핵심**: TLB Invalidation 후 같은 VA를 접근하면 반드시 TLB Miss가 발생하고 Page Walk가 수행되어야 한다. Stale 엔트리가 남아있으면 보안 취약점이 된다.
+
+#### TLBI 가 즉시 효력이 없고 _왜_ DSB 가 필요한가
+
+`TLBI` 명령은 실행한 그 순간 무효화가 끝났다고 보장하지 않습니다 — TLBI 는 **posted(비동기)** 동작이기 때문입니다. CPU 는 TLBI 를 "무효화하라" 는 요청으로 interconnect 에 _던져두고_ 곧장 다음 명령으로 넘어가며, 실제 무효화(특히 Inner-Shareable 도메인의 _다른 코어들_ 까지 broadcast 되어 각자의 TLB 에서 엔트리가 사라지는 일)는 그 뒤 임의의 시점에 완료됩니다. 즉 명령 retire 시각과 효력 발생 시각이 분리되어 있습니다.
+
+`DSB ISH` 는 바로 이 _완료 시점이 미정_ 인 문제를 메우는 fence 입니다. DSB 는 "앞서 발행한 메모리/유지보수 동작들(여기선 TLBI broadcast)이 Inner-Shareable 도메인 전체에서 _완료될 때까지_ 후속 명령 진행을 막아라" 라고 강제합니다. 따라서:
+
+```
+PTE store        ← page table 의 매핑 변경
+TLBI VAE1IS, Xt  ← posted: "무효화해달라" 만 던짐 (아직 미완)
+DSB ISH          ← 모든 코어의 TLBI 완료를 *기다리는* fence
+ISB              ← 파이프라인의 in-flight 명령까지 새 상태로 동기화
+```
+
+DSB 를 빼면, TLBI 가 아직 다른 코어에 도달하기도 전에 그 코어가 _옛 매핑으로_ 접근해 버리는 race 가 생깁니다 — 흔한 오해 3 의 multi-core stale race 가 정확히 이 메커니즘에서 옵니다. ISB 는 그 위에 더해, _자기 코어_ 의 파이프라인에 이미 들어와 있던 명령들까지 새 변환 상태를 보도록 context synchronize 합니다.
 
 ### 5.6 TLB Coherency 문제
 

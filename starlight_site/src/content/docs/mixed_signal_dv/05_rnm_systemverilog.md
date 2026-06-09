@@ -401,6 +401,10 @@ real n  = $sqrt(-2.0 * $ln(u1)) * $cos(2.0 * 3.141592653589793 * u2);
 - 함수는 반드시 `automatic` + side-effect 없어야 race-free
 - 반환 타입 = nettype의 payload 타입
 
+:::note[`function automatic` 의 의미 — 왜 race-free 인가]
+`automatic` 은 _함수가 호출될 때마다 지역 변수를 stack 에 새로_ 할당한다는 뜻이다 (호출이 끝나면 회수). 반대 기본값인 `static` 함수는 지역 변수를 _모든 호출이 공유하는 단 하나의_ 저장 공간에 두므로, 같은 함수가 동시에/재진입(re-entrant) 호출되면 한 호출이 쓴 지역 변수를 다른 호출이 덮어써 값이 오염된다. resolution function 은 _여러 net 이 동시에 갱신될 때 시뮬레이터가 병렬적으로/중첩해서 호출_ 할 수 있으므로, `static` 이면 호출들끼리 지역 변수를 공유해 data race 가 난다. `automatic` 으로 선언하면 각 호출이 _자기만의 지역 변수 사본_ 을 가지므로 서로 간섭하지 않아 동시 호출에 안전하다 — 이것이 "race-free" 의 정확한 근거다. (side-effect 금지도 같은 이유: 함수 밖 상태를 건드리지 않아야 호출 순서에 의존하지 않는다.) SV 의 `automatic` vs `static` 함수 저장 클래스에 대한 일반 논의는 [UVM Module 06 — Practical Patterns](../../uvm/06_practical_patterns/) 참조.
+:::
+
 > 한 net에 **"이 driver는 지금 끄고 싶다"**를 표현하려면 high-impedance 값(`Z = ∞` 또는 매우 큰 수)으로 보내야 합니다. struct 안에 `bit drive_en`을 두고 resolution에서 걸러내는 패턴도 자주 씁니다.
 
 ### 13.2 네 가지 전형적 resolution 패턴

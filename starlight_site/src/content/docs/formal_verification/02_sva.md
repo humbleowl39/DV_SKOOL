@@ -180,6 +180,10 @@ assert property (@(posedge clk) disable iff (rst)
 
 이후 모든 절은 **concurrent assertion** 을 의미합니다.
 
+:::note[concurrent assertion 은 *언제* 신호를 샘플하는가 — preponed region]
+"매 clock edge 평가" 라는 말은 *언제 신호 값을 읽는가* 를 빼면 절반만 맞습니다. concurrent assertion 은 clock edge 가 만드는 신호 *변화* 가 회로에 반영되기 *직전* 의 값, 즉 **preponed region(그 edge 직전의 안정된 값)** 을 샘플합니다. 그래서 같은 cycle 에 회로 로직이 신호를 바꾸더라도 assertion 은 *바뀌기 전 값* 을 일관되게 보고, edge 주변의 glitch 나 평가 순서에 따른 race 에 흔들리지 않습니다. `$past`/`$stable` 이 안정적으로 동작하는 것도 — 이전·현재 값을 모두 이 preponed 샘플로 일관되게 잡기 때문입니다. 이것이 `always_comb` 안에서 코드 도달 즉시 *현재* 값을 읽는 immediate assertion 과의 근본 차이입니다. 이 "왜 안정된 값을 읽는가" 를 떠받치는 SystemVerilog 스케줄러 region(Preponed/Active/NBA/Observed) 의 전체 메커니즘은 [UVM Module 02](../../uvm/02_agent_driver_monitor/) 에서 다루므로 여기서는 다시 유도하지 않습니다.
+:::
+
 ### 4.2 3가지 Directive — 역할 분담
 
 | Directive | 역할 | Formal 에서 | 시뮬레이션에서 |
@@ -351,6 +355,10 @@ assert property (@(posedge clk) disable iff (rst)
 // 시뮬레이션에서는 사용 불가 (유한 시간)
 ```
 
+:::note[`disable iff` 는 단순 조건 게이팅이 아니라 *비동기 종료* 다]
+거의 모든 패턴에 붙은 `disable iff (rst)` 가 정확히 무슨 일을 하는지가 reset 극성 정합의 근본입니다. `disable iff` 는 "그 조건일 때 평가를 건너뛴다" 정도의 단순 게이팅이 *아닙니다*. 조건(예: `rst`)이 참이 되는 순간, 그 시점에 *평가 중이던 모든 assertion thread 를 비동기로 즉시 종료*(kill)시켜 — 진행 중이던 매칭을 pass 도 fail 도 아닌 *없던 일* 로 폐기합니다. 그래서 reset 중에 미완성이던 `req |-> ##[1:3] ack` 매칭이 fail 로 잡히지 않습니다. 이 "즉시 kill" 성질 때문에 **reset *극성* 을 RTL 과 정확히 맞추는 것이 결정적** 입니다 — active-high reset 인데 `disable iff (!rst_n)` 처럼 극성을 뒤집어 쓰면, 정작 reset 구간에는 kill 이 안 걸려 가짜 fail 이 쏟아지고, 정상 동작 구간에는 엉뚱하게 thread 가 죽어 *조용한 vacuous* 가 됩니다.
+:::
+
 ### 5.4 Bind — 비침습적 SVA 적용
 
 ```systemverilog
@@ -472,6 +480,8 @@ endsequence
 4. 여러 시퀀스 인스턴스가 동시에 활성화되면 각각 독립적인 변수 보유
 ```
 
+규칙 4 의 "독립적인 변수" 가 어떻게 가능한지가 핵심입니다. concurrent sequence 는 *매 시작 가능 시점마다 새로운 evaluation thread* 를 띄웁니다 — 예컨대 `(wr_en, saved=wr_data) ##[1:10] (rd_en && rd_data==saved)` 에서 `wr_en` 이 cycle 3 과 cycle 5 에 각각 참이면, cycle 3 에서 시작한 thread 와 cycle 5 에서 시작한 thread 가 *동시에* 매칭 진행 중일 수 있습니다(overlapping match). 이때 **각 thread 는 local variable 의 *자기 복사본* 을 가집니다** — cycle 3 thread 의 `saved` 는 cycle 3 의 `wr_data` 를, cycle 5 thread 의 `saved` 는 cycle 5 의 `wr_data` 를 따로 들고 있습니다. 그래서 두 write 의 데이터가 섞이지 않고, 각자 자기 짝 read 와 비교됩니다. local variable 이 sequence-static 변수가 아니라 *thread 마다 인스턴스화* 되기 때문에 — 트랜잭션이 파이프라인처럼 겹쳐 흘러도 데이터 추적이 정확한 것입니다.
+
 ### 5.7 strong vs weak Sequence
 
 ```systemverilog
@@ -489,6 +499,10 @@ assert property (@(posedge clk)
 시뮬레이션 종료 시점에서 두 키워드의 차이가 드러납니다. strong sequence 는 시뮬레이션이 끝날 때까지 미완료이면 FAIL 로 처리하고, weak sequence 는 미완료를 조용히 무시합니다 (vacuous). Formal 에서는 엔진이 무한 시간을 가정하므로 두 경우 모두 차이가 없습니다.
 
 property 안의 sequence 는 기본값이 weak 입니다. 시뮬레이션에서 완료를 반드시 보장해야 한다면 strong 을 명시해야 합니다. 실무에서는 시뮬레이션 liveness 검증이 필요하면 `strong(##[1:N] ack)` 처럼 유한 bound 와 함께 strong 을 사용하고, Formal 전용 assertion 이라면 `s_eventually` 로 표현합니다.
+
+기본이 *weak* 인 것은 취향이 아니라 SystemVerilog 의 언어 규정이며, 그 이유는 *유한 시뮬레이션에서의 false fail 방지* 입니다. 시뮬레이션은 어느 시각에 그냥 끝납니다 — 만약 미완료 시퀀스를 무조건 fail 로 본다면, "ack 가 곧 올 예정이었는데 마침 그 직전에 시뮬이 끝난" 정상 케이스까지 전부 fail 로 보고됩니다. weak 는 이 미완료를 "판단 보류(없던 일)" 로 처리해 그런 가짜 실패를 막습니다. 그래서 *완료를 진짜로 강제하고 싶을 때만* strong 을 명시적으로 적게 한 것입니다.
+
+같은 논리가 **`s_eventually` 가 시뮬레이션에서 무의미한 기전** 을 설명합니다. liveness 의 위반("그 좋은 일이 *끝내* 안 일어난다")은 *유한 trace 로는 확정할 수 없습니다* — 증인(ack)이 무한히 미뤄질 수 있어서, 유한한 시뮬 구간에서 ack 를 못 봤다고 해서 "영원히 안 온다" 인지 "아직 안 왔을 뿐" 인지 구별이 불가능합니다(Module 01 의 safety/liveness 정의). Formal 은 무한 시간을 가정하므로 "모든 경로에서 결국 온다" 를 증명할 수 있지만, 유한 시뮬에는 그 무한이 없습니다. 그래서 시뮬용 liveness 는 반드시 `strong(##[1:N] ack)` 처럼 *유한 bound* 로 바꿔 "N cycle 안에는 와야 한다" 라는 *확정 가능한* 명제로 만들어야 합니다.
 
 ### 5.8 멀티 클럭 Assertion
 

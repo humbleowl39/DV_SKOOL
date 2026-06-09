@@ -12,7 +12,7 @@ title: "SoC Integration (CCTV) 용어집"
 
 **Definition.** SoC 내 모든(또는 대부분의) IP에 공통으로 적용되어야 하는 검증 항목들이 빠짐없이 수행되었는지 추적하는 coverage 방법론.
 
-**Source.** DVCon 2025 paper (ManGoBoost).
+**Source.** DVCon 2025 paper.
 
 **Related.** Common Task, Coverage matrix, Virtual Sequencer.
 

@@ -15,7 +15,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** Inclusive LLC가 cache line을 evict할 때 상위 L1/L2 캐시에 그 line의 사본을 버리도록 강제하는 무효화 명령.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4 (Back-Invalidation / Inclusive Coherency).
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Inclusive cache, LLC, orphan line, eviction.
 
@@ -31,7 +31,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 여러 로컬 캐시에 흩어진 단일 메모리 위치의 사본을 동기화하여 어떤 처리 요소도 stale 데이터를 읽지 않도록 하는 투명한 하드웨어 메커니즘.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.2.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** SWMR, Data-Value invariant, Snooping, Directory, Memory Consistency.
 
@@ -43,7 +43,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 로드와 스토어의 순서 규칙 및 동적 로드가 반환할 수 있는 값을 정의하는, 하드웨어와 소프트웨어 간의 아키텍처적으로 가시적인 계약.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.1.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Memory Model, memory barrier, ISA, Cache Coherence.
 
@@ -59,7 +59,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 새 epoch 시작 시점의 메모리 위치 값이 직전 read-write epoch 종료 시점의 값과 일치해야 한다는 coherence 불변식.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.2.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** SWMR, Cache Coherence, epoch.
 
@@ -71,7 +71,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 어느 상위 캐시가 어느 cache line을 보유하는지를 추적하는 장부 구조로, broadcast 대신 targeted snoop을 보내기 위해 사용된다.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4 (Snoop Filter / Directory).
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Snoop Filter, Targeted Snoop, sharer, LLC, broadcast snooping.
 
@@ -87,7 +87,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** DMA·NIC 같은 비캐싱 마스터가 메모리를 접근할 때 인터커넥트가 자동으로 CPU 캐시를 snoop해 최신 데이터를 반영하는, 단방향(one-way) coherence.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §3.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Point of Coherence, cache maintenance, snoop, DMA, NIC.
 
@@ -99,7 +99,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 상위 L1/L2 캐시에 존재하는 모든 cache line이 하위 LLC에도 반드시 존재해야 한다는 정책을 가진 캐시 계층.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4 (Inclusive Coherency).
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Back-Invalidation, LLC, orphan line.
 
@@ -115,7 +115,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 캐시 계층의 최하위에 위치하며 snoop filter·back-invalidation·Point of Coherence 역할로 시스템 전역 coherence를 능동적으로 유지하는 공유 캐시.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** SLC (System Level Cache), Directory, Back-Invalidation, Point of Coherence.
 
@@ -131,7 +131,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** cache line을 Modified·Exclusive·Shared·Invalid 네 상태로 추적해 사본의 일관성을 관리하는 snooping 기반 coherence 프로토콜.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.4 (snooping 프로토콜 예시; 상태 인코딩 세부는 원 primer로 재확인 권고).
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Snooping, MOESI, dirty bit, Exclusive state.
 
@@ -143,7 +143,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** MESI에 Owned 상태를 추가해, dirty cache line을 메모리에 write-back하지 않고도 다른 캐시와 공유할 수 있게 하는 coherence 프로토콜.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.4; Sweazey & Smith (MOESI 분류).
+**Source.** Sweazey & Smith (MOESI 분류); A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** MESI, Owned state, write-back, cache-to-cache transfer.
 
@@ -159,7 +159,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** MOESI에서 cache line이 dirty인 채로 여러 캐시에 공유될 수 있으며, owner가 데이터 공급과 최종 메모리 반영 책임을 지는 상태.
 
-**Source.** Sweazey & Smith, "A Class of Compatible Cache Consistency Protocols"; HDG §1.4 (MOESI 언급).
+**Source.** Sweazey & Smith, "A Class of Compatible Cache Consistency Protocols".
 
 **Related.** MOESI, write-back, sharer.
 
@@ -171,7 +171,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** Inclusive LLC가 eviction 후 추적하지 못하는, 상위 캐시에 남은 cache line 사본.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4 (back-invalidation으로 방지).
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Back-Invalidation, Inclusive Cache, SWMR.
 
@@ -187,7 +187,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 모든 메모리 observer(CPU·GPU·DMA)가 동일한 갱신 데이터를 보는 것이 보장되며 트랜잭션이 외부 DRAM에 commit되기 전 일치되는 물리적 지점.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** LLC, IO-Coherency, heterogeneous transaction.
 
@@ -203,7 +203,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 모든 캐시가 공유 버스나 broadcast 인터커넥트의 트랜잭션을 관찰하여 peer 사본을 자동으로 무효화·갱신하는 coherence 메커니즘.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.4.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** MESI, MOESI, BusRdX, Directory, broadcast.
 
@@ -215,7 +215,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 임의의 메모리 위치에 대해 임의의 순간 한 코어만 쓰기/읽기를 하거나 여러 코어가 읽기만 할 수 있다는 coherence 불변식.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §1.2.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Data-Value Invariant, Cache Coherence, invalidation.
 
@@ -227,7 +227,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 상위 캐시의 line 보유 정보를 추적해 불필요한 snoop broadcast를 걸러내고 targeted snoop만 보내게 하는 directory 구현.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §4.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Directory, Targeted Snoop, LLC.
 
@@ -239,7 +239,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** 특정 cache line의 사본을 보유하고 있다고 directory가 추적하는 상위 캐시.
 
-**Source.** Directory coherence 일반 용어 (HDG §4 directory 추적 맥락).
+**Source.** Directory coherence 일반 용어.
 
 **Related.** Directory, Snoop Filter, Targeted Snoop, under-snoop.
 
@@ -255,7 +255,7 @@ title: "Memory Consistency & Cache Coherence 용어집"
 
 **Definition.** CPU·GPGPU·NPU 등 서로 다른 처리 요소가 동일한 물리 메모리와 가상 주소 공간(Shared Virtual Memory)을 공유하는 시스템 아키텍처.
 
-**Source.** HDG `memory_consistency_coherence_spec.md` §2.
+**Source.** A Primer on Memory Consistency and Cache Coherence (Sorin/Hill/Wood).
 
 **Related.** Memory Consistency, Cache Coherence, ACE, CHI, Shared Virtual Memory.
 

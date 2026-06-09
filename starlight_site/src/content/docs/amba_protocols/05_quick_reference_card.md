@@ -436,10 +436,6 @@ APB 가 fit-for-purpose:
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `AMBA Protocol Selection` — APB/AHB/AXI 매트릭스
-- `AXI Burst Encoding` — AxLEN/AxSIZE 검증 사례
-
 **External**
 - ARM *AMBA AXI and ACE Protocol Specification* (IHI 0022)
 - ARM *AMBA APB Protocol Specification* (IHI 0024)

@@ -72,6 +72,12 @@ RAL 에는 **두 개의 문(door)** 이 있습니다.
 - **Front-door**: 실제 버스 트랜잭션을 발생시킵니다(드라이버 → DUT 핀). 느리지만 실제 경로를 검증합니다.
 - **Back-door**: 버스를 우회해 시뮬레이터의 HDL 계층 경로(`tb_top.dut.u_csr.ctrl_reg`)에 직접 접근합니다. Zero-time 이며 빠르지만 버스 로직은 검증하지 않습니다.
 
+:::note[back-door 가 신호에 "직접 닿는" 실제 기전 — 경로 해석]
+back-door 가 zero-time 인 이유는 버스 사이클을 한 번도 돌리지 않고 시뮬레이터에게 _그 신호를 지금 당장 읽거나 쓰라_ 고 직접 명령하기 때문입니다. 그 명령은 두 경로 중 하나로 전달됩니다 — (1) **hierarchical reference** (`tb_top.dut.u_csr.ctrl_reg` 같은 정적 계층 경로로 신호를 직접 가리킴), 또는 (2) 시뮬레이터의 **VPI/PLI** C 인터페이스로 그 net/reg 의 핸들을 얻어 read/write. 어느 쪽이든 핵심은 "RTL 신호의 _절대 계층 경로_ 를 알아야 한다" 는 것입니다.
+
+그래서 register model 은 각 register/field 가 RTL 의 _어디에_ 사는지를 알아야 하고, 이것을 `configure(..., "u_csr.ctrl_reg")` 의 hdl path 와 env 의 `set_hdl_path_root("tb_top.dut")` 로 알려 줍니다 — 둘을 이으면 `tb_top.dut.u_csr.ctrl_reg` 라는 완전한 경로가 완성됩니다. `set_hdl_path_root` 가 필요한 이유가 여기 있습니다: model 은 _상대 경로 (u_csr.ctrl_reg)_ 만 알고, top 에서 DUT 가 인스턴스화된 _절대 위치 (tb_top.dut)_ 는 환경마다 달라 외부에서 주입해야 합니다. 이 경로가 한 글자라도 틀리면 back-door 접근이 `UVM_NOT_OK` 로 실패합니다.
+:::
+
 ### 한 장 그림 — RAL 이 버스 위에 얹히는 구조
 
 ```d2
@@ -110,6 +116,18 @@ MODEL -> DUT: "**back-door**\nHDL path 직접 접근" { style.stroke-dash: 2; st
 ## 3. 작은 예 — `set → update` 한 번이 DUT 에 닿기까지
 
 가장 헷갈리는 지점이 **mirrored value** 와 **desired value** 의 분리입니다. 작은 시나리오로 흐름을 봅시다: 모델 안에서 원하는 값을 정해두고(`set`), 실제와 다를 때만 버스에 쓴다(`update`).
+
+:::note[데이터 모델 — register 객체 안의 _두 멤버_]
+"mirror" 와 "desired" 는 추상 개념이 아니라, register model 객체 안에 _실제로 나란히 존재하는 두 개의 멤버 변수_ 입니다. 하나는 **mirrored value** ("DUT 가 지금 이 값일 것" 이라는 _추측한 현재값_), 다른 하나는 **desired value** ("이 값으로 만들고 싶다" 는 _목표값_). 각 API 가 _어느 멤버를 건드리는지_ 로 외우면 set/update/mirror 의 차이가 기계적으로 잡힙니다.
+
+- `set(v)` → **desired 만** v 로. mirror 와 DUT 는 안 건드림 (zero-time).
+- `get()` → desired 를 읽음. `get_mirrored_value()` → mirror 를 읽음.
+- `write(v)` → DUT 에 버스 write + 결과로 **mirror 와 desired 둘 다** v 로 동기화.
+- `update()` → desired 와 mirror 를 _비교_ 해 다를 때만 desired 값을 write (그 후 둘 동기화).
+- `mirror()` → DUT 를 read 해 **mirror 갱신** (+ 옵션으로 기대값과 비교).
+
+즉 desired 는 "내가 원하는 것", mirror 는 "내가 아는 DUT 의 현재", DUT 레지스터는 "진짜 현재" — 세 곳이 따로 있고, 각 API 가 이 셋 중 어디를 읽고 어디를 쓰는지가 동작의 전부입니다.
+:::
 
 ### 단계별 다이어그램
 
@@ -187,6 +205,28 @@ PAS: "**3. Passive Integration**\n모델 ↔ 모니터만\n모델로 직접 read
 explicit prediction 을 쓰면서 `set_auto_predict(0)` 을 호출하지 않으면, 모델이 _스스로도_ 갱신하고 predictor 도 갱신해 **mirror 가 두 번 업데이트**되어 꼬입니다. explicit 의 필수 짝은 `regmodel.MAP.set_auto_predict(0)` 입니다.
 :::
 
+#### 이중 갱신이 _데이터 경로상_ 어떻게 일어나나
+
+"두 번 업데이트" 가 추상적으로 들리면, 한 `write` 트랜잭션이 mirror 까지 가는 _두 갈래 경로_ 를 그려 보면 명확해집니다.
+
+```d2
+direction: down
+W: "regmodel.CTRL.write(0xAB)"
+B: "버스로 DUT 에 write 실행"
+IMP: "**경로 A — implicit**\n모델이 _자기가 낸_ write 로\nmirror 를 스스로 갱신\n(auto_predict=1 일 때)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+MON: "Bus Monitor 가\n같은 버스 트랜잭션 관찰"
+PRED: "**경로 B — predictor**\nmonitor → predict()\n로 mirror 갱신" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+M: "mirror"
+W -> B
+B -> IMP
+B -> MON
+MON -> PRED
+IMP -> M: "갱신 ①"
+PRED -> M: "갱신 ② (중복!)" { style.stroke-dash: 4 }
+```
+
+predictor 를 연결하면 **경로 B** (monitor 가 본 트랜잭션을 predictor 가 `predict()` 로 반영) 가 생깁니다. 그런데 `auto_predict` 가 켜진 채면 모델이 _자기가 낸_ write 직후 **경로 A** 로도 mirror 를 갱신합니다 — 한 트랜잭션이 mirror 에 _두 번_ 반영되는 것입니다. W1C 나 토글 비트처럼 "쓴 값 ≠ 결과 값" 인 레지스터에서는 두 경로의 계산이 어긋나 mirror 가 엉뚱하게 토글됩니다. `set_auto_predict(0)` 은 **경로 A 를 꺼서** predictor (경로 B) 만 유일한 갱신자로 남깁니다 — 그래서 제3 마스터가 낸 트랜잭션 (모델은 모르고 monitor 만 보는) 까지 정확히 한 번씩 반영됩니다.
+
 ### 4.3 모델 계층 — block ⊃ regfile ⊃ reg ⊃ field
 
 ```d2
@@ -212,7 +252,7 @@ REG -> FLD
 
 ### 5.1 uvm_reg_adapter — 추상 동작 ↔ 버스 트랜잭션 변환
 
-RAL 의 추상 동작(`uvm_reg_bus_op`)을 프로젝트의 버스 트랜잭션으로 옮기는 두 함수만 구현하면 됩니다.
+RAL 의 추상 동작(`uvm_reg_bus_op`)을 프로젝트의 버스 트랜잭션으로 옮기는 두 함수만 구현하면 됩니다. 여기서 `reg2bus` / `bus2reg` 는 임의로 만든 이름이 아니라, base 클래스 `uvm_reg_adapter` 에 선언된 **virtual method 를 _override_** 하는 것입니다. RAL 코어 (read/write 를 처리하는 라이브러리 로직) 는 우리가 만든 APB·AHB·AXI adapter 의 구체 타입을 모른 채, base 핸들로 `reg2bus(...)` 를 호출합니다 — 그러면 **다형성 (polymorphism)** 에 의해 _우리가 override 한_ 구현이 런타임에 선택되어 실행됩니다. 즉 "골격 알고리즘 (register access 흐름) 은 base 가 고정하고, 버스별 변환 단계만 자식이 채운다" 는 구조로, 이는 [oop_design_patterns/03 — Template Method 패턴](../../oop_design_patterns/03_gof_design_patterns/) 의 전형입니다. adapter 를 교체하면 같은 RAL 코어가 다른 버스를 타는 이유가 바로 이 virtual override + 다형성 호출입니다.
 
 ```systemverilog
 class reg2apb_adapter extends uvm_reg_adapter;

@@ -414,6 +414,12 @@ NIC: "Dual-Port 100G NIC (한 silicon)" {
 
 → TLP 의 **AT field** (3-bit) 가 "Untranslated", "Translation Request", "Translated" 표시.
 
+:::note[RC는 왜 Translated TLP를 "믿어야" 하나 — ACS Translation Blocking의 신뢰 경계]
+ATS 의 성능 이득은 한 가지 위험한 전제 위에 섭니다 — AT=10(Translated) TLP 가 오면, RC/IOMMU 는 "이건 device 가 이미 정당하게 번역한 host PA 다" 라고 *믿고 walk 를 건너뜁니다*. 그래서 device 는 그 PA 로 곧장 DRAM 에 접근합니다. 그런데 이 신뢰가 곧 보안 구멍이 됩니다 — 만약 악의적이거나 버그 있는 device 가 *임의의 host PA* 를 AT=10 으로 위조해 보내면, IOMMU 가 검증 없이 통과시켜 그 device 가 *허락받지 않은 메모리(다른 VM, 커널 영역)* 를 읽고 쓸 수 있습니다. ATS 가 제공하던 IOMMU 격리가 통째로 무너지는 것입니다.
+
+이 위협을 막는 것이 **ACS Translation Blocking** 입니다. 신뢰할 수 없는 경로(예: switch 아래의 일반 endpoint)에서 올라오는 Translated TLP 를 *차단* 하거나 RC 로 redirect 해서, IOMMU 가 그 주소를 다시 검증하도록 강제합니다. 즉 "AT=10 을 믿는 신뢰 경계" 를 ACS 가 명시적으로 그어 줍니다 — Translation Blocking 이 켜진 port 를 통과하는 Translated TLP 는 "이미 번역됐다" 는 주장을 인정받지 못하고 검증 대상이 됩니다. 정리하면 ATS 는 *성능을 위해 RC 가 device 를 믿는* 메커니즘이고, ACS Translation Blocking 은 *그 신뢰를 어디까지 허용할지* 정하는 안전장치입니다 — 둘은 짝으로 동작해야 IOMMU 격리가 유지됩니다. (그래서 검증에서 "device 가 위조한 Translated PA 가 차단되는가" 가 핵심 보안 시나리오입니다.)
+:::
+
 #### Invalidate
 
 OS 가 page mapping 변경 시:
@@ -443,7 +449,16 @@ ATS 가 처리 안 된 IOVA (page fault) 발생 시:
 
 ### 5.3 PASID (Process Address Space ID)
 
-SR-IOV 로 VF 를 VM 에 패스스루하고 ATS 로 IOMMU walk 를 줄이더라도, 한 VF 가 여러 process 나 container 의 메모리에 동시에 DMA 해야 하는 상황이 생깁니다. 이때 BDF 만으로는 어느 process 의 page table 을 참조해야 하는지 알 수 없습니다. **PASID** 는 TLP 에 20-bit 의 address space 식별자를 붙여 IOMMU 가 (BDF, PASID) 쌍으로 page table 을 결정할 수 있게 합니다. 덕분에 하나의 VF 가 서로 다른 VM 의 메모리를 격리된 상태로 동시에 DMA 할 수 있습니다. PASID 는 **SVM (Shared Virtual Memory)** 의 기반이기도 합니다 — accelerator 가 CPU 의 가상 주소 공간을 그대로 참조하는 시나리오에서 PASID 가 없으면 프로세스별 메모리 격리가 무너집니다. 단, PASID 는 별도 Extended Capability (0x0023) 로 device 와 IOMMU 양쪽이 모두 지원해야 하며, 한쪽이라도 빠지면 silent failure 로 이어집니다.
+SR-IOV 로 VF 를 VM 에 패스스루하고 ATS 로 IOMMU walk 를 줄이더라도, 한 VF 가 여러 process 나 container 의 메모리에 동시에 DMA 해야 하는 상황이 생깁니다. 이때 BDF 만으로는 어느 process 의 page table 을 참조해야 하는지 알 수 없습니다. **PASID** 는 TLP 에 20-bit 의 address space 식별자를 붙여 IOMMU 가 (BDF, PASID) 쌍으로 page table 을 결정할 수 있게 합니다.
+
+:::note[IOMMU의 2단계 변환과 PASID의 위치 — stage-1 / stage-2]
+가상화 환경에서 device DMA 의 주소 변환은 *한 번* 이 아니라 *두 단계* 로 일어납니다. 이 구조를 알아야 PASID 가 *어디에* 끼는지 정확히 보입니다.
+
+- **Stage-1: guest VA → guest PA.** guest OS 가 자기 프로세스의 가상 주소를, *자기가 생각하는* 물리 주소(guest PA)로 바꾸는 변환입니다. 이 단계의 page table 은 guest 가 관리합니다. SVM(Shared Virtual Memory)에서 accelerator 가 CPU 프로세스의 VA 를 그대로 쓰는 것이 바로 이 stage-1 변환을 device 가 따라가는 것입니다.
+- **Stage-2: guest PA → host PA.** hypervisor 가 "guest 가 믿는 물리 주소" 를 *실제* host 물리 주소로 바꾸는 변환입니다. guest 는 이 단계의 존재를 모르며, page table 은 hypervisor 가 관리합니다 — VM 간 메모리 격리가 여기서 강제됩니다.
+
+device 의 DMA 주소는 이 둘을 *연달아* 거쳐야 진짜 host PA 에 도달합니다(guest VA → guest PA → host PA). 여기서 **PASID 의 위치** 가 드러납니다 — PASID 는 **stage-1 page table 을 고르는 식별자** 입니다. 한 device(한 BDF)가 여러 프로세스·여러 guest 의 주소 공간에 동시에 DMA 할 때, IOMMU 는 *PASID 로 어느 stage-1 table(어느 프로세스의 VA→PA 매핑)* 을 쓸지 정하고, 그 결과(guest PA)를 다시 BDF 에 묶인 stage-2 table 로 host PA 로 바꿉니다. 즉 BDF 는 "어느 device/VM" 을, PASID 는 "그 안의 어느 address space(stage-1)" 를 지목합니다. 이 2단계 + PASID 구조가 SVM 이 성립하는 토대입니다 — PASID 가 없으면 한 device 안의 여러 프로세스가 같은 stage-1 table 로 뭉뚱그려져 격리가 깨집니다.
+::: 덕분에 하나의 VF 가 서로 다른 VM 의 메모리를 격리된 상태로 동시에 DMA 할 수 있습니다. PASID 는 **SVM (Shared Virtual Memory)** 의 기반이기도 합니다 — accelerator 가 CPU 의 가상 주소 공간을 그대로 참조하는 시나리오에서 PASID 가 없으면 프로세스별 메모리 격리가 무너집니다. 단, PASID 는 별도 Extended Capability (0x0023) 로 device 와 IOMMU 양쪽이 모두 지원해야 하며, 한쪽이라도 빠지면 silent failure 로 이어집니다.
 
 ```
    하나의 device 가 여러 process / VM 의 메모리에 동시 DMA 시:
@@ -504,6 +519,14 @@ P2P 를 허용/차단하는 정책:
 | **Upstream Forwarding** | Switch port 의 forward 정책 |
 
 → **Default 보안 정책은 P2P 차단** (RC 우회 가능 = security risk). 명시적으로 enable 해야 P2P 작동.
+
+:::note[ACS가 왜 default로 P2P를 차단하나 — IOMMU 격리와 P2P의 충돌]
+P2P 의 매력은 device 끼리 RC 를 거치지 않고 직접 DMA 해 latency 를 줄이는 것입니다. 그런데 바로 *그 "RC 우회"* 가 IOMMU 격리와 정면으로 충돌합니다.
+
+가상화 환경에서 IOMMU 격리가 성립하는 전제는 "*모든* device DMA 가 IOMMU 를 통과하며 (BDF, PASID)별 검증을 받는다" 는 것입니다 — 그래서 VM₁ 에 패스스루된 device 가 VM₂ 의 메모리를 건드리지 못합니다. 그런데 P2P 는 한 endpoint 가 다른 endpoint 로 *직접* TLP 를 보내, switch 안에서 *RC(따라서 IOMMU)를 거치지 않고* 목적지에 도달할 수 있습니다. 이 경로의 트래픽은 IOMMU 격리 검증을 *받지 않습니다*. 결과적으로 VM₁ 의 device 가 P2P 로 다른 device 를 경유하거나 위조된 주소로 접근해 *VM₂ 의 격리를 우회* 할 수 있는 구멍이 생깁니다 — VM 간 격리가 깨지는 것입니다.
+
+그래서 ACS 의 default 가 *차단* 인 것은 보수적 안전 선택입니다 — "검증되지 않은 직접 경로를 일단 막고, RC(IOMMU)를 거치도록 강제(redirect)" 해서 모든 DMA 가 격리 검증을 받게 합니다. P2P 가 정말 안전하고 필요한 특정 경로(예: 같은 신뢰 도메인의 GPU↔NIC)에 한해, 관리자가 *명시적으로* 그 port 의 ACS 를 풀어 P2P 를 허용합니다. 즉 default-block 은 "P2P 의 성능" 과 "IOMMU 격리" 가 충돌할 때, 격리(안전)를 기본값으로 두고 성능은 명시적 opt-in 으로 돌린 설계입니다.
+:::
 
 #### 사용 시나리오
 
@@ -731,10 +754,6 @@ Driver 가 _`pci_pasid_features`_ 같은 capability 검증 필수.
 </details>
 :::
 ### 7.2 출처
-
-**Internal (Confluence / HDG)**
-- `6. PCIe 가상화: SR-IOV, VirtIO, IOMMU` (`pcie_seminar_6_note.md`) — PF/VF, MFD vs SR-IOV, VF BDF 도출(First VF Offset/Stride), IOMMU 3-계층 지원, VirtIO/vDPA 진화, Resizable BAR, SR-IOV/VirtIO 혼용
-- `7. 세대별 진화와 CXL` (`pcie_seminar_7_note.md`) — 세대별 대역폭, NRZ→PAM4+FEC, Retimer, CXL Memory Wall·3 기능, Memory Pooling
 
 **External**
 - *PCI Express Base Specification 6.0* — PCI-SIG (SR-IOV, ATS, PASID, ACS, AT field)

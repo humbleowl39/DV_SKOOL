@@ -176,6 +176,19 @@ L2 PTE 가 Table descriptor 였다면 L3 까지 한 번 더 read → 총 4 mem a
 
 이 문제를 해결하는 핵심 관찰은 단순합니다. 대부분의 프로세스는 전체 256 TB 주소 공간 중 실제로는 수십 MB 정도만 사용합니다. 그렇다면 사용하지 않는 영역의 하위 테이블을 아예 만들지 않으면 됩니다. 이것이 sparse 구조의 본질이고, 각 레벨의 테이블 하나가 정확히 4 KB(하나의 page) 가 되도록 설계하면 OS 의 메모리 관리 체계와 자연스럽게 맞아떨어집니다.
 
+#### 9-bit index 가 _필연_ 인 인과 방향
+
+"512 = 9 bit" 라는 결과는 사실 거꾸로 따라 나온 것입니다. 인과의 출발점은 **"table 하나 = page 하나(4 KB)"** 라는 _제약을 먼저 두는 것_ 입니다. 이 제약을 둬야 page table 자체도 일반 page 처럼 할당/회수/swap 할 수 있어 OS 의 page allocator 를 그대로 재사용할 수 있기 때문입니다. 이제 산수가 한 방향으로 흘러갑니다:
+
+```
+제약 1:  table 하나 = 4 KB (one page)
+제약 2:  PTE 하나 = 8 byte   ← 왜 8B 인가?
+  → 한 table 의 entry 수 = 4096 / 8 = 512
+  → index 폭 = log2(512) = 9 bit  (결과)
+```
+
+여기서 _왜 PTE 가 8 byte 인가_ 가 진짜 근원입니다. PTE 는 출력 물리 주소(최대 ~48-bit PA, 확장 시 52-bit)에 더해 valid/type/AP/AF/attr/SH 같은 메타비트까지 담아야 합니다. 48-bit 주소만 해도 4 byte(32-bit)에는 절대 안 들어가므로, 자연스러운 다음 워드 크기인 **8 byte(64-bit)** 가 PTE 크기로 강제됩니다. 즉 _64-bit PA 를 수용해야 한다_ → PTE = 8B → (4KB / 8B) = 512 → index = 9-bit 라는 사슬이고, 9-bit 가 먼저 정해진 게 아니라 _주소 폭과 page 크기가 9-bit 를 강요한 것_ 입니다. 그래서 4 level × 9 + 12 = 48 의 등식도 우연이 아니라 이 두 제약의 산술적 귀결입니다.
+
 ```
 핵심 관찰:
   대부분의 프로세스는 전체 주소 공간의 극히 일부만 사용한다.
@@ -235,6 +248,12 @@ L3E -> PPN
 
 4-level walk 를 항상 마지막 L3 까지 내려가야 할 이유는 없습니다. GPU 의 frame buffer 나 대용량 MMIO 영역처럼 수 GB 를 연속으로 매핑해야 하는 경우, L1 또는 L2 에서 walk 를 일찍 끝내는 Block Descriptor 를 쓰면 됩니다. PTE[1:0] 이 `0b01` 이면 "이 entry 가 바로 최종 PA 블록" 임을 의미하고, 그 순간 walk engine 은 나머지 레벨을 건너뜁니다. 결과적으로 TLB 한 entry 가 1 GB 또는 2 MB 전체를 커버하게 되어 hit rate 도 오르고 walk 비용도 줄어듭니다.
 
+:::note[Block 의 output PA 는 _반드시 block 크기에 정렬_ 되어야 한다]
+Block descriptor 의 output address 는 그냥 아무 PA 나 가리킬 수 없고, **그 block 크기의 배수(정렬)** 여야 합니다 — 2 MB block 이면 PA 가 2 MB 정렬(하위 21 bit = 0), 1 GB block 이면 1 GB 정렬(하위 30 bit = 0)이어야 합니다. _왜_ 그런가? PA 합성식이 `PA = OutputAddr[47:N] || VA[N-1:0]` 형태로, block 크기에 해당하는 하위 비트(2 MB면 [20:0])를 _VA 의 offset 으로 통째로 통과_ 시키기 때문입니다. 즉 walk engine 은 OutputAddr 의 그 하위 비트를 아예 읽지 않고 0으로 간주합니다. 만약 OS 가 2 MB 정렬이 아닌 PA(예: 하위 비트가 0이 아닌 값)를 block descriptor 에 넣으면, 그 하위 비트는 _하드웨어가 무시_ 하고 VA offset 으로 덮어써져 의도와 다른 PA 가 합성됩니다.
+
+이것이 DV 에서 마주치는 **"block 사용 시 PA 가 1 MB(또는 그 배수) 어긋남"** 증상의 근본 원인입니다 — PTE 에 비정렬 OutputAddr 를 쓰면 정확히 그 어긋난 만큼의 주소 오류로 나타납니다.
+:::
+
 ```
 Level 1에서 Block Descriptor:
   1GB 블록을 하나의 엔트리로 직접 매핑
@@ -274,6 +293,19 @@ Page Walk Cache 구조:
 ```
 
 **DV 포인트**: PWC의 정확성 검증 — Page Table 변경 후 PWC에 stale 데이터가 남으면 잘못된 PA가 생성될 수 있다. TLB Invalidation 시 PWC도 함께 무효화되는지 확인해야 한다.
+
+#### PWC 가 _왜_ TLB 와 별개 구조여야 하는가
+
+PWC 와 TLB 를 하나로 합치지 않는 이유는 둘이 캐싱하는 _대상의 성격_ 이 근본적으로 다르기 때문입니다. **TLB 는 leaf** 를 캐싱합니다 — 최종 (VPN → PPN) 매핑, 즉 _한 page(4 KB)_ 단위의 변환 결과입니다. 반면 **PWC 는 non-leaf** 를 캐싱합니다 — walk 도중 만나는 중간 PTE, 즉 _다음 레벨 table 의 base 주소_ 입니다. 같은 L2 PTE 하나는 그 아래 512개 page(= 2 MB 영역)의 walk 에서 공유되므로, PWC 엔트리 하나가 cover 하는 주소 공간 단위가 TLB 엔트리보다 훨씬 큽니다.
+
+이 "cover 하는 주소공간 단위가 다르다" 는 점이 키와 무효화 정책의 차이를 강제합니다:
+
+| 구조 | 캐싱 대상 | 키(key) | cover 단위 | 무효화 영향 범위 |
+|---|---|---|---|---|
+| **TLB** | leaf: VPN→PPN+perm+attr | 전체 VPN (+ASID/VMID) | 1 page (4 KB 등) | 그 page 의 매핑만 |
+| **PWC** | non-leaf: 다음 table base | VPN 의 _상위 부분_ (level 별) | 1 GB / 2 MB 서브트리 | 그 서브트리 전체의 walk |
+
+따라서 어떤 VA 의 _leaf_ 매핑만 바꾸고 TLB 만 invalidate 했더라도, 그 변경이 중간 table 의 구조 변경(예: table → block 전환, table 재배치)을 동반한다면 PWC 에 남은 옛 next-level base 가 stale 가 됩니다. TLBI 가 PWC 까지 함께 무효화하도록 설계됐는지를 _별도로_ 검증해야 하는 이유가 바로 이 구조적 분리에서 나옵니다(흔한 오해 3 참조).
 
 ---
 
@@ -342,6 +374,10 @@ DV 검증:
   - Contiguous 영역 중간 페이지 unmap → 엔트리 분리 확인
   - Contiguous + non-contiguous 혼합 시 TLB 동작
 ```
+
+Contiguous bit 가 _어떻게_ 16개를 하나로 줄이는지를 메커니즘으로 보면 이렇습니다. TLB 는 평소 한 page 의 PPN 을 그대로 들고 있지만, Contiguous bit 이 1로 표시된 entry 를 채울 때는 **"이 page 가 속한 16개 묶음은 PPN 이 연속이다"** 라는 _가정(hint)_ 을 single bit 으로 받아들입니다. 그러면 TLB 는 그 16개 중 어느 VA 가 들어와도 한 entry 의 base PPN 에 적절한 offset 을 더해 PA 를 즉석에서 만들어 줄 수 있어, 16개의 별도 TLB entry 대신 하나로 16개를 cover 합니다.
+
+이 가정이 성립하려면 **OS 가 그 16개 page 를 물리적으로 연속(PPN 이 base, base+1, …, base+15)이면서 그 묶음 자체가 16-page 경계에 정렬되도록 할당** 해야 합니다. 즉 contiguous bit 는 "내가 약속을 지켰으니 너는 검사 없이 믿어라" 라는 OS→HW 계약이고, OS 가 약속을 안 지킨 채(불연속인데) bit 만 켜면 TLB 가 잘못된 PA 를 합성합니다. _왜 하필 16개_ 인가는 정렬 단위의 선택입니다 — 16 × 4 KB = 64 KB 가 되어, 4 KB granule 을 유지하면서도 64 KB granule 의 TLB reach 효과를 별도 page 크기 없이 얻으려는 _중간 단계_ 로 16이 정해졌습니다(추론).
 
 ### 5.5 Copy-on-Write (COW) 메커니즘
 

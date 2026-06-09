@@ -161,6 +161,18 @@ OUT -> BUS: "PA + AT=Translated (옵션)"
 **(1) S1 PTE 자체의 주소도 IPA 라서 S2 walk 가 _nested_ 로 일어난다** — 그래서 worst case 가 4×5 = 20 mem access. 이게 IOTLB 의 capacity 가 가상화 환경에서 결정적인 이유. <br>
 **(2) Page fault 가 Synchronous 가 아니라 Asynchronous** — Device DMA 는 이미 멈춰 있고, OS 가 _나중에_ event queue 를 읽고 처리. Recovery path 는 PRI / Stall / Abort 의 세 가지 모드로 분기.
 :::
+:::note[walk 이전에 _identity resolution_ 자체가 추가 메모리 비용이다]
+위 worked example 에서 ①~② 단계(StreamID → STE, SubstreamID → CD)는 흔히 "라우팅" 으로만 읽고 넘어가기 쉽지만, **그 둘은 page table walk 와 별개의 추가 메모리 읽기** 입니다. STE 는 Stream Table 에서, CD 는 Context Descriptor 배열에서 각각 _DRAM_ 으로부터 fetch 되기 때문입니다. 즉 cold 상태의 전체 비용은:
+
+```
+identity resolution:  STE fetch (1) + CD fetch (1)        = 2 access  ← walk "이전"
+translation walk:     2-stage nested worst case            = 20 access (§4.5)
+                                                            ─────────────
+                                                            합계 ≈ 22 access
+```
+
+CPU MMU 에는 ①~② 에 해당하는 단계가 아예 없습니다(CPU 는 TTBR 를 레지스터에서 바로 읽음). IOMMU 는 "어느 device 의, 어느 process 의 table 인가" 를 먼저 _메모리에서_ 풀어야 하므로 walk 이전에 이 2 access 가 항상 선행합니다. 그래서 IOMMU 는 IOTLB(최종 매핑) 외에 **STE/CD(identity) 전용 cache 를 별도로** 둘 수밖에 없습니다 — 이 identity cache 가 없으면 IOTLB miss 마다 walk 의 20 에 더해 이 2 까지 매번 물게 됩니다(자세한 계층은 §5.5).
+:::
 ---
 
 ## 4. 일반화 — SMMU 구조, 2-Stage, StreamID
@@ -332,6 +344,12 @@ DEV -> MEM: "DMA (PA, AT=Translated)"
 - AT=Translated 인 DMA 는 IOTLB Walk 을 건너뜀
 - 단, Permission 재확인은 수행 (보안)
 
+:::note[AT=Translated 가 _왜_ 보안을 깨지 않는가 — 기전]
+"device 가 이미 변환된 PA 를 직접 들고 온다" 면, 악성 device 가 _아무 PA 나 위조_ 해서 AT=Translated 로 보내 host 메모리를 마음대로 건드릴 수 있는 것 아닌가? — 이 우려가 풀리는 지점이 ATS 보안의 핵심입니다. AT=Translated 가 건너뛰는 것은 **translation(주소 변환) 단계뿐** 이고, **access-control(소유권·권한 검증) 단계는 건너뛰지 않습니다**.
+
+device 가 PA 를 위조해도, IOMMU 는 그 DMA 를 보낸 device 의 StreamID 를 알고 있으므로 "이 device(이 도메인)가 _그 PA 를 가질 자격이 있는가_" 를 자신의 설정으로 검증합니다. 구체적으로는 그 device 에 대해 ATS 가 애초에 허용됐는지, 그리고 해당 PA 영역이 그 device 의 domain(Stage 2 / 격리 정책)에 속하는지를 확인합니다. device 가 _자기 도메인 밖_ 의 PA 를 위조하면 이 access-control 검증에서 걸려 차단됩니다. 즉 ATS 는 "변환을 device 에 위임" 한 것이지 "검사를 면제" 한 것이 아니므로, 위조 PA 는 단순 우회가 되지 못합니다(흔한 오해 4 참조). 별도로 남는 위험은 PA 자체의 위조가 아니라 _ATC invalidation race_ 이며, 그것은 §5.5 의 invalidation 으로 다룹니다.
+:::
+
 ### 5.2 PASID — 한 device 안의 여러 주소 공간
 
 ATS 와 PRI 를 이야기하기 전에, 그 둘이 의미를 가지려면 먼저 "이 변환이 어느 process 의 것인가" 를 식별할 수 있어야 합니다. 그 식별자가 **PASID (Process Address Space ID)** 입니다. PCIe 에서 PASID 는 **최대 20 bit** 폭을 가지므로, 하나의 device 가 동시에 거의 100 만 개에 가까운 독립 주소 공간을 호스팅할 수 있습니다. SMMU 의 SubstreamID 가 바로 이 PASID 에 대응하며, Intel/AMD 는 그대로 PASID 라고 부릅니다.
@@ -502,6 +520,12 @@ unmap 시나리오에서 `TLBI`/`ATC_INV` → `SYNC` 의 _순서와 짝_ 을 검
 
 CPU 의 page fault 는 "지금 이 instruction 이 실패했다" 는 동기적 이벤트입니다. CPU 가 멈추고 handler 가 실행되고 복구되면 같은 instruction 을 재실행합니다. 그런데 디바이스 DMA 는 이미 수십~수백 byte 의 burst 를 시작한 상태에서 fault 가 걸립니다. 멈추고 재실행한다는 개념 자체가 맞지 않습니다. 그래서 IOMMU 는 fault 를 Event Queue 에 기록하고 interrupt 를 올리는 것으로 끝나고, OS 가 queue 를 polling 해 원인을 파악한 뒤 page 를 준비하거나 디바이스에 abort 를 알리는 비동기 모델을 씁니다.
 
+:::note[DMA 가 "atomic 하게 못 멈춘다" 는 것의 물리적 근거]
+비동기 fault 모델은 임의의 설계 선택이 아니라 _DMA 의 물리적 성질_ 에서 강제됩니다. CPU 명령은 retire 되기 전까지는 아키텍처 상태에 반영되지 않으므로 exception 시 그 명령을 _취소하고 재실행_ 할 수 있는 명확한 단위(instruction boundary)가 있습니다. 반면 device 의 DMA 는 PCIe 의 경우 **TLP(Transaction Layer Packet)** 단위로 쪼개져, fault 가 인지되는 시점엔 이미 여러 TLP 가 link 위(wire)에 올라가 fabric 을 통과 중인 _in-flight_ 상태입니다.
+
+핵심은 이 in-flight burst 에는 CPU 명령 같은 **retire/replay 경계가 존재하지 않는다** 는 점입니다 — 이미 wire 에 나간 패킷을 "없던 일" 로 되돌릴 방법이 없고, 일부 byte 는 이미 메모리에 쓰였을 수도 있습니다. 따라서 "fault 났으니 burst 전체를 atomic 하게 멈추고 처음부터 다시" 라는 CPU식 모델이 물리적으로 성립하지 않습니다. 그래서 IOMMU 는 _부분 진행을 보존_ 하면서(Stall) 또는 _device 에게 처음부터 다시 시도할 책임을 넘기면서_(Abort) 비동기로 복구할 수밖에 없는 것입니다. 흔한 오해 3 의 "burst 재시작 시 byte 중복 write" 가 바로 이 retire 경계 부재의 직접적 귀결입니다.
+:::
+
 ```
 CPU Page Fault:
   CPU → Exception → 현재 명령어 중단 → OS Handler → 복구 → 명령어 재실행
@@ -667,12 +691,11 @@ SMB -> BUS
 - 각 sysMMU 가 해당 IP 의 주소 변환 + 접근 제어
 - 커널 드라이버가 각 sysMMU 의 Page Table 관리
 
-#### SoC 검증에서 sysMMU 의 중요성 (이력서 연결)
+#### SoC 검증에서 sysMMU 의 중요성 — 공통 인프라 IP 의 원리
 
-Resume의 Technical Challenge #3에서 언급:
-> "recurring post-integration bugs caused by human oversight in verifying common IPs (e.g., **sysMMU**, Security/Access Control, DVFS)"
+sysMMU 같은 IOMMU 류는 **SoC 의 거의 모든 DMA-capable IP 에 공통으로 연결되는 인프라 IP** 라는 특성을 가집니다. NIC, GPU, 코덱, DMA 엔진처럼 서로 다른 기능 블록이 _저마다_ sysMMU 를 거쳐 메모리에 닿기 때문에, sysMMU 는 한 IP 의 기능이 아니라 _전체 SoC 가 공유하는 횡단(cross-cutting) 관심사_ 입니다. Security/Access Control, DVFS(전력) 같은 다른 공통 IP 들도 같은 성격을 갖습니다.
 
-→ sysMMU는 SoC의 **모든 IP**에 공통적으로 연결되는 인프라 IP. 누락 시 post-integration에서 DMA 오류, 메모리 접근 실패가 발생한다.
+이 "공통성" 이 검증에서 함정이 되는 이유는 분명합니다. 각 IP 팀은 _자기 블록_ 의 기능 검증에 집중하느라, 그 블록이 sysMMU 를 _올바르게_ 통과하는지(매핑·권한·invalidation)는 누구의 명시적 책임도 아닌 _틈_ 에 빠지기 쉽습니다. 그 결과 개별 IP 단위 검증은 모두 통과해도, **integration 단계에서 비로소 DMA 변환 오류·접근 실패가 한꺼번에 드러나는** 패턴이 반복됩니다. 그래서 공통 인프라 IP 는 IP-level 검증과 별개로 _SoC-level integration 검증_ 에서 모든 master 의 sysMMU 경로를 체계적으로 sweep 하는 것이 원칙입니다 — 누락이 "사람이 빠뜨리기 쉬운 공통 경로" 에서 나오기 때문입니다.
 
 ---
 
@@ -777,11 +800,6 @@ stale entry = freed page 가 여전히 DMA 로 reachable:
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- HDG `common/iommu.md` — IOTLB/ATC/PWC caching 계층, invalidation, ATS/PRI/PASID, two-stage, interrupt remapping/ACS/TDISP, vIOMMU nested, RISC-V IOMMU 수렴
-- `SMMU Architecture` — Stream/Substream + S1/S2 매트릭스
-- `IOMMU Security DV` — bypass / abort 음성 시나리오, invalidation race
 
 **External**
 - ARM *SMMUv3 Architecture Specification* (IHI 0070)

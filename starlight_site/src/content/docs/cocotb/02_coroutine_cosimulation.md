@@ -139,7 +139,7 @@ async def basic_test(dut):
 
 :::note[여기서 잡아야 할 두 가지]
 **(1) sequence가 driver를 *직접 호출*합니다.** `await drive(dut, item)` 한 줄이면 끝입니다. UVM의 `get_next_item`/`item_done` TLM handshake boilerplate가 통째로 사라집니다(`cocotb_note.md` "CocoTB uses a direct call model").<br>
-**(2) `cocotb.start_soon`은 UVM의 fork에 해당하는 백그라운드 coroutine 기동입니다.** monitor와 scoreboard는 이렇게 띄워 두고, 메인 테스트가 자극을 인가하면 그들이 `await`로 깨어나며 처리합니다 — 그래도 동시에 도는 줄은 하나뿐입니다.
+**(2) `cocotb.start_soon`은 UVM의 fork에 해당하는 백그라운드 coroutine 기동입니다.** monitor와 scoreboard는 이렇게 띄워 두고, 메인 테스트가 자극을 인가하면 그들이 `await`로 깨어나며 처리합니다 — 그래도 동시에 도는 줄은 하나뿐입니다. 다만 `fork`와 *완전히* 같지는 않습니다. `start_soon`은 *같은 협력 스케줄러* 위에 새 coroutine을 예약할 뿐 진짜 병렬을 만들지 않고, 무엇보다 **호출자가 그 coroutine의 완료를 기다리지 않습니다**(fire-and-forget). 즉 `fork...join`의 join 대기가 없는 셈입니다. 완료를 기다리려면 `await`로 해당 coroutine을 직접 기다려야 하고, 반대로 `start_soon`은 "띄워 놓고 메인은 계속 진행"하는 수명/대기 모델입니다 — monitor·scoreboard처럼 테스트 내내 백그라운드로 도는 것에 맞습니다.
 :::
 ---
 
@@ -197,6 +197,10 @@ cocotb는 OS 스레드를 쓰지 않습니다. coroutine들은 *협력적*으로
 - 어느 순간에도 active coroutine은 하나뿐 → 두 coroutine이 같은 신호를 같은 delta에 건드려도 동작은 결정적이며 SV race와 동일하다.
 - `cocotb.start_soon(coro)`로 띄운 백그라운드 coroutine도 같은 협력 스케줄러 위에서 돈다 — 진짜 병렬이 아니다.
 
+:::note[콜백이 *어느 시점*에 실행되는가 — race 결정성의 근거]
+"콜백 등록 후 중단 → 시뮬레이터가 resume"의 *어느 순간에* resume되는지가 race 결정성을 떠받칩니다. cocotb의 edge trigger(`RisingEdge` 등)는 해당 clock edge가 발생한 뒤, 시뮬레이터가 그 delta의 신호 업데이트를 끝낸 *읽기 안정 시점*에 coroutine을 깨웁니다. 그래서 깨어난 Python이 `dut.q.value`를 읽으면 *이번 edge에서 갱신된 값*을 일관되게 봅니다 — driving은 값 쓰기 단계로, sampling은 값이 안정된 단계로 분리되어 두 coroutine이 같은 신호를 같은 edge에 건드려도 결과가 결정적입니다. 이는 SystemVerilog 스케줄러의 Active/NBA/Observed region 분리가 driver-monitor race를 막는 것과 정확히 대응합니다 — SV 스케줄러 region의 전체 메커니즘(왜 driving은 NBA, sampling은 안정 시점인가)은 [UVM Module 02](../../uvm/02_agent_driver_monitor/)에서 다룹니다.
+:::
+
 ### 5.2 주요 trigger와 UVM 대응
 
 | cocotb trigger | 의미 | UVM 대응 |
@@ -210,6 +214,10 @@ cocotb는 OS 스레드를 쓰지 않습니다. coroutine들은 *협력적*으로
 ### 5.3 시뮬레이터 독립성 — 한 번 쓰면 어디서나
 
 cocotb는 VPI라는 *표준* 인터페이스로만 시뮬레이터와 대화하므로, VPI를 지원하는 시뮬레이터(VCS, Questa, Icarus, Verilator 등)면 같은 Python 코드가 변경 없이 돕니다(`cocotb_note.md` "Simulator independence: the same Python code runs unchanged across all simulators"). 검증 코드를 한 번 작성해 무료 시뮬레이터로 CI를 돌리고, 필요할 때 상용 시뮬레이터로 더 빠르게 회귀하는 식의 조합이 가능해지는 근거가 이것입니다.
+
+:::note[`int(dut.sig.value)` — 왜 캐스팅이 필요한가]
+§3 코드에서 `int(dut.out_data.value)`처럼 `.value`를 `int()`로 감싸는 데에는 이유가 있습니다. `.value`가 돌려주는 것은 평범한 Python 정수가 아니라 **각 비트의 0/1/X/Z를 담는 전용 타입**(BinaryValue/LogicArray 계열)입니다. RTL 신호는 4-state라서 미지(X)·고임피던스(Z)를 표현해야 하므로 정수로 바로 환원될 수 없습니다. 그래서 산술 비교(`== exp`, `< N`)나 인덱싱 전에 `int()`로 정수 변환을 해줘야 의도대로 동작합니다. 주의: 비트에 X/Z가 섞여 있으면 정수로 해석할 수 없어 `int()`가 예외를 던질 수 있습니다 — reset 직후나 미구동 신호를 읽을 때 자주 만나는 함정이며, 비교 전에 X 여부를 확인하는 것이 안전합니다.
+:::
 
 ---
 
@@ -278,10 +286,6 @@ cocotb의 direct-call 모델은 UVM의 sequencer push 모델보다 단순하다.
 </details>
 :::
 ### 7.2 출처
-
-**Internal (Confluence / HDG)**
-- `CocoTB Seminar Notes (DV-SysTF)` (`wiki/common/cocotb_note.md`) — How It Works(Cosimulation Architecture), Structural Mapping 표, direct call vs push 모델
-- 원본 Confluence dump: `raw/confluence-dump/cocotb.md`
 
 **External**
 - cocotb 공식 문서 Triggers/Coroutines — https://docs.cocotb.org/

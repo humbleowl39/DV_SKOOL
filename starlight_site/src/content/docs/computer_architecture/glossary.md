@@ -15,7 +15,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 프로그램의 병렬화 가능 비율 f 와 그 부분의 speedup S 로 전체 speedup 을 `1/((1−f)+f/S)` 로 산출하는 성능 상한 법칙.
 
-**Source.** HDG `computer_architecture_spec.md` §6.2; Hennessy & Patterson, *A Quantitative Approach*.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** 직렬 비율(1−f), 멀티코어 스케일링, 가속기 오프로드, Iron Law.
 
@@ -27,7 +27,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 커널이 수행하는 부동소수점 연산 수를 DRAM 트래픽 바이트 수로 나눈, FLOP/byte 단위의 연산 밀도 지표.
 
-**Source.** HDG `computer_architecture_spec.md` §6.3.
+**Source.** Williams, Waterman & Patterson, *Roofline: An Insightful Visual Performance Model*.
 
 **Related.** Roofline, memory-bandwidth bound, compute bound.
 
@@ -43,7 +43,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 캐시 계층 간 전송의 최소 단위가 되는 연속된 바이트 묶음(전형적으로 64 byte).
 
-**Source.** HDG `computer_architecture_spec.md` §5.1; IEEE/Hennessy & Patterson.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Spatial locality, set, way, tag/index/offset.
 
@@ -55,7 +55,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 한 명령을 완료하는 데 평균적으로 소요되는 클럭 사이클 수.
 
-**Source.** HDG `computer_architecture_spec.md` §3, §6.1.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Iron Law, 파이프라인 해저드, cache miss, 분기 misprediction.
 
@@ -71,7 +71,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 한 명령이 아직 write-back 되지 않은 이전 명령의 결과 레지스터에 의존할 때 발생하는 파이프라인 위험(RAW/WAW/WAR).
 
-**Source.** HDG `computer_architecture_spec.md` §3.1.
+**Source.** Patterson & Hennessy, *Computer Organization and Design*.
 
 **Related.** RAW, forwarding, load-use hazard, register renaming.
 
@@ -83,7 +83,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 요청한 column 이 이미 활성화된 row 에 속하면 CAS 만으로 빠르게 접근(row hit)하고, 다른 row 면 precharge+RAS+CAS 가 필요해 느린(row miss) DRAM 접근 상태.
 
-**Source.** HDG `computer_architecture_spec.md` §5.4.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Bank, RAS, CAS, tRCD/CL/tRP, 메모리 컨트롤러 재정렬.
 
@@ -95,7 +95,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 특정 워크로드에 맞춰 범용성 오버헤드를 제거해 에너지 효율을 극대화한 도메인 특화 하드웨어 아키텍처.
 
-**Source.** HDG `computer_architecture_spec.md` §7.1–7.2.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Dark silicon, Power Wall, TPU systolic array, Tensor Core.
 
@@ -111,7 +111,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** EX 단계의 ALU 결과를 레지스터 파일을 거치지 않고 다음 명령의 EX 입력으로 직접 전달해 RAW stall 을 제거하는 파이프라인 기법.
 
-**Source.** HDG `computer_architecture_spec.md` §3.1.
+**Source.** Patterson & Hennessy, *Computer Organization and Design*.
 
 **Related.** Data hazard, load-use hazard, bubble.
 
@@ -127,7 +127,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** programmer-visible 상태(레지스터·메모리 모델·특권 레벨), 명령 인코딩, 명령 의미를 규정하는 하드웨어와 소프트웨어 사이의 계약.
 
-**Source.** HDG `computer_architecture_spec.md` §2.
+**Source.** *The RISC-V Instruction Set Manual, Volume I: Unprivileged ISA*; Patterson & Hennessy, *Computer Organization and Design*.
 
 **Related.** RISC, RISC-V, architectural state, micro-op.
 
@@ -139,7 +139,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** CPU 실행 시간을 명령 수·CPI·클럭 사이클 시간의 곱(`CPU Time = IC × CPI × Cycle Time`)으로 분해하는 성능 정량화 식.
 
-**Source.** HDG `computer_architecture_spec.md` §6.1.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** IC, CPI, Clock Frequency, Amdahl's Law, 파이프라인 깊이.
 
@@ -155,7 +155,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 프로세서 사이클 시간과 메모리 접근 시간이 100–1000× 로 벌어져 메모리 지연이 성능을 지배하게 된 현상.
 
-**Source.** HDG `computer_architecture_spec.md` §5.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** 메모리 계층, 캐시, AMAT, Roofline.
 
@@ -167,7 +167,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 캐시 miss 를 발생 원인에 따라 첫 접근(compulsory), 용량 초과(capacity), set 충돌(conflict)로 분류하는 모델.
 
-**Source.** HDG `computer_architecture_spec.md` §5.1.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Associativity, working set, cache line.
 
@@ -183,7 +183,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 명령 윈도우에서 operand 가 준비된 명령을 프로그램 순서와 무관하게 functional unit 에 issue 하되, retirement 는 in-order 로 유지하는 실행 방식.
 
-**Source.** HDG `computer_architecture_spec.md` §4.2.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Tomasulo, Reservation Station, Common Data Bus, ROB, register renaming.
 
@@ -199,7 +199,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 명령을 dispatch 시 순서대로 넣고 retire 시 순서대로 빼서 out-of-order 실행 중에도 precise exception 과 speculation 을 가능케 하는 순환 버퍼.
 
-**Source.** HDG `computer_architecture_spec.md` §4.2.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** OoO, precise exception, speculation, squash.
 
@@ -211,7 +211,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 고정 길이 명령·load/store 아키텍처·대형 레지스터 파일·hardwired control 을 채택해 빠른 파이프라이닝을 가능케 한 ISA 설계 철학.
 
-**Source.** HDG `computer_architecture_spec.md` §1.2.
+**Source.** Patterson & Hennessy, *Computer Organization and Design*.
 
 **Related.** CISC, RISC-V, 파이프라인, micro-op.
 
@@ -223,7 +223,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 커널의 성능 상한을 compute roof(peak FLOP/s)와 memory roof(arithmetic intensity × peak bandwidth)의 최솟값으로 특성화하는 시각적 성능 모델.
 
-**Source.** HDG `computer_architecture_spec.md` §6.3.
+**Source.** Williams, Waterman & Patterson, *Roofline: An Insightful Visual Performance Model*.
 
 **Related.** Arithmetic Intensity, compute bound, memory-bandwidth bound.
 
@@ -239,7 +239,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 분기 예측에 기반해 미해결 분기 너머의 명령을 미리 실행하고, 분기가 옳게 해결될 때만 ROB 에서 commit 하는 실행 방식.
 
-**Source.** HDG `computer_architecture_spec.md` §4.4.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** 분기 예측, ROB, squash, Spectre/Meltdown.
 
@@ -255,7 +255,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** 최근 가상→물리 페이지 매핑을 저장하는 작고 빠른 fully-associative 캐시.
 
-**Source.** HDG `computer_architecture_spec.md` §5.3.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Page table walk, page fault, huge page, IOMMU.
 
@@ -267,7 +267,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** Reservation Station, Common Data Bus, Register Renaming 을 사용해 동적으로 명령을 out-of-order 로 스케줄링하는 알고리즘.
 
-**Source.** HDG `computer_architecture_spec.md` §4.2.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Reservation Station, CDB, register renaming, OoO, WAR/WAW.
 
@@ -283,7 +283,7 @@ title: "Computer Architecture 용어집"
 
 **Definition.** hit 시 캐시 라인만 갱신하고 dirty bit 를 세운 뒤 축출 시에만 하위 계층에 기록하는 캐시 쓰기 정책.
 
-**Source.** HDG `computer_architecture_spec.md` §5.2.
+**Source.** Hennessy & Patterson, *Computer Architecture: A Quantitative Approach*.
 
 **Related.** Write-through, write-allocate, dirty bit, cache coherence.
 

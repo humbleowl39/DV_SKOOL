@@ -155,6 +155,15 @@ int kvm_cpu_exec(CPUState *cpu) {
 **(1) trap 의 종착지가 _hop 수_ 를 결정한다** — Type 1 은 1 hop, Type 2 는 2~3 hop. KVM 은 1 hop (kernel 안) + 선택적 user-space 회수. 100 Gbps NIC 처럼 초당 수십만 exit 이 나는 워크로드에서는 이 hop 수가 throughput 의 _주요 변수_ 입니다.<br>
 **(2) host OS 가 있다 = host OS scheduler 가 끼어든다** — Type 2 의 가장 큰 latency 변수. VM 이 CPU 를 받기까지 host OS 의 다른 프로세스와 경쟁합니다. Production 서버에 Type 2 를 안 쓰는 이유.
 :::
+
+:::caution[왜 "hop 수 = 비용" 인가 — 한 hop 이 _실제로_ 무엇을 일으키나]
+"hop 수가 throughput 변수" 라는 말이 추상적으로 들리지만, hop 한 번이 _물리적으로_ 무엇을 강제하는지를 보면 왜 곧 비용인지가 드러납니다. 각 hop 은 단순한 함수 호출이 아니라 **권한/주소공간 경계를 넘는 전환** 이기 때문입니다.
+
+- **mode/address-space 전환** — Guest(non-root/EL1) → KVM(root/EL2) → user-space QEMU(EL0) 로 hop 할 때마다 권한 레벨이 바뀌고, 특히 user-space 로 나가면 page table(주소공간) 까지 바뀝니다. 전환마다 레지스터 save/restore 와 권한 검사가 따라옵니다(§Module 02 의 VM Exit 비용 분해와 같은 구조).
+- **cache / TLB pollution** — 이게 더 큰 간접 비용입니다. hop 의 종착지 코드(host OS scheduler, QEMU device model)가 실행되면 Guest 가 데우던 cache line 과 TLB entry 를 밀어냅니다. 다시 Guest 로 돌아오면 Guest 는 _콜드_ 상태에서 재개되어, hop 자체의 cycle 보다 그 후폭풍(cache/TLB miss 폭증)이 더 비쌀 수 있습니다.
+
+그래서 hop 이 _많을수록_ — Type 2 의 2~3 hop, 또는 Xen 이 I/O 마다 Dom0 를 경유하는 path — 전환 비용과 pollution 이 누적됩니다. 반대로 KVM 이 가벼운 trap 을 kernel 안 1 hop 에서 끝내고 user-space 로 안 나가는 것(§3 의 코드 주석 "user-space round-trip 0회")이 latency 우위의 핵심입니다. "hop 수를 세라" 는 곧 "경계 전환과 cache pollution 지점을 세라" 와 같은 말입니다.
+:::
 ---
 
 ## 4. 일반화 — Hypervisor 분류축과 경계 사례
@@ -221,6 +230,14 @@ ARMv8.1 의 **VHE (Virtualization Host Extensions)** 는 host OS 가 EL1 대신 
 
 이 때문에 "KVM 은 Type 2 다" 라는 표현은 ARM 진영에서는 거의 안 씁니다. **2026 년 기준 production 시각에서는 "KVM = production-grade hypervisor, hosted 형태로 보이지만 성능과 보안은 bare-metal" 이 정확한 표현입니다.**
 
+:::note[VHE 가 host 의 EL1↔EL2 전환을 _구체적으로_ 어떻게 제거하나 — E2H 비트]
+pre-VHE 의 문제는 단순했습니다. host Linux kernel 은 EL1 에서 돌도록 짜여 있는데(시스템 레지스터를 `*_EL1` 이름으로 접근), KVM 의 hypervisor 부분은 EL2 에 있어야 했습니다. 그래서 host 코드가 KVM 을 부를 때마다 EL1→EL2→EL1 전환이 필요했습니다 — host 를 EL2 로 그냥 옮기면 되지 않느냐 싶지만, host kernel 코드는 `*_EL1` 레지스터를 만지므로 EL2 에 올려놓으면 _엉뚱한 레지스터_ 를 건드리게 됩니다.
+
+VHE 는 이를 **레지스터 alias** 로 풉니다. `HCR_EL2` 의 **`E2H` 비트** 를 set 하면, EL2 에서 실행 중인 코드가 `*_EL1` 시스템 레지스터에 접근할 때 HW 가 그것을 _자동으로 EL2 의 대응 레지스터로 재해석(alias)_ 합니다. 즉 host kernel 이 `TTBR0_EL1` 을 만지는 코드를 _한 줄도 고치지 않아도_, EL2 에서 돌면 HW 가 그 접근을 적절한 EL2 컨텍스트로 매핑해 줍니다. 그 결과 host kernel 전체를 _재컴파일 없이_ EL2 에서 그대로 돌릴 수 있고, host↔KVM 호출이 같은 EL2 안의 평범한 호출이 되어 EL1↔EL2 전환이 사라집니다.
+
+주의할 점 — VHE 가 없애는 것은 _host_ 측 전환뿐입니다. Guest 는 여전히 EL1 에서 돌므로 **Guest(EL1) ↔ Hypervisor(EL2) 전환은 그대로 존재** 합니다(§6 오해 참조). VHE 의 이득은 "guest 가 빨라짐" 이 아니라 "host kernel 의 KVM 호출 경로가 짧아짐" 입니다.
+:::
+
 ---
 
 ## 5. 디테일 — Type 1 / Type 2 / KVM / Xen / 선택 가이드
@@ -250,6 +267,14 @@ Hypervisor 가 **HW 위에 직접** 설치. Host OS 없음:
 | 관리 | 별도 관리 콘솔 필요 (일반 OS가 아니므로) |
 
 Host OS 계층이 없으니 VM 의 trap 이 Hypervisor 로 _직접_ 도달하고, 공격자가 노릴 수 있는 코드 표면도 Hypervisor 코드로만 한정됩니다. 그 대신 일반 OS 의 드라이버 생태계를 쓸 수 없으므로 자체 드라이버를 내장해야 합니다.
+
+:::note[Type 1 이 _왜_ 자체 driver 를 내장해야 하나 — 그리고 Xen 이 Dom0 로 우회한 이유]
+"drivers in hypervisor" 를 사실로만 받아들이면 Xen 의 Dom0 가 왜 존재하는지가 안 보입니다. 근본 인과는 이것입니다 — **Type 1 에는 그 아래에 일반 OS 가 없습니다.**
+
+디바이스 드라이버는 보통 Linux·Windows 같은 범용 OS 커널 _안_ 에서 삽니다. 수천 종의 NIC·NVMe·GPU 드라이버는 모두 그 OS 의 driver model(커널 API, 인터럽트 프레임워크, DMA API)에 맞춰 작성됩니다. Type 2 는 그 OS 가 _아래_ 에 있으니 이 방대한 드라이버 생태계를 _공짜로_ 물려받습니다. 그러나 Type 1 은 HW 위에 hypervisor 만 있고 그 아래 OS 가 없으므로, 어떤 디바이스를 쓰려면 **hypervisor 가 자체 driver model 과 드라이버를 직접 가져야** 합니다. 새 HW 마다 hypervisor 벤더가 드라이버를 새로 포팅해야 한다는 뜻이라, HW 호환성 확보가 Type 1 의 본질적 부담입니다.
+
+**Xen 은 이 부담을 Dom0 로 우회했습니다.** Xen hypervisor 본체는 드라이버를 거의 갖지 않는 얇은 microkernel 로 두고, _Dom0 라는 특권 관리 VM 안에서 통째의 Linux 를 돌려_ 그 Linux 의 드라이버 생태계를 빌려 씁니다(§5.5). 즉 "Type 1 이지만 드라이버는 일반 Linux 것을 쓴다" 가 Dom0 모델의 동기입니다 — 자체 드라이버를 다 만드는 대신, 한 VM 에 Linux 를 넣어 그 드라이버를 재사용한 것입니다. ESXi 는 반대로 vmkernel 안에 자체 드라이버를 직접 내장하는 길을 택했고, 그래서 ESXi 의 HW 호환성 목록(HCL)이 좁고 까다로운 것입니다.
+:::
 
 대표 구현:
 
@@ -518,11 +543,6 @@ Host OS scheduler 가 _hypervisor 위_ 가 아닌 _아래_ → VM 의 시간 보
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `Hypervisor Selection Guide` — KVM/Xen/ESXi/Hyper-V 비교
-- `Live Migration Dirty Bit` — KVM emulation 누락 사례
-
-**External**
 - *KVM: The Linux Virtual Machine Monitor* (OLS 2007)
 - VMware *ESXi Architecture* whitepaper
 - Microsoft *Hyper-V Architecture* (Type 1 분류 근거)

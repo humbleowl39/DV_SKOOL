@@ -316,6 +316,14 @@ VM: 각각 완전한 OS 포함        Container: OS 커널 공유
 | **IPC** | 프로세스 간 통신 (세마포어, 메시지 큐) |
 | **USER** | UID/GID 매핑 (컨테이너 내 root ≠ 호스트 root) |
 
+:::note[namespace 가 _어떻게_ view 를 격리하나 — kernel 자료구조 차원]
+"독립된 시스템 뷰를 제공" 이 추상적으로 들리지만, kernel 안에서 실제로 일어나는 일은 구체적입니다 — **각 namespace 는 kernel 안에 _별도의 자료구조 인스턴스_ 를 하나 더 만들고, 그 안의 process 는 그 인스턴스를 _가리키는 포인터_ 를 통해 세상을 봅니다.**
+
+예를 들어 PID namespace 를 만들면, kernel 은 그 namespace 전용의 _새 PID 할당 테이블_ 을 하나 더 만듭니다. 그 안의 첫 process 는 이 새 테이블에서 PID 1 을 받습니다 — host 의 PID 테이블에서는 같은 process 가 예컨대 PID 4217 이지만, 그 process 의 task 구조체는 _자기 PID namespace 포인터_ 를 따라가므로 자기를 1 로 봅니다. NET namespace 도 마찬가지로 _별도의 network stack 인스턴스_(자체 인터페이스 목록·라우팅 테이블·iptables 체인)를 하나 더 만들고, container 의 socket 호출은 그 인스턴스 포인터를 거쳐 처리됩니다. MNT namespace 는 별도의 mount tree 를 가리킵니다.
+
+핵심은 — **kernel 코드 자체는 하나뿐이고, 격리는 "어느 자료구조 인스턴스를 가리키느냐" 로만 이뤄진다** 는 점입니다. 이것이 §3 note (2) 의 "boundary = syscall 인터페이스" 와 container escape 의 근본을 설명합니다. VM 은 격리가 _별도 kernel + HW 권한 mode_ 에 박혀 있어 깨려면 hypervisor 까지 뚫어야 하지만, container 는 같은 kernel 코드가 _포인터를 잘못 따라가게_ 만드는 버그 하나면 — 한 namespace 의 process 가 다른 인스턴스(또는 host 의 전역 자료구조)에 닿게 되어 — escape 가 성립합니다. "kernel 버그 하나로 escape" 가 가능한 이유가 바로 격리가 _코드 분리_ 가 아니라 _포인터 선택_ 에 불과하기 때문입니다.
+:::
+
 #### cgroup (Control Group)
 
 컨테이너별 **리소스 사용량 제한**:
@@ -341,6 +349,15 @@ cgroup 계층:
 | **blkio** | 블록 디바이스 I/O 대역폭/IOPS |
 | **cpuset** | 특정 CPU 코어에 바인딩 |
 | **pids** | 최대 프로세스 수 제한 |
+
+:::note[cgroup 의 "상한 강제" 가 _어떻게_ 동작하나 — 그리고 왜 priority inversion 이 남나]
+cgroup 이 자원 상한을 _강제_ 한다고 했는데, 별도의 격리 장벽이 있는 게 아니라 **기존 kernel 의 scheduler·allocator 가 자원을 나눠줄 때마다 cgroup 의 _회계(accounting) 장부_ 를 참조** 하는 방식입니다.
+
+- **CPU** — kernel scheduler 는 어느 task 를 다음에 돌릴지 고를 때, 그 task 가 속한 cgroup 이 이번 주기에 _이미 할당량을 다 썼는지_ 를 cgroup 회계에서 확인합니다. 다 썼으면 그 task 를 다음 주기까지 **throttle**(실행 대기) 시킵니다. 즉 상한은 "scheduler 가 장부를 보고 안 돌려주는" 것으로 강제됩니다.
+- **Memory** — page 를 할당할 때마다 kernel 의 메모리 allocator 가 그 cgroup 의 사용량을 더해 `memory.max` 와 비교합니다. 넘으면 회수(reclaim)를 시도하고, 그래도 안 되면 그 cgroup 안에서 **OOM killer** 가 process 를 죽입니다.
+
+여기서 "상한일 뿐 격리가 아니다" 의 근본이 드러납니다. cgroup 은 _총량_ 을 셀 뿐, 자원의 _순서·우선순위_ 까지 보장하지 못합니다. 그래서 **priority inversion** 이 남습니다 — 예컨대 낮은 우선순위 container 가 공유 자원(disk queue, 커널 lock)을 잡은 채 throttle 되면, 높은 우선순위 container 가 그 자원을 기다리며 멈춥니다. cgroup 의 장부에는 "둘 다 할당량 안" 으로 보이지만 실제로는 낮은 쪽이 높은 쪽을 막은 것입니다. 회계는 _얼마나_ 를 통제할 뿐 _누가 먼저_ 를 통제하지 않기 때문에, 이런 inversion 과 throttle race·OOM scoring 문제는 cgroup 만으로는 풀리지 않고 별도 tuning 이 필요합니다(오해 3).
+:::
 
 ### 5.3 컨테이너의 보안 한계
 
@@ -507,6 +524,14 @@ Timeline:
 **실제**: MicroVM 의 핵심은 _작은 크기_ 가 아니라 **device model 최소화 (VirtIO 만) + boot path 단순화 (PCIe enumeration 생략)** — 공격 표면을 _수 KLOC 미만_ 으로 줄여 _security audit 가능_ 하게 만든 것. 같은 크기의 일반 VM 보다 빠르고 안전한 이유.<br>
 **왜 헷갈리는가**: "micro" 라는 이름.
 :::
+
+:::note["device model 최소화" 가 _왜_ 보안으로 이어지나 — 공격 표면 = 코드 줄 수]
+오해 5 가 "감사 가능한 공격 표면" 이라고 결과만 말했는데, 그 인과는 정량적입니다 — **device emulation 코드의 줄 수(KLOC)가 곧 공격 표면의 크기** 이기 때문입니다.
+
+그 이유는 device emulation 코드가 서 있는 _위치_ 에 있습니다. emulated device(virtio backend 든 e1000 이든)는 guest 가 _직접 입력을 먹이는_ 코드입니다 — guest 가 레지스터에 쓰는 값, descriptor 의 길이·주소, ring 의 내용이 모두 그 emulation 코드의 입력이 됩니다. 그 코드에 버그(경계 검사 누락, 정수 overflow)가 하나라도 있으면, 악의적 guest 가 그것을 찔러 hypervisor(host) 쪽 코드 실행 — 즉 VM escape — 으로 이어질 수 있습니다. 따라서 emulation 코드가 _많을수록_ 버그가 숨을 자리가 많아지고, 공격 표면이 넓어집니다.
+
+전통적 VMM(QEMU)은 호환성을 위해 수백 종의 device(VGA, IDE, USB, 사운드, 수많은 NIC 모델…)를 emulate 하므로 이 코드가 _수십~수백 KLOC_ 에 달합니다. Firecracker 는 정반대로 **VirtIO 계열의 극소수 device 만** 제공하고 PCIe enumeration 같은 무거운 경로를 _아예 빼서_, guest 가 입력을 먹일 수 있는 코드를 _수 KLOC 수준_ 으로 줄였습니다. 결과는 두 가지입니다 — (1) 버그가 숨을 코드 면적이 작아 escape 가능성이 구조적으로 낮고, (2) 코드가 작아 _사람이 전체를 감사_ 할 수 있습니다(수십 KLOC 는 완전 감사가 비현실적). "device model 최소화 → 보안" 은 곧 "입력을 먹는 코드 줄 수를 수십 KLOC 에서 수 KLOC 로 줄였다 → 공격 표면을 그만큼 줄였다" 와 같은 말입니다. Firecracker 가 Rust 로 작성된 것도 같은 방향 — 남은 그 적은 코드에서마저 메모리 안전 버그 부류를 컴파일 시점에 제거하려는 선택입니다.
+:::
 ### DV 디버그 체크리스트 (Container / MicroVM 환경에서 자주 보는 실패)
 
 | 증상 | 1차 의심 | 어디 보나 |
@@ -569,11 +594,6 @@ Multi-tenant 격리 + 빠른 cold start:
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `Container Security` — namespace/cgroup 격리 한계
-- `MicroVM Architecture` — Firecracker/Cloud Hypervisor 비교
-
-**External**
 - *Firecracker: Lightweight Virtualization for Serverless Applications* (NSDI 2020)
 - Linux `man 7 namespaces`, `man 7 cgroups`
 - Google *gVisor* whitepaper — userspace kernel approach

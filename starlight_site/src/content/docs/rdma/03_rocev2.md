@@ -352,7 +352,11 @@ XTH -- PAY -- ICRC -- FCS
 "RoCEv2 packets shall use UDP destination port 4791 (assigned by IANA)." — IBTA *Annex A17*, §A17.5
 :::
 :::caution[UDP source port — "가변" 의 정확한 의미]
-source port 가 hash 기반으로 가변이라는 말은 _패킷마다 무작위로 바뀐다_ 는 뜻이 **아닙니다**. 사내 rdma_spec 의 RoCEv2-specific additions 항목은 그 규칙을 명확히 적습니다: **"same QP → same source port"** — _같은 QP 가 보내는 패킷은 같은 source port_ 를 갖습니다. source port 는 QP (또는 connection) 단위로 결정되는 _flow 식별자_ 이고, 서로 _다른_ QP/flow 사이에서 값이 퍼지도록 hash 한 것입니다. 이렇게 해야 ECMP 라우터가 5-tuple hash 로 flow 들을 여러 path 에 분산시키면서도, _한 flow 의 패킷들은 같은 path 로 in-order 유지_ 합니다 (RC 의 PSN reorder 부담 방지). 따라서 검증 시 기대값은 "한 QP 안에서 source port _불변_, QP 가 다르면 _분산_" 으로 잡아야 하며, "패킷마다 매번 다른 값" 을 기대하면 false fail 입니다. _(출처: 사내 rdma_spec — ROCEV2_RULE_APPLICABILITY 인용)_
+source port 가 hash 기반으로 가변이라는 말은 _패킷마다 무작위로 바뀐다_ 는 뜻이 **아닙니다**. 사내 rdma_spec 의 RoCEv2-specific additions 항목은 그 규칙을 명확히 적습니다: **"same QP → same source port"** — _같은 QP 가 보내는 패킷은 같은 source port_ 를 갖습니다. source port 는 QP (또는 connection) 단위로 결정되는 _flow 식별자_ 이고, 서로 _다른_ QP/flow 사이에서 값이 퍼지도록 hash 한 것입니다.
+
+**ECMP 가 path 를 고르는 메커니즘**: ECMP (Equal-Cost Multi-Path) switch 는 목적지로 가는 _동등 비용 경로_ 가 N 개 있을 때, 패킷의 **5-tuple (src IP, dst IP, protocol, src port, dst port)** 을 하나의 hash 값으로 압축하고, 그 값을 N 으로 나눈 나머지로 **N 개 egress link 중 하나를 결정** 합니다 (`egress = hash(5-tuple) mod N`). 핵심 성질은 _결정론적_ 이라는 것 — 같은 5-tuple 은 항상 같은 hash → 항상 같은 link 입니다. RoCEv2 가 한 QP 안에서 src port 를 고정하는 이유가 바로 이것입니다: 5-tuple 중 나머지 4개는 connection 동안 불변이므로, src port 만 고정하면 **한 flow 의 모든 패킷이 같은 hash → 같은 path → 같은 순서로 도착** 합니다. 반대로 서로 다른 QP 는 서로 다른 src port 를 가지므로 hash 가 흩어져 여러 link 에 부하 분산됩니다. 이게 "flow 단위로는 in-order, flow 들 사이로는 분산" 을 동시에 달성하는 방법이고, RC 가 strict in-order 를 요구하는 것과 정확히 맞물립니다.
+
+따라서 검증 시 기대값은 "한 QP 안에서 source port _불변_, QP 가 다르면 _분산_" 으로 잡아야 하며, "패킷마다 매번 다른 값" 을 기대하면 false fail 입니다. _(출처: 사내 rdma_spec — ROCEV2_RULE_APPLICABILITY 인용)_
 :::
 ### 5.3 ICRC 계산 — RoCEv2 의 미묘한 차이
 
@@ -445,6 +449,10 @@ source port 가 hash 기반으로 가변이라는 말은 _패킷마다 무작위
 ### 5.6 신뢰성 — Lossless Ethernet 가정
 
 RoCEv2 의 RC service 는 **여전히 packet drop 을 spec 상으로 허용** 합니다 (PSN/retry 메커니즘이 있으므로). **하지만 실무에서는 retry 가 시작되면 throughput 이 급격히 떨어지므로** "packet drop 이 거의 없는 lossless Ethernet" 을 가정하는 deployment 가 일반적.
+
+:::note[왜 단 1개 drop 이 그 뒤 전부 재전송을 부르나 — Go-Back-N 메커니즘]
+RC service 는 receiver 가 패킷을 **PSN 순서대로만** 받아들입니다 (strict in-order). 그래서 PSN = N 이 drop 되면, 그 뒤에 도착한 PSN = N+1, N+2, … 는 _내용이 멀쩡해도_ "기대 PSN (=N) 이 아니다" 며 receiver 가 **버립니다** — receiver 는 빈 구멍 뒤를 받아둘 reorder buffer 가 (기본 RC 에는) 없기 때문입니다. Sender 는 ACK 가 N 까지밖에 안 오거나 NAK(PSN=N) 를 받으면, **N 부터 다시** 보내기 시작합니다 (Go-Back-N). 결국 _1개 drop_ 의 비용이 "drop 된 1개" 가 아니라 "**drop 이후 in-flight 였던 window 전체의 재전송 + 그동안의 timeout 지연**" 으로 증폭됩니다. drop rate 가 아주 낮아도 한 번의 drop 이 window 만큼의 재전송을 부르므로, throughput 곡선이 drop rate 에 매우 민감하게 무너집니다 — 이것이 RoCEv2 가 "거의 무손실" 을 _환경 가정_ 으로 깔고 PFC/ECN/DCQCN 에 투자하는 정량적 이유입니다. (Go-Back-N 의 retry/timeout 세부는 [Module 07](../07_congestion_error/) 에서.)
+:::
 
 | 메커니즘 | 역할 |
 |---------|------|

@@ -206,6 +206,10 @@ atomic_fetch_add(&counter, 1);
 
 **왜 atomic?** `counter++` 는 `load - add - store` 3개 명령. Multi-core / preempt 환경에서 race. CAS (compare-and-swap) 가 lock-free 자료구조의 기반.
 
+**CAS 가 _왜_ lock 없이 진행을 보장하나 — "기대값 일치 시에만 교체 + 실패 시 재시도".** CAS 의 동작은 한 번의 atomic 명령으로 "메모리 위치의 현재 값이 _내가 기대한 값(expected)과 같으면_ 새 값으로 바꾸고 성공을 반환, _다르면_ 아무것도 안 하고 실패를 반환" 이다. lock-free 갱신의 전형적 패턴은 이렇다: (1) 현재 값을 읽어 `expected` 로 둔다, (2) 그 값을 바탕으로 새 값을 계산한다, (3) `CAS(&x, expected, new)` 를 시도한다. 만약 그 사이 다른 스레드가 `x` 를 바꿔치웠다면 현재 값이 `expected` 와 달라 CAS 가 _실패_ 하고, 그러면 (1)부터 다시 읽어 _재시도(retry loop)_ 한다. 성공한 스레드만 갱신을 반영하므로 _덮어쓰기로 인한 손실_ 이 원천 차단된다.
+
+이것이 lock 과 결정적으로 다른 점은, CAS 가 실패해도 _블로킹하지 않는다_ 는 것이다. lock 은 보유 스레드가 선점/지연되면 대기자들이 _전부 멈추지만_, CAS 기반에서는 한 스레드의 CAS 가 실패한다는 것은 _다른 스레드가 이미 성공해 시스템이 전진했다_ 는 뜻이다 — 즉 누군가는 항상 진행한다(lock-free 의 progress 보장). 그래서 ISR 처럼 blocking 이 금지된 문맥(§위 4.x)에서 mutex 대신 CAS 기반 lock-free queue 를 쓰는 것이다.
+
 ### 4.4 Context Switch — 무엇이 저장되나?
 
 1. **CPU register file** (general purpose, SP, LR, PC)

@@ -375,6 +375,10 @@ SW -> RCV
 - 라우터/스위치는 LRH 의 DLID, VL 등을 정상적으로 변경(rewrite)할 수 있어야 한다 → 그 부분이 변경되어도 깨지지 않는 CRC 가 별도로 필요 → VCRC 가 hop 마다 재계산.
 - 그런데 데이터 자체의 무결성은 end-to-end 보장이 필요 → ICRC 는 변경 가능 영역을 빼고 계산되어 처음부터 끝까지 보존.
 
+:::note[왜 필드 하나만 바꿔도 CRC 전체가 깨지나 — 산술적 근거]
+CRC 는 입력 비트열 전체를 하나의 다항식으로 보고 generator 다항식으로 나눈 **나머지** 입니다. 이 나눗셈은 입력의 모든 비트가 결과에 섞여 들어가도록 설계돼 있어서, 입력에서 **단 1비트만 바뀌어도 나머지(=CRC) 가 전혀 다른 값** 으로 튑니다 (이게 CRC 가 오류를 잘 잡는 이유이자, _bit-flip 검출력_ 의 원천). 그래서 라우터가 DLID 한 필드만 rewrite 해도, 그 영역이 CRC 입력에 들어가 있으면 CRC 는 무조건 깨집니다. 결론적으로 hardware 가 line-rate 로 처리하기 좋은 유일한 방법은 _재계산_ 도 _delta-update_ 도 아닌 **"변경 가능 영역을 애초에 CRC 입력에서 빼는 것"** — 이게 ICRC 의 계산 범위 정의 (SLID/DLID/HopLmt 제외) 가 존재하는 이유입니다.
+:::
+
 :::note[Spec 인용]
 - "The ICRC field shall be present in all IBA transport packets." — C7-47 (R-057)
 - "The VCRC field shall be present in all data packets." — C7-49 (R-059)
@@ -423,6 +427,10 @@ Spec §9.6 의 silent-drop 정의를 그대로 인용. validation state machine 
 - VL15 는 **management 전용** (SMP/SA traffic). VL15 는 flow control 의 대상이 아니며, 256-byte payload 제한 (C7-27 / R-037).
 - 각 VL 은 독립적인 buffer + 독립적인 credit-based flow control → head-of-line blocking 방지.
 
+:::note[Head-of-line (HOL) blocking 이란, 그리고 VL 이 어떻게 막나]
+**HOL blocking** 은 한 큐의 _맨 앞_ 패킷이 어떤 이유로 진행하지 못하면 (예: 출력 포트가 막힘, credit 부족) 그 뒤에 줄 선 패킷들이 _목적지가 비어 있어도_ 전부 함께 정체되는 현상입니다 — 슈퍼마켓 한 줄에서 맨 앞 손님이 가격 확인하느라 멈추면 뒷사람 전부 기다리는 것과 같습니다. 단일 buffer/단일 credit 만 있으면 모든 트래픽이 한 줄이라 이 현상을 피할 수 없습니다. IB 는 VL 마다 **독립된 buffer 와 독립된 credit** 을 두어, 한 VL 이 막혀도 다른 VL 의 패킷은 자기 buffer·자기 credit 으로 독립 진행 — 즉 "여러 개의 줄" 을 만들어 한 줄의 정체가 전체로 번지지 않게 합니다. 이게 SL→VL 매핑으로 트래픽 class 를 서로 다른 VL 에 분산하는 진짜 목적입니다.
+:::
+
 #### Service Level (SL)
 
 - LRH 에 4-bit SL 필드.
@@ -465,6 +473,8 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
   FCTBS: Flow Control Total Blocks Sent (sender 가 보낸 누적)
   FCCL : Flow Control Credit Limit (receiver 가 sender 에 통보)
 ```
+
+**메커니즘 — closed loop 으로 보는 credit FC**: 핵심 아이디어는 "**receiver 가 받을 수 있는 만큼만 sender 가 보낸다**" 를 buffer 점유로 직접 강제하는 것입니다. Receiver 는 자기 수신 buffer 의 여유 공간을 **block 단위 (1 block = 64 byte)** 의 credit 으로 환산해, FC packet 에 FCCL (Flow Control Credit Limit) 로 실어 sender 에게 통보합니다. Sender 는 자기가 보낸 누적 block 수 (FCTBS) 를 추적하다가, FCTBS 가 받은 FCCL 에 도달하면 — 즉 credit 을 다 쓰면 — **더 보내지 않고 멈춥니다**. Receiver 가 buffer 를 비우면 (상위 layer 가 데이터를 소비하면) 새 FC packet 으로 더 큰 FCCL 을 광고하고, sender 는 그만큼 다시 보낼 수 있습니다. 이 "credit 발급 → 소진 → 재발급" 의 닫힌 고리 덕분에 receiver buffer 가 **절대 overflow 되지 않고**, 따라서 IB link 는 _drop 없는 (lossless)_ 동작을 합니다. (FCTBS/ABR/FCCL 의 누적 카운터 형태는 wrap-around 가 있어도 차이 비교가 일관되게 동작하도록 설계됨.)
 
 (**RoCEv2 에서는 IB FC 가 사라지고 Ethernet PFC 로 대체**)
 

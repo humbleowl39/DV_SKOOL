@@ -131,7 +131,9 @@ UVM의 TLM 포트(`uvm_analysis_port`, `uvm_blocking_put_port`)는 DIP의 정석
 
 > *서브타입은 그 기반 타입으로 대체 가능해야 한다.*
 
-`S`가 `T`의 서브타입이면, 프로그램에서 `T` 객체를 `S` 객체로 바꿔도 프로그램의 정확성이 깨지면 안 됩니다. 위반은 *의미적으로 거짓인 IS-A*를 만듭니다 — `Square extends Rectangle`은 Square의 width를 설정하면 height도 바뀌어 Rectangle 계약을 깨므로 LSP 위반입니다. **DV 함의**: 버스를 절대 구동하지 않는 `passive_driver`가 `uvm_driver`를 상속하면 active driver의 진짜 대체물이 아니므로 LSP 위반 — 별도 `uvm_component`로 모델링해야 합니다 (`oop_spec.md` §5.3).
+`S`가 `T`의 서브타입이면, 프로그램에서 `T` 객체를 `S` 객체로 바꿔도 프로그램의 정확성이 깨지면 안 됩니다. 위반은 *의미적으로 거짓인 IS-A*를 만듭니다 — `Square extends Rectangle`은 Square의 width를 설정하면 height도 바뀌어 Rectangle 계약을 깨므로 LSP 위반입니다.
+
+여기서 "계약(contract)"이 정확히 무엇인지 짚어야 "컴파일은 되는데 LSP 위반"이 기계적으로 보입니다. 한 메서드의 계약은 세 부분으로 이뤄집니다 — **precondition**(메서드가 호출되기 위해 만족돼야 하는 입력 조건), **postcondition**(메서드가 끝났을 때 보장하는 결과 조건), **invariant**(객체가 항상 유지하는 불변식). LSP의 형식적 기준은 이렇습니다 — 서브타입은 부모의 **precondition을 강화해선 안 되고**(더 까다로운 입력을 요구하면 부모를 기대한 호출자가 깨짐), **postcondition을 약화해선 안 되며**(더 약한 결과를 주면 부모를 기대한 호출자가 깨짐), **invariant를 보존해야** 합니다. 한 문장으로: *전제는 약화(또는 동일), 결과는 강화(또는 동일)만 허용*. `Square`는 "width와 height를 독립적으로 설정할 수 있다"는 Rectangle의 postcondition을 약화시켰기에 — 타입은 맞아 컴파일은 되지만 — 의미적 계약을 깬 것입니다. **DV 함의**: 버스를 절대 구동하지 않는 `passive_driver`가 `uvm_driver`를 상속하면 active driver의 진짜 대체물이 아니므로 LSP 위반 — 별도 `uvm_component`로 모델링해야 합니다 (`oop_spec.md` §5.3).
 
 ### 4.4 ISP — Interface Segregation Principle
 
@@ -139,11 +141,19 @@ UVM의 TLM 포트(`uvm_analysis_port`, `uvm_blocking_put_port`)는 DIP의 정석
 
 메서드가 많은 뚱뚱한 인터페이스는 구현 클래스에 필요 없는 메서드까지 제공하도록 강요합니다. 큰 인터페이스를 역할별 작은 인터페이스로 쪼갭니다. **DV 예시**: 메서드 30개짜리 단일 `IVipControl` 대신 `IConnectable`·`IResettable`·`IConfigurable`을 분리하면, VIP 리셋만 필요한 컴포넌트는 `IResettable`만 구현합니다 (`oop_spec.md` §5.4).
 
+:::caution[용어 충돌 주의 — 여기서 "interface"는 SV의 `interface` 키워드가 아니다]
+DV 엔지니어에게 "interface"는 거의 자동으로 SystemVerilog의 `interface` — `logic`/`modport`로 신호를 묶는 *RTL 신호 다발* — 를 떠올리게 합니다. 하지만 ISP에서 말하는 interface는 그것이 아니라 **역할 추상(CAN-DO)**, 즉 "이 객체는 무엇을 *할 수 있는가*"를 선언하는 메서드 집합입니다(Module 01의 CAN-DO 관계). SV에는 OOP의 `interface` 키워드가 따로 없어서, 이 역할 추상은 보통 순수 가상 메서드를 가진 `virtual class`(추상 클래스)나 `do_copy`/`do_compare` 같은 콜백 규약으로 표현됩니다. 두 "interface"는 이름만 같을 뿐 완전히 다른 개념입니다 — ISP를 적용할 때 신호 묶음을 쪼개라는 뜻으로 오해하지 마세요.
+:::
+
 ### 4.5 DIP — Dependency Inversion Principle
 
 > *구체가 아닌 추상에 의존하라.*
 
 고수준 모듈이 저수준 모듈을 직접 import하지 않고, 둘 다 추상(인터페이스/추상 클래스)에 의존하게 합니다. 이러면 교체와 테스트가 쉬워집니다. UVM의 TLM 포트가 정석 구현입니다 (§3 참고, `oop_spec.md` §5.5).
+
+:::note[DIP와 dependency injection은 같은 말이 아니다 — 원칙 vs 기법]
+이 둘은 자주 뭉뚱그려지지만 층이 다릅니다. **DIP는 *방향*에 관한 설계 원칙**입니다 — "고수준이 저수준 구체에 의존하지 말고, 양쪽 모두 추상에 의존하라"는 의존성의 *화살표 방향* 규칙입니다. **Dependency Injection(DI)은 그 의존을 *외부에서 주입*해 실현하는 구체적 기법**입니다 — 객체가 필요한 협력자를 스스로 `new`하지 않고, 생성자/세터/설정 채널을 통해 밖에서 받아오는 방식입니다. 즉 DIP는 "무엇을 지향하라"이고 DI는 "어떻게 그 지향을 코드로 달성하는가"입니다. UVM에서 `uvm_config_db#(T)::set/get`은 driver가 virtual interface를 직접 만들지 않고 외부(test)가 주입하게 하는 **DI 기법**이며, 그 결과 driver가 추상(`virtual my_if`)에만 의존하게 되는 것이 **DIP 원칙**의 충족입니다(Module 04 §5.2와 연결).
+:::
 
 ### 4.6 요약 표
 
@@ -282,18 +292,13 @@ endclass
 <details>
 <summary>정답</summary>
 
-producer(monitor)와 consumer(scoreboard/coverage)가 **추상 포트 타입을 통해 분리**되어, 어느 쪽도 상대의 구체 클래스를 알지 못하기 때문입니다 (`oop_spec.md` §5.5).
+producer(monitor)와 consumer(scoreboard/coverage)가 **추상 포트 타입을 통해 분리**되어, 어느 쪽도 상대의 구체 클래스를 알지 못하기 때문입니다.
 - 고수준(scoreboard)이 저수준(특정 monitor)에 직접 의존하지 않고 둘 다 추상(port)에 의존 — 이것이 DIP의 정의 그대로입니다.
 - 덕분에 monitor를 다른 구현으로 교체해도 scoreboard 코드는 불변입니다.
 
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `oop_spec.md` (Object-Oriented Programming Overview) — §5 SOLID (§5.1 SRP ~ §5.5 DIP), §6.2 Design for Change, §7 UVM factory = OCP
-- `design_pattern_onboarding.md` — cooking analogy (도구/사용법/레시피 위계)
-- Confluence: *OOP* (SOLID bullet list)
 
 **External**
 - McLaughlin, Pollice, West. *Head First Object-Oriented Analysis and Design*. O'Reilly, 2006.

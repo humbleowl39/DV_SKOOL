@@ -334,6 +334,10 @@ Recovery -> HotReset: "실패"
 4. Retraining 성공 시 합의 속도의 L0 진입.
 
 검증 시 "Gen 4 capable 인데 link 가 Gen 1 으로 떠 있다" → Recovery + speed change 가 안 일어났다는 의미. 보통 LTSSM trace 에서 EQ phase 결과 또는 양 끝 capability mismatch 가 원인.
+
+**왜 하필 Gen1·최저속도가 가장 안전한 출발점인가.** cold start 순간, 양 끝은 *서로의 capability 를 전혀 모릅니다* — 상대가 Gen 몇까지 되는지, channel 이 고속을 견디는지, 어떤 EQ 가 맞는지 아무 정보가 없습니다. 이 무지의 상태에서 link 를 세우려면 "어떤 상대·어떤 channel 에서도 통할 가능성이 가장 높은" 가장 robust 한 조건이어야 합니다. Gen1 의 2.5 GT/s + **8b/10b + NRZ** 가 바로 그것입니다 — 속도가 낮아 channel ISI·손실 여유가 크고, 8b/10b 는 encoding 자체에 DC balance·transition 보장이 내장되어 정밀한 EQ 없이도 CDR 가 박자를 잡습니다(고속의 128b/130b·PAM4 처럼 적응 EQ·FEC 가 *먼저* 동작해야 하는 부담이 없음). 즉 Gen1 은 "아무것도 모르는 상태에서 일단 통신 채널을 확실히 여는" 최소 공통분모입니다.
+
+link 가 일단 Gen1 으로 서면, 그 *위에서* 안전하게 capability 를 교환(TS1/TS2)하고, 합의된 속도로 올라갈 때 비로소 EQ 를 실측·협상합니다. 순서가 핵심입니다 — *통신이 되는 link 를 먼저 확보한 뒤에야* speed-up·EQ 같은 위험한 단계를 시도합니다. 만약 처음부터 최고속으로 시작하면, EQ 도 capability 합의도 못 한 채 신호가 깨져 link 자체를 못 세웁니다. 그래서 "항상 Gen1 부터" 는 보수적 bootstrap 전략 — *robust 한 바닥에서 시작해 한 단계씩 안전하게 올린다* — 의 결과입니다.
 :::
 ### 5.4 Equalization — Gen3+ 의 4 Phase
 
@@ -384,6 +388,16 @@ Recovery -> HotReset: "실패"
    → SKP Ordered Set 으로 align
    → Tolerance 는 lane 간 ~ 1.5 ns
 ```
+
+:::note[SKP Ordered Set의 또 다른 역할 — clock drift 흡수 (de-skew와 다른 목적)]
+위에서 SKP 가 lane *간* 도착 시간 차이(de-skew)를 맞춘다고 했는데, SKP 에는 그것과 *별개의* 더 근본적인 역할이 하나 더 있습니다 — **송수신 ppm 차이로 누적되는 clock drift 의 흡수** 입니다.
+
+송신기와 수신기는 각자의 reference clock 으로 동작하고, crystal oscillator 는 ppm 단위 오차가 있어 두 clock 의 주파수가 미세하게 다릅니다(Module 01 의 refclk/CDR 설명 참고). 수신 측은 들어오는 byte 를 자기 clock domain 으로 옮기기 위해 **elastic buffer** 에 잠시 담는데, 송신이 수신보다 *조금 빠르면* 이 buffer 가 서서히 차오르고(overflow 위험), *조금 느리면* 서서히 비워집니다(underflow 위험). 시간이 충분히 지나면 어느 쪽이든 반드시 한계에 도달합니다.
+
+SKP Ordered Set 은 이 drift 를 *주기적으로 리셋* 합니다 — buffer 가 차오르면 수신 측이 SKP symbol 을 *제거(skip)* 해 수위를 낮추고, 비워지면 SKP 를 *추가(insert)* 해 채웁니다. SKP 는 데이터가 아닌 보정용 padding 이라 빼거나 더해도 payload 가 손상되지 않습니다. 그래서 송신기는 일정 간격마다 SKP OS 를 끼워 보내, 수신기가 buffer 수위를 안전 범위로 유지할 기회를 줍니다.
+
+**de-skew 와 drift 흡수는 다른 문제** 입니다 — de-skew 는 *공간적* 문제(lane 들의 길이 차)로 한 시점의 lane 간 정렬을 맞추는 것이고, drift 흡수는 *시간적* 문제(두 clock 의 주파수 차)로 시간이 지나며 누적되는 buffer 편차를 막는 것입니다. SKP Ordered Set 하나가 이 두 목적에 모두 쓰이지만, "왜 SKP 가 주기적으로 계속 필요한가" 의 답은 후자(끊임없이 쌓이는 ppm drift)에 있습니다.
+:::
 
 ### 5.6 Lane Width Down-train
 

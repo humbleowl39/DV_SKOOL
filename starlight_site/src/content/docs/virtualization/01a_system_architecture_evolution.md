@@ -313,6 +313,19 @@ SI -> MEM
 
 그러나 가상 주소가 없으니 프로세스마다 물리 주소를 직접 관리해야 하고, HW 가속기가 물리 주소로 메모리에 직접 접근하므로 보안 위험이 생기며, 무엇보다 Linux 같은 범용 OS 를 실행하기 어렵습니다. 이 세 가지 한계가 맞물려 MMU 도입이 필요해졌습니다.
 
+:::note[MPU 와 MMU 의 _근본_ 차이가 왜 단계 5 를 강제하는가]
+위 표는 MPU 와 MMU 의 차이를 "보호만 vs 보호+변환" 으로 나열했지만, _결과_ 의 차이가 단계 4→5 전이의 진짜 이유입니다.
+
+MPU 는 메모리를 **region(영역) 단위** — base/limit 쌍 — 로 보호합니다. region 개수는 HW 에 박혀 있어 (보통 수~십수 개) 적고, 각 region 은 "이 물리 주소 구간은 read-only" 같은 _속성만_ 부여할 뿐 **주소를 바꾸지 않습니다.** 즉 프로그램이 보는 주소 = 물리 주소입니다.
+
+여기서 따라오는 결정적 한계는 **가상 연속성(virtual contiguity)을 만들 수 없다** 는 것입니다. MMU 의 page table 은 흩어진 물리 frame 들을 _가상 주소 공간에서는 연속_ 으로 보이게 엮을 수 있지만, MPU 의 base/limit region 으로는 물리적으로 연속인 덩어리밖에 표현하지 못합니다. 그 결과:
+
+- **Demand paging 불가** — 페이지가 _존재하지 않을 때_ fault 를 받아 그때 채워 넣는 것이 demand paging 인데, MPU 에는 "비어 있다가 접근 시 매핑되는 page" 라는 개념 자체가 없습니다 (변환 테이블이 없으니 매핑할 대상이 없음).
+- **fork 의 COW 불가** — fork 가 부모/자식의 같은 물리 page 를 공유하다가 write 시 분기(copy-on-write)하려면 page 단위 write-protect + fault-on-write 가 필요한데, region 단위로는 개별 page 를 동적으로 다른 frame 으로 리매핑할 수 없습니다.
+
+그래서 Linux 의 fork/mmap/demand paging 생태계는 _구조적으로_ MMU 를 요구하고, 이것이 ARM Cortex-M(MPU) 으로는 RTOS 까지, Cortex-A(MMU) 로 가야 범용 Linux 가 도는 경계의 근본입니다. (자세한 page table 기전은 [Module 03 — Memory Virtualization](../03_memory_virtualization/) 및 mmu 토픽 참조.)
+:::
+
 ### 5.5 단계 5: High-end Processor(OS) + HW Accelerator + MMU (IOMMU 없음)
 
 ```d2
@@ -489,6 +502,14 @@ Coherency 있을 때:
 | SW 단순화 | 수동 flush/invalidate 불필요 |
 | 성능 최적화 | 불필요한 DRAM 접근 감소 |
 
+:::note["자동 통보" 가 _실제로_ 무엇을 하는가 — snoop/invalidate 기전]
+위에서 "HW coherency 프로토콜이 자동 통보" 라고 결과만 말했는데, 그 통보의 정체는 **snoop + invalidate** 입니다. MESI 류 프로토콜이 대표적입니다.
+
+각 cache line 은 상태 비트를 가집니다 — 대략 **M**odified(나만 가진 최신 더티 사본) / **E**xclusive(나만 가진 깨끗한 사본) / **S**hared(여럿이 공유하는 깨끗한 사본) / **I**nvalid(무효). 어떤 마스터가 한 line 을 _write_ 하려 하면, 프로토콜은 interconnect 를 통해 **다른 캐시들에게 그 주소를 가지고 있는지 묻고(snoop)**, 가진 캐시의 사본을 **무효화(invalidate)** 시킵니다. 그제서야 writer 는 자기 사본을 Modified 로 올려 단독 소유권을 갖습니다. 이후 다른 마스터가 같은 주소를 읽으면 snoop 이 Modified 사본을 가진 캐시에서 최신값을 끌어옵니다.
+
+핵심 인과는 이것입니다 — 무효화가 _하드웨어 트랜잭션_ 으로 일어나므로, SW 가 "GPU 가 읽기 전에 CPU 캐시를 flush 하라" 같은 명시적 명령을 넣을 필요가 없어집니다. 단계 5 까지의 SW flush/invalidate 코드가 _제거되는_ 근본 이유가 바로 이 자동 snoop 입니다. (store buffer 가 끼면 이 일관성에도 _순서_ 문제가 생기는데, 그 store-buffer 기원은 [computer_architecture — Memory Hierarchy](../../computer_architecture/04_memory_hierarchy/) 참조.)
+:::
+
 #### 단계 6 특징 종합
 
 | 항목 | 설명 |
@@ -595,6 +616,12 @@ VMx OS 입장: VA → IPA 를 관리 (IPA 가 PA 라고 생각함).
 
 Hypervisor 입장: IPA → PA 를 관리 (실제 물리 메모리 배치 결정).
 
+:::note[AxUSER 가 _물리적으로_ 무엇인가]
+위 그림에서 "AxUSER 가 VM 정체성을 운반" 한다고 했는데, 그 정체는 추상 개념이 아니라 **AXI 버스의 sideband signal** 입니다. AXI 의 읽기 주소 채널(AR)·쓰기 주소 채널(AW)에는 표준 신호(addr, len, size, …) 외에 구현이 자유롭게 의미를 부여할 수 있는 **user 비트 묶음** — `ARUSER`/`AWUSER`(통칭 `AxUSER`) — 가 있습니다. 마스터(디바이스/PE)는 매 트랜잭션마다 이 비트에 자신의 식별 정보를 실어 보냅니다.
+
+이것이 IOMMU 가 STE/page table 을 인덱싱할 수 있는 _물리적 근거_ 입니다. IOMMU 는 들어온 트랜잭션의 AxUSER 비트(= ARM SMMU 의 StreamID, x86 VT-d 의 BDF 에 해당)를 읽어 "이 접근이 어느 VM/디바이스 소속인가" 를 결정하고, 그에 맞는 Stage-1/Stage-2 page table 을 골라 변환합니다. AxUSER 가 없거나 tie-off 되어 항상 0 이면 IOMMU 는 모든 디바이스를 구분하지 못해 격리가 무너집니다 — 그래서 DV 디버그 체크리스트의 "AxUSER 가 항상 0" 항목이 치명적인 것입니다.
+:::
+
 #### SW 가상화 vs HW 가상화 비교
 
 | 항목 | SW 가상화 (7a) | HW 가상화 (7b) |
@@ -699,11 +726,6 @@ SoC 카테고리별 분기:
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `SoC Architecture Evolution` — 7 단계 분류 + 검증 매트릭스
-- `IOMMU Integration Guide` — ACS / group 격리 사례
-
-**External**
 - ARM *AMBA System Memory Management Unit Architecture Specification (SMMUv3)*
 - Intel *VT-d Architecture Specification* — DMA remapping
 

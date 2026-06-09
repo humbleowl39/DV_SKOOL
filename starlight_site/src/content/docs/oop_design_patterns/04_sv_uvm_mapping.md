@@ -165,6 +165,14 @@ endclass
 
 `#(REQ, RSP)`가 parametric, `virtual run_phase`가 subtype 다형성입니다. 스케줄러는 모든 컴포넌트의 `run_phase`를 *구체 타입을 모른 채* 호출하는데, 이것이 subtype 다형성의 정의 그대로입니다 (`oop_spec.md` §3.4).
 
+:::note[`virtual`의 static binding 함정 — 무엇이 dispatch를 결정하는가]
+`virtual` 한 단어가 dispatch 규칙을 정반대로 바꿉니다. **non-virtual 메서드는 *핸들의 선언 타입*(static type)으로 dispatch가 컴파일 시점에 고정**됩니다 — `uvm_driver` 핸들에 `my_driver` 객체가 담겨 있어도, 메서드가 non-virtual이면 `uvm_driver`의 구현이 불립니다(static binding). 반대로 **virtual 메서드는 *객체의 실제 타입*(dynamic type)으로 런타임에 dispatch**됩니다(Module 01의 vtable). UVM 스케줄러는 모든 컴포넌트를 `uvm_component` 핸들로 들고 phase 메서드를 호출하므로, `run_phase`가 virtual이어야만 *자식*의 구현이 불립니다. virtual을 빠뜨리면 스케줄러가 `uvm_component`의 (비어 있는) `run_phase`만 부르고 자식 동작은 조용히 무시됩니다 — 이것이 아래 오해 2의 기계적 근거입니다.
+
+**parametric class는 파라미터 조합마다 *별개 타입*을 만든다.** `uvm_driver#(axi_item)`과 `uvm_driver#(pcie_item)`은 같은 템플릿에서 나왔지만 컴파일 시점에 *서로 다른 독립 타입*으로 특수화(specialization)됩니다 — 한쪽 핸들에 다른 쪽 객체를 담을 수 없습니다. 이 사실이 factory override와 타입 호환에 제약을 만듭니다(파라미터가 다르면 override 대상도 별개 타입). 같은 이유가 config_db의 type-key 매칭에도 그대로 작동합니다 — UVM 코스 [config_db & Factory](../../uvm/04_config_db_factory/)에서 "왜 `#(my_cfg)` set을 `#(uvm_object)` get으로 못 읽나"의 근본이 바로 이 "파라미터가 다르면 다른 타입"입니다.
+
+**SV class 멤버의 기본 가시성은 *public*이다.** Java/C++의 일부 습관과 달리, SystemVerilog class의 필드·메서드는 `local`/`protected`를 명시하지 않으면 *외부에서 자유롭게 접근 가능*합니다. 즉 캡슐화는 기본값이 아니라 *명시적으로 닫아야* 얻어집니다 — `local`(자기 클래스만)·`protected`(자기+자식만)를 붙이지 않으면 외부 코드가 내부 필드를 직접 바꿀 수 있고, 이것이 아래 디버그 체크리스트의 "외부에서 내부 필드를 바꿔 버그"의 근본입니다.
+:::
+
 ---
 
 ## 5. 디테일 — factory·config_db·TLM이 구현하는 SOLID/패턴
@@ -192,6 +200,8 @@ endclass
 ```
 
 `new` 대신 `type_id::create`를 쓰는 이유가 바로 이것입니다 — 생성을 factory에 위임해 두면, 나중에 override 한 줄로 그 타입을 바꿀 수 있습니다. 직접 `new`로 만든 객체는 override 대상이 되지 못합니다.
+
+이 위임이 작동하려면 *등록*이 먼저 있어야 합니다. `` `uvm_component_utils(my_driver) `` / `` `uvm_object_utils(my_item) `` 매크로가 하는 일이 바로 그 등록입니다 — 매크로가 클래스마다 `type_id`라는 **proxy(대리 생성자) 타입**을 만들어 factory의 전역 테이블에 "이 type-name → 이 proxy" 로 등록합니다. 그래서 생성과 override가 2단계로 갈립니다 — **(1) 등록**: 매크로가 proxy를 factory에 올려두고, **(2) 조회·생성**: `type_id::create`가 호출 시점에 factory 테이블에서 해당 type-name에 *현재* 걸려 있는 proxy(override가 있으면 교체된 proxy)를 찾아 그 proxy의 `new`를 호출합니다. `new`를 직접 부르면 이 테이블을 거치지 않으니 override가 끼어들 자리가 없습니다. 매크로가 *필수*인 이유가 이것 — 매크로 없이는 proxy 등록이 없어 factory가 그 타입을 모릅니다. `type_id::create`가 factory를 거쳐 proxy를 조회·생성하는 *간접 생성*의 전체 메커니즘은 UVM 코스 [config_db & Factory](../../uvm/04_config_db_factory/)에서 redirect table 관점으로 더 깊게 다룹니다.
 
 ### 5.2 config_db = 의존성 주입 (Dependency Injection)
 
@@ -305,18 +315,13 @@ endclass
 <summary>정답</summary>
 
 **타당합니다.** 두 측면이 동시에 성립합니다.
-- **DIP**: producer(monitor)와 consumer(scoreboard)가 추상 포트로 분리되어 서로의 구체 타입을 모릅니다 (`oop_spec.md` §5.5).
-- **Observer**: 상태(트랜잭션)를 여러 구독자에게 1:N broadcast하는 GoF Observer의 정의 그대로입니다 (`design_pattern_onboarding.md` Behavioral, Module 03 §4.3).
+- **DIP**: producer(monitor)와 consumer(scoreboard)가 추상 포트로 분리되어 서로의 구체 타입을 모릅니다.
+- **Observer**: 상태(트랜잭션)를 여러 구독자에게 1:N broadcast하는 GoF Observer의 정의 그대로입니다 (Module 03 §4.3).
 - 한 메커니즘이 여러 원칙/패턴을 동시에 구현하는 것은 흔합니다.
 
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `oop_spec.md` (Object-Oriented Programming Overview) — §3.4 두 다형성, §4.3 CAN-DO 콜백, §5.5 TLM=DIP, §7 OOP↔SV/UVM 매핑 표 + factory=OCP
-- `design_pattern_onboarding.md` — Behavioral(Observer), Why use them
-- Confluence: *OOP*, *Design Pattern*
 
 **External**
 - IEEE 1800-2017 (SystemVerilog) — §8 클래스, §25.9 virtual interface, §35 DPI-C

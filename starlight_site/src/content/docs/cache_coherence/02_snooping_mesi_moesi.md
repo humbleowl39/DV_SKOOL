@@ -20,7 +20,7 @@ title: "Module 02 — Snooping & MESI/MOESI"
 
 ### 1.1 시나리오 — write 후 다른 코어가 stale를 읽는 고전 버그
 
-Module 01의 무한 루프 버그(Core A가 `flag=1`을 썼는데 B가 0을 봄)를 하드웨어가 자동으로 막으려면, A의 store가 *발생하는 순간* B의 사본을 무효화하거나 갱신해야 합니다. snooping 프로토콜은 이를 **공유 버스(또는 broadcast 인터커넥트)** 위에서 모든 캐시가 서로의 트랜잭션을 *엿듣게(snoop)* 함으로써 달성합니다 (출처: HDG §1.4).
+Module 01의 무한 루프 버그(Core A가 `flag=1`을 썼는데 B가 0을 봄)를 하드웨어가 자동으로 막으려면, A의 store가 *발생하는 순간* B의 사본을 무효화하거나 갱신해야 합니다. snooping 프로토콜은 이를 **공유 버스(또는 broadcast 인터커넥트)** 위에서 모든 캐시가 서로의 트랜잭션을 *엿듣게(snoop)* 함으로써 달성합니다.
 
 문제는 단순 무효화만으로 끝나지 않는다는 점입니다. A가 dirty 데이터를 들고 있을 때 B가 그 line을 읽으려 하면, 메모리에는 옛 값밖에 없으므로 *A의 캐시에서 직접* 데이터를 끌어와야 합니다. 그리고 "지금 이 line을 내가 독점적으로 쓸 수 있나, 아니면 다른 캐시와 공유 중인가"를 매 접근마다 알아야 무효화 트래픽을 최소화할 수 있습니다. 이 정보를 line마다 들고 있는 것이 바로 **coherence state**이고, MESI/MOESI는 그 state 인코딩의 표준입니다.
 
@@ -105,13 +105,22 @@ E(Exclusive)의 가치가 ②에서 드러납니다. read miss 때 사본이 나
 :::note[여기서 잡아야 할 핵심]
 **E와 M의 분리**가 MESI의 영리함입니다. clean-독점(E)을 따로 두면, read 후 write로 이어지는 흔한 패턴에서 무효화 broadcast를 생략할 수 있습니다. 반대로 S에서 write하려면 *반드시* 다른 사본을 무효화(BusRdX/Upgrade)해야 SWMR을 지킵니다.
 :::
+
+:::note["다른 사본 없음" 을 누가 어떻게 판정하나 — shared signal]
+①에서 read miss가 E로 끝나려면 "지금 이 line을 가진 다른 캐시가 정말 하나도 없다" 는 사실을 확인해야 합니다. 그런데 요청한 코어는 자기 캐시 밖을 직접 들여다볼 수 없습니다 — 이 판정을 대신해 주는 것이 **snoop 응답의 shared signal** 입니다. BusRd가 버스에 올라오면 모든 peer 캐시가 그 주소를 snoop하고, *그 line을 보유한* 캐시가 공용 **shared(또는 "copies-exist") wired-OR 신호** 를 assert합니다. 이 신호는 여러 캐시가 동시에 당겨도 "하나라도 보유하면 1" 이 되도록 wired-OR로 묶여 있어, 요청자는 단 하나의 비트로 "사본 존재 여부" 를 알 수 있습니다.
+
+- shared signal이 **0** (아무도 assert 안 함) → 사본이 나뿐 → **E** 로 받음.
+- shared signal이 **1** (누군가 보유) → 공유 상태 → **S** 로 받음.
+
+즉 E 상태의 존재 자체가 이 shared signal에 의존합니다. 이 신호가 없거나 부정확하면, 사본이 있는데도 E로 받아 *조용히 무효화 없이 write* 하는 SWMR 위반이 생깁니다. 그래서 검증에서 "read miss → E 전이" 를 볼 때는, 그 시점에 정말 다른 캐시의 shared 응답이 0이었는지를 snoop 응답 로그로 확인해야 합니다.
+:::
 ---
 
 ## 4. 일반화 — MESI에서 MOESI로
 
 ### 4.1 MOESI의 Owned 상태
 
-MESI에서 ③번처럼 dirty line을 공유하려면 보통 *메모리에 write-back*한 뒤 둘 다 S가 됩니다. MOESI는 여기에 **O(Owned)** 상태를 추가해, dirty 데이터를 *메모리에 쓰지 않고도* 공유할 수 있게 합니다. Owner가 dirty 데이터를 계속 보유하면서 다른 캐시에 S로 공급하고, 최종적으로 메모리에 반영할 책임만 Owner가 집니다 (외부 표준 지식; HDG §1.4는 MESI/MOESI를 snooping 프로토콜 예로 명시).
+MESI에서 ③번처럼 dirty line을 공유하려면 보통 *메모리에 write-back*한 뒤 둘 다 S가 됩니다. MOESI는 여기에 **O(Owned)** 상태를 추가해, dirty 데이터를 *메모리에 쓰지 않고도* 공유할 수 있게 합니다. Owner가 dirty 데이터를 계속 보유하면서 다른 캐시에 S로 공급하고, 최종적으로 메모리에 반영할 책임만 Owner가 집니다.
 
 ```d2
 direction: right
@@ -151,11 +160,25 @@ MESI에서 dirty line을 여러 코어가 번갈아 읽기만 해도 매번 writ
 | Upgrade / Invalidate | S에서 write 전, 다른 사본 무효화 | S → M |
 | Writeback | dirty line을 메모리로 | M/O → (eviction) |
 
+:::note[snooping이 성립하려면 — bus가 트랜잭션을 직렬화하는 ordering point여야]
+snooping의 정확성은 한 가지 숨은 전제 위에 서 있습니다 — **모든 캐시가 트랜잭션을 *같은 순서* 로 관찰한다**. 공유 버스는 한 순간에 단 하나의 트랜잭션만 통과시키므로(arbitration으로 한 winner만 선택), 모든 캐시가 그 단일 순서를 똑같이 엿듣습니다. 이 "전역 단일 순서" 가 곧 coherence의 **ordering point(serialization point)** 입니다.
+
+왜 이게 필수일까요? 두 코어가 같은 line X에 거의 동시에 write하려 한다고 합시다. 둘의 BusRdX가 버스로 들어오면, 버스는 둘 중 하나를 *먼저* 통과시키고 다른 하나를 뒤로 미룹니다. 먼저 이긴 쪽이 X를 M으로 가져가고, 진 쪽의 BusRdX는 *그 결과를 본 뒤* 다시 무효화·재획득을 거칩니다. 만약 버스가 이렇게 직렬화하지 않고 두 write가 *서로 다른 캐시에 다른 순서로* 보이면, 어떤 캐시는 "A가 마지막 writer", 다른 캐시는 "B가 마지막 writer" 라고 믿어 SWMR이 깨집니다. 즉 snooping이 SWMR을 강제할 수 있는 근본 이유는 무효화 신호 자체가 아니라, *모든 경쟁 트랜잭션을 하나의 전역 순서로 줄 세우는 직렬화 지점* 이 존재하기 때문입니다. (Module 03에서 보겠지만, 버스가 사라진 directory 구조에서는 home node가 이 ordering point 역할을 물려받습니다.)
+:::
+
 ---
 
 ## 5. 디테일 — 무효화 vs 갱신, false sharing
 
 snooping 프로토콜은 크게 **invalidate 기반**과 **update 기반**으로 나뉩니다. invalidate 기반(MESI/MOESI 포함 대부분)은 writer가 peer 사본을 *무효화*하고 다음 read 때 새 값을 받게 합니다. update 기반은 writer가 새 값을 peer에 *직접 갱신*해 줍니다. 현대 시스템은 거의 invalidate 기반인데, update는 한 번 쓰고 안 읽는 데이터에 불필요한 트래픽을 만들기 때문입니다 (외부 표준 지식).
+
+:::note[왜 invalidate가 표준이 되었나 — 주소만 broadcast + write-once 지배]
+invalidate가 현대의 사실상 표준이 된 데에는 두 가지 더 깊은 이유가 있습니다.
+
+첫째, **broadcast 트래픽의 양 자체** 가 다릅니다. invalidate는 peer에게 "이 *주소* 를 버려라" 만 알리면 되므로, 버스에 실리는 것은 데이터가 아니라 *주소(coherence 명령)* 뿐입니다. 반면 update는 매 write마다 *새 데이터 값* 을 모든 사본에 실어 보내야 합니다 — write가 burst로 몰리면 데이터 트래픽이 그대로 coherence 트래픽으로 변합니다. cache line은 64B인데 주소는 그보다 훨씬 작으니, invalidate가 broadcast 대역폭 면에서 구조적으로 유리합니다.
+
+둘째, 실제 워크로드의 접근 패턴이 **write-once / write-burst 후 한 reader** 에 가깝습니다. 한 코어가 어떤 line을 여러 번 연속으로 쓰는 동안(예: 루프에서 누산), update 방식은 *매 write마다* peer를 갱신하지만 그 중간값들은 대개 아무도 안 읽습니다 — 순수 낭비입니다. invalidate는 첫 write에서 peer를 한 번 무효화하면 그 코어가 line을 독점(M)하므로, 이후 연속 write는 버스 트래픽 0으로 끝납니다. 다른 코어가 *실제로 다시 읽을 때* 만 단 한 번 최신값을 가져갑니다. 즉 "쓸 때마다 미리 뿌리는" update보다 "필요할 때만 끌어가는" invalidate가, 데이터가 아닌 주소만 broadcast하면 되고 중간 write를 공짜로 만든다는 두 효과로 대부분의 워크로드에서 이깁니다.
+:::
 
 검증에서 자주 마주치는 함정은 **false sharing**입니다. 서로 다른 변수가 *같은 cache line*에 들어 있으면, 한 코어가 자기 변수만 써도 line 전체가 무효화되어 다른 코어의 (논리적으로 무관한) 변수 접근이 miss를 유발합니다. 기능은 정상이지만 성능이 무너지고, coherence 트래픽이 폭증합니다. 성능 회귀를 디버그할 때 "기능은 맞는데 느리다"면 false sharing을 의심해야 합니다 (외부 표준 지식).
 
@@ -205,7 +228,7 @@ snooping 프로토콜은 크게 **invalidate 기반**과 **update 기반**으로
 :::caution[실무 주의점]
 - M/O line eviction 경로의 write-back은 *데이터 정확성*의 문제 — 누락 시 silent data loss.
 - "S에서 write"는 반드시 무효화를 동반해야 한다 — 이 트랜잭션 누락이 가장 위험한 coherence 버그.
-- MESI/MOESI의 정확한 상태 인코딩은 대상 인터커넥트(ACE/CHI)의 사양으로 *재확인* 필요 (HDG 노트 참조).
+- MESI/MOESI의 정확한 상태 인코딩은 대상 인터커넥트(ACE/CHI)의 사양으로 *재확인* 필요 (ARM IHI 0022 ACE / IHI 0050 CHI).
 :::
 ### 7.1 자가 점검
 
@@ -226,9 +249,6 @@ MESI에서는 dirty line을 공유하려면 매번 메모리로 write-back해야
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `Consistency & Coherency Overview` (HDG `memory_consistency_coherence_spec.md`) §1.4 — snooping 프로토콜(MESI/MOESI) 발명 맥락. *주의: 본 문서는 MESI/MOESI 상태 인코딩의 세부는 원 primer로 재확인을 권고함.*
 
 **External**
 - *A Primer on Memory Consistency and Cache Coherence* — snooping coherence 장

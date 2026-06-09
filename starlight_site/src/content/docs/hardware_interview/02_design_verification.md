@@ -82,6 +82,8 @@ endclass
 
 **효과** — `env` 코드를 *건드리지 않고* test 마다 다른 동작 주입. UVM 의 핵심 가치.
 
+**왜 코드 수정 없이 동작이 바뀌나 — factory 의 type table lookup.** 비결은 객체를 `new` 로 직접 생성하지 않고 `type_id::create()` 로 생성하는 데 있다. `create()` 는 곧장 그 타입을 만드는 대신, UVM factory 가 내부에 들고 있는 _type 매핑 테이블(override table)_ 을 먼저 _조회_ 한다 — "이 요청된 타입(base_seq)에 대해 등록된 대체 타입이 있는가?" 를 묻는 것이다. override 가 없으면 원래 타입을 그대로 만들지만, `set_type_override_by_type(base_seq, err_seq)` 가 그 테이블에 "base_seq → err_seq" 라는 한 줄을 심어 두면, 이후 모든 `base_seq::type_id::create()` 호출이 테이블 lookup 에서 err_seq 로 _치환_ 되어 생성된다. env 와 sequence 코드는 여전히 `base_seq` 만 요청하지만, factory 가 생성 시점에 매핑을 갈아끼우므로 _호출 코드를 한 줄도 고치지 않고_ 실제 생성 타입만 바뀌는 것이다. polymorphism(부모 핸들로 자식 객체를 다룸) 덕분에 env 는 치환 사실을 몰라도 정상 동작한다. 이것이 `new` 대신 항상 `create()` 를 써야 하는 이유다 — `new` 로 만든 객체는 factory 테이블을 거치지 않아 override 가 먹지 않는다.
+
 ---
 
 ## 2. SystemVerilog OOP — DV 에서 자주 묻는 것
@@ -199,6 +201,8 @@ cover property (@(posedge clk) (valid && !ready));   // backpressure 케이스
 ```
 
 `assert` 는 *위반 검출*, `cover` 는 *해당 조건이 시뮬에서 발생했는가 확인*. 둘이 짝이 아니면 assertion 이 *영구히 트리거 안 됨* 인 것을 모름 (vacuous pass).
+
+**vacuous pass 의 정확한 메커니즘.** implication `A |-> B` 는 논리적으로 "A 가 참이면 B 도 참이어야 한다" 이다. 그런데 _A(antecedent)가 한 번도 참이 아니면_, "거짓이면 무엇이든 참 (false implies anything)" 이라는 논리 규칙에 따라 property 전체가 _자동으로 참_ 으로 평가된다 — 이것이 **vacuous(공허한) pass** 다. 예컨대 `$rose(valid) |-> ... ready ...` 에서 테스트가 `valid` 를 한 번도 띄우지 않으면, consequent(ready 검사)는 _실행조차 되지 않은 채_ assertion 이 매 사이클 PASS 로 집계된다. 즉 "PASS" 가 "검증됨" 이 아니라 "검증할 기회가 없었음" 을 뜻하는데, 로그에는 똑같이 통과로 보여 위험하다. 그래서 antecedent 조건(`valid && ready` 등)을 그대로 `cover property` 로 함께 두어, _antecedent 가 실제로 발생했는지_ 를 독립적으로 확인해야 한다 — cover 가 0 hit 이면 그 assert 의 PASS 는 전부 공허한 것이므로 자극(stimulus)을 보강해야 한다는 신호다.
 
 ---
 

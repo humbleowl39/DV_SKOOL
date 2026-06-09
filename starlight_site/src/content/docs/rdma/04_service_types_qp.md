@@ -284,6 +284,12 @@ SQErr -> Reset: "Modify(Reset)"
 | **SQErr** (Send Queue Error) | UD/UC 에서 sender side 에러 발생. RX 는 가능, TX 는 새 WR 못 받음. | ✓ | ✗ |
 | **Err** | 어느 상태에서든 fatal error → 모든 in-flight WR flush 됨 (WC error). | ✗ | ✗ |
 
+:::note[메커니즘 — QP "state" 와 attribute 는 hardware 어디에 사는가: QP context lookup]
+지금까지 본 state, PSN, retry timer, window, dest QPN 같은 값들은 _추상적인 상태_ 가 아니라, NIC 안의 실제 저장소에 보관된 **QP context (QPC)** 라는 자료구조입니다. 활성 QP 가 많지 않으면 on-chip SRAM 에, 수만~수십만 QP 규모면 host/device DRAM 에 두고 자주 쓰는 것만 on-chip 에 캐시하는 식으로 구현합니다 (구체적 배치는 IP 마다 다름 — 확인 필요).
+
+핵심은 **모든 패킷 처리가 이 context lookup 으로 시작** 한다는 점입니다. 패킷이 도착하면 NIC 는 BTH 의 **DestQP (QPN)** 를 키로 QP context 를 찾아 (`QPN → QPC`), 거기 들어 있는 expected PSN·access 권한·state 와 패킷을 대조해 합/불을 판정합니다. 송신 측도 마찬가지로 doorbell 이 가리키는 QP 의 context 를 읽어 다음 PSN 을 매기고 retry timer 를 갱신합니다. 즉 QPN 은 단순 식별자가 아니라 **"이 패킷의 모든 처리 규칙이 들어 있는 context 의 주소"** 이며, 이 lookup 이 RC reliability·access check·in-order 보장의 _물리적 진입점_ 입니다. (TOE 의 Connection Table 이 4-tuple 로 connection state 를 찾는 것과 정확히 동형 — [TOE Module 02](../../toe/02_toe_architecture/) 참조.)
+:::
+
 ### 5.4 Modify 시 필수 attribute (RC 기준)
 
 | Transition | 필요한 attribute |
@@ -341,6 +347,10 @@ R -> S: "ACK PSN=N (다시)" { style.stroke-dash: 4 }
 - BTH 다음에 **DETH (8B)** 가 필수: Q_Key + SrcQP.
 - Multicast 가능: DLID = multicast LID, MGID 설정.
 - Q_Key 검증 필수 (high bit 1 인 Q_Key 는 privileged).
+
+:::note[메커니즘 — connectionless 인데 어떻게 목적지를 아나: AH 가 매 SEND 마다 dest 지정]
+RC 는 RTR/RTS 진입 시 peer 의 QPN·LID·PSN 같은 _connection state_ 를 QP 안에 박아두므로, 이후 SEND 는 "이미 정해진 상대" 로만 갑니다. UD 는 그런 connection state 가 **아예 없습니다** — 그래서 목적지 정보를 _QP 가 아니라 매 SEND 마다 packet 에 직접 실어_ 보냅니다. 구체적으로 post_send 시 **AH (Address Handle)** 를 함께 지정하는데, AH 는 "이 메시지를 어디로 보낼지" — dest LID/GID, SL, port — 를 담은 핸들이고, 여기에 dest QPN 과 Q_Key 를 더해 packet 의 **LRH(또는 Eth/IP) + DETH** 에 채웁니다. 즉 "목적지" 가 connection 에 저장된 게 아니라 _패킷마다 새로 명시_ 되므로, **하나의 UD QP 로 매 SEND 마다 다른 peer 에게 보낼 수 있고** multicast 도 가능합니다. 이것이 "connectionless = 1 QP 로 임의 peer 통신" 의 메커니즘이고, 동시에 ACK/retry 같은 per-connection reliability 가 불가능한 이유이기도 합니다 (상대를 기억하지 않으니 재전송할 대상도 추적 못 함).
+:::
 
 #### XRC (eXtended Reliable Connection)
 

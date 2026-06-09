@@ -124,6 +124,16 @@ H -> S
 
 **제어 해저드** 는 ID 단계의 분기가 EX(또는 그 이후)까지 해결되지 않아, 그 뒤에 이미 fetch 된 명령을 flush 해야 할 때 생기는 분기 페널티입니다(단순 파이프라인에서 보통 1–3 사이클). **구조 해저드** 는 두 명령이 같은 사이클에 같은 하드웨어 자원을 필요로 할 때이며, 대부분의 RISC 파이프라인은 I-cache 와 D-cache 를 분리하는 등 설계로 회피합니다.
 
+#### 구조 해저드는 "회피된다"가 아니라 "비용을 주고 회피된다"
+
+"대개 설계로 회피"라는 말이 자칫 구조 해저드를 무시해도 된다는 인상을 줄 수 있지만, 실제로는 _자원을 중복으로 둔 대가_ 로 사라진 것이지 공짜가 아닙니다. 자원을 아끼면 곧바로 stall 로 돌아옵니다. 구체적 사례 셋:
+
+- **단일 메모리 포트**: IF 단계는 매 사이클 명령을 읽어야 하고 MEM 단계는 load/store 로 데이터를 접근해야 합니다. 만약 명령 메모리와 데이터 메모리가 _한 포트_ 를 공유하면, load/store 가 MEM 에 있는 사이클에는 IF 가 명령을 못 읽어 stall 이 강제됩니다. 그래서 거의 모든 RISC 파이프라인이 I-cache 와 D-cache 를 _분리_(Harvard)해 이 충돌을 없앱니다 — 분리 자체가 구조 해저드를 _돈(면적)으로_ 산 결과입니다.
+- **단일 write 포트 레지스터 파일**: 두 명령이 같은 사이클에 WB 하려 하면 write 포트가 하나뿐일 때 한쪽이 양보해야 합니다. in-order 단일 발행에서는 드물지만, multi-cycle 연산이 늦게 끝나 일반 명령과 WB 사이클이 겹치면 발생합니다.
+- **분할되지 않은 multiplier/divider**: 곱셈·나눗셈 유닛이 _파이프라인화(분할)되지 않아_ 여러 사이클을 차지하면, 그 유닛이 바쁜 동안 뒤따르는 곱셈 명령이 EX 에 진입하지 못해 stall 합니다. 유닛을 파이프라인화하거나 복제하면 사라지지만 그만큼 면적·전력이 듭니다.
+
+즉 구조 해저드는 "자원 vs stall"의 trade-off 이며, 검증에서 "여기서 왜 멈추지?"가 데이터/제어 해저드로 설명 안 되면 _자원 경쟁_ 을 의심해야 합니다.
+
 ### 4.3 forwarding 과 load-use bubble
 
 forwarding(bypassing)은 EX 단계가 ALU 결과를 다음 명령의 EX 입력으로 직접 라우팅해 레지스터 파일을 거치지 않게 하는 기법으로, 대부분의 RAW stall 을 제거합니다. 그러나 **load-use 해저드** 는 예외입니다 — load 의 결과는 MEM 단계가 _끝나야_ 사용 가능하므로, 바로 뒤 명령이 EX 에서 그 값을 쓰려 하면 데이터가 아직 없어 한 사이클 **bubble(stall)** 이 반드시 필요합니다.
@@ -138,6 +148,18 @@ ADD x3, x1, x4       IF  ID  --  EX  MEM  WB    ← '--' = 1 bubble (load-use)
 | `LW x1,0(x2)` | IF | ID | EX | **MEM**(x1 준비) | WB | |
 | `ADD x3,x1,x4` | | IF | ID | **bubble** | EX(x1 forward) | MEM |
 
+#### forwarding mux 의 실제 구조 — 어느 source 를 고르고, 누가 우선인가
+
+forwarding 을 "EX 출력을 다음 EX 입력으로 돌린다"고만 말하면 핵심 회로가 빠집니다. 실체는 EX 단계의 각 ALU 입력 앞에 놓인 **multiplexer** 입니다. 이 mux 는 세 후보 중 하나를 고릅니다 — (1) 원래대로 레지스터 파일에서 읽은 값, (2) 한 사이클 앞선 명령의 EX 결과(EX/MEM 파이프라인 래치에 들어 있음), (3) 두 사이클 앞선 명령의 결과(MEM/WB 래치에 들어 있음). forwarding 로직은 "현재 EX 명령의 소스 레지스터 번호 == 앞선 명령의 목적 레지스터 번호 && 그 명령이 실제로 레지스터에 쓰는가(`rd != x0`)"를 비교해 mux 선택 신호를 만듭니다.
+
+여기서 _우선순위_ 가 정확성의 핵심입니다. 같은 레지스터를 연속으로 두 번 쓰는 시퀀스에서는 EX/MEM 래치(가장 최근 producer)와 MEM/WB 래치(한 단계 더 오래된 producer)가 _둘 다_ 현재 소스와 매칭될 수 있습니다. 이때 반드시 **가장 최신**, 즉 EX/MEM 쪽을 골라야 합니다. 만약 우선순위를 뒤집어 오래된 MEM/WB 값을 forward 하면 결과가 silently 틀립니다 — 이것이 체크리스트의 "WB 와 forward 우선순위(최신 producer 선택)" 항목이 가리키는 버그이고, 같은 레지스터에 연속 쓰기를 하는 시퀀스로 타겟 테스트해야 잡힙니다.
+
+#### pipeline register — stall 과 flush 의 실제 조작 대상
+
+지금까지 "단계"를 박스로 그렸지만, 단계와 단계 _사이_ 에는 매 사이클 한 명령분의 상태를 붙잡아 다음 단계로 넘기는 **파이프라인 래치(IF/ID, ID/EX, EX/MEM, MEM/WB)** 가 있습니다. 예컨대 ID/EX 래치는 디코드된 제어 신호·읽은 레지스터 값·즉치·목적 레지스터 번호를 담아 EX 단계가 쓸 수 있게 합니다. 이 래치들이 있기 때문에 다섯 명령이 서로 다른 단계에서 _동시에_ 진행할 수 있습니다.
+
+그리고 stall 과 flush 의 정체는 바로 이 래치 조작입니다. **stall = freeze**: load-use 해저드를 검출하면 IF/ID 래치를 _그대로 유지(write enable 끔)_ 하고 PC 도 갱신하지 않아 같은 명령이 한 사이클 더 머물게 하며, 동시에 ID/EX 래치에는 NOP(bubble)을 주입해 EX 가 아무 일도 안 하게 만듭니다. **flush = clear**: 분기 misprediction 이 확정되면 잘못 fetch 된 명령이 들어 있는 IF/ID(및 필요 시 ID/EX) 래치를 _NOP 로 덮어써_ 그 명령들의 효과를 무효화합니다. 즉 "멈춤"도 "취소"도 별도의 마법이 아니라 _파이프라인 래치의 enable/clear 제어_ 일 뿐이며, 검증에서 stall/flush 가 오동작하면 가장 먼저 이 래치 제어 신호를 봐야 합니다.
+
 ### 4.4 제어 해저드 완화 전략
 
 | 전략 | 방법 | trade-off |
@@ -145,6 +167,14 @@ ADD x3, x1, x4       IF  ID  --  EX  MEM  WB    ← '--' = 1 bubble (load-use)
 | Predict-not-taken | 항상 fall-through fetch; taken 이면 flush | 단순; not-taken 이 많을 때 유리 |
 | Delayed branch slot | 분기 직후 명령은 항상 실행(컴파일러가 채움) | MIPS 식; ISA 에 노출되어 호환성 부담 |
 | Dynamic prediction | 분기 이력으로 방향 예측(M03 §4.3) | 정확도 높음; 하드웨어 비용·misprediction flush |
+
+#### delayed branch slot 은 왜 현대 ISA 에서 사라졌나
+
+MIPS 의 delayed branch slot 은 "분기 _직후_ 한 명령은 분기 방향과 무관하게 항상 실행한다"는 약속으로, 단순 파이프라인에서 분기 1사이클 페널티를 컴파일러가 채운 유용한 명령으로 _가린_ 영리한 트릭이었습니다. 그런데 RISC-V 를 포함한 현대 ISA 는 이를 채택하지 않았고, 그 이유는 두 가지 인과로 정리됩니다.
+
+첫째, **깊은 파이프라인에서는 slot 한 개로 페널티를 못 가립니다.** 1980년대 MIPS 의 분기 페널티는 1사이클이라 slot 한 개로 정확히 상쇄됐지만, 현대 코어의 분기 해결은 10–20사이클 뒤에야 끝납니다. 슬롯을 그만큼 늘리는 것은 비현실적이고, 동적 분기 예측이 훨씬 효과적입니다 — 즉 트릭이 _마이크로아키텍처의 변화로 무력화_ 됐습니다.
+
+둘째, **ISA 가 마이크로아키텍처를 노출하는 설계 오류가 됐습니다.** delay slot 은 "파이프라인이 1단계 깊다"는 _특정 구현 사실_ 을 ISA 계약에 박아 넣은 것입니다(M01 의 "ISA 는 무엇만, 어떻게는 비워 둔다" 원칙 위반). 그 결과 더 깊거나 superscalar 인 코어를 만들 때 slot 의미가 어색해지고, 예외가 delay slot 명령에서 나면 복귀 처리가 복잡해지며, OoO 구현에서는 골칫거리가 됩니다. 동적 예측이 페널티를 더 잘 가리는 데다 _구현 세부를 계약에서 빼는_ 것이 옳다는 판단이 합쳐져 폐기된 것입니다.
 
 ---
 
@@ -245,9 +275,6 @@ load 의 데이터는 MEM 단계가 끝나는 시점에야 준비됩니다. ADD 
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG Wiki)**
-- `common/computer_architecture_spec.md` §3 (5-Stage Pipeline), §3.1 (Data Hazards / Forwarding / load-use), §3.2 (Control Hazards), §3.3 (Structural Hazards)
 
 **External**
 - Patterson & Hennessy, *Computer Organization and Design* — 5-stage 파이프라인, forwarding, hazard

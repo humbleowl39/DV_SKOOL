@@ -373,6 +373,16 @@ RAL 패키지 구조:
     └── dcmac_axi_lite_adapter.sv   // AXI-Lite ↔ RAL Adapter
 ```
 
+:::note[메커니즘 — frontdoor 와 backdoor 가 레지스터에 닿는 두 경로의 차이]
+RAL 은 한 레지스터를 _두 가지 다른 경로_ 로 접근할 수 있고, 둘은 동작 원리가 근본적으로 다릅니다.
+
+**Frontdoor** 는 **실제 bus transaction 을 발행** 해 접근합니다 — `reg.write(val)` 가 AXI-Lite adapter 를 통해 실제 AW/W/AR/R 사이클을 일으키고, 그 transaction 이 DUT 의 버스 인터페이스·디코더·레지스터 로직을 _그대로 통과_ 합니다. 즉 SW 가 실제로 register 를 건드릴 때와 _완전히 같은 경로_ 라, 버스 프로토콜·주소 디코딩·access policy(RW/RO/W1C) 동작까지 검증됩니다. 대신 bus handshake 만큼의 **시뮬레이션 시간** 이 소비됩니다.
+
+**Backdoor** 는 버스를 거치지 않고, RAL 에 등록된 **HDL path(`hdl_path`)로 RTL 내부 신호(레지스터 FF)에 직접 read/write** 합니다 — DPI/시뮬레이터 force·peek 으로 _0 시뮬레이션 시간(0-time)_ 에 값을 읽거나 박아 넣습니다. bus 를 안 타므로 빠르고, 초기 상태를 한 번에 세팅하거나 reset value 를 즉시 확인할 때 유용합니다. 단, 버스 경로·디코더·access policy 는 _전혀 거치지 않으므로_ 그 부분의 버그는 backdoor 로는 안 잡힙니다.
+
+그래서 §5.4 의 "frontdoor/backdoor 양쪽 확인" 의 진짜 의미는 — **backdoor 로 RTL 내부 _실제 값_ 을 읽고, frontdoor 로 _버스를 통해 보이는 값_ 을 읽어 둘이 일치하는지** 비교하는 것입니다. 일치하면 "버스 경로가 내부 레지스터를 올바르게 노출한다" 가 검증되고, 불일치하면 디코더/adapter/access-policy 버그를 가리킵니다.
+:::
+
 ### 5.5 SVA / Assertion 전략
 
 ```
@@ -585,6 +595,12 @@ DV에서의 CDC 검증 접근:
   - 실무: CDC formal verification은 별도 도구 (Questa CDC, Spyglass CDC)로 수행
     → 시뮬레이션에서는 비동기 FIFO의 기능적 정확성 위주로 검증
 ```
+
+:::note[메커니즘 — CDC 에서 데이터가 깨지는 근본 원인: metastability, 그래서 왜 sync/async-FIFO 가 필요한가]
+검증이 _무엇을 잡아야 하는지_ 의 전제가 되는 물리 원리입니다. 플립플롭은 입력이 clock edge 직전의 **setup 시간** 과 직후의 **hold 시간** 동안 안정돼 있어야 정상 동작합니다. 그런데 서로 **비동기인 두 클럭 도메인** 사이에서는 보내는 쪽 신호가 받는 쪽 clock edge 와 _아무 때나_ 겹칠 수 있어, 받는 FF 의 setup/hold 를 위반하는 순간이 반드시 생깁니다. 이때 FF 출력은 0 도 1 도 아닌 어중간한 전압에서 한동안 떨리는 **metastability(준안정 상태)** 에 빠지고, 언제 어느 값으로 떨어질지 비결정적입니다. 이 상태의 값을 그대로 다음 로직이 읽으면 도메인마다 0 으로도 1 로도 해석돼 — _데이터 corruption_ 또는 같은 신호를 도메인마다 다르게 보는 불일치가 발생합니다.
+
+해결책이 두 가지입니다. ① **single-bit 제어 신호** 는 **2-FF synchronizer** 로 받습니다 — 첫 FF 가 metastable 해져도, 두 번째 FF 가 샘플하기 전 한 clock 만큼 _안정될 시간(resolution time)_ 을 벌어주어 metastable 이 전파될 확률을 지수적으로 낮춥니다. ② **multi-bit 데이터(frame, 인코딩 블록)** 는 2-FF 로 못 막습니다 — 여러 비트가 _서로 다른 순간_ 에 안정되면 비트들이 뒤섞인 잘못된 워드가 되기 때문입니다. 그래서 **async FIFO** 를 씁니다: 쓰기는 송신 클럭으로, 읽기는 수신 클럭으로 하되, full/empty 를 가리키는 **포인터(Gray code)만 2-FF 로 안전하게 건너보내고**, 데이터 자체는 양쪽이 _안정된 시점에만_ 접근하는 dual-port 메모리에 둡니다. 이래야 한 워드의 모든 비트가 원자적으로 옮겨집니다. 그래서 §5.9 의 CDC 검증이 "비동기 FIFO 의 기능적 정확성(full/empty 경계, 포인터 동기)" 에 집중하는 것이고, metastability 자체의 확률적 정량 평가는 formal/STA 도구의 몫입니다.
+:::
 
 ### 5.10 DCMAC 디버그 방법론
 

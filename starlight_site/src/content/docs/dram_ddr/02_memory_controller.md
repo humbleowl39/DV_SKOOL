@@ -233,6 +233,8 @@ Bank 3:          ACT ── RD ── PRE
 
 실제 SoC 에서는 CPU, GPU, DMA, Display, ISP 같은 여러 마스터가 동시에 메모리를 요청합니다. 그런데 이들의 요구사항은 서로 충돌합니다. CPU 는 캐시 미스 지연을 최소화해야 하므로 낮은 latency 를 원하고, GPU 는 큰 블록을 연속으로 전송해야 하므로 높은 bandwidth 를 원하며, Display 는 1 프레임 단위로 반드시 데이터를 확보해야 하므로 보장된 bandwidth 와 deadline 이 필요합니다. FR-FCFS 같은 스케줄러만으로는 이 다양한 요구를 모두 충족할 수 없습니다 — 우선순위 없이 Row Hit 만 따르면 Display 처럼 랜덤 패턴을 쓰는 마스터가 굶어 죽게(starvation) 되기 때문입니다. 그래서 MC 에는 QoS Arbiter 가 별도로 존재하여 마스터별 우선순위, 대역폭 할당, aging 승격, Urgent 처리를 담당합니다.
 
+여기서 starvation 이 _우연한 부작용_ 이 아니라 FR-FCFS 정책 _구조 자체_ 에서 나온다는 점이 중요합니다. FR-FCFS 는 매 cycle "지금 Row Hit 인 요청을 먼저" 라는 규칙을 무조건 적용합니다. 그런데 순차 패턴(GPU 텍스처 스트림, CPU 캐시라인 prefetch)을 쓰는 마스터는 한 번 Row 를 열면 그 안에서 Hit 를 계속 만들어 내므로 큐의 맨 앞을 끝없이 차지합니다. 반대로 랜덤·소량 패턴을 쓰는 마스터(Display, 포인터 추적형 CPU 워크로드)는 매 요청이 다른 Row 라 거의 항상 Row Miss/Conflict 입니다. 즉 "Hit 우선" 이라는 한 줄의 규칙이, miss 만 내는 마스터를 **영구적으로 후순위로 밀어내는** 편향을 만듭니다 — 트래픽이 멈추지 않는 한 그 마스터의 차례는 영원히 오지 않습니다. 그래서 Hit 효율을 살리되 후순위 마스터를 구제하려면, 대기 시간을 추적해 일정 시간이 지나면 강제로 우선순위를 올리는 **aging** 같은 보정 장치가 필수가 됩니다.
+
 ```
 문제: SoC에는 여러 마스터(CPU, GPU, DMA, Display, ISP...)가 동시에
      메모리에 접근한다. 각 마스터의 요구사항이 다르다:
@@ -289,6 +291,8 @@ ARB -> CQ
 ### 5.5 Read-Write Turnaround — 숨은 성능 병목
 
 DQ 버스는 단방향이 아니라 양방향입니다. Read 는 DRAM → MC 방향, Write 는 MC → DRAM 방향으로 데이터가 흐릅니다. 그러므로 Read 다음에 Write 를 발행하거나, Write 다음에 Read 를 발행하려면 버스 방향을 전환하는 시간이 반드시 필요합니다. Write → Read 전환 시 tWTR, Read → Write 전환 시 tRTW 라는 대기 시간이 삽입됩니다. 그리고 이 전환이 빈번하게 일어날수록 유효 대역폭이 줄어듭니다. MC 가 Write Batching 을 통해 Write 요청을 모아 연속으로 발행하는 이유가 바로 이 전환 횟수를 최소화하기 위해서입니다.
+
+tWTR 이 단순한 "버스 방향 전환 시간" 이상인 이유는 데이터 위험(data hazard)에 있습니다. WR 명령에서 DQ 로 들어온 데이터는 곧바로 cell 에 안착하지 않습니다 — DRAM 내부에서 write driver 가 그 값을 해당 row 의 sense amplifier 를 거쳐 cell capacitor 에 실제로 써넣는 **internal write** 에 시간이 걸립니다. 만약 이 internal write 가 끝나기 전에 같은 위치를 RD 하면, sense amp 에는 아직 _옛값_ 또는 _쓰는 중인 불안정한 값_ 이 있어 stale 데이터를 읽게 됩니다. tWTR 은 바로 "방금 쓴 데이터가 cell 에 확정될 때까지 read 를 막아 두는" 최소 시간이며, 그래서 단순한 버스 turnaround 보다 길고 같은 BG(tWTR_L) 일 때 더 깁니다 — 같은 I/O 경로를 재사용해야 하기 때문입니다.
 
 ```
 문제: Read와 Write는 데이터 방향이 반대 (DQ 버스 양방향)
@@ -355,9 +359,11 @@ Read-After-Write Hazard:
   - → DRAM 접근 없이 즉시 응답 가능
 ```
 
+RAW bypass 가 단순한 latency 최적화가 아니라 **correctness** 를 위한 필수 동작이라는 점을 짚어야 합니다. MC 는 R/W turnaround 비용 때문에 write 를 Write Buffer 에 모아 두었다가 나중에 drain 합니다. 그 사이에 같은 주소로 read 가 들어오면, DRAM 셀에는 _아직 drain 되지 않은 옛값_ 이 들어 있습니다 — 가장 최신 값은 DRAM 이 아니라 Write Buffer 안에 있습니다. 만약 이 read 를 그냥 DRAM 으로 보내면 방금 쓴 값을 보지 못하고 stale 데이터를 돌려주어 프로그램의 read-after-write 순서 의미가 깨집니다. 그래서 MC 는 read 주소가 Write Buffer 의 pending write 와 겹치는지 검사하고, 겹치면 DRAM 대신 Write Buffer 의 값을 직접 forward 합니다. 즉 "buffer 의 값이 DRAM 보다 최신" 이라는 사실이 forwarding 을 _선택이 아니라 의무_ 로 만드는 것입니다.
+
 ### 5.7 Address Mapping (인터리빙)
 
-물리 주소의 어느 비트를 Rank·BG·Bank·Row·Col 에 할당하느냐에 따라 연속 주소가 어느 Bank 에 분산되는지가 결정되고, 그 결과가 workload 의 Row Hit 률과 대역폭을 크게 바꿉니다. 순차 접근이 주를 이루는 경우에는 같은 Row 에 연속으로 접근하는 패턴이 유리하여 Row 인터리빙이 적합하고, 랜덤 접근이 많은 경우에는 연속 주소를 다른 BG 로 분산하는 Bank Group 인터리빙으로 tCCD_S 를 활용하는 것이 유리합니다. SoC 의 주요 마스터(CPU 캐시 라인 순차 패턴, GPU 랜덤 텍스처 패턴)가 혼재하기 때문에 실무에서는 매핑 방식을 configurable 레지스터로 설계하고 테스트 후 결정합니다.
+물리 주소의 어느 비트를 Rank·BG·Bank·Row·Col 에 할당하느냐에 따라 연속 주소가 어느 Bank 에 분산되는지가 결정되고, 그 결과가 workload 의 Row Hit 률과 대역폭을 크게 바꿉니다. 그 메커니즘의 핵심은 "주소의 **하위 비트일수록 연속 접근에서 빠르게 변한다**" 는 사실입니다. CPU 가 메모리를 순차로 훑으면 주소는 1씩 증가하므로 LSB 쪽이 가장 자주 바뀝니다. 따라서 어떤 주소 비트를 어느 필드로 보내느냐가 곧 "연속 접근을 한 Row 에 모을지(집중), 여러 Bank/BG 로 흩뿌릴지(분산)" 를 결정합니다 — 자주 바뀌는 하위 비트를 Column 에 두면 연속 접근이 같은 Row 안에 머물러 Row Hit 가 쌓이고(집중), 같은 하위 비트를 Bank/BG 필드에 두면 연속 접근이 매번 다른 Bank/BG 로 튀어 Bank parallelism·tCCD_S 를 얻습니다(분산). 같은 주소 스트림이라도 이 비트 배치 하나로 Row Hit 율과 병렬성이 정반대로 갈리는 것입니다. 순차 접근이 주를 이루는 경우에는 같은 Row 에 연속으로 접근하는 패턴이 유리하여 Row 인터리빙이 적합하고, 랜덤 접근이 많은 경우에는 연속 주소를 다른 BG 로 분산하는 Bank Group 인터리빙으로 tCCD_S 를 활용하는 것이 유리합니다. SoC 의 주요 마스터(CPU 캐시 라인 순차 패턴, GPU 랜덤 텍스처 패턴)가 혼재하기 때문에 실무에서는 매핑 방식을 configurable 레지스터로 설계하고 테스트 후 결정합니다.
 
 ```
 물리 주소를 Rank/BG/Bank/Row/Col로 매핑하는 방식:

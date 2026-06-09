@@ -111,6 +111,10 @@ void pio_write(uint8_t value) {
 
 controller 는 register 몇 개를 두고 CPU 가 bit 패턴을 읽고 쓰며 대화합니다. register 에 닿는 길은 둘 — 전용 **I/O instruction** 과, device register 를 CPU physical address 공간에 끼워 넣어 평범한 load/store 로 접근하는 **memory-mapped I/O** 입니다. 후자가 더 빠르고 다루기 쉬워, 책은 *"most I/O is performed by device controllers using memory-mapped I/O"* 라고 적습니다.
 
+_왜_ MMIO 가 더 빠르고 다루기 쉬운지는 두 방식이 CPU 안에서 어떤 경로를 타는지를 보면 분명합니다. 전용 **I/O instruction**(예: x86 의 `in`/`out`)은 메모리와 _분리된 별도의 I/O 주소공간_ 을 씁니다. CPU 는 이 명령을 만나면 메모리 접근과는 다른 _별도의 디코딩·버스 사이클_ 을 거치고, 이 특수 명령은 일반 메모리 파이프라인의 최적화(주소 계산 유닛, store buffer, 캐시 등)를 그대로 쓰지 못합니다. 또 종류가 제한적이라 표현력도 떨어집니다(보통 단순 read/write 만).
+
+반면 **MMIO** 는 device register 를 _일반 메모리 주소처럼_ 보이게 만들어, 평범한 `load`/`store` 로 접근합니다. 그러면 그 접근은 CPU 의 **일반 메모리 파이프라인을 그대로** 타게 됩니다 — 주소 계산, 다양한 addressing mode, 메모리 명령들의 모든 종류(byte/word 단위, read-modify-write 등)를 _device register 에도 똑같이_ 쓸 수 있습니다. 별도 I/O 주소공간 디코딩이라는 _추가 단계가 아예 없어지므로_ 더 빠르고, ISA 에 특수 명령을 따로 둘 필요가 없어 컴파일러·프로그래밍 관점에서도 단순합니다(device register 가 그냥 포인터로 보임). 단, 이런 register 영역은 _캐싱하면 안 되므로_(쓰기 순서가 무너지면 device 가 오동작) MMU 가 그 page 를 non-cacheable/Device 속성으로 표시한다는 단서가 붙습니다(M03 의 memory attribute 와 연결).
+
 | register | 방향 | 역할 |
 |----------|------|------|
 | **data-in** | host read | 입력 받기 |
@@ -143,6 +147,16 @@ CPU 가 byte 를 하나씩 미는 **programmed I/O(PIO)** 는 값비싼 processo
 
 DMA 가 bus 를 점유하는 동안 CPU 는 잠깐 main memory 에 못 닿지만 cache 안 데이터는 계속 씁니다 — bus 사이클을 조금씩 훔치는 이것이 **cycle stealing** 입니다. 주소 방식도 갈립니다: physical address 를 그대로 쓰거나, virtual address 를 변환해 쓰는 **DVMA(direct virtual memory access)** 를 둬 두 memory-mapped device 간 직접 전송도 합니다(M03 의 주소 번역과 연결).
 
+:::note[cycle stealing 중 cache 일관성이 _왜_ 깨질 수 있는가 — DMA 는 메모리를, CPU 는 캐시를 본다]
+바로 위에서 "CPU 는 cache 안 데이터를 계속 쓴다" 고 했는데, 이 편리함이 곧 위험의 씨앗입니다. DMA controller 는 **main memory(DRAM)에 직접** read/write 합니다 — 보통 CPU 의 cache 를 거치지 않습니다. 반면 CPU 는 같은 주소를 접근할 때 가능하면 **자기 cache** 에서 읽습니다. 두 행위자가 _서로 다른 사본_ 을 보게 되는 것이 불일치의 근원입니다.
+
+두 방향 모두 깨질 수 있습니다:
+- **DMA→메모리 쓰기, CPU 읽기**: device 가 새 데이터를 DRAM 에 썼는데, CPU 의 cache 에 그 주소의 _옛 사본_ 이 아직 살아 있으면, CPU 는 cache 의 stale 값을 읽습니다(새 데이터를 놓침).
+- **CPU 쓰기(write-back cache), DMA 읽기**: CPU 가 값을 cache 에만 써 두고 아직 DRAM 으로 flush 안 한 상태에서 DMA 가 DRAM 을 읽으면, device 는 _아직 반영 안 된 옛 DRAM 값_ 을 가져갑니다.
+
+이 불일치를 막는 방법은 둘입니다 — (a) 하드웨어가 DMA 트래픽을 **snoop** 해서 cache 의 해당 line 을 자동 무효화/갱신하는 **I/O coherency**, 또는 (b) SW 가 DMA 전후로 해당 영역의 cache 를 명시적으로 **flush/invalidate** 하는 것입니다. 그래서 DV 에서 "DMA 후 CPU 가 stale 데이터를 본다" 는 증상은 곧 _이 coherency 메커니즘(snoop 또는 flush)이 빠졌거나 순서가 틀렸다_ 는 신호입니다(M05 의 memory ordering 과 같은 뿌리).
+:::
+
 ### 4.4 저장장치: HDD vs NVM/SSD (Ch.11.1)
 
 | | **HDD** | **NVM/SSD** |
@@ -153,7 +167,18 @@ DMA 가 bus 를 점유하는 동안 CPU 는 잠깐 main memory 에 못 닿지만
 | 성능 | 수백 IOPS | 수십만 IOPS |
 | 연결 | SATA 등 | NVMe(PCI bus 직결) |
 
-NAND 의 까다로움: page 단위로 읽고 쓰지만 덮어쓸 수 없어 먼저 **block 단위 erase** 필요(erase 가 가장 느림); erase 반복하면 닳아(약 10만 P/E cycle) 수명을 **DWPD** 로 잼. controller 가 이를 가립니다 — 유효 데이터 위치를 추적하는 **FTL(flash translation layer)**, block 을 비우는 **garbage collection**, 여유 공간을 빼두는 **over-provisioning**(보통 20%), 닳음을 고르게 하는 **wear leveling**. garbage collection 이 내부 read/write 를 유발해 한 write 가 여러 I/O 로 부푸는 **write amplification** 이 성능을 깎을 수 있습니다(Ch.11.1.2, §11.3). 저장장치도 host controller(HBA)·MMIO·DMA 구도 그대로이고, 상위에서는 **LBA(logical block address)** 로 다룹니다(Ch.11.1.4–11.1.5).
+NAND 의 까다로움: page 단위로 읽고 쓰지만 덮어쓸 수 없어 먼저 **block 단위 erase** 필요(erase 가 가장 느림); erase 반복하면 닳아(약 10만 P/E cycle) 수명을 **DWPD** 로 잼.
+
+:::note[NAND 가 덮어쓰기 불가라 erase-before-write 인 _물리적_ 이유 — 충전 방향의 비대칭]
+"덮어쓸 수 없다" 는 제약은 임의 규칙이 아니라 flash cell 의 _물리_ 에서 나옵니다. NAND cell 은 floating gate 에 **전하(charge)를 가두는** 방식으로 비트를 저장합니다. 핵심은 전하를 _넣는 동작_ 과 _빼는 동작_ 의 단위가 다르다는 **비대칭** 입니다:
+
+- **program(쓰기)** — 전하를 _넣는_ 동작은 **page 단위** 로 정밀하게 할 수 있습니다(원하는 cell 에 전하 주입).
+- **erase(지우기)** — 전하를 _빼는_ 동작은 cell 하나만 골라서 할 수 없고, 물리 구조상 더 큰 **block 단위** 로 한꺼번에만 가능합니다(block 전체의 전하를 비움).
+
+게다가 program 은 보통 _전하를 더하는 한 방향_ 으로만 동작하므로, 이미 데이터가 쓰인 page 를 _다른 값_ 으로 덮어쓰려면 먼저 전하를 빼서 빈 상태로 되돌려야 하는데, 그 "전하 빼기" 가 곧 block 단위 erase 입니다. 그래서 "page 를 고치려면 → 그 page 가 속한 block 전체를 erase 해야" 하는 **erase-before-write** 가 강제됩니다.
+
+이 비대칭이 곧 **write amplification 의 근원** 입니다 — 한 page 만 바꾸고 싶어도 같은 block 의 _다른 유효 page 들을 어딘가로 옮기고(read+program), block 을 erase 하고, 되돌려 써야_ 하므로, 사용자의 한 번 write 가 내부적으로 여러 번의 read/program/erase 로 부풀어 오릅니다. FTL·garbage collection·over-provisioning·wear leveling 이 모두 _이 비대칭을 가리고 완화하기 위한_ controller 의 장치입니다.
+::: controller 가 이를 가립니다 — 유효 데이터 위치를 추적하는 **FTL(flash translation layer)**, block 을 비우는 **garbage collection**, 여유 공간을 빼두는 **over-provisioning**(보통 20%), 닳음을 고르게 하는 **wear leveling**. garbage collection 이 내부 read/write 를 유발해 한 write 가 여러 I/O 로 부푸는 **write amplification** 이 성능을 깎을 수 있습니다(Ch.11.1.2, §11.3). 저장장치도 host controller(HBA)·MMIO·DMA 구도 그대로이고, 상위에서는 **LBA(logical block address)** 로 다룹니다(Ch.11.1.4–11.1.5).
 
 ### 4.5 오류 검출·정정 (Ch.11.4)
 
@@ -259,11 +284,6 @@ host 가 disk 에서 4 KB 를 메모리로 읽으려 한다. DMA 를 쓸 때 CPU
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG)**
-- `os_io_systems_spec.md` — controller/MMIO, polling handshake, interrupt, DMA/scatter-gather/cycle stealing/DVMA, kernel I/O subsystem (Ch.12 정독 요약)
-- `os_mass_storage_spec.md` — HDD vs NVM/SSD, FTL/wear leveling, NVMe, LBA, ECC (Ch.11 정독 요약)
-- `os_concepts_guide.md` — 시리즈 3~4번 "어디에 남는가 / 어떻게 나르는가"
 
 **External**
 - Silberschatz et al. *Operating System Concepts*, 10th ed. — **Ch.11 Mass-Storage Structure**(§11.1 HDD/NVM, §11.2–3 스케줄링, §11.4 ECC), **Ch.12 I/O Systems**(§12.2.1 MMIO, §12.2.2 polling, §12.2.3 interrupt, §12.2.4 DMA, §12.3–4 kernel I/O, §12.7 성능)

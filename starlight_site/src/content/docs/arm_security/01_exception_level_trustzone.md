@@ -291,6 +291,8 @@ CHK -> NOK: "no"
 - NS 비트는 HW 가 강제 — SW 로 조작 불가능.
 - EL3 (Secure Monitor) 만 NS 비트를 변경할 수 있음.
 
+격리는 메모리/디바이스 접근뿐 아니라 **캐시·TLB 내부의 매칭** 에도 적용됩니다. 같은 물리 주소(PA)라도, 캐시 라인과 TLB 엔트리에는 _그 라인을 채운 트랜잭션이 Secure였는지 Non-secure였는지_ 가 **NS 태그**로 함께 저장됩니다. 그래서 lookup 시 비교 키가 "주소만"이 아니라 "주소 + 현재 보안 상태"가 되어, NS=1 접근은 NS=1 태그 라인하고만 hit하고 Secure 라인과는 _miss_ 로 처리됩니다. 이렇게 하면 같은 PA를 가리키더라도 한 세계가 다른 세계의 캐시된 데이터를 캐시 hit으로 엿보는 경로가 막힙니다(이 메커니즘의 세부와 검증은 [Module 02](../02_world_switch_soc_infra/)에서 다룹니다).
+
 ### 5.3 SCR_EL3 (Secure Configuration Register)
 
 SCR_EL3 는 EL3 가 하위 EL 전체의 보안 정책을 결정하는 레지스터입니다. 그 중 가장 핵심은 bit[0] — 바로 NS bit — 이며, 이 비트 하나가 현재 실행 중인 EL 의 세계(Secure/Non-Secure)를 결정하고, 그 결정이 모든 outgoing bus transaction 의 attribute 로 전파됩니다. IRQ·FIQ 라우팅 비트들(bit[1]/[2])은 인터럽트가 어느 EL 에서 처리될지를 EL3 가 중앙에서 정하는 통로이고, RW bit(bit[10])는 하위 EL 이 AArch64 인지 AArch32 인지를 EL3 가 선언하는 비트입니다. BootROM 이 이 레지스터를 먼저 설정함으로써 이후 모든 BL 단계의 실행 환경이 결정됩니다.
@@ -311,6 +313,23 @@ EL3에서 제어하는 핵심 보안 레지스터:
   → BL2로 점프할 때 NS=0 (Secure) 유지
   → BL33으로 점프할 때 NS=1 (Non-Secure) 전환
 ```
+
+#### NS 가 _버스 신호_ 로 실리는 인코딩 — AxPROT[1] / AxNSE
+
+"SCR_EL3.NS 가 attribute 로 전파된다"의 _구체적인 버스 신호_ 는 AXI 의 보호 신호입니다. AXI 의 read/write 주소 채널에는 `AxPROT[2:0]` (ARPROT/AWPROT) 보호 신호가 있고, 그중 **`AxPROT[1]` 이 곧 NS 비트** 입니다 — `AxPROT[1]=0`이면 Secure 접근, `AxPROT[1]=1`이면 Non-Secure 접근을 뜻합니다(직관과 반대로 "1=Non-secure"임에 주의). 즉 현재 PE가 Non-Secure 상태(SCR_EL3.NS=1이 적용되는 EL)에서 발행한 모든 트랜잭션은 master IF에서 `AxPROT[1]=1`로 구동되고, Secure 상태면 `AxPROT[1]=0`으로 구동됩니다.
+
+```
+PE 보안 상태 (SCR_EL3.NS 가 결정)
+        │
+        ▼  master interface 에서 매핑
+  Secure 실행      → AxPROT[1] = 0   (Secure transaction)
+  Non-Secure 실행  → AxPROT[1] = 1   (Non-secure transaction)
+        │
+        ▼  downstream
+  TZASC/TZPC 가 AxPROT[1] 과 region 의 보안 속성을 비교 → 불일치면 차단
+```
+
+여기서 핵심은, master IF가 `AxPROT[1]`을 _SW가 임의로 못 거는_ 값으로 — 현재 PE의 보안 상태(궁극적으로 SCR_EL3.NS)에서 _하드웨어로 구동_ 한다는 점입니다. 그래서 §6 체크리스트의 "SCR_EL3.NS ↔ AxPROT[1] cycle-by-cycle 일치 SVA"가 핵심 검증입니다. Realm(ARMv9 CCA)까지 포함하는 시스템에서는 두 세계(S/NS)를 넘어 네 물리 공간을 구분해야 하므로, `AxPROT[1]`만으로 부족해 별도 보안 확장 신호(예: `AxNSE`)를 추가로 실어 NS와 조합해 Secure/Non-secure/Realm/Root를 인코딩합니다(확인 필요 — 정확한 신호명/조합은 해당 IP 사양 기준).
 
 ### 5.4 EL 전환 명령어 요약
 

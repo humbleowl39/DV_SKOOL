@@ -63,6 +63,10 @@ COCO: "cocotb 모델 (cosimulation)" {
 
 UVM에서는 testbench와 DUT가 한 시뮬레이션 안에 함께 컴파일되어 돕니다. cocotb에서는 Python 프로세스가 시뮬레이터 *밖*에 따로 있고, VPI(Verilog Procedural Interface)라는 표준 통로로 시뮬레이터를 제어합니다. 이 "밖에서 표준 통로로 조종한다"는 한 가지 사실에서 cocotb의 거의 모든 특성(시뮬레이터 독립성, Python 생태계 사용 가능, 라이선스 없는 무료 시뮬레이터 활용)이 따라 나옵니다.
 
+:::note[VPI란 무엇인가 — cocotb 전체가 여기서 파생된다]
+**VPI(Verilog Procedural Interface)는 시뮬레이터가 외부의 C 코드에 자신을 열어 주는 *표준 C API*** 입니다(IEEE 1800에 규정). 구체적으로 VPI는 외부 코드가 (1) 시뮬레이션 안의 신호·객체 핸들을 *이름으로 찾고*, (2) 그 신호 값을 *읽고 쓰며*, (3) "이 신호가 바뀌면" 또는 "이 시각이 되면" 나를 다시 불러 달라고 **콜백을 등록**할 수 있게 합니다. cocotb는 이 C API 위에 얇은 C 계층(시뮬레이터에 로드되는 VPI 라이브러리)을 두고, 그 위에서 Python을 구동합니다. 그래서 "신호를 읽고 쓴다", "다음 clock까지 기다린다", "어느 시뮬레이터든 같은 코드가 돈다"는 cocotb의 모든 특성이 *VPI라는 표준 C API 하나*에서 파생됩니다 — VPI를 지원하는 시뮬레이터면 무엇이든 cocotb가 붙을 수 있는 것도 이 때문입니다. (VHDL 쪽은 대응 표준인 VHPI를 씁니다.)
+:::
+
 ---
 
 ## 3. 작은 예 — 이름 한 글자씩 뜯어보기
@@ -110,8 +114,8 @@ async def smoke_test(dut):           # dut = 시뮬레이터 안 DUT의 핸들
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) DUT는 Python 코드 어디에도 없습니다.** `dut`는 시뮬레이터 안에서 돌고 있는 RTL의 핸들일 뿐이고, Python은 그 신호를 읽고 쓰기만 합니다. 이것이 "테스트는 Python, DUT는 HDL"이라는 분리의 실체입니다.<br>
-**(2) `@cocotb.test()` 데코레이터 하나가 UVM의 `uvm_test` 클래스 + `run_test()` 호출을 통째로 대신합니다.** factory 등록도, phase 선언도 없습니다.
+**(1) DUT는 Python 코드 어디에도 없습니다.** `dut`는 시뮬레이터 안에서 돌고 있는 RTL의 핸들일 뿐이고, Python은 그 신호를 읽고 쓰기만 합니다. 이것이 "테스트는 Python, DUT는 HDL"이라는 분리의 실체입니다. 더 정확히는, `dut`와 `dut.rst_n`은 시뮬레이터 안 RTL 계층을 비추는 *Python 프록시 객체*입니다. 그래서 `dut.rst_n.value = 0`은 Python 변수에 대입하는 게 아니라 — 프록시가 그 대입을 받아 **VPI write 호출로 변환**해 시뮬레이터 안 신호를 실제로 바꾸는 것이고, `dut.ready.value`를 읽는 것은 **VPI read**입니다. "DUT가 Python에 없다"는 말의 실체가 이 프록시-VPI 변환입니다.<br>
+**(2) `@cocotb.test()` 데코레이터 하나가 UVM의 `uvm_test` 클래스 + `run_test()` 호출을 통째로 대신합니다.** factory 등록도, phase 선언도 없습니다. 그리고 `async def`로 선언된 이 함수는 보통 함수가 아니라 **coroutine** — *호출 스택(어디까지 실행했는지)을 보존한 채 중간에 멈췄다가, 그 지점부터 다시 이어 실행*할 수 있는 함수입니다. `await RisingEdge(dut.clk)`에서 멈추고 시뮬레이터가 깨우면 *바로 다음 줄*부터 재개되는 것이 그래서 가능합니다. 이는 OS 스레드 병렬이 아니라 UVM task가 `@(posedge clk)`에서 멈췄다 재개되는 것과 같은 *협력적 중단*입니다 — 메커니즘은 Module 02에서 깊게 다룹니다.
 :::
 ---
 
@@ -139,14 +143,14 @@ cocotb를 한마디로 위치시키려면 UVM과 나란히 놓고 보는 것이 
 
 ### 5.1 실제 채택 사례
 
-이름만 들어도 알 만한 곳들이 cocotb를 실제 검증 플로우에 쓰고 있습니다(`cocotb_note.md` Real-World Users).
+이름만 들어도 알 만한 곳들이 cocotb를 실제 검증 플로우에 쓰고 있습니다.
 
 | 사용처 | 분야 | 사용 양상 |
 |---|---|---|
 | **OpenTitan** (Google, lowRISC) | 보안 칩 | 프로젝트 전체가 cocotb 사용 |
 | **Western Digital, Seagate** | SSD 컨트롤러 | 컨트롤러 검증 |
 | **Tenstorrent, Groq, Rain AI** | AI 가속기 | Python 기반 검증이 핵심 플로우 |
-| **MangoBoost** | NIC/DPU | MVP MD4 commander, BaseNIC_TB를 Claude와 함께 cocotb로 시도 — 전체 플로우를 5분 내 구성 |
+| **DPU/SmartNIC 벤더** | NIC/DPU | NIC TB를 cocotb로 구성 — LLM 보조로 전체 플로우를 빠르게 부트스트랩 |
 
 여기서 패턴이 보입니다. *알고리즘 모델 통합이 중요한 분야*(AI 가속기, SSD)와 *오픈소스·교육 성격*(OpenTitan)이 cocotb로 강하게 기웁니다. AI 가속기는 검증 기대값이 곧 PyTorch/NumPy 모델이므로, 그 모델을 `import` 한 줄로 가져올 수 있는 cocotb가 자연스럽습니다.
 
@@ -238,10 +242,6 @@ cocotb를 한마디로 위치시키려면 UVM과 나란히 놓고 보는 것이 
 </details>
 :::
 ### 7.2 출처
-
-**Internal (Confluence / HDG)**
-- `CocoTB Seminar Notes (DV-SysTF)` (`wiki/common/cocotb_note.md`) — What Is CocoTB, UVM 비교 표, Pros/Cons, Real-World Users
-- 원본 Confluence dump: `raw/confluence-dump/cocotb.md`
 
 **External**
 - cocotb 공식 문서 — https://docs.cocotb.org/ (COroutine-based COsimulation TestBench 정의)

@@ -73,6 +73,8 @@ JESD79-4D §3.3.1 가 명시하는 MR 프로그래밍 순서:
 | 6 | MR1 | DLL enable, Output drive, AL, ODT |
 | 7 | MR0 | BL, CL, DLL reset, WR, DLL_off |
 
+_왜 MR 프로그래밍에 순서가 정해져 있는가_ 는 일부 MR 설정이 다른 MR 설정의 _전제 조건_ 이기 때문입니다. Mode Register 들은 서로 독립적인 게 아니라 의존 관계를 가집니다 — 예를 들어 DLL 을 켜고 reset 하는 설정(MR1 의 DLL enable, MR0 의 DLL reset)은 DLL 의 동작을 결정하는데, DLL 은 다른 타이밍(특히 출력 타이밍)의 기준이 되므로 가장 나중에 확정되어야 앞선 설정들이 안정된 상태에서 lock 을 잡습니다. 마찬가지로 Vref training 관련 MR 은 ODT·드라이버 설정이 먼저 자리잡은 뒤라야 올바른 기준 전압을 잡을 수 있습니다. 즉 "A 의 결과 위에서 B 가 동작" 하는 선후 의존이 있어, 순서를 뒤집으면 뒤 설정이 아직 미확정인 앞 설정을 전제로 잘못 계산되어 silicon 에서 비정상 동작이 납니다. 그래서 JEDEC 이 안전한 단일 순서를 못박아 둔 것입니다.
+
 :::tip[DV 적용 — MR 프로그래밍 순서 검증]
 Scoreboard에서 controller가 MR을 *위 순서로* 프로그래밍하는지 검증. 순서를 어기면 spec violation이지만 시뮬레이션은 *통과*할 수 있음. directed test로 명시적 검증 필요.
 :::
@@ -344,6 +346,7 @@ endgroup
 가정: configure phase가 *시작도 전에* (CKE=0 상태에서) MR Write를 발급했다면?
 
 - DRAM은 CKE=0 동안 *명령을 수락하지 않음* (Self-Refresh / Power-Down 상태)
+  - _왜 못 받는가_ — CKE(Clock Enable)는 단순한 상태 플래그가 아니라 **내부 클럭을 게이팅하는 스위치**입니다. CKE=0 이면 DRAM 내부의 클럭 버퍼가 차단되어 command decoder·address latch 같은 동기 회로에 클럭 에지가 전달되지 않습니다. 명령은 CK 에지에 맞춰 sample 되어야 디코딩되는데, 그 에지 자체가 회로에 도달하지 않으므로 CA 핀에 무엇이 실려 있든 latch 되지 않고 그냥 흘러갑니다. 즉 CKE=0 은 "명령을 거부" 하는 게 아니라 명령을 _볼 수 있는 클럭 자체를 꺼 둔_ 상태이며, 이것이 power-down/self-refresh 에서 전력을 아끼는 메커니즘이기도 합니다.
 - DRAM 모델은 *조용히 명령을 drop* 하거나, *X*를 내부 상태에 전파
 - 시뮬레이션은 *계속 진행*되며 후속 RD/WR이 *잘못된 데이터*를 반환
 - 결과: scoreboard mismatch가 *몇 us 후*에 발생 — **timestamp가 떨어져 있어 debug 어려움**
@@ -435,6 +438,8 @@ endtask
 | After | Application Conditions |
 |---|---|
 | Ta is reached | **VPP shall be greater than VDD** |
+
+_왜 VPP 가 VDD 보다 먼저(또는 같이) ramp 되고, 항상 VDD 보다 높아야 하는가_ 는 word-line 부스팅의 물리에서 나옵니다. VPP 는 이름 그대로 "pumped" 전압으로, DRAM 코어 전압(VDD)보다 더 높은 전압입니다. 그 이유는 access transistor(NMOS)를 _완전히_ 켜서 셀 capacitor 를 VDD 전체까지 충전하려면, 게이트(word-line)에 VDD + Vth(문턱전압) 이상을 걸어야 하기 때문입니다 — 게이트가 VDD 밖에 안 되면 transistor 의 문턱전압 강하 때문에 셀이 VDD−Vth 까지밖에 안 차서 '1' 마진이 줄어듭니다. 그래서 word-line driver 는 VPP(>VDD)로 구동됩니다. 만약 전원을 켤 때 VDD 가 VPP 보다 먼저 올라와 코어가 살아 있는데 word-line 쪽 고전압이 아직 없는 상태가 되면, 내부 전위 관계가 설계 가정과 어긋나 기생 다이오드가 순방향이 되거나 **latch-up**(전원-접지 간 기생 SCR 도통)이 유발될 수 있습니다. VPP 를 먼저 또는 동시에 올려 항상 가장 높은 rail 로 유지하면 이런 비정상 전위 형성을 막을 수 있어, JEDEC 이 ramp 순서를 규정한 것입니다.
 
 > NOTE 1: Ta is the point when any power supply first reaches 300 mV.
 > NOTE 2: Voltage ramp conditions apply between (Ta) and Power-off.

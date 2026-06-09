@@ -349,6 +349,8 @@ score(d) = Σ 1 / (k + rank_i(d))
 - `rank_i(d)` = 검색 시스템 _i_ 에서 문서 d 의 순위.
 - `k` = 보정 상수 (보통 60).
 
+`k` 의 역할: 분모가 `k + rank` 이므로 `k` 는 _상위 rank 의 영향력을 완충_ 합니다. `k` 가 작으면 (예: k=1) rank 1 의 기여 `1/2` 와 rank 2 의 `1/3` 차이가 커서 _top-1 이 결과를 지배_ 하고, `k` 가 크면 (예: k=60) `1/61` vs `1/62` 로 rank 간 격차가 평탄해져 _여러 시스템의 합의_ 가 반영됩니다. k=60 은 "상위를 우대하되 한 시스템의 top-1 에 과하게 휘둘리지 않는" 균형점으로 널리 쓰입니다.
+
 장점: _score scale 무관_ — rank 만 사용. BM25 = 5.0, embedding = 0.7 같은 scale 차이 무시.
 
 대안: Weighted sum (`α * bm25 + (1-α) * dense`) — scale 정규화 필요.
@@ -377,7 +379,7 @@ RAG 가 좋은 경우: spec, RTL 코드, 디자인 문서 같은 _변화하는, 
 ### 7.2 출처
 
 **Internal (Confluence)**
-- `5. KV Caching & VectorDB w/ MangoBoost` (id=613187588)
+- `5. KV Caching & VectorDB` (id=613187588)
 - `Design Document of Component/System-Level Benchmarking Tool` (id=613482498)
 
 **External**

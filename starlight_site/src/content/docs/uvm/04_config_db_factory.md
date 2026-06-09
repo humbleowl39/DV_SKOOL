@@ -203,7 +203,75 @@ get(context, inst_name, field_name, variable)
 | `"env.agent"` | 정확히 env.agent | env.agent 의 build 에서 get(this, "", ...) |
 | `"env.agent.driver"` | 정확히 그 driver | driver 의 build 에서 get(this, "", ...) |
 
-### 4.3 Factory 의 두 종류 override
+#### config_db 의 저장 구조 — 전역 associative store
+
+"게시판" 비유의 실체는 **하나의 전역 (static) 저장소** 입니다. `set` 은 이 저장소에 항목을 _넣고_, `get` 은 _꺼냅니다_. 항목의 키는 단순한 문자열 하나가 아니라 사실상 **(context+inst_path 로 만든 전체 경로, field_name, _타입_) 의 조합** 입니다. 그래서:
+
+- **타입이 키의 일부** — `uvm_config_db#(virtual my_if)` 와 `uvm_config_db#(int)` 는 _다른 저장 공간_ 처럼 동작합니다. 경로와 field 가 똑같아도 타입이 다르면 _다른 항목_ 이라 매칭되지 않습니다. (오해 2 의 "타입 불일치 = 완전히 다른 entry" 의 근본.)
+- **wildcard 매칭은 _lookup 시점_ 에 일어난다** — `set` 이 `"*"` 같은 wildcard 경로를 넣어 둘 때 그것을 미리 펼치지 않습니다. 나중에 어떤 컴포넌트가 `get` 을 호출하면, _그 순간_ 자기 full_name 을 저장소의 모든 wildcard 항목과 _대조_ 해 매칭되는 첫 항목을 가져옵니다. 그래서 set 시점에 존재하지 않던 컴포넌트도 나중에 만들어져 get 하면 같은 항목에 hit 합니다.
+
+이 "전역 + 타입 포함 키 + lookup-time wildcard" 구조가 config_db 의 유연함 (한 set 이 여러 미래 컴포넌트에 도달) 과 함정 (타입/경로 한 끗 차이로 silent miss) 을 _동시에_ 설명합니다.
+
+#### 왜 parameterized class 가 타입 키를 가르나
+
+위에서 "타입이 키의 일부" 라 했는데, parameterized class 에서는 한 걸음 더 들어갑니다. SystemVerilog 에서 **파라미터가 다른 특수화 (specialization) 는 _서로 다른 타입_ 으로 컴파일** 됩니다 — `my_agent_config#(32)` 와 `my_agent_config#(64)` 는 이름은 같아 보여도 컴파일러에겐 완전히 별개의 타입입니다. 따라서 `uvm_config_db#(my_agent_config)` 로 set 하고 `uvm_config_db#(uvm_object)` 로 get 하면, 부모/자식 관계가 있어도 _타입 키가 달라_ 저장소에서 못 찾습니다. config_db 의 타입 매칭 실패 (오해 2) 와, factory override 가 parameterized 컴포넌트에서 까다로운 이유가 모두 이 "파라미터 다르면 다른 타입" 이라는 컴파일 규칙에서 옵니다.
+
+#### `::` — static method 이기에 인스턴스 없이 전역에 닿는다
+
+`uvm_config_db#(T)::set(...)` 을 보면 객체 핸들 없이 `클래스명::메서드` 형태로 부릅니다. 이것이 가능한 이유는 `set`/`get` 이 **static method** 이기 때문입니다. static method 는 특정 인스턴스에 묶이지 않고 _클래스 차원_ 에 존재하므로, 객체를 하나도 만들지 않고 `::` (scope resolution) 로 직접 호출됩니다. 그리고 그 안에서 건드리는 저장소도 인스턴스별이 아닌 _클래스 차원의 static 변수_ — 즉 위에서 말한 "하나의 전역 저장소" 입니다. "어디서 set 하든 어디서 get 하든 같은 게시판을 본다" 는 성질이 바로 static method + static 저장소의 결과입니다. 이 그룹에서 static method 가 처음으로 핵심 역할을 하는 지점입니다.
+
+### 4.3 Factory 의 심장 — `type_id::create` vs `new()`
+
+지금까지 여러 챕터에서 "컴포넌트는 `type_id::create` 로 만들어야 override 가 먹는다, `new()` 는 우회다" 를 _결과_ 로만 반복했습니다. 그 _기전_ 을 한 번 끝까지 따라가면, 이후 모든 factory 동작이 납득됩니다.
+
+#### 1단계 — `uvm_*_utils` 매크로가 _proxy_ 를 등록한다
+
+```systemverilog
+class my_driver extends uvm_driver #(my_item);
+  `uvm_component_utils(my_driver)   // ← 이 한 줄이 핵심
+  ...
+endclass
+```
+
+`` `uvm_component_utils(my_driver) `` 는 단순한 "등록 도장" 이 아닙니다. 이 매크로는 `my_driver` 안에 **`type_id` 라는 중첩 타입 (proxy / type-id)** 을 만들고, 그 proxy 의 인스턴스 _하나_ 를 전역 **factory 테이블** 에 `"my_driver"` 라는 타입 키로 _등록_ 합니다. 이 proxy 가 아는 일은 단 하나 — "나를 호출하면 `my_driver` 의 `new` 를 불러 진짜 객체를 만들어 돌려준다." 즉 매크로는 _타입마다 자기를 생성할 줄 아는 작은 대리인_ 을 factory 에 꽂아 둡니다. (그래서 `new()` 가 `protected` 가 아닌데도 _관례적으로_ create 를 강제하는 것이고, 매크로를 빠뜨린 클래스는 factory 가 모르는 클래스가 됩니다.)
+
+#### 2단계 — `type_id::create` 가 _테이블을 조회_ 한다
+
+```systemverilog
+drv = my_driver::type_id::create("drv", this);
+```
+
+`my_driver::type_id::create(...)` 는 객체를 _직접_ 만들지 않습니다. 대신 factory 에게 "`my_driver` 타입으로 등록된 것을 만들어 달라" 고 _요청_ 합니다. factory 는 이때:
+
+```d2
+direction: down
+C: "**create('drv', this)**\nmy_driver 타입 요청"
+L: "factory 테이블 **lookup**\n'my_driver' override 있나?" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+P1: "override 없음 →\nmy_driver 의 proxy" { style.stroke: "#137333" }
+P2: "override 있음 →\nenhanced_driver 의 proxy" { style.stroke: "#1a73e8" }
+N: "proxy.new() 호출 →\n진짜 객체 생성·반환"
+C -> L
+L -> P1: "기본"
+L -> P2: "redirect 등록 시" { style.stroke-dash: 4 }
+P1 -> N
+P2 -> N
+```
+
+1. **lookup**: factory 테이블에서 `"my_driver"` 키에 _override (redirect)_ 가 걸려 있는지 조회합니다.
+2. **proxy 선택**: override 가 없으면 `my_driver` 의 proxy 를, `set_type_override` 로 `enhanced_driver` 가 등록돼 있으면 _그쪽_ proxy 를 고릅니다.
+3. **proxy.new**: 고른 proxy 의 `new` 를 불러 실제 객체를 만들어 반환합니다.
+
+이 **create → lookup → proxy → new** 사슬 때문에 "타입 이름은 그대로 둔 채 받는 객체만 바꾸는" override 가 가능합니다. 호출 코드 (`my_driver::type_id::create`) 는 한 글자도 안 바뀌어도, 테이블의 redirect 한 줄이 3 번째 단계의 proxy 를 갈아끼웁니다.
+
+#### 왜 `new()` 는 override 가 안 먹나
+
+```systemverilog
+drv = new("drv", this);   // ← factory 를 거치지 않음
+```
+
+`new()` 는 위 1~3 단계를 _전부 건너뜁니다_. lookup 도, proxy 도 없이 컴파일 시점에 박힌 `my_driver` 타입을 곧장 생성합니다. factory 테이블을 쳐다보지 않으니, 거기 등록된 redirect 도 당연히 무시됩니다. 그래서 base 가 `new()` 로 만든 컴포넌트는 derived test 가 아무리 `set_type_override` 를 걸어도 _절대_ 바뀌지 않습니다 — override 가 사는 곳 (factory 테이블) 을 처음부터 안 보기 때문입니다. legacy 코드 인수 시 "override 가 왜 안 먹지?" 의 1 순위 원인이 이 `= new(` 입니다.
+
+### 4.4 Factory 의 두 종류 override
 
 Factory override 는 "어느 범위까지 교체할 것인가" 에 따라 두 가지로 나뉩니다. Type Override 는 환경 내의 모든 `my_driver` 인스턴스를 `enhanced_driver` 로 바꾸는 방식으로, 전체 테스트 환경의 동작을 한 줄로 전환할 때 씁니다. Instance Override 는 특정 경로에 있는 인스턴스 하나만 교체하는 방식으로, 두 개의 Agent 중 하나의 Driver 만 다르게 동작시키고 싶을 때 적합합니다. 두 경우 모두 override 는 `type_id::create` 가 불리기 **전에** 등록되어야 하므로, base_test 의 `build_phase` 에서 env 를 create 하기 전 가장 먼저 설정하는 것이 관례입니다.
 
@@ -224,7 +292,7 @@ set_inst_override_by_type("env.agent.driver",
 | 호출 위치 | base_test 의 build_phase | base_test 의 build_phase |
 | 사용 예 | 정상 → 에러 주입 driver 로 환경 전체 교체 | env 의 cpu_agent 만 glitch driver 로 |
 
-### 4.4 환경 동작을 바꾸는 두 축
+### 4.5 환경 동작을 바꾸는 두 축
 
 ```
 설정 (config_db)        ↔        구현 (Factory override)

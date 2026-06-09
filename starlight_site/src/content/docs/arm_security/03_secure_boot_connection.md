@@ -177,6 +177,10 @@ void bl31_to_bl33_transition(void) {
 **(1) Lock-down 은 ERET 이전에 _완료_ 돼야 한다.** ERET 후 BL33 은 NS world 인 채로 first instruction 을 실행하므로, 그 전에 모든 secure 인프라가 차단 모드여야 합니다. _한 cycle_ 의 misorder 가 곧 race window. <br>
 **(2) `MSR SCR_EL3, ...` 직후 `ISB` 가 필수** — instruction barrier 없이는 outgoing transaction 의 NS attribute 가 새 값으로 보장되지 않습니다.
 :::
+
+:::note[왜 SCR_EL3.NS write 직후 ISB 가 필요한가 — context synchronization]
+`MSR SCR_EL3, x` 는 시스템 레지스터를 바꾸지만, ARM 아키텍처에서 시스템 레지스터 변경의 효과는 _context-synchronizing 이벤트_ (ISB, exception 진입/ERET 등) 전까지는 후속 명령에 보장되지 않습니다. CPU는 성능을 위해 명령을 _앞질러 페치하고 투기적으로 실행_ 하는데, ISB가 없으면 `MSR` 뒤에 이미 파이프라인에 들어와 있던 명령들이 _옛 NS 상태_ 로 페치·실행될 수 있습니다 — 즉 NS=1로 바꿨는데도 직후 메모리 접근이 _구 Secure attribute_ 로 나가거나, 보안 설정이 옛 상태로 적용되는 창이 열립니다. `ISB` 는 "이 지점에서 파이프라인을 비우고, 이후 명령은 _새 SCR_EL3 상태로 다시 페치하라_" 는 동기화 장벽이라, ISB 이후의 모든 명령은 확정적으로 새 NS 상태에서 동작합니다. 그래서 월드 전환·보안 설정 변경 후에는 반드시 ISB로 경계를 박아 투기 실행으로 인한 NS attribute race를 닫습니다([Module 02 §5.6a](../02_world_switch_soc_infra/)의 cycle race와 같은 뿌리).
+:::
 ---
 
 ## 4. 일반화 — Boot stage 별 EL/NS 매트릭스 와 2 개의 검증 축
@@ -384,6 +388,13 @@ Boot Stage별 측정:
     → fTPM: Firmware TPM (TEE 내에서 SW로 구현)
 ```
 
+**왜 이 해시 체인이 과거 측정을 _위조 못 하게_ 막는가.** PCR은 직접 쓰는 레지스터가 아니라 **extend 연산** 으로만 갱신됩니다: `PCR_new = Hash(PCR_prev ‖ H(stage))`. 새 값이 _이전 PCR_ 에 의존한다는 점이 핵심입니다.
+
+- **중간값을 임의로 맞출 수 없음**: 공격자가 변조된 stage를 측정에 끼워 넣어도, 그 결과 PCR은 `Hash(...)`로 _체인 전체_ 가 달라집니다. "최종 PCR을 정상값으로 되돌리려면" 어느 중간 단계에서 PCR을 원하는 값으로 _되돌려 써야_ 하는데, extend는 덮어쓰기가 아니라 _이전 값에 해시로 누적_ 하는 단방향 연산이라, 원하는 출력이 나오게 하는 입력을 찾는 것은 해시의 preimage 저항성에 막힙니다. 즉 "정상 PCR로 보이게 만들 중간 입력"을 계산해 낼 수 없습니다.
+- **순서·내용 모두 봉인**: `Hash(PCR_prev ‖ ...)`라 _측정한 순서_ 까지 결과에 반영됩니다 — 같은 stage들을 다른 순서로 측정하면 다른 PCR이 됩니다.
+
+**초기조건 — reset 시 0에서 시작.** PCR은 _reset(콜드 부팅) 시 알려진 값(보통 0)으로 초기화_ 됩니다. 이 고정 시작점이 있어야 체인이 _재현 가능_ 합니다: 정직한 부팅은 매번 `0 → extend(BL2) → extend(BL31) → ...`로 _같은 최종 PCR_ 을 만들고, 서버는 그 기대값과 비교해 무결성을 판정합니다. 시작점이 무작위거나 SW가 임의로 set할 수 있으면 체인의 신뢰가 깨지므로, PCR은 _reset에 의해서만_ 0으로 가고 그 외에는 extend로만 변합니다(직접 write 불가).
+
 #### Remote Attestation
 
 서버가 디바이스의 무결성을 원격으로 검증:
@@ -589,6 +600,15 @@ c_anti_rollback: cover property (p_anti_rollback);
 **실제**: Secure Boot 의 ROTPK (Root-Of-Trust Public Key) 가 TrustZone 의 root key derivation 의 source 입니다. Boot 단계의 실패 (e.g., BootROM 취약점) 는 곧 runtime TrustZone 의 무력화. 둘은 _같은 trust chain 의 다른 단계_.<br>
 **왜 헷갈리는가**: 이름이 다르니 독립 기능이라는 직관.
 :::
+
+#### Boot 측정/ROTPK 가 런타임 키 파생으로 _이어지는_ 연결 고리
+
+"ROTPK 가 derivation 의 source" 라는 말의 _실제 연결_ 을 한 단계 풉니다(구현마다 다름, 확인 필요 — 일반 패턴). 런타임 비밀(예: 저장 암호화 키, 디바이스 바인딩 키)은 보통 칩 고유의 **HUK(Hardware Unique Key)** 에서 **KDF** 로 파생합니다: `runtime_key = KDF(HUK, 라벨 ‖ 컨텍스트)`. 여기서 boot/ROTPK가 끼어드는 방식은 두 가지입니다.
+
+- **(a) 접근 게이팅**: HUK와 KDF 엔진은 _Secure 상태(나아가 검증된 부팅을 거친 코드)에서만_ 접근 가능합니다. Secure Boot가 BL31/BL32를 ROTPK 체인으로 검증하고 NS 전환 _전에_ 보안 설정을 끝냈기 때문에, "정당한, 검증된 Secure 코드"만 KDF를 돌릴 수 있습니다 — 부팅 신뢰가 깨지면(가짜 BL2) 그 코드가 KDF에 닿지 못하거나, 닿더라도 다음 항목 때문에 _다른 키_ 가 나옵니다.
+- **(b) 측정값을 KDF 입력에 바인딩**: 더 강한 설계는 boot 측정값(PCR류) 또는 ROTPK/lifecycle 상태를 KDF의 _컨텍스트 입력_ 에 넣습니다: `key = KDF(HUK, 측정값 ‖ ...)`. 그러면 변조된 부팅(측정값이 달라짐)은 _애초에 다른 키_ 를 파생해, 원래 키로 암호화된 데이터(저장소 등)를 풀지 못합니다 — 즉 "정상 부팅했을 때만 올바른 런타임 키가 나온다"가 수학적으로 강제됩니다(measured boot ↔ key release의 결합).
+
+핵심 고리: **ROTPK가 부팅을 검증 → 검증된 부팅만 HUK·KDF에 도달(또는 측정값이 KDF에 바인딩) → 런타임 키 파생**. 그래서 BootROM 취약점은 곧 런타임 키 체계의 무력화이고, 둘은 한 trust chain입니다. (정확한 KDF/HUK 구조는 SoC별 secure key management 사양 확인 필요.)
 :::danger[❓ 오해 2 — '서명만 통과하면 안전']
 **실제**: 서명은 _누가 만든 image 인가_ 만 보장합니다. _언제 만들어진 (= 충분히 최신 인) image 인가_ 는 Anti-Rollback OTP counter 가 별도 검증. 둘 다 통과해야 안전.<br>
 **왜 헷갈리는가**: "서명 = 신뢰" 라는 단순화.

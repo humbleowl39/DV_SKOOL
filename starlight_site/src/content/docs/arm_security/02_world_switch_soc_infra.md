@@ -312,6 +312,22 @@ DRAM 영역을 Secure/Non-Secure로 분할:
   → NS Master(DMA, GPU)가 Secure DRAM 접근 → TZASC가 차단
 ```
 
+**region 매칭과 DECERR 생성의 비교 로직.** TZASC가 트랜잭션마다 하는 일은 _주소 비교 + 속성 일치 검사_ 두 단계입니다.
+
+1. **주소 → region 판정 (비교기)**. 들어온 트랜잭션 주소를 각 region의 `Base ≤ addr < Base+Size` 조건으로 비교해 어느 region에 드는지 찾습니다(주소 비교기 = 범위 검사). 위 예라면 `0x0010_0000`은 Region 0(Secure)에, `0x5000_0000`은 Region 1(NS)에 듭니다.
+2. **region 보안 속성 vs 트랜잭션 NS 일치 검사**. 그 region에 설정된 보안 속성(Secure 전용 여부)과 트랜잭션이 들고 온 NS 비트(`AxPROT[1]`, [Module 01](../01_exception_level_trustzone/))을 비교합니다. **불일치** — 즉 region이 Secure 전용인데 트랜잭션이 NS(`AxPROT[1]=1`)이면 — 접근을 거부하고 슬레이브 응답으로 **DECERR**(decode error)를 돌려줍니다. 일치하거나 NS 허용 region이면 통과시킵니다.
+
+```
+  addr ──range compare──► 해당 region 식별 ──► region.secure?
+                                                   │
+                       AxPROT[1] (txn NS) ─────────┤ 비교
+                                                   ▼
+            region=Secure 전용 & txn=NS  →  불일치 → DECERR (차단)
+            그 외(속성 일치)             →  허용 → 정상 access
+```
+
+핵심: 차단은 SW 판단이 아니라 _비교기 출력_ 입니다. region register와 lock 비트가 부팅 때 박히면, 이후 매 트랜잭션이 이 조합 로직을 통과하므로 NS 마스터가 Secure region을 건드리는 즉시 하드웨어가 DECERR로 끊습니다. region 경계(Base/Size)를 잘못 잡으면 §6의 "NS world가 secure DRAM 부분 접근 가능 → TZASC region 경계 misconfig"가 됩니다.
+
 ### 5.4 GIC (Generic Interrupt Controller) 보안
 
 인터럽트도 Secure / Non-Secure 분류:
@@ -388,6 +404,22 @@ CPUIF -> CORE
 - NS 에서 Group 0 / 1S 인터럽트의 설정 변경 / 마스킹 불가.
 - Secure 인터럽트는 Normal World 실행 중에도 선점 (preempt) 가능.
 
+#### Group 분류·라우팅의 내부 — IGROUPR/IGRPMODR 룩업과 ICC_IAR ack
+
+"어느 Group 에 넣느냐"가 실제로 어떻게 _비트로 결정되고 신호로 이어지는지_ 를 한 단계 풉니다.
+
+1. **INTID 별 Group 을 두 비트가 결정**. GIC는 인터럽트 번호(INTID)마다 두 개의 비트 배열을 둡니다 — `GICD_IGROUPRn` (또는 SGI/PPI는 GICR쪽)의 해당 비트 = **Group 1인가 0인가**, `GICD_IGRPMODRn`의 해당 비트 = **Secure인가 NS인가**(group modifier). 이 둘을 조합해 INTID마다 {Group 0, Group 1 Secure, Group 1 Non-secure}가 정해집니다(표의 3종이 이 두 비트의 조합).
+
+```
+   IGRPMODR.bit   IGROUPR.bit   →  그룹
+       0              0         →  Group 0        (Secure, FIQ)
+       1              0         →  Group 1 Secure (IRQ → S-EL1)
+       0              1         →  Group 1 NS     (IRQ → NS-EL1)
+```
+
+2. **Group → 신호선(FIQ/IRQ) + 타깃 EL**. 결정된 group과 현재 PE의 보안 상태가 조합되어 CPU interface가 그 인터럽트를 **FIQ로 올릴지 IRQ로 올릴지** 를 정합니다(대략: Group 0는 FIQ로 EL3에 잡히도록, Group 1은 그 세계의 IRQ로). 그래서 "Crypto 완료 = Group 0"이면 NS 실행 중에도 FIQ로 EL3에 꽂혀 NS가 못 가로챕니다.
+3. **ICC_IAR acknowledge 시 group 검사**. 코어가 인터럽트를 받아들일 때 `ICC_IAR0_EL1`(Group 0용) 또는 `ICC_IAR1_EL1`(Group 1용)을 읽어 INTID를 회수합니다. 여기서 GIC는 "_이 IAR 레지스터로 ack할 자격이 있는 group인가_"를 확인합니다 — 예컨대 NS상태에서 `ICC_IAR1_EL1`을 읽으면 Group 1 NS 인터럽트만 회수되고, Secure/Group 0 인터럽트는 그 IAR로는 _보이지 않습니다(특수값 반환)_. 즉 group 비트가 분류뿐 아니라 _acknowledge 경로의 게이트_ 로도 작동해, NS 코드가 Secure 인터럽트를 ack해서 가로채는 길이 막힙니다. 그래서 §6 체크리스트의 "해킹된 OS가 crypto IRQ를 mask → GICD_IGROUPRn/IGRPMODR"가 핵심 점검입니다.
+
 ### 5.5 SMMU (System MMU) — DMA 접근 제어
 
 문제: TZASC 는 물리 주소 기반으로 DRAM 을 보호하지만, DMA Master (GPU, DSP, 주변장치) 는 주소 변환이 필요할 수 있고 디바이스별 세밀한 접근 제어가 필요.
@@ -413,6 +445,24 @@ SMMUb -> DRAM
 3. Stream ID → Context 매핑: 각 디바이스 (Stream) 에 독립된 페이지 테이블 할당.
 4. Stage 1: IOVA → IPA (디바이스 드라이버가 설정) / Stage 2: IPA → PA (Hypervisor 가 설정).
 5. 접근 권한 검사: R/W/X + Secure / Non-Secure.
+
+**StreamID → Context 의 2단 룩업 (SMMUv3 자료구조).** 3번 "Stream ID 로 디바이스 식별 → context 매핑"의 내부는 _두 단계의 테이블 인덱싱_ 입니다(확인 필요 — SMMUv3 기준).
+
+```
+  StreamID ──인덱스──►  Stream Table Entry (STE)
+                          │  (이 master 의 설정: 어느 stage 켤지,
+                          │   security state, Context Descriptor 위치)
+                          ▼
+                       Context Descriptor (CD) ──► page table base (TTB)
+                          │                          + 변환 속성(TCR 등)
+                          ▼
+                       Stage1/Stage2 page table walk → IOVA→IPA→PA
+```
+
+- **1단 — Stream Table**: StreamID를 _인덱스_ 로 Stream Table에서 그 master의 **Stream Table Entry(STE)** 를 꺼냅니다. STE는 "이 디바이스가 어떤 보안 상태인지, 어떤 stage 변환을 쓰는지, 그리고 Context Descriptor가 어디 있는지"를 담습니다. 즉 _어느 master냐_ 가 곧 어느 STE냐로 직결되어, master별 정책이 여기서 갈립니다.
+- **2단 — Context Descriptor**: STE가 가리키는 **Context Descriptor(CD)** 에서 실제 **page table base(TTB)** 와 변환 제어(TCR 등)를 얻어, 그걸로 페이지 테이블 walk를 시작합니다.
+
+핵심: master의 신원(StreamID)이 테이블 인덱스가 되어 _그 master 전용_ 의 page table과 보안 속성에 도달하므로, 디바이스마다 독립된 주소 공간·접근 권한이 강제됩니다. STE/CD가 잘못 설정되거나 누락되면 §6의 "악성 GPU DMA가 secure DRAM 도달 → SMMU stream id → context table 매핑 누락"이 발생합니다.
 
 **보안 역할**:
 
@@ -475,6 +525,27 @@ SMMUb -> DRAM
       NS에서 Secure 캐시 타이밍 차이를 관측 가능
     → 추가 HW 완화 필요 (speculation barrier 등)
 ```
+
+### 5.6a NS attribute 전파의 cycle 정합성 — race 가 _왜_ 생기는가
+
+§3에서 "SCR_EL3.NS set cycle과 outgoing transaction의 NS cycle이 한 cycle 어긋나면 race"라고 _증상_ 만 적었습니다. 그 race window가 _어디서_ 생기는지 단계로 봅니다.
+
+문제의 본질은 **NS 상태를 "바꾸는 지점"과 그 상태가 "버스 신호로 도달하는 지점" 사이에 단계가 끼어 있다** 는 것입니다.
+
+```
+  ① MSR SCR_EL3, x   ← NS 비트 레지스터에 새 값 write
+        │  (아직 후속 명령은 구 NS 상태로 페치/투기 실행됐을 수 있음)
+  ② ISB              ← context synchronization: 이 시점 이후 명령은 새 상태로 재페치
+        │
+  ③ 파이프라인 → LSU → master IF  ← 메모리 접근 명령이 새 AxPROT[1] 로 구동되기까지 단계
+        │
+  ④ 인터커넥트 전파  ← 버스 패브릭을 거쳐 TZASC/슬레이브에 도달
+```
+
+- **①→② 사이**: ISB 같은 context-synchronizing 동작이 없으면, CPU가 이미 _앞질러 페치/투기 실행_ 해 둔 후속 명령이 _옛 NS 상태_ 로 동작할 수 있습니다([Module 03](../03_secure_boot_connection/)의 "ISB 필요 이유"와 같은 뿌리). 그래서 SCR_EL3.NS write 직후 ISB로 동기화 경계를 박습니다.
+- **②→③→④ 사이 (회로적 race)**: 동기화가 됐더라도, "PE의 NS 상태"라는 _내부 상태_ 가 메모리 접근의 `AxPROT[1]` _버스 신호_ 로 구동되기까지 파이프라인·LSU·인터커넥트의 단계를 거칩니다. 만약 어느 단계의 래치가 NS 변경을 한 사이클 늦게 반영하면, 그 한 사이클 동안 _새 세계의 명령이 옛 NS attribute로_ (또는 그 반대로) 트랜잭션을 발행하는 window가 생깁니다 — 예: Secure→NS로 막 바뀌었는데 첫 트랜잭션이 아직 `AxPROT[1]=0`(Secure)로 나가면, NS 코드가 Secure 권한으로 한 번 접근하는 틈이 됩니다.
+
+그래서 검증의 핵심 invariant가 "SCR_EL3.NS가 바뀐 그 사이클부터 _모든_ master IF의 `AxPROT[1]`이 정확히 일치"이고, §6의 "toggle 후 한 cycle attribute mismatch → NS bit propagation latency" SVA가 이 window를 직접 잡습니다.
 
 ### 5.7 월드 간 통신 메커니즘
 

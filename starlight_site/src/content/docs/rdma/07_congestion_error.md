@@ -267,6 +267,12 @@ ROOT -> R4 -> R4a
 
 **위험**: cyclic dependency → PFC storm → deadlock. → **deadlock 회피는 routing 설계 시 deadlock-free path 보장 또는 watchdog** 필요.
 
+:::note[PAUSE 가 어떻게 buffer-dependency cycle 을 닫아 영구 정지가 되나 — 전파 사슬]
+PFC 의 deadlock 은 _buffer 의존 그래프에 사이클이 생길 때_ 발생합니다. 한 hop 단위로 따라가 봅시다: switch X 의 입력 buffer 가 임계치까지 차오르면, X 는 자기에게 보내던 **상류 switch W 에게 PAUSE** 를 보냅니다. PAUSE 를 받은 W 는 송신을 멈추므로, 이제 W 의 buffer 가 차오릅니다 → W 는 다시 _자기_ 상류 V 에게 PAUSE 를 보냅니다. 이렇게 "buffer 참 → 상류에 PAUSE → 그 상류 buffer 참 → 또 그 상류에 PAUSE" 가 backward 로 사슬처럼 전파됩니다.
+
+여기까지는 정상 backpressure 입니다. 문제는 **이 사슬이 원을 그리며 자기 자신으로 돌아올 때** — 예컨대 X 가 비워지려면 Y 로 보내야 하는데, Y 의 buffer 도 차서 Y 가 X 에게 PAUSE 를 건 상태이고, Y 가 비워지려면 다시 X 쪽 경로가 풀려야 하는 식으로 **서로가 서로의 drain 을 기다리는 순환 의존(cyclic buffer dependency)** 이 닫히는 경우입니다. 이 사이클 안의 모든 link 가 "상대가 받아줘야 내가 보내는데, 상대도 나를 기다린다" 상태가 되어 **누구도 영원히 진행하지 못합니다** — 이것이 PFC deadlock(storm)입니다. drop 을 허용하면 buffer 가 비워져 사이클이 풀리지만, lossless 가 목표라 drop 을 안 하므로 외부 개입(watchdog 으로 강제 drain) 또는 애초에 _사이클이 생기지 않는 deadlock-free routing_ 이 필요합니다.
+:::
+
 ### 5.2 ECN (Explicit Congestion Notification, RFC 3168)
 
 ```
@@ -281,6 +287,18 @@ ROOT -> R4 -> R4a
 - Receiver 가 CE 보면 → 그 사실을 sender 에 알려야 함.
 - IB 에서는 BTH 의 **FECN bit** 를 receiver 가 다음 packet 에 set 해 sender 가 알게 함.
 - 또는 RoCEv2 의 **CNP** (Congestion Notification Packet) 를 receiver 가 sender 에 직접 송신.
+
+:::note[CE 마킹이 sender 까지 도달하는 end-to-end 신호 경로]
+혼잡 신호가 _혼잡이 생긴 곳(switch)_ 에서 _감속해야 할 곳(sender)_ 까지 어떻게 거꾸로 흘러가는지를 한 줄기로 잇습니다:
+
+1. **sender** 는 보낼 때 IP 헤더 ECN 필드를 ECT(=ECN 가능) 로 표시합니다 — "나 혼잡 신호 받을 수 있어".
+2. **중간 switch** 가 자기 buffer 가 임계치를 넘으면, _패킷을 버리는 대신_ IP.ECN 을 **CE(Congestion Experienced)** 로 마킹합니다. 데이터는 그대로 목적지까지 전달됩니다 (lossless 유지).
+3. **receiver** 가 CE 가 찍힌 패킷을 받으면 "이 flow 경로 어딘가가 혼잡하다" 를 _인식_ 합니다.
+4. receiver 는 이 사실을 _역방향_ 으로 sender 에게 알립니다 — RoCEv2 에서는 **CNP 를 sender 로 직접 송신**하고(또는 IB 에서는 응답 패킷의 BECN/FECN 비트 활용), 이 CNP 가 곧 DCQCN 의 감속 trigger 가 됩니다.
+5. **sender** 가 CNP 를 받으면 해당 flow 의 rate 를 낮춥니다.
+
+핵심은 신호가 _데이터와 같은 방향(forward)_ 으로 CE 마킹돼 receiver 까지 갔다가, _반대 방향(backward)_ 으로 CNP 가 되어 sender 로 돌아온다는 점입니다 — 즉 한 RTT 의 왕복이 신호 전파의 최소 지연이고, 이것이 ECN/DCQCN 의 반응이 PFC(hop 즉시)보다 느린(µs RTT 단위) 근본 이유입니다.
+:::
 
 ### 5.3 DCQCN (Data Center QCN)
 
@@ -304,6 +322,12 @@ CNP/ECN 신호에 따른 **sender 의 rate 조절 알고리즘**:
 - CNP 안 받으면 (timer 단위로) R 점진 회복:
   - Fast Recovery → Active Increase → Hyper Increase 단계
 - 검증의 핵심은 "fairness" — 두 flow 가 같은 bottleneck 를 share 했을 때 R 분포가 공평한지.
+
+:::note[왜 "probabilistic" 한가, 그리고 왜 hardware-friendly 한가 — closed loop]
+DCQCN 의 감속 강도는 _혼잡의 양_ 에 자연스럽게 비례하도록 **확률(probability)** 로 인코딩됩니다. 메커니즘은 두 단의 확률 변환으로 이뤄집니다. ① **switch 측**: buffer 점유가 임계 K_min~K_max 사이일 때, 점유율이 높을수록 _더 높은 확률_ 로 패킷에 ECN-CE 를 마킹합니다 (전부/전무가 아니라 비례 마킹). 따라서 혼잡이 심할수록 CE 로 찍힌 패킷 _비율_ 이 커집니다. ② **endpoint 측**: receiver 는 CE 패킷을 볼 때마다 CNP 를 sender 로 돌려보내는데, sender 는 받은 CNP 의 _빈도_ 에 따라 rate 를 곱셈 감소(R×α)시킵니다. 즉 "혼잡 정도 → CE 마킹 확률 → CNP 빈도 → 감속 강도" 가 하나의 닫힌 비례 고리를 이룹니다.
+
+이 설계가 **hardware-friendly** 한 이유는, switch 가 per-flow 상태를 들고 RTT 를 추정하거나 복잡한 윈도우 계산을 할 필요 없이 — 그저 **buffer 점유 하나를 보고 확률적으로 1비트(CE)를 set** 하면 끝나기 때문입니다. 무거운 제어 로직(rate 곡선 관리)은 endpoint NIC 에 모이고, fabric 의 switch 는 거의 무상태(near-stateless)·line-rate 동작만 합니다. TCP 처럼 drop 을 신호로 쓰지 않으므로(§1 잠깐 박스) drop 없이도 혼잡 강도에 비례한 부드러운 감속이 가능합니다.
+:::
 
 → 실무에서 DCQCN 의 parameter 튜닝 (α, R_min, recovery time) 이 deployment 별로 다름.
 

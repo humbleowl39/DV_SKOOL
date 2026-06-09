@@ -153,6 +153,10 @@ hsm_status_t hsm_burn_efuse_key(uint8_t slot,
 **(1) 평문 키는 HSM 안에서만 존재한다** — KMS → wire → HSM 전 구간에서 _wrapped_ 형태. Application Core 도, JTAG dump 도, 평문 키를 한 번도 못 봅니다. 이것이 "HSM 이 있으면 SW 만으로는 키를 못 뽑는다" 의 정확한 의미.<br>
 **(2) Lifecycle 전이 (`OPEN → SECURED`) 와 JTAG fuse 가 함께 일어나야 한다** — 둘 중 하나만 하면 빈틈이 생깁니다. SECURED 인데 JTAG 살아 있으면 fault injection 으로 lifecycle 다운그레이드 가능, 반대도 마찬가지.
 :::
+
+:::note[왜 KDF 가 한 디바이스 키 유출을 fleet 으로 확산 안 시키나]
+②의 `K_dev = KDF(K_OEM_root, VIN ‖ ESN)` 구조가 _확산 차단_ 의 핵심입니다. KDF는 (HMAC/CMAC 기반의) **단방향 함수** 라, _출력(K_dev)에서 입력(K_OEM_root)을 역산할 수 없습니다_ — 해시의 preimage 저항성과 같은 성질입니다. 그래서 공격자가 한 차량을 뜯어 그 차의 `K_dev` 하나를 추출하더라도, 그 값으로는 (a) 루트 키 `K_OEM_root`를 거꾸로 풀 수 없고, (b) 루트 키를 모르니 _다른 VIN_ 의 `K_dev = KDF(K_OEM_root, 다른VIN‖...)`를 계산할 수도 없습니다. 즉 루트 키는 _KDF의 입력으로만_ 공장 KMS 안에서 쓰이고 디바이스로는 나가지 않으며, 각 차량은 자기 VIN으로 파생된 _고유_ 키만 받습니다. 결과적으로 피해는 _그 한 대_ 로 격리됩니다(유출된 K_dev는 OTA로 그 차만 rotate). 만약 모든 차가 _같은_ 키를 공유했다면 한 대 추출 = fleet 전체 붕괴였을 것입니다 — KDF + 디바이스 고유 입력이 그 재앙을 막습니다.
+:::
 ---
 
 ## 4. 일반화 — 5-Layer 방어 스택과 구성 요소
@@ -363,6 +367,19 @@ INIT -> GAP { style.stroke-dash: 4 }
 - **A) Authentication Build-Up** — 처음 N 개 메시지를 인증 없이 수용합니다. 안전 임계 기능을 빨리 살릴 수 있지만, 그 창구간 동안 위조 메시지도 통과한다는 보안 공백이 생깁니다.
 - **B) Strict Mode** — Freshness 동기화가 완료될 때까지 모든 메시지를 폐기합니다. 보안은 완벽하지만, 동기화가 오래 걸리면 브레이크·조향 같은 안전 임계 메시지도 함께 버려지는 치명적 기능 손실이 발생할 수 있습니다.
 - **C) FM 우선 부팅** — Freshness Manager ECU 를 최우선으로 부팅시켜 sync 메시지를 먼저 배포한 후 다른 ECU 가 기능을 시작하게 합니다. 현실적인 타협이지만 FM 자체가 단일 장애점(SPOF) 이 된다는 설계 위험이 남습니다.
+
+**FV 를 cold-start 에서 _어떻게_ 합의하나 — sync broadcast.** 카운터 기반 FV의 근본 문제는 "전원이 꺼졌다 켜지면 각 ECU가 현재 FV가 얼마인지 모른다"는 것입니다. 그래서 보통 **Freshness Manager(FM)** 가 권위 있는 현재 FV(또는 그 상위 비트인 trip counter)를 **인증된 sync 메시지로 broadcast** 합니다. 흐름은 대략: ① FM이 자신의 단조 카운터(전원 off에도 유지되도록 NVM 또는 보조 카운터에 보관)를 권위값으로 잡고 → ② 그 값을 _자기 SecOC MAC_ 으로 인증해 버스에 뿌리면 → ③ 각 수신 ECU가 그 sync의 MAC을 검증한 뒤 자신의 로컬 FV를 그 값으로 _맞춥니다_. 인증된 sync여야 하는 이유: 만약 평문 sync면 공격자가 가짜 FV(예: 아주 작은 값)를 뿌려 replay 창을 열 수 있기 때문입니다.
+
+**window 가 _손실을 허용하면서_ replay 를 막는 경계 판정.** 동기화 후에도 CAN은 프레임을 가끔 놓치므로(arbitration loss, 노이즈), 수신 ECU는 "수신 FV가 직전 FV보다 _정확히_ +1"만 받아들이면 한 번의 손실로 영영 막혀 버립니다. 그래서 **허용 window** `[prev_FV+1, prev_FV+W]` 를 둡니다. 판정 로직은:
+
+```
+  Δ = rx_FV − prev_FV
+  Δ ≤ 0           → 과거/같은 값 = replay → 폐기
+  1 ≤ Δ ≤ W       → 정상(중간에 W−1개까지 손실 허용) → 수용, prev_FV ← rx_FV
+  Δ > W           → 너무 멀리 점프 = sync 깨짐/이상 → 폐기(재동기 필요)
+```
+
+핵심: **하한(`Δ≤0` 거부)이 replay를 막고**(과거 FV로 녹화 재전송하면 prev보다 작거나 같아 즉시 폐기), **상한(W)이 손실 허용폭을 정하면서도 무한 점프를 막습니다**. window가 너무 크면 공격자가 미래 FV로 jump시킬 여지가 생기고, 너무 작으면 정상 손실에도 메시지를 버립니다 — 그래서 W는 "예상 손실율 ↔ replay 저항"의 trade-off로 정합니다. §6 체크리스트의 "MAC 간헐 실패 → FV window 크기/prev_FV 갱신 시점"이 바로 이 경계 판정 버그를 가리킵니다.
 
 #### Edge case 2: 키 로테이션 중 통신 중단
 

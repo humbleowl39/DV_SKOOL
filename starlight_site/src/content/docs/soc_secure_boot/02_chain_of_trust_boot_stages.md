@@ -397,10 +397,13 @@ BL2 DRAM 초기화 단계:
 4. Read/Write Training (Gate Training, Eye Training)
    - 데이터 eye의 중심을 찾아 샘플링 포인트 최적화
    - 각 바이트 레인별 독립 수행
+   - 측정 루프: 알려진 패턴을 쓰고, 샘플 지점(딜레이)을 좌→우로 한 step씩
+     스윕하며 read 결과가 패턴과 일치(PASS)하는 구간의 좌·우 경계를
+     찾는다 → 그 PASS 구간의 중앙을 최종 딜레이로 택해 마진을 최대화.
    +-----------+
    |  ╱╲  ╱╲  |  ← Data Eye Diagram
    | ╱  ╲╱  ╲ |     중심에서 샘플링해야 안정적
-   |←─ margin─→|
+   |←─ margin─→|     (좌/우 fail 경계의 중점 = 최적 샘플점)
    +-----------+
 
 5. CA (Command/Address) Training

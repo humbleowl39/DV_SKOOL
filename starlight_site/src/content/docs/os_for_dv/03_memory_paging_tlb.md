@@ -90,6 +90,7 @@ D -> E
 
 :::note[여기서 잡아야 할 두 가지]
 **(1) offset d 는 번역되지 않고 그대로 간다.** page 안의 위치는 frame 안의 같은 위치이므로, 번역되는 것은 page number p → frame number 뿐입니다.<br>
+**(1-보강) page 크기가 _2의 거듭제곱_ 이어야 bit 분할이 되는 필연성.** "2^n 이라 깔끔히 갈린다" 의 진짜 이유는 _하드웨어 비용_ 에 있습니다. 임의 page 크기 `S` 라면, 주소에서 page number 와 offset 을 뽑는 일은 `p = addr / S`(나눗셈)와 `d = addr mod S`(나머지)입니다 — 나눗셈/나머지는 회로로 구현하면 느리고 비싸며 여러 cycle 이 듭니다. 그런데 `S = 2ⁿ` 이면 이 두 연산이 정확히 `p = addr >> n`(오른쪽 shift)과 `d = addr & (2ⁿ−1)`(하위 n비트 mask)로 _대체_ 됩니다. shift 와 mask 는 단순 배선(wire)과 AND 게이트라 **추가 게이트도 latency 도 사실상 0** 입니다 — 주소의 비트를 그냥 두 묶음으로 _잘라서_ 위쪽은 p, 아래쪽은 d 로 배선하면 끝입니다. 즉 page 크기를 2의 거듭제곱으로 강제하는 것은 "주소 분할을 _공짜_ 로 만들기 위한" 설계 결정이고, 매 메모리 참조마다 일어나는 이 분할이 0 cost 라야 paging 이 실용적입니다.<br>
 **(2) 보호는 page table 에서 한다.** frame 마다 read-only/read-write/execute 를 정하는 **protection bit** 과, 그 page 가 합법 영역인지 표시하는 **valid-invalid bit** 으로(Ch.9.3.3). DV 관점에서 이 두 bit 의 위반 trap 이 MMU 검증의 핵심 체크포인트입니다.
 :::
 ---
@@ -154,9 +155,21 @@ hit 99% → 실효 접근 시간 ≈ 10.1 ns (1%만 느려짐)
 | **Hashed** | virtual page number 를 hash, 충돌은 linked list | clustered 변형은 sparse 주소공간에 유리 |
 | **Inverted** | frame 마다 entry 하나(`<pid, page#>`) | 시스템 전체 1개라 메모리 절약, 검색 위해 hash table 곁들임 |
 
+:::note[inverted page table 이 _왜_ 메모리는 아끼지만 검색이 비싼가 — 방향이 뒤집힌다]
+보통 page table 은 _process 마다_ 하나씩 있고 page number 로 색인되므로, process 가 많고 주소공간이 크면 table 들의 총 크기가 폭발합니다. **inverted page table** 은 발상을 뒤집어 **물리 frame 마다 entry 하나** 만 둡니다 — table 크기가 _물리 메모리 크기에 비례_ 하고 process 수와 무관하므로, 시스템 전체에 단 하나로 충분합니다. 이것이 메모리를 크게 아끼는 이유입니다.
+
+그런데 이 절약에는 _검색 방향의 대가_ 가 따릅니다. 일반 table 은 "page number 를 주면 그 자리를 바로 인덱싱" 하지만, inverted table 의 entry 는 **frame → `<pid, page#>`** 형태라 _frame 번호로 색인_ 되어 있습니다. 우리가 알고 있는 건 frame 이 아니라 `<pid, page#>` 이므로, 변환하려면 "이 `<pid, page#>` 를 담은 entry 가 _몇 번째 frame_ 자리에 있나" 를 _거꾸로_ 찾아야 합니다 — 즉 table 전체를 처음부터 훑는 **선형 검색** 이 원리적으로 불가피합니다(최악 O(N), N = frame 수).
+
+매 메모리 참조마다 선형 검색은 받아들일 수 없으므로, 실무에서는 **hash table 을 곁들여** `<pid, page#>` 를 hash 해 후보 frame 위치로 _바로_ 점프하고, 충돌만 짧은 체인으로 처리합니다. 정리하면: 방향이 뒤집혀(frame-indexed) 검색이 본질적으로 역방향이라 비싸지고, hash 가 그 역방향 검색을 평균 상수 시간으로 보완하는 구조입니다(그리고 TLB 가 hit 하면 이 검색 자체를 건너뜁니다).
+:::
+
 ### 5.4 메모리가 모자랄 때: Swapping (Ch.9.5)
 
-process 나 그 일부를 잠시 **backing store**(보조 저장장치)로 내보냈다(**swap out**) 다시 들이는(**swap in**) 것이 **swapping** 입니다. 통째로 옮기는 standard swapping 은 비싸서 요즘은 **swapping with paging**(page out/in)을 씁니다(Ch.9.5.2). mobile 시스템은 flash 수명·용량 때문에 대개 swapping 을 지원하지 않고, 메모리가 부족하면 앱에 반납을 요청하거나 종료합니다(Ch.9.5.3). backing store 가 바로 M04 의 저장장치입니다.
+process 나 그 일부를 잠시 **backing store**(보조 저장장치)로 내보냈다(**swap out**) 다시 들이는(**swap in**) 것이 **swapping** 입니다. 통째로 옮기는 standard swapping 은 비싸서 요즘은 **swapping with paging**(page out/in)을 씁니다(Ch.9.5.2).
+
+_왜_ page 단위가 통째 swapping 을 밀어냈는지는 옮기는 I/O 양이 무엇에 비례하는가를 보면 분명합니다. **standard swapping** 은 process 를 _전체_ 내보내고 들이므로, 디스크 I/O 양이 **process 의 전체 크기** 에 비례합니다 — 수백 MB 짜리 process 라면 그 전부를 매번 디스크와 주고받아야 하고, 디스크는 메모리보다 수만 배 느리므로 이 비용이 치명적입니다. 게다가 실제로 process 가 _지금 쓰는_ 부분(working set)은 그중 일부일 뿐이라, 안 쓰는 부분까지 옮기는 건 순수 낭비입니다.
+
+**swapping with paging** 은 page 라는 작은 단위로 _필요한 만큼만_ 내보내고 들입니다. 그래서 옮기는 I/O 양이 process 크기가 아니라 **실제 활성 page 수** 에 비례합니다 — 안 쓰는 page 는 디스크에 둔 채로, 당장 필요한 page 만 들이면 됩니다(이것이 demand paging 의 토대). 같은 통찰의 다른 면이 **internal fragmentation 대신 page-level granularity** 의 이점이고, 메모리가 빠듯할 때 _전체를 비우지 않고_ 가장 안 쓰이는 몇 page 만 내보내 즉시 공간을 확보할 수 있다는 유연성입니다. 즉 "전부냐(standard) vs 필요한 만큼만(paging)" 의 차이가 근본 이점입니다. mobile 시스템은 flash 수명·용량 때문에 대개 swapping 을 지원하지 않고, 메모리가 부족하면 앱에 반납을 요청하거나 종료합니다(Ch.9.5.3). backing store 가 바로 M04 의 저장장치입니다.
 
 ---
 
@@ -227,10 +240,6 @@ page 크기 4 KB, logical address `0x00003ABC` 가 주어졌다. page number 와
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG)**
-- `os_main_memory_spec.md` — address binding, MMU/relocation, fragmentation, paging, TLB/ASID, page table 구조, swapping (Ch.9 정독 요약)
-- `os_concepts_guide.md` — 시리즈 2번 "어디서 도는가"
 
 **External**
 - Silberschatz et al. *Operating System Concepts*, 10th ed. — **Ch.9 Main Memory**(§9.1 binding/MMU, §9.2 fragmentation, §9.3 paging/TLB, §9.4 page table 구조, §9.5 swapping)

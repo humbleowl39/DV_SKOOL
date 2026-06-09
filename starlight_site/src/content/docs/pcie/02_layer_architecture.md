@@ -198,6 +198,14 @@ void send_phy(struct dll_pkt p) {
 
 PHY 의 BER 이 아무리 낮아도 0 은 아니기 때문에, 언젠가는 단 한 비트가 깨질 수 있고, 그 순간 LCRC 가 틀어집니다. 그때 재전송을 결정하는 것은 DLL 의 일입니다. **모든 PCIe link 의 retransmission 은 DLL 책임** — PHY 가 신호 품질을 개선해도 packet-level reliability 는 여전히 DLL 이 보장합니다.
 
+:::note[Flow Control은 왜 의미는 TL인데 운반은 DLL(DLLP)인가]
+위 책임 매트릭스에서 "Flow Control credit" 이 TL 에 ✓ 가 있고 DLL 칸에는 "(DLLP 운반)" 이라고만 적힌 것이 의아할 수 있습니다. 이 분업에는 layer 를 가로지르는 이유가 있습니다.
+
+credit 이 *의미* 하는 것은 순전히 TL 의 자원입니다 — "수신 측 TL 의 buffer 에 P/NP/Cpl 별로 TLP 가 몇 개·payload 가 몇 byte 더 들어갈 자리가 있는가". 이 buffer 점유는 TLP 를 만들고 소비하는 TL 만 알 수 있는 상태이므로, credit 의 *생성과 해석* 은 TL 의 책임입니다. 송신 TL 은 "상대 TL buffer 에 자리가 있다" 는 credit 이 있을 때만 TLP 를 내보냅니다.
+
+그런데 이 credit 정보를 *상대에게 전달* 하려면 link 위로 무언가를 보내야 합니다. 만약 credit 갱신을 TLP 로 보낸다면, 그 TLP 자체가 다시 credit 을 소비해야 하는 모순(credit 을 받으려고 credit 을 써야 함)에 빠지고, TLP 라면 LCRC 검증·replay 대상이 되어 무겁습니다. 그래서 credit 갱신은 **DLLP(UpdateFC)** 로 운반합니다 — DLLP 는 DLL 이 만들고 *flow control 의 적용을 받지 않으며*, hop-local 로 가볍게 오갑니다. 즉 "이 정보가 무엇을 뜻하는가(TL buffer 점유)" 와 "이 정보를 어떻게 안전하고 가볍게 나르는가(DLL 의 신뢰 채널 DLLP)" 는 다른 layer 의 일이고, 그래서 credit 은 *의미는 TL, 운반은 DLL* 로 갈립니다. (FC 의 동작 메커니즘은 Module 04 에서 상세히 다룹니다.)
+:::
+
 ### 4.3 디버그 흐름의 직선화
 
 ```d2
@@ -265,6 +273,14 @@ RT -> DLL: "TLP"
 | **Ordering** | Posted (P) ↔ Non-Posted (NP) ↔ Completion (Cpl) 의 strict ordering 규칙 (PCI legacy 호환) |
 | **ECRC (optional)** | end-to-end CRC. 라우팅 노드에서 변경 안 됨. |
 | **Address translation** | ATS 사용 시 IOVA → PA 변환 결과 캐시 |
+
+:::note[ECRC는 왜 optional인가 — hop LCRC로 충분한 경우 vs switch 내부 corruption]
+LCRC 가 매 hop 마다 무결성을 보장하는데 왜 ECRC 가 또 필요하고, 게다가 *optional* 일까요? 답은 *위협 모델* 의 차이에 있습니다.
+
+LCRC 는 **wire 위의 한 hop** 을 지킵니다 — 송신 노드가 LCRC 를 붙이고 수신 노드가 검증하므로, 그 link 구간에서 전송 중 비트가 깨지면 잡힙니다. 그런데 switch 는 TLP 를 받아 다음 hop 으로 forward 할 때 *LCRC 를 벗기고 새로 계산해 다시 붙입니다*(hop 마다 LCRC 가 새 것). 만약 switch 가 TLP 를 그대로 통과(store-and-forward)시키며 payload 를 건드릴 일이 없다면, 매 hop 의 LCRC 만으로 끝까지 무결성이 이어집니다 — 이 경우 ECRC 는 군더더기입니다. 그래서 *기본은 optional* 입니다.
+
+문제는 **switch 내부에서 일어나는 corruption** 입니다. TLP 가 switch 의 내부 buffer/SRAM 에 머무는 동안 soft error(예: 우주선에 의한 bit flip)로 payload 가 바뀌면, switch 는 *바뀐 payload 위에 정상 LCRC 를 새로 계산해* 다음 hop 으로 내보냅니다. 각 hop 의 LCRC 는 모두 통과하지만, 최종 수신자가 받는 데이터는 송신자가 보낸 것과 다릅니다 — LCRC 는 이 경로 *중간 노드 내부* 의 오염을 원리적으로 못 잡습니다. **ECRC** 는 송신 TL 이 붙여 수신 TL 이 검증하며 *경로 내내 변경되지 않으므로*, 이런 end-to-end 오염을 검출합니다. 정리하면: LCRC(hop)만으로 충분한 환경이면 ECRC 를 끄고, switch 내부 soft error 같은 routing 노드 corruption 까지 막아야 하는 high-reliability 환경이면 ECRC 를 켭니다 — 그래서 정책에 따라 켜고 끄는 optional 입니다.
+:::
 
 ### 5.3 Data Link Layer (DLL) 책임
 

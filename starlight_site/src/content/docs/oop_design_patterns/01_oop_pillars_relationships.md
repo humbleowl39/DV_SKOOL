@@ -151,6 +151,10 @@ for (Shape s : shapes)
 
 다형성에는 두 갈래가 있습니다. 런타임에 vtable로 dispatch되는 **subtype polymorphism**(대부분의 엔지니어가 "다형성"이라 부르는 것)과, 타입 파라미터로 임의 타입 T에 동작하는 **parametric polymorphism**(generics/template)입니다. UVM의 `uvm_driver#(REQ, RSP)`는 parametric, `run_phase()` 오버라이드는 subtype 다형성입니다 (`oop_spec.md` §3.4).
 
+여기서 "런타임 dispatch"가 실제로 어떻게 일어나는지가 핵심입니다. `virtual`로 선언된 메서드는 컴파일 시점에 호출 대상이 고정되지 않습니다. 대신 각 객체는 자신의 실제 타입에 해당하는 **가상 함수 테이블(vtable)** — 메서드 이름 → 실제 구현 주소의 표 — 을 가리키고, `s.area()` 호출은 "*핸들*의 선언 타입"이 아니라 "*객체*의 실제 타입"의 vtable을 조회해 구현을 고릅니다. 그래서 `Shape` 핸들에 `Circle` 객체가 담겨 있으면 `Circle::area()`가 불립니다 — 호출 측이 구체 타입을 몰라도 됩니다. 반대로 `virtual`이 빠지면 dispatch가 *핸들의 선언 타입*에 따라 컴파일 시점에 고정되어, `Shape` 핸들로는 항상 `Shape::area()`만 불립니다. 이것이 Module 04에서 `virtual` 누락 시 다형성이 조용히 깨지는 메커니즘의 근본입니다.
+
+추상화의 SV 표현인 `virtual class`도 같은 맥락에서 이해됩니다. `virtual class`는 "추상 타입" — 완성되지 않은(혹은 직접 인스턴스화를 금지한) 클래스라서 `new`로 직접 객체를 만들 수 없고, *상속한 구체 자식*만 인스턴스화할 수 있습니다. §3의 `abstract Shape`가 Java 풍이라면, SV에서는 `virtual class uvm_object`가 같은 역할을 합니다 — "넓이를 구할 수 있는 무언가"라는 추상만 정의하고 구현은 자식에게 위임하는 것입니다 (Module 04와 일관).
+
 ### 4.2 세 가지 객체 관계
 
 객체끼리 엮이는 방식은 세 갈래입니다 (`oop_spec.md` §4).
@@ -180,6 +184,18 @@ CANDO: "CAN-DO (인터페이스/역할)" {
   T -> L: "implements"
 }
 ```
+
+:::tip[기둥의 토대 — SV class 변수는 객체가 아니라 핸들(참조)이다]
+네 기둥을 SystemVerilog로 옮기기 전에, 모든 것의 바닥에 깔린 한 가지 사실을 먼저 못박아야 합니다 — **SV에서 class 타입 변수는 객체 *자체*가 아니라 객체를 가리키는 핸들(handle, 곧 참조/포인터)입니다.** `my_item a = new();` 는 객체 하나를 힙에 만들고 그 위치를 `a`에 담습니다. 이어서 `my_item b = a;` 를 하면 *객체가 복사되지 않고 핸들만 복사*되어, `a`와 `b`는 **같은 하나의 객체**를 가리킵니다. 그래서 `b.addr = 99;` 는 `a.addr`도 99로 바꿉니다 — 둘이 같은 객체이기 때문입니다. (대조적으로 `int`/`bit` 같은 값 타입은 대입 시 값이 복제됩니다.)
+
+이 reference semantics가 곧 **얕은 복사(shallow copy)와 깊은 복사(deep copy)** 의 구분을 낳습니다.
+
+- **단순 대입(`b = a`)**: 핸들만 복사 — 객체는 하나, 완전히 공유됨.
+- **얕은 복사(shallow copy)**: 객체를 새로 하나 만들고 *필드 값을 그대로* 복사. 그런데 필드가 또 다른 객체의 핸들이면, 그 *내부 핸들이 가리키는 객체는 여전히 공유*됩니다 — 껍데기만 새것이고 속은 공유.
+- **깊은 복사(deep copy)**: 객체를 새로 만들고, 핸들 필드가 가리키는 객체들까지 *재귀적으로* 새로 복제. 원본과 사본이 어떤 객체도 공유하지 않음.
+
+UVM의 `clone()` / `do_copy()` 가 정확히 이 deep copy를 보장하기 위해 존재합니다. 트랜잭션을 monitor가 scoreboard·coverage 등 여러 구독자에게 1:N으로 **broadcast**할 때, 단순히 같은 핸들을 넘기면 모든 구독자가 *같은 객체*를 받습니다. 한 구독자가 그 객체를 수정하면 다른 구독자가 보는 값까지 바뀌는 오염이 생깁니다. 그래서 "broadcast된 트랜잭션을 mutate하지 말라", 그리고 보관·재전송 시 `clone()`으로 사본을 떠서 쓰라는 규칙이 나옵니다. 이 메커니즘은 UVM 코스의 [Sequence & Item](../../uvm/03_sequence_and_item/)과 [TLM/Scoreboard](../../uvm/05_tlm_scoreboard_coverage/)에서 `do_copy`/`clone` 구현으로 다시 등장합니다.
+:::
 
 **IS-A**는 자식이 부모 자리에 *대체 가능*해야 성립합니다(Liskov 치환 — Module 02 §LSP). 설계 수명 내내 진짜로 참일 때만 모델링해야 합니다.
 
@@ -327,10 +343,6 @@ endclass
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG / Confluence)**
-- `oop_spec.md` (Object-Oriented Programming Overview) — §1 Why OOP, §2 KISS/DRY/YAGNI, §3 네 기둥, §4 객체 관계, §6 OOAD, §7 SV/UVM 매핑
-- Confluence: *OOP* (coding principles, SOLID, 4 pillars, relationships 스켈레톤)
 
 **External**
 - McLaughlin, Pollice, West. *Head First Object-Oriented Analysis and Design*. O'Reilly, 2006.

@@ -125,6 +125,12 @@ U -> K: "trap / interrupt / system call"
 K -> U: "return (mode bit → user)"
 ```
 
+:::note[mode bit 이 _하드웨어로_ 강제되는 물리적 기전 — decode 단계의 게이팅]
+"하드웨어가 강제한다" 는 말의 실체는 CPU 파이프라인의 **instruction decode(명령 해독) 단계** 에 있습니다. CPU 가 명령을 fetch 한 뒤 decode 하는 그 순간, decoder 는 그 opcode 가 _privileged 부류인지_ 를 식별하고, 동시에 현재 실행 모드를 나타내는 **mode bit(또는 current privilege level 레지스터)** 을 읽습니다. 이 둘을 작은 조합 논리가 비교합니다 — 대략 `(privileged_opcode == 1) AND (mode_bit == user)` 가 참이면, 그 명령을 실행 유닛으로 보내는 대신 **exception/trap 을 raise** 하도록 datapath 가 분기합니다.
+
+핵심은 이 검사가 _소프트웨어 한 줄도 거치지 않고_ 매 명령의 decode 와 _같은 cycle_ 에 하드웨어 회로로 일어난다는 점입니다 — 그래서 user 코드가 아무리 빨라도, 무엇을 끼워 넣어도 이 게이트를 우회할 수 없습니다(흔한 오해 1). DV 관점에서 이 "privileged opcode × mode bit → trap" 게이팅 로직이 바로 우리가 검증해야 할 _대상 회로_ 입니다: privileged 명령을 user mode 로 주입했을 때 실행 유닛에 도달하지 _못하고_ 정확한 exception 이 뜨는지를 봐야 합니다.
+:::
+
 ### 4.3 System call 의 여섯 갈래 (Ch.2.3.3)
 
 system call 은 크게 여섯 갈래입니다: **process control**, **file management**, **device management**, **information maintenance**, **communication**, **protection**. device management 갈래가 우리가 검증하는 컨트롤러의 OS 측 진입점에 해당합니다.
@@ -158,10 +164,29 @@ system call 은 크게 여섯 갈래입니다: **process control**, **file manag
 **실제**: 일반 함수 호출은 같은 mode 안에서의 점프이지만, system call 은 **trap 을 걸어 mode bit 을 바꾸고** interrupt vector 의 진입점으로 들어갑니다(Ch.1.4.2). 그래서 비용이 훨씬 크고, 그 경계에서 인자 검증이 일어납니다.<br>
 **왜 헷갈리는가**: 개발자가 보기엔 똑같이 `read()` 처럼 부르기 때문 — libc 래퍼가 trap 을 가립니다.
 :::
+
+#### trap 이 함수 호출보다 _구체적으로_ 왜 비싼가 — 비용의 분해
+
+일반 함수 호출은 사실상 "return 주소를 stack 에 push 하고 target 으로 점프" 가 거의 전부입니다 — 같은 mode, 같은 주소공간, 같은 권한이라 추가 절차가 없습니다. system call(trap)은 그 위에 다음 비용이 _더_ 얹힙니다:
+
+1. **mode/stack 전환** — user → kernel 로 mode bit 을 바꾸고, user stack 이 아닌 _kernel stack_ 으로 갈아탑니다(user stack 을 kernel 이 신뢰할 수 없으므로). 이 전환 자체가 레지스터 저장과 stack pointer 교체를 수반합니다.
+2. **interrupt vector 를 통한 _간접_ 점프** — 함수 호출처럼 컴파일 타임에 고정된 주소로 직접 가는 게 아니라, syscall 번호로 vector/dispatch table 을 한 번 _조회_ 한 뒤 그 진입점으로 갑니다. 이 간접 분기는 직접 호출보다 비싸고 분기 예측에도 불리합니다.
+3. **권한·인자 검증** — kernel 은 넘어온 인자(특히 user 가 준 포인터)를 _신뢰하지 않으므로_ 매 진입마다 유효성·권한을 검사합니다. 함수 호출에는 없는 단계입니다.
+4. **파이프라인/캐시 영향** — mode 전환은 흔히 파이프라인 동기화를 강제하고, kernel 코드·데이터로 작업셋이 바뀌며 캐시·TLB 가 일부 오염됩니다.
+
+이 네 가지가 합쳐져 trap 은 단순 함수 호출의 수십~수백 배 비용이 됩니다. **이것이 syscall 을 가능한 한 _batch_ 하는(예: `readv`/`writev` 로 여러 I/O 를 한 번에, 또는 버퍼링) 근본 동기** 입니다 — 경계를 넘는 횟수 자체를 줄이는 게 이득이기 때문입니다.
 :::danger[❓ 오해 3 — 'monolithic 이 microkernel 보다 무조건 낡았다']
 **실제**: monolithic 은 system-call 오버헤드가 적어 빠르고, 그래서 Linux 도 monolithic 을 유지합니다(Ch.2.8). microkernel 은 안전·이식성을 얻는 대신 message passing 오버헤드를 감수합니다 — 둘은 우열이 아니라 trade-off 입니다.<br>
 **왜 헷갈리는가**: "더 모듈화 = 더 현대적"이라는 단순화 때문.
 :::
+
+#### monolithic 의 오버헤드가 _왜_ 더 적은가 — 서비스 호출 방식의 기전 차이
+
+"오버헤드가 적다" 는 결과 뒤에는 _OS 서비스끼리 어떻게 서로를 부르는가_ 의 기전 차이가 있습니다. **monolithic** 에서는 파일시스템·드라이버·네트워크 스택 같은 서비스가 _모두 같은 kernel 주소공간_ 안에 함께 있습니다. 그래서 한 서비스가 다른 서비스를 호출하는 일은 그냥 **같은 주소공간 안의 함수 호출** 입니다 — 포인터로 데이터를 넘기고 점프하면 끝이라, 추가 복사도 mode 전환도 없습니다.
+
+**microkernel** 에서는 그 서비스들이 _제각각 별도의 user-space 프로세스_ 로 분리돼 있습니다. 따라서 한 서비스가 다른 서비스의 기능을 쓰려면 **message passing** 을 해야 하는데, 이는 (a) 보내는 쪽 주소공간의 데이터를 메시지로 _복사_ 하고, (b) kernel 을 거쳐 받는 쪽으로 전달하며, (c) 그 과정에서 **context switch**(프로세스 전환)가 일어납니다. 즉 monolithic 의 단순 함수 호출 한 번이, microkernel 에서는 _복사 + context switch_ 를 동반하는 IPC 한 라운드로 바뀝니다.
+
+이 기전 차이가 바로 trade-off 의 양면입니다 — microkernel 은 서비스를 격리해 한 서비스가 죽어도 kernel 이 안 무너지는 _fault isolation_ 을 얻지만, 그 격리(별도 주소공간)가 곧 복사·전환 비용의 원천입니다. monolithic 은 그 비용을 없앤 대신 모든 서비스가 한 주소공간을 공유해 한 결함이 전체에 번질 수 있습니다.
 ### DV 디버그 체크리스트
 
 | 증상 | 1차 의심 | 어디 보나 |
@@ -211,10 +236,6 @@ user 프로그램이 I/O 제어 명령(privileged)을 직접 실행하려 한다
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG)**
-- `os_overview_spec.md` — OS 서비스, dual-mode, system call, kernel 구조 (Ch.1–2 정독 요약)
-- `os_concepts_guide.md` — OS 시리즈 읽는 순서의 0번 "틀"
 
 **External**
 - Silberschatz, Galvin, Gagne. *Operating System Concepts*, 10th ed., Wiley 2018 — **Ch.1 Introduction**(§1.4.2 dual-mode), **Ch.2 Operating-System Structures**(§2.1 서비스, §2.3 system call, §2.8 kernel 구조)

@@ -251,6 +251,10 @@ HW 구현:
   - 1500B 패킷: ~94 cycles (vs SW: 수백~수천 cycles)
 ```
 
+:::note[메커니즘 — RX 가 "재계산 후 비교" 대신 0 검사로 끝낼 수 있는 self-checking 성질]
+TX 는 checksum 필드를 0 으로 두고 나머지 전체(pseudo header + TCP header + payload)를 16-bit 1's complement 로 합산한 뒤, **그 합의 1's complement (보수)** 를 checksum 필드에 넣습니다. 1's complement 덧셈의 성질상 "어떤 값 + 그 값의 보수 = all-ones(0xFFFF)" 가 됩니다. 그래서 **RX 는 checksum 필드까지 _포함_ 해 전체를 똑같이 1's complement 합산** 하기만 하면 됩니다 — 데이터가 무손상이면 (원래 합) + (그 보수) 가 더해져 결과가 **0xFFFF (= 1's complement 표현의 0)** 이 나옵니다. 즉 RX 는 "내가 따로 checksum 을 계산해 헤더값과 비교" 하는 대신, **합산 결과가 0(0xFFFF)인지만 보면** 무결성을 판정할 수 있습니다 — 비교 대상을 따로 들고 있을 필요가 없는 self-checking 구조입니다. 비트가 하나라도 바뀌면 이 합이 0xFFFF 에서 어긋나므로 검출됩니다. HW 가 동일한 합산기 한 벌로 TX 생성과 RX 검증을 모두 처리할 수 있는 이유가 이 대칭성입니다.
+:::
+
 #### DV 검증 포인트 — Checksum
 
 | 시나리오 | 확인 사항 |
@@ -629,6 +633,10 @@ Timestamps 옵션 — 두 가지 목적:
 
 Timestamps 를 HW 로 처리할 때 중요한 것은 Connection Table 에 TS_recent (해당 연결에서 가장 최근에 수신한 Timestamp) 를 저장해 두는 것입니다. 새 패킷이 도착하면 그 TSval 을 TS_recent 와 비교하고, TSval < TS_recent 이면 과거 연결에서 지연된 패킷으로 판단해 폐기합니다 — PAWS 동작입니다. 100 Gbps 에서는 32 비트 Sequence Number 가 약 17 초마다 wrap 하므로 이 보호가 없으면 오래된 패킷이 새 연결에 잘못 수용될 수 있습니다.
 
+:::note[메커니즘 — 왜 seq 가 아니라 timestamp 로 "오래된 패킷" 을 거르나]
+핵심 대비는 **단조성(monotonicity)** 에 있습니다. Sequence Number 는 32 비트라 100 Gbps 에서 약 17 초마다 0 으로 **wrap** 합니다 — 즉 _옛날에 떠돌던 지연 패킷_ 의 seq 가, 한 바퀴 돈 _현재_ 의 정상 seq 범위와 **우연히 겹칠** 수 있습니다. 그래서 seq 만으로는 "이게 방금 보낸 건지, 17 초 전에 길을 잃었던 유령인지" 를 구별할 수 없습니다. 반면 Timestamp(TSval)는 송신측 클럭에서 **계속 증가** 하므로, 같은 connection 에서 _나중에 보낸 패킷일수록 TSval 이 크다_ 는 단조 관계가 성립합니다 (실용적 관측 구간 내에서 wrap 이 사실상 안 일어남). 따라서 "들어온 패킷의 TSval 이 이미 받아둔 가장 최근 TS_recent 보다 _작다_ → 이건 시간상 과거에 출발한 패킷" 이라고 **seq 와 무관하게** 판정할 수 있습니다. 즉 PAWS 는 신뢰할 수 없게 된(wrap 하는) seq 대신, _단조 증가하는 시간축_ 을 보조 기준으로 삼아 늙은 패킷을 거르는 것입니다.
+:::
+
 #### DV 검증 포인트 — TCP Options
 
 | 시나리오 | 확인 사항 |
@@ -665,6 +673,8 @@ Timestamps 를 HW 로 처리할 때 중요한 것은 Connection Table 에 TS_rec
 :::danger[❓ 오해 2 — 'Fast Retransmit 은 dup ACK 1 개부터 trigger 된다']
 **실제**: dup ACK **3 개** 가 표준 (RFC 5681). 1~2 개는 OOO 일 수도 있어 손실 신호로 보기엔 약함. 3 개부터 _통계적으로_ 손실로 판정. <br>
 **왜 헷갈리는가**: "ACK 가 같다 = 손실" 의 단순화.
+
+**왜 하필 3 개인가 — 통계적 근거**: dup ACK 는 receiver 가 "기대하던 seq 가 비었는데 그 뒤 segment 가 도착했다" 는 신호입니다. 이 현상의 원인은 두 가지 — _진짜 손실_ 이거나 _네트워크 재배열(reorder)_ 입니다. 그런데 실제 fabric 에서 패킷 재배열은 보통 **인접한 1~2 개 패킷이 자리를 바꾸는** 정도로 일어납니다 (경로가 살짝 갈렸다 합쳐지는 경우). 즉 dup ACK 가 1~2 개면 "곧 빠진 패킷이 조금 늦게 도착할 reorder" 일 가능성이 충분히 높습니다. 반면 **dup ACK 가 3 개째로 누적되면, 그 정도 거리의 reorder 는 통계적으로 드물어 _손실_ 일 확률이 급격히 높아집니다**. 그래서 RFC 는 "3" 을 reorder 를 손실로 오판하지 않으면서도 너무 오래 기다리지 않는 _임계값_ 으로 잡았습니다 — 더 작으면 정상 reorder 에 과민반응(불필요 재전송), 더 크면 손실 복구가 느려집니다.
 :::
 :::danger[❓ 오해 3 — 'SACK 가 cumulative ACK 를 대체한다']
 **실제**: SACK 은 cumulative ACK 의 **보조** 정보. 헤더의 ACK 필드는 여전히 cumulative, SACK options 는 추가로 _수신 완료 범위_ 를 알려줌. 둘 다 사용. <br>

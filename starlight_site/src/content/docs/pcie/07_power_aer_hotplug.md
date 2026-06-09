@@ -142,6 +142,14 @@ void enable_aspm_l0s_l1(uint8_t bus, uint8_t dev, uint8_t func) {
 **(1) ASPM 의 entry 는 두 layer 의 합작** — TX idle 검출 (PHY) + DLLP handshake (DLL). 어느 한쪽이라도 실패하면 link 는 L0 에 머무름. 검증 시 `PM_Enter_L1` 송신 후 상대 측이 어떻게 ACK 하는지 (또는 NACK 하는지) waveform 에서 반드시 확인.<br>
 **(2) Correctable error 도 host 까지 보고된다** — hardware 가 _자동으로 복구_ 한 것과 _보고하지 않는 것_ 은 다릅니다. `ERR_COR` Message 가 RC 까지 가야 OS 의 AER counter 가 누적되고, threshold 기반 alert 시스템이 작동. EP 가 보고를 빼먹으면 production 에서는 "조용히 reliability 가 무너지는" 가장 위험한 패턴.
 :::
+
+:::note[L1 entry는 왜 양단 합의(DLLP handshake)를 요구하나]
+위 ⑥에서 L1 진입이 `PM_Enter_L1` DLLP 를 보내고 *상대의 ACK 를 받은 뒤에야* 이뤄지는 것 — 즉 양단 합의가 필수인 것 — 에는 분산 상태 동기화의 근본 이유가 있습니다.
+
+link 의 양 끝은 각자 독립적으로 동작하는 두 상태기계입니다. 만약 한쪽이 *자기 판단만으로* "idle 이니 L1 으로 내려가 수신을 멈추자" 하고 PHY 를 절전시키면, *깨어 있는 반대쪽* 은 그 사실을 모른 채 TLP 를 계속 송신합니다 — 잠든 쪽은 그 TLP 를 못 받아 **유실** 되고, link reliability 가 깨집니다. 양쪽이 *동시에, 합의하에* 절전해야 "이제 둘 다 더 보낼 것이 없고 함께 내려간다" 가 보장되어 in-flight TLP 손실이 없습니다. 그래서 L1 entry 는 `PM_Enter_L1` → 상대 ACK 의 2-way handshake 를 거칩니다 — 한 노드의 일방적 결정으로는 깨지는 *분산 합의(distributed consensus)* 문제입니다.
+
+이 원리는 프로토콜이 달라도 동형으로 반복됩니다 — CXL 의 ARB/MUX vLSM 도 절전 전이에 ALMP 2-way handshake 를 요구합니다([CXL ARB/MUX & 패브릭](../../cxl/04_arbmux_fabric/) 참고). "분산된 두 끝이 절전을 합의해야 in-flight 데이터를 잃지 않는다" 는 같은 모양의 문제입니다.
+:::
 ---
 
 ## 4. 일반화 — D-state, L-state, AER 3 등급, Hot Plug 2 시나리오
@@ -304,6 +312,14 @@ PCIe error 를 하나의 카테고리로 묶어 처리하면 LCRC 가 가끔 틀
 | **Correctable Status/Mask** | 각 correctable bit 의 상태와 mask |
 | **Header Log [0..3]** | 첫 번째 발생한 uncorrectable error 의 TLP header 4 DW 캡처 |
 | **Root Error Status** | RP 가 받은 ERR_COR/NONFATAL/FATAL count + first src ID |
+
+:::note[AER severity는 왜 고정이 아니라 programmable인가 — 시스템 정책 의존]
+Uncorrectable Error *Severity* register 가 각 error bit 의 등급(Fatal vs Non-Fatal)을 *바꿀 수 있게* 한 것은, **같은 error 라도 시스템마다 적절한 대응이 다르기 때문** 입니다. severity 는 "이 error 가 본질적으로 얼마나 나쁜가" 의 물리적 사실이 아니라, "이 시스템이 이 error 에 어떻게 반응해야 하는가" 의 *정책* 이라서 고정값이 아니라 knob 입니다.
+
+예를 들어 같은 Completion Timeout 을 두고도 환경에 따라 정반대의 대응이 옳습니다. mission-critical 서버(금융·통신 인프라)는 데이터 무결성이 최우선이라, 의심스러운 error 는 차라리 **Fatal** 로 올려 link 를 reset 하거나 system 을 멈춰 *잘못된 데이터가 퍼지는 것을 막는* 쪽이 안전합니다. 반대로 consumer 기기(노트북·게임기)는 가용성이 더 중요해, 같은 error 를 **Non-Fatal** 로 두고 driver 가 조용히 recovery 를 시도해 *사용자 경험을 끊지 않는* 쪽이 낫습니다. 어느 쪽이 "옳다" 가 아니라, 시스템의 목적(무결성 우선 vs 가용성 우선)이 답을 정합니다.
+
+그래서 spec 은 severity 를 하드웨어에 못 박지 않고, OS/firmware 가 시스템 정책에 맞춰 *프로그램* 하도록 register 로 노출합니다. 이 때문에 같은 PCIe device 라도 한 시스템에서는 특정 error 가 panic 을, 다른 시스템에서는 graceful recovery 를 유발할 수 있습니다 — severity register 의 설정 차이입니다. 검증·운영에서 "왜 우리 시스템만 이 error 에서 panic 하는가" 를 추적할 때 이 register 의 정책 설정을 먼저 확인해야 하는 이유입니다.
+:::
 
 ### 5.5 Error Reporting Path
 

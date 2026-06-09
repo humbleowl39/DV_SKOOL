@@ -202,7 +202,7 @@ endclass
 
 ### 2.4 clocking block과 real — 호환성 안전 패턴
 
-digital UVM에서는 `clocking` block으로 race를 피합니다. RNM에서도 동일하게 쓰고 싶지만 — `real`/nettype 신호의 clocking 지원은 **vendor마다 다릅니다**. 안전 패턴은 **별도 always 블록에서 sample**한 뒤 monitor가 그 sample을 transaction화하는 것:
+digital UVM에서는 `clocking` block으로 race를 피합니다. RNM에서도 동일하게 쓰고 싶지만 — `real`/nettype 신호의 clocking 지원은 **vendor마다 다릅니다**. 여기서 "race 를 피한다" 는 것은 SV 스케줄러의 region 순서와 직결된다 — DUT 가 `<=` 로 신호를 갱신하는 NBA region 과 monitor 가 그 값을 sampling 하는 시점이 같은 time slot 안에서 어긋나면, monitor 가 _옛 값인지 새 값인지_ 가 불확정해진다 (driver/monitor 의 region·sampling 타이밍 일반론은 [UVM Module 02 — Agent/Driver/Monitor](../../uvm/02_agent_driver_monitor/) 참조). 아래 안전 패턴은 **별도 always 블록에서 `<=` 로 sample**한 뒤 monitor 가 그 안정된 sample 을 transaction 화하는 것으로, clocking block 이 자동으로 해 주던 region 정렬을 명시적으로 재현한다:
 
 ```systemverilog
 // 호환성 최선: 명시적 always sample

@@ -129,6 +129,8 @@ AND -> "gated_clock to flops"
 
 **효과**: 사용하지 않는 flop 에 clock 이 공급되지 않으면, 그 flop 의 clock 네트워크 dynamic power 와 flop 내부의 switching 소비 모두 절약됩니다. 특히 대규모 register file 이나 data path 에서 clock gating 이 적용되면 전체 chip dynamic power 를 20~40% 줄이는 경우도 흔합니다.
 
+**왜 가장 효과적인가 — §4.1 의 αCV²f 와 직접 연결.** Dynamic power `P = α·C·V²·f` 에서 clock gating 은 _두 항_ 을 동시에 0 으로 만든다. 첫째, gating 된 flop 의 입력단에서는 clock edge 가 안 오므로 그 flop 의 _activity factor α 가 0_ 이 되어 flop 내부 switching power 가 사라진다. 둘째, gate 아래의 _clock net 자체_ 가 토글하지 않으므로 그 clock 분배 네트워크(보통 칩에서 가장 toggle 이 잦은, 즉 α≈1 에 가까운 노드)의 `α·C·V²·f` 가 통째로 0 이 된다 — clock tree 가 dynamic power 의 큰 비중을 차지하기 때문에 이 두 번째 절약이 특히 크다. 즉 다른 기법이 C(MBFF)나 V²(DVFS)를 _줄이는_ 반면, clock gating 은 안 쓰는 동안 α 를 _0 으로 만들어_ 항 자체를 소거하므로 효율이 높다.
+
 ### 4.4 Multi-bit Flip-Flop (MBFF)
 
 여러 single-bit flop 을 *공유 clock buffer + 공유 reset* 으로 묶음.
@@ -228,6 +230,13 @@ report_qor            # quality of result (timing/area/power)
 <summary>Q1. (Explain) Setup 과 hold violation 중 어느 것이 *fix 가 더 어렵나*?</summary>
 
 **Hold**. Setup 은 *주파수* 를 낮추면 거의 항상 fix 가능. Hold 는 *주파수 무관* — buffer 를 넣어 short path 를 늘려야 하는데, buffer 가 setup 을 동시에 악화. 균형 잡기 어려움.
+
+**왜 hold 는 주파수와 무관한가 — 두 부등식을 나란히 보면 보인다.** setup 과 hold 부등식에서 _clock 주기 `T_clk` 가 어디에 들어가는지_ 가 결정적이다 ([Unit 1](../01_digital_rtl/) 의 STA 식):
+
+$$ t_{ck \to q} + t_{logic,max} + t_{setup} + t_{skew} \le T_{clk} \quad \text{(Setup)} $$
+$$ t_{ck \to q} + t_{logic,min} \ge t_{hold} + t_{skew} \quad \text{(Hold)} $$
+
+setup 은 launch flop 의 데이터가 _다음_ clock edge(한 주기 뒤)까지 capture flop 에 도착해야 하므로 우변에 `T_clk` 가 있다 — 그래서 주파수를 낮춰(T_clk↑) 우변을 키우면 거의 항상 만족시킬 수 있다. 반면 hold 는 launch 와 capture 가 _같은(동시) clock edge_ 를 두고 벌이는 경합이다: 방금 launch 된 _새_ 데이터가 capture flop 의 hold window 가 닫히기 _전에_ 도착해 _현재_ 캡처를 오염시키면 안 된다는 조건이다. 이 "같은 edge" 비교에는 _다음 주기까지의 시간_ 이 개입할 여지가 없어 **부등식에 `T_clk` 가 아예 등장하지 않는다**. 따라서 주파수를 아무리 낮춰도 hold 부등식은 변하지 않고(주파수 무관), 오직 `t_logic,min` 을 키워야(=short path 에 buffer 삽입) 고칠 수 있다 — 그런데 그 buffer 는 setup 의 `t_logic,max` 도 키워 setup 을 악화시키므로 균형이 어렵다.
 
 </details>
 <details>

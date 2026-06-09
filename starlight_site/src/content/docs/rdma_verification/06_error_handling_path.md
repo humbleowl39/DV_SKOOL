@@ -174,6 +174,12 @@ destroy_qp.setErrState(cmd.err);
 
 한 번 ErrQP 로 마킹되면 이후 그 QP 로 가는 모든 verb 는 silently skip 되어 에러 cascading 이 차단됩니다.
 
+:::note[메커니즘 — `completed_wqe_ap` 차단이 in-order completion 을 보존하는 원리]
+RC QP 는 한 WQE 가 에러로 끝나면 그 _뒤_ 에 줄 서 있던 outstanding WQE 들이 전부 flush(`WR_FLUSH_ERR`)됩니다 (M07 의 Requester Class B). 그런데 spec 규칙은 미묘합니다 — **completion 은 여전히 _post 한 순서_ 로 나와야 하고, 에러를 _최초로_ 일으킨 WQE 의 status 는 본래 에러 코드(예: `REM_ACCESS_ERR`)로, 그 뒤 WQE 들은 `FLUSH_ERR` 로** 보고돼야 합니다. 즉 "순서 보존 + 최초 트리거 status 보존" 두 가지가 동시에 지켜져야 합니다.
+
+scoreboard 쪽에서 이를 깨지 않으려면, ErrQP 가 된 뒤의 WQE 들을 _정상 완료 스트림_ 에 섞으면 안 됩니다. 그래서 driver 는 `isErrQP()` 인 동안 **`completed_wqe_ap.write()` 를 차단** 합니다 — flush 되는 WQE 들이 "정상 완료" 로 카운트되어 scoreboard 의 expected 순서를 어긋나게 만드는 것을 막는 것입니다. 동시에 최초 트리거 WQE 의 에러 자체는 `cqe_ap` 를 통해 `cqe_validation_checker` 가 그대로 받아 검증합니다(오해 3). 결과적으로 "에러는 한 번, 그것도 _최초 WQE_ 의 status 로만 기록되고, 뒤따르는 flush 는 정상 완료 카운트를 오염시키지 않는다" 가 보장되어 completion 순서가 깨지지 않습니다.
+:::
+
 ### 5.2 경로 2: CQ Handler → Error CQE
 
 DUT 에서 에러 CQE 발생 시 (예: `IB_WC_REM_ACCESS_ERR`):
@@ -289,6 +295,10 @@ endfunction
 | `vrdma_c2h_tracker::err_enabled` | dma_env | 0 | C2H tracker — 매칭 실패 skip + deregister 에러 등록 |
 | `vrdma_cq_handler::enable_error_cq_poll` | agent | 1 | Error CQ 백그라운드 폴링 on/off |
 | `vrdma_pkt_base_monitor::turn_off` | network_env | 0 | 패킷 모니터 on/off |
+
+:::note[메커니즘 — static class member 가 어떻게 "전역 스위치" 가 되나]
+위 flag 들이 `static` 인 것이 핵심입니다. SystemVerilog 에서 **static class member 는 인스턴스마다 하나씩 생기는 게 아니라, _그 클래스 전체에 단 하나_ 만 존재하는 저장소** 입니다 (클래스-레벨 변수). 그래서 `vrdma_1side_compare` 가 멀티노드 환경에서 여러 번 instantiate 되어도, 그 모두가 _같은_ `err_enabled` 한 칸을 공유합니다. 결과적으로 시퀀스 어느 한 곳에서 `vrdma_1side_compare::err_enabled = 1` 을 한 번만 set 하면, **모든 인스턴스의 검증 동작이 동시에 완화** 됩니다 — 인스턴스마다 따로 켜줄 필요가 없습니다. 이것이 "한 컴포넌트 타입 전체를, 모든 QP 에 대해" 끄는 per-component gate 가 static 으로 구현되는 이유입니다. 반대로 _특정 QP 만_ 끄려면 static 이 아니라 per-QP 상태(`isErrQP()`)를, _특정 cmd 만_ 끄려면 per-cmd(`expected_error`)를 써야 합니다 — 적용 범위가 곧 저장소의 수명/공유 범위와 일치합니다.
+:::
 
 ### 5.7 에러 테스트 시퀀스 작성 패턴
 

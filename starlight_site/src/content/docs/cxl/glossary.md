@@ -43,7 +43,7 @@ title: "CXL 용어집"
 
 **Definition.** Type 2 디바이스 메모리의 소유권을 Host Bias(CPU 소유)와 Device Bias(가속기 소유) 두 상태로 동적으로 전환해 일관성과 성능을 조정하는 메커니즘.
 
-**Source.** CXL 3.1 Specification, §3 (Coherence); HDG `CXL Overview` §2.3.
+**Source.** CXL 3.1 Specification, §3 (Coherence).
 
 **Related.** Type 2, HDM-D, HDM-DB, BISnp.
 
@@ -55,7 +55,7 @@ title: "CXL 용어집"
 
 **Definition.** Type 2 디바이스가 Bias 전환 또는 데이터 무결성 보호를 위해 S2M 채널로 호스트 캐시를 무효화하는 CXL 3.0+ 메커니즘.
 
-**Source.** CXL 3.1 Specification, §3; HDG `CXL Overview` §3.3.
+**Source.** CXL 3.1 Specification, §3.
 
 **Related.** S2M, HDM-DB, Device Bias, GO.
 
@@ -71,7 +71,7 @@ title: "CXL 용어집"
 
 **Definition.** PCIe TLP/DLLP를 그대로 사용해 enumeration, configuration, 인터럽트, DMA를 처리하는 CXL의 기반 프로토콜.
 
-**Source.** CXL 3.1 Specification, §3; HDG `CXL Overview` §3.1.
+**Source.** CXL 3.1 Specification, §3.
 
 **Related.** PCIe TLP, Flex Bus, PBR TLP Header.
 
@@ -83,7 +83,7 @@ title: "CXL 용어집"
 
 **Definition.** 가속기(Device)가 호스트 메모리를 일관성을 유지하며 캐싱하기 위해 D2H/H2D 채널로 동작하는 CXL 프로토콜.
 
-**Source.** CXL 3.1 Specification, §3; HDG `CXL Overview` §3.2.
+**Source.** CXL 3.1 Specification, §3.
 
 **Related.** D2H, H2D, GO, snoop, Type 1/Type 2.
 
@@ -95,7 +95,7 @@ title: "CXL 용어집"
 
 **Definition.** 호스트(Master)가 디바이스의 로컬 메모리(HDM)를 Load/Store로 접근하기 위해 M2S/S2M 채널로 동작하는 CXL 프로토콜.
 
-**Source.** CXL 3.1 Specification, §3; HDG `CXL Overview` §3.1, §3.
+**Source.** CXL 3.1 Specification, §3.
 
 **Related.** M2S, S2M, HDM, Type 2/Type 3, NDR/DRS.
 
@@ -111,7 +111,7 @@ title: "CXL 용어집"
 
 **Definition.** Fabric Manager를 통해 메모리 용량을 온디맨드로 할당(Add)하고 회수(Release)하는 CXL 3.0+ 메모리 디바이스.
 
-**Source.** CXL 3.1 Specification, §7; HDG `CXL Overview` §7.1.
+**Source.** CXL 3.1 Specification, §7.
 
 **Related.** Fabric Manager, Memory Pooling, HDM, G-FAM.
 
@@ -127,7 +127,7 @@ title: "CXL 용어집"
 
 **Definition.** PCIe Electricals/Connector/Retimer를 재사용하면서 부팅 시 협상으로 PCIe 또는 CXL 모드를 선택하는 CXL의 물리 인터페이스.
 
-**Source.** CXL 3.1 Specification, §6; HDG `CXL Overview` §1.2.
+**Source.** CXL 3.1 Specification, §6.
 
 **Related.** LTSSM, TS1/TS2 OS, Alternate Protocol Negotiation, Fallback.
 
@@ -139,7 +139,7 @@ title: "CXL 용어집"
 
 **Definition.** CXL.cachemem 링크 계층이 데이터를 패킹하는 고정 크기 전송 단위 (68B 또는 256B).
 
-**Source.** CXL 3.1 Specification, §4; HDG `CXL Overview` §4.1.
+**Source.** CXL 3.1 Specification, §4.
 
 **Related.** CRC, FEC, LLR, 256B Latency-Optimized.
 
@@ -155,7 +155,7 @@ title: "CXL 용어집"
 
 **Definition.** 해당 트랜잭션이 시스템 전체에서 일관성 있게 관측되었음을 보장하는 CXL.cache의 응답 신호.
 
-**Source.** CXL 3.1 Specification, §3; HDG `CXL Overview` §3.2.
+**Source.** CXL 3.1 Specification, §3.
 
 **Related.** CXL.cache, H2D Rsp, coherency.
 
@@ -171,7 +171,7 @@ title: "CXL 용어집"
 
 **Definition.** 디바이스의 로컬 메모리를 호스트 주소 공간에 노출해 호스트가 관리하거나 공유하는 CXL 메모리 모델 (HDM-H / HDM-D / HDM-DB).
 
-**Source.** CXL 3.1 Specification, §2; HDG `CXL Overview` §2.2.
+**Source.** CXL 3.1 Specification, §2.
 
 **Related.** Type 2, Type 3, Bias, BISnp.
 
@@ -187,7 +187,7 @@ title: "CXL 용어집"
 
 **Definition.** 전송 오류 발생 시 송신 측 Retry Buffer에 보관된 Flit을 재전송하는 CXL 링크 계층의 하드웨어 수준 복구 메커니즘.
 
-**Source.** CXL 3.1 Specification, §4; HDG `CXL Overview` §4.2.
+**Source.** CXL 3.1 Specification, §4.
 
 **Related.** Flit, CRC, Retry Buffer, ACK.
 
@@ -215,7 +215,7 @@ title: "CXL 용어집"
 
 **Definition.** 단일 물리 디바이스를 여러 Logical Device(최대 16)로 논리 분할해 다중 호스트가 나눠 쓰게 하는 CXL 2.0+ 기능.
 
-**Source.** CXL 3.1 Specification, §9; HDG `CXL Overview` §2.4.
+**Source.** CXL 3.1 Specification, §9.
 
 **Related.** Memory Pooling, G-FAM, PBR, Fabric.
 
@@ -231,7 +231,7 @@ title: "CXL 용어집"
 
 **Definition.** 전압을 4단계로 나눠 한 심볼에 2비트를 전송하는 변조 방식으로, CXL 3.0+에서 64 GT/s 달성을 위해 도입된다.
 
-**Source.** CXL 3.1 Specification, §6; HDG `CXL Overview` §6.3.
+**Source.** CXL 3.1 Specification, §6.
 
 **Related.** NRZ, FEC, 256B Flit, SNR.
 
@@ -243,7 +243,7 @@ title: "CXL 용어집"
 
 **Definition.** CXL 스위치의 multi-hop 통과를 위한 라우팅 메커니즘으로, CXL 3.1 패브릭 확장의 기반이다.
 
-**Source.** CXL 3.1 Specification, §9; HDG `CXL Overview` §2.4, §3.1.
+**Source.** CXL 3.1 Specification, §9.
 
 **Related.** PBR TLP Header(PTH), Multi-Level Switch, G-FAM.
 
@@ -255,7 +255,7 @@ title: "CXL 용어집"
 
 **Definition.** 데이터 오류 감지 시 해당 캐시라인에 부착되어 소비자가 읽을 때 에러를 보고하게 하는 CXL RAS 태그.
 
-**Source.** CXL 3.1 Specification, §12; HDG `CXL Overview` §8.
+**Source.** CXL 3.1 Specification, §12.
 
 **Related.** Viral, AER, RAS, Error Reporting.
 
@@ -271,7 +271,7 @@ title: "CXL 용어집"
 
 **Definition.** 하나의 물리 링크 위에서 각 프로토콜이 독립된 링크 상태(Active/L1/L2/Retrain/L0p)를 갖는 것처럼 가상화하는 ARB/MUX의 상태 기계.
 
-**Source.** CXL 3.1 Specification, §5; HDG `CXL Overview` §5.2.
+**Source.** CXL 3.1 Specification, §5.
 
 **Related.** ARB/MUX, ALMP, L0p, 전력 상태.
 
@@ -283,7 +283,7 @@ title: "CXL 용어집"
 
 **Definition.** Poison 전파가 통제 불가능할 때 링크를 정지시켜 오염 확산을 차단하는 CXL RAS의 최후 방어 메커니즘.
 
-**Source.** CXL 3.1 Specification, §12; HDG `CXL Overview` §8.
+**Source.** CXL 3.1 Specification, §12.
 
 **Related.** Poison, RAS, Error Reporting.
 

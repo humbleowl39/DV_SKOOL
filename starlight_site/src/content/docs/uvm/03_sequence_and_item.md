@@ -197,6 +197,18 @@ class axi_item extends uvm_sequence_item;
 endclass
 ```
 
+#### `rand` 와 `randomize()` 의 실체 — constraint solver
+
+`rand` 와 constraint 선언만 보면 `randomize()` 가 그냥 "필드에 난수를 채운다" 처럼 보이지만, 실제로는 더 깁니다. `obj.randomize()` 를 호출하면 시뮬레이터의 **constraint solver** 가 깨어나, 그 객체의 _모든 활성 제약 (constraint)_ 을 수집해 "이 제약들을 _동시에_ 만족하는 `rand` 필드 값의 조합" 을 푸는 **제약 만족 문제 (constraint satisfaction problem)** 로 변환합니다. 그 해 (solution) 중 하나를 (의사난수로) 골라 필드에 배정하고, 성공하면 1 을 반환합니다.
+
+핵심은 "난수 생성" 이 아니라 "제약을 푸는 것" 입니다. 예를 들어 `addr[1:0]==0` (4-byte aligned) 와 `addr < 32'h1000_0000` 두 제약이 있으면, solver 는 _두 조건을 모두_ 만족하는 addr 만 후보로 두고 그 안에서 무작위로 고릅니다. 제약이 하나도 없는 `rand` 필드는 전 범위에서 균등 난수가 되고, 제약이 빡빡할수록 후보 공간이 좁아집니다. 이 토픽 그룹에서 solver 를 처음 쓰는 지점이 여기이며, "왜 randomize 만 해서는 자극이 인가되지 않는가" (오해 2) 와 "왜 모순된 제약이 `Randomization failed` 가 되는가" (§5.1) 모두 이 _제약 해결_ 모델에서 따라 나옵니다.
+
+#### 제약 충돌과 solve order
+
+여러 제약은 **AND 로 결합** 됩니다 — solver 는 _전부_ 동시에 참인 해를 찾아야 합니다. 그래서 두 제약이 서로 모순이면 (예: `addr == 0` 과 `addr > 100` 이 동시에 활성) 만족하는 해가 _존재하지 않아_ `randomize()` 가 0 을 반환하고 `Randomization failed` UVM_ERROR 가 납니다. inline `with { ... }` 제약은 item 의 base constraint 를 _대체하지 않고 추가로_ AND 되므로, base 와 inline 이 모순일 때도 같은 실패가 납니다 (디버그 시 둘을 함께 봐야 하는 이유).
+
+제약은 기본적으로 _순서가 없습니다_ — solver 는 모든 제약을 한꺼번에 봅니다. 그러나 특정 필드를 먼저 정하고 그 결과에 따라 다른 필드 분포를 바꾸고 싶을 때는 `solve a before b` 로 **해를 정하는 순서 (그리고 그에 따른 분포)** 를 제어할 수 있습니다. 이것은 _해가 존재하는지_ 를 바꾸지 않고 (여전히 같은 제약 집합), _어떤 해가 얼마나 자주_ 뽑히는지의 분포만 바꿉니다 — 예컨대 `solve len before data` 로 길이를 먼저 균등하게 뽑고 그에 맞춰 data 를 채우는 식입니다.
+
 ### 4.2 Sequence — 시나리오 로직
 
 ```systemverilog
@@ -309,9 +321,17 @@ class axi_item extends uvm_sequence_item;
 endclass
 ```
 
+:::note[`do_copy` 가 _값 복사_ 를 하는 이유 — handle 은 참조다]
+`do_copy` 가 필드를 하나하나 `this.addr = rhs_.addr;` 식으로 베끼는 것이 장황해 보일 수 있습니다. 왜 `this = rhs;` 한 줄로 안 될까요? SystemVerilog 에서 class 변수는 **객체 자체가 아니라 객체를 가리키는 핸들 (참조)** 이기 때문입니다. `a = b;` (단순 대입) 는 _핸들만_ 복사해 — `a` 와 `b` 가 _같은 한 객체_ 를 가리키게 됩니다 (shallow / 참조 공유). 이후 한쪽으로 필드를 바꾸면 다른 쪽도 같이 바뀝니다.
+
+`do_copy` 는 이와 달리 _새 객체의 필드에 값을 하나씩 베껴 넣어_ **독립된 사본 (deep copy)** 을 만듭니다. 그래서 복사 후 원본을 바꿔도 사본은 영향받지 않습니다. 이 구분은 [Module 05](../05_tlm_scoreboard_coverage/) 의 analysis port 1:N broadcast 오염 (모든 subscriber 가 _같은 핸들_ 을 받음) 의 근본 원인이며, handle = reference 라는 SV 의 토대 자체는 [oop_design_patterns/01 — OOP 기둥](../../oop_design_patterns/01_oop_pillars_relationships/) 에서 deep/shallow copy 와 함께 자세히 다룹니다.
+
+`$cast(rhs_, rhs)` 도 같은 do 메서드에 매번 등장합니다. `do_copy` 의 인자 `rhs` 는 base 타입 `uvm_object` 핸들이라, 그대로는 자식 타입 (`axi_item`) 의 필드 (`addr`, `data`) 에 접근할 수 없습니다. `$cast` 는 **런타임 타입 검사를 거친 안전한 down-cast** 입니다 — `rhs` 가 실제로 `axi_item` (또는 그 자식) 이면 `rhs_` 에 그 타입으로 담아 성공 (1 반환), 아니면 _배정하지 않고_ 0 을 반환합니다 (잘못된 메모리 접근 대신 검출 가능한 실패). 그래서 do 메서드 안의 `$cast` 는 "이 base 핸들을 내 타입으로 안전하게 좁혀라" 는 의미입니다.
+:::
+
 #### do 메서드 vs Field Automation 매크로
 
-Sequence Item 이 Scoreboard 에서 제대로 비교되고, 로그에서 의미 있게 출력되려면 `do_copy`, `do_compare`, `do_print`, `convert2string` 네 가지 메서드를 구현해야 합니다. UVM 은 편의를 위해 `uvm_field_*` 매크로로 이 작업을 자동화하는 방법을 제공하지만, 내부적으로 reflection 기반으로 동작하기 때문에 시뮬레이션 속도가 10~30% 저하될 수 있습니다. 수십만 건의 transaction 을 처리하는 실무 환경에서는 이 오버헤드가 무시할 수 없으며, 또한 특정 필드만 비교에서 제외하거나 조건부 출력을 하는 등의 커스터마이즈가 불가능하다는 단점도 있습니다. 그래서 현업에서는 do 메서드를 직접 구현하는 방식이 표준으로 자리 잡고 있습니다. 새 필드를 추가할 때마다 네 메서드를 모두 업데이트하는 습관이 중요합니다.
+Sequence Item 이 Scoreboard 에서 제대로 비교되고, 로그에서 의미 있게 출력되려면 `do_copy`, `do_compare`, `do_print`, `convert2string` 네 가지 메서드를 구현해야 합니다. UVM 은 편의를 위해 `uvm_field_*` 매크로로 이 작업을 자동화하는 방법을 제공하지만, 내부적으로 reflection 기반으로 동작하기 때문에 시뮬레이션 속도가 10~30% 저하될 수 있습니다. 여기서 "reflection 기반" 이란, 매크로가 각 필드의 _메타데이터 (이름·타입·크기)_ 를 등록해 두고, copy/compare/print 가 불릴 때마다 그 메타데이터 목록을 **런타임에 순회 (introspection)** 하며 필드를 generic 하게 처리한다는 뜻입니다. 즉 컴파일 시점에 `this.addr = rhs_.addr` 처럼 직접 박힌 코드가 도는 do 메서드와 달리, 매크로 방식은 매 transaction 마다 "필드가 몇 개고 각각 어떤 타입이더라" 를 _표를 보고_ 처리하므로 그 간접 비용만큼 느려집니다. 수십만 건의 transaction 을 처리하는 실무 환경에서는 이 오버헤드가 무시할 수 없으며, 또한 특정 필드만 비교에서 제외하거나 조건부 출력을 하는 등의 커스터마이즈가 불가능하다는 단점도 있습니다. 그래서 현업에서는 do 메서드를 직접 구현하는 방식이 표준으로 자리 잡고 있습니다. 새 필드를 추가할 때마다 네 메서드를 모두 업데이트하는 습관이 중요합니다.
 
 ```
 방법 1: `uvm_field_* 매크로 (편리하지만 비추천)
@@ -537,6 +557,15 @@ env.agent.sequencer.set_arbitration(UVM_SEQ_ARB_FIFO);
 ### 5.6 grab / lock — Sequencer 독점
 
 때로는 특정 sequence 가 Sequencer 를 독점하여 다른 sequence 가 끼어들지 못하게 해야 하는 경우가 있습니다. 대표적인 예가 reset sequence 처럼 중간에 다른 자극이 섞이면 안 되는 상황입니다. `grab()` 은 현재 처리 중인 item 이후부터 즉시 독점을 시작하며, `lock()` 은 현재 Sequencer 큐에 대기 중인 item 들이 모두 처리된 후에 독점을 시작합니다. 독점이 끝나면 반드시 `ungrab()` 또는 `unlock()` 을 호출해야 다른 sequence 가 다시 동작할 수 있습니다. 긴급 상황에는 `grab`, 원자적 (atomic) 트랜잭션 보장이 목적이면 `lock` 이 더 안전합니다.
+
+#### grab/lock 을 _arbitration 큐_ 관점으로 보기
+
+grab 과 lock 의 차이는 sequencer 의 **arbitration 큐** 에서의 끼어드는 위치로 보면 기계적으로 드러납니다. sequencer 는 `start_item` 으로 들어온 요청들을 큐에 모아 두고, 매 item 시점마다 arbitration 정책 (§5.5) 으로 _다음에 누구를 driver 로 보낼지_ 고릅니다.
+
+- **`lock()`**: 큐에 "독점 요청" 을 _일반 요청처럼_ 넣습니다. 그래서 이미 큐에 _앞서_ 대기 중이던 (pending) 요청들이 모두 소진된 _뒤에야_ 독점 차례가 옵니다 — 그때부터 unlock 까지 그 sequence 만 grant 받습니다. 진행 중이던 다른 sequence 의 burst 가 잘리지 않습니다.
+- **`grab()`**: 큐의 _맨 앞_ 에 강제 삽입합니다. arbitration 이 다음 item 을 고를 때 grab 한 sequence 가 _무조건 최우선_ 으로 뽑혀, pending 요청들을 건너뛰고 즉시 독점합니다.
+
+이 큐 동작에서 "왜 grab 이 burst 를 자르나" 가 바로 보입니다 — 다른 sequence 가 5-beat burst 중 2-beat 만 보낸 상태라도, grab 은 그 sequence 의 남은 beat 를 큐 뒤로 밀어내고 _자기가 새치기_ 하므로, burst 가운데가 끊겨 protocol violation 이 됩니다. lock 은 새치기 없이 _자기 차례를 기다리므로_ 진행 중인 burst 를 보존합니다 (그래서 atomic 보장엔 lock).
 
 ```systemverilog
 // grab: 즉시 독점 (현재 진행 중인 item 이후부터)

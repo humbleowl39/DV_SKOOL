@@ -228,7 +228,7 @@ writel(tail, regs + DOORBELL);
 
 **Definition.** 디바이스의 현재 상태를 소프트웨어에게 보고하는 디바이스 레지스터.
 
-**Source.** Linux Device Drivers 3rd Ed. Ch. 9; HDG `hw_sw_interaction_spec.md` §2.
+**Source.** Linux Device Drivers 3rd Ed. Ch. 9.
 
 **Related.** Control register, BUSY/READY bit, Polling, Read-to-clear.
 

@@ -232,6 +232,12 @@ v_shared = 110 / 225 ≈ 0.489 V
 ### 통찰
 
 - Sense margin은 **C_bl / C_cell 비율**이 클수록 줄어듦 → 1Gb 이상 DRAM에서 매우 challenging
+
+**왜 비율이 margin 을 결정하는가 — 한 식으로 보기.** 위 dry-run 의 charge sharing 결과 `v_shared = (Q_cell + Q_bl)/(C_cell + C_bl)` 에서 BL 변화량 ΔBL = v_shared − V_pre 를 정리하면, cell 이 V_cell 로, BL 이 V_pre 로 미리 충전돼 있을 때:
+
+$$ \Delta BL = (V_{cell} - V_{pre}) \cdot \frac{C_{cell}}{C_{cell} + C_{bl}} $$
+
+즉 cell 과 BL 의 전압 차에, **`C_cell/(C_cell+C_bl)` 라는 _분압비(charge-sharing ratio)_** 가 곱해진 만큼만 BL 이 움직인다. 여기서 핵심은 분모에 큰 `C_bl` 이 있다는 점이다 — `C_bl ≫ C_cell` 이면 비율이 `C_cell/C_bl` 에 가까워져 ΔBL 이 그 비율에 _반비례_ 로 작아진다. 위 숫자(25 fF / 225 fF ≈ 0.11)가 곧 ±61 mV 의 작은 margin 을 만든 원인이다. **왜 1Gb 에서 더 어려운가**: 집적도가 올라갈수록 cell capacitor 는 작아지는데(C_cell↓) BL 은 더 많은 cell 이 매달려 길어지므로(C_bl↑), `C_cell/(C_cell+C_bl)` 비율이 더 떨어져 ΔBL 이 줄고, 동시에 SA offset(σ ≈ 15~20 mV)은 공정이 미세해져도 쉽게 줄지 않아 _신호↓ vs 잡음→_ 의 충돌이 심해진다. 이 한 식이 "왜 1Gb 에서 sense margin 확보가 challenging 한가" 를 정량으로 보여 준다.
 - 1차 검증: RNM (functional)
 - 2차 검증: RNM Monte Carlo (offset σ 효과)
 - 3차 검증: SPICE Monte Carlo (corner 통계 sign-off)

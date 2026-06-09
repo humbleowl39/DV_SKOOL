@@ -18,7 +18,7 @@ LLC가 유지하는 **Snoop Filter(Directory)** 의 역할은?
 <details>
 <summary>정답 / 해설</summary>
 
-**B**. Snoop Filter(Directory)는 정확히 어느 상위 캐시가 어느 cache line을 보유하는지를 추적하는 장부(ledger)입니다. 코어/GPGPU가 데이터를 요청하면 LLC가 directory를 조회해 *해당 데이터를 가진 특정 코어에만* targeted snoop을 보내, 모든 L1/L2에 broadcast할 때 발생하는 인터커넥트 혼잡을 크게 줄입니다 (출처: HDG §4).
+**B**. Snoop Filter(Directory)는 정확히 어느 상위 캐시가 어느 cache line을 보유하는지를 추적하는 장부(ledger)입니다. 코어/GPGPU가 데이터를 요청하면 LLC가 directory를 조회해 *해당 데이터를 가진 특정 코어에만* targeted snoop을 보내, 모든 L1/L2에 broadcast할 때 발생하는 인터커넥트 혼잡을 크게 줄입니다.
 
 </details>
 ## Q2. (Understand)
@@ -28,7 +28,7 @@ broadcast snooping이 코어 수가 늘어날 때 왜 확장성 문제를 일으
 <details>
 <summary>정답 / 해설</summary>
 
-broadcast snooping은 sharer 정보가 없어 한 코어의 read miss마다 "이 데이터 누가 가졌어?"를 *나머지 모든* L1/L2에 broadcast합니다. 코어가 64개·128개로 늘면 대부분의 캐시가 "없어"라고 답할 뿐인 무의미한 질문-응답이 인터커넥트를 가득 채웁니다. 트래픽이 코어 수 N에 비례(O(N))해 증가하므로, 코어를 더 붙여도 coherence 트래픽이 대역폭을 잠식해 성능이 오히려 떨어집니다 (출처: HDG §4).
+broadcast snooping은 sharer 정보가 없어 한 코어의 read miss마다 "이 데이터 누가 가졌어?"를 *나머지 모든* L1/L2에 broadcast합니다. 코어가 64개·128개로 늘면 대부분의 캐시가 "없어"라고 답할 뿐인 무의미한 질문-응답이 인터커넥트를 가득 채웁니다. 트래픽이 코어 수 N에 비례(O(N))해 증가하므로, 코어를 더 붙여도 coherence 트래픽이 대역폭을 잠식해 성능이 오히려 떨어집니다.
 
 </details>
 ## Q3. (Apply)

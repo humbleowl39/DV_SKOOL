@@ -511,6 +511,10 @@ class IPProfileIndex:
 # → GPU에 적용된 Common Task가 NPU에도 필요할 가능성 높음
 ```
 
+:::note[FAISS 유사 IP 검색이 _왜_ 동작하는가 — "유사 IP = 벡터 근접"]
+이 검색이 성립하는 근거는 **임베딩이 의미적 유사도를 좌표 거리로 바꿔 주기** 때문입니다. IP profile (DMA 여부, sysMMU 사용, 보안 요구 등)을 텍스트로 풀어 임베딩하면, 기능이 비슷한 IP 일수록 벡터 공간에서 _가까운_ 좌표에 놓입니다 — NPU 와 GPU 는 둘 다 "대용량 메모리 + DMA + sysMMU + DVFS" 라는 특성을 공유하므로 벡터가 근접합니다. FAISS 는 그 근접 벡터를 _전수 비교 없이_ 빠르게 찾아 주는 ANN 엔진이고, 그래서 "새 IP 와 가장 가까운 기존 IP" = "검증 패턴을 그대로 참조할 만한 IP" 가 됩니다. _왜_ 비슷한 의미가 가까운 벡터가 되는지(contrastive 학습), 그리고 _어떻게_ 빠르게 찾는지(HNSW/IVF) 의 메커니즘은 [AI Engineering Module 03 — Embedding & Vector DB](../../ai_engineering/03_embedding_vectordb/) 에서 다룹니다.
+:::
+
 #### Phase 3: LLM 기반 Gap Detection 프롬프트
 
 ```python
@@ -562,6 +566,12 @@ Hybrid (IP-XACT + Spec + FAISS + LLM):
 ```
 
 IP Spec 텍스트에서 "sysMMU 를 통해 메모리에 접근" 이라는 문장을 발견하면 필요성이 확인되고, FAISS 로 유사 IP (GPU) 의 검증 이력을 참조하면 "어떤 시나리오를 우선해야 하는지" 까지 예측할 수 있습니다. 이 세 정보를 LLM 이 종합하여 Priority 가 매겨진 Gap 목록과 mrun 명령어를 출력합니다.
+
+:::caution[왜 LLM Gap 목록에 False Positive 가 섞이는가 — 생성기의 본질]
+§5.9 문제 2 의 Precision 60% (= 10개 중 4개가 False Positive) 는 프롬프트가 나빠서가 아니라 LLM 의 _작동 원리_ 에서 나오는 구조적 특성입니다. LLM 은 사실을 _조회(lookup)_ 하는 데이터베이스가 아니라, 학습 분포를 바탕으로 _다음 토큰을 확률적으로 생성_ 하는 모델입니다. 그래서 "이 IP 패턴이면 보통 이런 검증이 필요하더라" 는 _그럴듯한_ 항목을, 설령 해당 IP 의 spec 에 근거가 없어도, 자연스럽게 만들어 냅니다 — 예컨대 §5.9 의 "UART × sysMMU" 처럼 DMA 가 없는 IP 에 sysMMU Gap 을 제안하는 식입니다. 이것은 [AI Engineering Module 01 — LLM Fundamentals](../../ai_engineering/01_llm_fundamentals/) 가 설명하는 hallucination 의 한 형태로, "생성 모델은 spec 에 없는 것도 통계적으로 그럴듯하면 만들어 낸다" 는 본질에서 비롯됩니다.
+
+그래서 LLM Gap detection 은 _Precision_ 보다 _Recall (실제 Gap 을 놓치지 않는 비율)_ 을 우선 지표로 삼습니다 — False Positive 는 §3 의 _15 분 인간 리뷰_ 라는 quality gate 에서 싸게 걸러지지만, 놓친 Gap 은 silicon 에서야 비싸게 드러나기 때문입니다. FAISS 의 유사 IP 이력으로 LLM 출력을 cross-check 하는 것도 이 생성 특성을 _근거로 제약_ 해 hallucination 을 줄이려는 장치입니다.
+:::
 
 ### 5.6 Gap Report → V-Plan 반영 실무 워크플로우
 

@@ -242,6 +242,10 @@ R -> S: "ACK PSN=N+2" { style.stroke-dash: 4 }
 - **2^23 가 한쪽에 8 M packet/4 KB MTU = 32 GB 전송분** — 정상 deployment 에서 wrap 까지 도달하기 충분히 김.
 - **PSN init** 은 random (보안상). RTR 진입 시 dest_qp 의 init PSN 을 양 끝에서 modify QP 로 합의.
 
+:::note[왜 window 가 정확히 "절반" 이어야 ambiguity 가 없나 — modular arithmetic]
+PSN 은 2^24 로 wrap 하는 원형 공간입니다. 원 위의 두 점 A, B 만 보고 "B 가 A 보다 앞인가 뒤인가" 를 물으면, **시계방향 거리와 반시계방향 거리 중 어느 쪽이 짧은가** 로 답할 수밖에 없습니다. 두 점의 modular 거리가 정확히 절반 (2^23) 이면 양쪽 거리가 같아져 _앞/뒤 판정이 불가능_ 해집니다. 그래서 outstanding 할 수 있는 PSN 의 폭을 **2^23 미만 (즉 절반)** 으로 제한하면, 합법적인 두 PSN 의 signed 거리 `(PSN - ePSN) mod 2^24` 는 항상 [−2^23, +2^23) 안의 _유일한_ 값으로 떨어져, 부호만으로 "이미 받은(과거)" vs "미래(out-of-order)" 를 모호함 없이 가릅니다. 즉 window 를 절반으로 잡는 것은 메모리 절약이 아니라, **wrap 이 일어나도 앞/뒤 비교가 단 하나의 답을 갖게 만드는 수학적 필요조건** 입니다. 이것이 §6 오해 2 의 "단순 `>` 비교가 깨지는" 근본 이유이기도 합니다.
+:::
+
 :::note[Spec 인용]
 "The PSN window for a given QP shall be 2^23." — IB Spec 1.7, §9.7.2 (R-198)
 :::
@@ -446,6 +450,8 @@ BTH OpCode 8-bit = 상위 3-bit (service type) + 하위 5-bit (operation). RC se
    Pkt N+2  A=0
    Pkt N+3  A=1   ← 여기에 ACK 발생, PSN=N+3 한 번에 ack (coalesced)
 ```
+
+**왜 중간 ACK 를 생략해도 reliability 가 안 깨지나 — cumulative ACK 의 성질**: RC 의 ACK 는 _누적(cumulative)_ 의미를 가집니다. "ACK PSN=N+3" 은 "N+3 만 잘 받았다" 가 아니라 **"N+3 까지(그 이전 전부 포함) 빠짐없이 순서대로 받았다"** 를 뜻합니다. receiver 가 strict in-order 로만 ePSN 을 전진시키므로, ePSN 이 N+3 까지 왔다는 것 자체가 N, N+1, N+2 의 도착을 보장합니다. 따라서 중간 패킷마다 ACK 를 보내지 않고 마지막 한 번만 보내도 정보 손실이 없습니다 — 중간 ACK 는 그저 _같은 사실의 부분집합_ 을 반복하는 것뿐입니다. 만약 중간에 구멍이 생기면 ePSN 이 거기서 멈추므로, coalesced ACK 의 PSN 이 sender 의 기대보다 작게 와서 sender 가 즉시 누락을 감지합니다. 즉 cumulative semantics 덕분에 "ACK 를 모아 보내는 최적화" 와 "누락 검출" 이 충돌 없이 공존합니다.
 
 → 검증 시 sender 가 A=1 보낸 후 timeout 안에 ACK 못 받으면 retry.
 

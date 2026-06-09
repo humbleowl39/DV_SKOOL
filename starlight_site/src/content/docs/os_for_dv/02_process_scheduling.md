@@ -88,6 +88,7 @@ D -> E: "(나중에)"
 
 :::note[여기서 잡아야 할 두 가지]
 **(1) context switch 는 순수 오버헤드다.** state save/restore 동안 시스템은 유용한 일을 못 합니다(보통 수 microsecond; 하드웨어가 register set 을 여러 벌 제공하면 더 빠름, Ch.3.2.3). DV 관점에서 register set 다중화는 우리가 검증할 수 있는 하드웨어 가속의 한 예입니다.<br>
+**(1-보강) _왜_ 순수 오버헤드이고, register bank 가 _어떻게_ 가속하는가.** CPU 에 물리적 register file 이 _한 벌_ 뿐이면, 현재 process 의 모든 레지스터 값(PC 포함)을 메모리(PCB)로 **spill(저장)** 한 뒤, 다음 process 의 값을 메모리에서 register file 로 **reload(복원)** 해야 합니다. 이 spill/reload 는 레지스터 개수만큼의 메모리 store/load 이고, 그동안 ALU 는 _사용자 계산을 한 줄도 못 하므로_ 시간이 통째로 버려집니다 — 이것이 "순수 오버헤드" 의 정체입니다. 하드웨어가 register file 을 _여러 벌(multiple banks)_ 두면, 전환은 값을 메모리로 옮기는 대신 **"지금 어느 bank 를 쓸지" 를 가리키는 포인터(bank-select)만 바꾸면** 됩니다. 값들은 칩 안 bank 에 그대로 남아 있으므로 spill/reload 자체가 사라져, 수십 번의 메모리 접근이 _한 번의 선택 신호 토글_ 로 줄어듭니다(이것이 fast interrupt 용 banked register, 또는 GPU 의 다중 warp register file 의 원리). DV 관점에서 검증 대상은 _bank-select 가 바뀔 때 옛 bank 값이 보존되고 새 bank 의 옳은 값이 보이는가_ 입니다.<br>
 **(2) ④ 의 user mode 전환이 M01 의 dual-mode 와 맞물린다.** dispatcher 가 코어를 넘기며 mode bit 을 user 로 바꾸는 바로 그 지점입니다.
 :::
 ---
@@ -149,6 +150,12 @@ P: "**parallelism**\n여러 코어에서 '동시에'\n멀티코어라야 가능"
 | **Round-Robin** (§5.3.3) | time quantum 으로 돌려쓰기 (preemptive) | time-sharing 에 적합 | quantum 크기 민감 |
 | **Priority** (§5.3.4) | 우선순위 순 | 중요 작업 우선 | 낮은 우선순위 starvation 가능 |
 
+:::note[SJF 가 _왜_ 평균 대기 최적인가 — exchange argument]
+SJF 가 평균 대기시간을 최소화한다는 것은 단순한 경험칙이 아니라 짧은 논증으로 증명됩니다. 직관의 핵심은 **앞에 놓인 작업의 길이가 _그 뒤의 모든_ 작업의 대기시간에 더해진다** 는 점입니다. 작업 길이가 `t₁, t₂, …, tₙ` 순서로 실행되면, 두 번째 작업은 `t₁` 만큼, 세 번째는 `t₁+t₂` 만큼… 기다리므로 총 대기시간은 대략 `(n-1)t₁ + (n-2)t₂ + … + tₙ₋₁` 입니다 — 즉 _먼저 놓인 작업일수록 더 많은 횟수로 합산_ 됩니다.
+
+여기서 **교환 논증(exchange argument)** 이 나옵니다. 만약 어떤 순서에서 긴 작업이 짧은 작업보다 앞에 있다면, 그 둘의 자리를 _바꿔_ 짧은 것을 앞에 놓아 보십시오. 짧은 작업이 앞으로 오면 뒤 작업들에 더해지는 값이 줄어들어 _총 대기시간이 반드시 감소_ 합니다(다른 작업들의 위치는 그대로). 이렇게 "긴 것이 짧은 것 앞에 있는" 모든 쌍을 계속 교환해 나가면, 더는 줄일 수 없는 상태 = _짧은 것부터 정렬된 순서_ 에 도달합니다. 즉 가장 무겁게 합산되는 앞자리에 가장 작은 값을 두는 것이 합을 최소화하는 길이고, 그것이 바로 SJF 입니다. (단, 이 최적성은 _주어진 작업 집합_ 에 대한 것이며, burst 길이를 미리 알아야 한다는 가정 위에서 성립합니다.)
+:::
+
 ### 5.3 dispatcher 와 dispatch latency (Ch.5.1.4)
 
 **CPU scheduler** 가 ready queue 에서 process 를 고르면, **dispatcher** 가 실제로 코어를 넘깁니다 — context switch + user mode 전환 + 프로그램 위치로 점프이며, 그 시간이 **dispatch latency** 입니다. DV 관점에서, register set 을 여러 벌 둔 하드웨어는 이 latency 를 줄이는 가속이며, 우리가 그 register bank 전환을 검증할 수 있습니다.
@@ -171,6 +178,23 @@ P: "**parallelism**\n여러 코어에서 '동시에'\n멀티코어라야 가능"
 **실제**: preemptive 는 반응성을 얻지만, 공유 데이터를 다루다 임의 시점에 선점되면 **race condition** 을 만듭니다(Ch.5.1.3). 그래서 kernel 자료구조에 동기화(M05)가 필수가 됩니다 — 이득에는 대가가 따릅니다.<br>
 **왜 헷갈리는가**: "더 잘 끼어든다 = 더 좋다"로 단순화해서.
 :::
+
+#### preemption 이 race 를 만드는 _기전_ — read-modify-write 의 중간 선점
+
+"임의 시점에 끊긴다" 가 _왜_ 데이터를 깨뜨리는지는 `count++` 같은 평범한 한 줄을 _기계 수준_ 으로 펼쳐 보면 드러납니다. 이 한 줄은 사실 세 단계입니다 — **read**(메모리의 count 를 레지스터로 읽기) → **modify**(레지스터에서 +1) → **write**(레지스터 값을 메모리로 다시 쓰기). 이 셋은 _원자적이지 않으므로_ 그 사이 어디서든 선점될 수 있습니다.
+
+이제 두 흐름 A, B 가 count=5 를 동시에 증가시키는 상황을 보면:
+
+```
+A: read count(=5) → reg_A=5
+   ── 여기서 A 가 선점됨 (아직 write 전!) ──
+B: read count(=5) → reg_B=5   ← B 는 A 가 아직 안 쓴 *옛(stale) 값* 5 를 봄
+B: modify → reg_B=6,  write → count=6
+   ── A 재개 ──
+A: modify → reg_A=6,  write → count=6   ← 5→6 두 번 증가가 6 으로 한 번만 반영
+```
+
+결과는 7 이어야 하는데 6 이 됩니다 — **update 하나가 사라졌습니다(lost update)**. 핵심은 _A 가 read 와 write 사이에서 끊긴 틈에 B 가 옛 값을 읽었다_ 는 것이고, 이 interleaving 이 곧 race condition 입니다. nonpreemptive 였다면 A 의 세 단계가 끊기지 않아 이 틈이 없습니다. 이것이 M05 에서 _이 세 단계를 하나로 묶어(atomic) 보호하는_ lock/atomic 명령이 필요해지는 직접적 이유이고, 검증에서 "공유 자료가 _간헐적_ 으로만 깨진다" 는 증상의 정확한 정체입니다(선점 타이밍이 맞아떨어질 때만 발생).
 ### DV 디버그 체크리스트
 
 | 증상 | 1차 의심 | 어디 보나 |
@@ -220,10 +244,6 @@ P1 이 실행 중 interrupt 가 들어와 P2 로 전환된다. 이때 OS 가 PCB
 </details>
 :::
 ### 7.2 출처
-
-**Internal (HDG)**
-- `os_processes_concurrency_spec.md` — process/thread, context switch, concurrency vs parallelism, 스케줄링 (Ch.3–5 정독 요약)
-- `os_concepts_guide.md` — 시리즈 1번 "무엇이 도는가"
 
 **External**
 - Silberschatz et al. *Operating System Concepts*, 10th ed. — **Ch.3 Processes**(§3.1 상태/PCB, §3.2 context switch), **Ch.4 Threads & Concurrency**(§4.1–4.2), **Ch.5 CPU Scheduling**(§5.1 preempt/dispatcher, §5.2 기준, §5.3 알고리즘)

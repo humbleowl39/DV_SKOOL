@@ -124,6 +124,8 @@ dimm: "DDR5 DIMM (Server) — 64-bit = 32-bit × 2 channels" {
 :::tip[DDR5의 2-cycle command — DV가 가장 주의할 것]
 DDR5 command는 `CA[6:0]` 핀 7개를 *2 클럭에 걸쳐* 전송. 첫 cycle은 OPCODE + 일부 ADDR, 둘째 cycle은 나머지 ADDR. monitor는 *2 클럭 윈도우*를 보고 command를 reconstruct해야 합니다.
 :::
+
+2-cycle command 의 본질은 **핀 수와 시간을 맞바꾼 trade-off** 입니다. DDR5 가 한 명령에 담아야 하는 정보(OPCODE + BG + BA + 더 넓어진 Row/Col 주소)는 DDR4 보다 늘었지만, JEDEC 은 명령버스 핀을 오히려 7개(CA[6:0])로 좁혔습니다. 한 클럭에 다 담으려면 14개 안팎의 CA 핀이 필요했을 정보를, 7핀 × 2클럭 = 14 슬롯으로 _시간축에 펼쳐서_ 보내는 것이 2-cycle command 입니다. 왜 굳이 핀을 줄이려 했는가 — 두 가지 이유입니다. 첫째, **핀(ball)은 곧 비용**입니다. 패키지 ball 수와 채널당 PCB 배선 수가 줄면 패키지·기판 원가와 라우팅 난이도가 내려갑니다. 둘째, **신호 무결성(SI)** 입니다. 고속에서는 나란히 달리는 평행 신호선이 많을수록 crosstalk 와 동시 스위칭 노이즈가 커지는데, CA 핀 수를 줄이면 이 잡음원이 줄어 같은 속도에서 더 깨끗한 명령버스를 얻습니다. 즉 명령버스는 데이터버스만큼 폭이 중요하지 않으므로(데이터처럼 매 beat 새 값을 쏟지 않음), 폭을 줄이고 두 클럭에 나눠 보내는 쪽이 비용·SI 면에서 이득인 것입니다.
 ### 3.4 DDR5 Bank/Bank Group
 
 - **8 Bank Groups** (BG[2:0])
@@ -411,7 +413,9 @@ DDR5는 device 밀도 (8 Gb ~ 64 Gb) 와 organization (x4/x8/x16) 에 따라 BG/
 
 > **NOTE 1 (스펙 원문 인용)**: "For non-binary memory densities, **a quarter of the row address space is invalid. When the MSB address bit is 'HIGH', the MSB-1 address bit shall be 'LOW'**."
 >
-> 즉 24 Gb (= non-binary) 에서 row[16] = 1 일 때 row[15] = 0 강제. DV의 *random row* constraint에 반영 필요:
+> 즉 24 Gb (= non-binary) 에서 row[16] = 1 일 때 row[15] = 0 강제.
+
+_왜 1/4 의 주소 공간이 무효가 되는가_ 는 이진 주소와 비이진 용량의 불일치에서 나옵니다. 주소는 본질적으로 2의 거듭제곱 단위로만 공간을 가리킵니다 — n 비트 row 주소는 정확히 2ⁿ 개의 row 만 표현할 수 있습니다. 그런데 24 Gb 는 2의 거듭제곱이 아닙니다(16 Gb 와 32 Gb 사이, 정확히는 16 Gb 의 1.5배). 24 Gb 의 row 수를 담으려면 16 비트(2¹⁶ = 65,536 row)로는 모자라 17 비트(R0~R16)를 써야 하는데, 17 비트는 2¹⁷ = 131,072 row 를 가리킬 수 있어 실제 필요한 양(16 비트분의 1.5배 ≈ 98,304)보다 _넓습니다_. 즉 17 비트 주소 공간의 3/4 만 실제 셀에 대응하고 **나머지 1/4 은 물리적으로 존재하지 않는 빈 공간** 입니다. JEDEC 은 그 빈 1/4 을 "MSB(row[16]) 가 HIGH 이면 MSB-1(row[15]) 은 반드시 LOW" 라는 규칙으로 잘라내어, 접근 불가능한 주소가 명확히 정의되도록 한 것입니다. DV 의 *random row* constraint에 반영 필요:
 > ```systemverilog
 > constraint c_nonbinary_row {
 >     // 24Gb: 1/4 of row space invalid
@@ -471,6 +475,8 @@ DDR5는 device 밀도 (8 Gb ~ 64 Gb) 와 organization (x4/x8/x16) 에 따라 BG/
 핵심:
 - **8 Gb**: x4/x8 → 16 banks (8 BG × 2 BA), x16 → 8 banks (4 BG × 2 BA)
 - **16 Gb 이상**: x4/x8 → 32 banks (8 BG × 4 BA), x16 → 16 banks (4 BG × 4 BA)
+
+_왜 16 Gb 이상에서 bank 수를 두 배로 늘리는가_ 는 **bank-level parallelism 유지** 동기로 설명됩니다. 용량을 키우는 방법은 둘입니다 — bank 수는 그대로 두고 bank 하나를 더 크게(더 많은 row) 만들거나, bank 수 자체를 늘리거나. 만약 bank 수를 고정한 채 용량만 키우면, 동시에 "열어 둘 수 있는 row(= active bank 수)" 는 그대로인데 그 bank 들이 전체 용량에서 차지하는 비중은 줄어듭니다. 즉 같은 데이터양을 더 적은 동시 접근 창구로 처리해야 해서, bank conflict 가 늘고 controller 가 Row Hit·병렬화로 숨길 수 있는 여지가 줄어 effective bandwidth 가 떨어집니다. 그래서 JEDEC 은 용량이 한 단계 오를 때 bank 수도 함께 늘려, 용량 대비 동시 접근 가능한 bank 의 비율(parallelism 밀도)을 유지하는 쪽을 택합니다. DDR5 가 BG 를 8개로 둔 것과 결합하면, 늘어난 bank 가 여러 BG 에 분산되어 tCCD_S interleaving 기회까지 함께 커집니다.
 
 ### 9.7 16n Prefetch Architecture 원문 인용
 

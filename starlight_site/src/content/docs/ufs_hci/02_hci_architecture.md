@@ -135,7 +135,7 @@ if (is & IS_UTRCS) {
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) UTRD 작성과 doorbell 사이의 _memory barrier_ 가 핵심 invariant** 다. HCI 가 UTRD 를 fetch 했을 때 UCD / PRDT 가 모두 visible 해야 함. TB 의 host agent 도 이 ordering 을 모델링해야 silent corruption 시나리오를 catch. <br>
+**(1) UTRD 작성과 doorbell 사이의 _memory barrier_ 가 핵심 invariant** 다. HCI 가 UTRD 를 fetch 했을 때 UCD / PRDT 가 모두 visible 해야 함. 왜 명시적 barrier 가 필요한가 — 하드웨어 차원의 근본 이유는 CPU 가 store 를 *재배열·버퍼링* 하기 때문이다. CPU 는 성능을 위해 store 를 **store buffer** 에 모아 두었다가 나중에 메모리에 반영하고, 그 반영 순서도 프로그램 순서와 다를 수 있다. 그래서 driver 코드상으로는 "UTRD 작성 → doorbell" 순서여도, doorbell(MMIO write)이 먼저 메모리/디바이스에 보이고 UTRD store 는 아직 store buffer 에 남아 있을 수 있다. 이때 HCI 가 DMA 로 UTRD 를 읽으면 *아직 갱신 안 된 옛 값* 을 집어 silent corruption 이 된다. barrier 는 "여기까지의 store 가 전부 가시화된 뒤에 다음(doorbell)을 진행" 하도록 강제해 이 역전을 막는다. (CPU store buffer / write reordering 의 전체 메커니즘은 [computer_architecture — Memory Hierarchy](../../computer_architecture/04_memory_hierarchy/) 참고.) TB 의 host agent 도 이 ordering 을 모델링해야 silent corruption 시나리오를 catch. <br>
 **(2) 완료 통지는 _두 곳_ 에서 동시에** 일어난다. (a) UTRLDBR slot bit clear, (b) IS[UTRCS] set + IRQ. ISR 은 _(b) 만 보고_ 동작하지 말고 (a) 도 함께 확인해야 어떤 슬롯이 완료됐는지 알 수 있다.
 :::
 ---
@@ -223,6 +223,13 @@ UTP Transfer Request Descriptor (UTRD) — 32 bytes
   [8:11]        DW2 — Overall Command Status  4B     OCS: 0x0F=Invalid, 0x00=Success,
                                                       0x01=CC, 0x02=Fatal, 0x03=DevErr,
                                                       0x04=DevFatalErr, ...
+                                                      ※ SW가 발행 전 0x0F(INVALID)로 초기화하는 이유:
+                                                        HCI가 완료 시 이 필드를 결과 코드로 덮어쓴다.
+                                                        만약 직전 명령이 남긴 0x00(SUCCESS)이 그대로
+                                                        있으면, HCI가 아직 안 끝냈는데 SW가 stale한
+                                                        SUCCESS를 보고 "완료"로 오인할 수 있다.
+                                                        INVALID로 깔아두면 "아직 HCI가 안 썼음"과
+                                                        "HCI가 결과를 썼음"이 명확히 구분된다.
   [12:15]       DW3 — Reserved                4B
   [16:19]       DW4 — Command UPIU            4B     UCD Base Address (하위 32-bit)
                       Base Address
@@ -245,6 +252,8 @@ UCD (UTP Command Descriptor) 메모리 레이아웃:
 ```
 
 ### 5.2 PRDT Entry 형식
+
+왜 PRDT 같은 scatter/gather 리스트가 *필요* 한가? 핵심은 OS 의 **가상 메모리** 때문이다. 애플리케이션이 보는 buffer 는 가상 주소 공간에서 연속이지만, OS 는 그 buffer 를 물리적으로는 *흩어진 여러 페이지* 에 매핑한다 — 예컨대 128 KB buffer 가 물리 메모리에서는 서로 떨어진 32 개의 4 KB 페이지로 존재할 수 있다. HCI 의 DMA 엔진은 가상 주소를 모르고 *물리 주소* 로만 메모리에 접근하므로, "이 물리 페이지에 N 바이트, 다음 물리 페이지에 M 바이트…" 식으로 흩어진 조각들의 (주소, 길이) 목록이 있어야 한다. 그 목록이 바로 PRDT 이고, DMA 가 entry 를 순차로 따라가며 비연속 물리 메모리를 하나의 논리 전송으로 묶는다. 만약 단일 연속 물리 버퍼만 가정하면 큰 전송은 거의 불가능해진다.
 
 ```
 Physical Region Description Table Entry — 16 bytes
@@ -363,6 +372,8 @@ Gear 변경 예시 (HS-G1 → HS-G3):
 ### 5.6 MCQ (Multi-Circular Queue) — UFS 4.0+
 
 SDB 와 MCQ 의 차이는 단순한 큐 개수가 아니라 완료 통지 방식까지 바뀐다는 점에 있습니다. SDB 에서는 모든 코어가 단일 Doorbell 레지스터와 IS 를 공유하므로, 큐 깊이가 포화될수록 Lock 경합이 병목이 됩니다. MCQ 는 이 문제를 NVMe 방식으로 해결했습니다. 각 CPU 코어가 자신만의 Submission Queue 와 Completion Queue 쌍을 가지고 독립적으로 처리하기 때문에 Lock 없이도 명령을 병렬로 제출하고 회수할 수 있습니다.
+
+왜 코어별 큐가 곧 *lock-free* 인가? Lock 이 필요한 근본 이유는 *여러 코어가 같은 자료구조(단일 doorbell · 단일 슬롯 비트맵)를 동시에 건드릴 때* 서로의 갱신을 덮어쓰지 않도록 직렬화해야 하기 때문이다. SDB 에서는 모든 코어가 하나의 UTRLDBR 과 슬롯 풀을 공유하므로, 어느 슬롯이 비었는지 고르고 doorbell 비트를 세우는 동안 다른 코어를 막는 lock 이 필수다. MCQ 에서는 각 큐가 *한 코어 전용* 이라 애초에 공유 자료구조에 대한 경합 자체가 사라진다 — 코어가 자기 큐의 tail 만 전진시키면 되고 다른 코어와 충돌할 지점이 없으므로 lock 이 불필요해진다. 즉 lock-free 는 마법이 아니라 *공유를 없앤 결과* 다.
 
 ```
 기존 (SDB — Single Doorbell):
