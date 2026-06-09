@@ -23,7 +23,7 @@ title: "Module 05 — AArch64 MMU & 주소 변환"
 
 ### 1.1 시나리오 — 페이지 테이블을 바꿨는데 옛 매핑이 살아 있다
 
-커널이 어떤 가상 주소의 매핑을 바꾸려고 PTE (page table entry) 를 새로 씁니다. 그리고 곧바로 그 주소에 접근하죠. 그런데 결과가 옛 PA 를 가리킵니다. 코드는 분명히 새 PTE 를 메모리에 store 했는데도 말입니다.
+**MMU**(Memory Management Unit — 가상 주소(VA)를 물리 주소(PA)로 번역하고 접근 권한을 검사하는 하드웨어)가 이 모듈의 주인공입니다. 커널이 어떤 가상 주소의 매핑을 바꾸려고 PTE (page table entry, 가상→물리 한 페이지의 번역과 속성을 담은 항목) 를 새로 씁니다. 그리고 곧바로 그 주소에 접근하죠. 그런데 결과가 옛 PA 를 가리킵니다. 코드는 분명히 새 PTE 를 메모리에 store 했는데도 말입니다.
 
 원인은 **TLB (Translation Lookaside Buffer)** 입니다. TLB 는 PTE 의 hot cache 인데, 페이지 테이블이 메모리에서 바뀌어도 그 사실을 _자동으로 추적하지 않습니다_. SW 가 명시적으로 `TLBI` (TLB Invalidate) 명령으로 옛 entry 를 버려 줘야 합니다. 게다가 store 가 메모리에 보이기 전에 invalidate 가 나가면 page walker 가 다시 옛 PTE 를 읽어 들이고, 다른 코어는 여전히 자기 TLB 의 옛 entry 로 동작합니다. 그래서 표준 시퀀스는 다음과 같이 다섯 단계로 못박혀 있습니다 (asm/MMU §②).
 
@@ -37,7 +37,7 @@ title: "Module 05 — AArch64 MMU & 주소 변환"
 
 ② 가 빠지면 page walker 가 옛 PTE 를 읽고, ④ 가 빠지면 다른 코어가 stale TLB 로 동작하며, ⑤ 가 빠지면 자기 파이프라인이 옛 매핑으로 prefetch 한 명령을 실행합니다. 한 단계만 빠져도 _간헐적_ 으로만 재현되는, 가장 잡기 어려운 부류의 버그가 됩니다.
 
-이 메커니즘을 모르면 검증 환경에서 메모리 컨트롤러나 IOMMU·SMMU 를 검증할 때 "분명 PTE 는 맞는데 변환 결과가 틀린" 현상을 TB 버그로 오인하거나, 반대로 TB 가 barrier 없이 PTE 를 바꾸고 곧바로 비교해 spurious mismatch 를 만들게 됩니다.
+이 메커니즘을 모르면 검증 환경에서 메모리 컨트롤러나 **IOMMU·SMMU**(I/O 장치에 주소 번역을 제공하는 MMU — ARM 의 System MMU) 를 검증할 때 "분명 PTE 는 맞는데 변환 결과가 틀린" 현상을 TB 버그로 오인하거나, 반대로 TB 가 barrier 없이 PTE 를 바꾸고 곧바로 비교해 spurious mismatch 를 만들게 됩니다.
 
 ---
 
@@ -71,8 +71,8 @@ WALK -> PA: "leaf PTE"
 
 세 가지 요구의 교집합입니다.
 
-1. **모든 메모리 접근이 1-cycle 안에 변환돼야 한다** → load/store/fetch 마다 변환이 critical path 에 있으므로, 작고 빠른 μTLB 를 LSU 포트마다 두어 1-cycle hit 을 보장 (uarch/TlbPtw).
-2. **miss 해도 페널티를 흡수해야 한다** → miss 시 main TLB → PWC → walker 로 단계적 fallback. PWC 가 중간 레벨 PTE 를 캐시해 walk latency 를 절반 이하로 줄임.
+1. **모든 메모리 접근이 1-cycle 안에 변환돼야 한다** → load/store/fetch 마다 변환이 critical path 에 있으므로, 작고 빠른 **μTLB**(micro-TLB — 가장 가까운 1단계 번역 캐시)를 **LSU**(Load/Store Unit — 메모리 접근 명령을 처리하는 실행 유닛) 포트마다 두어 1-cycle hit 을 보장 (uarch/TlbPtw).
+2. **miss 해도 페널티를 흡수해야 한다** → miss 시 main TLB → **PWC**(Page Walk Cache — 페이지 테이블 walk 중간 레벨 항목을 캐싱하는 구조) → walker 로 단계적 fallback. PWC 가 중간 레벨 PTE 를 캐시해 walk latency 를 절반 이하로 줄임.
 3. **context switch 비용을 낮춰야 한다** → 모든 entry 에 ASID/VMID 를 태깅해, 프로세스/VM 전환 시 TLB 를 통째로 flush 하지 않아도 cross-context 매칭이 자동 차단.
 
 ---
@@ -203,7 +203,7 @@ uarch/TlbPtw 가 제시하는 latency breakdown 입니다.
 | Full walk, PTE in DRAM | ~100 ~ 300 | 각 fetch 마다 DRAM access |
 | Nested walk, PWC miss | ~300 ~ 1000+ | 최악 — DRAM 까지 24 fetch |
 
-μTLB 가 fully-associative CAM 인 이유는 **variable page size** 때문입니다. set-associative 는 set index 비트가 page size 에 따라 달라지는데, 4KB/16KB/64KB/2MB/1GB 를 동시에 지원하려면 모든 entry 를 동시 비교하는 CAM 이 필요합니다. 대신 작아야(~16~48 entry) 1-cycle 이 가능합니다.
+μTLB 가 fully-associative **CAM**(Content-Addressable Memory — 주소가 아니라 내용으로 모든 항목을 동시에 비교 검색하는 메모리) 인 이유는 **variable page size** 때문입니다. set-associative 는 set index 비트가 page size 에 따라 달라지는데, 4KB/16KB/64KB/2MB/1GB 를 동시에 지원하려면 모든 entry 를 동시 비교하는 CAM 이 필요합니다. 대신 작아야(~16~48 entry) 1-cycle 이 가능합니다.
 
 ---
 

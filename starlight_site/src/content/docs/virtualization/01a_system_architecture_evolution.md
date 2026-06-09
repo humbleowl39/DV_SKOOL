@@ -24,7 +24,7 @@ title: "Module 01A — System Architecture Evolution"
 
 ### 1.1 시나리오 — 40 년의 누적 _왜_
 
-현대 SoC 의 블록 다이어그램을 처음 보면 MMU, IOMMU, ATS, PASID, StreamID, AxUSER, hypervisor mode, EPT 같은 가상화 관련 하드웨어가 수십 개나 늘어서 있어 압도적으로 느껴집니다. 이것들이 왜 이렇게 많은지, 한 번에 다 설계할 수는 없었는지 궁금할 것입니다.
+현대 **SoC**(System on Chip — CPU·메모리 컨트롤러·가속기 등 한 시스템을 칩 하나에 통합한 것)의 블록 다이어그램을 처음 보면 **MMU**(Memory Management Unit — CPU 의 가상 주소를 물리 주소로 변환하는 하드웨어), IOMMU(디바이스의 DMA 주소를 변환·격리하는 "디바이스용 MMU"), **ATS**(Address Translation Service — 디바이스가 변환 결과를 미리 받아 캐시해 IOMMU 왕복을 줄이는 PCIe 기능), **PASID**(Process Address Space ID — 한 디바이스 안에서도 프로세스별로 주소 공간을 구분하는 식별자), **StreamID**(ARM 에서 "이 트랜잭션이 어느 디바이스/VM 소속인가"를 가리키는 식별자), AxUSER(AXI 버스에서 그 정체성을 실어 나르는 신호; §5.8), hypervisor mode, **EPT**(2단계 주소 변환을 하드웨어가 자동 처리하는 page table) 같은 가상화 관련 하드웨어가 수십 개나 늘어서 있어 압도적으로 느껴집니다. 이것들이 왜 이렇게 많은지, 한 번에 다 설계할 수는 없었는지 궁금할 것입니다.
 
 답은 **40 년의 점진적 진화** 에 있습니다.
 
@@ -38,7 +38,7 @@ title: "Module 01A — System Architecture Evolution"
 2020+: PASID (process-level isolation in device)
 ```
 
-각 단계는 이전 단계의 한계가 _운영 현장에서 구체적인 문제로 드러난 후_ 에야 추가됐습니다. 이론적으로는 더 일찍 만들 수 있었지만, 실제 필요성은 현장의 장애와 보안 사고가 인정해 주었습니다. 예를 들어 IOMMU 가 없던 시대에도 가상화는 동작했습니다. 그러다 2010 년대에 100 GbE NIC 의 pass-through 가 DMA 보안 구멍을 만들면서 IOMMU 가 비로소 필수 요소로 자리잡았습니다.
+각 단계는 이전 단계의 한계가 _운영 현장에서 구체적인 문제로 드러난 후_ 에야 추가됐습니다. 이론적으로는 더 일찍 만들 수 있었지만, 실제 필요성은 현장의 장애와 보안 사고가 인정해 주었습니다. 예를 들어 IOMMU 가 없던 시대에도 가상화는 동작했습니다. 그러다 2010 년대에 100 GbE **NIC**(Network Interface Card — 네트워크 카드)의 **pass-through**(디바이스를 hypervisor 를 거치지 않고 VM 에 직접 통째로 넘겨주는 것)가 **DMA**(Direct Memory Access — CPU 를 거치지 않고 디바이스가 메모리에 직접 접근하는 방식) 보안 구멍을 만들면서 IOMMU 가 비로소 필수 요소로 자리잡았습니다.
 
 가상화는 **하루아침에 만들어진 것이 아닙니다**. CPU 에 처음 MMU 가 붙은 1970 년대부터 IOMMU 가 표준이 된 2010 년대까지 거의 40 년의 누적 결과입니다. 각 단계는 이전 단계의 한계를 정확히 인식하고 그것만 풀기 위해 추가됐습니다.
 
@@ -77,7 +77,7 @@ S1 -> S2 -> S3 -> S4 -> S5 -> S6 -> S7
 
 ## 3. 작은 예 — 단계 5 → 6: 디바이스 DMA 가 IOMMU 로 바뀌는 1 사이클
 
-가장 결정적 전환점인 **단계 5 → 6** 만 step-by-step. HW 가속기가 1 KB 데이터를 DRAM 에서 읽는 단 한 번의 DMA 가 IOMMU 도입 전후 어떻게 바뀌는지.
+가장 결정적 전환점인 **단계 5 → 6** 만 step-by-step. HW 가속기가 1 KB 데이터를 DRAM 에서 읽는 단 한 번의 DMA 가 IOMMU 도입 전후 어떻게 바뀌는지. 미리 용어를 깔아두면: **PA**(Physical Address — 실제 DRAM 칩의 물리 주소), **IOVA**(I/O Virtual Address — 디바이스가 쓰는 가상 주소로, IOMMU 가 PA 로 번역), **IPA**(Intermediate Physical Address — Guest 가 "물리 주소"로 믿지만 한 단계 더 변환이 남은 중간 주소), **STE**(Stream Table Entry — StreamID 로 찾아 들어가는, 그 디바이스의 변환 설정을 담은 표 항목)입니다.
 
 ```d2
 direction: down
@@ -168,6 +168,8 @@ L -- K: { style.stroke-dash: 4 }
 | 5 | OS(ARM-A) + HW Accel | MMU, Cache | ① 가상 주소, 범용 OS |
 | **6** | **+ PEs + IOMMU + LLC + Coherency** | **IOMMU, LLC, Coherency** | **③ 디바이스 격리 (가상화 전제)** |
 | 7 | + Virtualization (HW) | Hypervisor, PF/VF, 2-stage | ④ VM 격리 + 성능 유지 |
+
+> 위 표의 약어: **PEs**(Processing Elements — GPU·DSP·NPU·DPU 등 CPU 옆에 붙는 특화 연산 엔진들), **LLC**(Last Level Cache — CPU·PE·가속기가 함께 쓰는 가장 바깥쪽 공유 캐시), **Coherency**(여러 캐시가 같은 주소의 값을 일관되게 보도록 하드웨어가 자동 동기화하는 것), **PF/VF**(Physical/Virtual Function — SR-IOV 가 물리 디바이스 하나를 관리용 PF 와 VM 에 나눠 주는 여러 VF 로 분할한 것). 각각은 §5.6~§5.8 에서 자세히 다룹니다.
 
 ### 4.3 단계 6 의 4 대 요소 — 왜 모두 한꺼번에 들어왔나
 
@@ -519,7 +521,7 @@ Coherency 있을 때:
 | 성능 | **높음** — LLC, Coherency, 특화 PE |
 | 예시 | 현대 스마트폰 SoC (Snapdragon, Apple Silicon), 서버 SoC |
 
-단계 6 은 현대 SoC 의 완성형에 가깝지만, 한 SoC 위에서 여러 독립 실행 환경을 _동시에_ 안전하게 운영해야 하는 요구 — 서버의 멀티테넌시, 자동차의 도메인 분리, 모바일의 TrustZone 강화 — 가 본격화되면서 Hypervisor 와 HW 가상화 지원을 추가한 단계 7 로 이어집니다.
+단계 6 은 현대 SoC 의 완성형에 가깝지만, 한 SoC 위에서 여러 독립 실행 환경을 _동시에_ 안전하게 운영해야 하는 요구 — 서버의 멀티테넌시(여러 고객이 한 인프라를 격리된 채 공유), 자동차의 도메인 분리, 모바일의 **TrustZone**(ARM 이 칩 안에 secure/normal 두 세계를 두어 민감 데이터를 격리하는 보안 기술) 강화 — 가 본격화되면서 Hypervisor 와 HW 가상화 지원을 추가한 단계 7 로 이어집니다.
 
 ### 5.7 단계 7a: 가상화 — HW 지원 없음 (SW 에뮬레이션)
 
@@ -706,7 +708,7 @@ Hypervisor 입장: IPA → PA 를 관리 (실제 물리 메모리 배치 결정)
 
 IOMMU 가 _DMA path_ 를 가상화:
 - 단계 5: CPU 의 메모리 접근만 page table 거침. DMA (device → memory) 는 _직접_ 물리 주소 사용 → VM passthrough 시 host RAM 침해 가능.
-- 단계 6: IOMMU 가 device 의 GPA → HPA 변환 → VM passthrough 가 _안전_.
+- 단계 6: IOMMU 가 device 의 GPA(Guest Physical Address — Guest 가 믿는 물리 주소) → HPA(Host Physical Address — 진짜 물리 주소) 변환 → VM passthrough 가 _안전_.
 - 결론: SR-IOV / VFIO / GPU passthrough 가 _가능_ 해진 분기점이 단계 6.
 
 </details>

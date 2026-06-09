@@ -154,6 +154,8 @@ Flash교체 → 서명 검증 (항상 활성)
 
 ### 5.4 DV 방법론 빠른 참조 (Module 07)
 
+아래 약어: **CG**(covergroup — 검증이 어떤 상황을 얼마나 건드렸는지 세는 커버리지 묶음), **RAL**(Register Abstraction Layer — 레지스터를 물리 주소 대신 이름으로 다루게 해 주는 UVM 추상화), **TAT**(Turn-Around Time — 한 검증 사이클을 도는 데 걸리는 총 소요 시간), **TRNG**(True Random Number Generator — 물리 잡음에서 진짜 난수를 뽑는 하드웨어).
+
 ```
 Legacy 문제:  Passive 모니터 + 수동 force + 물리주소 의존 + FW 대기
       ↓

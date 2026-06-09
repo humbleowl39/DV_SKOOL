@@ -22,7 +22,7 @@ title: "Ch09. 신뢰성·ECC·CRC·PPR"
 
 ## 1. 신뢰성 보호의 두 영역 — 어디서 무엇을 보호하는가
 
-DRAM 데이터는 두 단계에서 오류가 발생할 수 있습니다. 첫째는 DRAM 셀 내부에서 발생하는 오류입니다. capacitor의 자연 leakage, 우주선에서 날아오는 alpha particle에 의한 soft error, 시간이 지남에 따른 cell aging 등이 원인입니다. 둘째는 DRAM과 controller 사이의 링크에서 발생하는 오류입니다. 수 GT/s의 고속 신호에서 ISI(심볼 간 간섭), jitter, 크로스토크로 인해 전송 중 비트가 바뀔 수 있습니다.
+이 장에서 다루는 보호 기법의 핵심은 **ECC**(error-correcting code, 데이터에 여분의 검사 비트를 붙여 오류를 검출하고 일부는 정정하는 부호)입니다. DRAM 데이터는 두 단계에서 오류가 발생할 수 있습니다. 첫째는 DRAM 셀 내부에서 발생하는 오류입니다. capacitor의 자연 leakage, 우주선에서 날아오는 alpha particle(방사선 입자)에 의한 **soft error**(셀이 물리적으로 고장난 게 아니라 일시적 교란으로 값만 뒤집힌 오류), 시간이 지남에 따른 cell aging 등이 원인입니다. 둘째는 DRAM과 controller 사이의 링크에서 발생하는 오류입니다. 수 GT/s의 고속 신호에서 ISI(심볼 간 간섭), jitter, 크로스토크로 인해 전송 중 비트가 바뀔 수 있습니다.
 
 ```d2
 direction: down
@@ -592,6 +592,8 @@ DV 시사점:
 → Rx CTLE (Continuous Time Linear Equalizer) 는 *DFE와 별도의 receiver-side equalizer*. 6000 Mbps 이상 device에서 typically 필요.
 
 ### 12.7 MR22 (MA[7:0]=16H) — MBIST/mPPR Transparency, Rx CTLE Control
+
+여기서 **MBIST**(memory built-in self-test, 칩 내부에 내장되어 메모리 셀을 스스로 테스트하는 회로)와 **mPPR**(MBIST 결과로 발견한 fail row를 수리하는 PPR)을 알아 둡니다.
 
 | OP[7] | OP[6] | OP[5] | OP[4] | OP[3] | OP[2] | OP[1] | OP[0] |
 |---|---|---|---|---|---|---|---|

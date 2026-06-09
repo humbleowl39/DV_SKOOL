@@ -153,6 +153,8 @@ BL33 침해 → Normal World 만 (Secure World 안전)
 앞 단계일수록 = 높은 보안 요구사항 = 변경 불가능한 매체에 위치
 ```
 
+여기서 **TEE**(Trusted Execution Environment — CPU 안에 격리된 보안 실행 영역; 일반 OS 가 도는 Normal World 와 분리돼 키·지문 같은 민감 처리를 따로 돌린다, ARM 에선 TrustZone 으로 구현)와 **Secure Monitor**(Normal World ↔ Secure World 전환을 중재하는 최고 권한 EL3 코드, 곧 BL31)가 표에 등장합니다.
+
 **핵심 원리**: Chain of Trust 는 _단방향_ 입니다. Stage N 이 침해되면 N+1 이후 모든 단계가 신뢰 불가 — 검증자 자체가 오염되었기 때문. 그러나 N _이전_ 단계는 안전. 이것이 단계 분리의 또 다른 이유 — 피해 범위 제한.
 
 ### 4.3 키 계층 — 왜 ROTPK 가 직접 image 를 서명하지 않는가
@@ -201,7 +203,7 @@ BL33 -> OS
 
 ### 5.2 단계별 요약 테이블
 
-각 단계는 저장 위치, 실행 메모리, Exception Level 이 모두 다릅니다. BL1 은 Mask ROM 에 있으므로 변경이 불가능하고 internal SRAM 만 사용하는 반면, BL2 부터는 Flash 에 있어 현장 업데이트가 가능하고 DRAM 초기화 이후에는 DRAM 도 활용할 수 있습니다. Exception Level 은 신뢰 경계를 나타냅니다 — BL1 과 BL31 이 EL3 에서 실행되어 최고 권한을 갖고, BL32 는 S-EL1 에서 TEE 를 담당하며, BL33 은 Non-Secure EL1/2 에서 일반 부트로더로 동작합니다.
+각 단계는 저장 위치, 실행 메모리, Exception Level 이 모두 다릅니다(BL2 는 흔히 **FSBL**, First-Stage Boot Loader 라고도 불립니다 — ROM 다음에 실행돼 DRAM 을 깨우는 "첫 번째 본격 부트로더"). BL1 은 Mask ROM 에 있으므로 변경이 불가능하고 internal SRAM 만 사용하는 반면, BL2 부터는 Flash 에 있어 현장 업데이트가 가능하고 DRAM 초기화 이후에는 DRAM 도 활용할 수 있습니다. Exception Level 은 신뢰 경계를 나타냅니다 — BL1 과 BL31 이 EL3 에서 실행되어 최고 권한을 갖고, BL32 는 S-EL1 에서 TEE 를 담당하며, BL33 은 Non-Secure EL1/2 에서 일반 부트로더로 동작합니다. 표의 BL31 역할에 나오는 **SMC**(Secure Monitor Call — Normal World 코드가 Secure World 의 서비스를 호출할 때 쓰는 ARM 명령/관문)는 EL3 의 Secure Monitor 로 진입하는 통로이고, BL32 의 **OP-TEE** 는 가장 널리 쓰이는 오픈소스 Trusted OS(TEE 안에서 도는 보안 전용 작은 OS) 구현입니다.
 
 | 단계 | 저장 위치 | 실행 메모리 | Exception Level | 핵심 역할 | 업데이트? |
 |------|----------|-----------|-----------------|----------|----------|
@@ -289,6 +291,8 @@ BL33 (U-Boot)  → Verified Boot (dm-verity로 파티션 무결성)
 OS (Linux)     → Measured Boot (IMA/TPM으로 런타임 측정)
 ```
 
+위 표/예시에 나오는 구현 이름 몇 가지: **AVB**(Android Verified Boot — 안드로이드의 Verified Boot 구현), **dm-verity**(리눅스 커널 기능 — 읽기 전용 파티션의 모든 블록 해시를 트리로 묶어 읽을 때마다 변조를 잡아냄), **IMA**(Integrity Measurement Architecture — 리눅스가 실행하는 파일을 런타임에 측정해 기록하는 커널 기능), **PSA Attestation**(ARM Platform Security Architecture 의 원격 증명 규격). 
+
 **면접 답변 프레임**: "Secure Boot 는 '실행 자격' 을 검증하고, Verified Boot 는 '무결성' 을 검증하며, Measured Boot 는 '무엇이 실행되었는지' 를 기록한다. 실무에서는 이 셋을 계층적으로 조합한다."
 
 ### 5.5 Measured Boot — TPM PCR Extend 메커니즘
@@ -332,6 +336,8 @@ V: "검증 서버 (Verifier)"
 V -> D: "1. Attestation 요청"
 D -> V: "3. Quote 전송"
 ```
+
+위 흐름에서 TPM 이 PCR 값에 서명할 때 쓰는 **AIK**(Attestation Identity Key — TPM 이 attestation 전용으로 쓰는 서명 키 쌍, 장치 신원을 노출하지 않으면서 "이 측정값은 진짜 TPM 이 보증한다"를 증명)와, 서버가 매번 새로 발급해 재전송 공격을 막는 **nonce**(한 번만 쓰는 난수)가 핵심 부품입니다.
 
 #### DICE (Device Identifier Composition Engine) — 경량 대안
 
@@ -415,6 +421,8 @@ BL2 DRAM 초기화 단계:
 소요 시간: 수십~수백 ms (부팅 시간의 상당 부분 차지)
 ```
 
+위 시퀀스의 단계 이름을 한 줄로 풀면: **ZQ Calibration**(출력 드라이버 임피던스를 기준 저항에 맞추는 보정), **Write Leveling**(데이터 스트로브 **DQS** 를 클럭 **CK** 에 정렬해 보드 배선 길이 차이를 보상), **CAS Latency**(읽기 명령을 준 뒤 데이터가 나오기까지의 지연 사이클 수), **VREF Training**(0/1 을 가르는 기준 전압을 최적점으로 조정). 모두 칩·보드마다 다른 타이밍 마진을 부팅 시점에 맞춰 잡는 과정입니다.
+
 #### 왜 BootROM(BL1) 에서 하지 않는가?
 
 | 이유 | 설명 |
@@ -490,6 +498,8 @@ BL2 DRAM 초기화 단계:
 | Remote Attestation 실패 | TPM Quote 의 nonce mismatch 또는 AIK 키 만료 | Verifier 의 nonce 발급 vs device 의 응답 nonce |
 | BL2 가 DRAM init 후 garbage read | Training 미완료 상태에서 DRAM 접근 | BL2 DRAM training step log → ZQ/Write Lvl/Eye 모두 PASS 인지 |
 | Verified Boot 통과 후 dm-verity error | rootfs 의 Merkle tree 가 partition 과 분리되어 변조됨 | dm-verity hash tree 의 root hash 가 boot cert 와 묶여 있는가 |
+
+위 표의 용어: **ASN.1**(Abstract Syntax Notation One — 인증서(X.509) 같은 구조화 데이터를 바이트로 직렬화하는 표준 규칙; 파서가 길이/오프셋을 잘못 읽으면 버퍼 오버런의 원인), **Merkle tree**(데이터를 블록으로 쪼개 해시하고 그 해시들을 다시 해시하며 트리로 쌓아, 최상위 루트 해시 하나로 전체 무결성을 보장하는 구조).
 
 :::caution[실무 주의점 — BL1→BL2 Jump 직전 검증 생략 경로]
 **현상**: 서명 검증 함수가 SUCCESS 를 반환했지만 실제 이미지 무결성은 깨진 채로 BL2 로 jump 하여, 이후 단계에서 임의 코드가 Secure EL3 권한으로 실행된다.

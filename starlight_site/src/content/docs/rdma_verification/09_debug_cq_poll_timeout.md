@@ -21,7 +21,7 @@ title: "Module 09 — Debug Case 2: CQ Poll Timeout"
 
 ### 1.1 시나리오 — _CQ timeout_ 의 4 갈래
 
-당신의 RDMA test 가 _CQ poll timeout_. DUT 가 _어디서_ 멈춰있나?
+당신의 RDMA test 가 _CQ poll timeout_. 여기서 **CQ poll**(Completion Queue Polling — SW 가 완료 큐를 반복해서 들여다보며 "내 작업이 끝났다는 CQE 가 도착했나"를 확인하는 동작)이 정해진 시간 안에 CQE 를 못 받아 **timeout**(시간 초과) 한 상황입니다. DUT 가 _어디서_ 멈춰있나?
 
 4 갈래:
 1. **SQ doorbell 미인식**: SW post_send 했는데 _DUT 가 못 봄_.
@@ -106,6 +106,10 @@ Q2 -> EXC: "no"
 ```
    Step 1   에러 ID = E-DRV-TBERR-0001 → CQ poll timeout
             CQ = 2, unprocessed wqe = 1, PHASE = 1, TAIL = 0
+            (unprocessed wqe = 아직 완료(CQE)를 못 받은 WQE 수;
+             PHASE = phase bit — CQ 가 한 바퀴 wrap 될 때마다 0↔1 토글되어
+                     "이 엔트리가 새 것인지" 구분하는 비트, TB 기대값과 DUT 값이 같아야 함;
+             TAIL = tail pointer — CQ 에서 다음에 읽을 위치)
               ▶ TB 가 1 개 WQE 발행했는데 CQE 못 받음
 
    Step 2   c2h_tracker::active 확인
@@ -128,7 +132,7 @@ Q2 -> EXC: "no"
 
    Step 5   네트워크 패킷 송신 확인
             ─────────────────────────────────────────
-            ntw_env 로그: pkt_monitor 가 BTH OpCode=Write_Only 캡처 OK
+            ntw_env 로그: pkt_monitor 가 BTH(Base Transport Header — 모든 RDMA 패킷 공통 헤더) OpCode=Write_Only 캡처 OK
               ▶ DUT 가 packet 까지 송신함
 
    Step 6   QID 10/11 (COMP C2H) — 세 번째 분기
@@ -151,7 +155,7 @@ Q2 -> EXC: "no"
 | 6 | QID 10/11 write | 0 회 | Completion engine 미생성 |
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) `unprocessed wqe = 1` 인데 timeout** — 만약 0 이면 `signaled` / `sq_sig_type` 카운팅 오류 의심. 1 인데 안 오면 진짜 미생성.<br>
+**(1) `unprocessed wqe = 1` 인데 timeout** — 만약 0 이면 `signaled`(이 WQE 가 완료 시 CQE 를 만들도록 표시됐는지 여부 — unsignaled 면 CQE 가 안 생김) / `sq_sig_type`(SQ 의 completion 신호 정책) 카운팅 오류 의심. 1 인데 안 오면 진짜 미생성.<br>
 **(2) c2h_tracker::active 가 1 이면 timeout 자체가 안 발동** — 즉 timeout 로그가 떴다는 건 이미 active=0 이라는 정보. fsdb 시각이 timeout 직전이면 DMA 활동이 멈춘 시각.
 :::
 ---
@@ -196,7 +200,7 @@ QID 분기 순서 — **14–17 → 8 → 10/11 → PHASE**.
 | `E-DRV-TBERR-0001` | ERROR | `CQ POLLING TIMEOUT : Unprocessed CQE` | `vrdma_driver.svh:1486` |
 | `E-DRV-TBERR-0002` | ERROR | `CQ HANDLER: CQ POLLING TIMEOUT` | `vrdma_driver.svh:1488` |
 
-타임아웃 시 동작: **fatal 이 아니라** `uvm_shutdown_phase` 로 점프하여 graceful 종료 — 그래야 outstanding 진단 정보가 보존됨.
+타임아웃 시 동작: **fatal 이 아니라** `uvm_shutdown_phase` 로 점프하여 graceful(시뮬을 즉시 죽이지 않고 정리 단계를 거쳐 부드럽게 끝내는 것) 종료 — 그래야 outstanding 진단 정보가 보존됨.
 
 ### 5.2 `timeout_count` 기본값
 

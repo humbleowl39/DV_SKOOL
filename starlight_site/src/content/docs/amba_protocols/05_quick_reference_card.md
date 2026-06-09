@@ -223,6 +223,8 @@ RESP: OKAY / EXOKAY / SLVERR / DECERR
 
 ### 5.4 이력서 연결 — 프로토콜별 사용처
 
+(IP 약어: **OTP** = One-Time Programmable memory(한 번만 굽는 비휘발 저장소, 보안 키 등), **UFS HCI** = Universal Flash Storage Host Controller Interface(플래시 스토리지 호스트 컨트롤러), **BootROM** = 칩 부팅 코드가 든 ROM.)
+
 ```
 APB:  BootROM → OTP 레지스터, 보안 설정 레지스터
       UFS HCI → Configuration 레지스터
@@ -279,6 +281,8 @@ SOC: SoC {
 | APB | v4→v5 | +PWAKEUP, +xUSER (저전력+사이드밴드) |
 | AXI | v3→v4 | Burst 256, -WID/-Locked, +QoS/+Region/+User |
 | AXI | v4→v5 | +Atomic Ops, +Trace, +Poison |
+
+> AXI5 신규 용어: **Atomic Ops**(읽기-수정-쓰기를 interconnect 가 한 동작으로 처리하는 명령군), **Trace**(디버그용 transaction 추적 신호), **Poison**(데이터가 오염(uncorrectable error)됐음을 함께 실어 전파하는 표시 비트). **Region**(AxREGION — 같은 slave 안에서 주소 영역을 구분하는 4-bit 식별자), **QoS**(AxQOS — 중재 우선순위), **WID**(AXI3 의 write-data ID, AXI4 에서 제거).
 | AXI-S | v4 도입 | AXI4 와 함께 신규 정의 |
 | ACE | AXI3/4 확장 | +snoop 채널(AC/CR/CD) + 캐시라인 state — full coherency |
 | ACE-Lite | ACE 부분집합 | snoop 응답만 (캐시 없음) — IO coherency용 |

@@ -205,7 +205,7 @@ endclass
 
 ### 5.2 config_db = 의존성 주입 (Dependency Injection)
 
-`oop_spec.md` §7은 `uvm_config_db#(T)::set/get`을 **Dependency Injection**으로 매핑합니다. 컴포넌트가 필요한 설정(virtual interface·config 객체)을 *직접 생성하지 않고* 외부에서 주입받습니다 — 이는 DIP와 짝을 이룹니다.
+`oop_spec.md` §7은 `uvm_config_db#(T)::set/get`(설정 값을 계층 경로로 등록(set)하고 꺼내(get) 쓰는 UVM의 전역 설정 저장소)을 **Dependency Injection**으로 매핑합니다. 컴포넌트가 필요한 설정(virtual interface — 클래스 기반 TB가 RTL 신호 다발에 접근하기 위한 핸들·config 객체)을 *직접 생성하지 않고* 외부에서 주입받습니다 — 이는 DIP와 짝을 이룹니다.
 
 ```systemverilog
 // 주입하는 쪽 (test): 의존성을 외부에서 넣어줌

@@ -22,7 +22,7 @@ title: "Module 01 — cocotb란 무엇인가 + vs UVM"
 
 ### 1.1 시나리오 — 며칠짜리 검증을 몇 주로 만드는 환경 오버헤드
 
-작은 DSP 필터 블록 하나를 검증한다고 합시다. 입력 샘플을 넣고 출력이 기대 응답과 맞는지 보는 것이 전부인데, 기대 응답을 계산하는 황금 모델은 이미 Python NumPy로 존재합니다. UVM으로 가면 sequence_item, sequence, driver, monitor, scoreboard, agent, env, test를 모두 SystemVerilog로 작성하고, 그 NumPy 레퍼런스 로직을 SystemVerilog로 다시 포팅하거나 DPI로 연결해야 합니다. 블록 자체보다 환경 구축이 더 오래 걸리는 역전이 벌어집니다.
+작은 **DSP**(digital signal processing, 디지털 신호 처리 — 소리·이미지 같은 신호를 필터·변환하는 연산) 필터 블록 하나를 검증한다고 합시다. 입력 샘플을 넣고 출력이 기대 응답과 맞는지 보는 것이 전부인데, 기대 응답을 계산하는 **황금 모델**(golden/reference model — "정답"을 계산해 주는 참조 구현)은 이미 Python NumPy로 존재합니다. UVM으로 가면 검증 환경을 이루는 표준 부품들 — **sequence_item**(한 건의 자극/트랜잭션을 담는 데이터 객체), **sequence**(그 item들을 순서대로 생성하는 시나리오), **driver**(item을 받아 실제 DUT 신호로 인가하는 컴포넌트), **monitor**(DUT 신호를 관찰해 트랜잭션으로 복원하는 컴포넌트), **scoreboard**(DUT의 실제 출력과 황금 모델이 계산한 기대값을 비교하는 컴포넌트), **agent**(driver+monitor+sequencer를 묶은 단위), **env**(agent·scoreboard 등을 묶은 최상위 검증 환경), **test**(특정 시나리오를 띄우는 진입점) — 를 모두 SystemVerilog로 작성하고, 그 NumPy 레퍼런스 로직을 SystemVerilog로 다시 포팅하거나 **DPI**(Direct Programming Interface — SystemVerilog가 C/C++ 함수를 호출하도록 잇는 표준 통로)로 연결해야 합니다. 블록 자체보다 환경 구축이 더 오래 걸리는 역전이 벌어집니다.
 
 이때 떠올려야 할 질문은 이것입니다. "DUT는 HDL인데, 테스트까지 반드시 HDL이어야 하는가?" cocotb의 출발점이 바로 이 질문입니다. cocotb는 DUT는 Verilog/SystemVerilog/VHDL로 그대로 두고, 테스트만 Python으로 작성하게 합니다. 그러면 NumPy 레퍼런스를 `import numpy`로 그냥 가져다 쓸 수 있습니다.
 
@@ -115,7 +115,7 @@ async def smoke_test(dut):           # dut = 시뮬레이터 안 DUT의 핸들
 
 :::note[여기서 잡아야 할 두 가지]
 **(1) DUT는 Python 코드 어디에도 없습니다.** `dut`는 시뮬레이터 안에서 돌고 있는 RTL의 핸들일 뿐이고, Python은 그 신호를 읽고 쓰기만 합니다. 이것이 "테스트는 Python, DUT는 HDL"이라는 분리의 실체입니다. 더 정확히는, `dut`와 `dut.rst_n`은 시뮬레이터 안 RTL 계층을 비추는 *Python 프록시 객체*입니다. 그래서 `dut.rst_n.value = 0`은 Python 변수에 대입하는 게 아니라 — 프록시가 그 대입을 받아 **VPI write 호출로 변환**해 시뮬레이터 안 신호를 실제로 바꾸는 것이고, `dut.ready.value`를 읽는 것은 **VPI read**입니다. "DUT가 Python에 없다"는 말의 실체가 이 프록시-VPI 변환입니다.<br>
-**(2) `@cocotb.test()` 데코레이터 하나가 UVM의 `uvm_test` 클래스 + `run_test()` 호출을 통째로 대신합니다.** factory 등록도, phase 선언도 없습니다. 그리고 `async def`로 선언된 이 함수는 보통 함수가 아니라 **coroutine** — *호출 스택(어디까지 실행했는지)을 보존한 채 중간에 멈췄다가, 그 지점부터 다시 이어 실행*할 수 있는 함수입니다. `await RisingEdge(dut.clk)`에서 멈추고 시뮬레이터가 깨우면 *바로 다음 줄*부터 재개되는 것이 그래서 가능합니다. 이는 OS 스레드 병렬이 아니라 UVM task가 `@(posedge clk)`에서 멈췄다 재개되는 것과 같은 *협력적 중단*입니다 — 메커니즘은 Module 02에서 깊게 다룹니다.
+**(2) `@cocotb.test()` 데코레이터 하나가 UVM의 `uvm_test` 클래스 + `run_test()` 호출을 통째로 대신합니다.** factory(UVM이 클래스 이름으로 객체를 생성·치환하게 해 주는 등록 메커니즘) 등록도, phase(UVM이 build→connect→run 등 정해진 순서로 테스트 단계를 진행시키는 체계) 선언도 없습니다. 그리고 `async def`로 선언된 이 함수는 보통 함수가 아니라 **coroutine** — *호출 스택(어디까지 실행했는지)을 보존한 채 중간에 멈췄다가, 그 지점부터 다시 이어 실행*할 수 있는 함수입니다. `await RisingEdge(dut.clk)`에서 멈추고 시뮬레이터가 깨우면 *바로 다음 줄*부터 재개되는 것이 그래서 가능합니다. 이는 OS 스레드 병렬이 아니라 UVM task가 `@(posedge clk)`에서 멈췄다 재개되는 것과 같은 *협력적 중단*입니다 — 메커니즘은 Module 02에서 깊게 다룹니다.
 :::
 ---
 
@@ -161,7 +161,7 @@ cocotb를 한마디로 위치시키려면 UVM과 나란히 놓고 보는 것이 
 - Python을 아는 사람이라면 며칠 안에 테스트를 작성한다 (완만한 학습 곡선).
 - NumPy, PyTorch, Scapy 같은 전체 Python 생태계를 평범한 `import`로 쓴다.
 - 시뮬레이터 독립성 — 같은 Python 코드가 모든 시뮬레이터에서 변경 없이 동작한다.
-- 무료 시뮬레이터를 쓸 수 있어 라이선스 없는 CI가 가능하다.
+- 무료 시뮬레이터를 쓸 수 있어 라이선스 없는 CI(continuous integration, 코드를 push할 때마다 자동으로 빌드·테스트를 돌리는 파이프라인)가 가능하다.
 - pytest 통합, GitHub Actions 친화적.
 - 알고리즘 모델(DSP, ML 가속기) 통합이 쉽다.
 

@@ -25,7 +25,7 @@ title: "Module 06 — Data Path Operations"
 
 직관적으로 하나로 통일하면 안 되는지 생각해봅시다. 예를 들어 "RDMA WRITE 가 모든 걸 할 수 있다" 고 가정해 보면, 금방 한계에 부딪힙니다. 데이터를 보내는 것은 WRITE 로 되고, receiver 에게 "도착했음" 을 알리는 것도 WRITE_WITH_IMMEDIATE 로 가능합니다. 그런데 receiver 가 _미리 주소를 모르는_ 영역에 보내야 한다면 어떻게 할까요? WRITE 는 (remote_va, rkey) 를 _사전에 약속해야_ 하므로, 그 약속 자체를 성립시키는 첫 번째 메시지를 WRITE 로 보낼 수 없습니다. 메시지 queue 에 push 하는 패턴도 마찬가지입니다. WRITE 는 고정 주소에 쓰는 모델이라 queue 의 head 가 동적으로 바뀌는 상황에 맞지 않습니다.
 
-결국 두 가지 근본적으로 다른 모델이 필요해집니다. WRITE 는 "내가 _그 주소_ 에 쓴다 — sender 가 주소를 안다" 는 one-sided 모델이고, SEND 는 "내가 _메시지_ 를 보낸다 — receiver 가 어디에 받을지 스스로 결정한다" 는 two-sided 모델입니다. 이 두 축이 기본이고, 여기에 **multi-packet (FIRST/MIDDLE/LAST/ONLY)** 축과 **with-immediate/invalidate** 축이 곱해지면서 25 개 OpCode 가 _필연적_ 으로 생겨납니다.
+결국 두 가지 근본적으로 다른 모델이 필요해집니다. WRITE 는 "내가 _그 주소_ 에 쓴다 — sender 가 주소를 안다" 는 one-sided(한쪽 — 상대 CPU 가 전혀 관여하지 않는) 모델이고, SEND 는 "내가 _메시지_ 를 보낸다 — receiver 가 어디에 받을지 스스로 결정한다" 는 two-sided(양쪽 — 받는 쪽도 미리 수신 작업을 준비해야 하는) 모델입니다. 이 두 축이 기본이고, 여기에 **multi-packet (FIRST/MIDDLE/LAST/ONLY)** 축과 **with-immediate/invalidate** 축이 곱해지면서 25 개 OpCode 가 _필연적_ 으로 생겨납니다.
 
 **Data path 가 RDMA 검증의 비중상 80%** 입니다. Connection setup 은 한 번이지만 data path 는 시뮬레이션 매 cycle 마다 동작 — 모든 PSN 산정, OpCode, ACK 발생, retry 행동을 정확히 모델링해야 scoreboard 가 거짓 보고를 안 합니다.
 
@@ -371,7 +371,7 @@ RC service 의 retransmission·completion·flow control 은 **서로 다른 laye
 
 - **"WRITE_WITH_IMM 이 one-sided 인가 two-sided 인가?"** → wire 모양은 one-sided (rkey + remote_va) 지만 **RECV WQE 를 소비하고 RECV CQE 를 만듦** — semantic 은 two-sided. scoreboard 는 둘 다 모델링해야 RNR / RECV-shortage 시나리오에서 false fail 이 안 남.
 - **"왜 RDMA_READ 는 IMM 변형이 없나?"** → READ 는 sender 가 데이터를 _받는_ 쪽. 이미 sender 의 CQE 가 생기므로 receiver-notify 의미의 IMM 이 필요 없음.
-- **"ATOMIC 의 변형은 왜 둘뿐인가?"** → CAS, FAA 두 RMW 패턴이 distributed system 의 거의 모든 lock/counter 시맨틱을 cover. 더 복잡한 RMW 는 SEND 로 control msg 교환 후 일반 WRITE 로 처리.
+- **"ATOMIC 의 변형은 왜 둘뿐인가?"** → CAS(Compare-And-Swap — 값이 기대치와 같으면 새 값으로 교체)·FAA(Fetch-And-Add — 현재 값을 읽어 반환하면서 더하기) 두 RMW(read-modify-write — 읽고·고치고·쓰기를 쪼개지지 않는 한 동작으로 처리) 패턴이 distributed system 의 거의 모든 lock/counter 시맨틱을 cover. 더 복잡한 RMW 는 SEND 로 control msg 교환 후 일반 WRITE 로 처리.
 
 :::tip[한 줄 멘탈 모델]
 **`SEND` = receiver 가 buffer 를 정함, `WRITE/READ` = sender 가 정함, `_WITH_IMM` = "다 됐다" 통지를 곁들임, `_WITH_INVALIDATE` = "이제 그 키 폐기" 를 곁들임, `ATOMIC` = 8B RMW.**
@@ -665,7 +665,7 @@ ACK 가 wire 에서 사라지거나 너무 늦으면 requester 의 timer 가 만
 :::
 ### 5.y MSN 과 Message-Level Flow Control (LSN)
 
-§4.4 에서 본 MSN 은 _completion 통보_ 외에 **credit-based flow control** 의 신호도 겸합니다. RNR NAK 를 사전에 피하기 위함입니다.
+§4.4 에서 본 MSN 은 _completion 통보_ 외에 **credit-based flow control**(받는 쪽이 처리 가능한 만큼만 보내도록 "크레딧" 으로 송신량을 제어하는 방식) 의 신호도 겸합니다. RNR NAK 를 사전에 피하기 위함입니다. 여기서 **LSN**(Limit Sequence Number — responder 가 "여기까지 메시지를 받을 수 있다" 고 알려주는 상한 번호) 이 그 크레딧 상한입니다.
 
 ```
    ACK packet 의 AETH:

@@ -22,7 +22,7 @@ title: "Module 05 — TLM, Scoreboard, Coverage"
 
 ### 1.1 시나리오 — _OoO AXI_ scoreboard 의 false fail
 
-AXI master agent를 검증할 때 scoreboard에 expected queue와 actual queue를 두고 FIFO 순서대로 pop하여 비교하는 구조를 흔히 택합니다. 그런데 AXI는 서로 다른 ID를 가진 transaction이 발행 순서와 다른 순서로 응답을 돌려보내는 out-of-order 프로토콜입니다.
+AXI master agent를 검증할 때 scoreboard(DUT 가 실제로 낸 출력과 "정답" 기대값을 모아 비교해 통과/실패를 판정하는 컴포넌트)에 expected queue와 actual queue를 두고 FIFO 순서대로 pop하여 비교하는 구조를 흔히 택합니다. 그런데 AXI는 서로 다른 ID를 가진 transaction이 발행 순서와 다른 순서로 응답을 돌려보내는 out-of-order 프로토콜입니다.
 
 ```
 Expected:  [W1(id=1), W2(id=2)]
@@ -37,9 +37,9 @@ queue_per_id[1] expected ↔ queue_per_id[1] actual: FIFO 비교 (같은 ID 는 
 queue_per_id[2] expected ↔ queue_per_id[2] actual.
 ```
 
-이게 _OoO 프로토콜_ scoreboard 의 _표준 패턴_. UVM 의 TLM analysis port 가 _자유로운 비교_ 가능하게 함.
+이게 _OoO 프로토콜_ scoreboard 의 _표준 패턴_. UVM 의 TLM(Transaction Level Modeling — 비트가 아닌 트랜잭션 단위로 컴포넌트끼리 통신하는 추상화) analysis port(monitor 가 관찰한 트랜잭션을 여러 구독자에게 단방향으로 동시 전달하는 송신 포트) 가 _자유로운 비교_ 가능하게 함.
 
-TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard)** 로 결함을 발견하고, **커버리지 (Coverage)** 로 검증 완전성을 측정합니다. 둘 다 TLM 위에서 동작하므로 Analysis Port 연결이 잘못되면 두 기능 _모두_ 무력해집니다.
+TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard)** 로 결함을 발견하고, **커버리지 (Coverage**(검증이 어디까지 닿았는지를 bin 단위로 세어 완전성을 수치로 보여주는 측정)**)** 로 검증 완전성을 측정합니다. 둘 다 TLM 위에서 동작하므로 Analysis Port 연결이 잘못되면 두 기능 _모두_ 무력해집니다.
 
 이 모듈을 건너뛰면 검증 환경은 _자극은 인가하지만 결과를 못 잡는_ 상태로 빠집니다. 특히 OoO 응답을 가진 프로토콜 (AXI ID, PCIe TLP tag) 에서는 Scoreboard 매칭 로직 설계가 검증 신뢰성의 핵심 — 단순 큐 pop_front 비교를 그대로 쓰면 spurious mismatch 가 폭발합니다.
 

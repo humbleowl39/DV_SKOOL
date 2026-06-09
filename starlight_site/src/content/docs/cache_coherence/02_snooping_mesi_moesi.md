@@ -22,7 +22,9 @@ title: "Module 02 — Snooping & MESI/MOESI"
 
 Module 01의 무한 루프 버그(Core A가 `flag=1`을 썼는데 B가 0을 봄)를 하드웨어가 자동으로 막으려면, A의 store가 *발생하는 순간* B의 사본을 무효화하거나 갱신해야 합니다. snooping 프로토콜은 이를 **공유 버스(또는 broadcast 인터커넥트)** 위에서 모든 캐시가 서로의 트랜잭션을 *엿듣게(snoop)* 함으로써 달성합니다.
 
-문제는 단순 무효화만으로 끝나지 않는다는 점입니다. A가 dirty 데이터를 들고 있을 때 B가 그 line을 읽으려 하면, 메모리에는 옛 값밖에 없으므로 *A의 캐시에서 직접* 데이터를 끌어와야 합니다. 그리고 "지금 이 line을 내가 독점적으로 쓸 수 있나, 아니면 다른 캐시와 공유 중인가"를 매 접근마다 알아야 무효화 트래픽을 최소화할 수 있습니다. 이 정보를 line마다 들고 있는 것이 바로 **coherence state**이고, MESI/MOESI는 그 state 인코딩의 표준입니다.
+여기서 **cache line**(캐시가 메모리를 읽고 쓰는 최소 단위 블록 — 보통 64바이트, 한 변수만 써도 그 변수가 속한 line 전체가 통째로 오감)이 사본 관리의 단위입니다. 그리고 **dirty**(캐시에 쓴 값이 아직 메모리에 반영 안 돼 캐시본이 최신인 상태)란, write 정책 중 **write-back**(쓰기를 일단 캐시에만 반영하고 메모리 갱신은 그 line이 쫓겨날 때로 미루는 방식)을 쓸 때 생기는 상태입니다 — 매 쓰기를 즉시 메모리에도 반영하는 **write-through**(쓰기를 캐시와 메모리에 동시에 반영)와 대비됩니다.
+
+문제는 단순 무효화만으로 끝나지 않는다는 점입니다. A가 dirty 데이터를 들고 있을 때 B가 그 line을 읽으려 하면, 메모리에는 옛 값밖에 없으므로 *A의 캐시에서 직접* 데이터를 끌어와야 합니다. 그리고 "지금 이 line을 내가 독점적으로 쓸 수 있나, 아니면 다른 캐시와 공유 중인가"를 매 접근마다 알아야 무효화 트래픽을 최소화할 수 있습니다. 이 정보를 line마다 들고 있는 것이 바로 **coherence state**(각 cache line이 "독점인지·공유인지·수정됐는지"를 나타내는 상태 표시)이고, MESI/MOESI는 그 state 인코딩의 표준입니다.
 
 이 모듈을 건너뛰면 ACE의 snoop 응답이 왜 "데이터 동반"인지, 왜 어떤 read는 shared로 끝나고 어떤 read는 dirty 전송을 유발하는지 설명하지 못합니다.
 
@@ -55,7 +57,7 @@ BUS -> MEM: "miss 시 fetch"
 snooping이 답이 되는 이유는 세 요구의 교집합입니다.
 
 1. **store가 즉시 peer 사본에 반영되어야** (SWMR) → 모든 캐시가 버스를 엿듣고 무효화 신호에 반응.
-2. **dirty 데이터를 든 캐시가 메모리보다 우선 공급해야** (Data-Value) → snoop 응답에 데이터를 실어 보냄(cache-to-cache transfer).
+2. **dirty 데이터를 든 캐시가 메모리보다 우선 공급해야** (Data-Value) → snoop 응답에 데이터를 실어 보냄(**cache-to-cache transfer** — 메모리를 거치지 않고 한 캐시가 다른 캐시로 직접 데이터를 넘기는 전송).
 3. **불필요한 무효화 트래픽을 줄여야** → line마다 state를 둬서 "이미 독점(E/M)인지, 공유(S)인지"를 알고 *공유 중일 때만* 무효화.
 
 이 세 요구가 곧 **per-line state machine (MESI/MOESI) + broadcast snoop**의 설계 결정입니다.
@@ -158,7 +160,7 @@ MESI에서 dirty line을 여러 코어가 번갈아 읽기만 해도 매번 writ
 | BusRd | read miss (읽기 의도) | 사본 없으면 E, 있으면 S |
 | BusRdX | read-for-ownership (write 의도) | 다른 사본 무효화 후 M |
 | Upgrade / Invalidate | S에서 write 전, 다른 사본 무효화 | S → M |
-| Writeback | dirty line을 메모리로 | M/O → (eviction) |
+| Writeback | dirty line을 메모리로 | M/O → (eviction — 새 line 자리를 만들려고 기존 line을 캐시에서 쫓아냄) |
 
 :::note[snooping이 성립하려면 — bus가 트랜잭션을 직렬화하는 ordering point여야]
 snooping의 정확성은 한 가지 숨은 전제 위에 서 있습니다 — **모든 캐시가 트랜잭션을 *같은 순서* 로 관찰한다**. 공유 버스는 한 순간에 단 하나의 트랜잭션만 통과시키므로(arbitration으로 한 winner만 선택), 모든 캐시가 그 단일 순서를 똑같이 엿듣습니다. 이 "전역 단일 순서" 가 곧 coherence의 **ordering point(serialization point)** 입니다.

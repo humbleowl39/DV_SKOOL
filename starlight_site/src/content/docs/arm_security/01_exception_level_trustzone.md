@@ -24,7 +24,9 @@ title: "Module 01 — Exception Level & TrustZone"
 
 스마트폰에서는 게임 앱(실시간 fps 60, 화면 그리기, 인터넷 통신)과 결제 모듈(지문 인증, 카드 정보, 암호화 키)이 같은 CPU 위에서 동시에 동작합니다. 문제는 결제 모듈의 비밀키가 해킹된 게임 앱에서 읽혀서는 안 된다는 점입니다. 두 CPU 를 별도로 탑재하면 격리는 완벽하지만 비용·면적·통신 비용이 모두 올라갑니다.
 
-ARM 이 선택한 해답은 **TrustZone** — 같은 CPU 안에 **Non-Secure World**(Android, 게임, 일반 앱)와 **Secure World**(결제 모듈, 지문 인증, DRM, 암호화 키)라는 두 세계를 만들고, Non-Secure 에서 Secure 메모리를 읽지조차 못하도록 HW 가 강제하는 것입니다. 두 세계 사이의 전환은 _Secure Monitor (EL3)_ 라는 단 하나의 게이트를 통해서만 허용됩니다.
+ARM 이 선택한 해답은 **TrustZone**(ARM CPU 에 내장된 하드웨어 보안 확장 — 같은 코어를 보안/일반 두 "세계"로 나눠 격리) — 같은 CPU 안에 **Non-Secure World**(일반 세계 — Android, 게임, 일반 앱)와 **Secure World**(보안 세계 — 결제 모듈, 지문 인증, DRM, 암호화 키)라는 두 세계를 만들고, Non-Secure 에서 Secure 메모리를 읽지조차 못하도록 HW 가 강제하는 것입니다. 두 세계 사이의 전환은 _Secure Monitor_(두 세계 전환을 전담하는, EL3 에 상주하는 작은 보안 소프트웨어) (EL3) 라는 단 하나의 게이트를 통해서만 허용됩니다.
+
+여기서 **EL**(Exception Level — ARMv8 의 권한 등급. 숫자가 클수록 권한이 높아 EL0=앱, EL1=OS 커널, EL2=하이퍼바이저, EL3=최고 권한 보안 모니터)은 "얼마나 높은 권한인가"를 정하는 수직 축이고, 아래 표의 **NS**(Non-Secure — 일반 세계) / **S**(Secure — 보안 세계)는 "어느 세계인가"를 정하는 수평 축입니다. 차단을 집행하는 두 하드웨어 컨트롤러가 등장합니다 — **TZASC**(TrustZone Address Space Controller — DRAM 영역을 보안/일반으로 나눠 어긋난 접근을 막는 SoC 부품)와 **TZPC**(TrustZone Protection Controller — UART·암호엔진 같은 주변장치를 보안/일반으로 분류하는 SoC 부품).
 
 | 자원 | NS 세계가 접근 가능? | S 세계가 접근 가능? |
 |------|---------------------|---------------------|
@@ -33,9 +35,9 @@ ARM 이 선택한 해답은 **TrustZone** — 같은 CPU 안에 **Non-Secure Wor
 | NS register | ✓ | ✓ |
 | S register | ✗ (TZPC 차단) | ✓ |
 
-**핵심 메커니즘**: AXI bus 의 _NS bit_ — 모든 transaction 에 "이게 NS 인가 S 인가" 표시. Slave 가 _자기 영역과 안 맞으면_ 거부.
+**핵심 메커니즘**: **AXI bus**(ARM SoC 에서 CPU·메모리·주변장치를 잇는 표준 온칩 버스)의 _NS bit_(모든 버스 트랜잭션에 따라붙는 1비트 보안 표식 — 이 접근이 일반 세계 것인지 보안 세계 것인지를 나타냄) — 모든 transaction 에 "이게 NS 인가 S 인가" 표시. Slave(버스에서 요청을 받는 쪽 — 메모리/주변장치) 가 _자기 영역과 안 맞으면_ 거부.
 
-이후 모든 ARM Security 모듈은 한 가정에서 출발합니다 — **"같은 SoC 안에서 두 종류의 SW 가, 서로 메모리·레지스터·인터럽트를 보지 못한 채 공존한다"**. SCR_EL3.NS 가 왜 EL3 에서만 바뀌는지, BootROM 이 왜 EL3 에서 시작하는지, TZASC/TZPC/SMMU/GIC 가 왜 NS bit 를 따라가는지 — 전부 이 한 가정의 파생입니다.
+이후 모든 ARM Security 모듈은 한 가정에서 출발합니다 — **"같은 SoC 안에서 두 종류의 SW 가, 서로 메모리·레지스터·인터럽트를 보지 못한 채 공존한다"**. **SCR_EL3.NS**(EL3 의 보안 설정 레지스터 SCR_EL3 안의 NS 비트 — 현재 세계가 보안인지 일반인지를 정하는 "원천" 값)가 왜 EL3 에서만 바뀌는지, **BootROM**(칩 안에 구워져 변경 불가능한 최초 부팅 코드 — 전원이 켜지면 가장 먼저 실행됨)이 왜 EL3 에서 시작하는지, TZASC/TZPC/**SMMU**(System MMU — DMA 같은 비-CPU 마스터의 메모리 접근을 번역·차단하는 부품)/**GIC**(Generic Interrupt Controller — ARM 표준 인터럽트 컨트롤러)가 왜 NS bit 를 따라가는지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후의 모든 spec/레지스터/검증 결정이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 EL × NS 라는 **두 축의 매트릭스** 를 정확히 잡고 나면, 새 register 를 만날 때마다 _"이건 어느 칸의 보호 자원인가"_ 처럼 위치가 보입니다.
 
@@ -51,7 +53,7 @@ SCR_EL3.NS 라는 _한 비트_ 가 _세계 전환_ 결정. 왜 다른 EL 은 못
 
 EL3 (Secure Monitor) 가 _유일한 NS bit 변경 권한_ 을 가짐으로써:
 - NS world 의 어떤 code 도 S 자원에 _직접_ 접근 불가.
-- 진입은 _SMC instruction_ 으로 EL3 호출 → EL3 가 _권한 검증 후_ NS bit 변경.
+- 진입은 _SMC instruction_(Secure Monitor Call — 하위 EL 이 EL3 보안 모니터를 부르려고 일으키는 전용 명령) 으로 EL3 호출 → EL3 가 _권한 검증 후_ NS bit 변경.
 
 이게 ARM 의 _Single Gate_ 패턴 — 보안 모델의 _공리_. 게이트 하나만 잘 지키면 _모든 격리_ 가 성립.
 
@@ -107,7 +109,7 @@ EL3 -- NS.NS1: "직접 NS-EL1 ↔ S-EL1 전환 불가" { style.stroke-dash: 4 }
 
 ## 3. 작은 예 — 결제 앱이 TEE 에 진입할 때 EL/월드가 바뀌는 한 사이클
 
-가장 단순한 시나리오. 사용자가 결제 버튼을 누르면, 앱 (NS-EL0) 이 OS (NS-EL1) 의 syscall 을 거쳐 EL3 monitor 를 경유해 OP-TEE (S-EL1) 의 결제 TA (S-EL0) 까지 도달하고, 결과가 역순으로 반환됩니다.
+여기서 **TEE**(Trusted Execution Environment — 일반 OS 와 격리된 신뢰 실행 환경; TrustZone 의 Secure World 가 그 한 구현)가 처음 나옵니다. 가장 단순한 시나리오. 사용자가 결제 버튼을 누르면, 앱 (NS-EL0) 이 OS (NS-EL1) 의 **syscall**(system call — 앱이 OS 커널에게 작업을 요청하는 통로) 을 거쳐 EL3 monitor 를 경유해 **OP-TEE**(대표적인 오픈소스 Secure World OS — S-EL1 에서 동작) (S-EL1) 의 결제 **TA**(Trusted App — Secure World 안에서 도는 보안 앱) (S-EL0) 까지 도달하고, 결과가 역순으로 반환됩니다.
 
 ```d2
 shape: sequence_diagram
@@ -134,9 +136,9 @@ Linux -> App: "결제 결과" { style.stroke-dash: 4 }
 | Step | 누가 | 무엇을 | 의미 |
 |---|---|---|---|
 | ① | NS-EL0 앱 | 결제 SDK 호출 | EL0 에서는 SMC 사용 불가 — 반드시 syscall 경유 |
-| ② | NS-EL1 kernel | `SVC` → kernel 진입 → optee_driver 가 `SMC #0` 발행 | 일반 syscall 과 SMC 의 분업 |
-| ③ | HW | SMC trap → `VBAR_EL3 + 0x400` (Lower EL, AArch64, Sync) 점프 | Lower EL exception entry |
-| ④ | EL3 (BL31) | NS GPR/FP/sysreg context save → `SCR_EL3.NS = 0` → S context restore → `ERET` | 월드 전환의 **유일한 지점** |
+| ② | NS-EL1 kernel | `SVC`(Supervisor Call — 앱이 EL1 커널로 들어가는 syscall 명령) → kernel 진입 → optee_driver 가 `SMC #0` 발행 | 일반 syscall 과 SMC 의 분업 |
+| ③ | HW | SMC trap(금지/특권 동작 시 HW 가 실행을 멈추고 상위 EL 핸들러로 강제 전환하는 것) → `VBAR_EL3 + 0x400`(VBAR_EL3 = EL3 의 exception 핸들러들이 모인 벡터 테이블의 기준 주소) (Lower EL, AArch64, Sync) 점프 | Lower EL exception entry |
+| ④ | EL3 (BL31) | NS **GPR**(general-purpose register, 범용 레지스터)/FP/sysreg context save → `SCR_EL3.NS = 0` → S context restore → `ERET`(Exception Return — 상위 EL 에서 처리를 마치고 하위 EL 로 복귀하는 명령) | 월드 전환의 **유일한 지점** |
 | ⑤ | S-EL1 OP-TEE | TA dispatcher 가 결제 TA 를 찾아 호출 | TEE OS 의 책임 |
 | ⑥ | S-EL0 결제 TA | 결제 키 사용 → 처리 결과 생성 | EL0 격리 — TA 끼리도 메모리 분리 |
 | ⑦ | S-EL0 → S-EL1 | 결과 반환, OP-TEE 가 정리 | TA 종료 |
@@ -205,7 +207,7 @@ H: "NS — 수평 (월드)" {
 
 | 방향 | 규칙 |
 |---|---|
-| **상향** (낮은 EL → 높은 EL) | Exception 으로만 가능 — SVC (EL0→EL1) / HVC (EL1→EL2) / SMC (any→EL3) / IRQ·FIQ·Abort (설정에 따라). HW 자동: PSTATE→SPSR_ELn, PC→ELR_ELn, PC = VBAR_ELn + offset. |
+| **상향** (낮은 EL → 높은 EL) | Exception 으로만 가능 — SVC (EL0→EL1) / HVC(Hypervisor Call — 게스트가 EL2 하이퍼바이저를 부르는 명령) (EL1→EL2) / SMC (any→EL3) / IRQ·FIQ(IRQ=일반 인터럽트, FIQ=빠른/우선 인터럽트)·Abort (설정에 따라). HW 자동: **PSTATE**(현재 프로세서 상태 — 현 EL·인터럽트 마스크 등을 담은 상태 비트들)→SPSR_ELn(복귀 시 PSTATE 를 되살리려 저장해 두는 레지스터), PC→ELR_ELn(복귀할 주소를 저장하는 레지스터), PC = VBAR_ELn + offset. |
 | **하향** (높은 EL → 낮은 EL) | ERET 으로만 가능. SPSR_ELn.M 가 복귀 EL 을 결정, ELR_ELn 이 복귀 PC. 항상 같은 EL 또는 더 낮은 EL 로만 복귀 (상승 ERET 금지). |
 
 이 규칙이 **"권한 상승은 HW 가 통제, SW 가 임의로 올릴 수 없다"** 라는 모델의 본질입니다. 이후 모든 모듈에서 이 규칙은 변하지 않고 반복됩니다.
@@ -229,6 +231,8 @@ EL1 -> EL0
 ```
 
 #### 각 EL 의 핵심 역할
+
+아래 표의 "Secure Boot 연결" 칸에는 부팅 단계 이름들이 나옵니다 — ARM 부팅은 여러 단계(Boot Loader stage)를 거치며, 각 단계가 다음 단계를 검사·로드합니다. **BL1**(BootROM, 칩에 구운 1단계), **BL2**(2단계 로더), **BL31**(EL3 에 상주하는 Secure Monitor 본체 — ATF 의 핵심), **BL32**(Secure World OS, 예: OP-TEE), **BL33**(일반 세계 부트로더, 예: U-Boot)이 그 단계들이고, 이를 묶은 대표 구현이 **ATF**(ARM Trusted Firmware — ARM 이 제공하는 표준 보안 펌웨어 모음; 다음 모듈에서 자세히)입니다.
 
 | EL | 대표 SW | 핵심 권한 | Secure Boot 연결 |
 |---|---------|----------|-----------------|
@@ -464,8 +468,8 @@ VZ: "EL2 있을 때 (가상화)" {
 }
 ```
 
-- **Stage 1**: Guest OS (EL1) 가 관리 — VM 내부 매핑.
-- **Stage 2**: Hypervisor (EL2) 가 관리 — VM 간 격리.
+- **Stage 1**: Guest OS (EL1) 가 관리 — VM 내부 매핑(VA → IPA). 여기서 **IPA**(Intermediate Physical Address, 중간 물리 주소 — 게스트가 "진짜 물리 주소"로 착각하지만 실제로는 한 번 더 번역되는 가짜 물리 주소)가 등장합니다.
+- **Stage 2**: Hypervisor (EL2) 가 관리 — VM 간 격리(IPA → 진짜 PA).
 - **왜 2 단계인가**: Guest OS 는 자신이 물리 메모리를 직접 관리한다고 "착각" → 실제로는 Hypervisor 가 Stage 2 로 물리 메모리를 격리 → VM-A 가 VM-B 의 메모리에 접근 불가 (Stage 2 가 차단). 이것이 VM 탈출 (VM Escape) 공격을 막는 HW 기반 방어.
 - **TrustZone 과의 결합**: Stage 2 테이블에도 NS 속성 존재 → Hypervisor 가 VM 에 Secure 메모리를 매핑하는 것 자체를 차단. EL2 도 NS 상태이면 Secure PA 매핑 불가.
 
@@ -490,7 +494,7 @@ EL3M -> NSEL1: "ERET → Non-Secure"
 
 ### 5.9 Secure EL2 (ARMv8.4+) — Secure 가상화
 
-ARMv8.4 이전까지 Secure World 에는 Hypervisor 가 없었습니다. Secure OS (S-EL1) 가 하나만 존재했기 때문에, 복수의 TEE 를 같은 Secure World 안에서 서로 격리하는 방법이 없었고, 한 TEE 가 전체 Secure 메모리에 접근할 수 있는 구조였습니다. ARMv8.4 에서 Secure EL2 가 추가되면서 Secure Hypervisor (SPM) 가 복수의 Secure Partition 을 Stage 2 Translation 으로 서로 격리할 수 있게 됐고, 그 통신 표준이 FF-A (Firmware Framework for Arm) 입니다. SP 끼리 또는 Normal World ↔ SP 간에 메시지를 주고받으려면 기존에는 SMC 로 EL3 를 매번 경유해야 했는데, FF-A 는 이를 표준화된 메시지 인터페이스로 직접 라우팅합니다.
+ARMv8.4 이전까지 Secure World 에는 Hypervisor 가 없었습니다. Secure OS (S-EL1) 가 하나만 존재했기 때문에, 복수의 TEE 를 같은 Secure World 안에서 서로 격리하는 방법이 없었고, 한 TEE 가 전체 Secure 메모리에 접근할 수 있는 구조였습니다. ARMv8.4 에서 Secure EL2 가 추가되면서 Secure Hypervisor (**SPM** — Secure Partition Manager, 보안 세계의 하이퍼바이저로 여러 보안 구획을 격리·중재) 가 복수의 **Secure Partition**(SP — 보안 세계 안에서 서로 분리되어 도는 독립 보안 구획/프로그램) 을 Stage 2 Translation 으로 서로 격리할 수 있게 됐고, 그 통신 표준이 **FF-A**(Firmware Framework for Arm — SP 끼리·일반세계↔SP 간 메시지/메모리 공유를 정의한 표준) 입니다. SP 끼리 또는 Normal World ↔ SP 간에 메시지를 주고받으려면 기존에는 SMC 로 EL3 를 매번 경유해야 했는데, FF-A 는 이를 표준화된 메시지 인터페이스로 직접 라우팅합니다.
 
 ```
 ARMv8.4 이전:
@@ -525,7 +529,7 @@ NW.NSEL2 -> EL3M
 
 #### FF-A (Firmware Framework for Arm) — Secure Partition 통신 표준
 
-FF-A 의 핵심은 메모리 공유 방식의 명확한 소유권 언어입니다. Share 는 양쪽이 동시에 접근하는 공유이고, Lend 는 빌려준 쪽이 접근권을 잃는 일시 양도, Donate 는 소유권 자체가 이전되는 완전 양도입니다. 이 세 가지 구분이 없으면 SP 간 메모리 공유에서 TOCTOU 취약점이 발생할 수 있습니다. 그 위에서 SPM (Hafnium) 이 Stage 2 Translation 으로 SP 간 메모리 경계를 강제하고, FF-A 메시지를 라우팅합니다.
+FF-A 의 핵심은 메모리 공유 방식의 명확한 소유권 언어입니다. Share 는 양쪽이 동시에 접근하는 공유이고, Lend 는 빌려준 쪽이 접근권을 잃는 일시 양도, Donate 는 소유권 자체가 이전되는 완전 양도입니다. 이 세 가지 구분이 없으면 SP 간 메모리 공유에서 **TOCTOU**(Time-Of-Check to Time-Of-Use — 검사한 시점과 실제 사용 시점 사이에 값이 바뀌어 검사를 무력화하는 취약점) 취약점이 발생할 수 있습니다. 그 위에서 SPM (Hafnium) 이 Stage 2 Translation 으로 SP 간 메모리 경계를 강제하고, FF-A 메시지를 라우팅합니다.
 
 ```
 문제: SP끼리, 또는 Normal World↔SP 간 통신 방법이 필요
@@ -614,7 +618,7 @@ SEL0 -> BACK
 | `SVC` 가 EL3 까지 올라감 | trap routing (`HCR_EL2.IMO/AMO`, `SCR_EL3.IRQ/FIQ`) 잘못 | exception entry 의 VBAR base 와 offset 0x000 vs 0x400 |
 | EL2 에서 ERET 했는데 EL3 로 점프 | SPSR_EL2.M 잘못 (EL3h 로 set 됨) | SPSR.M 디코드 + ERET 직전 dump |
 | Stage2 가 비활성인데 VM 격리 실패 | VTTBR_EL2/VTCR_EL2 미설정 → identity mapping | VTCR_EL2.T0SZ/SL0 와 VTTBR_EL2 가 valid S2 table 가리키는지 |
-| OTP register 가 NS world 에서 읽힘 | TZPC slave 분류 누락 | BL1 boot trace + TZPC region 설정 |
+| **OTP**(One-Time Programmable — 한 번만 굽고 이후 변경 불가한 메모리; 칩 고유키·부팅 검증키 저장용) register 가 NS world 에서 읽힘 | TZPC slave 분류 누락 | BL1 boot trace + TZPC region 설정 |
 | 같은 PA 인데 S/NS 가 같은 캐시 라인 | cache NS tag 가 비활성 또는 line invalidate 누락 | cache controller 의 NS tag bit + write-back 정책 |
 | ERET 후 IRQ mask 풀림 | SPSR.DAIF 잘못 복원 | ERET 직전 SPSR 의 DAIF field |
 

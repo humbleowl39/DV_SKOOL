@@ -260,7 +260,7 @@ endclass
 
 ### 7.1 Rowhammer aggressor pattern
 
-Rowhammer 검증은 *aggressor row*를 *매우 빠르게 반복 ACT* 하는 시퀀스를 만드는 것:
+**stim**(stimulus, DUT를 흔들어 보려고 testbench가 만들어 인가하는 입력 자극)을 설계한다는 뜻입니다. Rowhammer 검증은 *aggressor row*(공격하듯 반복 접근하는 row)를 *매우 빠르게 반복 ACT* 하는 시퀀스를 만드는 것:
 
 ```systemverilog
 class rowhammer_aggressor_seq extends uvm_sequence #(ddr5_transaction);

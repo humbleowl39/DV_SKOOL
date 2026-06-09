@@ -194,9 +194,11 @@ void release(spinlock_t *l) { l->locked = 0; }
 | **semaphore** | 재웠다 깨움 (wait=P/signal=V) | busy wait 회피, Dijkstra |
 | **monitor** | 언어 차원, 데이터+연산 묶음 + condition variable | 더 높은 추상 |
 
+여기서 **condition variable**(조건 변수)은 monitor 안에서 "어떤 조건이 참이 될 때까지 기다렸다가, 다른 흐름이 깨워 주면 진행" 하게 해 주는 대기·통지 도구입니다(예: 버퍼가 비면 producer 를 깨움).
+
 ### 5.2 Deadlock: 네 필요조건 (Ch.8.3.1)
 
-동기화 도구를 잘못 쓰면 **liveness** 가 깨집니다 — 대표가 **deadlock**. 책은 mutex/semaphore 가 *가장 흔한 deadlock 원천*이라 짚습니다(Ch.8.1). 전형적 예: thread one 이 `first→second` 순, thread two 가 `second→first` 순으로 lock 을 잡으려 하면 각자 하나씩 쥔 채 멈춥니다(Ch.8.2).
+동기화 도구를 잘못 쓰면 **liveness**(살아 있음 — 시스템이 결국에는 진행을 이뤄낸다는 보장)가 깨집니다 — 대표가 **deadlock**(교착 상태 — 서로 상대가 쥔 자원을 기다리며 아무도 못 나아감). 책은 mutex/semaphore 가 *가장 흔한 deadlock 원천*이라 짚습니다(Ch.8.1). 전형적 예: thread one 이 `first→second` 순, thread two 가 `second→first` 순으로 lock 을 잡으려 하면 각자 하나씩 쥔 채 멈춥니다(Ch.8.2).
 
 deadlock 은 다음 **네 조건이 동시에 성립할 때** 생깁니다:
 
@@ -216,6 +218,8 @@ deadlock 은 다음 **네 조건이 동시에 성립할 때** 생깁니다:
 | **무시 (ignore)** | 없는 척; 드물면(월 1회) 다른 비용이 아까움 | 대부분의 OS(Linux·Windows) |
 | **prevention** | 네 조건 중 *적어도 하나*가 성립 못 하게 자원 요청 제약 | (예: read-only 공유 자원은 mutual exclusion 없어 deadlock 불가) |
 | **avoidance** | 사전 정보로 매 요청마다 **safe state** 판단 | banker's algorithm |
+
+여기서 **safe state**(안전 상태)는 어떤 순서로든 모든 thread 가 필요한 자원을 끝까지 받아 완료할 수 있는 자원 배분 상태이고, **banker's algorithm**(은행원 알고리즘)은 매 자원 요청을 허용하면 여전히 safe state 로 남는지 미리 따져 보고, 아니면 그 요청을 보류해 deadlock 을 피하는 기법입니다.
 | **detect + recover** | 허용하되 탐지 후 복구 | database 등 |
 
 세 방법은 자원 class 별로 골라 **조합**할 수도 있습니다.

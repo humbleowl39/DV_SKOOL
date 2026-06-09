@@ -104,6 +104,9 @@ S1 -> S2 -> S3 -> S4
 | Step | 누가 | 무엇을 | 핵심 |
 |---|---|---|---|
 | ① | RTL retire monitor | retire 사건에서 PC·rd·wdata·CSR 변화 샘플 | retire = architectural 확정 시점 |
+
+(위 다이어그램의 `rvfi_valid` 등 `rvfi_*` 신호는 **RVFI**(RISC-V Formal Interface; 코어가 검증용으로 약속한 retire 시점 신호 묶음 — "방금 어떤 명령이 무엇을 했나"를 표준 이름으로 노출)에서 옵니다. retire monitor 가 코어 내부를 뒤지지 않고 이 신호만 보면 되는 인터페이스로, [M03](../03_rvfi_rvvi/)에서 본격적으로 다룹니다.)
+
 | ② | ISS (golden predictor) | RTL 이 retire 한 _같은_ 명령을 한 스텝 실행 | RTL 이 leader, ISS 가 follower |
 | ③ | 비교기 | RTL 의 architectural 변화 == ISS 의 변화? | 사이클이 아닌 retire 단위 비교 |
 | ④ | 루프 제어 | 일치 → 다음, 불일치 → first divergence flag | 첫 불일치만 의미 있음 |
@@ -199,6 +202,8 @@ A -> B: "오염 전파"
 만약 첫 불일치에서 멈추지 않고 계속 비교하면, 명령 N 의 잘못된 결과가 이후 모든 명령의 입력을 오염시켜 수천 개가 mismatch 로 찍힙니다. 그 중 어느 것이 _원인_ 인지 구분이 불가능해집니다. 그래서 step-and-compare 는 **첫 divergence 에서 즉시 flag 하고 멈추거나, 적어도 첫 불일치를 명확히 표시**합니다 — 이것이 [DV 의 root-cause-first 원칙](../01_why_cpu_dv/)(첫 에러를 찾아라)을 프로세서 검증에 적용한 것입니다.
 
 ### 5.2 동기화 메커니즘 — RTL retire → ISS step
+
+아래 코드의 ISS 호출은 **DPI-C**(Direct Programming Interface for C; SystemVerilog 에서 C/C++ 함수를 직접 호출하는 IEEE 1800 표준 인터페이스)로 이뤄집니다 — C 로 작성된 ISS 한 스텝을 SV 쪽 monitor 가 함수처럼 부릅니다([M04](../04_uvm_core_env/)에서 UVM scoreboard 로 구체화).
 
 ```systemverilog
 // 개념적 SystemVerilog 측 — retire monitor 가 ISS 를 끌고 가는 구조

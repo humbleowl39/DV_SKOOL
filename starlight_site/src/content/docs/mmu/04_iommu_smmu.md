@@ -27,8 +27,8 @@ title: "Module 04 — IOMMU / SMMU"
 2010 년대 보안 연구: **악의적 USB device** 가 _IOMMU 없는_ system 에서 **kernel memory 전체** 를 _DMA 로_ 읽을 수 있음.
 
 작동 원리:
-- USB controller 의 DMA 가 _bus master_ — 임의 physical address access 가능.
-- 악의적 firmware → DMA 로 PA 0~∞ 영역 _read_.
+- USB controller 의 **DMA**(Direct Memory Access — CPU 를 거치지 않고 장치가 직접 메모리를 읽고 쓰는 기능) 가 _bus master_(버스 마스터 — 자기 주도로 버스에 메모리 요청을 내보낼 수 있는 주체) — 임의 physical address access 가능.
+- 악의적 firmware(펌웨어 — 장치 안에 내장된 저수준 소프트웨어) → DMA 로 PA 0~∞ 영역 _read_.
 - Kernel 의 _secret_ (encryption key, password) 노출.
 
 **해법: IOMMU**.
@@ -99,7 +99,7 @@ OUT -> BUS: "PA + AT=Translated (옵션)"
 
 ## 3. 작은 예 — GPU 가 IOVA = 0x4_0000_1000 에 DMA write 하는 한 사이클
 
-가장 단순한 시나리오. Guest OS 의 GPU driver 가 **IOVA = 0x0000_0004_0000_1000** (4 KB 정렬, 256 byte write) 로 DMA 를 발사. StreamID = 0x10 (GPU), SubstreamID = 0x05 (process 5). Stage 1 + Stage 2 모두 enable. IOTLB cold.
+가장 단순한 시나리오. Guest OS(게스트 OS — 가상 머신 안에서 도는 운영체제) 의 GPU driver 가 **IOVA**(I/O Virtual Address — 장치가 보는 가상 주소; CPU 의 VA 에 해당) **= 0x0000_0004_0000_1000** (4 KB 정렬, 256 byte write) 로 DMA 를 발사. **StreamID**(스트림 ID — "어느 장치인가"를 식별하는 번호) = 0x10 (GPU), **SubstreamID**(서브스트림 ID — 한 장치 안에서 "어느 process 인가"를 식별하는 번호; PASID 에 대응) = 0x05 (process 5). Stage 1 + Stage 2 모두 enable. **IOTLB**(I/O TLB — IOMMU 안의 변환 결과 캐시) cold. 변환에 쓰는 두 데이터 구조는 **STE**(Stream Table Entry — 장치별 설정 항목)와 **CD**(Context Descriptor — process별 page table 시작 주소를 담은 항목)입니다.
 
 ### 단계별 추적
 
@@ -154,7 +154,7 @@ OUT -> BUS: "PA + AT=Translated (옵션)"
 ### 만약 Stage 1 PTE 의 V=0 이면? (vs CPU fault)
 
 - **CPU MMU**: Synchronous Translation Fault → 현재 instr abort → handler.
-- **SMMU**: DMA stall (또는 abort) → **Event Queue 에 `TRANSLATION_FAULT` 기록** → SMMU 가 GIC 로 interrupt → OS 가 event 를 polling → page allocate → Command Queue 에 `PRI_RESP` (PRI 사용 시) 또는 STE/CD update + IOTLB invalidation → Device retry.
+- **SMMU**: DMA stall (또는 abort) → **Event Queue**(이벤트 큐 — SMMU 가 fault 같은 사건을 SW 에 알리려고 메모리에 쌓는 순환 버퍼) **에 `TRANSLATION_FAULT` 기록** → SMMU 가 GIC(Generic Interrupt Controller — ARM 의 인터럽트 분배 컨트롤러) 로 interrupt → OS 가 event 를 polling → page allocate → **Command Queue**(커맨드 큐 — SW 가 SMMU 에 명령을 전달하는 순환 버퍼) 에 `PRI_RESP` (PRI 사용 시) 또는 STE/CD update + IOTLB invalidation → Device retry.
 - 즉 **fault recovery 가 비동기**.
 
 :::note[여기서 잡아야 할 두 가지]

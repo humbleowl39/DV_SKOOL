@@ -32,7 +32,7 @@ title: "Module 04 — 메모리 모델 & 배리어"
 
 ARM은 **weakly-ordered** 메모리 모델이라, Core 0의 두 store가 **순서가 뒤집혀** Core 1에 보일 수 있습니다 — `ready=1`이 먼저, `data=42`가 나중에 도달. 그래서 Core 1이 `ready`를 봤을 때 `data`는 아직 쓰레기입니다. x86은 TSO(Total Store Order)라 store-store 순서가 자동 보장되어 이 버그가 안 나지만, ARM에서는 **배리어**로 순서를 명시해야 합니다.
 
-이 모듈은 검증에서 **가장 미묘하고 재현이 어려운 버그의 원천**을 다룹니다. weak memory의 재정렬은 대부분의 실행에서 우연히 in-order로 보이다가 특정 타이밍에서만 드러나, scoreboard mismatch가 간헐적으로 터집니다. ARM SMP·MMIO·페이지테이블이 끼인 DUT 검증에서 배리어 의미론은 필수 언어입니다.
+이 모듈은 검증에서 **가장 미묘하고 재현이 어려운 버그의 원천**을 다룹니다. weak memory의 재정렬은 대부분의 실행에서 우연히 in-order로 보이다가 특정 타이밍에서만 드러나, scoreboard mismatch가 간헐적으로 터집니다. ARM **SMP**(Symmetric Multi-Processing — 같은 메모리를 공유하는 여러 동등한 코어)·**MMIO**(Memory-Mapped I/O — 메모리 주소처럼 읽고 쓰면 실제로는 장치 레지스터에 접근하는 방식)·페이지테이블이 끼인 DUT 검증에서 배리어 의미론은 필수 언어입니다.
 
 ---
 
@@ -174,7 +174,7 @@ Device 타입의 접미(`nG` non-Gathering, `nR` non-Reordering, `nE` non-Early 
 | 주 용도 | SMP 공유 변수 순서 | MMIO, CMO, TLBI 완료 | SCTLR/TTBR/DAIF 변경 후, SMC 전 |
 | 흔한 쌍 | 단독 또는 LDAR/STLR 대체 | + ISB 짝지어 | DSB 뒤에 따라옴 |
 
-한 줄 결정 트리: **SMP 공유 변수 → DMB ISH(또는 LDAR/STLR), 장치/CMO/TLBI 완료 → DSB, 시스템 레지스터·코드 변경 → DSB + ISB.**
+표에 나온 약어: **CMO**(Cache Maintenance Operation — 캐시 라인을 비우거나 무효화하는 명령군), **TLBI**(TLB Invalidate — 낡아진 주소 번역 캐시 항목을 무효화하는 명령). 한 줄 결정 트리: **SMP 공유 변수 → DMB ISH(또는 LDAR/STLR), 장치/CMO/TLBI 완료 → DSB, 시스템 레지스터·코드 변경 → DSB + ISB.**
 
 ### 4.3 옵션 다이얼 — Scope × Direction
 
@@ -241,7 +241,7 @@ DMB는 **양방향** 순서를 강제해 한쪽만 필요한데도 비용을 지
     bl    wait_for_dma_done
 ```
 
-DMB는 순서만 정리할 뿐 **완료를 기다리지 않습니다**. 다음 명령이 장치의 응답을 기다려야 한다면 DSB가 필요합니다 — DMB만 쓰면 드물게 race가 나 디버깅 지옥이 됩니다.
+위 예의 **DMA**(Direct Memory Access — CPU를 거치지 않고 장치가 메모리를 직접 읽고 쓰는 전송 방식)처럼, DMB는 순서만 정리할 뿐 **완료를 기다리지 않습니다**. 다음 명령이 장치의 응답을 기다려야 한다면 DSB가 필요합니다 — DMB만 쓰면 드물게 race가 나 디버깅 지옥이 됩니다.
 
 ### 5.2 DSB + TLBI — 페이지테이블 변경의 표준형
 

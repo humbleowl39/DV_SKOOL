@@ -33,7 +33,7 @@ assert property (axi_data_stable);  // PASS!
 ```
 
 PASS 인 이유: **Antecedent 조건 (`VALID && !READY`) 이 _한 번도_ 발생 안 함**.
-- 시뮬에서 사용한 stimulus 가 _slave 가 항상 READY=1_ 인 모델 → backpressure 시나리오 없음.
+- 시뮬에서 사용한 stimulus(자극 — DUT 에 넣어 주는 입력 시퀀스) 가 _slave 가 항상 READY=1_ 인 모델 → backpressure(역압 — 받는 쪽이 아직 준비 안 됐다며 ready 를 0 으로 내려 보내는 쪽을 잠시 멈춰 세우는 흐름 제어) 시나리오 없음.
 - Implication 의 _left side false_ → property _자동 true_ (vacuous pass).
 
 **진단**: SVA `assert` 만 보지 말고 _`cover` property_ 동시 작성:
@@ -517,7 +517,7 @@ assert property (
 // clk_a 의 posedge 에서 req 확인 → 다음 clk_b 의 posedge 기준으로 0~3 cycle 내 ack
 ```
 
-멀티 클럭 assertion 을 사용할 때는 몇 가지 제약을 염두에 두어야 합니다. 시뮬레이션에서는 지원되지만 Formal 도구마다 지원 범위가 다르므로, 사용 전에 도구의 제약을 확인해야 합니다. CDC 검증은 일반적으로 Spyglass CDC, Meridian CDC 같은 전용 도구가 담당하며, SVA 멀티 클럭은 동기화 로직의 프로토콜 수준 검증에 보조적으로 활용됩니다. 클럭 간 전환 시 `##1` 은 "다음 클럭 엣지까지 대기" 를 의미합니다.
+여기서 **CDC**(Clock Domain Crossing, 클럭 도메인 교차 — 한 클럭으로 동작하는 신호가 다른 클럭 영역으로 건너갈 때 타이밍이 어긋나 값이 깨질 수 있는 위험 지점)는 서로 다른 주파수·위상의 클럭이 만나는 경계를 가리킵니다. 멀티 클럭 assertion 을 사용할 때는 몇 가지 제약을 염두에 두어야 합니다. 시뮬레이션에서는 지원되지만 Formal 도구마다 지원 범위가 다르므로, 사용 전에 도구의 제약을 확인해야 합니다. CDC 검증은 일반적으로 Spyglass CDC, Meridian CDC 같은 전용 도구가 담당하며, SVA 멀티 클럭은 동기화 로직의 프로토콜 수준 검증에 보조적으로 활용됩니다. 클럭 간 전환 시 `##1` 은 "다음 클럭 엣지까지 대기" 를 의미합니다.
 
 ### 5.9 면접 골든 답변 4종
 

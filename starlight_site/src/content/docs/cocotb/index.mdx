@@ -7,7 +7,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ## 왜 cocotb를 배우는가
 
-검증 방법론을 UVM 하나로만 알고 있으면, 정작 "이 블록은 Python으로 며칠 만에 검증할 수 있는데 왜 SystemVerilog로 몇 주를 쓰는가"라는 질문 앞에서 답을 갖지 못합니다. cocotb(COroutine-based COsimulation TestBench)는 테스트를 Python으로 작성하고 DUT는 그대로 Verilog/SystemVerilog/VHDL로 두는 프레임워크로, OpenTitan(Google/lowRISC), Western Digital, Tenstorrent, Groq 같은 곳이 실제 양산 검증 플로우에 채택하고 있습니다. UVM의 대체재가 아니라, 검증 엔지니어가 상황에 맞는 카드를 꺼낼 수 있게 해 주는 또 하나의 도구입니다.
+검증 방법론을 UVM 하나로만 알고 있으면, 정작 "이 블록은 Python으로 며칠 만에 검증할 수 있는데 왜 SystemVerilog로 몇 주를 쓰는가"라는 질문 앞에서 답을 갖지 못합니다. cocotb(COroutine-based COsimulation TestBench)는 테스트를 Python으로 작성하고 DUT(device under test, 검증 대상 설계)는 그대로 Verilog/SystemVerilog/VHDL로 두는 프레임워크로, OpenTitan(Google/lowRISC), Western Digital, Tenstorrent, Groq 같은 곳이 실제 양산 검증 플로우에 채택하고 있습니다. UVM의 대체재가 아니라, 검증 엔지니어가 상황에 맞는 카드를 꺼낼 수 있게 해 주는 또 하나의 도구입니다.
 
 cocotb를 모르면 다음 순간에 막힙니다. IP·블록 레벨을 빠르게 prototyping해야 하는데 UVM 환경 구축 오버헤드 때문에 시작조차 못 하고, DSP·ML 가속기 검증에서 NumPy/PyTorch 레퍼런스 모델을 SystemVerilog로 다시 짜느라 시간을 낭비하며, 시뮬레이터 라이선스 없이 CI를 돌리는 방법을 떠올리지 못합니다. 이 코스는 cocotb가 *무엇이고*, *어떻게 동작하며*, *언제 쓰는 것이 옳은지*를 UVM과 끊임없이 대조하며 풀어줍니다.
 

@@ -5,9 +5,9 @@ title: "Module 03 — OoO 실행 & 분기 예측"
 :::tip[학습 목표]
 이 모듈을 마치면:
 
-- **Explain** in-order 실행이 첫 해저드에서 멈추는 한계와, OoO(out-of-order) 실행이 명령 윈도우에서 준비된 명령부터 issue 하는 원리를 설명할 수 있다.
-- **Describe** Tomasulo 알고리즘의 세 메커니즘(Reservation Station, Common Data Bus, Register Renaming)이 어떻게 협력하는지 기술할 수 있다.
-- **Differentiate** ROB 가 execution 의 out-of-order 와 retirement 의 in-order 를 분리해 precise exception 과 speculation 을 가능케 함을 구분할 수 있다.
+- **Explain** in-order 실행(명령을 프로그램 순서 그대로 실행)이 첫 해저드에서 멈추는 한계와, OoO(out-of-order, 명령을 프로그램 순서와 다르게 실행하는 기법) 실행이 명령 윈도우(아직 끝나지 않은 명령들을 모아 둔 창)에서 준비된 명령부터 issue(실행 유닛으로 내보냄)하는 원리를 설명할 수 있다.
+- **Describe** Tomasulo(operand 가 준비된 명령부터 순서 무관하게 실행하는 동적 스케줄링 알고리즘) 알고리즘의 세 메커니즘(Reservation Station — 실행 유닛 앞에서 operand 가 찰 때까지 명령을 대기시키는 슬롯, Common Data Bus — 완료된 결과를 기다리던 모든 곳에 한 번에 방송하는 버스, Register Renaming — 같은 이름의 레지스터가 만드는 가짜 의존성을 물리 레지스터 매핑으로 없애는 기법)이 어떻게 협력하는지 기술할 수 있다.
+- **Differentiate** ROB(Reorder Buffer — 실행은 뒤섞여도 retire 는 program order 로 되돌리는 순환 큐)가 execution 의 out-of-order 와 retirement(명령을 완료 처리하는 단계)의 in-order 를 분리해 precise exception(예외 발생 시 그 명령 직전까지의 상태를 정확히 복원할 수 있게 하는 것)과 speculation(분기 결과를 추측해 미리 실행하는 것)을 가능케 함을 구분할 수 있다.
 - **Compare** 정적/동적 분기 예측기(2-bit, local/global history, tournament, TAGE)를 정확도·비용 기준으로 비교할 수 있다.
 - **Evaluate** speculative execution 이 성능을 주면서 동시에 Spectre/Meltdown 류 side-channel 을 낳는 trade-off 를 평가할 수 있다.
 :::
@@ -23,7 +23,7 @@ title: "Module 03 — OoO 실행 & 분기 예측"
 
 OoO 코어를 검증할 때 가장 흔한 함정은 _실행 순서_ 와 _완료(retire) 순서_ 를 혼동하는 것입니다. OoO 코어는 명령을 program order 와 다르게 실행하지만, architectural state(레지스터·메모리의 관찰 가능한 값)는 반드시 program order 대로 갱신합니다. reference model 을 만들 때 "OoO 니까 결과도 순서 없이 비교하자"고 하면, 정상 동작을 mismatch 로 신고하게 됩니다. 올바른 기대값은 항상 _retire 순서 = program order_ 기준입니다.
 
-또 다른 함정은 분기 예측과 speculation 입니다. 코어가 예측 경로의 명령을 미리 실행했다가 misprediction 으로 squash 하면, 그 명령들은 architectural state 를 _절대_ 바꾸지 않아야 합니다. 만약 squash 가 불완전해 speculative 결과가 새어 나가면 silent corruption 이 됩니다. 더 나아가, squash 된 speculative load 가 캐시 타이밍 흔적을 남기는 것이 바로 Spectre/Meltdown 의 뿌리입니다.
+또 다른 함정은 분기 예측과 speculation 입니다. 코어가 예측 경로의 명령을 미리 실행했다가 misprediction(분기 예측 실패)으로 squash(잘못 실행한 명령들을 통째로 무효화·폐기하는 것)하면, 그 명령들은 architectural state(레지스터·메모리처럼 소프트웨어가 관찰할 수 있는 공식 상태)를 _절대_ 바꾸지 않아야 합니다. 만약 squash 가 불완전해 speculative 결과가 새어 나가면 silent corruption 이 됩니다. 더 나아가, squash 된 speculative load 가 캐시 타이밍 흔적을 남기는 것이 바로 Spectre/Meltdown 의 뿌리입니다.
 
 이 모듈은 "execution 은 자유롭게 뒤섞여도 architectural state 는 in-order 로 보존된다"는 OoO 의 핵심 불변 조건을 세워, 검증의 기대값을 올바로 잡게 합니다.
 
@@ -113,7 +113,7 @@ OOO: "**OoO**" {
 
 ### 4.1 Tomasulo 의 세 메커니즘
 
-Tomasulo 알고리즘(원래 IBM System/360 FPU 용)은 세 부품으로 OoO 를 구현합니다. **Reservation Station(RS)** 은 각 functional unit 앞의 대기 슬롯으로, dispatch 된 명령은 소스 operand 가 준비되거나 생산 명령의 tag 로 표시된 채 RS 에서 기다립니다. **Common Data Bus(CDB)** 는 functional unit 이 완료 시 결과와 tag 를 방송하는 버스로, 그 tag 를 감시하던 모든 RS 가 값을 capture 해 operand 를 ready 로 표시합니다. **Register Renaming** 은 물리 레지스터를 architectural 레지스터보다 많이 두고, rename 단계에서 각 목적 architectural 레지스터를 빈 물리 레지스터에 매핑해 rename 경계에서 WAW/WAR 해저드를 _제거_ 합니다.
+Tomasulo 알고리즘(원래 IBM System/360 FPU 용)은 세 부품으로 OoO 를 구현합니다. 먼저 용어 정리: **operand**(연산이 입력으로 받는 값 — 예: `ADD`의 두 소스 레지스터 값), **functional unit**(실제 연산을 수행하는 실행 유닛 — ALU/FPU/LSU 등), **dispatch**(디코드된 명령을 실행 대기 슬롯에 배정하는 단계), **tag**(아직 계산 안 끝난 결과를 가리키는 임시 이름표). **Reservation Station(RS)** 은 각 functional unit 앞의 대기 슬롯으로, dispatch 된 명령은 소스 operand 가 준비되거나 생산 명령의 tag 로 표시된 채 RS 에서 기다립니다. **Common Data Bus(CDB)** 는 functional unit 이 완료 시 결과와 tag 를 방송하는 버스로, 그 tag 를 감시하던 모든 RS 가 값을 capture 해 operand 를 ready 로 표시합니다. **Register Renaming** 은 물리 레지스터를 architectural 레지스터보다 많이 두고, rename 단계에서 각 목적 architectural 레지스터를 빈 물리 레지스터에 매핑해 rename 경계에서 WAW/WAR 해저드를 _제거_ 합니다.
 
 | 메커니즘 | 해결하는 문제 | 비유 |
 |---|---|---|
@@ -159,13 +159,13 @@ EXC -> ROB: "offending 이후 전부 squash"
 
 ### 4.3 분기 예측 — 정확도 사다리
 
-분기를 잘못 예측하면 파이프라인을 flush 해야 하고(현대 깊은 파이프라인에서 페널티 10–20 사이클), 그래서 정확한 예측이 IPC 유지의 핵심입니다.
+분기를 잘못 예측하면 파이프라인을 flush(잘못 fetch 된 명령들을 비움)해야 하고(현대 깊은 파이프라인에서 페널티 10–20 사이클), 그래서 정확한 예측이 IPC(Instructions Per Cycle — 사이클당 완료 명령 수, 클수록 빠름; CPI 의 역수) 유지의 핵심입니다.
 
 | 예측기 | 원리 | 대략 정확도 |
 |---|---|---|
 | Static (predict not/taken) | 항상 한 방향; 컴파일러 힌트 | ~60–70% |
 | 2-bit saturating counter | 분기별 2-bit 상태기(SN→WN→WT→ST); 1회 오답에 안 뒤집힘 | 단일 anomaly 내성 |
-| Local / Global history | BHR(최근 N 분기 결과) + PHT 인덱싱 | 패턴 의존 분기 포착 |
+| Local / Global history | BHR(Branch History Register, 최근 N 분기의 taken/not 결과 기록) + PHT(Pattern History Table, 그 이력 패턴별 예측을 담은 표) 인덱싱 | 패턴 의존 분기 포착 |
 | Tournament (hybrid) | local/global 두 sub-predictor 가 경쟁, meta-predictor 가 분기별 선택 | DEC Alpha 21264 |
 | TAGE | 기하급수적 history length 의 다중 태그 테이블 | SPEC CPU >95% |
 

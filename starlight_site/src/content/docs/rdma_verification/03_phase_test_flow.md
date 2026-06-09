@@ -21,11 +21,11 @@ title: "Module 03 — UVM Phase & Test Flow"
 
 ### 1.1 시나리오 — 첫 _verb_ 부터 _fatal_
 
-새 RDMA 테스트를 작성하다 보면, `main_phase` 에서 `ibv_post_send` 를 호출하자마자 **즉시 fatal** 이 터지는 상황을 만납니다. 메시지는 "QP not in RTS state". QP 가 아직 Reset 상태이기 때문입니다. Init sequence — Modify(Init) → Modify(RTR) → Modify(RTS) — 가 실행되지 않아 QP 가 RTS 로 전이되지 못한 것입니다.
+새 RDMA 테스트를 작성하다 보면, `main_phase`(UVM 테스트의 본 실행 단계 — 뒤 §5.1 phase 표 참고) 에서 `ibv_post_send`(SW 가 "이 Send 작업을 큐에 넣어라"고 RDMA 에 내리는 표준 API 호출) 를 호출하자마자 **즉시 fatal** 이 터지는 상황을 만납니다. 메시지는 "QP not in RTS state". 여기서 QP 는 통신 채널 하나(Queue Pair)이고, 통신을 하려면 정해진 상태 머신을 거쳐야 합니다 — **Reset**(초기 상태) → **Init**(초기화) → **RTR**(Ready To Receive, 받을 준비 완료) → **RTS**(Ready To Send, 보낼 준비 완료). QP 가 RTS 에 도달해야 verb 를 보낼 수 있는데, 이 전이 시퀀스(`Modify(Init)→Modify(RTR)→Modify(RTS)`)가 실행되지 않아 아직 Reset 에 머물러 있어 fatal 이 난 것입니다.
 
 해법은 **`post_configure_phase` 에서 init seq 를 자동 실행** 하는 것입니다. RDMA-TB 는 8 phase 각각에 명확한 책임을 부여합니다. build/connect 에서 자원을 생성하고, reset 에서 초기화하고, configure 에서 설정을 적용한 뒤, **post_configure 에서 init seq 를 실행해 모든 QP 를 RTS 로 진입** 시킵니다. 그 다음에야 main phase 에서 정상 verb 를 발행할 수 있고, shutdown 에서 outstanding 을 drain 하고, check 에서 결과를 검증합니다. 각 phase 의 책임이 이렇게 명확히 나뉘어 있어야 race 가 생기지 않으며, 이것이 RDMA-TB 의 핵심 패턴입니다.
 
-RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 가 잘못 구성되면 race / dead-lock 이 쉽게 생깁니다. 예를 들어 QP/CQ/MR 등록 (init seq) 이 정상 main_phase verb 보다 늦으면 첫 verb 부터 fatal. RDMA-TB 는 이를 해결하기 위해 phase 별 책임을 명확히 나눴고, `post_configure_phase` 에서 default sequence 로 HW 초기화를 자동 수행합니다.
+RDMA-TB 는 **두 노드 + 다수 sub-env** 가 동시에 돌아가므로 phase 가 잘못 구성되면 race / dead-lock 이 쉽게 생깁니다. 예를 들어 QP/CQ/MR 등록 (init seq) 이 정상 main_phase verb 보다 늦으면 첫 verb 부터 fatal. RDMA-TB 는 이를 해결하기 위해 phase 별 책임을 명확히 나눴고, `post_configure_phase` 에서 **default sequence**(특정 phase 에 진입하면 UVM 이 자동으로 만들어 실행해 주는, 미리 등록해 둔 sequence)로 HW 초기화를 자동 수행합니다. 여기서 **sequence**(어떤 자극들을 어떤 순서로 발행할지 정의한 시나리오 객체)와 **init seq**(QP/CQ/MR 등록 같은 하드웨어 초기화를 수행하는 그 sequence)가 등장합니다. 또 **outstanding**(발행했지만 아직 완료(CQE)되지 않은 채 떠 있는 verb)이라는 개념이 반복되는데, 테스트 종료 전 이들을 모두 처리(**drain** — 남은 것을 끝까지 흘려보내 비우는 것)해야 정상입니다.
 
 이 모듈을 건너뛰면 새 테스트 작성 시 "왜 init 이 자동 실행되는지", "왜 `t_seqr` 를 명시해야 하는지", "왜 CQ 폴링은 `start_item` 을 안 쓰는지" 같은 질문이 끊임없이 나옵니다. 4 패턴 + sequencer 계층을 잡으면 모든 시퀀스 작성 결정이 자동화됩니다.
 
@@ -162,7 +162,9 @@ HV0 -> RS0
 HV1 -> RS1
 ```
 
-이 계층 구조에서 핵심 규칙은 다음과 같습니다. `vrdma_top_sequence` 는 **stateless function set** 으로 설계되어 있습니다. 즉 body() 가 없거나 minimal 하고, 실제 verb 함수만 제공합니다. 이렇게 stateless 로 유지해야 시퀀스를 여러 테스트에서 재사용할 때 이전 상태가 남아있는 stale state 문제가 생기지 않습니다. 멀티노드 verb 를 동시에 발행하려면 `fork-join_none` 으로 두 시퀀서에 동시에 `start_item / finish_item` 을 보내야 하는데, 이때 각 노드의 per-QP state (outstanding count, error status 등) 는 `vrdma_sequencer` 가 소유합니다. 만약 이 state 를 시퀀스에 두면 시퀀스를 재사용할 때마다 이전 실행의 값이 남아 있어 디버그하기 어려운 비결정적 동작이 발생합니다. 자세한 이유는 [Module 05](../05_extension_principles/) 의 Stateless 보존 원칙을 참고하세요.
+여기서 **virtual sequencer**(`top_vseqr` — 여러 하위 sequencer 를 자식으로 거느리며, 여러 노드/인터페이스에 걸친 sequence 를 한곳에서 조율하는 상위 sequencer)와 그 위에서 도는 **virtual sequence**(여러 sequencer 를 가로질러 자극을 조율하는 상위 sequence)가 핵심입니다.
+
+이 계층 구조에서 핵심 규칙은 다음과 같습니다. `vrdma_top_sequence` 는 **stateless function set**(내부 상태를 안 들고, verb 함수만 모아둔 형태) 으로 설계되어 있습니다. 즉 body() 가 없거나 minimal 하고, 실제 verb 함수만 제공합니다. 이렇게 stateless 로 유지해야 시퀀스를 여러 테스트에서 재사용할 때 이전 상태가 남아있는 stale state 문제가 생기지 않습니다. 멀티노드 verb 를 동시에 발행하려면 `fork-join_none` 으로 두 시퀀서에 동시에 `start_item / finish_item` 을 보내야 하는데, 이때 각 노드의 per-QP state (outstanding count, error status 등) 는 `vrdma_sequencer` 가 소유합니다. 만약 이 state 를 시퀀스에 두면 시퀀스를 재사용할 때마다 이전 실행의 값이 남아 있어 디버그하기 어려운 비결정적 동작이 발생합니다. 자세한 이유는 [Module 05](../05_extension_principles/) 의 Stateless 보존 원칙을 참고하세요.
 
 ---
 
@@ -175,7 +177,7 @@ HV1 -> RS1
 | 1 | `build_phase` | function | env 인스턴스화 (`vrdmatb_top_env` → 노드/data/dma/network) |
 | 2 | `connect_phase` | function | AP/export 연결, sequencer↔driver 연결 |
 | 3 | `reset_phase` | task | DUT reset, 메모리 초기화 |
-| 4 | `configure_phase` | task | RAL 기반 초기 컨피그 (BAR, MMU, link 설정) |
+| 4 | `configure_phase` | task | RAL(Register Abstraction Layer — DUT 레지스터를 이름으로 읽고 쓰게 해주는 UVM 계층) 기반 초기 컨피그 (BAR(Base Address Register — PCIe 장치의 레지스터 영역이 host 주소공간에 매핑되는 베이스 주소), MMU(Memory Management Unit — 가상↔물리 주소 변환 담당), link 설정) |
 | 5 | `post_configure_phase` | task | **`vrdma_init_seq` 가 default sequence 로 자동 실행** — QP/CQ/MR 등록 등 HW 초기화 |
 | 6 | `main_phase` | task | 테스트 시퀀스 실행, agent 백그라운드 task 동작 |
 | 7 | `shutdown_phase` | task | outstanding 마무리, error_cq drain |

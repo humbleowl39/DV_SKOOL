@@ -27,7 +27,7 @@ title: "Module 03 — GoF 23 디자인 패턴 개요"
 
 ### 1.2 왜 검증 엔지니어에게 중요한가
 
-UVM 자체가 GoF 패턴의 집합체입니다 — factory는 Factory Method/Abstract Factory, sequence-driver는 Template Method, analysis port는 Observer, config 객체로 동작을 바꾸는 것은 Strategy의 변형입니다. 패턴 어휘를 익히면 UVM 코드를 읽을 때 "이건 Observer다"라고 의도를 즉시 읽어낼 수 있고, 팀과 "여기 Factory 쓰자"는 한마디로 설계를 공유할 수 있습니다 — 이것이 패턴의 **공통 어휘** 가치입니다 (`design_pattern_onboarding.md` Why use them).
+UVM 자체가 GoF(Gang of Four — 1994년 디자인 패턴 카탈로그를 펴낸 네 저자, 그리고 그들이 정리한 23개 패턴 모음) 패턴의 집합체입니다 — factory(객체 생성을 한 곳에 위임하는 중앙 생성기)는 Factory Method/Abstract Factory, sequence-driver는 Template Method, analysis port(트랜잭션을 여러 구독자에 뿌리는 추상 포트)는 Observer, config 객체로 동작을 바꾸는 것은 Strategy의 변형입니다. 패턴 어휘를 익히면 UVM 코드를 읽을 때 "이건 Observer다"라고 의도를 즉시 읽어낼 수 있고, 팀과 "여기 Factory 쓰자"는 한마디로 설계를 공유할 수 있습니다 — 이것이 패턴의 **공통 어휘** 가치입니다 (`design_pattern_onboarding.md` Why use them).
 
 ---
 

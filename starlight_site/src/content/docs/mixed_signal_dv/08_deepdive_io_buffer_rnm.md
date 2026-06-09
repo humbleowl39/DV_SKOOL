@@ -12,9 +12,9 @@ title: "Ch08. Deep Dive — IO Buffer · IBIS-AMI"
 
 ## 1. IO Buffer가 왜 중요한가
 
-**IO Buffer**는 칩 내부의 디지털 신호를 외부 PCB로 전송하거나, 외부 신호를 내부로 받아들이는 회로입니다.
+**IO Buffer**는 칩 내부의 디지털 신호를 외부 **PCB**(Printed Circuit Board, 인쇄 회로 기판 — 칩들을 얹어 배선으로 잇는 보드)로 전송하거나, 외부 신호를 내부로 받아들이는 회로입니다.
 
-DRAM 검증에서 IO buffer는 단순한 출력 드라이버 이상의 의미를 갖습니다. sense amplifier까지는 완벽하게 데이터를 복원했어도, IO buffer를 거쳐 PCB trace와 package를 통과하는 과정에서 신호가 왜곡되면 결국 system error가 발생합니다. DDR5는 6400 Mbps/pin으로 동작하므로 1 비트의 시간이 약 156 ps밖에 되지 않습니다. 이 짧은 시간 안에 신호가 완전히 천이를 마쳐야 합니다. PCB trace는 전송선(transmission line)으로 동작하기 때문에 임피던스 불일치가 있으면 반사가 발생하고 eye가 닫힙니다. ZQ calibration과 ODT 같은 동적 조정이 필수인 이유가 여기에 있습니다. DDR5와 PCIe Gen5+ 이상의 고속 인터페이스에서는 **IBIS-AMI 모델로 RX equalizer까지 표준화**되어 있어, 이 표준을 이해하지 못하면 system-level sign-off가 불가능합니다.
+DRAM 검증에서 IO buffer는 단순한 출력 드라이버 이상의 의미를 갖습니다. sense amplifier(미세 전압차를 0/1로 증폭하는 회로)까지는 완벽하게 데이터를 복원했어도, IO buffer를 거쳐 **PCB trace**(기판 위 신호 배선)와 package를 통과하는 과정에서 신호가 왜곡되면 결국 system error가 발생합니다. DDR5는 6400 Mbps/pin으로 동작하므로 1 비트의 시간이 약 156 ps밖에 되지 않습니다. 이 짧은 시간 안에 신호가 완전히 천이를 마쳐야 합니다. PCB trace는 **전송선(transmission line**, 길이가 신호 파장과 견줄 만해 전압이 시간뿐 아니라 위치에 따라서도 변하는 배선)으로 동작하기 때문에 임피던스 불일치가 있으면 **반사**(신호가 끝단에서 되튕겨 돌아오는 것)가 발생하고 **eye**(아이 다이어그램의 벌어진 정도)가 닫힙니다. ZQ calibration과 ODT 같은 동적 조정이 필수인 이유가 여기에 있습니다. DDR5와 PCIe Gen5+ 이상의 고속 인터페이스에서는 **IBIS-AMI 모델로 RX equalizer까지 표준화**되어 있어, 이 표준을 이해하지 못하면 system-level sign-off가 불가능합니다.
 
 ## 2. IO Buffer의 5가지 특성
 
@@ -22,11 +22,11 @@ IO buffer의 동작을 결정하는 다섯 가지 특성이 있습니다. 이것
 
 ### 2.1 Driver Strength (구동 강도)
 
-Driver strength는 PMOS pull-up 트랜지스터와 NMOS pull-down 트랜지스터의 크기로 결정됩니다. 트랜지스터가 클수록 on-resistance가 낮아 더 많은 전류를 흘릴 수 있고, 신호 천이가 빠릅니다. 그러나 전류가 크면 EMI도 커집니다. DDR5에서는 트랜지스터 크기 대신 **34Ω, 40Ω, 48Ω** 같이 on-resistance의 임피던스로 강도를 표현합니다.
+Driver strength는 **PMOS pull-up**(출력을 전원 쪽 1로 끌어올리는 p형 트랜지스터)과 **NMOS pull-down**(출력을 접지 쪽 0으로 끌어내리는 n형 트랜지스터) 트랜지스터의 크기로 결정됩니다. 트랜지스터가 클수록 **on-resistance**(켜졌을 때의 도통 저항)가 낮아 더 많은 전류를 흘릴 수 있고, 신호 천이가 빠릅니다. 그러나 전류가 크면 **EMI**(Electro-Magnetic Interference, 전자기 간섭 — 회로가 내뿜는 전자기 잡음)도 커집니다. DDR5에서는 트랜지스터 크기 대신 **34Ω, 40Ω, 48Ω** 같이 on-resistance의 임피던스로 강도를 표현합니다.
 
 ### 2.2 Slew Rate Control
 
-Slew rate는 신호가 단위 시간당 얼마나 빠르게 전압을 변화시키는지(dV/dt)를 나타냅니다. 너무 빠르면 ringing과 crosstalk이 심해지고, 너무 느리면 한 UI(Unit Interval) 안에 천이를 마치지 못해 eye가 닫힙니다. DDR5+에서는 6400 Mbps 이상의 속도를 위해 슬루레이트를 매우 빠르게 설정해야 하는데, 이것이 SI(Signal Integrity) 설계의 핵심 과제가 됩니다.
+Slew rate는 신호가 단위 시간당 얼마나 빠르게 전압을 변화시키는지(dV/dt)를 나타냅니다. 너무 빠르면 **ringing**(천이 후 전압이 목표값 주위로 출렁이는 것)과 **crosstalk**(옆 배선 신호가 결합해 생기는 간섭)이 심해지고, 너무 느리면 한 **UI**(Unit Interval, 한 비트가 차지하는 시간) 안에 천이를 마치지 못해 eye가 닫힙니다. DDR5+에서는 6400 Mbps 이상의 속도를 위해 슬루레이트를 매우 빠르게 설정해야 하는데, 이것이 **SI**(Signal Integrity, 신호가 왜곡 없이 전달되는 정도) 설계의 핵심 과제가 됩니다.
 
 ### 2.3 Output Impedance (Z_out)
 
@@ -58,7 +58,7 @@ driver -> dq
 zq_cal -> driver.nmos: "select"
 ```
 
-- Driver는 보통 여러 작은 transistor의 parallel 조합 (binary weighted)
+- Driver는 보통 여러 작은 transistor의 parallel 조합 (**binary weighted** — 1·2·4·8…처럼 2의 거듭제곱 크기로 묶어 적은 비트로 넓은 범위를 조절)
 - ZQ cal이 어떤 transistor를 켤지 선택
 - 임피던스 = R_on (PMOS 또는 NMOS의 on resistance)
 
@@ -163,11 +163,13 @@ endmodule
 
 PCB trace는 transmission line으로 동작:
 
-- Characteristic impedance Z0 (보통 50Ω)
-- Propagation delay td (보통 6~7 ps/mm)
+- Characteristic impedance Z0 (특성 임피던스 — 전송선이 무한히 길 때 보이는 고유 임피던스, 보통 50Ω)
+- Propagation delay td (신호가 배선 단위 길이를 지나는 데 걸리는 지연, 보통 6~7 ps/mm)
 - 매칭 안 되면 reflection
 
 ### Reflection Coefficient
+
+**반사 계수 Γ**(Gamma)는 끝단에서 얼마만큼이 되튕기는지를 나타내는 비율입니다.
 
 ```
 Γ = (R_load - Z0) / (R_load + Z0)
@@ -236,6 +238,8 @@ endmodule
 ```
 
 ## 8. ODT (On-Die Termination) RNM 모델
+
+ODT는 종단 저항을 **VTT**(Termination Voltage — 종단 저항이 연결되는 기준 전압, 보통 VDDQ의 절반)에 묶어 신호 반사를 흡수합니다. **VDDQ/VSSQ**는 IO 전용 전원/접지입니다.
 
 ```systemverilog
 module odt_rnm (
@@ -321,7 +325,7 @@ DDR5/PCIe Gen5+ 같은 고속 인터페이스는 단순 driver/ODT 모델로 부
 
 ### 11.1 IBIS-AMI는 무엇인가
 
-**IBIS-AMI** = IBIS Algorithmic Model Interface. IBIS 5.0 (2008) 도입, **IBIS 7.0 (2019)** 에서 PAM modulation과 **back-channel link training** 지원 추가.
+**IBIS-AMI** = IBIS Algorithmic Model Interface (송수신단의 동작을 알고리즘으로 기술한 표준 SerDes 모델). IBIS 5.0 (2008) 도입, **IBIS 7.0 (2019)** 에서 **PAM**(Pulse Amplitude Modulation — 한 심볼에 여러 전압 레벨로 다중 비트를 싣는 변조) modulation과 **back-channel link training**(송수신단이 서로 신호를 주고받아 이퀄라이저 설정을 자동 최적화하는 협상) 지원 추가.
 
 ```d2
 direction: down
@@ -342,7 +346,7 @@ ibis_sim: "IBIS-AMI Simulation" {
 | 알고리즘 | 역할 |
 |---|---|
 | **CTLE** (Continuous-Time Linear Equalization) | 채널 loss를 high-pass로 보상 |
-| **FFE** (Feed-Forward Equalization) | TX에서 pre-emphasis로 ISI 사전 보상 |
+| **FFE** (Feed-Forward Equalization) | TX에서 pre-emphasis(미리 고주파 성분을 키워 보내는 보정)로 ISI 사전 보상 |
 | **DFE** (Decision-Feedback Equalization) | 결정된 비트를 feedback으로 ISI 제거 |
 | **AGC** (Automatic Gain Control) | 입력 amplitude 일정하게 |
 | **CDR** (Clock and Data Recovery) | 수신 데이터에서 clock 회복 |
@@ -350,7 +354,7 @@ ibis_sim: "IBIS-AMI Simulation" {
 
 ### 11.3 RNM과의 관계
 
-- IBIS-AMI는 **C/C++ DLL** + `.ami` 파일로 제공 → simulator(VCS, ADS, MATLAB SerDes Toolbox)가 호출
+- IBIS-AMI는 **C/C++ DLL**(Dynamic-Link Library — 컴파일된 공유 코드 모듈; 여기서는 Ch07의 Delay-Locked Loop와 무관) + `.ami` 파일로 제공 → simulator(VCS, ADS, MATLAB SerDes Toolbox)가 호출
 - RNM은 **자체 모델**, IBIS-AMI는 **표준 벤더 모델**
 - 두 가지 흐름:
     1. 칩 설계 단계: RNM으로 자체 driver/RX 모델
@@ -382,7 +386,7 @@ ibis_sim: "IBIS-AMI Simulation" {
 | Slew rate 부족 | 1 V/ns로 6.4Gbps 시도 | UI 안에 천이 가능한지 확인 |
 | ZQ cal 빈도 | Process drift 미반영 | Periodic recalibration |
 | ODT를 driver와 별개 모델 | Voltage divider 효과 무시 | 함께 풀어야 |
-| Single-ended vs differential | 모델 잘못 선택 | DDR은 DQ single, CK/DQS differential |
+| Single-ended vs differential | 모델 잘못 선택 | DDR은 DQ single(한 선의 절대 전압으로 0/1), CK/DQS differential(두 선의 차이로 0/1 — 잡음에 강함) |
 | IBIS-AMI 없이 BER sign-off | Statistical eye 불가 | IBIS-AMI + statistical method |
 
 ## 핵심 정리

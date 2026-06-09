@@ -39,6 +39,8 @@ title: "01 — 디바이스 레지스터 & MMIO / PMIO"
 | **Data** | 디바이스 안팎으로 데이터 이동 | `DATA_IN`, `DATA_OUT`, FIFO 포트 |
 | **Address / pointer** | 디바이스를 DRAM 위치로 가리킴(DMA 디스크립터, 큐 베이스, 도어벨 타깃) | `DESC_BASE_ADDR`, `QUEUE_HEAD` |
 
+표에 처음 나온 용어 몇 개를 먼저 풀어둡니다. **side-effect**(부수 효과 — 레지스터를 읽거나 쓰는 행위 자체가 값 저장을 넘어 디바이스 상태/동작을 바꾸는 것; 2장 주제)는 RAM에는 없는 I/O 특유의 성질입니다. **volatile**(휘발성 — 같은 주소를 다시 읽어도 값이 언제든 하드웨어에 의해 바뀔 수 있어, 컴파일러가 "읽기를 생략·캐싱"하면 안 되는 성질)도 마찬가지입니다. **acknowledge**(ack — 인터럽트를 처리했다고 디바이스에 알려 그 인터럽트 요청을 내리게 하는 신호), **mask**(특정 인터럽트 소스를 일시적으로 끄는 것), **FIFO**(first-in first-out — 먼저 넣은 데이터가 먼저 나오는 큐), **DMA**(Direct Memory Access — CPU를 거치지 않고 디바이스가 직접 메모리를 읽고 쓰는 방식)는 이후 장들에서 본격적으로 다룹니다.
+
 이 분류는 외워야 할 목록이 아니라 **검증의 골격**입니다. control 레지스터는 write side-effect를, status는 read side-effect를, interrupt 레지스터는 acknowledge 핸드셰이크를, pointer 레지스터는 DMA 주소 정합성을 각각 검증해야 한다는 신호이기 때문입니다.
 
 ---
@@ -112,6 +114,8 @@ PMIO: "**PMIO 읽기**" {
 | 주소 확보 | 물리 MMIO 주소를 가상 주소로 매핑(`ioremap`) | I/O 포트 번호를 그대로 사용 |
 | 접근 명령 | 일반 load/store 계열(`readl`/`writel`) | 전용 `in`/`out` 계열(`inl`/`outl`) |
 | 사용 가능한 레지스터 | **모든** 범용 레지스터로 주소 지정 가능 | 포트 번호는 immediate 또는 `DX`, 데이터는 `EAX`로 제한 |
+
+위 표의 **immediate**(즉치 — 명령어 안에 직접 박아 넣은 상수값)와 `EAX`·`DX`(x86 CPU의 특정 범용 레지스터 이름)는 PMIO가 쓸 수 있는 레지스터가 정해져 있다는 제약을 보여줍니다.
 | 디코더 | 메모리 주소 디코더가 hole 범위를 디바이스로 라우팅 | 별도 I/O 디코더 / "I/O" 핀 또는 전용 버스 |
 
 ### 코드로 보기
@@ -147,7 +151,7 @@ if (status_p & STATUS_BUSY) { /* ... */ }
 | 주소 공간 | RAM과 통합 | 별도(격리) I/O 공간 |
 | 접근 명령 | 일반 load/store | 전용 `in`/`out` |
 | CPU 복잡도 | 낮음(별도 I/O 명령셋 불필요 — RISC 친화) | I/O 명령셋·핀/버스 추가 필요 |
-| 사용 레지스터 | 모든 addressing mode·GPR 가능, ALU가 레지스터 직접 연산 | `EAX`/immediate·`DX`로 제한 |
+| 사용 레지스터 | 모든 addressing mode·GPR(general-purpose register, 범용 레지스터) 가능, ALU(arithmetic logic unit, 산술·논리 연산 회로)가 레지스터 직접 연산 | `EAX`/immediate·`DX`로 제한 |
 | 메모리 경합 | 메모리 버스 공유 | 전용 버스로 경합 회피 가능 |
 | 폭(width) | CPU 워드 폭까지 | x86-64에서도 32비트 cap (AMD가 `in`/`out`을 64비트로 확장 안 함) |
 
@@ -155,11 +159,11 @@ if (status_p & STATUS_BUSY) { /* ... */ }
 
 현대 x86(IA-32 / x86-64)에서 MMIO가 선호되는 이유는 본질적으로 **명령어 인코딩의 자유도와 속도**입니다. port-I/O 명령은 `EAX`와 immediate/`DX`로 제한되는 반면, *어떤* 범용 레지스터든 MMIO 주소를 지정할 수 있어 명령 수가 줄고 실행이 빠릅니다. AMD는 x86-64에서 `in`/`out`을 64비트로 확장하지 않아 포트 전송은 32비트에 갇혀 있습니다 (Wikipedia, MMIO/PMIO).
 
-PCI 디바이스도 거의 항상 MMIO를 택합니다. LDD3는 이렇게 정리합니다 — "*most PCI devices map registers into a memory address region. This I/O memory approach is generally preferred, because it doesn't require the use of special-purpose processor instructions; CPU cores access memory much more efficiently, and the compiler has much more freedom in register allocation and addressing-mode selection*" (LDD3 §I/O Ports and I/O Memory, p.236).
+PCI(Peripheral Component Interconnect, 주변장치를 CPU/메모리에 연결하는 표준 버스 — 그 고속 후속 규격이 PCIe) 디바이스도 거의 항상 MMIO를 택합니다. LDD3는 이렇게 정리합니다 — "*most PCI devices map registers into a memory address region. This I/O memory approach is generally preferred, because it doesn't require the use of special-purpose processor instructions; CPU cores access memory much more efficiently, and the compiler has much more freedom in register allocation and addressing-mode selection*" (LDD3 §I/O Ports and I/O Memory, p.236).
 
 ### 4.3 레지스터 맵을 *어떻게* 작성하는가는 별개의 관심사
 
-레지스터가 *무엇인지*(이 페이지)와, 블록 계층·이름·reset 값·access type를 *어떻게 문서화·생성하는지*는 다른 층위의 문제입니다. 후자는 조직별 컨벤션(레지스터 맵 작성 가이드라인)의 영역이며, 검증 자동화에서는 IP-XACT/스프레드시트에서 RAL 모델을 생성하는 흐름으로 연결됩니다.
+레지스터가 *무엇인지*(이 페이지)와, 블록 계층·이름·reset 값·access type를 *어떻게 문서화·생성하는지*는 다른 층위의 문제입니다. 후자는 조직별 컨벤션(레지스터 맵 작성 가이드라인)의 영역이며, 검증 자동화에서는 IP-XACT(레지스터·IP 구성을 기술하는 XML 표준 포맷)/스프레드시트에서 RAL(register abstraction layer — UVM에서 레지스터 맵을 소프트웨어 모델로 추상화해 읽기/쓰기를 검증하는 계층) 모델을 생성하는 흐름으로 연결됩니다.
 
 ---
 
@@ -175,7 +179,7 @@ BAR의 _크기 probe_ 메커니즘이 특히 영리합니다. 디바이스는 BA
 
 RTL 관점에서 이 hole은 곧 **주소 디코더**입니다. 디코더는 들어온 주소가 자기 영역에 속하는지 비교하고, 속하면 어느 레지스터인지 선택합니다. 검증에서 확인할 것은 (1) 할당된 범위 안의 각 오프셋이 올바른 레지스터를 선택하는가, (2) 범위 밖/미정의 오프셋 접근이 정의된 방식으로 응답하는가(에러 응답 또는 0 read)입니다.
 
-**디코더의 우선순위와 overlap 처리.** 실제 시스템에는 디코드 영역이 여럿입니다 — 여러 BAR, 레거시 영역, reserved 영역이 한 주소 버스를 공유합니다. 두 영역의 범위가 _겹치면_ 어느 쪽이 응답할지 모호해지므로, 디코더는 _우선순위_ 를 명시해야 합니다. 보통 (a) 더 구체적인(좁은) 영역이 넓은 영역보다 우선하거나, (b) 고정된 영역 인덱스 순서로 첫 매치가 이기도록 설계합니다. 검증의 핵심은 두 가지입니다: (1) **overlap 자체가 _발생하지 않도록_** BAR 할당이 보장되는가(enumeration이 충돌 없는 base를 주는가), (2) 그럼에도 입력 주소가 _두 영역의 경계_ 나 _겹침_ 에 떨어졌을 때 디코더가 _정확히 하나_ 의 타깃만 선택하고 둘이 동시에 응답(버스 충돌)하거나 둘 다 침묵(hang)하지 않는가. 경계 주소(영역의 첫·마지막 오프셋, 그 ±1)는 디코더 비교 로직의 off-by-one 버그가 잘 나는 곳이라 directed로 반드시 짚습니다.
+**디코더의 우선순위와 overlap 처리.** 실제 시스템에는 디코드 영역이 여럿입니다 — 여러 BAR, 레거시 영역, reserved 영역이 한 주소 버스를 공유합니다. 두 영역의 범위가 _겹치면_ 어느 쪽이 응답할지 모호해지므로, 디코더는 _우선순위_ 를 명시해야 합니다. 보통 (a) 더 구체적인(좁은) 영역이 넓은 영역보다 우선하거나, (b) 고정된 영역 인덱스 순서로 첫 매치가 이기도록 설계합니다. 검증의 핵심은 두 가지입니다: (1) **overlap 자체가 _발생하지 않도록_** BAR 할당이 보장되는가(enumeration이 충돌 없는 base를 주는가), (2) 그럼에도 입력 주소가 _두 영역의 경계_ 나 _겹침_ 에 떨어졌을 때 디코더가 _정확히 하나_ 의 타깃만 선택하고 둘이 동시에 응답(버스 충돌)하거나 둘 다 침묵(hang)하지 않는가. 경계 주소(영역의 첫·마지막 오프셋, 그 ±1)는 디코더 비교 로직의 off-by-one 버그가 잘 나는 곳이라 directed(랜덤이 아니라 특정 케이스를 콕 집어 만든 테스트)로 반드시 짚습니다.
 
 ### 5.2 posted write vs non-posted read — write 후 동작 보장의 함정
 

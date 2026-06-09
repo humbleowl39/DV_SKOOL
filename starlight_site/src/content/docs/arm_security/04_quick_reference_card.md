@@ -82,7 +82,7 @@ EL0/1/2/3 × Secure/NS × Stage1/Stage2 = 다축 권한 모델. 각 조합에서
 
 ## 3. 작은 예 — MTE tag mismatch 한 load 가 tag fault 까지 가는 1 cycle
 
-ARMv8.5 의 MTE (Memory Tagging Extension) 는 메모리 안전성 (use-after-free, buffer overflow) 의 HW 방어. 한 load instruction 이 tag mismatch 로 fault 되는 _1 cycle_ 을 들여다보면, ARM 보안 모델의 _tag 비교 + EL/NS 결합_ 이 가장 압축된 형태로 나타납니다.
+ARMv8.5 의 MTE (Memory Tagging Extension — 메모리 블록과 포인터에 각각 태그를 붙여 둘이 어긋나면 잘못된 접근으로 잡아내는 확장) 는 메모리 안전성 (**use-after-free**(이미 해제한 메모리를 다시 쓰는 버그), buffer overflow) 의 HW 방어. 한 load instruction 이 tag mismatch 로 fault 되는 _1 cycle_ 을 들여다보면, ARM 보안 모델의 _tag 비교 + EL/NS 결합_ 이 가장 압축된 형태로 나타납니다. (아래에서 **granule** = 태그가 붙는 메모리 단위 블록(여기선 16바이트), **TBI** = Top Byte Ignore, 포인터 최상위 바이트를 주소가 아닌 태그로 쓰게 해 주는 기능, **EC** = Exception Class, 예외 종류를 나타내는 코드.)
 
 ```
    Cycle:   t0          t1                t2
@@ -296,7 +296,7 @@ soc_secure_boot_ko Unit 7: BootROM DV
 ### 흔한 오해 (Quick reference 사용 시 자주 잡히는 함정)
 
 :::danger[❓ 오해 1 — 'EL3 가 항상 활성화되어 있다']
-**실제**: EL3 가 OEM 에 따라 disable 될 수 있음 (예: Cortex-A 에서 EL3 미사용 SoC, R-class). 그 경우 secure ↔ non-secure 전환은 EL2 / hypervisor 가 담당하거나, 단일 world 모델로 동작.<br>
+**실제**: EL3 가 **OEM**(Original Equipment Manufacturer — 칩/기기를 만들어 파는 제조사) 에 따라 disable 될 수 있음 (예: Cortex-A 에서 EL3 미사용 SoC, R-class). 그 경우 secure ↔ non-secure 전환은 EL2 / hypervisor 가 담당하거나, 단일 world 모델로 동작.<br>
 **왜 헷갈리는가**: ARM 표준 spec 의 "EL3 가 monitor" 표현 때문에 항상 있다고 가정.
 :::
 :::danger[❓ 오해 2 — '치트시트의 표만 외우면 끝']
@@ -369,7 +369,7 @@ soc_secure_boot_ko Unit 7: BootROM DV
 이 문제의 진단 실마리는 master 의 NS bit 가 SMMU/TZASC 까지 올바르게 전파됐는지 여부입니다. 각 축에서 발생할 수 있는 원인은 다음과 같습니다.
 - **SMMU**: master 가 Secure 인데 outgoing transaction 의 NS bit 가 _NS=1_ 로 잘못 → SMMU 가 NS RAM 으로 route.
 - **TZASC**: TZASC 의 region permission 이 NS=1 도 허용 → write 통과.
-- **Cache**: NS attribute 가 LLC 까지 안 전파 → cache fill 시 NS line 으로 저장.
+- **Cache**: NS attribute 가 **LLC**(Last-Level Cache — 코어들이 공유하는 가장 바깥 단계 캐시) 까지 안 전파 → cache fill 시 NS line 으로 저장.
 - 디버그 순서: master 출력 NS → SMMU stream → TZASC region → Cache attribute.
 
 </details>

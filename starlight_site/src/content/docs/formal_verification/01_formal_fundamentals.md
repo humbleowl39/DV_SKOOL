@@ -22,7 +22,7 @@ title: "Module 01 — Formal Verification 기본 개념"
 
 ### 1.1 시나리오 — _수십억 시나리오_ 를 _초_ 안에
 
-AXI bridge IP 의 _deadlock 부재_ 를 검증하는 시나리오를 생각해 봅시다.
+AXI bridge IP 의 _deadlock 부재_ 를 검증하는 시나리오를 생각해 봅시다. 여기서 **AXI**(ARM 이 만든 SoC 내부 버스 프로토콜 — 마스터와 슬레이브가 valid/ready 핸드셰이크로 데이터를 주고받음)는 칩 안의 IP 들을 연결하는 표준 통신 규약이고, **deadlock**(교착 — 서로가 상대를 기다리며 둘 다 영원히 진행하지 못하고 멈춘 상태)은 그 통신이 영영 멈춰 버리는 가장 위험한 버그 유형입니다.
 
 시뮬레이션으로 접근하면, 100 개 시나리오를 작성해 각각 100K cycle 씩 돌릴 수 있습니다. 일주일 후에는 1000 개 시나리오가 통과해 신뢰도 ~99% 에 이르지만, 결정적인 한계가 남습니다 — "아직 보지 않은 corner case" 가 존재할 수 있으며, 시뮬레이션은 그 공백에 대해 수학적 보장을 제공하지 않습니다.
 
@@ -36,7 +36,7 @@ Formal 은 이 문제를 근본적으로 다르게 풉니다. AXI handshake 의 
 | 디자인 크기 | 임의 | _state explosion_ 한계 |
 | 결과 신뢰도 | 통계적 | _수학적_ |
 
-이후 모든 Formal 모듈은 한 가정에서 출발합니다 — **"property 한 개를 증명하면 모든 입력/모든 cycle 에서 violation 이 없음을 수학적으로 보장한다"**. SVA 가 왜 implication 중심으로 쓰이는지, JasperGold 가 왜 Cover/Assume 을 강제하는지, BOUNDED 가 왜 PROVEN 이 아닌지 — 전부 이 한 가정의 파생입니다.
+이후 모든 Formal 모듈은 한 가정에서 출발합니다 — **"property 한 개를 증명하면 모든 입력/모든 cycle 에서 violation 이 없음을 수학적으로 보장한다"**. 여기서 **property**(프로퍼티 — 설계가 항상 지켜야 하는 시간적 규칙을 명제로 쓴 것, 예: "req 가 오면 몇 cycle 안에 ack 가 온다")는 검증하려는 "약속" 한 줄이고, **SVA**(SystemVerilog Assertions — SystemVerilog 에 내장된 assertion 전용 언어, property 를 코드로 적는 문법)는 그 property 를 실제로 기술하는 언어입니다. SVA 가 왜 implication(전제→결론 형태의 "~면 ~한다" 구조) 중심으로 쓰이는지, JasperGold 가 왜 Cover/Assume 을 강제하는지, BOUNDED 가 왜 PROVEN 이 아닌지 — 전부 이 한 가정의 파생입니다.
 
 이 모듈을 건너뛰면 이후 모든 Formal 결정이 "도구 사용법" 으로만 보입니다. 반대로 이 가정을 정확히 잡으면 PROVEN/BOUNDED/CEX 어떤 결과를 받아도 **"엔진이 무엇을 보지 못했는가"** 가 보입니다 — 그게 Formal 엔지니어의 핵심 역량입니다.
 
@@ -92,7 +92,9 @@ Formal 은 _silver bullet 아님_ — _좁은 영역_ 의 _깊은 보장_.
 
 ## 3. 작은 예 — FIFO overflow property 한 개의 life cycle
 
-가장 단순한 시나리오. **8-entry FIFO** 의 `wr_en && full` (overflow attempt) property 한 개를 SVA 로 작성 → bind → JasperGold 에 로드 → PROVEN 까지 전체 사이클을 따라가 봅시다.
+가장 단순한 시나리오. **8-entry FIFO**(8칸짜리 선입선출 큐 — 먼저 넣은 데이터가 먼저 나옴) 의 `wr_en && full` (가득 찬 상태에서 쓰기 시도, overflow attempt) property 한 개를 SVA 로 작성 → bind(RTL 코드를 건드리지 않고 별도 모듈의 assertion 을 그 RTL 에 외부에서 부착하는 SystemVerilog 구문) → **JasperGold**(Cadence 의 대표적 상용 Formal 검증 도구) 에 로드 → PROVEN 까지 전체 사이클을 따라가 봅시다.
+
+이 예에 등장하는 세 가지 statement 를 먼저 짚어 둡니다 — **assert**(설계가 *반드시* 지켜야 하는 규칙을 선언; 위반되면 버그), **cover**(어떤 상황에 *실제로 도달 가능한지* 확인; 한 번도 도달 못하면 그 assert 는 헛증명일 수 있음), **assume**(엔진에게 입력이 *이 조건만 들어온다고 가정하라*고 알려주는 환경 제약)입니다.
 
 ```d2
 direction: down
@@ -340,8 +342,8 @@ C -> D
 
 **사용 시나리오 3종**
 
-- **(a) RTL vs RTL (Sequential Equivalence, SEQ)** — 리팩토링, 최적화, ECO 후 동일성 확인. "코드를 바꿨는데, 기능이 달라지지 않았는가?" FSM 재인코딩, 파이프라인 단계 변경 등 검증 가능.
-- **(b) RTL vs Netlist (Logic Equivalence, LEC)** — 합성 (Synthesis) 후 동일성 확인. "합성 도구가 로직을 바꾸지 않았는가?" Synopsys Formality, Cadence Conformal 등 사용.
+- **(a) RTL vs RTL (Sequential Equivalence, SEQ)** — 리팩토링, 최적화, ECO(Engineering Change Order — 칩 설계 후반에 가하는 국소적 회로 수정) 후 동일성 확인. "코드를 바꿨는데, 기능이 달라지지 않았는가?" FSM 재인코딩, 파이프라인 단계 변경 등 검증 가능.
+- **(b) RTL vs Netlist (Logic Equivalence, LEC)** — 합성 (Synthesis — RTL 코드를 실제 게이트 회로로 변환하는 과정) 후 동일성 확인. **Netlist**(넷리스트 — 합성 결과로 나온 게이트·플립플롭과 그 연결 목록). "합성 도구가 로직을 바꾸지 않았는가?" Synopsys Formality, Cadence Conformal 등 사용.
 - **(c) C/C++ vs RTL (HLS 검증)** — HLS 생성 RTL 이 원본 C++ 알고리즘과 동일한지. 실무에서는 C-sim + Co-sim 으로 대체하는 경우 많음.
 
 **핵심 개념 — Miter Circuit**
@@ -473,7 +475,7 @@ SoC: "대규모 SoC" {
 > "Formal 은 모든 가능한 입력/상태를 수학적으로 검증한다 — '전수 검사' 이다. 시뮬레이션은 실행된 시나리오만 검증하므로, 테스트하지 않은 코너 케이스에 버그가 숨어 있을 수 있다. Formal 에서 PROVEN 이면 어떤 시나리오에서도 해당 속성이 성립함을 수학적으로 보장한다. 반면 Formal 은 State Explosion 으로 큰 설계에 적용이 어렵고, 성능 검증은 불가능하다. 따라서 Formal 과 시뮬레이션은 **상호 보완적** 으로 사용한다."
 
 **Q: Formal 은 어떤 IP 에 적합한가?**
-> "상태 공간이 관리 가능한 크기의 제어 로직이 최적이다. 구체적으로: (1) FSM — Deadlock/Livelock 부재 증명. (2) 프로토콜 인터페이스 — AXI/AHB handshake 준수. (3) FIFO/Buffer — Overflow/Underflow 부재, 데이터 순서 보존. (4) Arbiter — Starvation 부재, 공정성. (5) 보안 로직 — 접근 제어 규칙. Mapping Table IP 는 테이블 조회 로직의 정확성을 Formal 로 증명하기에 적합했다."
+> "상태 공간이 관리 가능한 크기의 제어 로직이 최적이다. 구체적으로: (1) **FSM**(finite state machine, 유한 상태 머신 — 정해진 상태들 사이를 규칙대로 옮겨 다니는 제어 회로) — Deadlock/Livelock(라이브락 — 멈추진 않고 계속 동작하지만 정작 일이 진척되지 않는 상태) 부재 증명. (2) 프로토콜 인터페이스 — AXI/AHB(둘 다 ARM 계열 SoC 버스 프로토콜) handshake 준수. (3) FIFO/Buffer — Overflow(넘침)/Underflow(빈 큐에서 읽기) 부재, 데이터 순서 보존. (4) **Arbiter**(중재기 — 여러 요청자가 한 자원을 동시에 원할 때 누구에게 줄지 정하는 회로) — Starvation(기아 — 특정 요청자가 영원히 차례를 받지 못함) 부재, 공정성. (5) 보안 로직 — 접근 제어 규칙. Mapping Table IP 는 테이블 조회 로직의 정확성을 Formal 로 증명하기에 적합했다."
 
 **Q: BOUNDED 결과가 나왔을 때 어떻게 하나?**
 > "BOUNDED 는 N cycle 까지만 증명된 것이다. Inductive Step 이 실패한 것이므로, (1) Helper Assertion 을 추가하여 중간 상태 불변을 명시하거나, (2) Abstraction 으로 상태 공간을 줄이거나, (3) Property 를 분할하여 각각 증명한다. 실무적으로 BOUNDED depth 가 충분히 크면 (설계의 최대 latency 보다 큰 경우) 실용적으로 수용하기도 한다."
@@ -492,7 +494,7 @@ SoC: "대규모 SoC" {
 **왜 헷갈리는가**: "Formal 은 완벽" 이라는 마케팅 문구 + tool 의 default summary 가 PROVEN/BOUNDED 를 같은 색 "passing" 으로 묶어 표시하기 때문.
 :::
 :::danger[❓ 오해 2 — 'Cover 는 옵션, assert 만 있으면 충분']
-**실제**: Cover 없이 assert PROVEN 이면 antecedent 가 한 번도 도달하지 않아 vacuously true 일 수 있다. assert 와 cover 는 짝. Module 02 의 Vacuous Pass 가 정확히 이 함정을 다룬다.<br>
+**실제**: Cover 없이 assert PROVEN 이면 antecedent(전제 — implication `A |-> B` 에서 앞쪽 조건 `A`) 가 한 번도 도달하지 않아 vacuously true(전제가 한 번도 참이 안 돼 공허하게 참 처리됨) 일 수 있다. assert 와 cover 는 짝. Module 02 의 Vacuous Pass 가 정확히 이 함정을 다룬다.<br>
 **왜 헷갈리는가**: cover 는 "이미 발생한 것만 본다" 는 인상 + 학습 순서가 assert 우선이기 때문에 cover 가 보조처럼 느껴짐.
 :::
 :::danger[❓ 오해 3 — 'Formal = 시뮬을 대체한다']
@@ -511,7 +513,7 @@ SoC: "대규모 SoC" {
 
 | 증상 | 1차 의심 | 어디 보나 |
 |---|---|---|
-| 전부 BOUNDED 만 나옴 | 입력 자유도 과다 또는 Helper invariant 부재 | `check_coi -property` 로 영향 범위 확인 → 큰 데이터 경로 blackbox 후보 |
+| 전부 BOUNDED 만 나옴 | 입력 자유도 과다 또는 Helper invariant(귀납 증명을 돕기 위해 추가로 명시하는 중간 불변 조건) 부재 | `check_coi -property` (COI = Cone of Influence, 그 property 결과에 실제로 영향을 주는 신호 범위) 로 영향 범위 확인 → 큰 데이터 경로 blackbox 후보 |
 | 전부 PROVEN 인데 cover 가 UNCOVERED | Vacuous pass — antecedent 미도달 | 각 assert 의 antecedent 를 cover 로 분리해 trace 출력 확인 |
 | FAILED 인데 spec 상 불가능한 입력 | Assume 부족 (false negative) | CEX 의 입력 시퀀스를 spec 과 1:1 대조 — 실제 spec 위반인지 판단 |
 | FAILED 인데 reset 직후 X 가 보임 | reset 로직 미정의 또는 init 미완 | RTL 의 always_ff reset case 누락 + JG 의 `reset` 명령 설정 확인 |

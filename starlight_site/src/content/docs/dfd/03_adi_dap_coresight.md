@@ -22,7 +22,7 @@ title: "N03 — Arm ADI(DAP) & CoreSight"
 
 ### 1.1 시나리오 — 디버거는 칩 구조를 모른다
 
-디버거는 수많은 종류의 Arm SoC에 붙어야 합니다. 각 칩마다 코어가 몇 개고 trace 블록이 어디 있는지 디버거에 미리 박아 둘 수는 없습니다. 그렇다면 디버거는 어떻게 "이 칩에는 코어 4개, ETM 4개, ETR 1개가 있다"는 걸 알아낼까요?
+디버거는 수많은 종류의 Arm SoC에 붙어야 합니다. 각 칩마다 코어가 몇 개고 trace 블록이 어디 있는지 디버거에 미리 박아 둘 수는 없습니다. 그렇다면 디버거는 어떻게 "이 칩에는 코어 4개, **ETM**(Embedded Trace Macrocell; 코어별 실행 trace 스트림을 만드는 trace 생성기) 4개, **ETR**(Embedded Trace Router; trace를 시스템 메모리(DRAM)에 써 넣는 trace 저장기) 1개가 있다"는 걸 알아낼까요?
 
 답은 **표준화된 다리(DAP)** 와 **자기 기술 디렉터리(ROM table)** 입니다. ADI(Arm Debug Interface)는 디버거가 따르는 표준 프로토콜을 정의하고, 모든 Arm SoC는 그 프로토콜로 접근 가능한 DAP를 제공합니다. 디버거는 표준 DAP만 알면 되고, connect 시점에 ROM table을 읽어 그 칩의 구체적인 구성을 _런타임에 발견_합니다. JTAG([N02](../02_jtag_boundary_scan/))이 직렬 통로였다면, DAP는 그 통로를 메모리-맵 버스 접근으로 바꾸는 다리이고, CoreSight는 그 다리 너머의 실제 디버그/trace IP입니다.
 
@@ -33,7 +33,7 @@ title: "N03 — Arm ADI(DAP) & CoreSight"
 | **ADIv5** | 32비트 AP 주소 공간, 널리 배포 | Cortex-M / Cortex-A / Cortex-R |
 | **ADIv6** | 64비트 주소, 계층적 ROM table, 더 큰 시스템 | 최신·대규모 SoC |
 
-ADIv6는 64비트 주소와 계층적 ROM table을 도입해 ADIv5보다 훨씬 큰 시스템을 표현합니다. SoC 통합 초기에 어느 버전을 쓸지 고정해야 합니다([N01 §7](../01_why_dfd/) 참고).
+여기서 **Cortex-M / -A / -R**은 Arm의 코어 제품군(각각 마이크로컨트롤러용·고성능 응용용·실시간용)이고, **ADIv5/ADIv6**은 ADI 표준의 두 세대 버전입니다. ADIv6는 64비트 주소와 계층적 ROM table을 도입해 ADIv5보다 훨씬 큰 시스템을 표현합니다. SoC 통합 초기에 어느 버전을 쓸지 고정해야 합니다([N01 §7](../01_why_dfd/) 참고).
 
 ---
 
@@ -110,7 +110,7 @@ S1 -> S2 -> S3 -> S4 -> S5 -> S6
 
 #### DRW 접근이 버스 전송을 트리거하는 내부 핸드셰이크
 
-"DRW write가 전송을 트리거"의 내부를 한 단계 더 풀면, MEM-AP는 _상태를 미리 래치해 두고 DRW가 도착하는 순간 버스 마스터로 변신_ 하는 구조입니다.
+"DRW write가 전송을 트리거"의 내부를 한 단계 더 풀면, MEM-AP는 _상태를 미리 래치해 두고 DRW가 도착하는 순간 **버스 마스터**(bus master; 버스 위에서 전송을 시작·주도하는 쪽 — 받기만 하는 쪽은 **슬레이브**(slave))로 변신_ 하는 구조입니다.
 
 1. **TAR/CSW는 _래치_ 일 뿐 — 접근 시 버스로 안 나간다.** ③에서 CSW에 size/auto-increment 속성을, ④에서 TAR에 목표 주소를 write하면, 이 값들은 MEM-AP 내부 레지스터에 _보관_ 만 됩니다. 아직 시스템 버스에는 아무 일도 일어나지 않습니다(준비 단계).
 2. **DRW 접근이 "발사 트리거"다.** ⑤에서 DRW에 write(또는 DRW read)가 도착하는 순간, MEM-AP가 보관해 둔 {주소=TAR, 속성=CSW, 데이터=DRW write값}을 조립해 _시스템 버스의 마스터로서_ 한 건의 트랜잭션을 발행합니다. write면 버스 write, read면 버스 read입니다.
@@ -150,7 +150,7 @@ S1 -> S2 -> S3 -> S4 -> S5 -> S6
 
 ### 4.4 CoreSight 컴포넌트 카테고리
 
-CoreSight는 DAP 너머에서 실제로 디버그·trace를 수행하는 IP family입니다.
+CoreSight는 DAP 너머에서 실제로 디버그·trace를 수행하는 IP family(서로 맞물려 쓰이도록 설계된 IP 블록 모음)입니다. 아래 표의 trace 생성기 이름은 무엇을 기록하느냐로 갈립니다 — **ETM**은 코어 명령 실행, **ITM**(Instrumentation Trace Macrocell)은 소프트웨어가 일부러 찍는 메시지, **STM**(System Trace Macrocell)은 시스템 차원 software trace, **PTM/HTM**은 각각 program-flow trace와 bus(AHB) trace를 담당합니다.
 
 | 카테고리 | 컴포넌트 | 역할 |
 |----------|----------|------|

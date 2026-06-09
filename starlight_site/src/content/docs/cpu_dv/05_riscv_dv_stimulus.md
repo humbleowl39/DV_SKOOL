@@ -107,7 +107,7 @@ S1 -> S2 -> S3 -> S4 -> S5
 |------|------|--------|-----|
 | ① | 엔지니어 | "load 뒤 ALU 허용 + 레지스터 의존 무작위" 제약 설정 | 인접 조합이 _생길 수 있게_ 문법을 연다 |
 | ② | ISG | 시드 N 으로 명령 스트림 생성 — 우연히 `add x6,x5,x7` 가 `lw x5` 뒤에 옴 | 시드 다양성이 곱집합을 메운다 |
-| ③ | toolchain | 어셈블 + 링크 → ELF | RTL·ISS 양쪽이 같은 바이너리를 먹는다 |
+| ③ | toolchain | 어셈블 + 링크 → ELF(컴파일·링크된 실행 파일 포맷 — 명령·데이터가 담긴 바이너리) | RTL·ISS 양쪽이 같은 바이너리를 먹는다 |
 | ④ | UVM env + ISS | 같은 ELF 를 동시에 실행, retire trace 수집 | 동일 입력에 대한 두 결과를 만든다 |
 | ⑤ | Scoreboard + coverage | `x6` 의 architectural 값 비교, load-use cross bin 카운트 | hazard 가 _실제로 발생했고_(coverage) _옳게 처리됐는지_(compare) 둘 다 확인 |
 

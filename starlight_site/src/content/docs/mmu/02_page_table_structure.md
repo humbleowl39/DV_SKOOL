@@ -21,13 +21,13 @@ title: "Module 02 — Page Table Structure"
 
 ### 1.1 시나리오 — 왜 _4-level_ page table?
 
-48-bit virtual address. _순진하게_ flat page table:
-- 4 KB page = offset 12 bit. VA 48 - 12 = 36 bit index.
-- Table size: 2^36 × 8 byte (PTE) = **512 GB**.
+48-bit virtual address. _순진하게_ flat page table(플랫 페이지 테이블 — 모든 page 의 매핑을 한 줄로 늘어놓은 단일 거대 표):
+- 4 KB page = offset 12 bit. VA 48 - 12 = 36 bit index(인덱스 — 표에서 몇 번째 칸인지 가리키는 번호).
+- Table size: 2^36 × 8 byte (**PTE** — Page Table Entry, 표 한 칸) = **512 GB**.
 
 **불가능**. 모든 process 가 512 GB page table 필요.
 
-해법: **Multi-level (sparse) page table**:
+해법: **Multi-level (sparse) page table**(다단계·희소 페이지 테이블 — 표를 여러 단계로 쪼개고, 실제로 쓰는 가지만 만들어 메모리를 아끼는 구조. "sparse" 는 대부분이 비어 있다는 뜻):
 - L0 (top): 9 bit index = 512 entries.
 - L1: 9 bit = 512.
 - L2: 9 bit = 512.
@@ -36,7 +36,7 @@ title: "Module 02 — Page Table Structure"
 
 **Sparse**: 실제 사용 안 하는 L0 entry 는 _NULL_ → 그 sub-tree 의 _수 GB_ table 안 만들어짐. _Process 의 1-10 MB page table_ 로 _entire 48-bit VA space_ 표현.
 
-**Trade-off**: page table walk 이 _4 memory access_. 그래서 _TLB_ 가 필수, _huge page (2 MB / 1 GB)_ 가 _walk depth 감소_, _PWC (Page Walk Cache)_ 가 _intermediate level cache_.
+**Trade-off**: **page table walk**(페이지 테이블 워크 — 단계별 표를 따라 내려가며 VA→PA 를 계산하는 과정)이 _4 memory access_. 그래서 _TLB_(변환 결과 캐시) 가 필수, _huge page (2 MB / 1 GB)_(휴지 페이지 — 보통 4 KB 보다 훨씬 큰 page; 한 칸으로 넓은 영역을 덮어 변환 단계를 줄임) 가 _walk depth 감소_, _PWC (Page Walk Cache)_(페이지 워크 캐시 — walk 중간 단계 결과를 캐싱해 다음 walk 를 단축하는 캐시) 가 _intermediate level cache_.
 
 **Page table walk 은 MMU 성능과 fault diagnosis 의 _공통 어휘_** 입니다. 이후 모든 모듈 — TLB invalidate by VA 의 효과, IOMMU Stage 1 + Stage 2, 성능 분석의 PWC, DV 의 reference model — 이 "어느 level 의 어느 PTE 가 어떻게 됐는가" 의 언어로 표현됩니다. 이 모듈의 비트 분할표가 후속 챕터의 _도면_ 입니다.
 
@@ -89,7 +89,7 @@ L3 -> KB
 
 ## 3. 작은 예 — VA 0xFFFF_0000_0040_0ABC 의 4-level walk
 
-가장 단순한 시나리오. ARMv8 EL1 에서 동작하는 kernel thread 가 **VA = 0xFFFF_0000_0040_0ABC** 를 읽습니다. 4 KB granule, ASID=1, TTBR1_EL1 = `0x0000_0009_0000_0000` (VA[63] = 1 이므로 TTBR1 사용). TLB 는 cold.
+가장 단순한 시나리오. ARMv8 EL1(OS 커널 권한 레벨)에서 동작하는 kernel thread 가 **VA = 0xFFFF_0000_0040_0ABC** 를 읽습니다. 4 KB granule(page 한 개의 크기), ASID=1(Address Space Identifier — 어느 process 의 변환인지 구분하는 번호표), **TTBR1_EL1**(Translation Table Base Register 1 — 커널 영역 page table 의 시작 주소를 담은 레지스터; user 영역은 TTBR0) = `0x0000_0009_0000_0000` (VA[63] = 1 이므로 커널용 TTBR1 사용). TLB 는 cold(비어 있음). 이때 walk 도중 만나는 PTE 는 두 종류입니다 — **Table descriptor**(테이블 디스크립터 — "다음 단계 표로 더 내려가라"를 뜻하는 PTE)와 **Block/Page descriptor**(블록·페이지 디스크립터 — "여기가 끝, 이게 최종 PA 다"를 뜻하는 PTE).
 
 ### 단계별 추적
 
@@ -142,10 +142,10 @@ L3 -> KB
 
 ### 만약 L1 PTE 의 V=0 이었다면?
 
-- walk 가 L1 에서 멈춤 → **Translation Fault at Level 1**.
-- ESR_EL1.DFSC[5:0] = `0b000101` (Translation fault, level 1).
-- FAR_EL1 = 0xFFFF_0000_0040_0ABC (failed VA).
-- HW 는 PTE 를 채우지 않음 — _SW (OS)_ 가 demand-paging 후 retry.
+- walk 가 L1 에서 멈춤 → **Translation Fault at Level 1**(L1 단계에서 유효한 매핑이 없어 변환 실패).
+- ESR_EL1(Exception Syndrome Register — 예외의 원인·종류를 담는 레지스터).DFSC[5:0] = `0b000101` (Translation fault, level 1).
+- FAR_EL1(Fault Address Register — 실패한 VA 를 담는 레지스터) = 0xFFFF_0000_0040_0ABC (failed VA).
+- HW 는 PTE 를 채우지 않음 — _SW (OS)_ 가 demand-paging(요청 시 페이징 — 실제 접근이 일어난 순간에야 page 를 할당·매핑하는 방식) 후 retry.
 
 ### 같은 VA 가 4 KB 매핑이었다면? (대조)
 

@@ -92,7 +92,7 @@ DDR5는 MR3에 *DQS Training Mode*를 두어:
 - **MR30**: Read LFSR Assignments
 - **MR31**: Read Training Pattern Address
 
-DRAM이 *내부 LFSR* 또는 *고정 pattern*을 DQ에 출력해 controller가 *eye opening*을 찾도록.
+DRAM이 *내부 LFSR*(linear-feedback shift register, 의사난수 비트열을 만드는 시프트 레지스터 — training용 패턴 생성에 쓰임) 또는 *고정 pattern*을 DQ에 출력해 controller가 *eye opening*(eye가 열린 정도, 즉 0/1 판별 여유)을 찾도록.
 
 ### 3.3 DCA (Duty Cycle Adjuster) Training
 
@@ -674,7 +674,7 @@ endclass
 | Read Training Mode | MR25 (Read Training Mode Settings), MR26~MR31 (Read Pattern Data/Invert/LFSR) | — |
 | DCA Training (per DQ) | MR42~MR48 (DCA group), MR103~MR254 (per-DQ DCA + VrefDQ offset) | — |
 | DCM (Duty Cycle Monitor) | (LPDDR5 §4.2.8) | — |
-| DFE Training | MR21 (Rx CTLE), MR70~MR75 (DFE Global), MR111 (DFE Global Settings), MR112~MR248 (per-DQ DFE Tap1~4 Gain Bias) | — |
+| DFE Training | MR21 (Rx CTLE — continuous-time linear equalizer, 수신단에서 신호를 연속적으로 보정하는 아날로그 등화기), MR70~MR75 (DFE Global), MR111 (DFE Global Settings), MR112~MR248 (per-DQ DFE Tap1~4 Gain Bias) | — |
 
 > 정확한 MR70~MR75 (PRAC enable), MR111 (Global Enable + Tap-1~4 Enable), MR112~MR248 (Gain Bias Step 0~7, Sign bit) 의 비트 매핑은 JESD79-5C.01 §3.5.71~§3.5.86 참조.
 

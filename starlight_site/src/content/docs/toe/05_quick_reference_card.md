@@ -17,6 +17,8 @@ title: "Module 05 — Quick Reference Card"
 
 이 카드는 **5 분 컨텍스트 스위치** 를 위한 것입니다. 면접 직전, 리뷰 회의 준비, 디버그 회의에서 "TOE 의 ssthresh 가 뭐였더라?" 같은 순간 즉시 인출하기 위한 압축. 이 카드의 한 줄로 부족하면 해당 module (01–04) 로 돌아가는 _index_ 역할.
 
+> 이 카드는 앞 4 모듈의 용어를 압축 인용합니다. 약어 정의가 필요하면 각 약어가 처음 설명된 모듈 또는 [용어집](../glossary/)을 참조하세요.
+
 이 카드를 건너뛰면 _개념 회수 비용_ 이 매번 높아져, 실무에서 모듈을 다시 통독해야 합니다. 반대로 이 카드를 외워 두면 일상 대화에서 즉시 "TOE 는 stateful offload 라서 connection table 이 SRAM/DRAM tier 야" 같은 대답이 가능.
 
 ---
@@ -179,12 +181,14 @@ Checksum Offload ⊂ TSO/LRO ⊂ TOE ⊂ RDMA (TCP 우회)
 |------|----------|----------|
 | TOE 시나리오 개발 | "어떤 테스트를 추가했나?" | 복합 에러 (Loss + OOO + Zero Window), DCMAC 연동 에러 |
 | Coverage 확장 | "Coverage 를 어떻게 확장했나?" | FSM 전이, Error × Recovery 교차, Congestion 상태 조합 |
-| DCMAC 서브시스템 | "DCMAC 과의 연동은?" | AXI-S E2E 무결성, 백프레셔, CRC 에러 전파 |
-| 서버급 가속기 | "왜 중요한 IP 인가?" | 100 Gbps SmartNIC/DPU, CPU Offload 필수 |
+| DCMAC 서브시스템 | "DCMAC 과의 연동은?" | AXI-S **E2E**(End-to-End; 송신 호스트에서 수신 호스트까지 전 구간) 무결성, 백프레셔, CRC 에러 전파 |
+| 서버급 가속기 | "왜 중요한 IP 인가?" | 100 Gbps **SmartNIC**(네트워크 처리를 자체 수행하는 지능형 NIC)/**DPU**(Data Processing Unit; 네트워크·스토리지 처리를 전담하는 프로세서), CPU Offload 필수 |
 
 ### 5.7 실무 주의점 — LRO 와 IP Fragment 혼용
 
 :::caution[실무 주의점 — LRO(Large Receive Offload)와 IP Fragment 혼용]
+여기서 **IP Fragment**(IP 단편; MTU 보다 큰 IP 패킷을 전송 가능한 크기로 쪼갠 조각 — 첫 조각에만 상위 TCP 헤더가 들어 있음)를 먼저 잡고 가세요.
+
 **현상**: LRO를 활성화한 환경에서 IP Fragment 패킷이 유입되면 재조합 오류가 발생하거나, 이후 정상 TCP 세그먼트도 LRO로 묶이지 않는다.
 
 **원인**: LRO는 연속 TCP 세그먼트를 하나의 대형 버퍼로 합산하는 기능인데, IP Fragmented 패킷은 TCP 헤더가 첫 Fragment에만 있어 LRO 엔진이 연속성을 판단하지 못한다. 두 경로가 동일 수신 큐를 공유하면 상태 머신이 충돌한다.

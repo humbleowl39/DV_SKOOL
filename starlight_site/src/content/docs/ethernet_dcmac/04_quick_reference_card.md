@@ -136,7 +136,7 @@ EtherType: 0x0800=IPv4, 0x86DD=IPv6, 0x0806=ARP, 0x8100=VLAN
 |---|---|---|
 | `0x0800` | IPv4 | host AXI-S 로 정상 전달 |
 | `0x86DD` | IPv6 | host AXI-S 로 정상 전달 |
-| `0x0806` | ARP | host AXI-S 로 정상 전달 |
+| `0x0806` | ARP (Address Resolution Protocol — IP 주소를 MAC 주소로 변환) | host AXI-S 로 정상 전달 |
 | `0x8100` | VLAN tag | tag strip 옵션 / tuser.vlan_tagged set |
 | `0x8808` | MAC Control (Pause / PFC) | host 안 올림. Flow Ctrl 블록 처리 |
 | `0x88F7` | PTP | host 전달 + PTP timestamp capture |
@@ -283,7 +283,7 @@ mmu_ko/   →   toe_ko/   →   ethernet_dcmac_ko/
 **왜 헷갈리는가**: AXI-S 가 표준이라 사이드밴드도 표준일 거라는 직관.
 :::
 :::danger[❓ 오해 4 — 'EEE 모드는 idle 일 때만 동작하니까 트래픽 검증과 무관하다']
-**실제**: EEE 진입 / 해제 (Tw_sys_tx 타이머) 가 끝나기 전 새 frame 이 도착하면 IFG 축소 또는 frame drop. 짧은 burst + EEE 조합은 별도 시나리오.<br>
+**실제**: **EEE**(Energy Efficient Ethernet, 802.3az — 트래픽이 없을 때 link 를 저전력 idle 로 내렸다가 다시 깨우는 절전 기능) 의 진입 / 해제 (Tw_sys_tx 타이머) 가 끝나기 전 새 frame 이 도착하면 IFG 축소 또는 frame drop. 짧은 burst + EEE 조합은 별도 시나리오.<br>
 **왜 헷갈리는가**: "에너지 절약" 이라는 이름 때문에 데이터 path 와 무관해 보임.
 :::
 :::danger[❓ 오해 5 — '면접 답변은 외워서 그대로 말하면 된다']

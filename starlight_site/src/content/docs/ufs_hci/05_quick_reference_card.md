@@ -20,6 +20,15 @@ title: "Module 05 — Quick Reference Card"
 
 ## 1. Why care? — 이 카드를 언제 여나
 
+:::note[핵심 약어 빠른 정의 (본문은 Module 01–04)]
+- **UFS**(Universal Flash Storage): JEDEC 가 정한 모바일/서버용 플래시 스토리지 표준.
+- **HCI**(Host Controller Interface): SW 드라이버와 UFS 하드웨어 사이의 표준 register/메모리 인터페이스.
+- **UTRD**(UTP Transfer Request Descriptor): SW 가 메모리에 적어 두는, 명령 한 건의 정보를 담은 descriptor.
+- **UPIU**(UFS Protocol Information Unit): 명령/데이터/응답을 담는 UFS 의 통신 패킷.
+- **doorbell**: SW 가 메모리에 명령을 적은 뒤 "이제 처리하라"고 HW 에 알리는 register write 신호.
+- **Task Tag**: 동시에 떠 있는 명령들을 구별하는 0~31 범위의 식별 태그.
+:::
+
 이 카드는 **세 가지 상황** 을 위한 도구입니다.
 
 1. **회의 / 면접 도중** — register offset, UPIU 종류, error 5 단계, gear 별 속도 같은 _즉답 사항_ 이 필요할 때.

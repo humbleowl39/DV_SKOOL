@@ -22,15 +22,15 @@ title: "Ch03. 초기화·Reset·Power 시퀀스"
 
 ## 1. 왜 초기화가 DV의 첫 단계인가
 
-DRAM은 RTL reset 신호 하나만 low에서 high로 올린다고 동작하는 부품이 아닙니다. 내부의 DLL, ZQ calibration 회로, 각종 analog 경로가 올바른 조건을 갖추어야 비로소 ACT/RD/WR 명령을 수락합니다. 그 조건은 크게 다섯 단계를 순서대로 충족해야 합니다.
+DRAM은 RTL reset 신호 하나만 low에서 high로 올린다고 동작하는 부품이 아닙니다. 내부의 **DLL**(delay-locked loop, 내부 클럭을 외부 CK에 정확히 정렬시켜 데이터 타이밍을 맞추는 회로), **ZQ calibration**(외부 기준 저항에 맞춰 출력 구동/종단 임피던스를 보정하는 절차) 회로, 각종 analog 경로가 올바른 조건을 갖추어야 비로소 ACT/RD/WR 명령을 수락합니다. 그 조건은 크게 다섯 단계를 순서대로 충족해야 합니다.
 
 1. **Voltage rail이 올바른 순서로 ramp** (Vdd → Vddq → Vpp ...)
 2. **RESET_n deasserted + CK 안정화**
-3. **Mode Register 프로그래밍** (CL, BL, Vref 등)
+3. **Mode Register 프로그래밍** (CL, BL, **Vref**(reference voltage, 입력 신호의 0/1을 가르는 기준 전압) 등)
 4. **ZQ Calibration** (output impedance)
 5. **Training** (CA/DQ/DQS — Ch08에서 상세)
 
-이 순서를 틀리면 어떻게 될까요? 전압 rail이 잘못된 순서로 올라오면 device가 손상될 수 있고, CKE가 너무 일찍 HIGH가 되면 DRAM 내부 상태가 미정의 상태가 됩니다. DV 환경에서 이 시퀀스를 잘못 짜면 DRAM 모델이 X를 내거나 조용히 잘못된 데이터를 반환하기도 합니다. 시뮬레이션이 통과하는데 실제 silicon에서 fail이 나는 대표적인 원인이 초기화 시퀀스 오류이므로, testbench의 init sequence는 스펙 §3.3의 Figure 4와 timing 파라미터를 정확히 반영해야 합니다.
+이 순서를 틀리면 어떻게 될까요? 전압 rail이 잘못된 순서로 올라오면 device가 손상될 수 있고, **CKE**(clock enable, HIGH일 때만 DRAM이 클럭을 받아 명령을 처리하게 하는 제어 신호)가 너무 일찍 HIGH가 되면 DRAM 내부 상태가 미정의 상태가 됩니다. DV 환경에서 이 시퀀스를 잘못 짜면 DRAM 모델이 X를 내거나 조용히 잘못된 데이터를 반환하기도 합니다. 시뮬레이션이 통과하는데 실제 silicon에서 fail이 나는 대표적인 원인이 초기화 시퀀스 오류이므로, testbench의 init sequence는 스펙 §3.3의 Figure 4와 timing 파라미터를 정확히 반영해야 합니다.
 
 ---
 
@@ -61,7 +61,7 @@ T7    +tZQinit      Normal operation 가능
 
 ### 2.1 DDR4 MR programming 순서
 
-JESD79-4D §3.3.1 가 명시하는 MR 프로그래밍 순서:
+JESD79-4D §3.3.1 가 명시하는 MR 프로그래밍 순서입니다. 표에 나오는 설정 항목 — **MPR**(multi-purpose register, 정해진 패턴이나 상태를 읽어내는 특수 레지스터), **CWL**(CAS write latency, write 명령부터 데이터를 실어 보내기까지의 클럭 지연), **AL**(additive latency, 명령 처리를 의도적으로 늦춰 버스 활용을 높이는 추가 지연), **RTT_WR**(write 시 적용되는 ODT 종단 저항값)입니다.
 
 | 순서 | MR | 주요 설정 |
 |---|---|---|
@@ -136,7 +136,7 @@ T1    Power applied — Vdd1 → Vdd2 → Vddq (정해진 순서)
 T2    Reset 활성화 (LPDDR4의 RESET_n)
 T3    Reset deassert 후 일정 시간
 T4    CKE LOW → HIGH
-T5    MRW (Mode Register Write) — initial config
+T5    MRW (Mode Register Write — mode register에 설정값을 쓰는 명령) — initial config
 T6    ZQ Calibration
 T7    CA / DQ Training (Ch08)
 T8    Normal operation
@@ -410,7 +410,7 @@ endgroup
 | RFM RAA Counter | MR59 OP[7:6] | vendor specific | |
 
 :::tip[DV 적용 — Default Reset 값 SVA]
-Power-on reset 직후 *MR을 readback*해서 위 default와 *일치*하는지 SVA 또는 RAL verify로 확인.
+Power-on reset 직후 *MR을 readback*해서 위 default와 *일치*하는지 SVA 또는 RAL(register abstraction layer, UVM에서 레지스터를 추상화해 읽기/쓰기/검증하는 모델) verify로 확인.
 
 ```systemverilog
 // DDR5 init reset value check
@@ -481,7 +481,7 @@ T_a → T_b → T_c → T_d → T_e → T_f → T_g → T_h ...
                                                  │tMRD — MRW 시작
 ```
 
-DV 검증 포인트:
+여기서 **DES**(deselect, "아무 명령도 아님"을 뜻하는 무동작 명령), **NOP**(no operation, 마찬가지로 아무 일도 하지 않는 명령), **MPC**(multi-purpose command, training 등 특수 동작을 지시하는 명령)를 알아 둡니다. DV 검증 포인트:
 - **각 tINIT* timing 위반** SVA로 catch
 - **CS_n LOW 보장 시점** (tINIT2 이전) 검증
 - **DES/NOP only window** (CKE HIGH 후 ~ first MRW 까지) 동안 다른 명령 금지

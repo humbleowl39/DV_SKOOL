@@ -2,7 +2,7 @@
 title: "Appendix B. Code Examples (EN)"
 ---
 
-> Three runnable RNM examples — Inverter, DRAM cell + Sense Amp, PLL Lock indicator.
+> Three runnable RNM (Real Number Modeling — analog behavior approximated by real-valued functions inside a digital simulator) examples — Inverter, DRAM cell + Sense Amp, PLL Lock indicator. For any unfamiliar term, see the [Glossary](../appendix_c_glossary/) or the linked chapters.
 >
 > Original source: `20260521_142844_PRATICE_MIXED_SIGNAL_LEARNING/examples/`
 > Korean mirror: appendix_b_code_examples_ko.md

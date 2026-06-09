@@ -177,7 +177,7 @@ C6: "**CSR / 기타**\n구현에 따라 추가"
 
 ### 4.3 Bounded Model Checking 이 보장하는 것
 
-riscv-formal 의 기본 엔진은 BMC(bounded model checking)입니다.(외부 표준 지식) BMC 는 "reset 으로부터 k 사이클 이내에 property 를 위반하는 실행이 존재하는가?"를 SAT/SMT 솔버로 푼다는 의미입니다.
+riscv-formal 의 기본 엔진은 BMC(bounded model checking)입니다.(외부 표준 지식) BMC 는 "reset 으로부터 k 사이클 이내에 property 를 위반하는 실행이 존재하는가?"를 SAT/SMT 솔버(불리언/수식 제약을 만족하는 해가 존재하는지 자동으로 탐색·판정하는 엔진 — SAT 은 불리언, SMT 은 산술·비트벡터까지 다룸) 로 푼다는 의미입니다.
 
 ```
 BMC(k):

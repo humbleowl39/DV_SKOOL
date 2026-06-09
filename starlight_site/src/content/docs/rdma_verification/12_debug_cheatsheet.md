@@ -26,6 +26,8 @@ RDMA test 가 실패하면 log 에 다음과 같은 줄이 찍힙니다.
 F-CQHDL-TBERR-0003: Unexpected error CQE
 ```
 
+> 이 카드에 반복 등장하는 약어: **CQE**(완료 항목), **wc_status**(완료 결과 코드), **QID**(DMA 큐 식별 번호), **H2C/C2H**(host→card / card→host DMA 방향), **PA**(물리 주소), **MR**(등록 메모리 영역), **SGE**(흩어진 메모리 조각 한 단위), **QP**(통신 채널 = Send+Receive Queue 쌍), **AP**(analysis port, 1:N 방송 통로), **ErrQP**(에러로 마킹돼 검증 제외되는 QP), **RC**(순서·신뢰 보장 연결) / **OPS/SR**(순서 무관 송신+선택 재전송), **expected_error**(의도된 에러임을 미리 표시하는 per-cmd 플래그). 각 용어의 자세한 정의는 해당 모듈(M04·M06~M11) 및 [용어집](./glossary/)에 있습니다.
+
 cheatsheet 없이 접근하면 M08, M09, M10, M11 을 순서대로 펴면서 자기 케이스를 찾아야 하므로 5 분이 걸립니다. 반면 cheatsheet 의 §5.1 한 표를 펼치면 30 초 만에 결론이 납니다.
   ```
   prefix       → 모듈

@@ -21,7 +21,7 @@ title: "Module 03 — Sequence & Sequence Item"
 
 ### 1.1 시나리오 — _100 시나리오_ 가 _10 줄_ 로
 
-SoC를 검증하다 보면 "AXI write 후 CPU read", "AXI write에 DMA와 reset을 겹친 경우"처럼 수백 가지 시나리오를 다뤄야 합니다. sequence 없이 각 시나리오를 별도의 SystemVerilog test 파일로 작성하면, 시나리오 하나당 수백 줄이 필요해 전체가 수만 줄로 불어나고 재사용도 되지 않습니다. UVM은 이 문제를 계층 분리로 풉니다. `axi_write_seq`·`axi_read_seq`·`dma_seq`·`reset_seq` 같은 **기본 sequence**를 각각 한 번씩만 작성해 두면, **virtual sequence**가 이들을 시간·순서로 조합해 시나리오를 구성합니다. 그 결과 새 시나리오를 추가할 때 늘어나는 코드는 조합을 기술하는 한두 줄뿐입니다.
+SoC를 검증하다 보면 "AXI write 후 CPU read", "AXI write에 DMA와 reset을 겹친 경우"처럼 수백 가지 시나리오를 다뤄야 합니다. sequence 없이 각 시나리오를 별도의 SystemVerilog test 파일로 작성하면, 시나리오 하나당 수백 줄이 필요해 전체가 수만 줄로 불어나고 재사용도 되지 않습니다. UVM은 이 문제를 계층 분리로 풉니다. `axi_write_seq`·`axi_read_seq`·`dma_seq`·`reset_seq` 같은 **기본 sequence**(시퀀스 — 어떤 트랜잭션을 어떤 순서로 만들지 `body()` task 안에 적어 둔 "자극 시나리오 한 편")를 각각 한 번씩만 작성해 두면, **virtual sequence**(여러 Agent 의 sequence 들을 위에서 한꺼번에 지휘해 시스템 레벨 시나리오를 짜는 상위 시퀀스)가 이들을 시간·순서로 조합해 시나리오를 구성합니다. 그 결과 새 시나리오를 추가할 때 늘어나는 코드는 조합을 기술하는 한두 줄뿐입니다.
 
 ```
 class test_3 extends base_vseq;
@@ -40,7 +40,7 @@ Sequence의 핵심 가치는 **조합 가능성**에 있습니다. 시나리오 
 
 검증 가치의 절반은 **자극의 다양성과 의도성** 에서 나옵니다. Sequence 가 부실하면 coverage 가 안 메워지고 (curated 가 아니라 우연이 채움), 너무 hard-coded 면 재사용이 안 됩니다 (시나리오 1 개당 sequence 1 개의 폭발).
 
-이 모듈을 건너뛰면 이후 모든 검증이 _directed test 의 무한 증식_ 으로 흐릅니다. 반대로 sequence / item / virtual sequence 의 3 계층을 정확히 잡으면, _시나리오 = sequence 조합_ 으로 표현되어 새 시나리오 1 개를 추가할 때 코드가 1~2 줄 늘어나는 환경이 됩니다. Virtual Sequence 는 SoC-level 시나리오의 핵심 — 여러 Agent 를 시간 / 순서로 조율해야 의미 있는 시스템 검증이 됩니다.
+이 모듈을 건너뛰면 이후 모든 검증이 directed test(특정 시나리오를 손으로 일일이 적어 둔 고정 테스트 — 랜덤 자극의 반대)_의 무한 증식_ 으로 흐릅니다. 반대로 sequence / item / virtual sequence 의 3 계층을 정확히 잡으면, _시나리오 = sequence 조합_ 으로 표현되어 새 시나리오 1 개를 추가할 때 코드가 1~2 줄 늘어나는 환경이 됩니다. Virtual Sequence 는 SoC-level 시나리오의 핵심 — 여러 Agent 를 시간 / 순서로 조율해야 의미 있는 시스템 검증이 됩니다.
 
 ---
 

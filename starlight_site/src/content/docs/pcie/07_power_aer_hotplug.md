@@ -22,6 +22,8 @@ title: "Module 07 — Power Management, AER, Hot Plug"
 
 ### 1.1 시나리오 — _laptop 배터리_ 1 시간
 
+> **이 글의 핵심 용어** — **ASPM**(Active State Power Management — SW 개입 없이 link 가 idle 을 감지해 알아서 저전력 상태로 들어가는 기능), **idle**(주고받을 데이터가 없어 link 가 노는 상태), **D-state**(device 단위 전력 상태 — D0 active ~ D3cold off; OS·driver 가 관리), **L-state**(link 단위 전력 상태 — L0 active ~ L2; LTSSM/ASPM 이 관리), **AER**(Advanced Error Reporting — error 를 표준 형식으로 분류·기록하는 PCIe 기능), **Hot Plug**(전원을 끄지 않고 device 를 꽂고 빼는 것), **PME**(Power Management Event — 잠든 device 가 host 를 깨우려 보내는 신호), **Cpl Timeout**(Completion Timeout — 보낸 요청의 응답이 제한 시간 안에 안 와 포기하는 것), **panic**(OS 가 복구 불가로 판단해 멈추는 것).
+
 PCIe NVMe SSD 를 탑재한 laptop 을 설계할 때 ASPM 을 지원하지 않으면, SSD 는 idle 상태에서도 L0(full power) 를 유지한 채 수 W 를 소비합니다. 그 결과 배터리가 1 시간 만에 소진됩니다. ASPM 을 지원하면 idle 감지 시 L1(low power) 로 전환되어 SSD 소비 전력이 0.1 W 수준으로 떨어지고, 동일 배터리로 5~6 시간을 쓸 수 있게 됩니다. 설정 하나의 차이가 사용자 경험을 수 배 갈라놓습니다.
 
 전력 관리 외에도 두 가지 임계 시나리오가 더 있습니다. AER 를 설정하지 않은 상태에서 Cpl timeout 같은 PCIe error 가 한 번 발생하면 커널 panic 으로 이어지지만, AER 가 올바르게 구성되어 있으면 device reset 후 복구됩니다. Hot Plug 처리가 누락된 상황에서 SSD 가 갑자기 뽑히면 driver 가 MMIO 를 시도하다 bus error 를 만나 OS 가 freeze 되지만, Hot Plug 를 제대로 구현하면 graceful 하게 처리됩니다.

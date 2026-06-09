@@ -26,6 +26,8 @@ PCIe error log 한 줄을 마주쳤다고 가정합니다.
 PCI Express: Correctable error: LCRC error
 ```
 
+> **이 글의 핵심 약어** — **TLP**(Transaction Layer Packet — 읽기/쓰기 요청을 담는 패킷), **DLLP**(Data Link Layer Packet — link 한 구간에서만 쓰는 짧은 제어 패킷, 예: ACK), **LCRC**(Link CRC — TLP 가 한 구간을 건너는 동안 깨졌는지 보는 검사값), **ECRC**(End-to-end CRC — 보낸 곳부터 받는 곳까지 통째로 안 바뀌었는지 보는 선택적 검사값), **BER**(Bit Error Rate — 비트가 잘못 전달될 확률), **ACK/NAK**(잘 받음/다시 보내라 신호), **Ordered Set**(데이터가 아닌, link 를 맞추는 데 쓰는 약속된 심볼 묶음).
+
 이 줄이 담고 있는 정보는 layer 모델을 알면 즉시 풀립니다. LCRC 의 L 은 Link Layer, 곧 DLL(Data Link Layer)의 책임임을 뜻하고, Correctable 은 DLL 의 ACK/NAK retry 가 자동으로 복구했다는 상태입니다. 따라서 시스템은 이미 복구된 상태이지만, 이 오류가 빈도를 높이고 있다면 PHY 의 신호 품질을 의심해야 합니다. 반면 ECRC error 라면 E 가 End-to-end 를 의미하므로 Transaction Layer 의 일이 되고, Endpoint 의 TLP 생성 버그 또는 RC 의 수신 문제로 진단 방향이 전혀 달라집니다.
 
 같은 "CRC error" 라도 어느 layer 의 CRC 인지에 따라 진단 경로가 완전히 갈립니다. Layer 모델 없이 두 오류를 동일 범주로 묶으면 엉뚱한 RTL 영역을 디버깅하게 됩니다.
@@ -125,6 +127,8 @@ WIRE -> RX.RXPL
 | ① | Device core → TL | "write 64B" 의도 → MWr TLP | application 의 추상화 |
 | ② | TL | Header (Fmt/Type/Address/Length) + payload + opt ECRC | TLP 의 자기-기술적 (self-descriptive) packet |
 | ③ | TL | FC credit 차감 (P credit) | receiver 의 buffer 만큼만 송신 (Module 04) |
+
+위 표의 **FC credit**(Flow Control credit — 수신 측 buffer 에 얼마나 여유가 있는지를 나타내는 "보낼 수 있는 양" 토큰; 있을 때만 보냄)과 **P credit**의 P 는 **Posted**(응답이 따로 오지 않는 TLP 부류, 예: Memory Write)를 가리킵니다. 이와 짝을 이루는 분류가 **NP**(Non-Posted — 반드시 응답을 받아야 하는 부류, 예: 읽기)와 **Cpl**(Completion — 그 응답 자체)이며, 자세한 동작은 Module 03·04 에서 다룹니다.
 | ④ | DLL | Seq# (12-bit) | 순서 보장 + Replay 단위 |
 | ⑤ | DLL | LCRC (32-bit) over [Seq# + TLP] | hop-level 무결성 |
 | ⑥ | DLL | Replay Buffer 저장 | ACK 받기까지 보관 |
@@ -175,7 +179,7 @@ void send_phy(struct dll_pkt p) {
 | Data Link | **DLLP** | 8 byte (header + LCRC) | Ack, Nak, FC Init/Update, PM_*, Vendor |
 | Physical | **Ordered Set + Symbol** | 가변 | TS1/TS2, FTS, EIOS, EIEOS, SDS, SKP |
 
-→ DLLP 는 Transaction Layer 가 보지 않음. TLP 는 PHY 가 보지 않고 그저 byte stream.
+→ DLLP 는 Transaction Layer 가 보지 않음. TLP 는 PHY 가 보지 않고 그저 byte stream. (위 PHY 의 **Ordered Set** 들은 link 를 켜고 맞추는 데 쓰는 약속된 심볼 묶음으로 — **TS1/TS2**=training sequence, **FTS**=빠른 재동기, **EIOS/EIEOS**=전기적 idle 진입 표시, **SDS**=data stream 시작, **SKP**=clock 차이 보정 — 자세한 건 Module 05.)
 
 ### 4.2 책임 매트릭스
 
@@ -449,7 +453,7 @@ D -> E
 | Link 가 LTSSM L0 에 못 감 | PHY (LTSSM stuck) | LTSSM trace, Detect/Polling/Configuration 어디서 멈췄나 (Module 05) |
 | L0 진입했지만 packet 0 | DLL (DL_Inactive 또는 FC init 미완료) | DL_Active 진입 여부, InitFC1/2 교환 |
 | LCRC error 카운트 증가 | PHY BER 또는 DLL 송신 측 LCRC 계산 버그 | AER correctable counter, replay 횟수 |
-| Specific TLP 만 UR | TL header field (Fmt/Type/Address) | Packet trace, TL 의 routing 결과 |
+| Specific TLP 만 UR (Unsupported Request — 받는 쪽이 처리할 수 없어 거절한 응답) | TL header field (Fmt/Type/Address) | Packet trace, TL 의 routing 결과 |
 | Replay buffer overflow → recovery | ACK 가 늦거나 NAK 빈발 | DLL 양쪽의 ACK timer + LCRC error rate |
 | Switch 통과한 TLP 의 ECRC fail | path 중간 corruption | switch 의 cut-through vs store-forward, 두 LCRC error 패턴 |
 | Gen 변경 시 packet drop | LTSSM Recovery + DLL state 동시 처리 | LTSSM trace 와 DLL state 동기화 |

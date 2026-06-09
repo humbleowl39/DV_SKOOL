@@ -22,7 +22,7 @@ title: "Module 07 — Congestion Control & Error Handling"
 
 ### 1.1 시나리오 — 1000 GPU 가 한 link 에 _동시에_ 보낸다
 
-1000 GPU all-to-all 통신을 RDMA 로 구성하면 평소에는 잘 돌아갑니다. 그런데 all-reduce ring 의 특정 step 에서 거의 모든 GPU 가 단 하나의 link 로 동시에 데이터를 보내는 incast 가 발생하는 순간, 상황이 완전히 달라집니다.
+1000 GPU all-to-all(모든 노드가 서로에게 데이터를 주고받는 집합 통신) 통신을 RDMA 로 구성하면 평소에는 잘 돌아갑니다. 그런데 all-reduce ring 의 특정 step 에서 거의 모든 GPU 가 단 하나의 link 로 동시에 데이터를 보내는 incast(여러 송신자가 한 수신자/링크로 동시에 몰려 혼잡을 일으키는 트래픽 패턴) 가 발생하는 순간, 상황이 완전히 달라집니다.
 
 아래 네 시나리오를 비교하면 메커니즘별 차이가 명확해집니다.
 
@@ -35,12 +35,12 @@ title: "Module 07 — Congestion Control & Error Handling"
 
 세 메커니즘을 동시에 써야 하는 이유는 각각이 다루는 시간 단위가 다르기 때문입니다. PFC 는 ns 단위로 hop-by-hop PAUSE 를 걸어 buffer overflow 를 막지만, 그 대가로 deadlock 위험을 내포합니다. ECN 은 packet 단위로 CE 비트를 마킹해 sender 가 혼잡을 인식하게 하지만, 신호를 받기까지 이미 혼잡이 시작된 뒤입니다. DCQCN 은 ECN 신호를 받아 µs 단위 rate 점진 감속과 회복을 수행하는데, ECN 신호가 없으면 작동 자체가 불가능합니다. 세 메커니즘의 time scale 이 각기 다르므로 어느 하나만으로 나머지를 대체할 수 없습니다. 자동차의 ABS, ESP, 안전벨트처럼 계층화된 안전망이 필요한 구조입니다.
 
-**RDMA 의 검증 가치는 "행복 경로" 가 아니라 "에러 경로"** 에 있습니다. 정상 packet 만 보내면 어떤 구현이든 어느 정도 동작 — 진짜 차이는 (1) congestion 발생 시 fairness 와 throughput 회복, (2) error 발생 시 정확한 status 보고와 QP recovery 입니다. RDMA-TB 의 `error_handling` vplan 이 9 시나리오로 거의 모든 error path 를 커버하는 이유.
+**RDMA 의 검증 가치는 "행복 경로" 가 아니라 "에러 경로"** 에 있습니다. 정상 packet 만 보내면 어떤 구현이든 어느 정도 동작 — 진짜 차이는 (1) congestion 발생 시 fairness 와 throughput 회복, (2) error 발생 시 정확한 status 보고와 QP recovery 입니다. RDMA-TB 의 `error_handling` vplan(verification plan — 무엇을 어떤 시나리오로 검증할지 정리한 검증 계획서) 이 9 시나리오로 거의 모든 error path 를 커버하는 이유.
 
 또한 디버그 시: WC status + debug flag 의 조합이 **root cause 를 1 step 으로 식별 가능한 형태** 로 보고되도록 설계됐기 때문에, 이 매핑을 알면 fail 시 진단이 압도적으로 빠릅니다.
 
 :::tip[🤔 잠깐 — TCP 는 어떻게 풀었나?]
-TCP 도 congestion control 을 합니다 (Cubic, BBR). RDMA 가 _TCP 의 CC 를 그대로 못 쓰는_ 이유는?
+TCP 도 congestion control(CC — 네트워크 혼잡을 감지해 송신 속도를 조절하는 기법) 을 합니다 (Cubic, BBR). RDMA 가 _TCP 의 CC 를 그대로 못 쓰는_ 이유는?
 
 <details>
 <summary>정답</summary>
@@ -134,7 +134,7 @@ QP_A (NODE0) 가 QP_B (NODE1) 의 MR_X 에 RDMA WRITE. 그러나 sender 의 pack
             → NAK Remote Access Error
             (Error CQ 에 CQE 생성 + debug_flag = WC_FLAG_RESP_RKEY)
             (IB_EVENT_QP_ACCESS_ERR async event)
-            (IRQ raise)
+            (IRQ raise)   ← IRQ = interrupt request, CPU 에 처리를 요청하는 인터럽트 신호
    t=5    Wire: BTH(ACKNOWLEDGE) + AETH(syndrome=NAK Remote Access Error)
    t=6    NODE0 HCA: NAK 받음
             → outstanding WQE 의 status = WC_REM_ACCESS_ERR

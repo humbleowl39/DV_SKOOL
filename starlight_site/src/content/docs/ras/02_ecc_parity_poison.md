@@ -136,7 +136,7 @@ ecc_result_e ecc_decode(uint64_t *data, uint8_t stored_check) {
 
 ### 3.1 syndrome이 _좌표_ 가 되는 진짜 이유 — 패리티 검사 행렬 H
 
-앞에서 syndrome을 "체크섬의 교차 좌표"로 비유했는데, 실제로 _왜_ syndrome 비트열이 에러 비트의 인덱스가 되는지를 Hamming code 한 예로 비트 단위로 풀어 봅시다. (7,4) Hamming code — 데이터 4비트 + check 3비트 = 코드워드 7비트를 씁니다.
+앞에서 syndrome을 "체크섬의 교차 좌표"로 비유했는데, 실제로 _왜_ syndrome 비트열이 에러 비트의 인덱스가 되는지를 **Hamming code**(데이터 비트들을 여러 check 비트가 겹쳐 덮도록 배치해, 틀린 비트의 _위치_ 까지 알아내는 고전 에러 정정 코드) 한 예로 비트 단위로 풀어 봅시다. (7,4) Hamming code — 데이터 4비트 + check 3비트 = 코드워드(데이터+check를 합친 한 보호 단위) 7비트를 씁니다.
 
 **① 각 check 비트는 특정 데이터 비트 집합의 XOR입니다.** 비트 위치 1~7을 두고, _위치 번호를 3비트 2진수로 적었을 때_ 어느 자리가 1인지로 어느 check가 그 비트를 덮는지를 정합니다.
 
@@ -201,7 +201,7 @@ read 시 두 가지를 본다:
 | 검출 | 1-bit O, 2-bit X | 1-bit O, 2-bit O |
 | 정정 | 불가 | 1-bit O |
 | 오버헤드 | 1-bit/워드 | 데이터당 코드 비트(예: 64+8) |
-| 적용 위치 | control path, FSM, 빠른 검출이 필요한 곳 | L1/L2/L3 캐시, register file, HBM/DDR5 인터페이스 |
+| 적용 위치 | control path, FSM(finite state machine, 유한 상태 기계 — 정해진 상태 사이를 옮겨 다니는 제어 논리), 빠른 검출이 필요한 곳 | L1/L2/L3 캐시, register file(코어 내부의 고속 레지스터 묶음), HBM/DDR5 인터페이스 |
 | 목적 | 저비용 실시간 오동작 검출 | 데이터 무결성 복구 + 무검출 손상 방지 |
 
 ### 4.2 SEC-DED 능력 경계
@@ -214,7 +214,7 @@ SEC-DED 보장:
   3-bit↑    → 보장 밖 (오정정 또는 미검출 가능) — 더 강한 코드(예: DEC-TED, chipkill) 필요
 ```
 
-고밀도 메모리에서 다중 비트 에러 위험이 크면 SEC-DED를 넘어선 코드(chipkill 등)를 쓰지만(추론), 기본 SoC SRAM/캐시의 표준은 SEC-DED입니다.
+여기서 **DEC-TED**(Double Error Correction, Triple Error Detection — 2-bit까지 정정하고 3-bit까지 검출하는, SEC-DED보다 한 단계 강한 코드)와 **chipkill**(DRAM 칩 하나가 통째로 고장 나도 나머지로 데이터를 복구하도록 설계한 서버 메모리 보호 기법)이 그런 강화 코드의 예입니다. 고밀도 메모리에서 다중 비트 에러 위험이 크면 SEC-DED를 넘어선 코드(chipkill 등)를 쓰지만(추론), 기본 SoC SRAM/캐시의 표준은 SEC-DED입니다.
 
 ### 4.3 Poison — UE를 가용성으로 흡수
 

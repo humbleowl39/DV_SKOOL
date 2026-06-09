@@ -27,15 +27,15 @@ title: "Module 06 — Strict vs Passthrough"
 - _Bare metal 대비 20-30% 성능 손실_.
 
 Nitro 후:
-- **Pass-through + SR-IOV** + **Nitro card** (전용 DPU) 로 _bare metal 성능_.
-- VM 이 NIC, EBS, SSD 에 _직접_ access.
-- IOMMU 가 _보안 격리_ — VM 끼리 못 봄.
+- **Pass-through**(디바이스를 VM 에 직접 통째로 넘겨 hypervisor 를 거치지 않음) + **SR-IOV**(물리 디바이스 하나를 하드웨어가 여러 개로 분할) + **Nitro card** (전용 **DPU**=Data Processing Unit, 네트워크·스토리지 처리를 CPU 대신 전담하는 보조 프로세서) 로 _bare metal 성능_.
+- VM 이 **NIC**(네트워크 카드), **EBS**(AWS 의 블록 스토리지 서비스), SSD 에 _직접_ access.
+- **IOMMU**(디바이스의 DMA 주소를 변환·격리하는 "디바이스용 MMU") 가 _보안 격리_ — VM 끼리 못 봄.
 
 **가격**: 같은 성능 EC2 가 _20-30% 저렴_ 또는 _같은 가격에 더 큰 VM_. AWS 의 _market share_ 큰 차이 만듦.
 
 이게 _strict vs passthrough_ 의사결정이 _수십억 USD_ 규모 영향.
 
-I/O 가상화의 가장 큰 trade-off 는 한 문장입니다 — **"hypervisor 가 모든 I/O 를 가로채면 안전하지만 느리다. VM 이 device 에 직접 닿으면 빠르지만 IOMMU 없이는 보안이 깨진다."** 100 Gbps NIC · GPU · NVMe 같은 고대역폭 device 가 들어오면서 _전부 hypervisor 가 가로채는 strict 모델_ 은 throughput 의 _병목_ 이 됐고, 그래서 등장한 것이 SR-IOV / VFIO / pass-through. 그러나 device 가 VM 메모리에 직접 DMA 한다는 것은 **device 가 잘못 동작하거나 악의적이면 host kernel/다른 VM 메모리까지 침해 가능** 하다는 뜻 — 그래서 IOMMU 가 _없으면 안 되는_ 부품이 됐습니다.
+I/O 가상화의 가장 큰 trade-off 는 한 문장입니다 — **"hypervisor 가 모든 I/O 를 가로채면 안전하지만 느리다. VM 이 device 에 직접 닿으면 빠르지만 IOMMU 없이는 보안이 깨진다."** 전자를 **strict**(모든 I/O 를 hypervisor 가 중재하는 모델), 후자를 **passthrough**(VM 이 디바이스에 직접 닿는 모델)라 부릅니다. 100 Gbps NIC · GPU · NVMe(고속 SSD 프로토콜) 같은 고대역폭 device 가 들어오면서 _전부 hypervisor 가 가로채는 strict 모델_ 은 throughput(처리량) 의 _병목_ 이 됐고, 그래서 등장한 것이 SR-IOV / **VFIO**(Linux 의 디바이스 passthrough 프레임워크) / pass-through. 그러나 device 가 VM 메모리에 직접 **DMA**(Direct Memory Access — CPU 를 거치지 않고 디바이스가 메모리에 직접 읽고 씀) 한다는 것은 **device 가 잘못 동작하거나 악의적이면 host kernel/다른 VM 메모리까지 침해 가능** 하다는 뜻 — 그래서 IOMMU 가 _없으면 안 되는_ 부품이 됐습니다.
 
 이 모듈을 건너뛰면 이후 "왜 클라우드는 SR-IOV 를 쓰는가", "왜 GPU 는 항상 pass-through 인가", "Nitro 가 무엇을 바꿨는가" 같은 질문에 _그림 없이 단어로만_ 답하게 됩니다. 반대로 _두 path 의 hop 수와 IOMMU 의 위치_ 만 잡으면, 새로운 device (DPU, CXL accelerator 등) 가 와도 즉시 적절한 I/O 모델을 선택할 수 있습니다.
 
@@ -94,7 +94,7 @@ Strict 만으로는 1·3 은 풀리지만 2 가 깨지고, naive passthrough 만
 
 ## 3. 작은 예 — 64-byte 수신 한 번을 virtio 와 SR-IOV 에서 비교
 
-가장 단순한 시나리오. NIC 가 **64-byte Ethernet frame** 한 개를 받고, VM 안의 `recv()` 가 그것을 회수합니다. emulated virtio path 와 SR-IOV passthrough path 에서 _같은 일_ 이 어떻게 다르게 처리되는지 step-by-step.
+가장 단순한 시나리오. NIC 가 **64-byte Ethernet frame** 한 개를 받고, VM 안의 `recv()` 가 그것을 회수합니다. emulated virtio path 와 SR-IOV passthrough path 에서 _같은 일_ 이 어떻게 다르게 처리되는지 step-by-step. 주소 용어: **IOVA**(I/O Virtual Address — 디바이스가 쓰는 가상 주소), **HPA**(Host Physical Address — 진짜 물리 주소)이며, IOMMU 가 IOVA→HPA 변환을 담당합니다. `ixgbevf` 는 Intel NIC 의 VF 용 실제 드라이버, **MSI-X** 는 디바이스가 메모리 write 형태로 보내는 인터럽트 방식입니다.
 
 ```
    ┌──────────────────────── Strict: virtio-net ────────────────────────┐
@@ -520,7 +520,7 @@ VM0의 I/O 경로:
 | **인터럽트** | Hypervisor 라우팅 (지연 있음) | 직접 전달 (Posted Interrupt) |
 | **디바이스 공유** | 가능 (에뮬레이션/VirtIO) | 불가 (SR-IOV 사용 시 VF 단위 가능) |
 | **Live Migration** | 용이 (상태가 SW에 있음) | 어려움 (HW 상태 이전 복잡) |
-| **적용** | 범용 클라우드, 보안 중시 환경 | HPC, NFV, GPU, 저지연 시스템 |
+| **적용** | 범용 클라우드, 보안 중시 환경 | HPC(High-Performance Computing, 고성능 연산), NFV(Network Function Virtualization, 네트워크 장비 기능을 SW VM 으로 구현), GPU, 저지연 시스템 |
 
 ### 5.5 현대 시스템: 혼합 모델
 

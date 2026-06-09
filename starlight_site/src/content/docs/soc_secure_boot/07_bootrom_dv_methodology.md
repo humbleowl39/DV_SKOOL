@@ -61,6 +61,8 @@ UVM -> UVM_RESULT
 
 이 세 요구의 교집합이 **UVM + OTP Abstraction + Active Driver + DPI-C** 의 4축 구조입니다.
 
+용어를 한 줄로 풀면: **UVM**(Universal Verification Methodology — 재사용 가능한 검증 환경을 만드는 SystemVerilog 업계 표준 라이브러리), **DPI-C**(Direct Programming Interface for C — 검증 환경이 C 함수를 직접 호출하게 해 주는 표준; C 정답 모델을 끌어다 쓰는 통로), **RAL**(Register Abstraction Layer — 레지스터를 물리 주소가 아니라 이름으로 다루게 해 주는 UVM 추상화; 여기서는 OTP 필드 접근에 같은 방식을 차용), **virtual sequencer**(여러 agent 에 흩어진 자극을 한 시나리오로 지휘하는 UVM 컴포넌트), **covergroup(CG)**(검증이 어떤 조합을 얼마나 건드렸는지 세는 커버리지 묶음).
+
 ---
 
 ## 3. 작은 예 — BootROM 테스트 한 사이클 (fuse → ROM → BL1)

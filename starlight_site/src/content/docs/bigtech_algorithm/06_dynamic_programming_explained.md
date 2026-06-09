@@ -25,17 +25,17 @@ title: "Module 06 — Dynamic Programming"
 
 **Brute force (재귀)**: 각 동전을 _사용/불사용_ 결정. **O(2^N)**. N=30 이면 10⁹ → 1초.
 
-**DP**: `dp[k] = 금액 k 만드는 최소 동전 수`. 점화식: `dp[k] = min(dp[k - c] + 1) for c in coins`. **O(N × K)**.
+**DP**(Dynamic Programming, 동적 계획법 — 큰 문제를 부분 문제로 나누고 그 답을 저장해 중복 계산을 피하는 기법): `dp[k] = 금액 k 만드는 최소 동전 수`. **점화식**(recurrence — 큰 문제의 답을 더 작은 문제들의 답으로 표현한 식): `dp[k] = min(dp[k - c] + 1) for c in coins`. **O(N × K)**.
 
 N=30, K=10⁴ → 3×10⁵ 연산 → 즉시.
 
-**DP 의 가치**: _overlapping subproblems_ + _optimal substructure_ → exponential 을 polynomial 로.
+**DP 의 가치**: _overlapping subproblems_(중복 부분 문제 — 같은 작은 문제가 여러 번 등장) + _optimal substructure_(최적 부분 구조 — 큰 문제의 최적 답이 작은 문제들의 최적 답으로 구성됨) → exponential 을 polynomial 로.
 
 **5 단계 풀이 표준**:
 1. **State**: 무엇을 dp[i] 가 나타내는가?
 2. **Recurrence**: dp[i] 가 dp[j<i] 들로 어떻게 표현되는가?
 3. **Base case**: dp[0] 또는 가장 작은 case.
-4. **Iteration order**: bottom-up (반복문) 또는 top-down (memoization).
+4. **Iteration order**: bottom-up(작은 부분 문제부터 표를 채워 올라가는 방식 = tabulation) 또는 top-down(큰 문제부터 재귀로 내려가며 결과를 캐시에 저장하는 방식 = memoization — 한 번 계산한 부분 문제 답을 저장해 두고 재사용).
 5. **Space optimization**: dp[i] 가 _최근 k 개_ 만 보면 → O(1) space.
 
 DP 는 면접관이 _reasoning depth_ 를 가장 좋아하는 패턴입니다. **상태 정의 → 점화식 → 베이스 케이스 → 구현 → 최적화** 의 5 단계 표준 풀이를 만들 수 있으면 거의 모든 DP 문제를 풀 수 있고, 이 표준은 운영 코드(parsing, scoring, scheduling) 에도 그대로 등장합니다.
@@ -43,7 +43,7 @@ DP 는 면접관이 _reasoning depth_ 를 가장 좋아하는 패턴입니다. *
 이 모듈을 건너뛰면 "경우의 수 / 최대-최소 / 가능한가?" 류 문제에서 _exponential brute force_ 를 그대로 제출하게 됩니다. 반대로 _state 한 줄 정의_ 와 _점화식 한 줄_ 을 _코드 작성 전_ 에 적는 습관이 잡히면, DP 문제가 _얼개_ 와 _세부 구현_ 으로 깔끔하게 분리되어 빨라집니다.
 
 :::tip[🤔 잠깐 — DP _vs Greedy_?]
-어떤 문제는 _greedy_ (각 step _최선_ 선택) 로도 풀림. 언제 DP 가 필요하고 언제 greedy 면 충분?
+어떤 문제는 _greedy_(탐욕법 — 매 단계 그 순간 가장 좋아 보이는 선택을 하고 되돌아보지 않는 기법) 로도 풀림. 언제 DP 가 필요하고 언제 greedy 면 충분?
 
 <details>
 <summary>정답</summary>
@@ -118,7 +118,7 @@ fib(4):
 총 시간 = (서로 다른 부분문제의 수) × (부분문제 1개당 work)
 ```
 
-입니다. memo 가 있으면 각 부분문제는 _최초 1회_ 만 진짜로 계산되고(이후는 캐시 히트 = O(1)), 그 1회의 비용은 점화식이 참조하는 항의 수입니다. fib 는 부분문제가 `fib(0)..fib(n)` 으로 **N+1 개**, 각각 `dp[i-1]+dp[i-2]` 라 **work=O(1)** → `N × O(1) = O(N)`. coin change(§1.1) 는 부분문제가 금액 `0..K` 로 K+1 개, 각각 동전 N 종류를 훑어 work=O(N) → `K × O(N) = O(N·K)`. 0/1 Knapsack 은 상태가 `(아이템 i, 용량 w)` 라 부분문제가 N·W 개, work=O(1) → `O(N·W)`. 지수가 다항으로 줄어드는 정확한 이유는 _재계산 횟수_ 가 "부분문제 수" 로 상한이 잡히기 때문이고, 이 곱셈식이 그 상한을 그대로 보여 줍니다.
+입니다. memo 가 있으면 각 부분문제는 _최초 1회_ 만 진짜로 계산되고(이후는 캐시 히트 = O(1)), 그 1회의 비용은 점화식이 참조하는 항의 수입니다. fib 는 부분문제가 `fib(0)..fib(n)` 으로 **N+1 개**, 각각 `dp[i-1]+dp[i-2]` 라 **work=O(1)** → `N × O(1) = O(N)`. coin change(§1.1) 는 부분문제가 금액 `0..K` 로 K+1 개, 각각 동전 N 종류를 훑어 work=O(N) → `K × O(N) = O(N·K)`. 0/1 Knapsack(0/1 배낭 문제 — 무게 한도 안에서 아이템을 골라 가치 합을 최대화; 각 아이템은 담거나 안 담거나 둘 중 하나) 은 상태가 `(아이템 i, 용량 w)` 라 부분문제가 N·W 개, work=O(1) → `O(N·W)`. 지수가 다항으로 줄어드는 정확한 이유는 _재계산 횟수_ 가 "부분문제 수" 로 상한이 잡히기 때문이고, 이 곱셈식이 그 상한을 그대로 보여 줍니다.
 :::
 
 **Bottom-up DP (tabulation) — O(N) 시간, 공간 O(N) → O(1) 가능**
@@ -234,6 +234,8 @@ def climb_stairs(n):
    │  "가장 긴 / 가장 짧은 부분 문자열"               │   → LIS / LCS
    └──────────────────────────────────────────────┘
 ```
+
+여기서 **LIS**(Longest Increasing Subsequence, 최장 증가 부분 수열 — 순서를 유지하며 고른 원소들이 계속 커지는 가장 긴 수열)와 **LCS**(Longest Common Subsequence, 최장 공통 부분 수열 — 두 수열에 공통으로 순서대로 나타나는 가장 긴 부분 수열)는 대표적인 2D DP 문제입니다.
 
 이 키워드들이 DP 를 신호하는 이유는 모두 **현재 결정이 미래 결정에 영향을 미친다**는 구조를 공유하기 때문입니다. "경우의 수" 는 이전 단계에서 가능한 경우들의 합으로 현재 경우를 구성하고, "최소/최대" 는 이전의 최적 결과 위에 현재 선택을 더해 더 큰 최적을 만들며, "가능한가" 도 이전 상태에서 도달 가능한 경우가 현재 상태로 전이될 수 있는지를 묻습니다. 이 의존 관계 때문에 그냥 재귀로 풀면 같은 부분 문제가 지수적으로 재계산되고, 메모이제이션으로 한 번씩만 계산하는 것이 DP 의 핵심 이득입니다.
 

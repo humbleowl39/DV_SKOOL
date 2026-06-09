@@ -24,9 +24,9 @@ title: "Module 04 — Attack Surface & Defense"
 
 OBD-II 게이트웨이, CAN SecOC, V2X TLS, 인포테인먼트 sandbox 를 모두 강력하게 구현한 차량 OEM 을 상상해 봅시다. 차량 내부와 무선 채널은 완벽하게 방어된 것처럼 보입니다.
 
-그런데 **공급망** 에서 두 가지 사고가 동시에 발생합니다. 한 Tier-1 supplier 의 ECU firmware 빌드 시스템이 침해되어 백도어 코드가 삽입되었고, OTA 서버의 admin 계정 하나가 피싱 공격으로 탈취되었습니다. 두 사고 모두 차량 외부에서 일어났고, 차량 내 어떤 보안 장치도 이것을 감지하지 못합니다. 이 두 약점이 수십 보안 layer 의 가치를 단번에 0 으로 만듭니다. **Defense-in-depth 의 본질은 모든 surface 를 동시에 방어하는 것**이며, 한 곳의 약점이 나머지 강한 layer 를 전부 무용지물로 만든다는 데 있습니다.
+그런데 **공급망** 에서 두 가지 사고가 동시에 발생합니다. 한 **Tier-1 supplier**(완성차 OEM 에 부품·ECU 를 직접 납품하는 1차 협력사) 의 ECU firmware 빌드 시스템이 침해되어 백도어 코드가 삽입되었고, **OTA**(Over-the-Air — 무선으로 차량 소프트웨어를 원격 업데이트하는 방식) 서버의 admin 계정 하나가 피싱 공격으로 탈취되었습니다. 두 사고 모두 차량 외부에서 일어났고, 차량 내 어떤 보안 장치도 이것을 감지하지 못합니다. 이 두 약점이 수십 보안 layer 의 가치를 단번에 0 으로 만듭니다. **Defense-in-depth**(심층 방어 — 한 통제에 의존하지 않고 독립된 여러 보안 계층을 겹겹이 쌓는 원칙) **의 본질은 모든 surface 를 동시에 방어하는 것**이며, 한 곳의 약점이 나머지 강한 layer 를 전부 무용지물로 만든다는 데 있습니다.
 
-방어를 잘 하려면 **공격자가 어디부터 들어오는지** 체계적으로 알아야 합니다. 차량은 _외부_ (셀룰러, V2X), _근접_ (BT, WiFi, NFC, OBD-II), _내부_ (CAN, Ethernet), _공급망_ (ECU FW, OTA 서버) 등 광범위한 surface 를 가집니다. 이 모듈은 각 surface 를 **자산 → 위협 → 방어 계층** 매트릭스로 정리해, 학습자가 자기 시스템에도 같은 표를 직접 그릴 수 있게 합니다.
+방어를 잘 하려면 **공격자가 어디부터 들어오는지** 체계적으로 알아야 합니다. 차량은 _외부_ (셀룰러, **V2X** — Vehicle-to-Everything, 차량이 다른 차·인프라와 주고받는 무선 통신), _근접_ (**BT** — Bluetooth, WiFi, **NFC** — Near-Field Communication, 수 cm 거리의 근접 무선, OBD-II), _내부_ (CAN, Ethernet), _공급망_ (ECU FW, OTA 서버) 등 광범위한 **attack surface**(공격 표면 — 외부에서 침입할 수 있는 모든 진입점의 총합) 를 가집니다. 이 모듈은 각 surface 를 **자산 → 위협 → 방어 계층** 매트릭스로 정리해, 학습자가 자기 시스템에도 같은 표를 직접 그릴 수 있게 합니다.
 
 이 모듈은 ISO 21434 의 TARA (Threat Analysis & Risk Assessment) 사고를 _체화_ 하는 단계입니다. Module 03 의 Tesla 사례가 1 가지 surface (OBD) 의 1 가지 attack (CAN injection) 이었다면, 이 모듈은 _12 가지 attack × 6 layer_ 의 매트릭스로 시야를 넓힙니다.
 
@@ -109,6 +109,8 @@ PHY -> IN { style.stroke-dash: 4 }
 
 **Step 2 — Threat 시나리오 (STRIDE 적용)**:
 
+**STRIDE** 는 위협을 여섯 범주로 나눠 빠짐없이 훑는 분류법입니다 — Spoofing(위장), Tampering(변조), Repudiation(부인), Information disclosure(정보 노출), Denial of service(서비스 거부), Elevation of privilege(권한 상승) 의 머리글자입니다.
+
 | Threat | STRIDE | 설명 |
 |---|---|---|
 | T1 | Spoofing | OBD-II 동글이 GPS frame 위조 주입 |
@@ -127,6 +129,8 @@ PHY -> IN { style.stroke-dash: 4 }
 | T6 Feature 변조 | Low | High | Low | Low |
 
 **Step 4 — Attack Feasibility (CVSS-like)** — T1:
+
+(**CVSS** — Common Vulnerability Scoring System — 취약점의 심각도를 0~10 점으로 표준화해 매기는 업계 척도; 여기서는 그 방식을 본떠 공격 실현 난이도를 점수화)
 
 - Tools: easy (online 판매되는 €500 동글)
 - Knowledge: medium (CAN 기본 + RE)
@@ -239,11 +243,15 @@ print(risk(impact_score=3,       # High (safety)
 | Key Fob Relay | RF | L1 UWB Time-of-Flight |
 | V2X Sybil | DSRC/C-V2X | L5 SCMS PKI + L4 Misbehavior Det. |
 
+위 표의 **Sybil**(시빌 공격 — 한 공격자가 다수의 가짜 신원을 만들어 신뢰 모델을 왜곡), **DSRC/C-V2X**(V2X 의 두 경쟁 무선 기술 — WiFi 계열 DSRC, 셀룰러 계열 C-V2X), **SCMS**(Security Credential Management System — V2X 차량에 가명 인증서를 발급·폐기하는 PKI 인프라), **Misbehavior Detection**(비정상·악의 메시지를 행동 패턴으로 가려내는 탐지) 는 §5.2 의 V2X 절에서 자세히 다룹니다.
+
 ---
 
 ## 5. 디테일 — 축별 공격 기법, 방어 layer, 규제
 
 ### 5.1 축 1: 물리적 접근 공격
+
+아래 표의 진입점 중 **JTAG/SWD** 는 칩 내부에 접근하는 하드웨어 디버그 인터페이스(개발용이지만 잠그지 않으면 펌웨어 추출 통로가 됨), **Fault Injection** 은 전압·클럭을 순간 교란해 보안 검증을 건너뛰게 만드는 물리 공격, **Chip Decapping** 은 칩 패키지를 깎아 내부를 직접 들여다보는 고비용 공격을 가리킵니다.
 
 | 공격 | 진입점 | 기법 | 위험도 | 실제 사례 |
 |---|---|---|---|---|
@@ -323,7 +331,7 @@ EM Fault Injection:
 
 #### Cellular / TCU 원격 공격 — 가장 위험한 원격 vector
 
-물리 접근 없이 인터넷에서 차량으로 직접 닿을 수 있는 경로는 Telematics Control Unit(TCU) 입니다. TCU 는 LTE/5G 셀룰러 모뎀, WiFi/BT, GPS 를 통합한 게이트웨이 ECU 로, 그 출력이 CAN 인터페이스를 통해 차량 전체 버스로 연결됩니다. 이 구조 때문에 모뎀 펌웨어나 TCU OS 에 취약점이 하나라도 있으면, 공격자는 인터넷에서 출발해 CAN 버스까지 도달할 수 있습니다. 2015년 Jeep Cherokee 가 정확히 이 경로로 뚫렸습니다.
+물리 접근 없이 인터넷에서 차량으로 직접 닿을 수 있는 경로는 Telematics Control Unit(TCU) 입니다. TCU 는 LTE/5G 셀룰러 모뎀, WiFi/BT, GPS 를 통합한 게이트웨이 ECU 로, 그 출력이 CAN 인터페이스를 통해 차량 전체 버스로 연결됩니다. 이 구조 때문에 모뎀 펌웨어나 TCU OS 에 취약점이 하나라도 있으면, 공격자는 인터넷에서 출발해 CAN 버스까지 도달할 수 있습니다. 2015년 Jeep Cherokee 가 정확히 이 경로로 뚫렸습니다. (아래 방어 표의 **APN** 은 Access Point Name — 셀룰러 망에서 차량을 사설망 구간에 묶어 공인 인터넷에서 직접 닿지 못하게 하는 접속 설정입니다.)
 
 ```d2
 direction: down
@@ -474,7 +482,7 @@ CAR -> MSG: "V2V 메시지"
 MSG -> RX
 ```
 
-**V2X 공격 시나리오**:
+**V2X 공격 시나리오** (아래 표의 **BSM** 은 Basic Safety Message — 차량이 주변에 자기 위치·속도를 알리는 V2X 기본 메시지, **CRL** 은 Certificate Revocation List — 폐기된 인증서 목록으로, 도용·악의 차량을 신뢰 대상에서 제외):
 
 | 공격 | 방법 | 위험 | 방어 |
 |---|---|---|---|
@@ -508,7 +516,7 @@ Level 2: RF GPS Spoofing (위성 신호 위조)
 Tesla 탈옥은 Level 1 사용 — 더 간단·확실
 ```
 
-**Galileo OSNMA — 항법 메시지에 서명을 실어 spoof 을 거르는 흐름.** 기존 GNSS는 위성 신호에 _인증이 전혀 없어_ SDR로 가짜 신호를 만들면 수신기가 그대로 믿습니다. OSNMA(Open Service Navigation Message Authentication)는 _항법 메시지 자체에 비대칭 인증_ 을 실어 이를 막습니다. 핵심은 **TESLA 류 지연 공개(delayed key disclosure)** 입니다(확인 필요 — OSNMA 개념 수준).
+**Galileo OSNMA — 항법 메시지에 서명을 실어 spoof 을 거르는 흐름.** 기존 GNSS는 위성 신호에 _인증이 전혀 없어_ SDR(Software-Defined Radio — 소프트웨어로 임의 무선 신호를 만들어 송신하는 장비)로 가짜 신호를 만들면 수신기가 그대로 믿습니다. OSNMA(Open Service Navigation Message Authentication)는 _항법 메시지 자체에 비대칭 인증_ 을 실어 이를 막습니다. 핵심은 **TESLA 류 지연 공개(delayed key disclosure)** 입니다(확인 필요 — OSNMA 개념 수준).
 
 1. **메시지에 MAC + (나중에 공개될) 키 묶음을 실음**: 위성이 항법 데이터에 그 데이터를 인증하는 태그를 함께 방송하되, 그 태그를 검증할 키는 _아직 공개하지 않습니다_.
 2. **시간이 지난 뒤 키를 공개**: 일정 지연 후 위성이 _그 키_ 를 방송합니다. 수신기는 (a) 공개된 키가 상위 신뢰(위성의 비대칭 서명으로 보증된 키 체인)에 속하는지 검증하고, (b) 그 키로 _앞서 받아 둔_ 항법 메시지의 MAC을 재계산해 일치하는지 봅니다.
@@ -516,7 +524,7 @@ Tesla 탈옥은 Level 1 사용 — 더 간단·확실
 
 ### 5.3 축 3: 공급망 공격
 
-공급망 공격이 가장 위험한 이유는 차량 내부의 어떤 보안 장치도 이것을 사전에 감지하기 어렵다는 점입니다. Tier-1 supplier 의 빌드 시스템이 침해되면 ECU 펌웨어 자체에 악성 코드가 들어간 채로 출하되며, 이 펌웨어는 Secure Boot 의 서명 키를 OEM 이 발급했다면 정상 서명을 받은 상태입니다. OTA 서버 하이재킹도 마찬가지로, 공격자가 정식 코드 서명 권한을 가진 계정을 탈취하면 악성 패키지가 유효한 서명을 달고 fleet 전체로 배포될 수 있습니다. 이 때문에 공급망 보안은 기술적 수단(코드 서명, SBOM)과 운영적 수단(접근 권한 분리, 공장 보안)이 모두 요구됩니다.
+공급망 공격이 가장 위험한 이유는 차량 내부의 어떤 보안 장치도 이것을 사전에 감지하기 어렵다는 점입니다. Tier-1 supplier 의 빌드 시스템이 침해되면 ECU 펌웨어 자체에 악성 코드가 들어간 채로 출하되며, 이 펌웨어는 Secure Boot 의 서명 키를 OEM 이 발급했다면 정상 서명을 받은 상태입니다. OTA 서버 하이재킹도 마찬가지로, 공격자가 정식 코드 서명 권한을 가진 계정을 탈취하면 악성 패키지가 유효한 서명을 달고 fleet 전체로 배포될 수 있습니다. 이 때문에 공급망 보안은 기술적 수단(코드 서명, SBOM — Software Bill of Materials, 소프트웨어에 포함된 모든 구성요소·라이브러리의 명세서로 취약점 추적의 기반)과 운영적 수단(접근 권한 분리, 공장 보안)이 모두 요구됩니다.
 
 | 공격 | 대상 | 기법 | 위험도 |
 |---|---|---|---|

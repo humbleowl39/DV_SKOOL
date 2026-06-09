@@ -234,7 +234,7 @@ DUT -> COV: "retire stream"
 DUT -> SVA: "신호 불변식"
 ```
 
-환경은 고립돼 있지 않습니다. [M05](../05_riscv_dv_stimulus/)의 제약 랜덤 ISG 가 만든 ELF 를 RTL 과 predictor ISS 가 _같이_ 실행하고, retire stream 이 scoreboard(판정)와 coverage(완전성, [M07](../07_coverage_special_areas/))로 흐릅니다. SVA 는 RVFI 신호 자체의 프로토콜 불변식(예: `rvfi_valid` 일 때 PC 정렬)을 _상시_ 검사해 monitor 의 가정이 깨지면 즉시 잡습니다. 이 네 가지(자극·비교·coverage·SVA)가 한 환경에서 맞물려 동작합니다.
+환경은 고립돼 있지 않습니다. [M05](../05_riscv_dv_stimulus/)의 제약 랜덤 ISG(instruction stream generator, 명령 스트림 생성기) 가 만든 ELF(컴파일·링크된 실행 파일 포맷 — 코어가 fetch 할 명령·데이터가 담긴 바이너리) 를 RTL 과 predictor ISS 가 _같이_ 실행하고, retire stream 이 scoreboard(판정)와 coverage(완전성, [M07](../07_coverage_special_areas/))로 흐릅니다. SVA 는 RVFI 신호 자체의 프로토콜 불변식(예: `rvfi_valid` 일 때 PC 정렬)을 _상시_ 검사해 monitor 의 가정이 깨지면 즉시 잡습니다. 이 네 가지(자극·비교·coverage·SVA)가 한 환경에서 맞물려 동작합니다.
 
 ### 4.3 CSR 와 RAL
 
@@ -258,7 +258,7 @@ predictor 가 ISS 를 DPI-C 로 호출할 때 핵심은 _RTL-driven lockstep_([M
 
 **DPI-C 호출의 비용과 상태 관리.** 매 retire 마다 `iss_step` 을 한 번씩 부르므로, 긴 회귀(수억 명령)에서는 DPI 경계를 넘는 _호출 자체_ 가 성능에 잡힙니다. 시뮬레이터는 SV↔C 경계에서 인자를 마샬링(복사)하므로, retire 당 호출이 빈번할수록 마샬링 비용이 누적됩니다 — 그래서 인자는 _값이 필요한 것만_ 좁게 넘기고(전체 레지스터 파일을 매번 복사하지 않음), 큰 상태는 C 측에 _남겨두는_ 것이 정석입니다. 즉 **ISS 의 상태(레지스터·메모리·CSR)는 SV 가 아니라 C 측 정적(static) 객체로 유지**되고, SV 는 "한 스텝 진행하라"는 트리거와 비교에 필요한 소수의 출력만 주고받습니다. ISS 핸들을 C 의 static 포인터로 두면 호출 간 상태가 자연히 보존됩니다.
 
-이 구조는 **멀티 코어/멀티 hart** 에서 중요한 함의를 갖습니다. hart 가 N 개면 ISS _인스턴스_ 도 N 개가 필요하고, 각 retire 가 _어느 hart_ 의 것인지에 따라 해당 인스턴스를 step 시켜야 합니다. 따라서 C 측은 단일 static 이 아니라 hart_id 로 인덱싱되는 인스턴스 배열/맵을 두고, DPI 시그니처에 `hart_id` 를 추가해 올바른 ISS 를 고릅니다. 이를 빠뜨리면 한 hart 의 retire 가 다른 hart 의 ISS 를 진행시켜 발산합니다. (DPI-C 함수의 재진입·자동 변수 의미는 [UVM M06 의 function vs function automatic](../../uvm/06_practical_patterns/) 과 같은 원리 — 호출 간 보존이 필요한 상태는 static, 호출별로 새로 필요한 것은 automatic.)
+이 구조는 **멀티 코어/멀티 hart**(hardware thread — RISC-V 에서 독립적으로 명령을 실행하는 하드웨어 실행 단위, 각자 architectural state 를 가짐) 에서 중요한 함의를 갖습니다. hart 가 N 개면 ISS _인스턴스_ 도 N 개가 필요하고, 각 retire 가 _어느 hart_ 의 것인지에 따라 해당 인스턴스를 step 시켜야 합니다. 따라서 C 측은 단일 static 이 아니라 hart_id 로 인덱싱되는 인스턴스 배열/맵을 두고, DPI 시그니처에 `hart_id` 를 추가해 올바른 ISS 를 고릅니다. 이를 빠뜨리면 한 hart 의 retire 가 다른 hart 의 ISS 를 진행시켜 발산합니다. (DPI-C 함수의 재진입·자동 변수 의미는 [UVM M06 의 function vs function automatic](../../uvm/06_practical_patterns/) 과 같은 원리 — 호출 간 보존이 필요한 상태는 static, 호출별로 새로 필요한 것은 automatic.)
 
 ### 5.2 superscalar 코어 — order 기반 정렬
 
@@ -283,7 +283,7 @@ SB -> ISS: "order 순서로"
 
 **그러면 "능동 요소"는 구체적으로 어디에 결선되는가.** "자극은 ELF 로"는 _명령 스트림_ 의 출처일 뿐, 코어는 실행 도중 메모리 응답과 인터럽트라는 _두 능동 입력_ 을 더 받습니다.
 
-- **메모리 모델 — backdoor preload vs bus agent.** ELF 의 코드/데이터를 코어가 보게 하는 방법은 두 가지입니다. (a) _backdoor preload_: 시뮬레이션 시작 전 메모리 배열에 ELF 이미지를 직접 써넣어 코어가 즉시 fetch/load 하게 함 — 빠르고 단순하지만 버스 프로토콜·지연·backpressure 는 검증하지 못합니다. (b) _bus agent_(능동): 코어의 메모리 인터페이스(예: AXI/AHB 류)에 driver 를 붙여 read/write 요청에 _프로토콜대로 응답_ 하고 임의 지연·에러 응답을 주입 — 메모리 서브시스템과 stall 경로까지 자극합니다. 실무에선 코드 영역은 backdoor 로 빠르게, 데이터·MMIO 영역은 bus agent 로 능동 응답하는 혼합 구성이 흔합니다.
+- **메모리 모델 — backdoor preload vs bus agent.** ELF 의 코드/데이터를 코어가 보게 하는 방법은 두 가지입니다. (a) _backdoor preload_: 시뮬레이션 시작 전 메모리 배열에 ELF 이미지를 직접 써넣어 코어가 즉시 fetch/load 하게 함 — 빠르고 단순하지만 버스 프로토콜·지연·backpressure(수신 측이 아직 못 받을 때 송신을 막아 흐름을 늦추는 역압) 는 검증하지 못합니다. (b) _bus agent_(능동): 코어의 메모리 인터페이스(예: AXI/AHB 류)에 driver 를 붙여 read/write 요청에 _프로토콜대로 응답_ 하고 임의 지연·에러 응답을 주입 — 메모리 서브시스템과 stall 경로까지 자극합니다. 실무에선 코드 영역은 backdoor 로 빠르게, 데이터·MMIO 영역은 bus agent 로 능동 응답하는 혼합 구성이 흔합니다.
 - **인터럽트 주입 컴포넌트.** 인터럽트는 ELF 안에 표현되지 않으므로 _별도 능동 컴포넌트_ 가 코어의 인터럽트 입력 핀(예: 외부/타이머/소프트웨어 인터럽트)을 시간/명령 경계 기준으로 assert 합니다. 이 컴포넌트가 인터럽트를 넣은 사실은 [M03 `rvfi_intr`](../03_rvfi_rvvi/) 로 retire 에 표시되어 predictor 가 같은 경계에서 trap 하게 됩니다(§5.1). _언제_ 주입할지(특정 명령이 특정 stage 에 있을 때 등)의 정밀 제어는 [M07 §4.2](../07_coverage_special_areas/) 에서 다룹니다.
 
 정리하면 env 결선은 비대칭입니다: monitor(수동)는 retire 를 _관찰만_, 메모리 bus agent 와 인터럽트 주입기(능동)는 코어에 _응답·이벤트를 인가_, 그리고 두 능동 입력의 효과는 다시 retire stream 으로 관찰되어 predictor 와 동기화됩니다.

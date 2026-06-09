@@ -21,9 +21,9 @@ title: "03 — 커맨드 분류: Admin / IO / Fabric"
 
 ### 1.1 시나리오 — IO 큐를 만들기 전에 해야 할 일
 
-NVMe 검증을 막 시작한 사람이 흔히 하는 실수가 있습니다. controller를 켜자마자 곧장 NVM Write 명령을 IO 큐에 던지는 것입니다. 그런데 IO 큐는 아직 존재하지 않습니다. IO 큐를 만들려면 먼저 **Admin** 커맨드(Create IO Submission/Completion Queue)를 admin 큐로 보내야 하고, 디바이스가 어떤 namespace와 능력을 가졌는지 알려면 **Identify** Admin 커맨드를 먼저 실행해야 합니다.
+NVMe 검증을 막 시작한 사람이 흔히 하는 실수가 있습니다. **controller**(SSD 안에서 명령을 받아 처리하는 제어 칩) 를 켜자마자 곧장 NVM Write 명령을 IO 큐에 던지는 것입니다. 그런데 IO 큐는 아직 존재하지 않습니다. IO 큐를 만들려면 먼저 **Admin** 커맨드(Create IO Submission/Completion Queue)를 admin 큐로 보내야 하고, 디바이스가 어떤 **namespace**(하나의 NVMe 디바이스를 논리적으로 나눈 독립 저장 영역 — OS에는 별개의 디스크처럼 보임) 와 능력을 가졌는지 알려면 **Identify**(controller·namespace의 사양과 능력을 조회하는 Admin 커맨드) 커맨드를 먼저 실행해야 합니다.
 
-NVMe 명령은 평평한 하나의 집합이 아니라 세 가지 분류 — **Admin / IO / Fabric** — 로 나뉩니다. controller를 *설정·관리*하는 명령(Admin), 실제로 *데이터를 옮기는* 명령(IO), 그리고 NVMe-oF 패브릭 환경에서만 쓰이는 *연결·속성* 명령(Fabric)입니다. 이 분류를 모르면 어떤 명령을 어느 큐로, 어떤 순서로 보내야 하는지 판단할 수 없습니다.
+NVMe 명령은 평평한 하나의 집합이 아니라 세 가지 분류 — **Admin / IO / Fabric** — 로 나뉩니다. controller를 *설정·관리*하는 명령(Admin), 실제로 *데이터를 옮기는* 명령(IO), 그리고 **NVMe-oF**(NVMe over Fabrics, NVMe를 네트워크 패브릭으로 확장해 원격 스토리지를 로컬처럼 쓰게 한 사양) 패브릭 환경에서만 쓰이는 *연결·속성* 명령(Fabric)입니다. 이 분류를 모르면 어떤 명령을 어느 큐로, 어떤 순서로 보내야 하는지 판단할 수 없습니다.
 
 ---
 
@@ -79,7 +79,7 @@ S2 -> S3: "IO 큐 생성 후 IO cmd 가능"
 | ③ | IO | NVM Write, NVM Read | 실제 데이터 전송 및 readback 검증 |
 
 :::note[로컬 PCIe vs NVMe-oF]
-①의 Fabric 단계는 *NVMe-oF 환경에서만* 등장합니다. 로컬 PCIe NVMe에서는 admin 큐가 PCIe 초기화로 바로 서므로 Connect 없이 Admin부터 시작합니다. NRT DV는 NVMe-oF이므로 Connect 후 admin QP(qid=5)가 활성화되는 흐름을 따릅니다.
+①의 Fabric 단계는 *NVMe-oF 환경에서만* 등장합니다. 로컬 PCIe NVMe에서는 admin 큐가 PCIe 초기화로 바로 서므로 Connect 없이 Admin부터 시작합니다. NRT DV는 NVMe-oF이므로 Connect 후 admin **QP**(Queue Pair, SQ+CQ를 한 쌍으로 묶은 통신 단위)가 **qid**(queue identifier, 각 큐에 매겨진 번호 — qid=0은 admin 큐) 5로 활성화되는 흐름을 따릅니다.
 :::
 
 ---
@@ -92,7 +92,7 @@ Admin 커맨드는 controller를 *설정·관리*합니다. 큐 관리(Create/De
 
 ### 4.2 IO Commands
 
-IO 커맨드는 실제 데이터를 옮깁니다. IO 명령 분류와 NRT DV의 `io_type` knob 매핑은 다음과 같습니다.
+IO 커맨드는 실제 데이터를 옮깁니다. IO 명령 분류와 NRT DV의 `io_type` **knob**(검증 시나리오의 동작을 바꾸기 위해 테스트에서 조절하는 설정값) 매핑은 다음과 같습니다.
 
 | 카테고리 | 명령 예 | NRT DV `NrtIoControlKnob_t.io_type` |
 |---|---|---|
@@ -104,7 +104,7 @@ NRT-TB의 IO 시퀀스는 `lib/vnrttb/include/seq_lib/vnrttb_nvme_io_virtual_seq
 
 #### 64바이트 SQE — 한 명령이 담아야 하는 것
 
-2장에서 SQE가 **64바이트 고정 크기**라고 했는데, 이 크기는 임의가 아니라 *한 IO 명령이 자기 일을 완전히 기술하는 데 필요한 필드들의 합*에서 나옵니다. 명령 하나에는 무엇을 할지(opcode), 어느 디바이스에(namespace identifier), 어느 위치를(starting LBA), 얼마나(length), 그리고 **데이터가 host 메모리의 어디에 있는지를 가리키는 포인터**가 들어가야 합니다. 이 포인터 필드가 특히 자리를 차지합니다 — 큰 전송을 위해 여러 메모리 영역을 가리켜야 하기 때문입니다. 이 모든 필드를 담되 큐 슬롯을 규칙적으로 배치(인덱싱·DMA가 단순해지도록)하기 위해, NVMe는 SQE를 64바이트라는 고정 크기로 정했습니다.
+2장에서 **SQE**(Submission Queue Entry, host가 SQ에 적재하는 한 개의 명령 항목)가 **64바이트 고정 크기**라고 했는데, 이 크기는 임의가 아니라 *한 IO 명령이 자기 일을 완전히 기술하는 데 필요한 필드들의 합*에서 나옵니다. 명령 하나에는 무엇을 할지(**opcode**, operation code — 어떤 명령인지를 나타내는 코드), 어느 디바이스에(**namespace identifier**(NSID), 대상 namespace의 번호), 어느 위치를(starting **LBA**(Logical Block Address, 스토리지를 일정 크기 블록으로 나눠 매긴 논리 주소)), 얼마나(length), 그리고 **데이터가 host 메모리의 어디에 있는지를 가리키는 포인터**가 들어가야 합니다. 이 포인터 필드가 특히 자리를 차지합니다 — 큰 전송을 위해 여러 메모리 영역을 가리켜야 하기 때문입니다. 이 모든 필드를 담되 큐 슬롯을 규칙적으로 배치(인덱싱·**DMA**(Direct Memory Access, CPU를 거치지 않고 장치가 메모리를 직접 읽고 쓰는 방식)가 단순해지도록)하기 위해, NVMe는 SQE를 64바이트라는 고정 크기로 정했습니다.
 
 #### 데이터는 어디에 있나 — PRP vs SGL
 
@@ -112,7 +112,7 @@ NRT-TB의 IO 시퀀스는 `lib/vnrttb/include/seq_lib/vnrttb_nvme_io_virtual_seq
 
 **PRP (Physical Region Page)** — host 메모리를 **페이지 단위**로 가리키는 방식입니다. SQE에는 PRP entry 두 개(PRP1·PRP2)를 담을 자리가 있습니다. 전송이 작아 한두 페이지면 충분하면 PRP1·PRP2가 곧장 그 페이지들을 가리킵니다. 더 많은 페이지가 필요하면 PRP2가 **PRP list**(페이지 주소들의 배열)를 가리키고, controller가 그 리스트를 따라가며 페이지들을 모읍니다. PRP의 전제는 *각 영역이 한 페이지에 정렬된 고정 크기*라는 점 — 그래서 구조가 단순하지만 임의의 byte-offset·가변 길이 영역은 표현하기 어렵습니다.
 
-**SGL (Scatter Gather List)** — host 메모리를 **(주소, 길이) 쌍의 리스트**로 가리키는 더 일반적인 방식입니다. 각 SGL descriptor가 임의의 시작 주소와 임의의 길이를 가질 수 있어, 페이지 정렬에 묶이지 않고 흩어진(scattered) 버퍼를 유연하게 기술합니다. descriptor들을 이어 붙이거나 다음 리스트를 가리키게 해서 큰 전송도 표현합니다. NVMe-oF(패브릭) 전송에서는 SGL이 기본인데, 원격 메모리 영역을 (주소, 길이, key)로 기술하는 RDMA 모델과 자연스럽게 들어맞기 때문입니다(4장).
+**SGL (Scatter Gather List)** — host 메모리를 **(주소, 길이) 쌍의 리스트**로 가리키는 더 일반적인 방식입니다. 각 SGL descriptor(데이터 영역 하나를 기술하는 항목)가 임의의 시작 주소와 임의의 길이를 가질 수 있어, 페이지 정렬에 묶이지 않고 흩어진(scattered) 버퍼를 유연하게 기술합니다. descriptor들을 이어 붙이거나 다음 리스트를 가리키게 해서 큰 전송도 표현합니다. NVMe-oF(패브릭) 전송에서는 SGL이 기본인데, 원격 메모리 영역을 (주소, 길이, key)로 기술하는 **RDMA**(Remote Direct Memory Access, 원격 장치가 host CPU를 거치지 않고 네트워크 너머 메모리를 직접 읽고 쓰는 기술) 모델과 자연스럽게 들어맞기 때문입니다(4장).
 
 ```d2
 direction: right
@@ -147,7 +147,7 @@ SQE.PRP1 -> SGL_PATH.D1: "가변 길이/흩어진 버퍼"
 
 ### 4.3 Fabric Commands
 
-Fabric 커맨드는 **NVMe-oF 환경에서만** 사용하며, capsule transport(RDMA SEND/RECV) 위에서 동작합니다. 인코딩이 독특합니다: **opcode `0x7F`가 Fabric command의 마커**이고, opcode의 sub-field(sub-opcode)가 실제 명령을 식별합니다.
+Fabric 커맨드는 **NVMe-oF 환경에서만** 사용하며, **capsule**(NVMe-oF에서 명령과 부속 데이터를 묶어 네트워크로 운반하는 전송 단위 — 4장) transport(RDMA SEND/RECV) 위에서 동작합니다. 인코딩이 독특합니다: **opcode `0x7F`가 Fabric command의 마커**이고, opcode의 sub-field(sub-opcode)가 실제 명령을 식별합니다.
 
 왜 하필 `0x7F` 하나를 마커로 골랐을까요? Fabric은 기존 NVMe보다 나중에 추가된 명령 집합이라, 이미 쓰이고 있던 Admin/IO opcode 공간과 **충돌하지 않는 예약값**을 하나 잡아야 했습니다. 그 자리(0x7F)를 "여기서부터는 Fabric"이라는 단일 진입점으로 정해 두고, 실제 명령 수십 종은 그 안의 sub-opcode로 확장하는 방식입니다. 이렇게 하면 기존 디코더의 opcode 의미를 건드리지 않으면서 Fabric 명령군을 통째로 덧붙일 수 있습니다 — 하나의 예약 opcode를 게이트로 삼아 명령 공간을 *2단계*로 넓힌 설계 의도입니다.
 

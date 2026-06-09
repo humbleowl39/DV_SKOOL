@@ -28,9 +28,11 @@ Ch01~Ch10 의 모든 개념을 *하나의 가상 검증 프로젝트*로 묶어 
 
 ## 11.1 Verification Plan (V-Plan)
 
+**V-Plan**(verification plan, 무엇을 어떻게 검증할지 — 기능·시나리오·coverage 목표를 정리한 검증 계획 문서)부터 세웁니다.
+
 ### 11.1.1 DUT 정의
 
-**DUT**: DDR5 Memory Controller IP (parameterized)
+**DUT**(design under test, 지금 검증하려는 대상 설계): DDR5 Memory Controller IP (parameterized)
 - Spec 지원: DDR5 + LPDDR5 (configurable)
 - 채널: per-DIMM 2 independent channels
 - BL: 16 (default), 32 (optional)
@@ -114,6 +116,8 @@ ddr5_tb/
 ```
 
 ### 11.2.2 Top-level connection
+
+아래 그림에서 **vif**(virtual interface, TB 컴포넌트가 DUT의 핀 묶음(interface)에 접근하기 위한 핸들)를 통해 driver/monitor가 DUT 신호에 연결됩니다.
 
 ```d2
 direction: down

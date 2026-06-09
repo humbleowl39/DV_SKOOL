@@ -21,7 +21,7 @@ title: "Module 03 — Memory Virtualization"
 
 ### 1.1 시나리오 — VM 의 _TLB miss_ 가 _6 배_ 비싸다
 
-VM 에서 memory-intensive 워크로드 (예: database) 를 실행했을 때 bare metal 대비 30% 느린 원인을 추적하면 대부분 TLB miss 비용으로 귀결됩니다. Bare metal 에서 TLB miss 시 page walk 는 4-level page table 을 순회하는 최대 4 회 메모리 접근으로 끝납니다. 그런데 shadow page table 을 쓰는 VM 에서는 Guest 가 PT 를 수정할 때마다 hypervisor 가 동기화를 위해 VM Exit 을 발생시켜 비용이 폭증합니다. EPT (Extended Page Tables) 로 넘어오면 VM Exit 문제는 해결되지만, Guest PT walk 의 각 단계마다 Host PT walk 가 중첩되어 worst-case 에서 **24 회** 메모리 접근이 필요합니다 [Wikipedia SLAT, 2025]. Bare metal 의 6 배에 달하는 비용입니다.
+VM 에서 memory-intensive 워크로드 (예: database) 를 실행했을 때 bare metal 대비 30% 느린 원인을 추적하면 대부분 **TLB**(Translation Lookaside Buffer — 최근 주소 변환 결과를 캐시하는 고속 버퍼) miss 비용으로 귀결됩니다. 여기서 세 주소를 먼저 구분하면: **VA**(Virtual Address — 프로그램이 보는 가상 주소), **IPA**(Intermediate Physical Address — Guest 가 "물리 주소"로 믿지만 실제로는 한 단계 더 변환이 남은 중간 주소), **PA**(Physical Address — 진짜 DRAM 의 물리 주소)입니다. Bare metal 에서 TLB miss 시 **page walk**(TLB 에 없을 때 page table 을 단계별로 따라가 변환을 찾는 과정)는 4-level page table 을 순회하는 최대 4 회 메모리 접근으로 끝납니다. 그런데 **shadow page table**(EPT 없던 시절 hypervisor 가 VA→PA 를 직접 관리하던 구식 가상화 page table)을 쓰는 VM 에서는 Guest 가 PT 를 수정할 때마다 hypervisor 가 동기화를 위해 VM Exit(Guest 실행이 멈추고 hypervisor 로 넘어가는 전환) 을 발생시켜 비용이 폭증합니다. **EPT**(Extended Page Tables — IPA→PA 변환을 하드웨어가 자동 처리하는 2단계 page table; Intel 명칭, 일반 용어로는 SLAT=Second Level Address Translation) 로 넘어오면 VM Exit 문제는 해결되지만, Guest PT walk 의 각 단계마다 Host PT walk 가 중첩되어 worst-case 에서 **24 회** 메모리 접근이 필요합니다 [Wikipedia SLAT, 2025]. Bare metal 의 6 배에 달하는 비용입니다.
 
 VMware 측정에 따르면 EPT 가 shadow PT 대비 MMU-intensive workload 에서 600% 향상을 보인다는 결과도 있지만, EPT 자체의 worst-case cliff 는 여전히 존재합니다. 이 cliff 의 영향을 최소화하는 가장 효과적인 도구가 **huge page (2 MB / 1 GB)** 입니다. page 크기가 커질수록 TLB 한 entry 가 커버하는 영역이 넓어지고 walk 깊이가 줄어들어 miss 비용이 크게 감소합니다. 일반 환경에서는 선택 사항이지만, 가상화 환경에서는 쓰지 않을 경우 손실이 너무 크기 때문에 사실상 필수입니다.
 
@@ -149,7 +149,7 @@ pa_t walk_2stage(va_t va, ttbr_t guest_ttbr_ipa, vttbr_t hyp_vttbr_pa) {
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) Bare metal 의 5 회가 가상화에서 25 회 — 5 배 worst-case.** 실제로는 TLB hit + Page Walk Cache (PWC) 로 훨씬 적게 가지만, miss 시 이 cliff 가 _존재한다_ 는 게 huge page 의 동기.<br>
+**(1) Bare metal 의 5 회가 가상화에서 25 회 — 5 배 worst-case.** 실제로는 TLB hit + **Page Walk Cache**(PWC — page table 의 중간 레벨 entry 들을 따로 캐시해 walk 를 단축하는 보조 캐시) 로 훨씬 적게 가지만, miss 시 이 cliff 가 _존재한다_ 는 게 huge page(보통 4 KB 인 page 를 2 MB·1 GB 등 큰 단위로 묶어 TLB entry 하나가 더 넓은 영역을 덮게 하는 것) 의 동기.<br>
 **(2) Stage-1 의 _각 entry_ 가 IPA 라는 게 핵심** — 그래서 Stage-1 walk 의 _모든 단계마다_ Stage-2 가 끼어듭니다. Stage-1 만 4 회가 아니라 _5 × Stage-2_ 가 됩니다.
 :::
 ---
@@ -378,7 +378,7 @@ TLB Miss: 최대 25 회 메모리 접근 (수백 cycle)
 :::note[TLB 가 _어떻게_ 25 회 cliff 를 평소엔 숨기나 — combined entry]
 "TLB hit 이면 1 cycle" 이라고 했는데, 가상화에서 TLB 가 실제로 _무엇을_ 담는지가 cliff 가 평소에 안 보이는 이유의 핵심입니다.
 
-가상화 TLB entry 는 Stage-1 결과(GVA→IPA)나 Stage-2 결과(IPA→PA)를 따로 담지 않고, **최종 GVA→HPA(즉 GVA→PA) 를 _직접_** 담습니다 — 이것을 combined(또는 merged) translation 이라 합니다. 그래서 한 번 walk 를 마치고 나면 그 결과가 TLB 에 통째로 들어가고, 같은 페이지를 다시 접근할 때는 TLB 가 GVA 를 보고 _두 stage 를 모두 건너뛰어_ 곧장 HPA 를 내놓습니다.
+가상화 TLB entry 는 Stage-1 결과(GVA→IPA; GVA=Guest Virtual Address, Guest 안의 가상 주소)나 Stage-2 결과(IPA→PA)를 따로 담지 않고, **최종 GVA→HPA(Host Physical Address, 진짜 물리 주소; 즉 GVA→PA) 를 _직접_** 담습니다 — 이것을 combined(또는 merged) translation 이라 합니다. 그래서 한 번 walk 를 마치고 나면 그 결과가 TLB 에 통째로 들어가고, 같은 페이지를 다시 접근할 때는 TLB 가 GVA 를 보고 _두 stage 를 모두 건너뛰어_ 곧장 HPA 를 내놓습니다.
 
 즉 25 회 walk 는 _이 combined entry 를 _만들기 위한_ miss 1 회_ 의 비용일 뿐이고, 이후의 모든 hit 는 stage 수와 무관하게 1 cycle 입니다. 워크로드의 working set 이 TLB 안에 들어가면 25 회 cliff 는 거의 보이지 않다가, working set 이 TLB 용량을 넘기는 순간(VM 다수·큰 메모리·낮은 locality) capacity miss 가 늘며 cliff 가 드러납니다. 그래서 huge page 가 결정적입니다 — entry 하나가 더 넓은 영역을 덮으면 같은 working set 을 더 적은 entry 로 담아 miss 자체를 줄이기 때문입니다.
 :::
@@ -510,7 +510,7 @@ STEP 2: User-space 앱이 HPA (Huge Page Area) 위에서 직접 동작
 **왜 헷갈리는가**: "둘 다 2-stage HW" 라는 추상의 같음.
 :::
 :::danger[❓ 오해 5 — 'TLB invalidate 는 한 vCPU 에만 하면 된다']
-**실제**: ARM `TLBI VMALLE1IS` / Intel `INVEPT` 는 inner-shareable broadcast 가 필요. IPI 가 모든 vCPU / PE 에 도달하지 않으면 일부 코어가 stale entry 사용 → silent corruption.<br>
+**실제**: ARM `TLBI VMALLE1IS` / Intel `INVEPT` 는 inner-shareable broadcast 가 필요. **IPI**(Inter-Processor Interrupt — 한 CPU 코어가 다른 코어에게 보내는 인터럽트) 가 모든 vCPU / PE 에 도달하지 않으면 일부 코어가 stale entry 사용 → silent corruption.<br>
 **왜 헷갈리는가**: bare metal 의 TLBI 가 local 만으로 충분했던 경험.<br>
 **한 단계 더**: TLBI 가 broadcast 되어도 _완료 순서_ 가 보장되는 것은 아닙니다 — TLBI 뒤에 `DSB` fence 를 두어 다른 코어의 무효화 완료를 _기다려야_ 합니다. 이 순서 문제의 하드웨어 뿌리(write 가 store buffer 에 지연 commit 되어 다른 코어가 옛 값을 보는 메커니즘)는 [computer_architecture — Memory Hierarchy](../../computer_architecture/04_memory_hierarchy/) 의 store buffer / memory reorder 설명을 참조하세요. 여기서는 "broadcast 만으로는 부족하고 fence 가 필요하다" 만 잡으면 됩니다.
 :::

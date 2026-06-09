@@ -22,13 +22,13 @@ title: "Module 10 — Debug Case 3: C2H Tracker Error"
 
 ### 1.1 시나리오 — _Wrong PA_ DMA write
 
-당신의 RDMA test 가 `F-C2H-MATCH` fatal. DUT 가 host 의 _wrong PA_ 에 DMA write.
+당신의 RDMA test 가 `F-C2H-MATCH` fatal. **C2H**(Card-to-Host — DUT 가 host 메모리에 쓰는 DMA 방향)에서, DUT 가 host 의 _wrong PA_(Physical Address — 실제 물리 메모리 주소) 에 **DMA**(CPU 를 안 거치고 메모리에 직접 쓰기) write.
 
 가능 원인:
-- **PTW bug**: virtual → physical 변환 잘못.
-- **QP routing**: 잘못된 QP 의 MR 사용.
-- **MR page table**: page entry corruption.
-- **Completion FSM**: PA 계산 logic bug.
+- **PTW bug**(Page Table Walk — 가상→물리 주소 변환 과정): virtual → physical 변환 잘못.
+- **QP routing**(어느 QP 의 트래픽인지 갈라 보내는 것): 잘못된 QP 의 MR(등록된 메모리 영역) 사용.
+- **MR page table**(MR 의 가상→물리 변환표): page entry corruption.
+- **Completion FSM**(완료 처리를 담당하는 상태 머신): PA 계산 logic bug.
 
 C2H tracker 의 진단 로그 `W-C2H-MATCH-*`:
 - _Expected_ PA 큐.
@@ -121,7 +121,7 @@ FATAL -> DUMP
             QP 0x05 의 expected WRITE PA = 0x8800_3000, 3040, 3080
               ▶ actual (0x8800_2040) 가 expected (0x8800_3000 …) 와
                 page (4KB) 단위 1 page 차이
-              ▶ 가설: PTW miss 결과의 PFN 이 1 page 어긋남
+              ▶ 가설: PTW miss 결과의 PFN(Page Frame Number — 물리 페이지 번호) 이 1 page 어긋남
 
    Step 3   다른 QP 의 PA 리스트와 cross-reference
             ─────────────────────────────────────────
@@ -169,6 +169,10 @@ FATAL -> DUMP
 
 ### 4.1 3 실패 유형 — 첫 분기
 
+> **등장 용어** — **ordering**(트랜잭션이 도착하는 순서), **RC**(Reliable Connected — 순서 보장+신뢰 전달을 보장하는 연결형 RDMA 서비스; 따라서 **FIFO**(First-In-First-Out, 들어온 순서 그대로) 순서를 강제), **OPS/SR**(Out-of-order Packet Sending / Selective Repeat — 성능을 위해 순서 무관 송신을 허용하고 빠진 것만 골라 재전송; 따라서 **OoO**(Out-of-Order, 순서 뒤섞임) 도착이 정상), **transfer_size**(한 verb 가 옮기기로 한 데이터 크기), **dest_qp**(패킷이 도착해야 할 목적지 QP 번호 — BTH 헤더의 DestQP 필드).
+
+
+
 ```d2
 direction: down
 
@@ -206,7 +210,7 @@ ROOT -> F3
 | `W-C2H-MATCH-0001` | WARNING | `Current WRITE unprocessed PA List: %p` (fatal 직전 진단) | `vrdma_c2h_tracker.svh:783` |
 | `W-C2H-MATCH-0002` | WARNING | `Current READ unprocessed PA List: %p` | `vrdma_c2h_tracker.svh:784` |
 | `W-C2H-MATCH-0003` | WARNING | `Current RECV unprocessed PA List: %p` | `vrdma_c2h_tracker.svh:785` |
-| `W-C2H-MATCH-0004` | WARNING | `Current SRQ RECV unprocessed PA List: %p` | `vrdma_c2h_tracker.svh:788` |
+| `W-C2H-MATCH-0004` | WARNING | `Current SRQ RECV unprocessed PA List: %p` (SRQ = Shared Receive Queue, 여러 QP 가 공유하는 Receive Queue) | `vrdma_c2h_tracker.svh:788` |
 
 #### Ordering 위반
 

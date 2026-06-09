@@ -75,7 +75,7 @@ RXMAC -> HOST_RX
 
 1. **Line-rate (400 Gbps) 를 single-cycle stall 없이 채워야 함** → TX/RX 데이터 path 가 한 사이클에 multi-segment 처리 가능한 Segmented IF.
 2. **상위 stack (TOE/IP) 가 byte-level frame 만 다루게 해야 함** → host 측은 표준 AXI-Stream, byte 마스크 (tkeep), 사이드밴드 (tuser) 만 노출.
-3. **흐름제어 / 시각 동기 / 통계는 main path 와 독립이어야 함** → PFC, PTP, RMON counter 가 각각 별도 블록으로 분리.
+3. **흐름제어 / 시각 동기 / 통계는 main path 와 독립이어야 함** → PFC, PTP, **RMON**(Remote Monitoring — frame 수·byte 수·에러 수 등을 누적하는 표준 네트워크 통계 카운터 집합) counter 가 각각 별도 블록으로 분리.
 
 이 세 요구의 교집합이 곧 **5 블록 + 2 인터페이스** 형상.
 
@@ -174,6 +174,8 @@ endclass
 | **Config (AXI-Lite)** | AXI-Lite | 모든 블록의 control register | 모드/MTU/MAC addr/FEC/PFC config |
 | **Flow Control** | RX MAC, Config | TX MAC stall vector | Pause/PFC parsing + TX scheduler 제어 |
 | **PTP / 1588** | Config + frame timing | TX/RX timestamp out | TS capture + correction field 갱신 |
+
+여기서 **AXI-Lite**(ARM AMBA의 경량 레지스터 버스 — 한 번에 한 워드씩 주소를 지정해 control/status 레지스터를 읽고 쓰는 단순 인터페이스, 데이터 path 의 고속 AXI-Stream 과 별개)는 frame 데이터가 아니라 _설정 값_ 을 주고받는 통로이고, **PTP**(Precision Time Protocol, IEEE 1588 — 네트워크 장비끼리 ns 정밀도로 시계를 맞추는 표준)는 frame 이 MAC 을 통과하는 정확한 시각을 하드웨어로 찍어 주는 블록입니다.
 
 ### 4.2 두 인터페이스의 의미 차이
 

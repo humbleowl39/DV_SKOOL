@@ -22,15 +22,15 @@ title: "Module 05 — Adding New Components: 4원칙"
 ### 1.1 시나리오 — _수십 명_ 의 _동시 변경_ regression
 
 당신의 RDMA-TB. 팀 30 명 동시 작업. 매주:
-- 5 개 PR merge.
-- _2-3 개 regression_ (다른 사람의 변경이 자기 test 깨뜨림).
+- 5 개 PR(Pull Request — 코드 변경을 본 브랜치에 합치자고 올리는 리뷰 요청) merge.
+- _2-3 개 regression_(여기서는 "회귀" — 잘 돌던 테스트가 누군가의 변경으로 다시 깨지는 것; DV 에서 regression 은 "여러 테스트를 한꺼번에 돌리는 묶음"을 뜻하기도 함) (다른 사람의 변경이 자기 test 깨뜨림).
 - 평균 _2 시간_ debug per regression.
 
 **시간 손실: 30 명 × 4-6 시간/주 = 120-180 시간/주**.
 
 원인 추적: 대부분 _"내가 필요한 기능을 위해 driver 코드 1 줄 변경"_ → 다른 test 의 hidden assumption 깨짐.
 
-해법은 **4 원칙**으로 요약됩니다. 먼저 **Open/Closed 원칙** — 기존 코드는 수정하지 않고 추가만 합니다. driver 를 건드리면 그 파일을 쓰는 30 명 모두에게 영향이 갑니다. 대신 새 컴포넌트를 추가하고 기존 **AP 를 구독**하면 driver 는 한 줄도 변경하지 않아도 됩니다. 인터페이스를 바꾸는 것은 모든 연결 지점을 깨뜨리므로, 기존 class 가 부족하다면 **서브클래싱으로 override** 하고, 동작의 차이는 hardcode 가 아닌 **config_db** 로 제어합니다. 이 4 가지 규칙이 PR 리뷰의 자동 체크리스트가 됩니다. "이 변경이 4 원칙 중 어느 것을 위반하는가?" 라는 한 질문으로 위반이 없으면 merge, 있으면 원칙에 맞는 방향을 제시합니다. 결과적으로 기존 경험에서 regression 이 약 80% 감소했습니다.
+해법은 **4 원칙**으로 요약됩니다. 먼저 **Open/Closed 원칙** — 기존 코드는 수정하지 않고 추가만 합니다. driver 를 건드리면 그 파일을 쓰는 30 명 모두에게 영향이 갑니다. 대신 새 컴포넌트를 추가하고 기존 **AP**(Analysis Port — 한 컴포넌트가 만든 transaction 을 구독자들에게 동시에 뿌리는 1:N 방송 통로) **를 구독**하면 driver 는 한 줄도 변경하지 않아도 됩니다. 인터페이스를 바꾸는 것은 모든 연결 지점을 깨뜨리므로, 기존 class 가 부족하다면 **서브클래싱으로 override**(상속받아 동작을 덮어쓰기) 하고, 동작의 차이는 hardcode 가 아닌 **config_db**(UVM 의 전역 설정 저장소 — 컴포넌트가 이름으로 설정값을 넣고 꺼낸다) 로 제어합니다. 이 4 가지 규칙이 PR 리뷰의 자동 체크리스트가 됩니다. "이 변경이 4 원칙 중 어느 것을 위반하는가?" 라는 한 질문으로 위반이 없으면 merge, 있으면 원칙에 맞는 방향을 제시합니다. 결과적으로 기존 경험에서 regression 이 약 80% 감소했습니다.
 
 RDMA-TB 는 수십 명이 동시에 변경하는 코드베이스입니다. "기존 동작을 바꾸지 않으면서 새 기능을 추가한다" 는 규율이 깨지면 회귀 (regression) 가 폭증합니다. 이 4 원칙은 그 규율을 명문화한 것입니다.
 
@@ -72,7 +72,7 @@ RDMA-TB 확장 ≈ **임대 빌딩에 사무실 한 칸 더 짓기**.<br>
 
 ## 3. 작은 예 — Congestion monitor 추가의 올바른 경로 vs 잘못된 경로
 
-요구사항: "Congestion control 이벤트 (RTT, ECN, NACK) 를 모니터링하는 컴포넌트를 추가하라."
+요구사항: "Congestion control(혼잡 제어 — 네트워크가 막힐 때 송신 속도를 조절하는 기법) 이벤트 (RTT(Round-Trip Time, 왕복 지연 시간), ECN(Explicit Congestion Notification, 라우터가 혼잡을 알리려 패킷에 찍는 표시), NACK(Negative ACK, 잘못 받았다는 부정 응답)) 를 모니터링하는 컴포넌트를 추가하라."
 
 ### 잘못된 경로 (4 원칙 위반)
 
@@ -94,7 +94,7 @@ RDMA-TB 확장 ≈ **임대 빌딩에 사무실 한 칸 더 짓기**.<br>
 | ② | DRY via AP | `vrdma_cc_monitor` 가 `drv.completed_wqe_ap`, `cq_handler.cqe_validation_cqe_ap` 를 구독 |
 | ③ | Interface Stability | 기존 AP 시그니처 불변. 필요한 cc 정보가 cqe object 에 없으면 cqe object 에 _필드 추가_ (시그니처 그대로) |
 | ④ | Stateless 보존 | RTT 누적 / ECN 카운트는 `vrdma_cc_monitor` 자체에 보유 — handler 에 절대 추가 안 함 |
-| ⑤ | Opt-in | cfg 의 `enable_cc_monitor` 플래그로 enable. 끄면 base TB 와 동일 동작 |
+| ⑤ | Opt-in(기본은 꺼져 있고 켤 때만 동작 — 끄면 base 와 동일) | cfg 의 `enable_cc_monitor` 플래그로 enable. 끄면 base TB 와 동일 동작 |
 
 ```c
 // 잘못된 경로 (driver 침투)                         |  올바른 경로 (AP 구독)
@@ -135,7 +135,7 @@ endclass                                            |       drv.completed_wqe_ap
 :::
 ### 원칙 2 — Interface Stability: 안정된 인터페이스 + 객체 기반 통신
 
-**규칙**: 컴포넌트 간 인터페이스 (TLM port/export) 는 고정. 데이터 교환은 transaction object 를 통해서만.
+**규칙**: 컴포넌트 간 인터페이스 (TLM(Transaction-Level Modeling — 신호 단위가 아니라 "트랜잭션" 단위로 컴포넌트끼리 데이터를 주고받는 UVM 통신 방식) port/export — 트랜잭션을 내보내는/받는 연결 단자) 는 고정. 데이터 교환은 transaction object(한 동작에 필요한 정보를 담아 컴포넌트 사이로 전달되는 데이터 객체) 를 통해서만.
 
 | 변경 방법 | 영향 범위 | 권장? |
 |----------|----------|-------|

@@ -21,9 +21,9 @@ title: "Module 06 — Error Handling Path"
 
 ### 1.1 시나리오 — _하나의 에러_, _전체 fail_
 
-의도된 NAK 시나리오를 작성한다고 해 봅시다. 한 QP 에 rkey violation 을 inject 해서 NAK 를 받고 WC error 를 확인하는 것이 목표입니다. 그런데 막상 시뮬을 돌리면 **시뮬레이션 전체가 FATAL** 로 종료되고, 다른 정상 QP 의 verb 까지 fail 로 처리됩니다. Scoreboard 가 하나의 NAK 를 전역 fatal 로 처리해 다른 QP 의 정상 시나리오까지 abort 시킨 것입니다.
+의도된 **NAK**(Negative Acknowledgement — 수신 측이 "이 요청은 처리 못 한다/거부한다"고 보내는 부정 응답) 시나리오를 작성한다고 해 봅시다. 한 QP 에 **rkey violation**(원격 접근 열쇠 rkey 가 틀려 권한 위반 — 허용되지 않은 메모리에 접근 시도) 을 **inject**(고의로 주입) 해서 NAK 를 받고 **WC**(Work Completion — 작업 완료 결과; 성공 또는 어떤 에러인지를 담음) error 를 확인하는 것이 목표입니다. 그런데 막상 시뮬을 돌리면 **시뮬레이션 전체가 FATAL** 로 종료되고, 다른 정상 QP 의 verb 까지 fail 로 처리됩니다. Scoreboard 가 하나의 NAK 를 전역 fatal 로 처리해 다른 QP 의 정상 시나리오까지 abort 시킨 것입니다.
 
-해법은 **에러 격리 (isolation)** 입니다. 가장 좁은 단위인 **per-cmd gate** 부터 시작합니다. 이번 NAK 는 의도된 것이므로 `expected_error=1` 로 표시하면 해당 cmd 하나만 fail 처리됩니다. 그런데 한 verb 가 에러를 받으면 그 QP 자체가 에러 상태로 전이될 수 있습니다. 이때 **per-QP gate** (`isErrQP()`) 가 개입해 그 QP 의 후속 verb 만 skip 시키고, 나머지 QP 의 정상 검증은 계속 진행합니다. 더 광범위한 fault injection 시나리오라면 **per-component gate** (`err_enabled`) 를 사용해 해당 comparator 또는 tracker 전체의 검증 수위를 완화할 수도 있습니다. 이 3 단위 게이트를 올바르게 조합해야 의도된 에러를 검증하면서도 다른 정상 시나리오를 오염시키지 않는 정밀한 에러 시나리오가 완성됩니다.
+해법은 **에러 격리 (isolation)** 입니다. 가장 좁은 단위인 **per-cmd gate** 부터 시작합니다. 이번 NAK 는 의도된 것이므로 `expected_error=1` 로 표시하면 해당 cmd 하나만 fail 처리됩니다. 그런데 한 verb 가 에러를 받으면 그 QP 자체가 에러 상태로 전이될 수 있습니다. 이때 **per-QP gate** (`isErrQP()`) 가 개입해 그 QP 의 후속 verb 만 skip 시키고, 나머지 QP 의 정상 검증은 계속 진행합니다. 더 광범위한 **fault injection**(고장 주입 — 의도적으로 에러를 만들어 에러 처리 경로를 검증하는 기법) 시나리오라면 **per-component gate** (`err_enabled`) 를 사용해 해당 comparator 또는 tracker 전체의 검증 수위를 완화할 수도 있습니다. 이 3 단위 게이트를 올바르게 조합해야 의도된 에러를 검증하면서도 다른 정상 시나리오를 오염시키지 않는 정밀한 에러 시나리오가 완성됩니다.
 
 RDMA 검증에서 "에러 시나리오" 는 정상 시나리오만큼 중요합니다. 그러나 에러 케이스에 다른 정상 검증이 휩쓸려가면 (false positive fatal) 디버깅이 불가능해집니다. RDMA-TB 는 에러를 **격리 (isolate)** 하면서도 **검증 (check)** 하는 정밀한 메커니즘을 가지고 있습니다.
 
@@ -148,7 +148,7 @@ this.RDMAQPDestroy(.t_seqr(seqr), .qp_num(qp_num), .err(1));
 
 | 단위 | 메커니즘 | 적용 범위 | 사용 시나리오 |
 |------|---------|----------|------------|
-| 단일 cmd | `cmd.expected_error = 1` | 한 verb 발행만 | 특정 read 가 RAE 를 받기를 예상할 때 |
+| 단일 cmd | `cmd.expected_error = 1` | 한 verb 발행만 | 특정 read 가 RAE(Remote Access Error — 원격 메모리 접근 권한 위반 에러) 를 받기를 예상할 때 |
 | 단일 QP | `qp.setErrState(1)` (자동: SQDestroy.err / 에러 CQE) | 해당 QP 의 모든 후속 verb | 한 QP 에 대한 광범위 에러 테스트 |
 | 모든 QP, 한 컴포넌트 | static `err_enabled = 1` | 해당 comparator/tracker 전체 | 실험적 fault injection 시 검증 통째로 완화 |
 | 컴포넌트 자체 OFF | `enable_error_cq_poll = 0` / `turn_off = 1` | 해당 컴포넌트 전부 | 에러 CQ / 패킷 모니터 자체를 비활성화 |
@@ -175,7 +175,7 @@ destroy_qp.setErrState(cmd.err);
 한 번 ErrQP 로 마킹되면 이후 그 QP 로 가는 모든 verb 는 silently skip 되어 에러 cascading 이 차단됩니다.
 
 :::note[메커니즘 — `completed_wqe_ap` 차단이 in-order completion 을 보존하는 원리]
-RC QP 는 한 WQE 가 에러로 끝나면 그 _뒤_ 에 줄 서 있던 outstanding WQE 들이 전부 flush(`WR_FLUSH_ERR`)됩니다 (M07 의 Requester Class B). 그런데 spec 규칙은 미묘합니다 — **completion 은 여전히 _post 한 순서_ 로 나와야 하고, 에러를 _최초로_ 일으킨 WQE 의 status 는 본래 에러 코드(예: `REM_ACCESS_ERR`)로, 그 뒤 WQE 들은 `FLUSH_ERR` 로** 보고돼야 합니다. 즉 "순서 보존 + 최초 트리거 status 보존" 두 가지가 동시에 지켜져야 합니다.
+**RC**(Reliable Connected — 순서 보장과 신뢰 전달을 보장하는 RDMA 연결 방식) QP 는 한 WQE 가 에러로 끝나면 그 _뒤_ 에 줄 서 있던 outstanding WQE 들이 전부 flush(`WR_FLUSH_ERR` — 앞선 에러 때문에 처리되지 못하고 비워진 작업의 완료 상태)됩니다 (M07 의 Requester Class B). 그런데 spec 규칙은 미묘합니다 — **completion 은 여전히 _post 한 순서_ 로 나와야 하고, 에러를 _최초로_ 일으킨 WQE 의 status 는 본래 에러 코드(예: `REM_ACCESS_ERR` — 원격 접근 권한 위반)로, 그 뒤 WQE 들은 `FLUSH_ERR` 로** 보고돼야 합니다. 즉 "순서 보존 + 최초 트리거 status 보존" 두 가지가 동시에 지켜져야 합니다.
 
 scoreboard 쪽에서 이를 깨지 않으려면, ErrQP 가 된 뒤의 WQE 들을 _정상 완료 스트림_ 에 섞으면 안 됩니다. 그래서 driver 는 `isErrQP()` 인 동안 **`completed_wqe_ap.write()` 를 차단** 합니다 — flush 되는 WQE 들이 "정상 완료" 로 카운트되어 scoreboard 의 expected 순서를 어긋나게 만드는 것을 막는 것입니다. 동시에 최초 트리거 WQE 의 에러 자체는 `cqe_ap` 를 통해 `cqe_validation_checker` 가 그대로 받아 검증합니다(오해 3). 결과적으로 "에러는 한 번, 그것도 _최초 WQE_ 의 status 로만 기록되고, 뒤따르는 flush 는 정상 완료 카운트를 오염시키지 않는다" 가 보장되어 completion 순서가 깨지지 않습니다.
 :::

@@ -19,6 +19,8 @@ title: "Module 03 — AXI-Stream"
 
 ## 1. Why care? — 이 모듈이 왜 필요한가
 
+기본 용어를 먼저 풀어 둡니다. **AXI-Stream**(주소 없이 데이터를 한 방향으로 흘려보내는 점대점 streaming protocol — AXI 의 5채널 대신 데이터 채널 1개). **memory-mapped**(주소를 줘서 특정 위치를 read/write 하는 방식 — 일반 AXI 가 이쪽). **point-to-point**(점대점 — master 한 개와 slave 한 개를 곧장 잇는 단방향 연결). **packet / frame**(여러 beat 가 모여 "한 덩어리"를 이루는 단위; 네트워크 데이터의 한 묶음). **beat**(한 클럭에 오가는 데이터 한 칸). **master**(데이터를 보내는 source), **slave**(받는 sink). AXI-Stream 신호는 모두 `T` 로 시작합니다: **TDATA**(데이터), **TVALID/TREADY**(handshake 쌍), **TLAST**(이 beat 가 packet 의 마지막임을 표시), **TKEEP**(어느 byte 가 유효한지의 마스크), **TUSER**(사이드밴드 부가 정보).
+
 ### 1.1 시나리오 — 왜 AXI 가 _아니라_ AXI-Stream 인가?
 
 AI 가속기의 _weight loader_ 를 설계하는 상황을 생각해 봅시다. DDR 에서 weight 를 _연속적으로_ 읽어서 가속기로 흘려보낼 때, AXI 와 AXI-Stream 의 차이가 결정적입니다.
@@ -104,7 +106,7 @@ AXIS: "AXI-Stream (point-to-point)\n채널 1개, 주소 없음, 단방향" {
 
 ## 3. 작은 예 — 100-byte 패킷 한 개를 512-bit Stream 에서 2 beat 로 cycle 단위 추적
 
-가장 단순한 시나리오. **TDATA 폭 = 512-bit (64-byte)**, 100-byte Ethernet payload 를 한 packet 으로 전송. Slave 는 beat 1 직후 1 cycle 동안 TREADY=0 으로 backpressure 를 건다.
+가장 단순한 시나리오. **TDATA 폭 = 512-bit (64-byte)**, 100-byte Ethernet **payload**(헤더를 뺀 실제 데이터 본문) 를 한 packet 으로 전송. Slave 는 beat 1 직후 1 cycle 동안 TREADY=0 으로 **backpressure**(받는 쪽이 "잠깐 못 받음"을 READY=0 으로 알려 보내는 쪽을 멈춰 세우는 역압력) 를 건다.
 
 ### Cycle-by-cycle timeline
 
@@ -311,6 +313,8 @@ IC -> S1: "TDEST=1"
 | 프레임 경계 | Burst Length 로 | **TLAST** 로 |
 | 대표 사용처 | CPU↔MC, DMA | **TOE↔DCMAC**, 비디오, DSP |
 
+> 약어: **TOE**(TCP Offload Engine — TCP 처리를 HW 로 떠넘기는 가속 블록), **DCMAC**(고속 Ethernet MAC — 프레임 송수신 계층), **DSP**(Digital Signal Processing — 신호 처리), **MC**(Memory Controller).
+
 ### 5.2 AXI-Stream 신호 일람
 
 | 신호 | 방향 (Master→Slave) | 역할 |
@@ -323,7 +327,7 @@ IC -> S1: "TDEST=1"
 | TSTRB [N/8-1:0] | M→S | NULL/Position byte 구분 (선택) |
 | TID | M→S | 스트림 식별자 (멀티 스트림) |
 | TDEST | M→S | 라우팅 목적지 |
-| TUSER | M→S | 사이드밴드 정보 (FCS 결과, 에러 등) |
+| TUSER | M→S | 사이드밴드 정보 (FCS 결과, 에러 등) — FCS = Frame Check Sequence, Ethernet 프레임 끝의 오류 검출 코드 |
 
 #### 필수 vs 선택
 
@@ -391,6 +395,8 @@ DCMAC (Master) → TOE (Slave):
 
 #### MMU Translation 인터페이스
 
+(**MMU** = Memory Management Unit — 가상 주소를 물리 주소로 바꿔 주는 블록. **VA** = Virtual Address(프로그램이 보는 주소), **PA** = Physical Address(실제 메모리 주소).)
+
 ```
 Request (Master → MMU):
   TDATA: VA + 제어 정보
@@ -416,6 +422,8 @@ Response (MMU → Master):
 
 ### 5.5 Custom "Thin" VIP 설계 (이력서 직결)
 
+(**VIP** = Verification IP — 특정 protocol 을 시뮬레이션에서 대신 구동·검사해 주는 재사용 검증 컴포넌트. "thin" 은 필요한 신호만 처리해 가볍게 만든 것.)
+
 ```
 상용 VIP 문제: 모든 AXI-S 기능 구현 → 메모리 폭발
 
@@ -440,7 +448,7 @@ Custom Thin VIP:
 | TLAST | 매 패킷 마지막에 정확히 | 프레임 경계 정확 |
 | TKEEP | 마지막 beat 부분 유효 | 유효 바이트만 처리 |
 | 백프레셔 | TREADY 빈번 toggle | 데이터 유지, 순서 보존 |
-| 연속 패킷 | Back-to-back (TLAST → 즉시 다음 TVALID) | IFG 없이 연속 가능 |
+| 연속 패킷 | Back-to-back (TLAST → 즉시 다음 TVALID) | IFG(Inter-Frame Gap — 프레임 사이 간격) 없이 연속 가능 |
 | 빈 패킷 | TLAST + 0 데이터? | 프로토콜 정의에 따라 |
 | TUSER | 사이드밴드 정보 전파 | FCS 결과 등 정확 반영 |
 
@@ -631,7 +639,7 @@ Slave 1이 받는 패킷: P1(TID=0), P4(TID=1) → TID로 Master 구분 가능
 ### 7.1 자가 점검
 
 :::tip[🤔 Q1 — Stream vs AXI 선택 (Bloom: Apply)]
-PCIe TLP 를 inter-IP 전달. AXI 또는 AXI-Stream 중?
+PCIe TLP(Transaction Layer Packet — PCIe 에서 데이터를 나르는 packet 단위) 를 inter-IP 전달. AXI 또는 AXI-Stream 중?
 
 <details>
 <summary>정답</summary>

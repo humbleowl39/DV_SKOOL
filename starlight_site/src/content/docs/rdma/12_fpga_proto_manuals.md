@@ -24,7 +24,7 @@ title: "Module 12 — FPGA Prototyping & Lab Manuals"
 
 ### 1.1 시나리오 — "시뮬은 OK, lab 은 FAIL"
 
-RDMA-IP RTL 의 모든 simulation 시나리오를 통과시킨 뒤 (`mrun regr` 100%) FPGA 에 bitfile 을 올리고 lab cabinet 에서 실제 traffic 을 흘리면 첫 5 분 만에 throughput 이 spec 의 50% 로 떨어지는 상황이 생길 수 있습니다. 이때 시뮬에서는 볼 수 없었던 환경 의존성들이 원인으로 등장합니다. switch fabric 에 adaptive routing 이 설정되지 않아 ECMP 단일 path 만 사용될 수도 있고, SR-IOV VF 의 QoS 가 다른 VF 에 bandwidth 를 빼앗길 수도 있습니다. IOMMU group 충돌로 DMA 변환이 지연되거나, MSI-X vector affinity 가 다른 NUMA node 의 CPU 를 가리켜 cache miss 가 폭증하거나, kernel module 로드 순서가 `mlx5_core` 보다 늦어 init race 가 생기는 경우도 있습니다. 이 모든 의존성은 **spec 에 없고 운영 manual 에만** 기록되어 있습니다. 시뮬에서 통과한 시나리오가 lab 에서 깨지는 이유가 바로 이 간극이고, 이 모듈이 그 운영 ground truth 의 좌표를 제공합니다.
+RDMA-IP RTL 의 모든 simulation 시나리오를 통과시킨 뒤 (`mrun regr` 100%) FPGA(Field-Programmable Gate Array — 회로 구성을 다시 프로그래밍할 수 있는 칩; ASIC 제작 전 검증에 씀) 에 bitfile(FPGA 에 올리는, 회로 구성을 담은 합성 결과 파일) 을 올리고 lab cabinet 에서 실제 traffic 을 흘리면 첫 5 분 만에 throughput 이 spec 의 50% 로 떨어지는 상황이 생길 수 있습니다. 이때 시뮬에서는 볼 수 없었던 환경 의존성들이 원인으로 등장합니다. switch fabric 에 adaptive routing(switch 가 link 혼잡도에 따라 패킷 경로를 동적으로 바꾸는 라우팅) 이 설정되지 않아 ECMP 단일 path 만 사용될 수도 있고, SR-IOV(Single Root IO Virtualization — 한 물리 PCIe 디바이스를 여러 가상 함수로 쪼개 VM 에 나눠주는 기술) VF(virtual function, SR-IOV 로 나뉜 가상 디바이스) 의 QoS 가 다른 VF 에 bandwidth 를 빼앗길 수도 있습니다. IOMMU group 충돌로 DMA 변환이 지연되거나, MSI-X(PCIe 디바이스가 CPU 에 인터럽트를 보내는 메시지 기반 방식) vector affinity 가 다른 NUMA(Non-Uniform Memory Access — CPU 마다 가까운 메모리가 달라 접근 속도가 다른 구조) node 의 CPU 를 가리켜 cache miss 가 폭증하거나, kernel module 로드 순서가 `mlx5_core` 보다 늦어 init race 가 생기는 경우도 있습니다. 이 모든 의존성은 **spec 에 없고 운영 manual 에만** 기록되어 있습니다. 시뮬에서 통과한 시나리오가 lab 에서 깨지는 이유가 바로 이 간극이고, 이 모듈이 그 운영 ground truth 의 좌표를 제공합니다.
 
 :::tip[🤔 잠깐 — 시뮬 vs Lab 의 _가장 큰 차이_]
 Simulation 과 실제 lab 의 _가장 다른_ 한 가지를 떠올려 보세요. 단순히 "RTL vs FPGA" 가 아닙니다.
@@ -95,7 +95,7 @@ Simulation 과 실제 lab 의 _가장 다른_ 한 가지를 떠올려 보세요.
    t=5  kernel module load (MB-Shell driver)
         $ sudo modprobe mb_shell
         $ dmesg | tail -20  # MSI-X allocation, BAR mapping 확인
-        $ lspci | grep MangoBoost  # device 인식 확인 (BDF)
+        $ lspci | grep MangoBoost  # device 인식 확인 (BDF = Bus:Device.Function, PCIe 장치의 주소)
 
    t=8  RAL bring-up + debug register 1차 진단
         $ mb-shell  # console 진입
@@ -193,7 +193,7 @@ RDMA 의 *post WR / poll CQ / interrupt* 는 위 calculator 의 *ioctl / read re
 ### 5.3 검증 환경의 토폴로지 — leaf-spine
 
 :::note[Internal (Confluence: *Setup leaf-spine*, id=421003291; *Adaptive Routing for CX*, id=397967495)]
-검증 cabinet 의 fabric 은 heterogeneous switch (Dell + Accton) leaf-spine 으로 구성.
+검증 cabinet 의 fabric 은 heterogeneous switch (Dell + Accton) leaf-spine(데이터센터 표준 2계층 토폴로지 — 서버에 붙는 leaf 스위치들이 모두 spine 스위치에 연결돼 어느 서버 간에도 hop 수가 일정) 으로 구성.
 
 - **Leaf**: Dell z9432f-on (DELL OS 10).
 - **Spine**: Accton (별도 NOS).

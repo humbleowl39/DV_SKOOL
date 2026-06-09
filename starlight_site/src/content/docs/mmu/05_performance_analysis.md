@@ -21,17 +21,17 @@ title: "Module 05 — Performance Analysis"
 
 ### 1.1 시나리오 — _0.1% miss ratio_ 의 SLA 위반
 
-100 Gbps NIC 의 functional 검증이 모두 통과했는데 운영 환경에서 throughput 이 80 Gbps 에 머무르는 상황을 생각해 보겠습니다. 아무 오류도 없이 정상 동작하는데 왜 20 Gbps 가 사라졌을까요?
+100 Gbps **NIC**(Network Interface Card — 네트워크 카드) 의 functional 검증(기능이 맞는지만 보는 검증)이 모두 통과했는데 운영 환경에서 **throughput**(처리량 — 단위 시간당 처리하는 양) 이 80 Gbps 에 머무르는 상황을 생각해 보겠습니다. 아무 오류도 없이 정상 동작하는데 왜 20 Gbps 가 사라졌을까요?
 
-추적해 보면 TLB miss ratio 가 0.5% 로, ideal 의 0.1% 보다 5 배 높습니다. Miss penalty 가 page walk ~400 ns 이므로 평균 translation 비용을 계산하면 `1 ns × 99.5% + 400 ns × 0.5% = 3 ns/translation` 입니다. 64 byte packet 기준 100 Gbps 는 초당 150 M 개의 translation 을 요구하는데, 3 ns × 150 M = 초당 450 M cycle 분의 TLB activity 가 발생합니다. 이것이 TLB bandwidth 한계에 닿으면서 throughput 이 80 Gbps 로 꺾입니다.
+추적해 보면 **TLB miss ratio**(TLB 실패율 — 전체 변환 중 TLB 에 없어 walk 가 필요했던 비율) 가 0.5% 로, ideal 의 0.1% 보다 5 배 높습니다. **Miss penalty**(미스 페널티 — 한 번 miss 났을 때 추가로 드는 시간) 가 page walk ~400 ns 이므로 평균 **translation**(변환 — VA→PA 한 번) 비용을 계산하면 `1 ns × 99.5% + 400 ns × 0.5% = 3 ns/translation` 입니다. 64 byte packet 기준 100 Gbps 는 초당 150 M 개의 translation 을 요구하는데, 3 ns × 150 M = 초당 450 M cycle 분의 TLB activity 가 발생합니다. 이것이 TLB bandwidth 한계에 닿으면서 throughput 이 80 Gbps 로 꺾입니다.
 
-결국 **0.1% miss ratio 와 0.5% miss ratio 의 차이** 가 20 Gbps SLA 위반의 직접 원인입니다.
+결국 **0.1% miss ratio 와 0.5% miss ratio 의 차이** 가 20 Gbps **SLA**(Service Level Agreement — 서비스가 보장해야 할 성능 약속, 예: "응답을 N ns 이내에") 위반의 직접 원인입니다.
 
 검증 시 _functional pass_ 만 보지 말고 _miss ratio 측정_ + _ideal 대비 비교_ 필수.
 
 **MMU 성능 검증은 functional verification 보다 미묘**합니다. PASS/FAIL 이 아니라 _"Ideal 대비 얼마나 효율적인가"_ 를 정량 분석. 100 Gbps NIC / SmartNIC 가속기는 64 byte packet 기준 **150 M+ translations/sec** 를 요구하고, miss ratio 0.1% 차이가 throughput SLA 를 좌우합니다.
 
-**Dual-Reference Model** (Functional + Ideal) 은 이력서의 시그니처 패턴 — Ideal 을 기준으로 DUT 성능 갭을 _자동_ 측정해 시뮬레이션에서 회귀를 잡습니다. P99 tail latency 는 평균만 봐선 보이지 않는 SLA 위반의 실제 원인. 이 모듈을 못 잡으면 검증이 _"되긴 한다"_ 단계에서 멈추고, _"충분히 빠른가"_ 단계로 못 넘어갑니다.
+**Dual-Reference Model**(이중 참조 모델 — 정답을 주는 Functional 모델과 이론 최고 성능을 주는 Ideal 모델 둘을 함께 두는 검증 패턴) 은 이력서의 시그니처 패턴 — Ideal 을 기준으로 **DUT**(Design Under Test — 검증 대상 설계) 성능 갭을 _자동_ 측정해 시뮬레이션에서 회귀를 잡습니다. **P99**(99 백분위 — 느린 쪽부터 상위 1% 를 제외한, "100 번 중 99 번은 이 값 이하"인 지점) **tail latency**(꼬리 지연 — 드물게 아주 느린 소수의 요청이 만드는 지연) 는 평균만 봐선 보이지 않는 SLA 위반의 실제 원인. 이 모듈을 못 잡으면 검증이 _"되긴 한다"_ 단계에서 멈추고, _"충분히 빠른가"_ 단계로 못 넘어갑니다.
 
 ---
 
@@ -82,7 +82,7 @@ title: "Module 05 — Performance Analysis"
 
 ## 3. 작은 예 — 1M translation 에서 TLB miss ratio 3.2% 가 실제로 어떻게 나타나는가
 
-가장 단순한 시나리오. DUT MMU 가 1,000,000 회의 random VA translation 을 처리. 측정 결과를 Ideal Model 과 비교하여 _성능 갭_ 의 root cause 를 추적합니다.
+가장 단순한 시나리오. DUT MMU 가 1,000,000 회의 random VA translation 을 처리. 측정 결과를 **Ideal Model**(이상 모델 — 무한히 큰 TLB·즉시 끝나는 walk 를 가정한, 도달 불가능한 성능 상한 기준) 과 비교하여 _성능 갭_ 의 root cause(근본 원인)를 추적합니다. 비교는 **Scoreboard**(스코어보드 — DUT 출력과 기준 모델 출력을 받아 자동으로 대조하는 검증 컴포넌트)가 담당하고, miss 의 원인은 **3C**(세 가지 miss 유형 — 첫 접근이라 어쩔 수 없는 Compulsory, 용량 부족 Capacity, 같은 set 충돌 Conflict)로 분류합니다.
 
 ### 측정 raw data
 
@@ -342,6 +342,8 @@ PWC가 Walk Latency에 미치는 영향 — 구체적 수치:
 ```
 
 ### 5.2 Performance Counter 수집 (UVM)
+
+아래는 **UVM**(Universal Verification Methodology — SystemVerilog 기반 표준 검증 프레임워크)으로 작성한 성능 카운터 컴포넌트입니다. translation 마다 hit/miss 와 latency 를 누적했다가 마지막에 리포트로 뽑습니다.
 
 ```systemverilog
 class mmu_perf_monitor extends uvm_component;

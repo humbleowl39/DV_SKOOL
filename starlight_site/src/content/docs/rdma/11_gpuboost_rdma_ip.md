@@ -23,7 +23,7 @@ Spec 본문은 별도 문서 (GPUBoost spec PDF, *High-Level Architecture Descri
 
 ### 1.1 시나리오 — "scoreboard 가 fail 했는데 _누구_ 책임?"
 
-RDMA-TB 시뮬을 돌리다가 `WC_REM_ACCESS_ERR` 가 뜰 때, 이것이 sender 의 _requester wrapper_ 가 잘못된 rkey 를 보낸 송신측 버그인지, 아니면 receiver 의 _responder wrapper_ 가 valid rkey 를 잘못 reject 한 수신측 버그인지 즉답해야 할 때가 있습니다. 이 분기를 빠르게 판단하려면 두 wrapper 의 경계와 signal 흐름을 알아야 하는데, spec 만으로는 부족하고 **구현의 ground truth** 가 필요합니다.
+RDMA-TB 시뮬을 돌리다가 `WC_REM_ACCESS_ERR` 가 뜰 때, 이것이 sender 의 _requester wrapper_(하나의 기능 단위를 묶은 RTL 모듈 블록) 가 잘못된 rkey 를 보낸 송신측 버그인지, 아니면 receiver 의 _responder wrapper_ 가 valid rkey 를 잘못 reject 한 수신측 버그인지 즉답해야 할 때가 있습니다. 이 분기를 빠르게 판단하려면 두 wrapper 의 경계와 signal 흐름을 알아야 하는데, spec 만으로는 부족하고 **구현의 ground truth** 가 필요합니다.
 
 GPUBoost RDMA-IP 는 5 개 wrapper 분업 — **requester / completer / responder / cc / mmu**. 각 wrapper 가 _다른 II_ (handle rate) 와 _다른 latency budget_ 을 가지므로:
 
@@ -31,7 +31,7 @@ GPUBoost RDMA-IP 는 5 개 wrapper 분업 — **requester / completer / responde
 - _Inject 위치_ 가 wrapper 경계에 정확히 매핑됨 (e.g. "responder_frontend 의 packet 입력 한계로 inject").
 - _Coverage closure_ 가 wrapper 별 corner case 로 분해됨.
 
-또한 HLS 합성 결과의 II/WNS 가 throughput 에 직결되므로 spec 보다 _구현 timing 특성_ 을 봐야 정확한 검증 시나리오 설계가 가능합니다.
+또한 HLS(High-Level Synthesis — C++ 등 고수준 코드에서 RTL 을 자동 합성하는 기법) 합성 결과의 II(Initiation Interval — 파이프라인이 새 입력을 받는 간격, 작을수록 throughput 높음)/WNS(Worst Negative Slack — 타이밍 여유의 최악값, 음수면 타이밍 위반) 가 throughput 에 직결되므로 spec 보다 _구현 timing 특성_ 을 봐야 정확한 검증 시나리오 설계가 가능합니다.
 
 이 모듈은 RDMA-TB 의 모든 후속 디버그/시나리오 설계의 **구현 ground truth** 를 제공합니다.
 
@@ -45,7 +45,7 @@ GPUBoost RDMA-IP 는 5 개 wrapper 분업 — **requester / completer / responde
 
 예: requester 의 doorbell 처리는 _1 cycle II_ 가능 (단순). 하지만 responder 의 _5-step access check + DMA 변환_ 은 _4~6 cycle II_ 필요. 한 monolithic RTL 으로 합치면 _가장 느린 II_ 가 전체 throughput 을 결정.
 
-Wrapper 분리 → 각자 자신의 II 로 동작 + _AXI4 / streaming I/F 로 buffer_ → 전체 throughput 이 _가장 느린 wrapper_ 가 아닌 _bottleneck wrapper_ 의 II 로 결정. 분업의 효과.
+Wrapper 분리 → 각자 자신의 II 로 동작 + _AXI4(ARM 의 표준 on-chip 버스 프로토콜; AXI-Stream 은 그중 연속 데이터 스트리밍용 변형) / streaming I/F 로 buffer_ → 전체 throughput 이 _가장 느린 wrapper_ 가 아닌 _bottleneck wrapper_ 의 II 로 결정. 분업의 효과.
 
 </details>
 :::

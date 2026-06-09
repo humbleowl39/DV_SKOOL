@@ -21,6 +21,8 @@ title: "Module 05 — Physical Layer & LTSSM"
 
 ### 1.1 시나리오 — _Link up 안 됨_
 
+> **이 글의 핵심 용어** — **PHY**(Physical Layer — 비트를 실제 전기 신호로 보내는 최하위 계층), **LTSSM**(Link Training and Status State Machine — link 를 켜고 상태를 관리하는 PHY 의 상태 기계), **link training**(양 끝이 신호를 맞춰 link 를 켜는 과정), **L0**(link 가 정상 동작하는 상태; L0s/L1/L2 는 점점 깊은 저전력 상태), **TS1/TS2**(Training Sequence — link 를 맞출 때 주고받는 약속된 심볼 묶음), **Electrical Idle**(아무 신호도 보내지 않는 조용한 상태), **BER**(Bit Error Rate — 비트가 잘못 전달될 확률), **ISI**(Inter-Symbol Interference — 앞 신호의 잔향이 다음 신호를 흐리는 간섭), **EQ**(Equalization — 뭉개진 신호를 송·수신에서 보정하는 것), **refclk**(reference clock — 양 끝 PHY 에 공급되는 기준 클럭, 보통 100 MHz).
+
 새 SoC 와 PCIe device 를 연결하고 boot 했는데 link 가 L0 에 진입하지 못하고 driver 가 device 를 인식하지 못하는 상황을 가정합니다. LTSSM trace 를 확인하면 `Detect → Polling → Polling.Compliance` 에서 멈춰 있을 수 있습니다. 이 경우의 전형적인 원인은 RX 전기 신호가 threshold 보다 약해 polling 단계에서 peer 를 인식하지 못하는 것입니다. 해법으로는 Tx 의 pre-emphasis 에 해당하는 EQ preset 조정, Rx 의 amplification 에 해당하는 CTLE/DFE 조정, 또는 PCB trace length 단축을 순서대로 시도합니다.
 
 LTSSM 11 state 의 의미는 각 state 가 link bring-up 의 한 단계를 담당한다는 점에 있습니다. 어느 state 에서 멈췄는지를 보면 문제가 어느 layer 에 있는지 즉시 좁혀집니다.
@@ -281,6 +283,8 @@ Recovery -> HotReset: "실패"
 | **Disabled** | Electrical idle | SW 가 enable 시 Detect |
 | **Loopback** | (test pattern echo) | LB exit 명령 시 Detect |
 | **Hot Reset** | TS1 with Hot Reset bit | 끝나면 Detect |
+
+위 표의 신호 약어: **EIOS**(Electrical Idle Ordered Set — "이제 조용한 idle 로 들어간다"는 표시 심볼), **FTS**(Fast Training Sequence — L0s 에서 L0 로 빠르게 박자를 재동기하는 심볼), **Beacon/WAKE#**(deep sleep 의 link 를 깨우는 신호), **ASPM**(Active State Power Management — SW 개입 없이 link 가 idle 을 감지해 알아서 저전력 상태로 들어가는 기능; Module 07).
 
 ### 5.3 Polling 상세
 

@@ -21,9 +21,9 @@ title: "N02 — JTAG & Boundary Scan"
 
 ### 1.1 시나리오 — 핀이 모자란다
 
-테스트 엔지니어가 새 칩을 보드에 올렸는데, 디버그와 production test 양쪽 모두 필요한 상황입니다. 칩 핀은 수백 개지만 디버그 전용으로 쓸 수 있는 것은 극소수입니다. 칩 안의 수백만 게이트, 모든 코어 레지스터, 전체 메모리 공간에 접근해야 하는데, 이걸 병렬 핀으로 다 빼면 핀이 폭발합니다.
+테스트 엔지니어가 새 칩을 보드에 올렸는데, 디버그와 **production test**(양산 단계에서 칩·납땜이 정상인지 대량으로 걸러내는 제조 테스트) 양쪽 모두 필요한 상황입니다. 칩 핀은 수백 개지만 디버그 전용으로 쓸 수 있는 것은 극소수입니다. 칩 안의 수백만 게이트, 모든 코어 레지스터, 전체 메모리 공간에 접근해야 하는데, 이걸 병렬 핀으로 다 빼면 핀이 폭발합니다.
 
-JTAG의 답은 **직렬화**입니다. 단 4개(또는 TRSTn 포함 5개) 핀으로 칩 내부의 임의의 레지스터에 비트를 밀어 넣고(shift in) 빼냅니다(shift out). 클럭(TCK) 한 줄, 상태 제어(TMS) 한 줄, 데이터 입력(TDI) 한 줄, 데이터 출력(TDO) 한 줄이면, 칩 안 어떤 scan chain에도 도달할 수 있습니다. 이 직렬 접근 위에 [N03](../03_adi_dap_coresight/)의 DAP가 얹혀 메모리-맵 디버그가 됩니다.
+JTAG(Joint Test Action Group; 그 이름의 위원회가 만든 IEEE 1149.1 표준 — 직렬 핀으로 칩 내부에 접근)의 답은 **직렬화**입니다. 단 4개(또는 TRSTn 포함 5개) 핀으로 칩 내부의 임의의 레지스터에 비트를 밀어 넣고(shift in) 빼냅니다(shift out). 클럭(TCK) 한 줄, 상태 제어(TMS) 한 줄, 데이터 입력(TDI) 한 줄, 데이터 출력(TDO) 한 줄이면, 칩 안 어떤 **scan chain**(여러 저장 소자를 하나의 긴 직렬 줄로 엮어, 한 핀으로 차례차례 값을 넣고 뺄 수 있게 한 사슬)에도 도달할 수 있습니다. 이 직렬 접근 위에 [N03](../03_adi_dap_coresight/)의 DAP가 얹혀 메모리-맵 디버그가 됩니다.
 
 ### 1.2 JTAG 신호
 
@@ -211,7 +211,7 @@ SWD: "**SWD (Serial Wire Debug)**\nSWCLK + SWDIO\n2핀" {
 }
 ```
 
-핀이 극히 부족한 디바이스(소형 MCU 등)에서는 JTAG의 4~5핀도 부담입니다. **SWD(Serial Wire Debug)** 는 ADI가 정의한 2핀(SWCLK 클럭 + SWDIO 양방향 데이터) 대안으로, JTAG을 대체하면서도 _같은 DAP_를 노출합니다. 즉 물리 프로토콜만 다르고 그 너머의 디버그 세계(DP/AP, ROM table, CoreSight)는 완전히 동일합니다. SWJ-DP는 JTAG와 SWD를 핀에서 자동 선택하는 DP 변종입니다([N03](../03_adi_dap_coresight/)에서 다룸).
+핀이 극히 부족한 디바이스(소형 MCU(Microcontroller Unit, 코어·메모리·주변장치를 한 칩에 담은 소형 제어용 칩) 등)에서는 JTAG의 4~5핀도 부담입니다. **SWD(Serial Wire Debug)** 는 ADI가 정의한 2핀(SWCLK 클럭 + SWDIO 양방향 데이터) 대안으로, JTAG을 대체하면서도 _같은 DAP_를 노출합니다. 즉 물리 프로토콜만 다르고 그 너머의 디버그 세계(DP/AP, ROM table, CoreSight)는 완전히 동일합니다. SWJ-DP는 JTAG와 SWD를 핀에서 자동 선택하는 DP 변종입니다([N03](../03_adi_dap_coresight/)에서 다룸).
 
 ### 5.4 scan cell은 왜 2단(shift FF + update latch)인가
 
@@ -228,7 +228,7 @@ SWD: "**SWD (Serial Wire Debug)**\nSWCLK + SWDIO\n2핀" {
 - **1단 — shift flip-flop**: Capture-DR에서 값(IDCODE 비트, 핀 상태 등)을 병렬 로드하고, Shift-DR 동안 매 TCK마다 옆 셀로 한 칸씩 이동시킵니다. TDI→shift FF→TDO 사슬이 곧 scan chain입니다.
 - **2단 — update(shadow) latch**: Update-DR 상태에서만 1단의 현재 값을 받아 _출력_ 으로 반영합니다.
 
-**왜 굳이 2단인가?** Shift 동안에는 1단 FF의 값이 매 TCK마다 마구 바뀝니다(체인을 따라 비트가 흐르므로). 만약 출력이 1단을 직접 보고 있다면, EXTEST로 핀을 구동하는 경우 _shift하는 내내 핀이 중간 비트값으로 덜덜 떨려_ 외부 회로에 글리치를 줍니다. 2단 update latch가 있으면 Shift 중 출력은 _직전 Update에서 확정된 값_ 으로 **안정 유지** 되고, 모든 비트를 다 밀어 넣은 뒤 Update-DR 한 순간에만 새 값이 일제히 반영됩니다. 즉 "준비(Shift)"와 "반영(Update)"을 분리해, 직렬로 채우는 과도 상태가 출력/핀에 새어 나가지 않게 하는 것이 2단 구조의 이유입니다. IR도 같은 이유로 shift단 + update단을 가져, Update-IR 순간에만 새 instruction이 확정됩니다.
+**왜 굳이 2단인가?** Shift 동안에는 1단 FF의 값이 매 TCK마다 마구 바뀝니다(체인을 따라 비트가 흐르므로). 만약 출력이 1단을 직접 보고 있다면, EXTEST로 핀을 구동하는 경우 _shift하는 내내 핀이 중간 비트값으로 덜덜 떨려_ 외부 회로에 글리치(glitch; 의도치 않게 잠깐 튀는 신호 펄스)를 줍니다. 2단 update latch가 있으면 Shift 중 출력은 _직전 Update에서 확정된 값_ 으로 **안정 유지** 되고, 모든 비트를 다 밀어 넣은 뒤 Update-DR 한 순간에만 새 값이 일제히 반영됩니다. 즉 "준비(Shift)"와 "반영(Update)"을 분리해, 직렬로 채우는 과도 상태가 출력/핀에 새어 나가지 않게 하는 것이 2단 구조의 이유입니다. IR도 같은 이유로 shift단 + update단을 가져, Update-IR 순간에만 새 instruction이 확정됩니다.
 
 ---
 

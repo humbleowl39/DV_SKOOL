@@ -67,6 +67,8 @@ MON -> SB: "관찰값"
 SEQ -> SB: "기대값(reference)"
 ```
 
+위 그림에 나오는 검증 용어를 처음 본다면 먼저 짚고 갑니다(자세한 것은 [UVM M07 RAL](../../uvm/07_register_layer_ral/)에). **RAL**(Register Abstraction Layer — DUT의 하드웨어 레지스터를 SW 객체처럼 이름으로 읽고 쓰게 해 주는 UVM 모델)을 통하면 `dut.u_x.reg`가 아니라 `model.ERRSTATUS.write(...)`처럼 _이름_ 으로 접근합니다. **frontdoor**는 실제 버스 트랜잭션으로 레지스터에 접근하는 정규 경로이고, **adapter**는 RAL의 추상 read/write를 그 버스 프로토콜 트랜잭션으로 번역하는 변환기입니다. **mirror**는 RAL이 칩 안 레지스터의 현재 값을 SW 쪽에 복제해 두는 그림자 사본이고, **predictor**(`uvm_reg_predictor`)는 버스에서 관찰한 접근을 보고 그 mirror를 자동 갱신하는 컴포넌트입니다. **IRQ**는 interrupt request(인터럽트 요청 신호)의 약자입니다.
+
 ### 왜 이 구조인가 — Design rationale
 
 세 요구의 교집합입니다.
@@ -197,7 +199,7 @@ endclass
 
 ### 4.2 인터럽트 / telemetry 경로
 
-에러 기록이 valid가 되면 RAS-node는 비동기 인터럽트를 외부 **SCP**(System Control Processor)나 **BMC**(Baseboard Management Controller)로 올립니다. 운영자/펌웨어는 이 telemetry로 어느 FRU가 문제인지 진단합니다. 검증에서는 (1) 인터럽트가 _올라가는가_, (2) record clear(W1C) 후 _내려가는가_, (3) enable이 꺼져 있으면 안 올라가는가를 자극합니다.
+에러 기록이 valid가 되면 RAS-node는 비동기 인터럽트를 외부 **SCP**(System Control Processor)나 **BMC**(Baseboard Management Controller)로 올립니다. 운영자/펌웨어는 이 telemetry(에러·상태를 관리 주체로 보내는 원격 보고 데이터)로 어느 **FRU**(Field Replaceable Unit, 현장에서 통째로 교체 가능한 부품 단위)가 문제인지 진단합니다. 검증에서는 (1) 인터럽트가 _올라가는가_, (2) record clear(W1C) 후 _내려가는가_, (3) enable이 꺼져 있으면 안 올라가는가를 자극합니다.
 
 ### 4.3 주입 시나리오 매트릭스
 
@@ -211,7 +213,7 @@ endclass
 
 ### 4.4 Coverage 관점
 
-fault injection 검증은 covergroup으로 "어떤 에러 type × 어떤 위치 × clear 여부"의 조합을 추적해야 합니다. 단일 type만 100%여도 CE→UE 악화, overflow, clear-after-inject 같은 조합이 빠지면 RAS 로직의 코너가 미검증으로 남습니다.
+fault injection 검증은 covergroup(SystemVerilog의 기능 커버리지 수집 단위 — 어떤 값/조합이 실제로 자극됐는지 자동 집계)으로 "어떤 에러 type × 어떤 위치 × clear 여부"의 조합을 추적해야 합니다. 단일 type만 100%여도 CE→UE 악화, overflow, clear-after-inject 같은 조합이 빠지면 RAS 로직의 코너가 미검증으로 남습니다.
 
 ---
 
@@ -231,7 +233,7 @@ error record의 status 비트는 보통 **W1C(write-1-to-clear)** 입니다. 즉
 
 ### 5.3 Scoreboard — 기대 record 예측
 
-inject 시퀀스가 _무엇을_ 주입했는지(type, addr)를 reference로 두고, monitor가 관찰한 record(또는 RAL mirror)와 비교합니다. explicit prediction을 쓰면 monitor→predictor로 mirror가 갱신되므로, scoreboard는 mirror와 기대값을 비교할 수 있습니다. 핵심 비교 대상은 type(CE/UE), failing address, valid/overflow입니다.
+inject 시퀀스가 _무엇을_ 주입했는지(type, addr)를 reference(기대값의 근거)로 두고, monitor(버스 트래픽을 수동으로 관찰·캡처하는 컴포넌트)가 관찰한 record(또는 RAL mirror)와 비교합니다. explicit prediction(RAL이 write를 보내며 스스로 mirror를 갱신하는 대신, 버스에서 _실제로 관찰된_ 접근만으로 predictor가 mirror를 갱신하게 하는 방식 — HW가 자체적으로 바꾸는 W1C 같은 비트에 정확)을 쓰면 monitor→predictor로 mirror가 갱신되므로, scoreboard는 mirror와 기대값을 비교할 수 있습니다. 핵심 비교 대상은 type(CE/UE), failing address, valid/overflow입니다.
 
 ```systemverilog
 // 주입 기대값을 reference로 만들어 scoreboard에 등록 (개념)

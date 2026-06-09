@@ -21,22 +21,24 @@ title: "Module 01 — MMU 기본 개념 및 주소 변환"
 
 ### 1.1 시나리오 — _Process 격리_ 가 _없으면_?
 
+먼저 핵심 용어부터 짚고 갑니다. **MMU**(Memory Management Unit, 메모리 관리 유닛 — CPU 가 내보낸 주소를 실제 메모리 주소로 번역해 주는 하드웨어), **PA**(Physical Address, 물리 주소 — 실제 DRAM 칩의 한 칸을 직접 가리키는 진짜 주소), **VA**(Virtual Address, 가상 주소 — 프로그램이 보는 "가짜" 주소로, 반드시 MMU 를 거쳐 PA 로 번역되어야 실제 메모리에 닿음), **DRAM**(Dynamic RAM, 컴퓨터의 주 메모리 칩), **process**(실행 중인 프로그램 한 개 — 자기만의 메모리 영역을 가짐)를 기억해 두면 됩니다.
+
 OS 설계자 입장에서 생각해 보면, 두 process 가 물리 DRAM 주소를 직접 공유할 때 어떤 일이 생기는지 금방 알 수 있습니다. 비밀번호를 PA 0x1000 에 저장 중인 Process A 와 게임을 실행 중인 Process B 가 동시에 돌아간다면, B 가 버그나 악의적 코드로 0x1000 을 읽는 순간 A 의 비밀번호가 그대로 노출됩니다. 두 process 가 동시에 같은 주소에 쓰면 서로의 데이터를 오염시킵니다.
 
-MMU 는 이 문제를 각 process 에게 _독립된 가상 주소 공간_ 을 부여함으로써 해결합니다. 같은 VA 0x1000 이라도 Process A 에서는 PA 0x80000000, Process B 에서는 PA 0x90000000 으로 매핑되므로, 두 process 는 물리적으로 완전히 다른 메모리를 봅니다. 이 매핑을 process 별로 관리하는 것이 page table 이고, 그 덕분에 Process B 는 Process A 의 물리 주소를 아예 알 수 없습니다.
+MMU 는 이 문제를 각 process 에게 _독립된 가상 주소 공간_ 을 부여함으로써 해결합니다. 같은 VA 0x1000 이라도 Process A 에서는 PA 0x80000000, Process B 에서는 PA 0x90000000 으로 매핑되므로, 두 process 는 물리적으로 완전히 다른 메모리를 봅니다. 이 매핑을 process 별로 관리하는 것이 **page table**(페이지 테이블 — VA 한 덩어리[page]가 어느 PA 덩어리로 가는지를 적어 둔, 메모리에 저장된 변환 표)이고, 그 덕분에 Process B 는 Process A 의 물리 주소를 아예 알 수 없습니다.
 
 이것이 OS 보안의 가장 근본적인 메커니즘입니다. UNIX/Linux/Windows/macOS 가 multi-user system 을 지원하는 것은 모두 MMU 위에서입니다.
 
-이 토픽의 모든 후속 모듈은 한 가정에서 시작합니다 — **"CPU 와 device 가 보는 주소(Virtual Address)는 실제 DRAM 주소(Physical Address)가 아니다"**. Page table 이 왜 multi-level 인지, TLB 가 왜 latency-critical 인지, IOMMU 가 왜 SoC 보안의 토대인지 — 모두 이 한 가정의 파생입니다.
+이 토픽의 모든 후속 모듈은 한 가정에서 시작합니다 — **"CPU 와 device 가 보는 주소(Virtual Address)는 실제 DRAM 주소(Physical Address)가 아니다"**. Page table 이 왜 multi-level(여러 단계로 쪼갠 계층 구조)인지, **TLB**(Translation Lookaside Buffer — 최근 변환한 VA→PA 결과를 담아 두는 작은 초고속 캐시)가 왜 latency-critical 인지, **IOMMU**(I/O MMU — CPU 가 아닌 주변 장치[GPU·DMA 등]의 메모리 접근을 번역·통제하는 MMU)가 왜 SoC 보안의 토대인지 — 모두 이 한 가정의 파생입니다.
 
-이 모듈을 건너뛰면 이후 검증 시 마주칠 모든 fault, permission error, ASID mismatch, identity-mapping 누락 같은 증상이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이건 process isolation 을 위한 거구나"** 처럼 _이유_ 가 보입니다.
+이 모듈을 건너뛰면 이후 검증 시 마주칠 모든 fault(폴트 — 변환이나 권한 검사가 실패해 하드웨어가 정상 흐름을 멈추는 사건), permission error(권한 오류 — 읽기 전용 영역에 쓰기를 시도하는 등 허용되지 않은 접근), **ASID**(Address Space Identifier — 어느 process 의 변환인지 구분하려고 TLB 항목에 붙이는 번호표) mismatch, identity-mapping(VA 와 PA 를 똑같은 값으로 1:1 매핑하는 것) 누락 같은 증상이 "그냥 외워야 하는 규칙" 으로 보입니다. 반대로 이 가정을 정확히 잡고 나면, 디테일을 만날 때마다 **"아, 이건 process isolation 을 위한 거구나"** 처럼 _이유_ 가 보입니다.
 
 ---
 
 ## 2. Intuition — 비유와 한 장 그림
 
 :::tip[💡 한 줄 비유]
-**MMU** = 도시의 _주소록_. 같은 "302호" 라는 가상 주소가 어느 동(어느 process) 인지에 따라 전혀 다른 실제 빌딩(physical address) 으로 번역됩니다. 우편물(load/store) 은 _주소록을 거치지 않고는 배달되지 않습니다_.<br>
+**MMU** = 도시의 _주소록_. 같은 "302호" 라는 가상 주소가 어느 동(어느 process) 인지에 따라 전혀 다른 실제 빌딩(physical address) 으로 번역됩니다. 우편물(load/store — CPU 가 메모리에서 값을 읽는 load 명령과 메모리에 값을 쓰는 store 명령) 은 _주소록을 거치지 않고는 배달되지 않습니다_.<br>
 **Page Table** = 그 주소록의 _두꺼운 종이 책_. 통째로 외우기엔 무거워서, MMU 는 자주 본 페이지(TLB) 만 _즐겨찾기_ 해 둡니다.
 :::
 ### 한 장 그림 — VA → PA 흐름
@@ -80,7 +82,7 @@ BUS -> MMIO
 
 ## 3. 작은 예 — Process A 가 VA 0x4000_1234 를 읽는 한 사이클
 
-가장 단순한 시나리오. ARMv8 EL0 에서 동작하는 Process A 가 `ldr w0, [x1]` 로 **VA = 0x0000_0000_4000_1234** 를 읽으려 합니다. 4KB granule, ASID=5, 처음 접근이라 TLB 는 비어 있습니다.
+가장 단순한 시나리오. ARMv8 EL0(Exception Level 0 — 일반 응용 프로그램이 도는 최저 권한 모드)에서 동작하는 Process A 가 `ldr w0, [x1]`(레지스터 `x1` 이 가리키는 VA 에서 값을 읽어 `w0` 에 넣는 load 명령)로 **VA = 0x0000_0000_4000_1234** 를 읽으려 합니다. 4KB granule(그래뉼 — 변환의 최소 단위인 page 한 개의 크기; 여기선 4KB), ASID=5, 처음 접근이라 TLB 는 비어 있습니다. 이때 TLB 에 답이 없으면 MMU 는 **page walk**(페이지 워크 — 메모리에 있는 page table 을 단계별로 따라 내려가며 VA→PA 를 직접 계산하는 과정)를 수행합니다.
 
 ### 단계별 추적
 
@@ -130,6 +132,8 @@ BUS -> MMIO
    r0 = *(0x9_2234)
 ```
 
+위 추적에 나오는 약어를 미리 풀면: **VPN**(Virtual Page Number — VA 에서 offset 을 뺀 윗부분, "몇 번째 page 인가"를 가리킴), **page offset**(page 안에서의 위치를 가리키는 하위 비트 — 변환되지 않고 그대로 통과), **PTE**(Page Table Entry — page table 한 칸에 든 항목; PA 와 권한·속성을 담음), **PPN**(Physical Page Number — 변환 결과인 물리 page 번호), **TTBR0**(Translation Table Base Register 0 — page table 의 시작 주소를 담은 레지스터), **AP**(Access Permission — 읽기/쓰기 허용 권한 비트), **AF**(Access Flag — 이 page 가 한 번이라도 접근됐는지 표시하는 비트)입니다.
+
 ### 단계별 의미
 
 | Step | 누가 | 무엇을 | 왜 |
@@ -142,6 +146,8 @@ BUS -> MMIO
 | ⑥ | Bus + cache | 실제 DRAM 접근 | attr 이 cacheable / device 인지에 따라 path 분기 |
 
 ### 만약 PTE 가 잘못됐다면? (3 분기)
+
+변환이 실패하면 **Page Fault**(페이지 폴트 — 요청한 VA 의 매핑이 없거나 권한이 없어 MMU 가 정상 접근을 막고 OS 에 처리를 넘기는 예외)가 발생합니다. 아래 세 가지가 대표적입니다.
 
 | 시나리오 | PTE 상태 | 결과 |
 |---|---|---|
@@ -171,6 +177,8 @@ BUS -> MMIO
 | **캐시 속성 제어** | AttrIdx[4:2] → MAIR_EL1 lookup | Normal WB / Device-nGnRnE 등 attr 이 bus 로 정확히 전파 |
 
 ### 4.2 Translation Regime — 누가, 어디서
+
+**Translation Regime**(번역 체제)이란 "어느 권한 레벨에서, 어느 page table 로, 어떤 변환을 하는가"를 묶은 한 세트를 말합니다. ARMv8 은 권한을 **Exception Level**(EL — 권한 등급; EL0 응용 < EL1 OS 커널 < EL2 hypervisor < EL3 보안 펌웨어)로 나눕니다. 가상화가 켜지면 변환이 두 단계가 되어, OS 가 보는 "물리 주소"가 실은 **IPA**(Intermediate Physical Address — 중간 물리 주소; 진짜 PA 가 아니라 hypervisor 가 한 번 더 번역해야 하는 가짜 물리 주소)이고, **Hypervisor**(하이퍼바이저 — 여러 가상 머신을 돌리는 관리 소프트웨어)가 **Stage 2** 변환으로 IPA→PA 를 마무리합니다.
 
 ```
 ARMv8 Exception Level 별 Translation:
@@ -226,7 +234,7 @@ MC -> DRAM
 > CPU → MMU (CPU 전용, 보통 CPU 내부) <br>
 > GPU/DMA/가속기 → SMMU / IOMMU / sysMMU (디바이스용)
 
-**SoC 에서 MMU 가 중요한 이유**: HW 가속기(NPU, GPU, DMA)가 직접 메모리에 접근할 때, 가상 주소를 사용해야 OS의 메모리 관리 체계와 일관성을 유지하고, 잘못된 접근으로부터 시스템을 보호할 수 있다. 자세한 SMMU 구조는 [Module 04](../04_iommu_smmu/) 에서 다룹니다.
+**SoC 에서 MMU 가 중요한 이유**: HW 가속기(NPU, GPU, **DMA**[Direct Memory Access — CPU 를 거치지 않고 장치가 직접 메모리를 읽고 쓰는 방식])가 직접 메모리에 접근할 때, 가상 주소를 사용해야 OS의 메모리 관리 체계와 일관성을 유지하고, 잘못된 접근으로부터 시스템을 보호할 수 있다. 자세한 **SMMU**(System MMU — ARM 의 IOMMU 표준 구현) 구조는 [Module 04](../04_iommu_smmu/) 에서 다룹니다.
 
 ---
 
@@ -309,7 +317,7 @@ Page Table Entry (PTE)에 포함된 권한 비트:
 
 ### 5.4 캐시 속성 제어 (Memory Attributes)
 
-VA → PA 변환이 끝나도 한 가지 결정이 남습니다. 이 PA 가 가리키는 메모리를 캐시에 올릴 것인가, 아니면 버스로 직접 내려보낼 것인가 — 이것이 캐시 속성입니다. 일반 DRAM 이라면 캐싱해서 반복 접근 비용을 아껴야 하지만, MMIO 레지스터라면 캐싱하는 순간 쓰기 순서가 무너지고 하드웨어가 잘못된 값을 보게 됩니다. MMU 는 PTE 의 `AttrIdx[4:2]` 를 통해 이 결정을 인코딩하고, `MAIR_EL1` 레지스터가 그 인코딩을 실제 속성으로 풀어줍니다.
+VA → PA 변환이 끝나도 한 가지 결정이 남습니다. 이 PA 가 가리키는 메모리를 캐시에 올릴 것인가, 아니면 버스로 직접 내려보낼 것인가 — 이것이 캐시 속성입니다. 일반 DRAM 이라면 캐싱해서 반복 접근 비용을 아껴야 하지만, **MMIO**(Memory-Mapped I/O — 하드웨어 장치의 제어 레지스터를 메모리 주소처럼 읽고 써서 다루는 방식) 레지스터라면 캐싱하는 순간 쓰기 순서가 무너지고 하드웨어가 잘못된 값을 보게 됩니다. MMU 는 PTE 의 `AttrIdx[4:2]`(속성 인덱스 — 어떤 메모리 종류인지를 가리키는 PTE 의 비트들) 를 통해 이 결정을 인코딩하고, `MAIR_EL1`(Memory Attribute Indirection Register — 메모리 종류 8 가지를 실제로 정의해 둔 레지스터) 레지스터가 그 인코딩을 실제 속성으로 풀어줍니다.
 
 | 속성 | 의미 | 용도 |
 |------|------|------|

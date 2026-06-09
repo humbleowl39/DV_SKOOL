@@ -57,6 +57,8 @@ TB.ENV2.SB -> TB.ENV2.REF: compares
 
 ### 1.1 컴포넌트별 책임
 
+위 그림은 **UVM**(Universal Verification Methodology, 재사용 가능한 검증 환경을 만드는 SystemVerilog 표준 클래스 라이브러리)으로 짠 검증 환경입니다. 표를 읽기 전에 구성 요소를 먼저 풀어 둡니다 — **env**(environment, 검증 컴포넌트들을 묶는 최상위 컨테이너), **agent**(한 인터페이스의 자극 생성·구동·관찰을 담당하는 묶음), **sequencer**(트랜잭션을 만들어 driver로 흘려보내는 컴포넌트), **driver**(트랜잭션을 받아 핀 신호로 인가), **monitor**(핀 신호를 관찰해 트랜잭션으로 복원), **scoreboard**(기대값과 실제값을 비교), **virtual sequence**(여러 시나리오를 조합해 지휘하는 상위 시퀀스), **reference model**(정답을 계산하는 golden model), **BFM**(bus functional model, 실제 RTL 대신 버스 동작만 흉내 내는 모델 — 여기서는 DRAM 역할), **bind**(RTL을 수정하지 않고 외부에서 검사 모듈을 붙이는 SystemVerilog 구문)입니다.
+
 | 컴포넌트 | 책임 |
 |---|---|
 | **virtual sequence** | 시나리오 조합 — init / training / traffic / refresh stress |

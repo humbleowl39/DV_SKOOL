@@ -105,7 +105,7 @@ PROV -> BOOT: "chip 출하 후" { style.stroke-dash: 4 }
 
 | Step | 누가 | 무엇을 | 의미 |
 |---|---|---|---|
-| ① | Build server | RSA/ECDSA key pair 생성 | private key 는 HSM, public key (ROTPK) 만 양산 라인으로 전달 |
+| ① | Build server | RSA/ECDSA key pair 생성 | private key 는 **HSM**(Hardware Security Module — 키 생성·저장·서명을 내부에서만 처리하는 변조 방지 보안 장치), public key (ROTPK) 만 양산 라인으로 전달 |
 | ② | Provisioning tool | `h_rotpk = SHA-256(ROTPK_pub)` | 256 B (RSA) 또는 64 B (ECDSA) 키를 32 B hash 로 압축 — OTP 공간 절약 |
 | ③ | OTP burner HW | eFuse blow (높은 전류 또는 전압) | 물리적으로 비가역. 한 비트 blow 면 다시 못 돌림 |
 | ④ | Provisioning tool | OTP write protection 잠금 | 이후 OTP 영역 자체를 freeze — 양산 칩이 받는 마지막 OTP 명령 |
@@ -171,7 +171,7 @@ int constant_time_memcmp(const uint8_t *a, const uint8_t *b, size_t n) {
 | 속성 | SW RoT | HW RoT |
 |------|--------|--------|
 | 변조 저항성 | Flash 덮어쓰기 가능 | ROM 은 물리적으로 쓰기 불가 |
-| 공격 표면 | OS / 부트로더 취약점 | HW 레벨 공격 (FIB) 필요 |
+| 공격 표면 | OS / 부트로더 취약점 | HW 레벨 공격 (**FIB**, Focused Ion Beam — 집속 이온빔으로 칩 회로를 직접 깎거나 연결하는 고가의 물리 변조 장비) 필요 |
 | 신뢰 근거 | 순환: "이 SW 를 누가 검증?" | 제조 시점 고정, 순환 없음 |
 | Reset 후 상태 | 메모리 내용 보장 불가 | ROM/OTP 항상 동일 |
 

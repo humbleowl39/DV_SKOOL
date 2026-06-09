@@ -13,7 +13,7 @@ title: "Module 05 — Attack Surface & Defense"
 :::
 :::note[사전 지식]
 - [Module 01-04](../01_hardware_root_of_trust/) — RoT, chain, crypto, boot device
-- 보안 취약점 / 공격 모델 일반 (CIA triad)
+- 보안 취약점 / 공격 모델 일반 (CIA triad — 정보보안의 세 기둥: Confidentiality 기밀성 / Integrity 무결성 / Availability 가용성)
 :::
 ---
 
@@ -29,7 +29,7 @@ title: "Module 05 — Attack Surface & Defense"
 3. _Verify result branch_ instruction 에서 _NOP_ 되거나 _wrong branch_.
 4. _Invalid signature_ 인데도 _OK 처리_ → 임의 image load.
 
-**Fault injection 의 본질**: _alle algorithm_ 정확해도 _실행 환경_ 이 _공격당하면_ 결과 corruption. 검증 시 _silicon spec_ 만 검증 ≠ 보안.
+**Fault injection 의 본질**: _모든 algorithm_ 이 정확해도 _실행 환경_ 이 _공격당하면_ 결과 corruption. 검증 시 _silicon spec_ 만 검증 ≠ 보안. (이후 등장하는 **DUT**(Design Under Test — 검증 대상이 되는 설계, 여기서는 BootROM 을 품은 SoC)는 우리가 시뮬레이션에서 두드려 보는 그 칩을 가리킨다.)
 
 방어:
 - **Double verify**: verify 후 _다시 verify_, 두 결과 비교 → glitch 한 번에 둘 다 우회 어려움.
@@ -40,7 +40,7 @@ title: "Module 05 — Attack Surface & Defense"
 
 Module 01-04 는 _정상적으로_ chain 이 동작하는 모습이었습니다. 이번 모듈은 그 chain 에 _공격자가 끼어들 자리_ 가 어디인지를 봅니다 — 그리고 그 자리마다 **DV 가 reproducible 한 negative scenario 로 미리 두드려야** 합니다. 그러지 않으면 spec 만 맞춘 검증 = false sense of security.
 
-이후 Module 07 (DV 방법론) 의 _Active UVM Driver / 5 covergroup / Negative scenario framework_ 가 모두 이 모듈에서 본 surface 를 기반으로 설계됩니다. 즉 Module 05 = 공격자 관점 모델, Module 07 = 그것을 검증으로 환원한 결과.
+이후 Module 07 (DV 방법론) 의 _Active **UVM**(Universal Verification Methodology — SystemVerilog 기반의 표준 검증 방법론/클래스 라이브러리, 재사용 가능한 검증 환경을 만드는 업계 표준) Driver / 5 covergroup / Negative scenario framework_ 가 모두 이 모듈에서 본 surface 를 기반으로 설계됩니다. 즉 Module 05 = 공격자 관점 모델, Module 07 = 그것을 검증으로 환원한 결과.
 
 ---
 

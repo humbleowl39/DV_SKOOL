@@ -21,11 +21,11 @@ title: "Module 02 — SOLID 설계 원칙"
 
 ### 1.1 시나리오 — scoreboard가 자꾸 손이 가는 이유
 
-한 scoreboard 클래스가 기능 정확성 검사뿐 아니라 coverage 수집, 로그 포맷팅, 레지스터 모델 접근까지 떠안고 있다고 합시다. 처음엔 한 곳에 다 있어 편해 보이지만, coverage 정책이 바뀌면 scoreboard를 고쳐야 하고, 로그 포맷이 바뀌어도 scoreboard를 고쳐야 합니다. 즉 *바뀌는 이유가 여러 개*라서 손이 끊임없이 갑니다. 게다가 이 scoreboard를 다른 프로젝트에 재사용하려 하면 불필요한 coverage·레지스터 의존이 딸려옵니다 (`oop_spec.md` §5.1).
+한 scoreboard(기대값과 실제값을 비교해 정오답을 판정하는 검증 컴포넌트) 클래스가 기능 정확성 검사뿐 아니라 coverage(어떤 시나리오가 실제로 검증됐는지 누적 측정) 수집, 로그 포맷팅, 레지스터 모델(RAL — DUT의 하드웨어 레지스터를 소프트웨어 객체로 미러링한 모델) 접근까지 떠안고 있다고 합시다. 처음엔 한 곳에 다 있어 편해 보이지만, coverage 정책이 바뀌면 scoreboard를 고쳐야 하고, 로그 포맷이 바뀌어도 scoreboard를 고쳐야 합니다. 즉 *바뀌는 이유가 여러 개*라서 손이 끊임없이 갑니다. 게다가 이 scoreboard를 다른 프로젝트에 재사용하려 하면 불필요한 coverage·레지스터 의존이 딸려옵니다 (`oop_spec.md` §5.1).
 
 ### 1.2 SOLID가 푸는 문제
 
-SOLID는 클래스와 그 관계를 *확장·유지보수·테스트하기 쉽게* 설계하기 위한 다섯 원칙입니다 (`oop_spec.md` §5). 네 기둥이 "도구"이고 SOLID는 "그 도구를 쓰는 법"입니다 (`design_pattern_onboarding.md` cooking analogy). 검증 환경에서 SOLID를 지키면 VIP가 DUT에 독립적이 되고(재사용), 새 프로토콜을 기존 코드 수정 없이 추가할 수 있으며(확장), scoreboard·monitor가 추상 포트로 느슨하게 결합되어 테스트가 쉬워집니다.
+SOLID는 클래스와 그 관계를 *확장·유지보수·테스트하기 쉽게* 설계하기 위한 다섯 원칙입니다 (`oop_spec.md` §5). 네 기둥이 "도구"이고 SOLID는 "그 도구를 쓰는 법"입니다 (`design_pattern_onboarding.md` cooking analogy). 검증 환경에서 SOLID를 지키면 VIP(Verification IP — 특정 프로토콜을 검증하는 재사용 가능한 컴포넌트 묶음)가 DUT(Design Under Test — 검증 대상 설계)에 독립적이 되고(재사용), 새 프로토콜을 기존 코드 수정 없이 추가할 수 있으며(확장), scoreboard·monitor(DUT 신호를 관찰해 트랜잭션으로 변환하는 컴포넌트)가 추상 포트로 느슨하게 결합되어 테스트가 쉬워집니다.
 
 ---
 
@@ -107,7 +107,7 @@ endclass
 ```
 
 :::note[여기서 잡아야 할 핵심]
-UVM의 TLM 포트(`uvm_analysis_port`, `uvm_blocking_put_port`)는 DIP의 정석적 표현입니다. producer와 consumer가 추상 포트 타입을 통해 분리되어, 어느 쪽도 상대의 구체 타입을 알지 못합니다 (`oop_spec.md` §5.5).
+UVM의 TLM(Transaction-Level Modeling — 신호 단위가 아니라 트랜잭션 단위로 컴포넌트끼리 통신하는 방식) 포트(`uvm_analysis_port`, `uvm_blocking_put_port`)는 DIP의 정석적 표현입니다. producer(데이터를 보내는 쪽)와 consumer(받는 쪽)가 추상 포트 타입을 통해 분리되어, 어느 쪽도 상대의 구체 타입을 알지 못합니다 (`oop_spec.md` §5.5).
 :::
 ---
 
@@ -171,7 +171,7 @@ DV 엔지니어에게 "interface"는 거의 자동으로 SystemVerilog의 `inter
 
 ### 5.1 OCP의 결정판 — UVM Factory
 
-`oop_spec.md` §7은 **UVM factory를 검증에서 가장 강력한 OOP 패턴**으로 꼽습니다. factory는 테스트벤치 수준에서 OCP를 구현합니다 — 동작을 바꾸려면 기존 env를 편집하지 않고 *override를 새로 등록*하면 됩니다.
+`oop_spec.md` §7은 **UVM factory(객체를 직접 `new` 하지 않고 한 곳에 위임해 생성하는 중앙 생성기 — 나중에 어느 타입을 만들지 한 줄로 바꿔치기 가능)를 검증에서 가장 강력한 OOP 패턴**으로 꼽습니다. factory는 테스트벤치 수준에서 OCP를 구현합니다 — 동작을 바꾸려면 기존 env를 편집하지 않고 *override(원래 만들 타입 대신 다른 타입을 만들도록 갈아끼우는 등록)를 새로 등록*하면 됩니다.
 
 ```systemverilog
 // 기존 env·test 코드를 한 줄도 안 고치고 driver 동작을 교체 (OCP)

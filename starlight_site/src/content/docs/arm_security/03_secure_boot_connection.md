@@ -23,7 +23,9 @@ title: "Module 03 — Secure Boot Connection"
 
 ### 1.1 시나리오 — _Power-on 첫 1 ms_ 의 race
 
-Secure Boot 를 구현하고, 부팅 직후 Secure UART 에 비밀 데이터를 출력했습니다. 시뮬레이션은 통과했는데 실제 칩에서는 가끔 NS world 에서 그 비밀이 보이는 현상이 생깁니다.
+**Secure Boot**(보안 부팅 — 부팅 각 단계가 다음 단계의 서명을 검증한 뒤에만 실행을 넘기는 절차)를 구현하고, 부팅 직후 Secure UART 에 비밀 데이터를 출력했습니다. 시뮬레이션은 통과했는데 실제 칩에서는 가끔 NS world(일반 세계 — NS bit=1 로 실행되는 영역)에서 그 비밀이 보이는 현상이 생깁니다.
+
+부팅은 여러 단계(Boot Loader stage)로 나뉩니다 — **BL1**(BootROM, 칩에 구워진 1단계 부팅 코드), **BL2**(2단계 로더), **BL31**(EL3 에 상주하는 Secure Monitor 본체), **BL32**(Secure World OS, 예: OP-TEE), **BL33**(일반 세계 부트로더, 예: U-Boot). 그리고 **EL3**(ARMv8 권한 등급 중 최고 — 보안 모니터 전용), **SCR_EL3.NS**(EL3 보안 설정 레지스터의 NS 비트 — 현재 세계를 정함), **TZPC**(주변장치를 보안/일반으로 분류하는 컨트롤러), **TZASC**(DRAM 영역을 보안/일반으로 분할하는 컨트롤러)가 이 모듈의 주역입니다.
 
 추적 결과:
 
@@ -107,17 +109,17 @@ Boot 시 Chain of Trust 가 _"누가 입주해도 되는가"_ 를 확정하고 (
 
 세 가지 요구가 동시에 풀려야 했습니다.
 
-1. **첫 명령어부터 신뢰의 root 가 있어야 한다** → BootROM (mask-ROM, 위변조 불가) 이 EL3 (최고 권한) 에서 시작 → 이후 단계의 _누구를_ 실행할지 결정.
-2. **각 단계가 다음 단계를 검증해야 한다 (Chain of Trust)** → BL1 이 BL2 서명 검증, BL2 가 BL31/BL32/BL33 서명 검증, 한 단계라도 실패면 abort.
-3. **검증된 image 라도 _최신_ 이어야 한다 (Anti-Rollback)** → 서명만 보면 v1.0 의 취약점도 다시 booting 가능 → OTP monotonic counter 가 _"version 이 충분히 높은가"_ 를 추가 검증.
+1. **첫 명령어부터 신뢰의 root 가 있어야 한다** → BootROM (**mask-ROM** — 제조 시 회로로 굳혀져 절대 바꿀 수 없는 ROM, 위변조 불가) 이 EL3 (최고 권한) 에서 시작 → 이후 단계의 _누구를_ 실행할지 결정.
+2. **각 단계가 다음 단계를 검증해야 한다 (**Chain of Trust** — 신뢰 사슬: 앞 단계가 다음 단계의 서명을 검증한 뒤에만 넘김)** → BL1 이 BL2 서명 검증, BL2 가 BL31/BL32/BL33 서명 검증, 한 단계라도 실패면 abort.
+3. **검증된 image 라도 _최신_ 이어야 한다 (**Anti-Rollback** — 과거의 취약한 옛 버전으로 되돌리는 다운그레이드를 막는 것)** → 서명만 보면 v1.0 의 취약점도 다시 booting 가능 → **OTP**(One-Time Programmable — 한 번만 굽고 변경 불가한 메모리) **monotonic counter**(한 방향으로만 증가하는 카운터 — 줄어들 수 없어 버전 되돌리기를 막음) 가 _"version 이 충분히 높은가"_ 를 추가 검증.
 
-이 세 요구의 교집합이 곧 **Verified Boot (서명) + Architecture Enforcement (EL/NS) + Anti-Rollback (OTP counter)** 의 3 메커니즘 결합입니다.
+이 세 요구의 교집합이 곧 **Verified Boot**(서명 검증으로 "정당한 image 인가"를 확인) **(서명) + Architecture Enforcement (EL/NS) + Anti-Rollback (OTP counter)** 의 3 메커니즘 결합입니다.
 
 ---
 
 ## 3. 작은 예 — 부팅 중 BL31 에서 BL33 으로 넘어갈 때, 단 한 cycle 동안 일어나는 일
 
-가장 critical 한 시나리오. BL31 (EL3, Secure) 에서 BL33 (NS-EL1) 으로 ERET 하는 _그 한 cycle_ 에 무엇이 일어나는지. 이 한 cycle 직전까지 모든 secure 인프라가 lock-down 돼 있어야 하고, 한 cycle 후부터는 모든 NS access 가 차단돼야 합니다.
+가장 critical 한 시나리오. BL31 (EL3, Secure) 에서 BL33 (NS-EL1) 으로 **ERET**(Exception Return — 상위 EL 에서 하위 EL 로 복귀하는 명령) 하는 _그 한 cycle_ 에 무엇이 일어나는지. 이 한 cycle 직전까지 모든 secure 인프라가 lock-down 돼 있어야 하고, 한 cycle 후부터는 모든 NS access 가 차단돼야 합니다. (아래에서 **DECERR** = decode error, 버스가 "이 주소 접근 거부"로 돌려주는 에러 응답. **RAZ/WI** = Read-As-Zero/Write-Ignored, 읽으면 0·쓰면 무시되어 사실상 접근을 막는 레지스터 동작. **DTB**(device tree blob) = 하드웨어 구성을 OS 에 알려 주는 자료 구조.)
 
 ```
    Cycle:   t-3        t-2        t-1        t         t+1        t+2
@@ -145,7 +147,7 @@ Boot 시 Chain of Trust 가 _"누가 입주해도 되는가"_ 를 확정하고 (
 |---|---|---|---|
 | t-3 | BL31 | TZPC 의 secure-only slave list 완성 | NS access 차단의 구체화 |
 | t-2 | BL31 | TZASC region register set + lock | 이후 변경 금지 (SoC 마다 register 가 LOCK bit 또는 OTP 기반) |
-| t-1 | BL31 | GIC group 분류 + SPSR/ELR 설정 | ERET 직전 준비 |
+| t-1 | BL31 | GIC group 분류 + SPSR/ELR 설정 (SPSR_EL3 = 복귀 시 되살릴 프로세서 상태, ELR_EL3 = 복귀할 주소) | ERET 직전 준비 |
 | **t** | EL3 HW | **SCR_EL3.NS ← 1**, ERET | _이 cycle_ 이 architecture 전체의 turning point |
 | t+1 | BL33 | NS world 첫 instruction | 보안 인프라가 모두 작동 중 |
 | t+2 | BL33 (오류 시도) | secure DRAM read → DECERR | TZASC 가 정확히 차단 |
@@ -346,6 +348,8 @@ OTP (One-Time Programmable) 퓨즈에 단조 증가 카운터 저장:
 
 ### 5.4 Measured Boot & Remote Attestation
 
+**Measured Boot**(측정 부팅 — 부팅 각 단계의 해시를 차곡차곡 기록해 두는 것; 실행을 막진 않고 "무엇이 실행됐는지"를 증거로 남김)와 **Remote Attestation**(원격 증명 — 그 기록을 서버에 보내 기기 무결성을 원격으로 입증)이 이 절의 주제입니다. 측정값을 누적하는 전용 레지스터를 **PCR**(Platform Configuration Register — 부팅 측정 해시를 누적 저장하는 레지스터)이라 하고, 이를 담는 칩이 **TPM**(Trusted Platform Module — 측정값·키를 보관하는 표준 보안 칩; **fTPM** 은 이를 펌웨어로 구현한 것)입니다. ARM 진영의 보안 부팅 표준 묶음은 **PSA**(Platform Security Architecture — ARM 의 IoT/임베디드 보안 아키텍처 표준)라 부릅니다.
+
 #### Secure Boot vs Measured Boot
 
 ```
@@ -390,7 +394,7 @@ Boot Stage별 측정:
 
 **왜 이 해시 체인이 과거 측정을 _위조 못 하게_ 막는가.** PCR은 직접 쓰는 레지스터가 아니라 **extend 연산** 으로만 갱신됩니다: `PCR_new = Hash(PCR_prev ‖ H(stage))`. 새 값이 _이전 PCR_ 에 의존한다는 점이 핵심입니다.
 
-- **중간값을 임의로 맞출 수 없음**: 공격자가 변조된 stage를 측정에 끼워 넣어도, 그 결과 PCR은 `Hash(...)`로 _체인 전체_ 가 달라집니다. "최종 PCR을 정상값으로 되돌리려면" 어느 중간 단계에서 PCR을 원하는 값으로 _되돌려 써야_ 하는데, extend는 덮어쓰기가 아니라 _이전 값에 해시로 누적_ 하는 단방향 연산이라, 원하는 출력이 나오게 하는 입력을 찾는 것은 해시의 preimage 저항성에 막힙니다. 즉 "정상 PCR로 보이게 만들 중간 입력"을 계산해 낼 수 없습니다.
+- **중간값을 임의로 맞출 수 없음**: 공격자가 변조된 stage를 측정에 끼워 넣어도, 그 결과 PCR은 `Hash(...)`로 _체인 전체_ 가 달라집니다. "최종 PCR을 정상값으로 되돌리려면" 어느 중간 단계에서 PCR을 원하는 값으로 _되돌려 써야_ 하는데, extend는 덮어쓰기가 아니라 _이전 값에 해시로 누적_ 하는 단방향 연산이라, 원하는 출력이 나오게 하는 입력을 찾는 것은 해시의 **preimage 저항성**(주어진 해시 결과를 만들어 내는 입력을 거꾸로 찾는 것이 사실상 불가능하다는 해시 함수의 성질)에 막힙니다. 즉 "정상 PCR로 보이게 만들 중간 입력"을 계산해 낼 수 없습니다.
 - **순서·내용 모두 봉인**: `Hash(PCR_prev ‖ ...)`라 _측정한 순서_ 까지 결과에 반영됩니다 — 같은 stage들을 다른 순서로 측정하면 다른 PCR이 됩니다.
 
 **초기조건 — reset 시 0에서 시작.** PCR은 _reset(콜드 부팅) 시 알려진 값(보통 0)으로 초기화_ 됩니다. 이 고정 시작점이 있어야 체인이 _재현 가능_ 합니다: 정직한 부팅은 매번 `0 → extend(BL2) → extend(BL31) → ...`로 _같은 최종 PCR_ 을 만들고, 서버는 그 기대값과 비교해 무결성을 판정합니다. 시작점이 무작위거나 SW가 임의로 set할 수 있으면 체인의 신뢰가 깨지므로, PCR은 _reset에 의해서만_ 0으로 가고 그 외에는 extend로만 변합니다(직접 write 불가).
@@ -413,9 +417,9 @@ SRV -> SRV: "6. Token 검증\n서명 확인 + PCR 비교\n→ 신뢰 판단"
 ```
 
 활용 사례:
-- DRM: 콘텐츠 서버가 디바이스 무결성 확인 후 키 전달
-- 기업 보안: MDM 서버가 단말 무결성 확인 후 접속 허용
-- IoT: 클라우드가 디바이스 상태 확인 후 OTA 업데이트 배포
+- **DRM**(Digital Rights Management — 콘텐츠 저작권 보호): 콘텐츠 서버가 디바이스 무결성 확인 후 키 전달
+- 기업 보안: **MDM**(Mobile Device Management — 회사가 직원 단말을 원격 관리하는 시스템) 서버가 단말 무결성 확인 후 접속 허용
+- IoT: 클라우드가 디바이스 상태 확인 후 **OTA**(Over-The-Air — 무선으로 펌웨어/소프트웨어를 갱신) 업데이트 배포
 
 보안 레벨 연결:
 - DeviceKey는 Secure World(EL3 또는 S-EL1)에서만 접근 가능
@@ -430,7 +434,7 @@ SRV -> SRV: "6. Token 검증\n서명 확인 + PCR 비교\n→ 신뢰 판단"
 |------|-------------|---------|
 | OS 해킹 → 키 탈취 | TrustZone 격리 | NS에서 Secure 메모리 접근 불가 |
 | DMA 공격 | TZASC + SMMU | NS DMA가 Secure DRAM 접근 차단 |
-| JTAG 디버그 | EL3 + OTP | EL3에서 JTAG 비활성화, OTP로 영구 차단 |
+| **JTAG**(칩 디버그·테스트용 표준 하드웨어 인터페이스 — 열려 있으면 내부를 들여다보는 공격 통로) 디버그 | EL3 + OTP | EL3에서 JTAG 비활성화, OTP로 영구 차단 |
 | Privilege Escalation | EL 계층 | EL0→EL1은 Exception만, EL1→EL3은 SMC만 |
 | 악성 부트로더 | Secure Boot + EL | 서명 실패 → 실행 차단, NS 전환 전에 검증 완료 |
 | TEE 앱 간 격리 | S-EL0 + S-EL1 | TEE OS가 TA 간 메모리 격리 |
@@ -439,6 +443,8 @@ SRV -> SRV: "6. Token 검증\n서명 확인 + PCR 비교\n→ 신뢰 판단"
 | 위장 디바이스 | Measured Boot + TEE | Remote Attestation으로 무결성 증명 |
 
 #### 실제 공격 사례
+
+아래 사례에 나오는 용어 — **EDL**(Emergency Download — 퀄컴 칩의 비상 펌웨어 다운로드 모드; 복구용이지만 우회 시 공격 통로), **Flush+Reload**(캐시를 비운 뒤 다시 채워지는 시간차로 상대가 무엇을 접근했는지 알아내는 캐시 측면 채널 공격), **voltage glitch**(전압을 순간적으로 흔들어 칩이 검증·분기를 잘못 수행하게 만드는 물리 공격).
 
 ```
 (1) Nintendo Switch BootROM 취약점 (2018, "Fusée Gelée")
@@ -545,6 +551,8 @@ DV 의 핵심 원칙은 "무엇이 일어나야 하는가"(Positive) 와 "무엇
 
 #### SVA Assertion 예시
 
+**SVA**(SystemVerilog Assertions — 신호가 지켜야 할 시간적 규칙을 선언해 시뮬레이션 중 자동으로 위반을 잡아내는 검증 구문)로 위 invariant 를 강제합니다. `SLVERR`(slave error — 슬레이브가 요청을 처리하다 낸 에러 응답; DECERR 와 함께 버스 에러의 두 종류)도 함께 등장합니다.
+
 ```systemverilog
 // SCR_EL3.NS 전환 타이밍 검증
 // NS 전환 전에 모든 Secure 초기화가 완료되었는지 확인
@@ -603,7 +611,7 @@ c_anti_rollback: cover property (p_anti_rollback);
 
 #### Boot 측정/ROTPK 가 런타임 키 파생으로 _이어지는_ 연결 고리
 
-"ROTPK 가 derivation 의 source" 라는 말의 _실제 연결_ 을 한 단계 풉니다(구현마다 다름, 확인 필요 — 일반 패턴). 런타임 비밀(예: 저장 암호화 키, 디바이스 바인딩 키)은 보통 칩 고유의 **HUK(Hardware Unique Key)** 에서 **KDF** 로 파생합니다: `runtime_key = KDF(HUK, 라벨 ‖ 컨텍스트)`. 여기서 boot/ROTPK가 끼어드는 방식은 두 가지입니다.
+"ROTPK 가 derivation 의 source" 라는 말의 _실제 연결_ 을 한 단계 풉니다(구현마다 다름, 확인 필요 — 일반 패턴). 런타임 비밀(예: 저장 암호화 키, 디바이스 바인딩 키)은 보통 칩 고유의 **HUK**(Hardware Unique Key — 칩마다 다른, 외부로 절대 나오지 않는 하드웨어 고유 비밀키)에서 **KDF**(Key Derivation Function — 하나의 비밀에서 용도별 키를 안전하게 뽑아내는 함수)로 파생합니다: `runtime_key = KDF(HUK, 라벨 ‖ 컨텍스트)`. 여기서 boot/ROTPK가 끼어드는 방식은 두 가지입니다.
 
 - **(a) 접근 게이팅**: HUK와 KDF 엔진은 _Secure 상태(나아가 검증된 부팅을 거친 코드)에서만_ 접근 가능합니다. Secure Boot가 BL31/BL32를 ROTPK 체인으로 검증하고 NS 전환 _전에_ 보안 설정을 끝냈기 때문에, "정당한, 검증된 Secure 코드"만 KDF를 돌릴 수 있습니다 — 부팅 신뢰가 깨지면(가짜 BL2) 그 코드가 KDF에 닿지 못하거나, 닿더라도 다음 항목 때문에 _다른 키_ 가 나옵니다.
 - **(b) 측정값을 KDF 입력에 바인딩**: 더 강한 설계는 boot 측정값(PCR류) 또는 ROTPK/lifecycle 상태를 KDF의 _컨텍스트 입력_ 에 넣습니다: `key = KDF(HUK, 측정값 ‖ ...)`. 그러면 변조된 부팅(측정값이 달라짐)은 _애초에 다른 키_ 를 파생해, 원래 키로 암호화된 데이터(저장소 등)를 풀지 못합니다 — 즉 "정상 부팅했을 때만 올바른 런타임 키가 나온다"가 수학적으로 강제됩니다(measured boot ↔ key release의 결합).
@@ -641,7 +649,7 @@ c_anti_rollback: cover property (p_anti_rollback);
 ---
 
 :::caution[실무 주의점 — ROM/HSM 키 fuse 가 NS world 에서 read 가능]
-**현상**: NS world 에서 OTP/eFuse mirror 레지스터를 읽었더니 root key 또는 HUK 가 그대로 노출된다.
+**현상**: NS world 에서 OTP/**eFuse**(전기적으로 한 번 굽는 일회성 퓨즈 — 키·설정을 영구 저장) mirror(퓨즈 값을 빠르게 읽도록 복제해 둔 레지스터) 레지스터를 읽었더니 root key 또는 HUK 가 그대로 노출된다. (**HSM** = Hardware Security Module, 키 생성·보관·암호 연산을 전담하는 보안 하드웨어.)
 
 **원인**: 키가 저장된 fuse mirror 가 secure-only 영역으로 매핑되지 않아, TZPC/TZASC filter 가 해당 주소를 secure 로 lock 하지 못한다.
 

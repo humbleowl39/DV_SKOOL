@@ -21,9 +21,9 @@ title: "04 — NVMe-oF over RDMA"
 
 ### 1.1 시나리오 — SSD가 다른 랙에 있다
 
-데이터센터에서 컴퓨트 노드와 스토리지를 분리(disaggregation)하고 싶다고 합시다. SSD를 각 서버에 꽂는 대신 별도 스토리지 노드에 모아두고, 네트워크로 끌어다 쓰는 구조입니다. 문제는 "원격인데 로컬만큼 빠르고 지연이 낮아야 한다"는 것입니다. 일반 네트워크 스토리지(예: iSCSI)는 TCP/IP 스택과 CPU 카피 때문에 NVMe SSD의 마이크로초 지연을 다 까먹습니다. 구체적으로 그 손실은 *매 I/O마다* 쌓입니다 — 데이터가 애플리케이션 버퍼와 소켓 버퍼(커널) 사이를 CPU가 복사하고, 패킷 도착마다 인터럽트가 발생해 컨텍스트 전환을 일으키며, TCP 프로토콜 처리(시퀀스·ACK·재조립)가 CPU에서 돌아갑니다. 이 카피·인터럽트·프로토콜 처리 비용이 I/O 한 건 한 건에 더해져, 정작 SSD 매체가 마이크로초로 응답해도 그 이득이 소프트웨어 스택에서 묻혀 버립니다.
+데이터센터에서 컴퓨트 노드와 스토리지를 분리(**disaggregation**, 컴퓨팅 자원과 저장 자원을 별도 장비로 떼어내 네트워크로 연결하는 설계)하고 싶다고 합시다. **SSD**(Solid-State Drive, 플래시 메모리 기반 드라이브)를 각 서버에 꽂는 대신 별도 스토리지 노드에 모아두고, 네트워크로 끌어다 쓰는 구조입니다. 문제는 "원격인데 로컬만큼 빠르고 지연이 낮아야 한다"는 것입니다. 일반 네트워크 스토리지(예: **iSCSI**, SCSI 스토리지 명령을 TCP/IP 네트워크로 실어 나르는 프로토콜)는 **TCP/IP**(인터넷 표준 네트워크 프로토콜 스택) 스택과 CPU 카피 때문에 NVMe SSD의 마이크로초 지연을 다 까먹습니다. 구체적으로 그 손실은 *매 I/O마다* 쌓입니다 — 데이터가 애플리케이션 버퍼와 소켓 버퍼(커널) 사이를 CPU가 복사하고, 패킷 도착마다 인터럽트가 발생해 컨텍스트 전환을 일으키며, TCP 프로토콜 처리(시퀀스·ACK·재조립)가 CPU에서 돌아갑니다. 이 카피·인터럽트·프로토콜 처리 비용이 I/O 한 건 한 건에 더해져, 정작 SSD 매체가 마이크로초로 응답해도 그 이득이 소프트웨어 스택에서 묻혀 버립니다.
 
-**NVMe over Fabrics(NVMe-oF)**가 이 문제를 풉니다. NVMe spec은 transport layer를 추상화해 두었기 때문에, 그 위에 PCIe 대신 RDMA(InfiniBand/RoCEv2/iWARP), TCP, Fibre Channel을 끼울 수 있습니다. 특히 **RDMA over Fabrics**는 host CPU를 거치지 않는 zero-copy 전송으로 원격 NVMe를 거의 로컬처럼 만듭니다. NRT DV 환경은 바로 이 **NVMe-oF over RDMA**(RoCEv2가 주 use-case)를 검증합니다.
+**NVMe over Fabrics(NVMe-oF)**(NVMe를 네트워크 패브릭으로 확장해 원격 스토리지를 로컬처럼 쓰게 한 사양) 가 이 문제를 풉니다. NVMe spec은 **transport layer**(명령·데이터를 실제로 운반하는 하부 전송 계층)를 추상화해 두었기 때문에, 그 위에 PCIe 대신 **RDMA**(Remote Direct Memory Access, 원격 장치가 CPU를 거치지 않고 네트워크 너머 메모리를 직접 읽고 쓰는 기술)(**InfiniBand**(고성능 RDMA 전용 네트워크)/**RoCEv2**(RDMA over Converged Ethernet v2, 일반 Ethernet 위에서 RDMA를 구현하는 방식)/**iWARP**(TCP/IP 위에서 RDMA를 구현하는 방식)), TCP, Fibre Channel을 끼울 수 있습니다. 특히 **RDMA over Fabrics**는 host CPU를 거치지 않는 **zero-copy**(데이터를 CPU가 버퍼 사이로 복사하지 않고 곧바로 전달하는 방식) 전송으로 원격 NVMe를 거의 로컬처럼 만듭니다. NRT DV 환경은 바로 이 **NVMe-oF over RDMA**(RoCEv2가 주 use-case)를 검증합니다.
 
 이 장을 모르면 원격 스토리지 IP(NRT, NVMe RDMA Target)에서 *왜 NVMe 큐가 RDMA QP가 되는지*, *데이터가 어떻게 capsule로 운반되는지*를 설명하지 못해 검증을 시작조차 못 합니다.
 
@@ -59,7 +59,7 @@ TARGET.TQP -> FABRIC: "RDMA Read/Write (data)\n+ completion capsule"
 FABRIC -> HOST.HQP
 ```
 
-핵심 매핑: **RDMA QP 한 쌍 = NVMe 큐 쌍(SQ+CQ) 하나**. control-plane(Connect/Disconnect/Property/Auth)도 모두 capsule 형태로 이 QP 위를 흐릅니다.
+여기서 **host**(명령을 보내는 쪽, initiator)와 **target controller**(원격에서 명령을 받아 SSD를 제어하는 쪽)가 RDMA 패브릭을 사이에 두고 마주봅니다. 핵심 매핑: **RDMA QP 한 쌍 = NVMe 큐 쌍(SQ+CQ) 하나**. **control-plane**(데이터 전송이 아니라 연결 수립·설정을 담당하는 제어 경로)(Connect/Disconnect/Property/Auth)도 모두 capsule 형태로 이 QP 위를 흐릅니다.
 
 ---
 
@@ -91,7 +91,7 @@ S1 -> S2 -> S3 -> S4
 
 작은 데이터를 매번 별도 RDMA Read/Write로 옮기면 왕복 지연이 낭비입니다. 그래서 작은 write는 capsule 봉투 안에 데이터를 같이 실어(**ICD**) SEND 한 번으로 끝냅니다. 반대로 큰 데이터를 capsule에 다 넣으면 SEND 버퍼가 감당 못 하므로, capsule엔 SGL(Scatter-Gather List, 데이터가 어디 있는지 알려주는 주소표)만 넣고 본체는 **RDMA Read/Write**로 따로 운반합니다(**Out-of-line**).
 
-그렇다면 "작다/크다"를 가르는 임계값은 어디서 올까요? inline으로 실을 수 있는 한도는 **RDMA SEND가 한 번에 운반하는 버퍼 크기**가 정합니다 — capsule은 결국 SEND 한 건에 담겨야 하고, 그 SEND 페이로드는 수신 측이 미리 마련해 둔 RECV 버퍼와 전송 MTU 같은 transport 제약 안에 들어가야 하기 때문입니다. 즉 data가 capsule(명령 64B + inline 여유분)에 들어가고도 한 SEND 버퍼를 넘지 않으면 ICD, 넘으면 Out-of-line입니다(정확한 임계 byte 수는 구성·spec 협상값으로 확인 필요). Read의 경우 데이터가 target→host 방향이므로 target이 **RDMA Write**로 host 버퍼에 데이터를 직접 써 넣고 마지막에 completion capsule을 보냅니다.
+그렇다면 "작다/크다"를 가르는 임계값은 어디서 올까요? inline으로 실을 수 있는 한도는 **RDMA SEND가 한 번에 운반하는 버퍼 크기**가 정합니다 — capsule은 결국 SEND 한 건에 담겨야 하고, 그 SEND 페이로드는 수신 측이 미리 마련해 둔 RECV 버퍼와 전송 **MTU**(Maximum Transmission Unit, 한 번에 보낼 수 있는 최대 패킷 크기) 같은 transport 제약 안에 들어가야 하기 때문입니다. 즉 data가 capsule(명령 64B + inline 여유분)에 들어가고도 한 SEND 버퍼를 넘지 않으면 ICD, 넘으면 Out-of-line입니다(정확한 임계 byte 수는 구성·spec 협상값으로 확인 필요). Read의 경우 데이터가 target→host 방향이므로 target이 **RDMA Write**로 host 버퍼에 데이터를 직접 써 넣고 마지막에 completion capsule을 보냅니다.
 
 ---
 
@@ -99,7 +99,7 @@ S1 -> S2 -> S3 -> S4
 
 ### 4.1 큐 쌍과 capsule
 
-NVMe-oF over RDMA 아키텍처의 요점은 셋입니다. 첫째, **Host ↔ Target controller 사이 RDMA QP 한 쌍 = NVMe 큐 쌍(SQ+CQ) 하나**. 둘째, **capsule**(NVMe cmd 64B + 부속 data)이 RDMA SEND/RECV로 운반됩니다. 셋째, **control-plane**(Connect/Disconnect/Property Get·Set/Authentication)도 capsule 형태로 같은 경로를 흐릅니다 — 즉 3장의 Fabric 커맨드가 바로 이 control-plane capsule입니다.
+NVMe-oF over RDMA 아키텍처의 요점은 셋입니다. 첫째, **Host ↔ Target controller 사이 RDMA QP**(Queue Pair, RDMA에서 송신 큐와 수신 큐를 한 쌍으로 묶은 통신 단위) **한 쌍 = NVMe 큐 쌍(SQ+CQ) 하나**. 둘째, **capsule**(NVMe cmd 64B + 부속 data)이 RDMA SEND/RECV로 운반됩니다. 셋째, **control-plane**(Connect/Disconnect/Property Get·Set/Authentication)도 capsule 형태로 같은 경로를 흐릅니다 — 즉 3장의 Fabric 커맨드가 바로 이 control-plane capsule입니다.
 
 ```d2
 direction: right
@@ -118,7 +118,7 @@ RDMA: "RDMA transport\n(RoCEv2)"
 
 NVMe-oF가 올라갈 수 있는 transport는 PCIe(로컬 NVMe), RDMA(InfiniBand/RoCEv2/iWARP), TCP, Fibre Channel입니다. **NRT DV 환경은 NVMe-oF over RDMA이며 RoCEv2가 주 use-case**입니다. RDMA를 고른 이유는 zero-copy·CPU 우회로 NVMe SSD의 저지연을 네트워크 너머까지 보존하기 때문입니다.
 
-RDMA가 *물리적으로* zero-copy가 되는 이유는 **NIC가 호스트 메모리에 직접 DMA**하기 때문입니다. iSCSI/TCP에서는 CPU가 소켓 버퍼와 애플리케이션 버퍼 사이를 복사했지만, RDMA에서는 NIC 하드웨어가 미리 등록된 메모리 영역을 향해 데이터를 직접 읽고 씁니다. 커널 카피도, 매 패킷마다의 CPU 개입도 없으므로 host CPU는 전송 경로에서 빠집니다. 바로 이 "NIC가 직접 DMA"가 위 1.1에서 본 카피·인터럽트·프로토콜 비용을 제거하는 메커니즘입니다.
+RDMA가 *물리적으로* zero-copy가 되는 이유는 **NIC**(Network Interface Card, 네트워크 통신을 담당하는 카드/칩)**가 호스트 메모리에 직접 DMA**(Direct Memory Access, CPU를 거치지 않고 장치가 메모리를 직접 읽고 쓰는 방식)하기 때문입니다. iSCSI/TCP에서는 CPU가 소켓 버퍼와 애플리케이션 버퍼 사이를 복사했지만, RDMA에서는 NIC 하드웨어가 미리 등록된 메모리 영역을 향해 데이터를 직접 읽고 씁니다. 커널 카피도, 매 패킷마다의 CPU 개입도 없으므로 host CPU는 전송 경로에서 빠집니다. 바로 이 "NIC가 직접 DMA"가 위 1.1에서 본 카피·인터럽트·프로토콜 비용을 제거하는 메커니즘입니다.
 
 이것이 안전하려면 전제가 하나 있습니다 — NIC가 건드릴 메모리를 **미리 Memory Region(MR)으로 등록**해 두어야 합니다. RDMA는 원격이 임의의 host 주소에 직접 쓰는 모델이므로, 무방비로 두면 잘못된 주소를 덮어쓰는 위험이 있습니다. 그래서 host는 대상 버퍼를 사전에 **핀(pin)**하고(OS가 그 페이지를 옮기거나 swap하지 못하게 고정) MR로 등록해, NIC가 안전하게 접근할 수 있는 주소·권한 범위를 정해 둡니다. MR 등록이 선행되지 않으면 NIC는 그 영역에 DMA할 권한이 없습니다 — Read 데이터가 host 버퍼에 도착하지 않는 디버그의 단골 원인이 여기 있습니다.
 
@@ -134,11 +134,11 @@ NVMe-oF over RDMA의 검증은 로컬 NVMe보다 검증 면이 넓습니다. NRT
 
 ### 5.1 Polling 기반 completion
 
-NRT DV는 **polling 위주**(MSI 비활성)입니다. NVMe-oF에서 completion은 completion capsule로 도착해 host CQ에 반영되고, host는 [2장](../02_sq_cq_doorbell/)에서 본 것처럼 phase bit으로 유효성을 판정합니다. 여러 QP가 CQ를 공유하는 **shared CQ dispatcher**(abort, stale CQE fast-forward 포함)가 NRT 환경의 검증 대상입니다.
+NRT DV는 **polling 위주**(host가 새 결과를 직접 반복 확인, MSI 비활성)입니다. NVMe-oF에서 completion은 completion capsule로 도착해 host CQ에 반영되고, host는 [2장](../02_sq_cq_doorbell/)에서 본 것처럼 **phase bit**(슬롯의 CQE가 새것인지 옛것인지 구별하는 1비트 표식)으로 유효성을 판정합니다. 여러 QP가 CQ를 공유하는 **shared CQ dispatcher**(여러 큐의 completion을 하나의 CQ에서 받아 알맞은 곳으로 분배하는 로직)가 — abort(진행 중 명령 취소), stale CQE(이전 바퀴의 옛 항목) fast-forward 포함 — NRT 환경의 검증 대상입니다.
 
 ### 5.2 Scoreboard — OoO completion
 
-서로 다른 명령의 completion은 발행 순서와 다르게 도착할 수 있습니다. 따라서 scoreboard를 단일 큐로 짜면 false mismatch가 납니다 — [UVM M05 TLM/Scoreboard](../../uvm/05_tlm_scoreboard_coverage/)에서 본 OoO 패턴 그대로입니다. NRT-TB의 scoreboard는 SRB(submission) ↔ SQE를 비교하는 구조입니다.
+서로 다른 명령의 completion은 발행 순서와 다르게 도착할 수 있습니다(**OoO**, Out-of-Order — 완료가 명령을 보낸 순서와 무관하게 뒤섞여 도착함). 따라서 **scoreboard**(DUT의 실제 출력과 기대값을 비교해 정오답을 판정하는 검증 컴포넌트)를 단일 큐로 짜면 false mismatch(정상인데 틀렸다고 잘못 신고하는 것)가 납니다 — [UVM M05 TLM/Scoreboard](../../uvm/05_tlm_scoreboard_coverage/)에서 본 OoO 패턴 그대로입니다. NRT-TB의 scoreboard는 SRB(submission request block, 발행한 명령을 기록한 블록) ↔ SQE를 비교하는 구조입니다.
 
 ```systemverilog
 // NVMe-oF completion scoreboard — OoO 매칭 개념 (예시)

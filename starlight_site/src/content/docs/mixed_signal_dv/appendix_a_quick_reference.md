@@ -2,6 +2,8 @@
 title: "Appendix A. Quick Reference — 식·상수·표"
 ---
 
+> 이 부록은 각 챕터에서 설명한 식·상수·문법을 한곳에 모은 빠른 참조표입니다. 처음 보는 용어(charge sharing, Pelgrom's law, Q-function 등)는 [Glossary](../appendix_c_glossary/) 또는 해당 챕터의 정의를 참고하세요.
+
 ## 1. 핵심 식
 
 ### Charge Sharing (DRAM read)

@@ -66,7 +66,7 @@ PMD -> NET: "light / electrical pulses"
 - PCS 는 **block-level** 일을 합니다 (64b/66b, alignment, FEC).
 - PMA/PMD 는 **bit/symbol-level** 일을 합니다 (NRZ/PAM4, CDR).
 
-이 분담이 곧 DCMAC 의 인터페이스 형상 — 위쪽은 AXI-Stream(byte), 아래쪽은 Segmented(block) — 를 결정합니다.
+이 분담이 곧 DCMAC 의 인터페이스 형상 — 위쪽은 **AXI-Stream**(ARM AMBA의 스트리밍 버스 프로토콜 — 주소 없이 데이터를 한 방향으로 연속해 흘려보내는 valid/ready 핸드셰이크 인터페이스)(byte), 아래쪽은 Segmented(block) — 를 결정합니다.
 
 ### 2.5 한 장 그림 — OSI 7 계층 속 DCMAC 의 자리
 
@@ -96,7 +96,7 @@ L7 -> L6 -> L5 -> L4 -> L3 -> L2 -> L1 -> MED
 
 ## 3. 작은 예 — 1518B IPv4 프레임의 TX 1-cycle step by step
 
-가장 단순한 시나리오. TOE 가 **1500-byte IPv4 payload** 를 만들어 DCMAC 의 AXI-S TX 인터페이스에 1518-byte Ethernet frame 으로 흘려보냅니다 (DA 6 + SA 6 + Type 2 + Payload 1500 + FCS 4 = 1518).
+가장 단순한 시나리오. **TOE**(TCP Offload Engine — TCP/IP 처리를 CPU 대신 하드웨어로 가속하는 블록, 여기서는 DCMAC 상위의 트래픽 소스 역할) 가 **1500-byte IPv4 payload** 를 만들어 DCMAC 의 AXI-S TX 인터페이스에 1518-byte Ethernet frame 으로 흘려보냅니다 (DA 6 + SA 6 + Type 2 + Payload 1500 + FCS 4 = 1518).
 
 ```d2
 shape: sequence_diagram
@@ -177,6 +177,8 @@ PMD -> MED
 | **lane 수** | 1 → 1 (또는 4×2.5G 묶음) → 4 → 8 (또는 4×PAM4) |
 | **encoding / FEC** | 8b/10b (no FEC) → 64b/66b (no FEC) → 64b/66b + RS(528,514) → 64b/66b + RS(544,514) |
 
+여기서 **Baud**(보율 — 초당 심볼(신호 변화) 수, GBaud = 10억 심볼/초)는 초당 _심볼_ 수이고 bit rate 는 초당 _비트_ 수라 둘이 다릅니다. NRZ(심볼당 1비트)는 둘이 같지만, PAM4(심볼당 2비트)는 같은 Baud 로 2배 bit rate 를 냅니다 — 그래서 53 GBaud PAM4 가 ~106 Gbps/lane 을 만듭니다.
+
 → "단순히 클럭만 빨라지는 게 아니라 인코딩/FEC/lane 조합이 통째로 바뀌므로, 각 속도 모드는 사실상 **다른 PHY**" 입니다.
 
 ### 4.3 Frame 한 개의 변형 — VLAN / Jumbo / Pause / PFC
@@ -226,7 +228,7 @@ C -> D: "+Ethernet header & FCS"
 D -> E: "line coding"
 ```
 
-이 그림이 §2.5 의 "DCMAC payload = 불투명한 바이트 덩어리" 를 정확히 설명합니다. DCMAC 의 AXI-Stream 으로 들어오는 payload 는 이미 L3(IP) + L4(TCP) 헤더가 다 붙은 상태이고, DCMAC 은 그 바깥에 Ethernet 헤더와 FCS 만 두릅니다. 오버헤드를 숫자로 보면 — IP MTU 1500B 에서 IPv4 20B + TCP 20B 를 빼면 payload(MSS) 는 1460B 이고, Ethernet 은 그 1500B 바깥에 14B frame 헤더 + 4B FCS(=18B) 를 더해 wire 위 한 frame 은 최대 **1518B** 가 됩니다 (`osi_7_layer_spec.md:102-105`). 이 1518 이 §5.1 frame 다이어그램의 표준 최대 크기의 출처입니다.
+이 그림이 §2.5 의 "DCMAC payload = 불투명한 바이트 덩어리" 를 정확히 설명합니다. DCMAC 의 AXI-Stream 으로 들어오는 payload 는 이미 L3(IP) + L4(TCP) 헤더가 다 붙은 상태이고, DCMAC 은 그 바깥에 Ethernet 헤더와 FCS 만 두릅니다. 오버헤드를 숫자로 보면 — IP **MTU**(Maximum Transmission Unit — 한 frame 에 실을 수 있는 payload 의 최대 byte 수, Ethernet 표준은 1500B) 1500B 에서 IPv4 20B + TCP 20B 를 빼면 payload(**MSS**, Maximum Segment Size — TCP가 한 segment 에 담는 최대 데이터) 는 1460B 이고, Ethernet 은 그 1500B 바깥에 14B frame 헤더 + 4B FCS(=18B) 를 더해 wire 위 한 frame 은 최대 **1518B** 가 됩니다 (`osi_7_layer_spec.md:102-105`). 이 1518 이 §5.1 frame 다이어그램의 표준 최대 크기의 출처입니다.
 
 #### OSI ↔ TCP/IP 매핑과 디바이스 동작 계층
 
@@ -273,7 +275,7 @@ ETH -> DC
 
 진화의 첫 분기점은 **circuit switching → packet switching** 입니다. 전화망은 두 끝점이 통신하려면 중간 교환기들이 물리 회선을 미리 잡고 통화가 끝날 때까지 독점했는데, 사람 음성과 달리 데이터 트래픽은 **버스트성(bursty)** 이라 회선 독점에 맞지 않았습니다 (`network_history_spec.md:26-31`). 해법인 packet switching 은 여러 대화가 한 회선을 나눠 쓰고(통계적 다중화), 고장 난 노드를 우회하며, 보낼 데이터가 있을 때만 회선을 씁니다 (`network_history_spec.md:33-39`). 이 "데이터를 패킷/프레임 단위로 쪼개 독립적으로 보낸다" 는 발상이 곧 Ethernet frame 의 철학적 뿌리입니다.
 
-**Ethernet 자체** 는 1973 년 Bob Metcalfe 가 ALOHAnet 아이디어를 유선 케이블에 적용하며 시작됐고, 초기 실험 속도는 **2.94 Mbps** 였습니다 (`network_history_spec.md:88-90`). 핵심 메커니즘 **CSMA/CD** 는 트래픽이 늘수록 충돌이 폭발하는 한계가 있었습니다 (`network_history_spec.md:91-94`). 1980 년 DEC+Intel+Xerox(DIX) 가 Ethernet v1 을 내놓았고 이것이 IEEE 802.3 으로 발전했는데, 그때 정해진 **48-bit MAC 주소, 1500-byte MTU, Ethernet frame 형식이 오늘날까지 그대로** 쓰입니다 (`network_history_spec.md:96-98`) — §5.1 의 frame 구조와 §5.5 의 48-bit MAC 이 바로 이 1980 년의 유산입니다. 결정적으로 1992 년 **full-duplex** 도입과 **switch** 의 등장이 CSMA/CD 충돌을 사실상 없앴고, 그래서 현대 Ethernet 은 이름만 같을 뿐 내부 동작은 초기와 다른 프로토콜에 가깝습니다 (`network_history_spec.md:118-121`).
+**Ethernet 자체** 는 1973 년 Bob Metcalfe 가 ALOHAnet 아이디어를 유선 케이블에 적용하며 시작됐고, 초기 실험 속도는 **2.94 Mbps** 였습니다 (`network_history_spec.md:88-90`). 핵심 메커니즘 **CSMA/CD**(Carrier Sense Multiple Access with Collision Detection — 보내기 전에 매체가 비었는지 듣고, 동시 전송이 겹치면 충돌을 감지해 재시도하는 공유 매체 접근 방식) 는 트래픽이 늘수록 충돌이 폭발하는 한계가 있었습니다 (`network_history_spec.md:91-94`). 1980 년 DEC+Intel+Xerox(DIX) 가 Ethernet v1 을 내놓았고 이것이 IEEE 802.3 으로 발전했는데, 그때 정해진 **48-bit MAC 주소, 1500-byte MTU, Ethernet frame 형식이 오늘날까지 그대로** 쓰입니다 (`network_history_spec.md:96-98`) — §5.1 의 frame 구조와 §5.5 의 48-bit MAC 이 바로 이 1980 년의 유산입니다. 결정적으로 1992 년 **full-duplex** 도입과 **switch** 의 등장이 CSMA/CD 충돌을 사실상 없앴고, 그래서 현대 Ethernet 은 이름만 같을 뿐 내부 동작은 초기와 다른 프로토콜에 가깝습니다 (`network_history_spec.md:118-121`).
 
 속도는 약 40 년 동안 10 Mbps → 1.6 Tbps 로 **16 만 배** 성장했습니다 (`network_history_spec.md:103-116`).
 
@@ -289,7 +291,7 @@ ETH -> DC
 | 800 GbE | 2022 | 800 Gbps |
 | 1.6 TbE | 2024~ (초안) | 1.6 Tbps |
 
-이 속도 폭증이 §4.2 의 "bit-rate × lane × encoding/FEC 세 축이 동시에 변한다" 의 역사적 동력이고, DCMAC 이 100/200/400GbE 를 다루는 이유입니다. 그리고 마지막 분기인 **데이터센터 네트워크** 가 PFC/RDMA 의 출처입니다. 클라우드와 분산 컴퓨팅이 server↔server 의 east-west 트래픽을 폭증시키면서 전통적 3-tier 트리 대신 **Spine-Leaf(Clos) 네트워크** 가 표준이 됐고 (`network_history_spec.md:152-156`), TCP 의 오버헤드(커널 처리, ack/재전송, copy) 를 피하려 NIC 이 원격 메모리를 CPU 개입 없이 직접 읽고 쓰는 **RDMA** 가 등장했습니다. RDMA 는 InfiniBand 에서 출발해 Ethernet 위 표준인 **RoCE(RDMA over Converged Ethernet)** 로 정착했는데, 손실에 민감하므로 **PFC** 와 **ECN** 으로 무손실(lossless) 을 보장해야 합니다 (`network_history_spec.md:158-164`). 즉 §4.3 과 §5.4 의 **PFC 가 "데이터센터에서 필수" 인 진짜 이유는 RoCE 의 무손실 요구** 이며, DCMAC 이 PFC 를 정확히 구현·검증해야 하는 동기가 여기서 나옵니다. 더 나아가 NIC 이 패킷 처리·암호화·VxLAN 터널링까지 떠안는 **SmartNIC/DPU** 시대에는 NIC 이 단순 송수신 장치가 아니라 "네트워크 위에서 도는 컴퓨터" 가 되며 (`network_history_spec.md:172-176`), DCMAC 은 그 DPU 의 L2/L1 가속 엔진입니다.
+이 속도 폭증이 §4.2 의 "bit-rate × lane × encoding/FEC 세 축이 동시에 변한다" 의 역사적 동력이고, DCMAC 이 100/200/400GbE 를 다루는 이유입니다. 그리고 마지막 분기인 **데이터센터 네트워크** 가 PFC/RDMA 의 출처입니다. 클라우드와 분산 컴퓨팅이 server↔server 의 east-west 트래픽을 폭증시키면서 전통적 3-tier 트리 대신 **Spine-Leaf(Clos) 네트워크** 가 표준이 됐고 (`network_history_spec.md:152-156`), TCP 의 오버헤드(커널 처리, ack/재전송, copy) 를 피하려 NIC 이 원격 메모리를 CPU 개입 없이 직접 읽고 쓰는 **RDMA** 가 등장했습니다. RDMA 는 InfiniBand 에서 출발해 Ethernet 위 표준인 **RoCE(RDMA over Converged Ethernet)** 로 정착했는데, 손실에 민감하므로 **PFC** 와 **ECN**(Explicit Congestion Notification — 패킷을 버리는 대신 헤더에 혼잡 표시 비트를 세워 송신자가 속도를 줄이게 알리는 혼잡 제어) 으로 무손실(lossless) 을 보장해야 합니다 (`network_history_spec.md:158-164`). 즉 §4.3 과 §5.4 의 **PFC 가 "데이터센터에서 필수" 인 진짜 이유는 RoCE 의 무손실 요구** 이며, DCMAC 이 PFC 를 정확히 구현·검증해야 하는 동기가 여기서 나옵니다. 더 나아가 NIC 이 패킷 처리·암호화·VxLAN 터널링까지 떠안는 **SmartNIC/DPU** 시대에는 NIC 이 단순 송수신 장치가 아니라 "네트워크 위에서 도는 컴퓨터" 가 되며 (`network_history_spec.md:172-176`), DCMAC 은 그 DPU 의 L2/L1 가속 엔진입니다.
 
 ---
 

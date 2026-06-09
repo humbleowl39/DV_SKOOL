@@ -15,6 +15,8 @@ title: "Module 04 — TOE DV Methodology"
 :::note[사전 지식]
 - [Module 01-03](../01_tcp_ip_and_toe_concept/)
 - [UVM](../../uvm/), [AXI-Stream](../../amba_protocols/03_axi_stream/)
+
+이 모듈은 검증(DV) 어휘를 씁니다. 먼저 잡고 가세요. **DV**(Design Verification; 설계한 HW 가 사양대로 동작하는지 시뮬레이션으로 증명하는 작업), **DUT**(Design Under Test; 검증 대상이 되는 설계 — 여기서는 TOE), **UVM**(Universal Verification Methodology; SystemVerilog 로 검증 환경을 모듈처럼 조립하는 표준 방법론), **TB**(testbench; DUT 에 자극을 넣고 출력을 검사하는 검증 환경), **agent**(에이전트; 한 인터페이스를 담당하는 UVM 검증 블록 묶음 — 보통 driver+monitor+sequencer), **transaction**(트랜잭션; "이 패킷을 보내라" 같은 한 단위의 추상 작업 — 신호 비트보다 높은 추상 수준), **happy path**(해피 패스; 오류 없이 모든 게 정상으로 흘러가는 기본 시나리오).
 :::
 ---
 
@@ -109,11 +111,11 @@ Ref -> SB: "Reference ACK"
 
 | Step | TB 컴포넌트 | 무엇을 | 왜 |
 |---|---|---|---|
-| ① | UVM Sequence | `tcp_connect_seq.start(host_seqr)` 호출 | 테스트 의도를 transaction 으로 |
+| ① | UVM **Sequence**(시퀀스; transaction 들을 순서대로 만들어 내는 테스트 시나리오 생성기) | `tcp_connect_seq.start(host_seqr)` 호출 | 테스트 의도를 transaction 으로 |
 | ② | DUT (TX path) | SYN packet 만들고 Conn Table 에 entry 생성 | 검증 대상의 첫 동작 |
-| ③ | Network Agent Monitor | AXI-S 에서 SYN 캡처, analysis_port 에 publish | DUT 출력 관찰 |
-| ④ | Reference Model | TCP 시뮬레이션 → 기대 SYN-ACK 계산 | scoreboard 비교 기준 생성 |
-| ⑤ | Network Agent Responder | SYN-ACK 자동 생성 (또는 의도적 drop/corrupt) | reactive peer 시뮬 |
+| ③ | Network Agent **Monitor**(모니터; 인터페이스 신호를 관찰해 transaction 으로 복원하는 수동 컴포넌트) | AXI-S 에서 SYN 캡처, **analysis_port**(관찰한 transaction 을 scoreboard·coverage 등 구독자들에게 방송하는 통로) 에 publish | DUT 출력 관찰 |
+| ④ | **Reference Model**(레퍼런스 모델; DUT 와 같은 입력에 대해 "정답" 출력을 계산하는 독립 모델 — golden model) | TCP 시뮬레이션 → 기대 SYN-ACK 계산 | scoreboard 비교 기준 생성 |
+| ⑤ | Network Agent **Responder**(리스폰더; DUT 출력을 보고 그에 맞는 응답을 즉석에서 만들어 주는 reactive 컴포넌트) | SYN-ACK 자동 생성 (또는 의도적 drop/corrupt) | reactive peer 시뮬 |
 | ⑥ | Scoreboard | DUT SYN vs Reference SYN field-by-field 비교 | 프로토콜 정확성 |
 | ⑦ | DUT (RX path) | SYN-ACK 수신, FSM 전이 | 다음 검증 대상 |
 | ⑧ | Coverage | cp_state, cp_transition bin 적중 | structural completeness |
@@ -135,8 +137,8 @@ endclass
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) Reactive 의 의미** — Step ⑤ 의 SYN-ACK 은 _DUT 의 SYN 을 Monitor 가 본 후_ Responder 가 만들어냅니다. 미리 정해진 패킷이 아닙니다. 그래서 DUT 가 ISN (Initial Sequence Number) 을 어떻게 바꾸든 적절히 응답. <br>
-**(2) Coverage 와 SVA 의 역할 분담** — Coverage 는 "어떤 상태를 _겪었는가_", SVA 는 "그 상태에서 _규칙을 지켰는가_". 둘 다 있어야 vacuous pass 를 막습니다.
+**(1) Reactive 의 의미** — Step ⑤ 의 SYN-ACK 은 _DUT 의 SYN 을 Monitor 가 본 후_ Responder 가 만들어냅니다. 미리 정해진 패킷이 아닙니다. 그래서 DUT 가 ISN (Initial Sequence Number; 연결을 열 때 무작위로 고르는 첫 sequence number — 옛 연결과 섞이지 않도록) 을 어떻게 바꾸든 적절히 응답. <br>
+**(2) Coverage 와 SVA 의 역할 분담** — **Coverage**(커버리지; 검증이 어떤 상황·상태를 실제로 밟았는지 세어 완전성을 재는 지표) 는 "어떤 상태를 _겪었는가_", **SVA**(SystemVerilog Assertion; "이 조건은 항상 성립해야 한다"를 코드로 박아 자동 검사) 는 "그 상태에서 _규칙을 지켰는가_". 둘 다 있어야 **vacuous pass**(베이큐어스 패스; 검사 전제 조건이 한 번도 발생하지 않아 단언이 _평가조차_ 안 됐는데 통과로 보이는 허상) 를 막습니다.
 :::
 ---
 
@@ -428,7 +430,7 @@ class network_agent extends uvm_agent;
   }
 ```
 
-이 설계의 핵심은 네트워크의 비결정론적 특성을 Constrained Random 으로 모델링한다는 것입니다. 실제 네트워크에서는 패킷 손실, 순서 역전, 중복이 어떤 조합으로든 발생할 수 있는데, 테스트마다 이 파라미터를 다르게 randomize 하면 그 조합 공간을 자연스럽게 커버하게 됩니다.
+이 설계의 핵심은 네트워크의 비결정론적 특성을 **Constrained Random**(제약 랜덤화; 정해진 제약 범위 안에서 값을 무작위로 뽑아 사람이 미처 생각 못한 조합까지 자동으로 훑는 검증 기법) 으로 모델링한다는 것입니다. 실제 네트워크에서는 패킷 손실, 순서 역전, 중복이 어떤 조합으로든 발생할 수 있는데, 테스트마다 이 파라미터를 다르게 **randomize**(무작위로 값 채우기) 하면 그 조합 공간을 자연스럽게 커버하게 됩니다.
 
 #### Network Agent 동작 흐름 — 상세
 
@@ -511,14 +513,14 @@ Resume: "Enhanced the TCP Offload Engine verification environment
 **왜 헷갈리는가**: "정확한 reference = cycle accurate" 라는 추정.
 :::
 :::danger[❓ 오해 5 — 'Performance regression 은 마지막에 한 번만 돌리면 된다']
-**실제**: TOE 는 architecture 변경이 _throughput / latency / fairness_ 에 큰 영향. Performance 회귀는 _continuous_ — daily/weekly 로 throughput, p99 latency, conn scaling 을 측정하지 않으면 silent regression 이 누적. <br>
+**실제**: TOE 는 architecture 변경이 _throughput / latency / fairness_ 에 큰 영향. Performance 회귀는 _continuous_ — daily/weekly 로 throughput, **p99 latency**(p99 지연; 전체 요청 중 99 % 가 이 시간 안에 끝났다는 값 — 평균보다 "느린 꼬리"를 보는 tail latency 지표), conn scaling 을 측정하지 않으면 **silent regression**(조용한 성능 퇴행; 기능은 통과하지만 성능만 몰래 나빠지는 것) 이 누적. <br>
 **왜 헷갈리는가**: Performance 측정 비용이 커서 "release 직전" 타이밍이라는 인식.
 :::
 ### DV 디버그 체크리스트 (TOE 검증 환경에서 자주 보는 실패)
 
 | 증상 | 1차 의심 | 어디 보나 |
 |---|---|---|
-| Scoreboard 가 매번 첫 packet 부터 mismatch | Reference Model 의 ISN seed 가 DUT 와 다름 | RNG seed, ISN 초기화 시점 |
+| Scoreboard 가 매번 첫 packet 부터 mismatch | Reference Model 의 ISN seed 가 DUT 와 다름 | **RNG seed**(난수 생성기의 초기 입력값 — 같은 seed 면 같은 난수열이 나와 시뮬레이션이 재현됨), ISN 초기화 시점 |
 | Network Agent 가 SYN-ACK 안 보냄 | Responder 가 LISTEN state 가 아님 (sequence 가 active open 으로 잘못 시작) | sequence 의 listen vs connect 분기 |
 | Coverage hit 0 인 transition 다수 | sequence 가 생성 안 한 시나리오 (예: simultaneous open) | sequence library 의 시나리오 enum |
 | SVA 가 항상 vacuous pass | antecedent 조건이 너무 좁아 발생 안 함 | cover property 의 hit count |

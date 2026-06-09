@@ -7,7 +7,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ## 왜 HW/SW Interaction을 배우는가
 
-소프트웨어는 트랜지스터를 직접 만지지 못합니다. 운영체제는 그 사이에 **디바이스 드라이버**라는 번역 계층을 두어, "이 블록을 읽어라", "이 패킷을 보내라" 같은 고수준 요청을 하드웨어가 알아듣는 레지스터 write/read, 인터럽트 acknowledge, DMA 설정으로 옮깁니다. 드라이버가 반복하는 일은 결국 두 가지뿐입니다. 레지스터를 써서 **디바이스를 구동**하고, 인터럽트나 폴링으로 **디바이스에 반응**하는 것입니다. 이 둘의 약속이 곧 디바이스의 프로그래밍 모델입니다.
+소프트웨어는 트랜지스터를 직접 만지지 못합니다. 운영체제는 그 사이에 **디바이스 드라이버**라는 번역 계층을 두어, "이 블록을 읽어라", "이 패킷을 보내라" 같은 고수준 요청을 하드웨어가 알아듣는 레지스터 write/read, 인터럽트 acknowledge, DMA(Direct Memory Access — CPU를 거치지 않고 디바이스가 직접 메모리를 읽고 쓰는 방식) 설정으로 옮깁니다. 드라이버가 반복하는 일은 결국 두 가지뿐입니다. 레지스터를 써서 **디바이스를 구동**하고, 인터럽트나 폴링으로 **디바이스에 반응**하는 것입니다. 이 둘의 약속이 곧 디바이스의 프로그래밍 모델입니다.
 
 검증 엔지니어에게 이 주제는 결코 소프트웨어만의 이야기가 아닙니다. 우리가 만드는 RTL의 레지스터 맵, 인터럽트 출력, 도어벨 입력이 바로 드라이버가 두드리는 그 접점이기 때문입니다. MMIO 영역에 캐시가 걸리면 드라이버 write가 디바이스에 영영 도달하지 않을 수 있고, 메모리 배리어가 빠지면 디스크립터가 준비되기 전에 도어벨이 울려 디바이스가 쓰레기를 읽습니다. level/edge 트리거를 헷갈리면 인터럽트가 영영 사라지거나(missed edge) 영영 멈추지 않습니다(stuck level). 이 모든 것이 RTL 버그이거나 드라이버 버그이며, 둘을 구분해 내는 것이 DV의 일입니다. 이 코스는 그 접점의 동작 원리와, 그것을 레지스터·드라이버 레벨에서 어떻게 검증하는지를 다룹니다.
 
@@ -18,7 +18,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 - **Explain (이해)** 디바이스 레지스터의 다섯 가지 기능 분류(control/status/interrupt/data/pointer)와 MMIO·PMIO가 CPU 주소 공간을 다루는 방식의 차이를 설명
 - **Differentiate (분석)** I/O 레지스터의 side-effect가 일반 메모리와 어떻게 다른지, 그리고 캐싱·재정렬이 왜 I/O를 깨뜨리는지 구분
 - **Apply (적용)** compiler barrier / read·write·full 메모리 배리어를 올바른 위치에 배치해 디바이스 접근 순서를 보장
-- **Differentiate (분석)** level vs edge 트리거, MSI, 도어벨, IPI의 동작과 적용 맥락을 구분
+- **Differentiate (분석)** level vs edge 트리거, MSI(message-signaled interrupt — 물리 인터럽트 선 대신 버스 메시지로 거는 인터럽트), 도어벨, IPI(inter-processor interrupt — 한 CPU 코어가 다른 코어에 거는 인터럽트)의 동작과 적용 맥락을 구분
 - **Evaluate (평가)** 주어진 워크로드에 폴링·인터럽트·하이브리드(인터럽트 후 임계 폴링) 중 무엇이 적합한지 latency·CPU 비용 trade-off로 판단
 - **Design (생성)** 레지스터·드라이버 레벨에서 side-effect, 인터럽트, 폴링 핸드셰이크를 검증하는 시나리오를 설계
 

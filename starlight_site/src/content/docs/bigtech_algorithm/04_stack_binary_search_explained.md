@@ -21,9 +21,9 @@ title: "Module 04 — Stack & Binary Search"
 
 ### 1.1 시나리오 — "_더 빠르게_?" 의 함정
 
-_Daily Temperatures_ 에서 각 day 마다 뒤를 전부 스캔하는 첫 번째 시도는 O(N²) 로 N=10⁶ 에서 timeout 입니다. 이 문제를 hash map 이나 two pointers 로 접근하면 패턴이 맞지 않아 역시 막힙니다. 적합한 패턴은 **Monotonic Stack** 입니다. "아직 답 못 찾은" index 를 stack 에 보관해 두었다가, 새 day _i_ 의 온도가 stack top 에 저장된 index 의 온도보다 높으면 pop 하면서 답을 채우는 방식입니다. 각 element 가 평생 push 한 번, pop 최대 한 번만 일어나므로 전체 비용은 amortized O(N) 입니다.
+_Daily Temperatures_ 에서 각 day 마다 뒤를 전부 스캔하는 첫 번째 시도는 O(N²) 로 N=10⁶ 에서 timeout 입니다. 이 문제를 hash map 이나 two pointers 로 접근하면 패턴이 맞지 않아 역시 막힙니다. 적합한 패턴은 **Monotonic Stack**(단조 스택 — 안의 원소가 항상 증가 또는 감소 순서를 유지하도록 운용하는 스택)입니다. 여기서 **stack**(스택 — 가장 나중에 넣은 것이 가장 먼저 나오는 LIFO(Last-In-First-Out) 자료구조)에 "아직 답 못 찾은" index 를 보관해 두었다가, 새 day _i_ 의 온도가 stack의 **top**(맨 위 — 가장 최근에 넣은 원소)에 저장된 index 의 온도보다 높으면 **pop**(맨 위 원소를 꺼냄)하면서 답을 채우는 방식입니다. 각 element 가 평생 **push**(원소를 맨 위에 넣음) 한 번, pop 최대 한 번만 일어나므로 전체 비용은 **amortized**(분할상환 — 여러 호출에 비용을 평탄하게 나눈 평균) O(N) 입니다.
 
-**Binary Search** 는 정렬된 배열 외에도 어떤 함수 f(x) 가 _단조_ 이기만 하면 적용 가능합니다. "parameter K 에 대한 yes/no 답이 단조" — 즉 어떤 임계점을 기준으로 한쪽에서는 항상 true, 다른 쪽에서는 항상 false 인 구조라면 Binary search on answer 로 풀 수 있습니다.
+**Binary Search**(이진 탐색 — 후보 범위를 매 step 절반씩 줄여 O(log N)에 답을 찾는 기법)는 정렬된 배열 외에도 어떤 함수 f(x) 가 _단조_(monotonic — 한 방향으로만 커지거나 작아짐)이기만 하면 적용 가능합니다. "parameter K 에 대한 yes/no 답이 단조" — 즉 어떤 임계점을 기준으로 한쪽에서는 항상 true, 다른 쪽에서는 항상 false 인 구조라면 **parametric search**(답 자체를 이진 탐색하는 기법 — "X 이상이 가능한가?"라는 단조 판정 함수에 binary search 적용)로 풀 수 있습니다.
 
 Stack 은 **이전 상태를 미루어 두었다 다시 쓰는** 가장 단순하지만 강력한 도구이고, Binary Search 는 **단조성(monotonicity)** 만 있다면 어디든 통하는 보편 패턴입니다. 이 둘을 패턴으로 익히면 면접에서 "이게 stack/이진 탐색 문제인가?" 를 인지하는 시간이 크게 줄어듭니다.
 
@@ -156,7 +156,7 @@ def is_valid(s):
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) "가장 최근의 여는 것" 과 매칭한다는 _시간 역순_ 이 LIFO 의 본질** — Queue (FIFO) 로는 풀 수 없는 문제. 매칭 짝의 _마지막 push_ 가 _가장 먼저 pop_ 되어야 합니다.<br>
+**(1) "가장 최근의 여는 것" 과 매칭한다는 _시간 역순_ 이 LIFO 의 본질** — Queue(큐 — 먼저 넣은 것이 먼저 나오는 FIFO(First-In-First-Out) 자료구조) 로는 풀 수 없는 문제. 매칭 짝의 _마지막 push_ 가 _가장 먼저 pop_ 되어야 합니다.<br>
 **(2) 종료 시 stack 이 비어 있는지 확인** — 닫는 괄호로 끝났어도 여는 괄호가 더 많이 push 됐을 수 있음. 마지막 단계의 `return stack.empty()` 가 _빠지면_ `"((("` 같은 입력에 false positive.
 :::
 ---

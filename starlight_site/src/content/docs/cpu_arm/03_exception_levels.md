@@ -31,7 +31,7 @@ EL1 (kernel): VBAR_EL1 + 0x400   // "Lower EL Sync" 벡터로 진입
               ESR_EL1.EC = 0x18  // "MSR/MRS system register trap"
 ```
 
-AArch64는 4개의 Exception Level을 두고, 숫자가 높을수록 높은 특권을 가집니다. 하위 EL은 상위 EL의 리소스(레지스터·메모리·인터럽트 설정)를 **직접** 건드릴 수 없고, 오직 동기 예외(`SVC`/`HVC`/`SMC`)나 비동기 이벤트(IRQ/FIQ/SError)로만 상위로 올라갑니다.
+AArch64는 4개의 **Exception Level**(EL — 권한 등급, 숫자가 클수록 높은 권한)을 두고, 숫자가 높을수록 높은 특권을 가집니다. 하위 EL은 상위 EL의 리소스(레지스터·메모리·인터럽트 설정)를 **직접** 건드릴 수 없고, 오직 **동기 예외**(`SVC`/`HVC`/`SMC` — 특정 명령 실행이 곧바로 일으키는 예외)나 **비동기 이벤트**(**IRQ**=일반 인터럽트 / **FIQ**=빠른 고우선 인터럽트 / **SError**=시스템 오류 — 명령과 무관하게 외부에서 도착)로만 상위로 올라갑니다.
 
 이 모듈은 검증에서 **거의 모든 trap·syscall·하이퍼바이저 동작의 기반**입니다. "이 명령이 왜 trap했나", "syscall이 어느 핸들러로 갔나", "VM이 어떻게 격리되나"를 EL 모델 없이는 설명할 수 없습니다. 펌웨어/OS가 끼인 SoC 검증에서 EL 전환 추적은 필수 능력입니다.
 
@@ -169,7 +169,7 @@ do_svc:
 | **EL2** Hypervisor | KVM/Xen·VM 관리·stage-2 translation(IPA→PA) | `HCR_EL2`(트랩 구성), `VTTBR_EL2`, VMID(VM 구분 TLB 태그), VHE(`E2H`) |
 | **EL3** Secure Monitor | TrustZone·TF-A·PSCI·월드 스위치 | `SCR_EL3.NS`(유일한 월드 전환), `MDCR_EL3`, OTP 키 검증 = Root of Trust |
 
-**TTBR 분리**가 EL1의 핵심 최적화입니다. `TTBR0_EL1`은 유저 공간(VA 상위 비트 0), `TTBR1_EL1`은 커널 공간(VA 상위 비트 1)이라, 컨텍스트 스위치 때 TTBR0만 바꾸면 되어 TLB invalidate가 경량화됩니다(ASID로 더 최적화). 페이지 테이블 일반 원리는 [MMU](../../mmu/), ARM stage-1/2 세부는 M05에서 다룹니다.
+표에 처음 나온 용어: **stage-2 translation**(게스트 OS가 본 "물리 주소"(**IPA**, Intermediate Physical Address)를 진짜 물리 주소로 한 번 더 번역하는 가상화용 2차 번역), **TTBR**(Translation Table Base Register — 페이지 테이블의 시작 주소를 담는 레지스터), **TLB**(Translation Lookaside Buffer — 최근 주소 번역 결과를 캐싱해 매번 페이지 테이블을 안 거치게 하는 작은 캐시)입니다. **TTBR 분리**가 EL1의 핵심 최적화입니다. `TTBR0_EL1`은 유저 공간(VA 상위 비트 0), `TTBR1_EL1`은 커널 공간(VA 상위 비트 1)이라, 컨텍스트 스위치 때 TTBR0만 바꾸면 되어 TLB invalidate(낡은 번역 캐시 무효화)가 경량화됩니다(ASID로 더 최적화). 페이지 테이블 일반 원리는 [MMU](../../mmu/), ARM stage-1/2 세부는 M05에서 다룹니다.
 
 #### VHE(Virtualization Host Extensions) — 왜 호스트 커널을 EL2 에서 돌리나
 

@@ -21,6 +21,8 @@ title: "Module 04 — DLLP, Flow Control, ACK/NAK"
 
 ### 1.1 시나리오 — _Cpl credit 부족_ 으로 _stall_
 
+> **이 글의 핵심 용어** — **DLLP**(Data Link Layer Packet — link 한 구간에서만 쓰는 8바이트 제어 패킷), **ACK/NAK**(잘 받음 / 다시 보내라 신호), **Sequence#**(보낸 TLP 마다 붙이는 순번), **LCRC**(TLP 가 한 구간을 건너며 깨졌는지 보는 검사값), **Replay Buffer**(ACK 받기 전까지 보낸 TLP 를 쥐고 있다가 NAK 오면 다시 보내는 버퍼), **Flow Control credit**(수신 측 buffer 여유분 = "더 보내도 되는 양" 토큰), **stall**(보낼 게 있는데 credit·자리가 없어 전송이 멈춘 상태), **RTT**(Round-Trip Time — 보낸 신호가 돌아오기까지 걸리는 왕복 시간), **P/NP/Cpl**(Posted/Non-Posted/Completion — TLP 의 세 부류; 각각 Header(H)·Data(D) credit 을 따로 셈 → PH/PD/NPH/NPD/CplH/CplD).
+
 당신의 PCIe link 가 _link up OK_, 그런데 _throughput 0 Mbps_. Stall.
 
 원인 추적:

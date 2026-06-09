@@ -25,13 +25,13 @@ title: "Module 01 — Virtualization Fundamentals"
 
 이 **15%** 라는 숫자가 어디서 오는지가 핵심입니다. 서버는 _peak_ 부하를 견디도록 provisioning 됩니다 — 블랙프라이데이 트래픽, 월말 배치 작업 같은 최악의 순간에도 죽지 않아야 하기 때문입니다. 그런데 실제 부하는 대부분의 시간 동안 peak 의 일부에 불과합니다. 즉 _평균_ 활용률 = (평균 부하 / peak 용량) 이고, peak 을 기준으로 over-provision 하면 이 비율은 구조적으로 낮을 수밖에 없습니다. 한 워크로드의 idle 시간을 다른 워크로드의 busy 시간으로 메우는 것 — 이것이 consolidation 이 이득인 _근본 이유_ 입니다. 통계적으로 독립적인 N 개의 워크로드를 한 서버에 모으면, 모두가 동시에 peak 를 치지 않는 한 합산 peak 는 개별 peak 합보다 훨씬 작아지기 때문입니다.
 
-가상화는 이 문제를 서버 한 대 위에 수십 개의 VM 을 동시에 올리는 방식으로 풉니다. 각 VM 은 독립된 OS 와 애플리케이션을 갖고 서로 격리되어 있어, CPU 사용률을 80% 이상으로 끌어올릴 수 있습니다. 같은 서비스를 10,000 대가 아닌 2,000 대로 제공하게 되고, 전력·공간·비용이 5 배 절감됩니다.
+가상화는 이 문제를 서버 한 대 위에 수십 개의 **VM**(Virtual Machine, 가상 머신 — 소프트웨어로 흉내 낸 독립된 컴퓨터 한 대)을 동시에 올리는 방식으로 풉니다. 각 VM 은 독립된 OS 와 애플리케이션을 갖고 서로 격리되어 있어, CPU 사용률을 80% 이상으로 끌어올릴 수 있습니다. 같은 서비스를 10,000 대가 아닌 2,000 대로 제공하게 되고, 전력·공간·비용이 5 배 절감됩니다. 여러 워크로드의 idle 시간을 한 서버에 모아 채우는 이 통합을 **consolidation**(여러 가상 머신을 물리 서버 한 대에 모으는 것)이라 부릅니다.
 
-**가상화 없이는 현대 클라우드 자체가 불가능합니다.** AWS, GCP, Azure 모두 hypervisor 위에서 운영됩니다.
+**가상화 없이는 현대 클라우드 자체가 불가능합니다.** AWS, GCP, Azure 모두 **hypervisor**(여러 VM 에 하드웨어 자원을 나눠 주고 격리하는 관리 소프트웨어 계층; VMM 이라고도 함) 위에서 운영됩니다. 여러 사용자(tenant)가 같은 물리 인프라를 격리된 채 공유하는 이런 모델을 **multi-tenant**(여러 입주자가 한 건물을 나눠 쓰듯, 한 물리 서버를 여러 고객이 격리된 채 공유)라 합니다.
 
-이후 모든 가상화 모듈은 한 가정에서 출발합니다 — **"하나의 물리 머신 위에 여러 OS 가 동시에, 그러나 서로를 모르는 채 동작한다"**. CPU 가상화의 trap-and-emulate, Memory 가상화의 2-stage translation, I/O 가상화의 SR-IOV 모두 이 한 가정의 파생입니다.
+이후 모든 가상화 모듈은 한 가정에서 출발합니다 — **"하나의 물리 머신 위에 여러 OS 가 동시에, 그러나 서로를 모르는 채 동작한다"**. CPU 가상화의 **trap-and-emulate**(Guest 가 특권 명령을 실행하려 하면 하드웨어가 가로채 hypervisor 가 대신 처리하고 돌려보내는 방식), Memory 가상화의 2-stage translation(주소 변환을 두 단계로 나눠 VM 별 메모리를 격리), I/O 가상화의 **SR-IOV**(하나의 물리 디바이스를 하드웨어가 여러 개로 분할해 각 VM 에 직접 할당하는 PCIe 기능) 모두 이 한 가정의 파생입니다.
 
-이 모듈을 건너뛰면 이후의 VMCS / EPT / IOMMU / VirtIO 가 "왜 그렇게 생겼는지" 가 보이지 않고 그냥 외워야 하는 규칙이 됩니다. 반대로 **3대 자원(CPU/Mem/I/O)** 과 **Popek-Goldberg 3조건** 만 정확히 잡으면, 디테일을 만날 때마다 _이유_ 가 보입니다.
+이 모듈을 건너뛰면 이후의 VMCS / EPT / **IOMMU**(I/O 장치의 DMA 주소까지 변환·격리해, 디바이스가 허락된 메모리만 건드리게 막는 하드웨어; Intel 명칭은 VT-d) / **VirtIO**(Guest 와 hypervisor 가 공유 큐로 효율적으로 통신하도록 만든 표준 para-virtual 디바이스 인터페이스) 가 "왜 그렇게 생겼는지" 가 보이지 않고 그냥 외워야 하는 규칙이 됩니다. 반대로 **3대 자원(CPU/Mem/I/O)** 과 **Popek-Goldberg 3조건** 만 정확히 잡으면, 디테일을 만날 때마다 _이유_ 가 보입니다.
 
 ---
 
@@ -74,21 +74,21 @@ VT: "Virtualization" {
 }
 ```
 
-세 가지 일이 Hypervisor 에서 동시에 일어납니다.
+위 그림에서 **Guest**(hypervisor 위에서 돌아가는, 자신이 단독 머신인 줄 아는 VM 과 그 OS)는 자신이 직접 하드웨어를 쓴다고 믿지만 실제로는 **VMM**(Virtual Machine Monitor — hypervisor 의 동의어) 이 그 사이를 중재합니다. 세 가지 일이 Hypervisor 에서 동시에 일어납니다.
 
-1. **자원 분할** — 각 VM 에 vCPU / 메모리 슬라이스 / 가상 디바이스를 할당.
-2. **접근 중재** — Guest OS 가 특권 명령을 실행하려 하면 trap 으로 가로채서 대신 처리.
-3. **격리 보장** — VM A 는 VM B 의 메모리를 읽을 수 없도록 page table 분리.
+1. **자원 분할** — 각 VM 에 **vCPU**(virtual CPU — VM 에게 진짜 CPU 처럼 보이도록 시간 분할로 제공하는 가상 CPU) / 메모리 슬라이스 / 가상 디바이스를 할당.
+2. **접근 중재** — Guest OS 가 **특권 명령**(privileged instruction — 하드웨어 핵심 상태를 바꿔 OS 커널만 실행할 수 있는 명령)을 실행하려 하면 **trap**(비특권 모드에서 금지된 동작을 시도할 때 하드웨어가 실행을 멈추고 상위 권한 처리 루틴으로 강제 전환) 으로 가로채서 대신 처리.
+3. **격리 보장** — VM A 는 VM B 의 메모리를 읽을 수 없도록 **page table**(가상 주소를 실제 물리 주소로 변환하는 매핑 표) 분리.
 
 ### 왜 이렇게 설계됐는가 — Design rationale
 
-서버 한 대를 한 워크로드가 독점하던 시대는 평균 **CPU 활용률 10–15%** 에 머물렀습니다. 자원의 90% 가 낭비됐다는 뜻입니다. 동시에 보안 / 부팅 시간 / OS 의존성 / 멀티테넌시 요구는 **격리는 강하면서 자원은 공유** 하는 모델을 요구했습니다. Hypervisor 가 답입니다 — 충돌만 가로채고, 나머지 99% 명령은 HW 가 직접 실행하게 두면 활용률은 올라가고 격리는 유지됩니다. 이 한 줄 — **"가로채야 할 명령만 가로챈다"** — 가 곧 Popek-Goldberg 3조건의 효율성, VT-x 의 VMX root/non-root 분리, ARM EL2 의 도입 동기입니다.
+서버 한 대를 한 워크로드가 독점하던 시대는 평균 **CPU 활용률 10–15%** 에 머물렀습니다. 자원의 90% 가 낭비됐다는 뜻입니다. 동시에 보안 / 부팅 시간 / OS 의존성 / 멀티테넌시 요구는 **격리는 강하면서 자원은 공유** 하는 모델을 요구했습니다. Hypervisor 가 답입니다 — 충돌만 가로채고, 나머지 99% 명령은 HW 가 직접 실행하게 두면 활용률은 올라가고 격리는 유지됩니다. 이 한 줄 — **"가로채야 할 명령만 가로챈다"** — 가 곧 Popek-Goldberg 3조건(가상화가 올바르려면 만족해야 하는 1974년의 세 가지 이론 조건; §4.2)의 효율성, **VT-x**(Intel 의 하드웨어 가상화 확장)의 VMX root/non-root 분리, ARM **EL2**(ARM 의 권한 레벨 중 hypervisor 가 동작하는 레벨)의 도입 동기입니다.
 
 ---
 
 ## 3. 작은 예 — CR3 write 한 번이 VM Exit / VM Entry 가 되는 과정
 
-가장 단순한 시나리오. Linux Guest 안에서 컨텍스트 스위치가 일어나 **새 page table base 를 CR3 에 쓰는** 단 한 줄이 어떻게 trap → emulate → resume 1 사이클이 되는지 추적합니다.
+가장 단순한 시나리오. Linux Guest 안에서 컨텍스트 스위치가 일어나 **새 page table base 를 CR3 에 쓰는** 단 한 줄이 어떻게 trap → emulate → resume 1 사이클이 되는지 추적합니다. 여기서 **CR3**(x86 의 제어 레지스터로, 현재 page table 의 시작 주소를 담음 — 이 값을 바꾸면 곧 주소 공간을 통째로 교체하는 것)는 특권 자원이라, Guest 가 직접 쓰려 하면 가로채집니다.
 
 ```d2
 shape: sequence_diagram
@@ -110,11 +110,13 @@ HW -> G: "다음 instruction 실행\n(직접 HW 에 쓴 것처럼 보임)"
 | Step | 누가 | 무엇을 | 의미 |
 |---|---|---|---|
 | ① | Guest OS | `MOV CR3, RAX` (또는 ARM `MSR TTBR0_EL1, X0`) | 새 task 의 page table 로 전환 — bare metal 에서는 그냥 1 명령 |
-| ② | HW (VT-x / EL2) | VMCS 의 VM-Execution Control 이 "CR3 access trap" 을 ON 으로 둔 상태 → **VM Exit** | 비특권 모드에서 특권 자원 접근 → HW 가 자동 trap |
+| ② | HW (VT-x / EL2) | **VMCS** 의 VM-Execution Control 이 "CR3 access trap" 을 ON 으로 둔 상태 → **VM Exit** | 비특권 모드에서 특권 자원 접근 → HW 가 자동 trap |
 | ③ | Hypervisor | VMCS 의 Exit Reason 필드 읽음 (예: `28` = `CR_ACCESS`) | "왜 깼는지" 만 보고 분기 — 빠른 디스패치 |
-| ④ | Hypervisor | new_pt 가 IPA 인지, 이 VM 에 속하는지 검증, EPT/Shadow PT 갱신 | 보안 검증 — Guest 가 다른 VM 메모리를 볼 수 없게 |
+| ④ | Hypervisor | new_pt 가 **IPA** 인지, 이 VM 에 속하는지 검증, **EPT/Shadow PT** 갱신 | 보안 검증 — Guest 가 다른 VM 메모리를 볼 수 없게 |
 | ⑤ | Hypervisor | VMCS 의 Guest-state.CR3 = new_pt 로 기록 | resume 시 HW 가 이 값을 CR3 에 로드 |
-| ⑥ | HW | `VMRESUME` → Guest 가 다음 명령부터 정상 실행 | Guest 는 trap 이 일어났는지 _모름_ |
+| ⑥ | HW | `VMRESUME` → Guest 가 다음 명령부터 정상 실행 (이 재진입을 **VM Entry** 라 함) | Guest 는 trap 이 일어났는지 _모름_ |
+
+위 표에 처음 나온 약어를 풀면: **VMCS**(Virtual Machine Control Structure — Guest 의 CPU 상태와 "어떤 명령을 trap 할지" 설정을 담아 두는 자료구조), **VM Exit**(Guest 실행 중 trap 이 일어나 hypervisor 로 제어가 넘어가는 전환), **IPA**(Intermediate Physical Address — Guest 가 "물리 주소"로 믿는, 실제로는 한 단계 더 변환이 남은 중간 주소), **EPT**(Extended Page Table — IPA 를 진짜 물리 주소로 변환하는, 하드웨어가 자동 처리하는 2단계 page table; Intel 명칭), **Shadow PT**(EPT 가 없던 시절 hypervisor 가 직접 관리하던 구식 가상화 page table).
 
 ```c
 /* Step ① 의 실제 코드 (Linux process switch 의 일부 — switch_mm_irqs_off). */
@@ -135,7 +137,7 @@ static inline void load_new_mm_cr3(pgd_t *pgdir) {
 
 - **아키텍처 상태 save/restore** — Exit 시 HW 가 Guest 의 레지스터/제어 상태를 VMCS 에 저장하고, Entry 시 Hypervisor(또는 다음 Guest)의 상태를 다시 로드합니다. 저장·복원할 필드가 많을수록 비용이 커집니다.
 - **Pipeline flush** — root↔non-root 전환은 권한·주소공간 경계를 넘으므로 in-flight 명령이 무효화되고 파이프라인이 비워진 뒤 다시 채워져야 합니다.
-- **간접 비용 (cache / TLB pollution)** — Hypervisor handler 코드가 실행되며 Guest 의 cache line 과 TLB entry 를 밀어냅니다. resume 후 Guest 는 _콜드_ 상태에서 다시 시작하므로, exit 자체의 cycle 보다 이 후폭풍이 더 클 수 있습니다.
+- **간접 비용 (cache / TLB pollution)** — Hypervisor handler 코드가 실행되며 Guest 의 cache line 과 **TLB**(Translation Lookaside Buffer — 최근 주소 변환 결과를 캐시해 page table 재탐색을 건너뛰는 작은 고속 버퍼) entry 를 밀어냅니다. resume 후 Guest 는 _콜드_ 상태에서 다시 시작하므로, exit 자체의 cycle 보다 이 후폭풍이 더 클 수 있습니다.
 
 이 세 요소의 합이 "exit 한 번 = 수천 cycle" 의 정체입니다. 그래서 이후 모듈의 모든 최적화(EPT 로 메모리 exit 제거, Posted Interrupt 로 인터럽트 exit 제거, doorbell batching)는 한 문장으로 요약됩니다 — **exit 횟수를 줄여라.**
 :::
@@ -165,6 +167,8 @@ V -> IO
 | **Memory** | 주소 변환, 메모리 격리 | VM 마다 독립 주소 공간 제공, 변환 오버헤드 최소화 |
 | **I/O** | 디바이스 접근, DMA | 디바이스 공유 vs 전용 할당의 trade-off |
 
+> 위 표의 **EPT, NPT**는 같은 것의 두 이름입니다 — EPT 는 Intel, **NPT**(Nested Page Table)는 AMD 가 부르는 2단계 주소 변환 하드웨어입니다. **VFIO**(Virtual Function I/O — Linux 가 디바이스를 VM 에 직접 통째로 넘겨주는 passthrough 프레임워크)와 **DMA**(Direct Memory Access — CPU 를 거치지 않고 디바이스가 메모리에 직접 읽고 쓰는 방식)도 I/O 가상화에서 다시 만납니다.
+
 이 셋이 이후 Module 02 / 03 / 04 의 본문이고, 모든 모듈은 위 표의 한 칸을 깊게 파는 구조입니다.
 
 ### 4.2 Popek-Goldberg 3 조건 (1974)
@@ -190,11 +194,13 @@ Efficiency   ──── 대부분의 Guest 명령은 HW 직접 실행 — trap
 
 같은 3 조건을 만족시키는 3 가지 다른 길.
 
+여기서 **sensitive 명령**(hardware 상태를 바꾸거나 읽어서 가상화 시 hypervisor 가 가로채야 하는 명령)을 세 방식이 각기 다르게 다룹니다.
+
 | 방식 | 어떻게 sensitive 명령을 처리하나 | 대표 |
 |---|---|---|
-| **Full (HW emulation)** | QEMU 가 모든 HW 동작을 SW 로 흉내 — 사용자 OS 그대로 | QEMU 단독 (TCG 모드) |
-| **Para-virtualization** | Guest OS 를 수정해 hypercall 로 직접 호출 — trap 회피 | Xen para-virt (Linux 수정) |
-| **HW-assisted** | CPU 가 sensitive 명령을 HW 에서 자동 trap (VMX/EL2) — Guest 미수정 | Intel VT-x, AMD-V, ARM EL2 |
+| **Full (HW emulation)** | **QEMU**(소프트웨어로 CPU·디바이스를 통째로 흉내 내는 에뮬레이터)가 모든 HW 동작을 SW 로 흉내 — 사용자 OS 그대로 | QEMU 단독 (TCG 모드) |
+| **Para-virtualization** | Guest OS 를 수정해 **hypercall**(Guest 가 hypervisor 에게 "이 일 좀 대신 해 달라"고 직접 거는 호출 — 시스템 콜의 가상화 버전)로 직접 호출 — trap 회피 | Xen para-virt (Linux 수정) |
+| **HW-assisted** | CPU 가 sensitive 명령을 HW 에서 자동 trap (VMX/EL2) — Guest 미수정 | Intel VT-x, **AMD-V**(AMD 의 하드웨어 가상화 확장 — VT-x 의 등가물), ARM EL2 |
 
 오늘날 거의 모든 production 가상화는 **HW-assisted** 입니다. Para-virt 의 "guest 수정" 부담과 Full emulation 의 성능 절벽을 동시에 피하기 때문입니다.
 
@@ -222,7 +228,7 @@ Efficiency   ──── 대부분의 Guest 명령은 HW 직접 실행 — trap
 | 서버 과다 | VM consolidation 으로 물리 서버 수 감소 |
 | 격리 부재 | VM 간 메모리 / 프로세스 완전 격리 |
 | 환경 의존성 | 각 VM 이 독립 OS → 서로 다른 환경 공존 |
-| 복구 어려움 | VM snapshot / live migration 으로 빠른 복구 / 이동 |
+| 복구 어려움 | VM snapshot(실행 중인 VM 의 전체 상태를 한 시점으로 저장) / live migration(동작 중인 VM 을 멈추지 않고 다른 물리 서버로 옮기는 것) 으로 빠른 복구 / 이동 |
 | 개발 / 테스트 | 동일 HW 에서 여러 OS / 환경 즉시 생성 |
 
 ### 5.2 추상화 계층 — 일반 시스템 vs 가상화 시스템
@@ -276,7 +282,7 @@ SENS -> PRIV
 SENS -> NONPRIV
 ```
 
-이 마지막 칸의 존재 때문에 VMware 가 1998 년 **Binary Translation** 을 발명했고, Intel 이 2005 년 VT-x 로 **모든 sensitive 명령을 HW trap 대상** 으로 확장했습니다.
+이 마지막 칸의 존재 때문에 VMware 가 1998 년 **Binary Translation**(Guest 의 위험한 명령을 실행 직전에 안전한 명령열로 동적으로 바꿔치기하는 소프트웨어 우회 기법) 을 발명했고, Intel 이 2005 년 VT-x 로 **모든 sensitive 명령을 HW trap 대상** 으로 확장했습니다.
 
 :::tip[Popek-Goldberg 정리 — 한 줄 명제]
 §4.2 의 3 조건은 "올바른 가상화의 _목표_" 였습니다. Popek-Goldberg 가 1974 년에 실제로 증명한 _정리_ 는 그 목표를 언제 trap-and-emulate 만으로 달성할 수 있는지에 대한 한 줄 명제입니다.
@@ -315,11 +321,13 @@ R0: "Ring 0 (Kernel) — OS 커널 (최고 권한)"
 R3 -> R0: "특권 명령 시 예외 발생"
 ```
 
+x86 의 **Ring**(권한 레벨 — 숫자가 낮을수록 강한 권한; OS 커널은 Ring 0, 응용은 Ring 3)은 하드웨어가 강제하는 권한 경계입니다.
+
 - **Ring 0**: 모든 HW 자원 접근 가능 (특권 명령어 실행 가능).
 - **Ring 3**: 제한된 권한 (특권 명령어 실행 시 → 예외 발생).
 - **Ring 1, 2**: x86 spec 에 존재하지만 현대 OS 는 미사용.
 
-**충돌**: OS 는 Ring 0 에서 동작한다고 가정하고 설계되었습니다. 가상화 시 Guest OS 도 Ring 0 을 요구하고 Hypervisor 도 Ring 0 이 필요 → **두 Ring 0 이 충돌**. 해결: VT-x 의 **VMX root / non-root 모드** 분리로 Hypervisor 와 Guest 가 각자 자기 root 의 Ring 0 을 가짐. (자세한 내용은 [Module 02](../02_cpu_virtualization/) §VT-x.)
+**충돌**: OS 는 Ring 0 에서 동작한다고 가정하고 설계되었습니다. 가상화 시 Guest OS 도 Ring 0 을 요구하고 Hypervisor 도 Ring 0 이 필요 → **두 Ring 0 이 충돌**. 해결: VT-x 의 **VMX root / non-root 모드** 분리(hypervisor 는 root 모드, Guest 는 non-root 모드에서 돌아 각자 자기만의 Ring 0~3 권한 체계를 가짐)로 Hypervisor 와 Guest 가 각자 자기 root 의 Ring 0 을 가짐. (자세한 내용은 [Module 02](../02_cpu_virtualization/) §VT-x.)
 
 ### 5.6 가상화의 역사
 

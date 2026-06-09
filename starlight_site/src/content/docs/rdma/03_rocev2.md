@@ -22,7 +22,7 @@ title: "Module 03 — RoCEv2: Ethernet 위의 RDMA"
 
 ### 1.1 시나리오 — "InfiniBand 사고 싶은데, 데이터센터에 깔린 Ethernet 은 어떡하지?"
 
-5000 대 서버에 이미 10 GbE → 100 GbE Ethernet switch fabric 이 깔려 있고 IP 관리/모니터링/ACL 체계가 운영되는 데이터센터에서, AI 학습 잡을 위해 RDMA 를 도입해야 하는 상황을 생각해 보겠습니다.
+5000 대 서버에 이미 10 GbE → 100 GbE Ethernet switch fabric(여러 스위치가 그물처럼 연결된 네트워크 묶음) 이 깔려 있고 IP 관리/모니터링/ACL(access control list — 어떤 트래픽을 허용/차단할지 정한 규칙 목록) 체계가 운영되는 데이터센터에서, AI 학습 잡을 위해 RDMA 를 도입해야 하는 상황을 생각해 보겠습니다.
 
 세 가지 선택지가 있습니다:
 
@@ -35,13 +35,13 @@ title: "Module 03 — RoCEv2: Ethernet 위의 RDMA"
 **RoCEv2 의 본질은 "_IB transport 의 BTH 부터는 그대로_, 그 아래만 Ethernet/IP/UDP 로 갈아끼우기"** 입니다. 이게 작동하려면 두 가지를 보장해야 합니다:
 
 1. _BTH 이하_ 의 IB transport semantics 가 그대로 살아 있어야 한다 (RC 의 PSN/ACK/retry).
-2. _BTH 이상_ 의 Ethernet/IP/UDP 가 RDMA-friendly 하게 동작해야 한다 (특히 **lossless** — packet drop = RC 의 timeout-retry 부담 폭증).
+2. _BTH 이상_ 의 Ethernet/IP/UDP 가 RDMA-friendly 하게 동작해야 한다 (특히 **lossless**(무손실 — 네트워크가 혼잡해도 패킷을 버리지 않는 성질) — packet drop = RC 의 timeout-retry 부담 폭증).
 
 이 모듈은 _이 매핑이 정확히 어떻게 작동하고_, _어디서 깨질 수 있는지_ 의 지도입니다.
 
 ### 1.2 그래서 이 모듈을 잡아야 한다
 
-오늘날 거의 모든 데이터센터 RDMA 트래픽은 **RoCEv2** 입니다. RDMA-TB 의 대부분 시나리오도 RoCEv2 를 가정합니다. 그런데 검증자 입장에서 진짜 중요한 질문은 "RoCEv2 가 무엇인가" 가 아니라 "**IB spec 의 어느 규칙이 RoCEv2 에 _그대로_ 적용되고, 어느 규칙은 _아예 버려야_ 하는가**" 입니다. 이 경계선을 모르면 IB 기준으로 작성한 checker 가 RoCEv2 트래픽에서 false positive 를 쏟아내기 때문입니다.
+오늘날 거의 모든 데이터센터 RDMA 트래픽은 **RoCEv2** 입니다. RDMA-TB 의 대부분 시나리오도 RoCEv2 를 가정합니다. 그런데 검증자 입장에서 진짜 중요한 질문은 "RoCEv2 가 무엇인가" 가 아니라 "**IB spec 의 어느 규칙이 RoCEv2 에 _그대로_ 적용되고, 어느 규칙은 _아예 버려야_ 하는가**" 입니다. 이 경계선을 모르면 IB 기준으로 작성한 checker(검증에서 규칙 위반을 자동 감시하는 코드) 가 RoCEv2 트래픽에서 false positive(정상인데 오류로 잘못 신고하는 것) 를 쏟아내기 때문입니다.
 
 프로젝트는 이 경계선을 정량화해 두었습니다. 사내 `ROCEV2_RULE_APPLICABILITY.md` 는 **IB protocol rule 1109 개 전체**를 RoCEv2 적용성 기준으로 4 개 버킷으로 분류합니다:
 
@@ -394,7 +394,7 @@ source port 가 hash 기반으로 가변이라는 말은 _패킷마다 무작위
 | LRH | (없음) | Ethernet header 가 link-level 라우팅 |
 | LRH.DLID | Eth.DST_MAC | 같은 broadcast domain 내에서만 |
 | LRH.SLID | Eth.SRC_MAC | 동일 |
-| LRH.SL | DSCP (IPv4 ToS / IPv6 TC) → PFC priority | Ethernet PFC 로 매핑 |
+| LRH.SL | DSCP(Differentiated Services Code Point — IP 헤더에서 트래픽 우선순위를 표시하는 6비트 필드) (IPv4 ToS / IPv6 TC) → PFC priority | Ethernet PFC 로 매핑 |
 | LRH.VL | PFC priority (8개 priority) | 8 vs 16 차이 |
 | GRH.IPVer | IP.Version | IPv4=4, IPv6=6 |
 | GRH.TClass | IPv4 DSCP+ECN, IPv6 TC | |

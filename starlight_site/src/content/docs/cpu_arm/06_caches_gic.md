@@ -23,7 +23,7 @@ title: "Module 06 — Caches & GIC (인터럽트)"
 
 ### 1.1 시나리오 — DMA 가 옛 데이터를 가져갔다
 
-CPU 가 버퍼에 데이터를 써서 DMA 엔진에 넘겼는데, 장치가 읽어 간 값이 옛 데이터입니다. 코드는 분명히 버퍼에 새 값을 store 했는데도 말입니다.
+CPU 가 버퍼에 데이터를 써서 **DMA**(Direct Memory Access — CPU를 거치지 않고 장치가 메모리를 직접 읽고 쓰는 전송) 엔진에 넘겼는데, 장치가 읽어 간 값이 옛 데이터입니다. 코드는 분명히 버퍼에 새 값을 store 했는데도 말입니다.
 
 원인은 **D-cache** 입니다. CPU 의 store 는 우선 D-cache 에만 들어가고 DRAM 에는 아직 반영되지 않을 수 있습니다 (write-back 캐시). DMA 엔진은 DRAM 을 직접 읽으므로 캐시 안의 새 값을 보지 못합니다. 반대로 DMA 가 버퍼를 채운 뒤 CPU 가 읽으면, CPU 의 D-cache 에 남은 _낡은 값_ 을 보게 됩니다 (arm/Cache).
 
@@ -70,7 +70,7 @@ GICBLK: "GICv3" {
 
 1. **CPU 와 다른 관측자(DMA, 다른 코어, I-cache)가 같은 값을 봐야 한다** → coherency point (PoU/PoC) 개념 + 그 지점까지 데이터를 밀어내거나 버리는 CMO.
 2. **인터럽트는 종류·우선순위·대상 코어가 다양하다** → 분류(SGI/PPI/SPI/LPI) + Distributor 가 라우팅 + Redistributor 가 코어별 전달.
-3. **MSI 같은 대량 장치 인터럽트를 효율적으로 라우팅해야 한다** → GICv3 의 ITS (Interrupt Translation Service) 가 DeviceID+EventID 를 LPI 로 변환.
+3. **MSI**(Message Signaled Interrupt — 전용 핀 대신 약속된 메모리 주소에 쓰기를 보내 알리는 인터럽트 방식) **같은 대량 장치 인터럽트를 효율적으로 라우팅해야 한다** → GICv3 의 ITS (Interrupt Translation Service) 가 DeviceID+EventID 를 LPI 로 변환.
 
 ---
 
@@ -108,7 +108,7 @@ S1 -> S2 -> S3 -> S4 -> S5 -> S6
 
 ### 3.2 인터럽트 한 건 — ISR 진입과 종료
 
-타이머 인터럽트가 도착했을 때 ISR 의 뼈대는 다음과 같습니다 (arm/GIC).
+타이머 인터럽트가 도착했을 때 **ISR**(Interrupt Service Routine — 인터럽트가 오면 실행되는 처리 루틴) 의 뼈대는 다음과 같습니다 (arm/GIC).
 
 ```asm
 // IRQ vector 진입

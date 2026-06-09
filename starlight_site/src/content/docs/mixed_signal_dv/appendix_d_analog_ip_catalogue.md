@@ -2,7 +2,9 @@
 title: "Appendix D. Analog IP Catalogue — RNM 모델·검증 시나리오·Coverage"
 ---
 
-본 부록은 SoC에서 가장 자주 등장하는 8가지 analog/mixed-signal IP에 대해 **spec 표 + 최소 RNM 모델 + 검증 시나리오 + coverage 골격 + 흔한 함정**을 한 페이지씩 정리한 카탈로그입니다. 각 IP의 deep dive는 별도 챕터(Ch07 DLL, Ch08 IO buffer, Ch09 sense amp)에서 다룹니다.
+본 부록은 SoC에서 가장 자주 등장하는 8가지 analog/mixed-signal **IP**(Intellectual Property — 재사용 가능한 설계 블록)에 대해 **spec 표 + 최소 RNM 모델 + 검증 시나리오 + coverage 골격 + 흔한 함정**을 한 페이지씩 정리한 카탈로그입니다. 각 IP의 deep dive는 별도 챕터(Ch07 DLL, Ch08 IO buffer, Ch09 sense amp)에서 다룹니다.
+
+아래 표와 본문에 반복되는 핵심 성능 지표를 먼저 정의합니다: **INL/DNL**(Integral/Differential Non-Linearity — 변환기의 이상 직선/이상 한 칸에서 벗어난 정도), **monotonicity**(입력이 커지면 출력 코드도 반드시 같이 커지는 단조성), **ENOB**(Effective Number Of Bits — 잡음·왜곡을 감안한 유효 분해능 비트 수), **SNR/SNDR**(Signal-to-Noise (and Distortion) Ratio — 신호 대 잡음(과 왜곡) 비), **SFDR**(Spurious-Free Dynamic Range — 가장 큰 스퍼리어스 성분까지의 여유), **settling**(출력이 목표값에 안정될 때까지의 과도 거동), **PSRR**(Power Supply Rejection Ratio — 전원 잡음을 출력이 얼마나 억제하는지), **UVLO**(Under-Voltage Lockout — 입력 전압이 낮으면 동작을 막는 보호), **TC**(Temperature Coefficient — 온도에 따른 변화율, ppm/°C), **glitch**(코드 전환 순간 출력에 튀는 스파이크), **ripple**(스위칭 전원 출력에 남는 주기적 잔류 변동), **spur**(원치 않는 주파수 tone)입니다.
 
 | IP | 검증 RNM 적합도 | 주 코너 도구 |
 |---|---|---|
@@ -38,6 +40,8 @@ g.f_ref -> g.pfd -> g.cp -> g.lpf -> g.vco -> g.f_out
 g.vco -> g.div_n
 g.div_n -> g.pfd: "feedback"
 ```
+
+위 그림: **PFD**(Phase-Frequency Detector, 위상·주파수 차이를 감지), **CP**(Charge Pump, 그 차이를 전류로 펌핑), **LPF**(Loop Filter/Low-Pass Filter, 제어 전압으로 적분), **VCO**(전압으로 주파수를 만드는 발진기), **/N div**(VCO 출력을 N으로 분주해 기준과 비교)입니다.
 
 ### spec
 
@@ -143,10 +147,10 @@ endgroup
 
 | 종류 | 속도 | 분해능 | 비고 |
 |---|---|---|---|
-| Flash | GS/s | 4~8 bit | 비교기 2^N개, 면적·전력 큼 |
-| **SAR** | 10~100 MS/s | 10~16 bit | IoT/센서용 표준 |
-| Pipeline | 100 MS/s~GS/s | 10~14 bit | stage별 SHA + flash |
-| Sigma-Delta | kS/s~MS/s | 16~24 bit | oversampling + decimation |
+| Flash | GS/s | 4~8 bit | 비교기 2^N개로 한 번에 변환, 면적·전력 큼 |
+| **SAR** | 10~100 MS/s | 10~16 bit | 비트를 하나씩 이진 탐색, IoT/센서용 표준 |
+| Pipeline | 100 MS/s~GS/s | 10~14 bit | stage별 SHA(Sample-and-Hold Amplifier) + flash |
+| Sigma-Delta | kS/s~MS/s | 16~24 bit | oversampling(목표보다 훨씬 빠르게 샘플) + decimation(다운샘플 필터)으로 고분해능 |
 | Integrating | 매우 느림 | 고정밀 | 정밀계측 |
 
 ### spec
@@ -268,7 +272,7 @@ endgroup
 | resolution N, full-scale range | O |
 | **monotonicity, INL/DNL** | O (mismatch 주입) |
 | settling time | 제한 (1차 RC 근사) |
-| **glitch energy (major-carry)** | X (Spice) |
+| **glitch energy (major-carry — MSB가 바뀌는 코드 경계에서 최악의 스파이크)** | X (Spice) |
 | output impedance | O (nettype Z) |
 | SFDR | X (Spice) |
 
@@ -587,10 +591,10 @@ endgroup
 | 항목 | RNM |
 |---|---|
 | sequencing order, inter-rail delay | O |
-| UVLO/OVP threshold | O |
+| UVLO/OVP(Over-Voltage Protection, 과전압 보호) threshold | O |
 | power_good combo | O |
 | fault response (retry/latch/shutdown) | O |
-| **SMPS ripple** | X (Spice) |
+| **SMPS(Switched-Mode Power Supply, 스위칭 방식 전원) ripple** | X (Spice) |
 | thermal shutdown | O (T 입력) |
 
 ### 모델 구조
@@ -815,7 +819,7 @@ endmodule
 
 ## 8. SerDes PHY
 
-SerDes는 **analog signal integrity**(eye, jitter, equalization)와 **protocol**(link training)을 동시에 다룹니다. protocol은 RNM/UVM과 잘 맞지만 signal integrity는 **RNM의 한계가 매우 큰 영역**. spec PASS는 대부분 statistical sim + silicon measurement에 의존.
+SerDes는 **analog signal integrity**(eye, jitter, equalization — 신호가 채널을 지나며 왜곡되지 않는지)와 **protocol**(link training — 링크를 켜고 양단 설정을 맞추는 절차)을 동시에 다룹니다. protocol은 RNM/UVM과 잘 맞지만 signal integrity는 **RNM의 한계가 매우 큰 영역**. spec PASS는 대부분 statistical sim + silicon measurement에 의존. (용어: **8b/10b · 64b/66b**는 직렬 전송용 인코딩, **elastic buffer**는 송수신 클록 미세 차이를 흡수하는 버퍼, **lane**은 한 쌍의 직렬 신호 채널, **LTSSM**은 링크 상태 천이를 규정한 상태 기계, **OOB**는 Out-Of-Band 신호, **disparity**는 8b/10b에서 0과 1의 누적 균형, **S-parameter**는 고주파에서 채널의 전달·반사 특성을 기술하는 행렬입니다.)
 
 ```d2
 direction: down

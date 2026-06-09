@@ -37,6 +37,8 @@ SK Hynix DRAM 설계검증 직무 JD (Logic / Timing / Quality 3축) 와 정렬.
 
 ### 1.1 3축의 의미
 
+이 챕터의 키워드 셋을 먼저 풀어 둡니다 — **Mixed-Signal**(digital 논리와 analog 회로가 섞인 설계 — DRAM은 명령은 digital, 셀 sensing은 analog), **STA**(static timing analysis, 입력 자극 없이 회로의 모든 경로 지연을 정적으로 계산해 setup/hold 위반을 빠짐없이 점검하는 방법), **DFT**(design for test, 칩을 테스트하기 쉽게 만들기 위해 넣는 설계 — scan chain·BIST 등)입니다.
+
 | 축 | 무엇을 검증 | 주된 도구 |
 |---|---|---|
 | **Logic** | 명령 시퀀스, MR, refresh, training, ECC, PPR 등 *프로토콜* | System Verilog + UVM-lite, *In-house verification framework* |
@@ -453,7 +455,7 @@ endmodule
 
 ### 6.1 MBIST (Memory BIST)
 
-수억 개의 cell을 외부 ATE로 일일이 테스트하는 것은 비용과 시간 면에서 비현실적입니다. 그래서 DRAM은 내부에 self-test 로직(MBIST)을 두어 자체적으로 test pattern을 생성하고 결과를 verify합니다. wafer 단계나 시스템 동작 중 모두 활용할 수 있고, fail이 발견되면 mPPR과 연계해 자동 repair까지 이어질 수 있습니다.
+수억 개의 cell을 외부 **ATE**(automated test equipment, 칩을 외부에서 자동으로 테스트하는 장비)로 일일이 테스트하는 것은 비용과 시간 면에서 비현실적입니다. 그래서 DRAM은 내부에 self-test 로직(**MBIST**, memory built-in self-test — 칩 안에 내장돼 메모리 셀을 스스로 테스트하는 회로)을 두어 자체적으로 test pattern을 생성하고 결과를 verify합니다. wafer 단계나 시스템 동작 중 모두 활용할 수 있고, fail이 발견되면 mPPR과 연계해 자동 repair까지 이어질 수 있습니다.
 
 > DDR5 MR23 OP[4]: **MBIST Enable** (SR/W) — "DRAM will automatically write to 0 when MBIST completes."
 

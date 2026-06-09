@@ -22,7 +22,7 @@ title: "Module 04 — RAG (Retrieval-Augmented Generation)"
 
 ### 1.1 시나리오 — "Spec 이 _매주_ 바뀐다"
 
-사내 IP RDMA spec 으로 LLM 에 도메인 지식을 주입하고 싶은데 spec 이 _매주_ 갱신된다고 합시다 (review feedback, bug fix, new feature). 이때 가능한 세 가지 옵션을 비교합니다.
+사내 IP RDMA spec 으로 LLM 에 도메인 지식을 주입하고 싶은데 spec 이 _매주_ 갱신된다고 합시다 (review feedback, bug fix, new feature). 이 모듈의 주제인 **RAG**(Retrieval-Augmented Generation — 질문이 오면 외부 문서에서 관련 부분을 먼저 검색해 prompt 에 넣어 주고, 그 근거로 LLM 이 답하게 하는 구조)와, 비교 대상인 **Fine-tune**(파인튜닝 — 모델 가중치를 도메인 데이터로 추가 학습시켜 지식·스타일을 모델 안에 새겨 넣는 방법)을 먼저 풀어 둡니다. 이때 가능한 세 가지 옵션을 비교합니다.
 
 | 옵션 | 비용 | 갱신 시간 | 운영 |
 |------|-----|---------|------|
@@ -145,7 +145,7 @@ R -> U: "⑦ 답변 + citation list\n(클릭 가능한 출처 링크)" { style.s
 
 Naive RAG 는 "쿼리 → 임베딩 → 검색 → 프롬프트 삽입 → 생성" 의 단순한 흐름입니다. 구현이 빠르고 이해하기 쉽지만, 검색 품질에 극도로 의존합니다. 사용자가 쓰는 어휘와 문서가 쓰는 어휘가 다르거나 (Semantic gap), chunk 가 문장 중간에서 잘리거나, 정답 chunk 가 Top-K 밖에 밀려나는 순간 시스템 전체가 흔들립니다.
 
-Advanced RAG 는 이 취약점을 보완하기 위해 각 단계에 컴포넌트를 추가합니다. 쿼리가 들어오면 먼저 재작성·확장하고, 임베딩 후 Dense + Sparse 하이브리드 검색을 수행하고, 결과를 Cross-encoder re-ranker 로 정밀 재정렬하고, 최종 생성 후에는 출처를 검증합니다. 복잡도가 높아지는 대신 각 단계의 실패를 격리할 수 있습니다. 실전에서는 Naive RAG 를 먼저 배포하고 RAGAS (§5.4) 로 어느 지점이 망가지는지 측정한 뒤, _필요한 Advanced 컴포넌트만_ 추가하는 것이 ROI 최적입니다.
+Advanced RAG 는 이 취약점을 보완하기 위해 각 단계에 컴포넌트를 추가합니다. 쿼리가 들어오면 먼저 재작성·확장하고, 임베딩 후 **Dense + Sparse 하이브리드 검색**(Dense = 의미 임베딩 기반 검색, Sparse = BM25 같은 키워드 기반 검색, Hybrid = 둘의 점수를 합쳐 의미·정확 키워드 둘 다 잡는 방식)을 수행하고, 결과를 **Cross-encoder re-ranker**(re-ranker = 1차 검색 결과를 다시 정밀 채점해 순위를 바로잡는 단계; cross-encoder = 질의와 문서를 한 입력으로 함께 넣어 관련도를 직접 매기는, 느리지만 정확한 모델) 로 정밀 재정렬하고, 최종 생성 후에는 출처를 검증합니다. 복잡도가 높아지는 대신 각 단계의 실패를 격리할 수 있습니다. 실전에서는 Naive RAG 를 먼저 배포하고 RAGAS (§5.4) 로 어느 지점이 망가지는지 측정한 뒤, _필요한 Advanced 컴포넌트만_ 추가하는 것이 ROI 최적입니다.
 
 ---
 
@@ -208,7 +208,7 @@ Re-ranker:
 
 ### 5.4 RAG 품질 평가 지표
 
-RAG 품질은 "검색" 과 "생성" 두 축을 분리해서 측정해야 합니다. 검색 축에서는 Top-K 중 실제로 관련된 문서가 얼마나 들어있는지 (Retrieval Precision) 와, 존재하는 관련 문서 중 얼마나 빠짐없이 회수했는지 (Retrieval Recall) 를 봅니다. 생성 축에서는 LLM 이 만든 답변이 실제로 검색된 chunk 에 근거하고 있는지 (Answer Faithfulness) 와, 질문에 실제로 유용한 답변인지 (Answer Relevance) 를 측정합니다. 두 축을 분리하지 않으면 "틀린 답" 의 원인이 retrieval 인지 generation 인지 알 수 없어 디버그가 불가능합니다.
+RAG 품질은 "검색" 과 "생성" 두 축을 분리해서 측정해야 합니다 (이를 자동화한 대표 프레임워크가 **RAGAS** — Retrieval-Augmented Generation Assessment, retrieval 정확도와 답변 충실도를 자동 채점해 주는 평가 도구). 검색 축에서는 Top-K 중 실제로 관련된 문서가 얼마나 들어있는지 (Retrieval Precision) 와, 존재하는 관련 문서 중 얼마나 빠짐없이 회수했는지 (Retrieval Recall) 를 봅니다. 생성 축에서는 LLM 이 만든 답변이 실제로 검색된 chunk 에 근거하고 있는지 (Answer Faithfulness) 와, 질문에 실제로 유용한 답변인지 (Answer Relevance) 를 측정합니다. 두 축을 분리하지 않으면 "틀린 답" 의 원인이 retrieval 인지 generation 인지 알 수 없어 디버그가 불가능합니다.
 
 | 지표 | 측정 대상 | 의미 |
 |------|----------|------|

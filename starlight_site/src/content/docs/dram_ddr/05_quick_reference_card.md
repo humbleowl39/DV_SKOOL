@@ -235,6 +235,8 @@ MI/PHY = DDR 전기 신호 변환 + Training(타이밍 캘리브레이션)
 
 ### 5.2 핵심 타이밍 파라미터
 
+아래 값은 모두 "두 명령 사이에 최소한 기다려야 하는 cycle 수"입니다 — `t` 는 time, 이름은 "무엇→무엇" 사이를 가리킵니다(예: tRCD = ACT→RD 사이). 명령 약어는 ACT=Row 열기, RD/WR=읽기/쓰기, PRE=Row 닫기, REF=refresh.
+
 ```
 tCL:   CAS Latency (RD → 데이터)
 tRCD:  ACT → RD/WR (Row to Column Delay)

@@ -9,7 +9,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 스토리지가 회전 디스크(HDD)에서 플래시 SSD로 넘어오면서, 정작 매체는 빨라졌는데 인터페이스가 발목을 잡는 상황이 생겼습니다. SATA/SAS는 본래 느린 HDD를 전제로 설계된 프로토콜이라 큐가 하나뿐이고 그 안에 명령을 최대 32개밖에 못 넣습니다. 멀티코어 CPU가 동시에 수만 건의 I/O를 쏟아내도 이 좁은 통로 하나로 줄을 세워야 하니, SSD의 잠재력이 그대로 묻혀 버립니다. NVMe(Non-Volatile Memory Express)는 이 병목을 없애기 위해 PCIe 위에서 처음부터 플래시를 겨냥해 다시 설계된 인터페이스입니다. 최대 64K개의 큐, 큐당 64K개의 명령이라는 압도적 병렬성으로 SSD를 CPU에 직접 붙입니다.
 
-검증 엔지니어 입장에서 NVMe를 모르면 정작 필요한 순간에 막힙니다. host와 controller가 host 메모리의 ring buffer(SQ/CQ)와 doorbell 레지스터로 어떻게 명령을 주고받는지 설명하지 못하면, 시뮬레이션이 왜 멈췄는지(doorbell을 안 울렸나? CQ를 안 비웠나?)를 판단할 수 없습니다. 또한 NVMe-oF가 등장하면서 스토리지 프로토콜이 네트워크 패브릭(RDMA/RoCEv2) 위로 확장되었기 때문에, 이제는 NVMe 큐 한 쌍이 RDMA QP 한 쌍에 어떻게 매핑되고 capsule이 RDMA SEND/RECV로 어떻게 운반되는지까지 알아야 원격 스토리지 IP(예: NRT, NVMe RDMA Target)를 검증할 수 있습니다. 이 코스는 그 흐름을 단계별로 풀어줍니다.
+검증 엔지니어 입장에서 NVMe를 모르면 정작 필요한 순간에 막힙니다. host와 controller가 host 메모리의 ring buffer(SQ/CQ)와 doorbell 레지스터로 어떻게 명령을 주고받는지 설명하지 못하면, 시뮬레이션이 왜 멈췄는지(doorbell을 안 울렸나? CQ를 안 비웠나?)를 판단할 수 없습니다. 또한 NVMe-oF(NVMe over Fabrics, 원격 스토리지를 네트워크로 로컬처럼 쓰게 한 확장)가 등장하면서 스토리지 프로토콜이 네트워크 패브릭(RDMA — 원격 메모리를 CPU 없이 직접 읽고 쓰는 기술 / RoCEv2 — Ethernet 위에서 RDMA를 구현하는 방식) 위로 확장되었기 때문에, 이제는 NVMe 큐 한 쌍이 RDMA QP(Queue Pair, 송·수신 큐 한 쌍) 한 쌍에 어떻게 매핑되고 capsule이 RDMA SEND/RECV로 어떻게 운반되는지까지 알아야 원격 스토리지 IP(예: NRT, NVMe RDMA Target)를 검증할 수 있습니다. 이 코스는 그 흐름을 단계별로 풀어줍니다.
 
 ## 학습 목표
 

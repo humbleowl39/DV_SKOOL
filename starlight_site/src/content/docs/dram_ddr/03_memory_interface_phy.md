@@ -83,7 +83,9 @@ PHY -> DRAM: "PCB trace\n(수 cm, ps 단위 차이)"
 
 ## 3. 작은 예 — Write Leveling 한 byte lane 을 step-by-step 으로 맞추기
 
-가장 단순한 시나리오. 64-bit DDR4 모듈에서 _byte lane 0_ 의 Write Leveling 한 lane 을 추적합니다.
+가장 단순한 시나리오. 64-bit DDR4 모듈에서 _byte lane 0_ 의 Write Leveling(쓰기 레벨링 — 각 데이터 묶음의 strobe 시점을 클럭에 맞춰 정렬하는 보정) 한 lane 을 추적합니다.
+
+용어 먼저 — **PHY**(Physical Layer, 물리 계층 — MC 의 논리적 명령을 실제 전기 신호로 바꿔 핀으로 내보내고, 받은 신호를 다시 0/1 로 판정하는 회로 블록). **byte lane**(바이트 레인 — DQ 8개를 한 묶음으로 다루는 데이터 경로 단위; 64-bit 버스 = 8 lane). **DQ**(Data — 실제 데이터가 흐르는 핀), **DQS**(Data Strobe — DQ 가 "지금 유효하다"고 알려 주는 동반 클럭 신호), **CK**(Clock — 시스템 기준 클럭). **delay tap**(딜레이 탭 — 신호를 아주 조금씩 늦추는 조절 눈금; 한 tap 이 약 5~10 ps). **MRS**(Mode Register Set — DRAM 의 동작 모드를 설정하는 명령으로, 여기서는 DRAM 을 training 전용 모드로 진입시키는 데 씀).
 
 ### 사전 상황
 
@@ -192,7 +194,7 @@ LPDDR5 는 추가로 **WCK2CK Training** + **CBT** (Command Bus Training).
                  → ZQ Short / periodic retraining
 ```
 
-Training 은 특정 시점의 PVT 조건을 기준으로 margin 을 확보하는 작업입니다. 온도가 변하거나 전압이 흔들리면 그 기준이 어긋나므로, 한 번 학습한 결과를 영구히 재사용할 수는 없습니다. 그래서 ZQ Short 는 수십 초마다 impedance 를 재조정하고, full retraining 은 주기적으로 또는 온도가 임계값을 초과할 때 새로 trigger 됩니다.
+여기서 **eye**(아이 다이어그램 — 수신 신호 파형을 한 비트 구간마다 겹쳐 그렸을 때 가운데에 생기는 눈 모양의 빈 공간; 이 "눈"이 넓을수록 0/1 을 안정적으로 구분할 시간·전압 여유가 크다)와 **margin**(마진 — 정확히 샘플링할 수 있는 안전 여유)이 핵심 개념입니다. **PVT**(Process/Voltage/Temperature — 공정 편차·전압·온도; 칩마다, 순간마다 신호 속도를 바꾸는 세 변동 요인)도 함께 짚어 둡니다. Training 은 특정 시점의 PVT 조건을 기준으로 margin 을 확보하는 작업입니다. 온도가 변하거나 전압이 흔들리면 그 기준이 어긋나므로, 한 번 학습한 결과를 영구히 재사용할 수는 없습니다. 그래서 ZQ Short 는 수십 초마다 impedance 를 재조정하고, full retraining 은 주기적으로 또는 온도가 임계값을 초과할 때 새로 trigger 됩니다.
 
 온도가 _왜_ 전파 지연을 바꾸는지는 트랜지스터·배선의 물리에 뿌리가 있습니다. 신호가 게이트와 PCB trace 를 통과하는 속도는 캐리어 이동도(carrier mobility)와 배선 저항에 달려 있는데, 온도가 오르면 실리콘 격자의 열진동이 심해져 캐리어가 더 자주 산란되어 **이동도가 떨어지고**(트랜지스터가 느려짐), 동시에 금속 배선의 **저항이 커져** RC 지연이 늘어납니다. 두 효과가 합쳐져 부팅 시 25 °C 에서 맞춘 delay tap 이 75 °C 에서는 신호 도착 시각을 ps 단위로 밀어 버립니다 — eye 가 좌/우로 shift 하는 것입니다. 이 drift 가 윈도우 가장자리를 넘어서기 전에 다시 측정해 tap 을 옮겨 주는 것이 retraining 이 _주기적_ 이어야 하는 근본 이유입니다.
 

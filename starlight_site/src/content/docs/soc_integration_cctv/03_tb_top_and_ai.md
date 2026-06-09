@@ -21,15 +21,17 @@ title: "Module 03 — TB Top & AI Automation"
 
 ### 1.1 시나리오 — _8 개월 vs 1 주_
 
+먼저 용어 정리. **SoC**(System-on-Chip — 여러 IP 를 한 칩에 통합한 것), **IP**(SoC 를 구성하는 재사용 설계 블록), **TB**(Testbench — DUT 를 둘러싸고 자극을 주며 결과를 검사하는 검증 환경 전체; **DUT**=Device Under Test, 검증 대상 설계), **TB Top**(여러 IP 를 통합한 SoC 전체를 검증하는 최상위 TB)이 이 모듈의 무대입니다. **Config-driven**(설정 파일 한 곳이 환경 구성을 결정하는 방식), **AI/LLM**(Large Language Model — 대규모 언어 모델), **Gap**(검증이 빠진 부분)이라는 말도 곧 나옵니다.
+
 SoC 검증 팀이 새 SoC release 마다 TB 를 처음부터 작성하는 데 _4 주_, 검증 사이클에 8 개월을 쓰고 나서야 다음 SoC 개발을 시작할 수 있다면, 프로젝트가 겹칠 때마다 일정이 압박받습니다.
 
-DVCon 2025 데이터 [Cadence / Synopsys] 에 따르면 Config-driven TB + AI Gap discovery 를 도입했을 때 TB 작성 기간이 4 주에서 1 주로 단축되고, 8 개월 검증 사이클을 1.5 개월 줄일 수 있었습니다.
+**DVCon**(Design and Verification Conference — 검증 분야 주요 학회) 2025 데이터 [Cadence / Synopsys] 에 따르면 Config-driven TB + AI Gap discovery(빈틈 자동 발견) 를 도입했을 때 TB 작성 기간이 4 주에서 1 주로 단축되고, 8 개월 검증 사이클을 1.5 개월 줄일 수 있었습니다.
 
-이것이 가능한 이유는 세 가지 패턴이 결합되기 때문입니다. 먼저 TB Top 의 모든 component 가 **Config 기반** 으로 동작합니다 — JSON 한 파일이 IP list, base address, common task matrix 를 정의하면 Generator 가 나머지를 자동 구성합니다. 다음으로 **AI Gap discovery** 가 새 IP 추가 시 기존 Spec 과 검증 이력을 바탕으로 Gap candidate 를 자동으로 제시합니다. 마지막으로 **사람이 리뷰하고 승인** 합니다 — AI 는 제안을 만들고, 숙련된 DV 엔지니어가 False Positive 를 걸러내고 priority 를 확정합니다.
+이것이 가능한 이유는 세 가지 패턴이 결합되기 때문입니다. 먼저 TB Top 의 모든 component(컴포넌트 — TB 를 이루는 부품 객체) 가 **Config 기반** 으로 동작합니다 — JSON(키-값 구조의 텍스트 설정 형식) 한 파일이 IP list, base address(각 IP 의 주소 영역 시작점), common task matrix 를 정의하면 **Generator**(그 설정을 읽어 TB 환경을 자동으로 만들어 내는 코드) 가 나머지를 자동 구성합니다. 다음으로 **AI Gap discovery** 가 새 IP 추가 시 기존 Spec(명세서) 과 검증 이력을 바탕으로 Gap candidate(빠졌을 법한 검증 후보) 를 자동으로 제시합니다. 마지막으로 **사람이 리뷰하고 승인** 합니다 — AI 는 제안을 만들고, 숙련된 DV 엔지니어가 False Positive(실제로는 문제 아닌데 문제라고 잘못 짚은 것) 를 걸러내고 priority 를 확정합니다.
 
-이 세 패턴이 맞물리면 같은 팀 규모로 이전 대비 8 배 더 많은 chip 을 처리할 수 있습니다. 이것이 modern SoC DV 에서 가장 ROI 가 높은 영역입니다.
+이 세 패턴이 맞물리면 같은 팀 규모로 이전 대비 8 배 더 많은 chip 을 처리할 수 있습니다. 이것이 modern SoC DV 에서 가장 **ROI**(Return On Investment — 투자 대비 효과) 가 높은 영역입니다.
 
-Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap 을 _누가 어떤 테스트로 메우는지_ 는 여전히 수동입니다. 새 IP 가 들어오거나 base address 가 바뀌면 TB 의 agent / checker / monitor / coverage 가 _전부 손으로 갱신_ 돼야 하고, 이 과정에서 "TB 작업 4 주 → 검증 시작" 의 병목이 다시 발생합니다.
+Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap 을 _누가 어떤 테스트로 메우는지_ 는 여전히 수동입니다. 새 IP 가 들어오거나 base address 가 바뀌면 TB 의 agent(한 인터페이스를 구동·관측하는 컴포넌트 묶음) / checker(규칙 위반을 감시하는 컴포넌트) / monitor(신호를 관측해 거래로 뽑아내는 컴포넌트) / coverage(어떤 경우를 밟았는지 집계하는 측정) 가 _전부 손으로 갱신_ 돼야 하고, 이 과정에서 "TB 작업 4 주 → 검증 시작" 의 병목이 다시 발생합니다.
 
 이 모듈을 건너뛰면 CCTV 가 그저 "한 번 만든 매트릭스" 로 끝나고, _다음 SoC_ 에서는 다시 처음부터 시작하게 됩니다. 반대로 **Config (JSON) 한 파일만 교체하면 모든 layer 가 자동 재구성** 되는 패턴을 잡으면, 8 개월에 한 번 짓던 TB 가 _1 주일_ 만에 release 가능한 상태가 됩니다 — 이게 DVCon 2025 가 정량적으로 보여준 가치입니다.
 
@@ -41,6 +43,8 @@ Module 02 의 매트릭스만으로는 _Gap 을 발견_ 하지만, 발견된 Gap
 **TB Top** = _도시별로 다시 만들지 않는_ 검사 장비 세트. 도로/전기/배수 검사 절차는 도시가 바뀌어도 동일 — _도시 지도 (Config)_ 만 갈아 끼우면 같은 장비가 다른 도시도 검사할 수 있어야 한다.<br>
 **AI 자동화** = 도시 지도가 바뀔 때마다 _새 점검 항목 (Gap)_ 을 자동으로 찾아주는 보조원. 보조원이 만든 목록은 _경험 있는 검사관 (DV 엔지니어)_ 이 최종 리뷰.
 :::
+위 비유에 나오는 **AI 자동화** 스택의 두 부품을 미리 풀어둡니다 — **RAG**(Retrieval-Augmented Generation — 관련 문서를 먼저 검색해 그 내용을 근거로 LLM 이 답을 생성하는 방식), **FAISS**(많은 벡터 중 비슷한 것을 빠르게 찾아주는 유사도 검색 라이브러리). **UVM**(Universal Verification Methodology — SystemVerilog 기반 표준 검증 프레임워크) Env(검증 환경)는 그 위에서 자동 구성됩니다.
+
 ### 한 장 그림 — Config → Generator → UVM Env → AI Gap loop
 
 ```d2
@@ -71,7 +75,9 @@ ENV -> AI: "regression 결과 + V-Plan"
 
 ## 3. 작은 예 — 새 NPU IP 한 개를 TB Top 에 통합하는 1 cycle
 
-가장 단순한 시나리오. 영상 SoC 에 _새로운 NPU (Neural Processing Unit) IP_ 가 추가됨 — AXI master, DMA, sysMMU 사용, irq_out, PD_AI 도메인. 이 한 IP 가 TB Top 에 _자동 통합되는_ 1 cycle 을 추적합니다.
+가장 단순한 시나리오. 영상 SoC 에 _새로운 **NPU** (Neural Processing Unit — 신경망 연산 전용 가속기) IP_ 가 추가됨 — **AXI**(ARM 의 칩 내부 버스 프로토콜) **master**(버스에서 거래를 먼저 시작하는 쪽; 반대는 응답하는 slave), **DMA**(CPU 없이 직접 메모리를 옮기는 방식), **sysMMU**(IP 의 가상 주소를 실제 주소로 변환·격리하는 장치) 사용, irq_out(인터럽트 출력), PD_AI 도메인(Power Domain — 따로 켜고 끌 수 있는 전원 영역). 이 한 IP 가 TB Top 에 _자동 통합되는_ 1 cycle 을 추적합니다.
+
+아래 흐름에 나오는 **IP-XACT**(IEEE 1685 — IP 의 레지스터·포트·주소맵을 기계가 읽을 수 있는 XML 로 적은 표준), **OPP**(Operating Performance Point — DVFS 가 전환하는 전압·주파수 조합 한 단계), **FAISS**(유사 IP 를 벡터 거리로 빠르게 찾는 검색), **LLM**(대규모 언어 모델), **mrun**(이 프로젝트의 시뮬레이션 빌드/실행 명령), **V-Plan**(Verification Plan — 검증 계획서), **Recall**(실제로 있는 것들 중 얼마나 찾아냈는지의 비율)도 함께 나옵니다.
 
 ```d2
 direction: down
@@ -118,7 +124,7 @@ def generate_tb_top(config):
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) Config 한 파일이 모든 layer 의 single source of truth** — 사람이 두 곳을 동시에 갱신하다 어긋날 위험이 사라집니다. NPU base address 가 바뀌면 _Config 만_ 갱신, agent / mmap / SVA / RAL 이 자동 재생성.<br>
+**(1) Config 한 파일이 모든 layer 의 single source of truth(모든 정보가 한 곳에서만 정의되는 단일 진실 원천)** — 사람이 두 곳을 동시에 갱신하다 어긋날 위험이 사라집니다. NPU base address 가 바뀌면 _Config 만_ 갱신, agent / mmap / SVA(SystemVerilog Assertions — 설계 규칙을 코드로 적어 위반 시 에러 내는 검증 구문) / RAL(Register Abstraction Layer — DUT 의 레지스터 맵을 SystemVerilog 객체로 모델링한 UVM 계층) 이 자동 재생성.<br>
 **(2) AI 는 _제안기_ 이지 _결정기_ 가 아니다** — T3 → T4 까지는 AI 가 list 를 만들지만, T5 의 _15 분 인간 리뷰_ 가 quality gate. False Positive 는 자연스러운 비용이고, _Recall (실제 Gap 의 발견율)_ 이 더 중요한 지표입니다.
 :::
 ---
@@ -291,6 +297,8 @@ DUT -> CHK
 `ip_list[].common_tasks` 필드에 적힌 Task 만 CCTV 에서 검증 대상이 되고, 적히지 않은 Task 는 `ignore_bins` 로 자동 처리됩니다. 덕분에 UART 에 sysMMU 가 없다는 사실을 코드에 하드코딩하지 않아도 됩니다. `reset_sequence` 필드는 IP 사이의 reset 해제 순서를 선언하면 Generator 가 이를 SVA 로 자동 변환합니다 — 설계 의도와 검증 코드가 같은 파일에서 동기화됩니다. 프로젝트 A 와 B 는 Config 파일만 다르고 나머지는 동일합니다.
 
 ### 5.3 코드 예시 — Config 기반 UVM Env 자동 구성
+
+아래 코드는 `build_phase`(UVM 컴포넌트가 자식들을 만들어 짓는 단계)에서 IP 목록을 돌며 agent 를 동적으로 만들고, `uvm_config_db`(컴포넌트 사이로 설정 객체를 전달하는 UVM 의 중앙 저장소)로 각 checker 에 설정을 내려보냅니다.
 
 ```systemverilog
 class soc_top_env extends uvm_env;
@@ -568,7 +576,7 @@ Hybrid (IP-XACT + Spec + FAISS + LLM):
 IP Spec 텍스트에서 "sysMMU 를 통해 메모리에 접근" 이라는 문장을 발견하면 필요성이 확인되고, FAISS 로 유사 IP (GPU) 의 검증 이력을 참조하면 "어떤 시나리오를 우선해야 하는지" 까지 예측할 수 있습니다. 이 세 정보를 LLM 이 종합하여 Priority 가 매겨진 Gap 목록과 mrun 명령어를 출력합니다.
 
 :::caution[왜 LLM Gap 목록에 False Positive 가 섞이는가 — 생성기의 본질]
-§5.9 문제 2 의 Precision 60% (= 10개 중 4개가 False Positive) 는 프롬프트가 나빠서가 아니라 LLM 의 _작동 원리_ 에서 나오는 구조적 특성입니다. LLM 은 사실을 _조회(lookup)_ 하는 데이터베이스가 아니라, 학습 분포를 바탕으로 _다음 토큰을 확률적으로 생성_ 하는 모델입니다. 그래서 "이 IP 패턴이면 보통 이런 검증이 필요하더라" 는 _그럴듯한_ 항목을, 설령 해당 IP 의 spec 에 근거가 없어도, 자연스럽게 만들어 냅니다 — 예컨대 §5.9 의 "UART × sysMMU" 처럼 DMA 가 없는 IP 에 sysMMU Gap 을 제안하는 식입니다. 이것은 [AI Engineering Module 01 — LLM Fundamentals](../../ai_engineering/01_llm_fundamentals/) 가 설명하는 hallucination 의 한 형태로, "생성 모델은 spec 에 없는 것도 통계적으로 그럴듯하면 만들어 낸다" 는 본질에서 비롯됩니다.
+§5.9 문제 2 의 Precision(정밀도 — 찾아낸 것 중 진짜인 비율) 60% (= 10개 중 4개가 False Positive) 는 프롬프트(prompt — LLM 에게 주는 지시문)가 나빠서가 아니라 LLM 의 _작동 원리_ 에서 나오는 구조적 특성입니다. LLM 은 사실을 _조회(lookup)_ 하는 데이터베이스가 아니라, 학습 분포를 바탕으로 _다음 토큰을 확률적으로 생성_ 하는 모델입니다. 그래서 "이 IP 패턴이면 보통 이런 검증이 필요하더라" 는 _그럴듯한_ 항목을, 설령 해당 IP 의 spec 에 근거가 없어도, 자연스럽게 만들어 냅니다 — 예컨대 §5.9 의 "UART × sysMMU" 처럼 DMA 가 없는 IP 에 sysMMU Gap 을 제안하는 식입니다. 이것은 [AI Engineering Module 01 — LLM Fundamentals](../../ai_engineering/01_llm_fundamentals/) 가 설명하는 hallucination 의 한 형태로, "생성 모델은 spec 에 없는 것도 통계적으로 그럴듯하면 만들어 낸다" 는 본질에서 비롯됩니다.
 
 그래서 LLM Gap detection 은 _Precision_ 보다 _Recall (실제 Gap 을 놓치지 않는 비율)_ 을 우선 지표로 삼습니다 — False Positive 는 §3 의 _15 분 인간 리뷰_ 라는 quality gate 에서 싸게 걸러지지만, 놓친 Gap 은 silicon 에서야 비싸게 드러나기 때문입니다. FAISS 의 유사 IP 이력으로 LLM 출력을 cross-check 하는 것도 이 생성 특성을 _근거로 제약_ 해 hallucination 을 줄이려는 장치입니다.
 :::
@@ -592,6 +600,8 @@ S5 -> S6
 ```
 
 ### 5.7 TB Top Release 프로세스 상세
+
+아래 체크리스트의 용어를 먼저 풀어둡니다. **RTL freeze**(설계 코드(RTL)에 더 이상 기능 변경을 받지 않기로 동결하는 시점), **Compile**(소스 코드를 시뮬레이터가 쓸 형태로 번역하는 단계), **Elaboration**(컴파일된 모듈들을 실제 계층 구조로 조립·연결하는 단계), **Sanity 검증**(본격 검증 전 "기본은 도는가"를 빠르게 확인하는 최소 점검), **Boot test**(BootROM 부터 시작해 메모리 접근까지 부팅 흐름이 되는지 보는 테스트).
 
 ```
 Phase 1: RTL 수령 및 Config 생성 (1-2일)

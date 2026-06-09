@@ -36,7 +36,7 @@ rnm_col: "RNM" {
 }
 ```
 
-AMS는 경계를 넘을 때마다 connect module이라는 번역기를 통하고, 아날로그 측에서는 SPICE 엔진이 수치 적분을 수행합니다. RNM은 SPICE 엔진 자체를 제거합니다. 아날로그 동작을 SystemVerilog의 `real` 타입과 수학 함수로 근사하고, 디지털 시뮬레이터만으로 전부 처리합니다. 시간은 여전히 이벤트 기반이어서 수치 적분의 오버헤드가 없습니다. DVCon 발표에 따르면 RNM 도입으로 **100~1000× 속도 향상**이 보고되었습니다(PMIC SSD 사례, 2020).
+AMS는 경계를 넘을 때마다 connect module이라는 번역기를 통하고, 아날로그 측에서는 SPICE 엔진이 수치 적분을 수행합니다. RNM은 SPICE 엔진 자체를 제거합니다. 아날로그 동작을 SystemVerilog의 `real` 타입과 수학 함수로 근사하고, 디지털 시뮬레이터만으로 전부 처리합니다. 시간은 여전히 이벤트 기반이어서 수치 적분의 오버헤드가 없습니다. **DVCon**(Design and Verification Conference, 검증 분야 대표 학회) 발표에 따르면 RNM 도입으로 **100~1000× 속도 향상**이 보고되었습니다(**PMIC**(Power Management IC — 칩의 여러 전원을 생성·관리하는 IC) SSD 사례, 2020). 참고로 **RNM**(Real Number Modeling)은 디지털 시뮬레이터 안에서 아날로그 동작을 실수 함수로 근사하는 기법, **AMS**는 디지털 sim과 SPICE를 함께 돌리는 방식, **connect module**은 두 영역의 경계 변환기입니다.
 
 ## 2. RNM이 가능한 이유
 
@@ -54,7 +54,7 @@ initial begin
 end
 ```
 
-- IEEE 754 double-precision
+- IEEE 754 double-precision (부동소수점 실수의 국제 표준 형식, 64비트 배정밀도)
 - 일반 변수처럼 사용 — `assign`, `always`, `function` 등 모두 가능
 - 단, **net이 될 수 없음** → port 간 wire로 못 씀
 
@@ -108,9 +108,9 @@ nettype drive_t wreal_resolved with resolve_max_strength;
 
 ### 4.3 UDN — User-Defined Nettype 확장
 
-DVCon (2020~2025) 사례들이 보여주는 활용:
+**UDN**(User-Defined Nettype — 사용자가 값 타입과 합성 함수를 직접 정의한 nettype)으로 단일 실수를 넘어 구조체를 net에 실을 수 있습니다. DVCon (2020~2025) 사례들이 보여주는 활용:
 
-- **EEnet (Cadence EE_pkg)**: `nettype` 안에 (voltage, impedance) 구조체 → 임피던스 인터랙션 모델링
+- **EEnet (Cadence EE_pkg)**: `nettype` 안에 (voltage, impedance — 전류 흐름을 방해하는 정도) 구조체 → 임피던스 인터랙션 모델링
 - **Loading effects in power regulation**: structured UDN으로 multi-driver current/voltage summation
 - **Scalable UVM-DMS**: 자동 type conversion + driver resolution
 
@@ -162,7 +162,7 @@ endmodule
 
 ## 7. 더 정밀한 RNM — DRAM Cell Charge Sharing (Level 5)
 
-DRAM cell이 bit line으로 신호를 흘리는 동작:
+DRAM cell이 bit line으로 신호를 흘리는 동작입니다. **word line(WL)**은 읽을 행을 활성화하는 선, **bit line(BL)**은 데이터를 실어 나르는 선, **precharge**는 읽기 전에 BL을 중간 전압으로 미리 충전해 두는 것, **charge sharing**은 셀과 BL의 전하가 합쳐져 평형 전압을 이루는 현상, **destructive read**(파괴적 읽기)는 읽으면 셀 전하가 흐트러져 원래 값이 사라지므로 다시 써넣어야 하는 DRAM 특성입니다.
 
 ```systemverilog
 `timescale 1ns/1ps
@@ -264,7 +264,7 @@ v_shared = (27 + 45)/130 = 0.554 V
 
 → BL이 0.554V로 precharge보다 0.104V 높음 → '1' 검출.
 
-**Sense margin = ±0.104 V**. 이 margin이 sense amp offset(σ ≈ 18mV)보다 충분히 커야 함.
+**Sense margin = ±0.104 V** (sense amp가 0/1을 안전하게 가르는 전압 여유). 이 margin이 sense amp offset(이상값에서 벗어난 미세 직류 편차; σ ≈ 18mV — σ는 표준편차, 통계적 산포의 크기)보다 충분히 커야 함.
 
 ## 10. 흔한 함정
 
@@ -303,7 +303,7 @@ endfunction
 nettype ee_t eenet with resolve_parallel;
 ```
 
-→ 두 driver가 parallel로 net을 구동하면 **Thevenin equivalent**를 자동 계산.
+→ 두 driver가 parallel로 net을 구동하면 **Thevenin equivalent**(테브난 등가 — 여러 전압원·저항을 하나의 전압원과 직렬 저항으로 합친 등가 회로)를 자동 계산.
 
 DVCon 2020/2021 발표에서 PMIC, power regulation, multi-supply switching 등에 활용.
 
@@ -370,7 +370,7 @@ real f_vco = f_center + Kvco * (vctrl - vmid);
 // dB → linear gain
 real gain_lin = $pow(10.0, gain_db / 20.0);
 
-// Box-Muller 정규분포 noise
+// Box-Muller 정규분포 noise (균등난수 두 개를 정규분포 난수로 바꾸는 표준 공식)
 real u1 = $itor($urandom_range(1, 1<<30)) / (1<<30);
 real u2 = $itor($urandom_range(0, 1<<30)) / (1<<30);
 real n  = $sqrt(-2.0 * $ln(u1)) * $cos(2.0 * 3.141592653589793 * u2);
@@ -424,9 +424,9 @@ function automatic analog_t res_thevenin(input analog_t d[]);
 endfunction
 ```
 
-**② Norton (전류 합성)** — 전류 source들이 한 node에 들어올 때 (KCL). V = (ΣI) / (Σ1/Z), 정의역만 다릅니다.
+**② Norton (전류 합성)** — 전류 source들이 한 node에 들어올 때 (KCL = 노드 전류 보존 법칙). Norton 등가는 회로를 전류원 하나와 병렬 저항으로 합치는 표현입니다. V = (ΣI) / (Σ1/Z), 정의역만 다릅니다.
 
-**③ Wired-OR / Wired-AND** — open-drain · open-collector 모델.
+**③ Wired-OR / Wired-AND** — open-drain(출력이 0을 끌어내리기만 하고 1은 외부 pull-up이 만드는 구조) · open-collector 모델. 여러 출력이 한 선을 공유할 때 하나만 0이면 선 전체가 0이 됩니다.
 
 ```systemverilog
 typedef struct { real V; bit pull_low; } od_t;
@@ -548,8 +548,8 @@ endtask
 ### 14.5 시간 디버깅 팁
 
 - log message에 항상 `%0t` 또는 `$realtime`을 같이 — race 분석의 첫 단서
-- FSDB / VCD dump에 `real`도 포함되도록 dump 옵션 명시 (vendor마다 default 다름)
-- 같은 시간에 여러 event가 발생할 때 NBA region과 `#0` 동작이 vendor마다 미묘 → race-sensitive 구간은 명시적 delay
+- FSDB / VCD(파형을 기록하는 dump 파일 형식 — FSDB는 Synopsys, VCD는 표준)에 `real`도 포함되도록 dump 옵션 명시 (vendor마다 default 다름)
+- 같은 시간에 여러 event가 발생할 때 NBA region(Non-Blocking Assignment 영역 — 비차단 대입이 한꺼번에 반영되는 시뮬레이션 스케줄 단계)과 `#0` 동작이 vendor마다 미묘 → race-sensitive 구간은 명시적 delay
 - `$timeformat(-9, 3, " ns", 12)`로 출력 형식 통일
 
 ## 15. SVA on real — bound · slew · settle
@@ -748,7 +748,7 @@ endgroup
 
 ## 17. Randomization on real — int + post_randomize
 
-IEEE 1800-2023부터 `rand real`이 LRM에 명시되긴 했지만, **simulator 지원과 솔버 한계** 때문에 표준 패턴은 `rand bit[N:0]` 또는 `rand int`를 뽑고 post-randomize로 real로 변환하는 것입니다.
+IEEE 1800-2023부터 `rand real`이 LRM에 명시되긴 했지만, **simulator 지원과 솔버**(제약 조건을 만족하는 값을 찾는 constraint solver) **한계** 때문에 표준 패턴은 `rand bit[N:0]` 또는 `rand int`를 뽑고 post-randomize로 real로 변환하는 것입니다.
 
 | 접근 | 호환성 | 제약 표현력 | 비고 |
 |---|---|---|---|
@@ -843,10 +843,10 @@ endclass
 | 시나리오 | 패턴 |
 |---|---|
 | 입력 sweep | 12-bit 코드 → post_randomize에서 V로 |
-| Corner sampling | PVT를 enum/int corner index로, model param을 후처리에서 set |
+| Corner sampling | PVT(Process·Voltage·Temperature — 공정·전압·온도 변동 조건)를 enum/int corner index로, model param을 후처리에서 set |
 | Time-domain stim | freq · ampl · duty · jitter를 int로, sequence에서 sine 생성기에 전달 |
-| Reference shift | Vref · bias를 randomize해서 calibration/trim 검증 |
-| Mismatch 모델 | ADC LSB · offset · gain error를 정규분포로 후처리에서 부여 |
+| Reference shift | Vref · bias를 randomize해서 calibration/trim(보정·미세 조정) 검증 |
+| Mismatch 모델 | ADC LSB(Least Significant Bit — 최하위 비트가 나타내는 최소 전압 한 칸) · offset · gain error를 정규분포로 후처리에서 부여 |
 
 > **seed에 의존하지 않는 random은 functional pass 신뢰도가 낮습니다.** UVM regression에서 매 seed의 결과가 재현 가능해야 디버깅 가능 — `$random`을 직접 호출하지 말고 `uvm_root::get().set_seed()`를 통한 관리 권장.
 

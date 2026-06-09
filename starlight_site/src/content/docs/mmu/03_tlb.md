@@ -21,13 +21,13 @@ title: "Module 03 — TLB"
 
 ### 1.1 시나리오 — _Stale TLB_ 의 silent corruption
 
-OS 에서 `mmap` 으로 파일을 매핑한 뒤 `munmap` 으로 해제했다고 가정하겠습니다. 이 시점에 다른 process 가 _같은 VA 영역_ 에 _다른 파일_ 을 mmap 하면 어떤 일이 벌어질까요? 잠시 후 그 process 가 해당 VA 를 읽으면 예상과 전혀 다른 파일의 데이터가 나옵니다.
+OS 에서 `mmap`(메모리 매핑 시스템 콜 — 파일이나 빈 영역을 process 의 VA 공간에 연결) 으로 파일을 매핑한 뒤 `munmap`(매핑 해제) 으로 해제했다고 가정하겠습니다. 이 시점에 다른 process 가 _같은 VA 영역_ 에 _다른 파일_ 을 mmap 하면 어떤 일이 벌어질까요? 잠시 후 그 process 가 해당 VA 를 읽으면 예상과 전혀 다른 파일의 데이터가 나옵니다.
 
-원인은 **stale TLB entry** 입니다. 첫 번째 `mmap` 시 TLB 에 VA → PA1 매핑이 채워집니다. `munmap` 이 page table 에서 그 매핑을 제거하지만, TLB invalidate 를 하지 않으면 구 entry(VA → PA1)가 TLB 에 그대로 남습니다. 이후 새 `mmap` 이 VA → PA2 매핑을 page table 에 추가해도, TLB hit 경로는 여전히 PA1 을 반환하므로 두 번째 파일을 읽어야 하는 접근이 첫 번째 파일의 물리 페이지를 건드리게 됩니다.
+원인은 **stale TLB entry**(스테일 TLB 항목 — page table 은 바뀌었는데 TLB 에 남아 있는 낡은 옛 변환 결과) 입니다. 첫 번째 `mmap` 시 TLB 에 VA → PA1 매핑이 채워집니다. `munmap` 이 page table 에서 그 매핑을 제거하지만, **TLB invalidate**(TLB 무효화 — 특정 TLB 항목을 강제로 비워 다음 접근 때 다시 변환하게 하는 동작)를 하지 않으면 구 entry(VA → PA1)가 TLB 에 그대로 남습니다. 이후 새 `mmap` 이 VA → PA2 매핑을 page table 에 추가해도, TLB hit 경로는 여전히 PA1 을 반환하므로 두 번째 파일을 읽어야 하는 접근이 첫 번째 파일의 물리 페이지를 건드리게 됩니다.
 
-해결책은 단순하지만 놓치기 쉽습니다. `munmap` 직후 반드시 `tlb_invalidate(va)` — x86 에서는 `INVLPG`, ARM 에서는 `TLBI` — 를 호출해야 합니다. 이 누락은 Linux 커널 이력에 수십 건이 쌓여 있는, OS 에서 가장 자주 발생하는 버그 중 하나입니다.
+해결책은 단순하지만 놓치기 쉽습니다. `munmap` 직후 반드시 `tlb_invalidate(va)` — x86 에서는 `INVLPG`, ARM 에서는 `TLBI`(TLB Invalidate 명령어) — 를 호출해야 합니다. 이 누락은 Linux 커널 이력에 수십 건이 쌓여 있는, OS 에서 가장 자주 발생하는 버그 중 하나입니다.
 
-**TLB 는 MMU 성능의 90% 를 결정**합니다. Page walk 이 ~400 ns 인 반면 TLB hit 는 ~1 cycle (~0.5 ns) — _800 배_ 차이. Hit rate 가 99% 에서 95% 로 4%p 만 떨어져도 effective access time 이 4.5 ns 에서 20.5 ns 로 _4.6배_ 늘어납니다. 즉, TLB hit-rate 가 IPC 를 직접 결정.
+**TLB 는 MMU 성능의 90% 를 결정**합니다. Page walk 이 ~400 ns 인 반면 TLB hit 는 ~1 cycle (~0.5 ns) — _800 배_ 차이. Hit rate(적중률 — 전체 접근 중 TLB 에서 바로 답이 나온 비율) 가 99% 에서 95% 로 4%p 만 떨어져도 effective access time(실효 접근 시간 — hit 와 miss 를 비율로 가중 평균한 평균 변환 시간) 이 4.5 ns 에서 20.5 ns 로 _4.6배_ 늘어납니다. 즉, TLB hit-rate 가 **IPC**(Instructions Per Cycle — 사이클당 처리하는 명령 수, CPU 성능 지표) 를 직접 결정.
 
 검증 관점에서 **stale TLB entry 는 silent correctness bug 의 가장 흔한 원인** 입니다 — page table update 후 invalidate 누락이면 잘못된 PA 에 access 하지만 _아무 경고도 없이_ 진행. 이 모듈의 invalidation 시나리오를 빠짐없이 다루는 것이 핵심.
 
@@ -64,8 +64,8 @@ BUS -> CMISS
 
 세 요구가 동시에 만족돼야 했습니다.
 
-1. **매 instruction 마다 _1 cycle_ 안에 끝나야** → μTLB 가 fully-associative + 32-64 entries 의 _아주 작은_ CAM. 검색 latency 가 cycle time 안에 들어와야 IPC 무너지지 않음.
-2. **그래도 working set 은 수천 page 가능** → L2 TLB 가 set-associative 로 더 크게. Hit 가 μTLB 보다 몇 cycle 느리지만 walk 보단 100 배 빠름.
+1. **매 instruction 마다 _1 cycle_ 안에 끝나야** → **μTLB**(마이크로 TLB — CPU 코어에 가장 가까운 가장 작고 빠른 1차 TLB) 가 **fully-associative**(완전 연관 — 어떤 항목이든 어느 칸에나 들어갈 수 있어 전부를 동시에 비교) + 32-64 entries 의 _아주 작은_ **CAM**(Content-Addressable Memory — 주소가 아니라 "내용"으로 검색하는, 모든 칸을 병렬 비교하는 메모리). 검색 latency 가 cycle time 안에 들어와야 IPC 무너지지 않음.
+2. **그래도 working set**(워킹셋 — 한동안 실제로 자주 쓰는 page 들의 집합) **은 수천 page 가능** → L2 TLB 가 **set-associative**(집합 연관 — 항목이 들어갈 칸을 일부 비트로 먼저 한 묶음[set]으로 좁힌 뒤 그 안에서만 비교) 로 더 크게. Hit 가 μTLB 보다 몇 cycle 느리지만 walk 보단 100 배 빠름.
 3. **walk 자체도 줄여야** → PWC (Module 02 §4.6).
 
 이 세 단계가 **μTLB → L2 TLB → PWC → page walk** 의 정확히 4 단계 hierarchy 를 만듭니다. 각 단계가 다음 단계의 비용을 _분산 흡수_ 하는 구조.

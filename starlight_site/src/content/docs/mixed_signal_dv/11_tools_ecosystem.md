@@ -11,7 +11,7 @@ title: "Ch11. 도구 지형 — VCS-AMS · AMS Designer · Questa-AMS · IBIS-AM
 
 ## 1. 도구 카테고리 정리
 
-도구를 선택하기 전에 먼저 도구 지형 전체를 한 눈에 볼 필요가 있습니다. mixed-signal 검증에서 쓰이는 도구는 다섯 가지 카테고리로 나뉩니다. SPICE는 정확도의 기준점이지만 느립니다. Fast SPICE는 속도를 높여 DRAM full-chip에도 적용할 수 있습니다. AMS는 digital sim과 SPICE를 결합합니다. Pure RNM은 별도 SPICE 엔진 없이 디지털 시뮬레이터만으로 mixed-signal을 처리합니다. IBIS-AMI는 SerDes와 DDR 같은 고속 인터페이스의 system-level 검증 표준입니다.
+도구를 선택하기 전에 먼저 도구 지형 전체를 한 눈에 볼 필요가 있습니다. (**EDA** = Electronic Design Automation, 반도체 설계·검증을 자동화하는 소프트웨어 분야. **vendor**는 이런 도구를 만드는 공급사 — Synopsys·Cadence·Siemens EDA가 3대 vendor입니다.) mixed-signal 검증에서 쓰이는 도구는 다섯 가지 카테고리로 나뉩니다. SPICE는 정확도의 기준점이지만 느립니다. Fast SPICE는 속도를 높여 DRAM full-chip에도 적용할 수 있습니다. AMS는 digital sim과 SPICE를 결합합니다. Pure RNM은 별도 SPICE 엔진 없이 디지털 시뮬레이터만으로 mixed-signal을 처리합니다. IBIS-AMI는 SerDes와 DDR 같은 고속 인터페이스의 system-level 검증 표준입니다.
 
 | 카테고리 | 대표 도구 | 특징 |
 |---|---|---|
@@ -60,9 +60,9 @@ SPICE 도구들은 정확도 측면에서 silicon에 가장 가깝습니다. 어
 
 핵심 특징 (공식 datasheet, 2024 기준):
 
-- Native low-power(NLP) 기술 확장 — UPF mixed-signal 지원
+- Native low-power(NLP) 기술 확장 — **UPF**(Unified Power Format — 전원 도메인·전원 끄기 등 저전력 의도를 기술하는 표준) mixed-signal 지원
 - SystemVerilog · Verilog · VHDL · Verilog-AMS · SPICE **모두 한 환경에서**
-- Post-layout: SPF · DSPF · SPEF 형식 지원
+- **Post-layout**(레이아웃 완료 후 실제 배선의 기생 저항·용량을 반영한 단계): SPF · DSPF · SPEF(레이아웃에서 추출한 기생 성분을 담은 표준 파일 형식들) 형식 지원
 - AMS Testbench — UVM 기반 mixed-signal 검증 환경
     - Analog node에 assertion/checker
     - Analog node monitoring + sampling
@@ -161,7 +161,7 @@ q_size -> rnm
 다음 4개 검증 task에 어떤 도구 조합이 적합한가?
 
 1. DDR5 SDRAM PHY full-chip functional regression (5,000 testcases)
-2. PMIC buck regulator step-load response analysis
+2. PMIC buck regulator step-load response analysis (부하 전류가 계단처럼 급변할 때 출력 전압이 어떻게 회복되는지 분석)
 3. PCIe Gen5 link training back-channel training 검증
 4. Bandgap reference voltage corner sign-off
 
@@ -204,7 +204,7 @@ UVM/SoC DV 경험자가 mixed-signal 도구를 익힐 때:
 | `$realtime` precision (`timeprecision`과의 상호작용) | 다른 timeunit 모듈과 boundary 테스트 | timing rounding drift |
 | Cross-language: VAMS `wreal` ↔ SV `nettype` 자동 변환 | mixed instance elaborate | implicit conversion missing |
 
-> 가능하면 **같은 RNM 코드가 두 vendor 이상에서 elaborate 되는 것**을 CI로 강제하세요. 한 vendor에 묶이면 model bug workaround가 vendor-specific으로 누적되고, vendor 교체 시 대대적 rewrite가 필요해집니다.
+> 가능하면 **같은 RNM 코드가 두 vendor 이상에서 elaborate 되는 것**을 **CI**(Continuous Integration, 코드 변경 시마다 자동으로 빌드·테스트하는 체계)로 강제하세요. 한 vendor에 묶이면(**vendor lock-in**) model bug workaround가 vendor-specific으로 누적되고, vendor 교체 시 대대적 rewrite가 필요해집니다.
 
 ## 13. License 경계와 비용 영향
 
@@ -223,7 +223,7 @@ UVM/SoC DV 경험자가 mixed-signal 도구를 익힐 때:
 
 ### Analog 팀이 Cadence 위주
 
-→ Xcelium AMS로 통일. Virtuoso · Spectre 흐름과 모델 swap이 편하고, connect module 자동 삽입(CMI)이 강합니다. UVM도 Xcelium에서 잘 돕니다.
+→ Xcelium AMS로 통일. Virtuoso · Spectre 흐름과 모델 swap이 편하고, connect module 자동 삽입(CMI — Connect Module Insertion)이 강합니다. UVM도 Xcelium에서 잘 돕니다.
 
 ### Digital 팀이 Synopsys 위주
 
@@ -231,7 +231,7 @@ UVM/SoC DV 경험자가 mixed-signal 도구를 익힐 때:
 
 ### Foundry corner / 군용·항공우주
 
-→ Siemens EDA Questa AMS + Eldo. corner 라이브러리가 강하고 보안 인증(예: DO-254)에 활용 사례가 많습니다.
+→ Siemens EDA Questa AMS + Eldo. corner 라이브러리가 강하고 보안 인증(예: DO-254 — 항공 전자 하드웨어 인증 표준)에 활용 사례가 많습니다.
 
 ## 15. Verilator 등 오픈소스 도구 현황
 

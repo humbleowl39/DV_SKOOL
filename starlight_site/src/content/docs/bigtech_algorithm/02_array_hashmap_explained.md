@@ -32,7 +32,7 @@ for i in range(N):
             return (i, j)
 ```
 
-병목은 내부 루프가 "complement 가 이미 등장했는가?" 를 매번 처음부터 뒤지는 데 있습니다. 이 검색 하나를 hash map 의 O(1) lookup 으로 대체하면 전체 복잡도가 O(N) 으로 떨어지고, N=10⁵ 일 때 수 µs 에 통과합니다.
+병목은 내부 루프가 "complement(보완값 — 현재 값 x에 대해 `K - x`, 즉 합이 K가 되려면 필요한 짝)가 이미 등장했는가?" 를 매번 처음부터 뒤지는 데 있습니다. 여기서 **hash map**(키→값 쌍을 저장하고 키로 평균 O(1)에 찾는 자료구조 — Module 01에서 소개)의 O(1) **lookup**(조회 — 키로 값을 찾는 연산)으로 이 검색 하나를 대체하면 전체 복잡도가 O(N) 으로 떨어지고, N=10⁵ 일 때 수 µs 에 통과합니다.
 
 ```python
 seen = {}
@@ -54,7 +54,7 @@ Hash map lookup 이 _평균_ O(1). 그런데 _worst-case_ 는?
 <details>
 <summary>정답</summary>
 
-**O(N)** — 모든 key 가 _같은 hash bucket_ 에 모일 때 (hash collision 폭주).
+**O(N)** — 모든 key 가 _같은 hash bucket_(해시 버킷 — 값을 보관하는 칸; 키를 해시한 결과가 가리키는 슬롯)에 모일 때 (**hash collision**(해시 충돌 — 서로 다른 키가 같은 버킷으로 떨어지는 현상) 폭주).
 
 대응:
 - **C++ unordered_map**: open hashing (chaining). worst O(N) 가능.

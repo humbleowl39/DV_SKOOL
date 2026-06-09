@@ -22,11 +22,11 @@ title: "Module 02 — TOE Architecture"
 
 ### 1.1 시나리오 — _1 백만 연결_ 의 _RTO timer_
 
-당신이 cloud server 를 운영한다고 해봅시다. 동시 활성 TCP 연결이 1 백만 개이고, 각 연결마다 독립적인 RTO timer 가 있어 응답이 안 오면 retransmit 해야 합니다.
+당신이 cloud server 를 운영한다고 해봅시다. 동시 활성 TCP 연결이 1 백만 개이고, 각 연결마다 독립적인 **RTO**(Retransmission Timeout; 보낸 데이터의 ACK 가 이 시간 안에 안 오면 재전송하도록 정한 대기 시간) timer 가 있어 응답이 안 오면 **retransmit**(재전송; 잃어버린 것으로 판단한 segment 를 다시 보냄) 해야 합니다.
 
 가장 단순한 SW 모델은 매 cycle 마다 1 백만 개의 timer 를 전부 비교하는 것인데, 이러면 CPU 가 대부분의 시간을 timer 처리에 소진하게 됩니다.
 
-TOE HW 의 Timer Wheel 은 이 문제를 구조적으로 풉니다. 1 ms 단위의 bucket 들로 시간을 분할하고, 각 timer 는 자신의 만료 시점에 해당하는 bucket 에 연결해 둡니다. 그러면 매 1 ms 마다 wheel 이 한 칸 돌아 현재 만료 bucket 의 timer 만 처리하면 됩니다 — 수십 개. 비용이 _O(전체 N)_ 에서 _O(만료 수)_ 로 내려갑니다.
+TOE HW 의 **Timer Wheel**(타이머 휠; 시간을 칸으로 나눈 원형 배열에 각 timer 를 만료 시각의 칸에 매달아 두는 자료구조) 은 이 문제를 구조적으로 풉니다. 1 ms 단위의 **bucket**(버킷; 같은 시간대 또는 같은 해시값을 묶어 담는 한 칸) 들로 시간을 분할하고, 각 timer 는 자신의 만료 시점에 해당하는 bucket 에 연결해 둡니다. 그러면 매 1 ms 마다 wheel 이 한 칸 돌아 현재 만료 bucket 의 timer 만 처리하면 됩니다 — 수십 개. 비용이 _O(전체 N)_(처리량이 전체 개수 N 에 비례 — 표기 O 는 입력 규모에 따른 비용 증가율) 에서 _O(만료 수)_ 로 내려갑니다.
 
 여기에 더해 Connection Table 은 1 백만 연결의 4-tuple→state 매핑을 SRAM 에서 O(1) 로 꺼내 주고, 활성 연결은 빠른 SRAM 에, idle 연결은 느린 DRAM 에 두는 tier 구조가 메모리 비용을 현실적으로 만듭니다. 이 구조 없이 SW 로 처리하면 CPU 8 코어가 100 % 점유되지만, HW offload 면 0.5 코어로 줄어듭니다.
 
@@ -101,11 +101,11 @@ S8 -> APP
 
 | Step | 어느 블록 | 무엇을 | 의미 |
 |---|---|---|---|
-| ① | DCMAC → TOE | Ethernet Frame 의 payload (IP/TCP) 를 TOE RX 에 인계 | AXI-S 인터페이스, 백프레셔 가능 |
-| ② | RX Checksum Verify | IP header + TCP pseudo header + payload 의 1's complement sum | 실패 시 silent drop + counter |
-| ③ | Connection Lookup | {srcIP, srcPort, dstIP, dstPort} 의 hash → Connection Table entry | O(1) 평균 (충돌은 chaining) |
-| ④ | Seq Validate | seg.seq == rcv_nxt → in-order. (≠ → OOO 버퍼 또는 drop) | 기대 범위 밖이면 DUP ACK |
-| ⑤ | TCP State Update | rcv_nxt += len, snd_una 갱신, retx buffer 해제 | Connection Table 의 state RMW |
+| ① | DCMAC → TOE | Ethernet Frame (이더넷이 한 번에 전송하는 데이터 단위 — 헤더+payload+검사값) 의 payload (IP/TCP) 를 TOE RX 에 인계. **DCMAC**(data-center Ethernet MAC; 프레임을 실제 회선에 싣고 내리는 블록) | **AXI-S**(AXI-Stream; 데이터를 연속 스트림으로 흘려보내는 표준 인터페이스) 인터페이스, **백프레셔**(backpressure; 받는 쪽이 바쁘면 보내는 쪽을 잠시 멈추게 하는 흐름 제어) 가능 |
+| ② | RX Checksum Verify | IP header + TCP pseudo header + payload 의 **1's complement sum**(1의 보수 합; 자리올림을 되돌려 더하는 checksum 계산 방식) | 실패 시 silent drop + counter |
+| ③ | Connection Lookup | {srcIP, srcPort, dstIP, dstPort} 의 hash → Connection Table entry. 이 네 값이 **4-tuple**(연결 하나를 유일하게 식별하는 출발지/목적지 IP·포트 묶음) | O(1) 평균 (충돌은 **chaining**(같은 hash 칸에 여러 entry 를 리스트로 매다는 충돌 처리)) |
+| ④ | Seq Validate | seg.seq == **rcv_nxt**(receive next; 다음으로 받기를 기대하는 byte 번호) → in-order. (≠ → **OOO**(out-of-order; 순서가 어긋나 도착한) 버퍼 또는 drop) | 기대 범위 밖이면 **DUP ACK**(duplicate ACK; 같은 ack 번호를 반복 보내 "빠진 조각이 있다"고 알리는 신호) |
+| ⑤ | TCP State Update | rcv_nxt += len, **snd_una**(send unacknowledged; 보냈지만 아직 ACK 못 받은 가장 오래된 byte) 갱신, retx buffer 해제 | Connection Table 의 state **RMW**(Read-Modify-Write; 읽어서 고친 뒤 다시 쓰는 3단계 갱신) |
 | ⑥ | Reassembly | in-order 라 직통, OOO 라면 buffer 에 저장 후 gap 채워질 때까지 대기 | 본 예시는 in-order |
 | ⑦ | RX DMA | TOE 의 RX buffer → host memory descriptor 가 가리키는 영역 | descriptor ring 의 producer pointer 증가 |
 | ⑧ | Host notify | IRQ 또는 polling 방식으로 app 이 read() 가능 신호 | NAPI / busy-poll 정책 |
@@ -180,7 +180,9 @@ CT -> HASH
 CT -> PATH
 ```
 
-Connection Table entry 가 담는 필드들이 곧 TOE 의 "stateful" 을 정의합니다. 각 연결마다 TCP FSM state (CLOSED/LISTEN/SYN_RCVD/ESTABLISHED/…), Sequence number 쌍 (snd_una, snd_nxt, rcv_nxt), Window 값 (snd_wnd, rcv_wnd, snd_wl1/wl2), 혼잡 제어 변수 (cwnd, ssthresh, dup_ack_count), RTT 추정치 (srtt, rttvar), Timer Wheel 의 slot 위치, 그리고 DRAM 상의 retx buffer 위치와 길이가 한 entry 에 기록됩니다. 이 정보가 모두 HW 에 있어야 packet 이 도착할 때마다 SW 개입 없이 올바른 응답을 만들 수 있습니다.
+위 그림의 호스트 연결 용어: **PCIe**(PCI Express; CPU·메모리와 주변 장치를 잇는 고속 직렬 버스 — TOE 가 호스트에 붙는 통로), **BAR**(Base Address Register; 장치의 레지스터·메모리를 호스트 주소 공간에 노출하는 창구), **doorbell**(도어벨; SW 가 "새 작업을 넣었다"고 HW 에 알리려 쓰는 알림 레지스터). SW 는 descriptor ring 에 작업을 넣고 doorbell 을 울려 HW 를 깨우고, HW 는 끝나면 IRQ 로 알립니다.
+
+Connection Table entry 가 담는 필드들이 곧 TOE 의 "stateful" 을 정의합니다. 각 연결마다 **TCP FSM state**(finite state machine; 연결이 거치는 상태들과 전이를 정의한 유한 상태 기계 — CLOSED/LISTEN/SYN_RCVD/ESTABLISHED/…), Sequence number 쌍 (snd_una, **snd_nxt**(send next; 다음에 보낼 byte 번호), rcv_nxt), Window 값 (**snd_wnd**(send window; 보내도 되는 양 — 상대가 알려 준 수신 여유), **rcv_wnd**(receive window; 내가 받을 수 있는 여유), snd_wl1/wl2 — window 갱신을 판단하는 보조 seq/ack), 혼잡 제어 변수 (cwnd, **ssthresh**(slow-start threshold; slow start 를 멈추고 완만한 증가로 바꾸는 경계), **dup_ack_count**(중복 ACK 수 — 보통 3 개면 빠른 재전송)), **RTT**(Round Trip Time; 보내고 ACK 받기까지 왕복 시간) 추정치 (**srtt**(smoothed RTT; 흔들림을 평탄화한 RTT 평균), **rttvar**(RTT 변동폭)), Timer Wheel 의 slot 위치, 그리고 DRAM 상의 retx buffer 위치와 길이가 한 entry 에 기록됩니다. 이 정보가 모두 HW 에 있어야 packet 이 도착할 때마다 SW 개입 없이 올바른 응답을 만들 수 있습니다.
 
 ### 4.4 Timer Wheel + Memory hierarchy
 
@@ -259,8 +261,8 @@ State (TCP FSM):
 | 방법 | 원리 | 속도 | 메모리 |
 |------|------|------|--------|
 | Hash Table | 4-tuple 해시 → 인덱스 | O(1) 평균 | 중간 |
-| CAM (Content Addressable Memory) | 병렬 매칭 | O(1) 보장 | 큼 (비쌈) |
-| TCAM | 와일드카드 매칭 가능 | O(1) 보장 | 매우 큼 |
+| CAM (Content Addressable Memory; 주소가 아니라 _값_ 으로 검색해 일치하는 칸을 한 번에 찾는 메모리) | 병렬 매칭 | O(1) 보장 | 큼 (비쌈) |
+| TCAM (Ternary CAM; 0/1 에 더해 "don't-care" 비트를 둬 와일드카드 매칭이 되는 CAM) | 와일드카드 매칭 가능 | O(1) 보장 | 매우 큼 |
 
 **실무**: 대부분의 TOE 는 **Hash Table** 사용 — 비용 효율적이고 충분히 빠름. 충돌은 체이닝으로 처리.
 
@@ -356,7 +358,7 @@ cascade 는 이 오차를 없애는 동작입니다: **L1 슬롯이 만료되는
 |---------|----------|
 | 정확한 만료 시점 | RTO 설정값과 실제 만료 시각 차이 ≤ 1 tick |
 | ACK 수신 → 타이머 취소 | ACK 후 해당 연결의 재전송 미발생 |
-| Exponential Backoff | 재전송마다 RTO 2배 증가 |
+| Exponential Backoff (지수 백오프; 재전송 실패가 반복될수록 대기 시간을 2배씩 늘려 혼잡을 키우지 않는 기법) | 재전송마다 RTO 2배 증가 |
 | 다수 연결 동시 만료 | 같은 슬롯에 여러 연결 → 모두 처리 |
 | 타이머 갱신 (재시작) | 새 데이터 전송 시 타이머 리셋 |
 
@@ -438,8 +440,8 @@ DCMAC (AMD):
 
 - 100 / 200 / 400 Gbps Ethernet MAC
 - Ethernet Frame 송수신
-- FCS (Frame Check Sequence) 처리
-- Pause Frame (흐름 제어)
+- **FCS**(Frame Check Sequence; 프레임 끝에 붙는 CRC 검사값 — 전송 중 비트 오류 검출) 처리. **CRC**(Cyclic Redundancy Check; 다항식 나눗셈으로 만든 오류 검출 코드)
+- **Pause Frame**(상대에게 "잠깐 전송을 멈춰라"를 알리는 이더넷 흐름 제어 프레임)
 
 TOE ↔ DCMAC 인터페이스는 AXI-Stream 기반입니다. TX 방향에서는 TOE 가 만든 TCP 세그먼트가 DCMAC 으로 전달되어 Ethernet Frame 으로 포장되고, RX 방향에서는 DCMAC 이 수신한 Ethernet Frame 을 TOE 로 넘겨 TCP 세그먼트를 꺼냅니다.
 
@@ -450,7 +452,7 @@ TOE ↔ DCMAC 인터페이스는 AXI-Stream 기반입니다. TX 방향에서는 
 :::caution[실무 주의점 — SYN Flood 시 Connection Table 고갈]
 **현상**: SYN 패킷이 대량으로 유입될 때 정상 클라이언트의 연결 요청이 거부되며, `conn_table_full` 상태 비트가 set 된다.
 
-**원인**: TOE의 Connection Table은 고정 크기(예: 64K entry)이다. Half-open 상태(SYN_RCVD)인 항목이 SYN-ACK 응답 없이 쌓이면 테이블이 포화된다. SYN Cookie 미지원 또는 Half-open 타임아웃이 너무 길게 설정된 경우 더욱 취약하다.
+**원인**: TOE의 Connection Table은 고정 크기(예: 64K entry)이다. Half-open(하프오픈; SYN 은 받았지만 3-way handshake 가 아직 안 끝난 미완성 연결) 상태(SYN_RCVD)인 항목이 마지막 ACK 없이 쌓이면 테이블이 포화된다. SYN Cookie(연결 정보를 sequence number 에 암호화해 담아, 테이블에 entry 를 만들지 않고도 handshake 를 진행하는 방어 기법) 미지원 또는 Half-open 타임아웃이 너무 길게 설정된 경우 더욱 취약하다.
 
 **점검 포인트**: 시뮬레이션에서 SYN only 시퀀스를 1K회 이상 인가하여 `conn_table_used` 카운터가 포화에 도달하는 사이클을 측정. 이후 정상 SYN이 DROP 되는지 확인하고, half-open 타임아웃 레지스터를 최솟값으로 설정 후 재시험.
 :::

@@ -12,9 +12,9 @@ title: "Ch07. Deep Dive — DLL Real Number Modeling"
 
 ## 1. DLL이란 무엇인가
 
-**DLL (Delay-Locked Loop)**은 입력 클록(REF_CLK)과 출력 클록(OUT_CLK)의 **위상 차이를 0으로 유지**하기 위해, **가변 delay line**을 자동으로 조절하는 폐회로(feedback loop) 시스템입니다.
+**DLL (Delay-Locked Loop)**은 입력 클록(REF_CLK)과 출력 클록(OUT_CLK)의 **위상 차이를 0으로 유지**하기 위해, **가변 delay line**(지연 시간을 디지털 코드로 조절할 수 있는 지연 회로)을 자동으로 조절하는 폐회로(feedback loop — 출력을 다시 입력으로 되먹여 자동 조정하는 회로) 시스템입니다. 여기서 **위상**(phase)은 한 주기 안에서 신호 엣지가 놓인 시간적 위치를 뜻합니다.
 
-DLL을 처음 배울 때 PLL과 혼동하기 쉽습니다. 둘 다 입력 클록을 기준으로 출력을 정렬하는 폐루프 시스템이지만, 핵심 메커니즘이 다릅니다. PLL은 VCO가 새로운 주파수의 클록을 생성하고, 그 주파수를 제어 전압으로 조절합니다. DLL은 클록 주파수를 바꾸지 않습니다. 입력 클록을 그대로 전달하되, 가변 delay line으로 천이 시점을 조절해서 위상을 맞춥니다. 안정성 분석도 더 단순하고, 대부분의 경우 1차 시스템으로 취급할 수 있습니다.
+DLL을 처음 배울 때 PLL과 혼동하기 쉽습니다. **PLL**(Phase-Locked Loop)·**DLL** 둘 다 입력 클록을 기준으로 출력을 정렬하는 폐루프 시스템이지만, 핵심 메커니즘이 다릅니다. PLL은 **VCO**(Voltage-Controlled Oscillator, 제어 전압에 따라 주파수가 변하는 발진기)가 새로운 주파수의 클록을 생성하고, 그 주파수를 제어 전압으로 조절합니다. DLL은 클록 주파수를 바꾸지 않습니다. 입력 클록을 그대로 전달하되, 가변 delay line으로 천이 시점을 조절해서 위상을 맞춥니다. 안정성 분석도 더 단순하고, 대부분의 경우 1차 시스템으로 취급할 수 있습니다.
 
 | 항목 | PLL | DLL |
 |---|---|---|
@@ -24,7 +24,9 @@ DLL을 처음 배울 때 PLL과 혼동하기 쉽습니다. 둘 다 입력 클록
 | Stability 분석 | Bode plot, loop gain | 단순 (대부분 first-order) |
 | 적용 | Clock multiplication, RF | Phase alignment, clock deskew |
 
-DRAM에서 DLL이 필요한 이유는 이렇습니다. DDR DRAM은 외부 CK 클록을 받아 내부 데이터 출력 stage까지 전달합니다. 그런데 내부를 통과하는 buffer와 배선 지연 때문에 외부 CK의 엣지와 내부 DQ 출력의 엣지 사이에 위상 차이(phase shift)가 생깁니다. **DLL이 이 지연을 정확히 측정하고 보상**하여 DQ가 CK 엣지에 정확히 정렬되도록 합니다. DDR5는 WCK와 DLL을 조합해 더욱 정밀한 alignment를 구현합니다.
+위 표의 용어: **charge pump**(작은 전류 펄스로 제어 전압을 끌어올리는 회로), **replica**(실제 출력 경로와 같은 지연을 흉내 낸 복제 경로), **Bode plot**(주파수에 따른 이득·위상을 그린 안정성 분석 그래프), **loop gain**(피드백 루프 한 바퀴의 신호 증폭률 — 안정성 판단의 핵심), **first-order**(에너지 저장 요소가 하나뿐인 1차 시스템 — 진동 없이 단조 수렴), **clock multiplication**(기준 클록보다 높은 주파수를 만드는 것), **deskew**(여러 신호의 도착 시간 차이를 맞춰 정렬)입니다.
+
+DRAM에서 DLL이 필요한 이유는 이렇습니다. DDR DRAM은 외부 CK 클록을 받아 내부 데이터 출력 stage까지 전달합니다. 그런데 내부를 통과하는 buffer와 배선 지연 때문에 외부 CK의 엣지와 내부 DQ 출력의 엣지 사이에 위상 차이(phase shift)가 생깁니다. **DLL이 이 지연을 정확히 측정하고 보상**하여 **DQ**(데이터 출력 핀)가 **CK**(외부 클록) 엣지에 정확히 정렬되도록 합니다. DDR5는 **WCK**(Write Clock — DDR5에서 데이터 전송에 쓰는 별도의 고속 클록)와 DLL을 조합해 더욱 정밀한 alignment를 구현합니다.
 
 ## 2. DLL의 4가지 구성요소
 
@@ -131,13 +133,15 @@ endmodule
 
 ### 5.1 Phase Detector (PD)
 
+**XOR**(배타적 논리합 — 두 입력이 다를 때만 1), **duty cycle**(한 주기 중 신호가 1인 시간의 비율)을 활용합니다.
+
 ```systemverilog
 // Type 1: XOR-based PD
 always @(ref_clk or fb_clk)
   pd_out = ref_clk ^ fb_clk;
 // pd_out의 duty cycle이 phase error에 비례
 
-// Type 2: Phase-Frequency Detector (PFD) — 더 정확
+// Type 2: Phase-Frequency Detector (PFD) — 두 클록의 위상과 주파수 차이를 함께 감지, 더 정확
 always @(posedge ref_clk) up <= 1;
 always @(posedge fb_clk)  down <= 1;
 always @(*) if (up && down) {up, down} = 0;
@@ -157,7 +161,7 @@ real phase_err_ps;  // 시간 차이를 실수로 직접 표현
 V_ctrl(s) = (1 + s/wz) / (s · C) × I_cp(s)
 ```
 
-이산 RNM (PI controller):
+이산 RNM (**PI controller** — Proportional-Integral, 현재 오차(비례)와 누적 오차(적분)를 함께 보고 제어량을 정하는 제어기):
 
 ```systemverilog
 real v_ctrl;
@@ -223,10 +227,12 @@ Jitter 종류:
 
 | 종류 | 원인 | RNM 모델링 |
 |------|------|-----------|
-| Random jitter (RJ) | Thermal noise | Gaussian random |
+| Random jitter (RJ) | Thermal noise (열잡음) | Gaussian random |
 | Deterministic jitter (DJ) | Power supply, crosstalk | Sinusoidal 또는 periodic |
-| Data-dependent jitter | ISI | 데이터 패턴 의존 |
+| Data-dependent jitter | ISI (인접 비트 간섭) | 데이터 패턴 의존 |
 | Duty cycle distortion (DCD) | Asymmetric rise/fall | Rise/fall delay 분리 |
+
+(jitter는 클록 엣지가 이상 시점에서 흔들리는 시간 오차이고, **RMS**(Root Mean Square — 제곱 평균 제곱근, 변동의 실효 크기)로 그 크기를 나타냅니다. RJ는 무작위 잡음성, DJ는 원인이 뚜렷한 규칙성 jitter입니다.)
 
 ## 7. Harmonic / False Lock — 산업의 실 문제
 
@@ -318,9 +324,9 @@ DLL 사양:
 
 ### 9.2 시나리오 2 — Limit cycle oscillation
 
-- 증상: ctrl이 두 값 사이를 계속 왔다갔다
+- 증상: ctrl이 두 값 사이를 계속 왔다갔다 (**limit cycle** = 한 점에 멈추지 못하고 일정 진폭으로 영구 진동하는 상태)
 - 원인: Step 크기가 너무 큼 → resolution 부족
-- 해결: Dead zone 추가
+- 해결: **Dead zone**(작은 오차는 무시하고 제어를 멈추는 불감대) 추가
 
 ```systemverilog
 if (phase_err_ps > DEAD_ZONE && ctrl > 0)
@@ -370,16 +376,18 @@ DLL과 PLL은 자주 한 chip에 같이 들어옵니다. 본 챕터의 DLL deep 
 | 측면 | DLL | PLL |
 |---|---|---|
 | 변하는 것 | delay code (정수 step) | VCO 주파수 (연속) |
-| Lock 판정 | phase error < 1 step | freq error < ppm |
+| Lock 판정 | phase error < 1 step | freq error < ppm(parts per million, 100만분의 1 주파수 오차) |
 | Lock 시간 모델 | step × 누적 cycle | loop dynamics (R·C·KVCO) |
-| 흔한 fail 모드 | **harmonic lock** (이 챕터 §6) | **cycle slip** in lock acquisition |
+| 흔한 fail 모드 | **harmonic lock** (이 챕터 §6) | **cycle slip**(루프가 한 주기를 통째로 건너뛰어 한 사이클 어긋남) in lock acquisition |
 | Jitter (RNM) | step 단위 quantization noise | 누적 phase noise (RNM 한계) |
 | Reference loss | 외부 처리 (digital) | loop이 vctrl drift |
 | Test 시나리오 핵심 | freq sweep + harmonic 진단 | step + reference loss + fast-lock mode |
 
-**같은 TB로 검증할 수 있나** — 부분적으로. Lock 시간 측정·SVA·tolerance compare 패턴은 그대로 재사용 가능합니다. 다만 PLL은 **분주비 N**과 **VCO range**, DLL은 **delay code range**가 randomize 대상이라 sequence_item 필드가 다릅니다.
+**같은 TB로 검증할 수 있나** — 부분적으로. Lock 시간 측정·SVA·tolerance compare 패턴은 그대로 재사용 가능합니다. 다만 PLL은 **분주비 N**(VCO 주파수를 N으로 나눠 기준과 비교 — 출력이 기준의 N배가 됨)과 **VCO range**, DLL은 **delay code range**가 randomize 대상이라 sequence_item 필드가 다릅니다.
 
 **한 chip에 같이 둘 때의 sequencing**:
+
+아래 sequencing의 **Bandgap**(온도·전원에 둔감한 기준 전압원), **LDO**(Low-Dropout regulator, 안정된 전원을 공급하는 선형 레귤레이터)는 PLL이 동작하기 전에 먼저 안정되어야 하는 전원 블록입니다.
 
 ```text
 1) Bandgap stable
@@ -390,7 +398,7 @@ DLL과 PLL은 자주 한 chip에 같이 들어옵니다. 본 챕터의 DLL deep 
 6) DQ output ready
 ```
 
-→ PMU의 sequencing 검증과 PLL/DLL의 lock 시나리오는 **chip-wide virtual sequence** 수준에서 묶어 검증합니다 — [Ch12 §4 Virtual Sequence](../12_uvm_rnm_integration/#42-virtual-sequence--여러-도메인-동기) 참고.
+→ **PMU**(Power Management Unit, 전원 생성·순서를 관리하는 블록)의 sequencing 검증과 PLL/DLL의 lock 시나리오는 **chip-wide virtual sequence**(여러 인터페이스의 시퀀스를 한 상위 시퀀스가 조율하는 UVM 패턴) 수준에서 묶어 검증합니다 — [Ch12 §4 Virtual Sequence](../12_uvm_rnm_integration/#42-virtual-sequence--여러-도메인-동기) 참고.
 
 ## 핵심 정리
 

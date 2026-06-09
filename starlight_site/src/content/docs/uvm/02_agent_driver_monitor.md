@@ -22,7 +22,7 @@ title: "Module 02 — Agent / Driver / Monitor"
 
 ### 1.1 시나리오 — 같은 AXI agent, _Master_ + _Slave_
 
-AXI bridge를 검증할 때는 bridge의 master 인터페이스에 자극을 인가하는 측과, slave 인터페이스에서 응답을 내어주는 측을 모두 제어해야 합니다. 두 역할을 각각 별도의 agent 클래스로 작성하면 거의 동일한 코드가 두 배로 늘어나고, 한쪽을 수정할 때 다른 쪽도 따라 수정해야 하는 유지 비용이 생깁니다. UVM은 이 문제를 `is_active` 설정 하나로 풉니다. `UVM_ACTIVE` 모드에서는 Driver·Sequencer·Monitor를 모두 빌드해 자극을 인가하고, `UVM_PASSIVE` 모드에서는 Monitor만 빌드해 관찰만 합니다. 결과적으로 같은 agent 클래스 한 벌로 master 측과 slave 측을 모두 커버하며, _PCIe RC vs EP_, _AXI master vs slave_ 같은 dual-role 구성에도 동일하게 재사용됩니다.
+여기서 **Agent**(uvm_agent — 하나의 DUT 인터페이스를 다루는 Driver·Monitor·Sequencer 세 컴포넌트를 한 묶음으로 캡슐화한 재사용 단위)는 한 프로토콜 포트를 통째로 책임지는 "한 벌" 입니다. AXI bridge를 검증할 때는 bridge의 master 인터페이스에 자극을 인가하는 측과, slave 인터페이스에서 응답을 내어주는 측을 모두 제어해야 합니다. 두 역할을 각각 별도의 agent 클래스로 작성하면 거의 동일한 코드가 두 배로 늘어나고, 한쪽을 수정할 때 다른 쪽도 따라 수정해야 하는 유지 비용이 생깁니다. UVM은 이 문제를 `is_active` 설정 하나로 풉니다. `UVM_ACTIVE` 모드에서는 Driver(트랜잭션을 받아 DUT 핀을 실제로 흔드는 컴포넌트)·Sequencer(자극을 만드는 Sequence 와 Driver 사이를 중개하는 컴포넌트)·Monitor(DUT 핀을 읽기만 해서 트랜잭션으로 복원하는 컴포넌트)를 모두 빌드해 자극을 인가하고, `UVM_PASSIVE` 모드에서는 Monitor만 빌드해 관찰만 합니다. 결과적으로 같은 agent 클래스 한 벌로 master 측과 slave 측을 모두 커버하며, _PCIe RC vs EP_, _AXI master vs slave_ 같은 dual-role 구성에도 동일하게 재사용됩니다.
 
 이후 검증 환경의 모든 _프로토콜 인터페이스_ 는 Agent 한 개로 캡슐화됩니다. Agent 의 설계가 잘못되면 — 예를 들어 Active / Passive 분리를 안 두면 — 같은 인터페이스를 다른 위치에서 (PCIe RC vs EP, AXI master vs slave) 검증할 때 Agent 를 새로 짜야 합니다. 그래서 이 모듈의 패턴 (Active/Passive 분기, Driver/Monitor 책임 분리, vif 전달) 은 _재사용성의 출발점_ 입니다.
 
@@ -75,7 +75,7 @@ MON -> SB: "ap.write(item)"
 
 ## 3. 작은 예 — 한 transaction 이 driver → DUT → monitor 로 흐르는 과정
 
-가장 단순한 시나리오. Sequence 가 valid/ready 핸드셰이크 transaction 한 개를 만들고, Active Agent 의 driver 가 DUT 에 인가, monitor 가 sample 해서 Scoreboard 로 보냅니다.
+가장 단순한 시나리오. Sequence 가 valid/ready 핸드셰이크 transaction(트랜잭션 — "주소 X 에 데이터 D 를 쓴다" 처럼 한 번의 의미 있는 동작을 신호 비트가 아닌 객체 한 개로 표현한 자극/관찰 단위) 한 개를 만들고, Active Agent 의 driver 가 DUT 에 인가, monitor 가 sample 해서 Scoreboard(DUT 출력과 기대값을 비교해 통과/실패를 판정하는 컴포넌트; M05) 로 보냅니다.
 
 ### 단계별 다이어그램
 
@@ -117,7 +117,7 @@ MON -> SB: "⑪ item.data <= vif.data\nap.write(item)"
 | ⑧ | Driver | `seq_item_port.item_done()` | sequencer 에 "끝났다" 알림 — 다음 item 받기 가능 |
 | ⑨ | DUT | (1 cycle 후) 결과를 vif 로 출력 | 일반적인 DUT 응답 |
 | ⑩ | Monitor.run_phase | `@(posedge vif.clk); if (valid && ready)` | sampling 시점 결정 |
-| ⑪ | Monitor | `item.data = vif.data; ap.write(item)` | pin → transaction 역변환 + analysis port broadcast |
+| ⑪ | Monitor | `item.data = vif.data; ap.write(item)` | pin → transaction 역변환 + analysis port(관찰한 트랜잭션을 Scoreboard·Coverage 등 여러 구독자에게 단방향으로 동시에 흘려보내는 송신 포트; M05) broadcast |
 
 ### 실제 코드 (Driver / Monitor 짧은 버전)
 

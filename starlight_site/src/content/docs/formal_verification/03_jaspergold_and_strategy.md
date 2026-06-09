@@ -21,7 +21,7 @@ title: "Module 03 — JasperGold & DV Strategy"
 
 ### 1.1 시나리오 — _False PROVEN_
 
-JasperGold 로 _arbiter fairness_ 를 증명해 **PROVEN** 결과를 받고 sign-off 했다고 가정합시다. 그런데 silicon 이후 _starvation bug_ 가 발견됩니다. 어디서 잘못됐을까요?
+JasperGold 로 _arbiter fairness_ 를 증명해 **PROVEN** 결과를 받고 sign-off 했다고 가정합시다. 여기서 **arbiter**(중재기 — 여러 요청자가 한 자원을 동시에 원할 때 누구에게 차례를 줄지 정하는 회로)의 **fairness**(공정성 — 모든 요청자가 *언젠가는* 반드시 차례를 받음)를 증명한 셈입니다. 그런데 silicon 이후 _starvation bug_(기아 — 특정 요청자가 영원히 차례를 받지 못하는 결함) 가 발견됩니다. 어디서 잘못됐을까요?
 
 조사해 보면, 작성했던 assume 이 문제입니다.
 
@@ -49,7 +49,7 @@ assume property (@(posedge clk) req[0] |=> $past(req[0]));
 
 :::tip[💡 한 줄 비유]
 **JasperGold 워크플로** ≈ **법정 절차** — 사건 등록 → 가정 정리 → 주장 제기 → 판결.<br>
-elaborate (사건 등록) → assume (전제 정리) → assert (주장 제기) → run (판결 진행) → analyze (판결 결과 검토). 한 단계라도 빼면 신뢰 불가.
+elaborate(엘라보레이트 — RTL 과 SVA 를 읽어 도구 내부의 분석용 회로 모델로 펼쳐 세우는 단계, "사건 등록") → assume (전제 정리) → assert (주장 제기) → run (판결 진행) → analyze (판결 결과 검토). 한 단계라도 빼면 신뢰 불가.
 :::
 ### 한 장 그림 — Property 한 개의 운명 흐름
 
@@ -446,6 +446,8 @@ Assume 이 너무 많으면:
 | 상태 제약 | `state != ILLEGAL` | **위험** — 버그로 도달할 수도 |
 
 ### 5.5 Formal Sign-off 기준
+
+아래 체크리스트에 등장하는 **waiver**(웨이버 — 증명에 도달하지 못한 항목을 그냥 두지 않고, "왜 면제해도 되는가" 의 근거를 명시해 의도적으로 검증 면제 처리하는 것)는 미증명 property 를 책임 있게 닫는 표준 절차입니다.
 
 ```
 Formal 검증을 "완료" 로 선언하기 위한 체크리스트:

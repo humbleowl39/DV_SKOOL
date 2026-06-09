@@ -20,7 +20,7 @@ title: "Module 02 — 프로세스 · 스레드 · CPU 스케줄링"
 
 ## 1. Why care? — 우리가 검증하는 interrupt 는 context switch 를 일으킨다
 
-DV 엔지니어가 interrupt 컨트롤러나 DMA 완료 interrupt 를 검증할 때, 그 interrupt 가 시스템 수준에서 실제로 일으키는 일은 **context switch** 입니다. CPU 가 현재 process 의 상태를 PCB 에 저장하고 다른 process 로 넘어가는 것이죠. 또 현대 OS 가 대부분 **preemptive** 라는 사실은, 공유 데이터를 다루던 흐름이 임의 시점에 끊길 수 있다는 뜻이고, 이것이 곧 M05 에서 다룰 race condition 의 근본 원인입니다.
+DV 엔지니어가 **interrupt**(하드웨어 장치나 사건이 CPU 의 현재 실행을 멈추고 정해진 처리 루틴으로 강제 전환시키는 비동기 신호 — M04 정식 정의) 컨트롤러나 **DMA**(direct memory access, CPU 를 거치지 않고 전용 컨트롤러가 메모리와 장치 사이 데이터를 직접 옮기는 방식 — M04 정식 정의) 완료 interrupt 를 검증할 때, 그 interrupt 가 시스템 수준에서 실제로 일으키는 일은 **context switch** 입니다. CPU 가 현재 process 의 상태를 PCB 에 저장하고 다른 process 로 넘어가는 것이죠. 또 현대 OS 가 대부분 **preemptive** 라는 사실은, 공유 데이터를 다루던 흐름이 임의 시점에 끊길 수 있다는 뜻이고, 이것이 곧 M05 에서 다룰 race condition 의 근본 원인입니다.
 
 즉 "interrupt 가 온다"는 우리 testbench 의 한 줄 자극이, OS 관점에서는 실행 흐름 전체를 갈아끼우는 무거운 사건입니다. process/thread/스케줄링을 이해하면, 우리가 자극하는 신호가 시스템에 어떤 파급을 주는지, 그리고 왜 동기화가 필요한지가 보입니다.
 
@@ -149,6 +149,8 @@ P: "**parallelism**\n여러 코어에서 '동시에'\n멀티코어라야 가능"
 | **SJF** (§5.3.2) | 다음 burst 가장 짧은 것 먼저 | 평균 대기 최적 | burst 예측 필요 |
 | **Round-Robin** (§5.3.3) | time quantum 으로 돌려쓰기 (preemptive) | time-sharing 에 적합 | quantum 크기 민감 |
 | **Priority** (§5.3.4) | 우선순위 순 | 중요 작업 우선 | 낮은 우선순위 starvation 가능 |
+
+여기서 **burst**(CPU burst)는 한 process 가 I/O 를 기다리지 않고 연속으로 CPU 계산을 하는 한 구간이고, **time quantum** 은 Round-Robin 이 각 process 에 한 번에 주는 정해진 시간 조각입니다. **convoy effect** 는 긴 작업 하나가 앞에 서면 짧은 작업들이 그 뒤에 줄줄이 막혀 평균 대기가 늘어나는 현상이고, **starvation**(기아)은 우선순위가 낮은 흐름이 계속 밀려 영영 실행되지 못하는 상태입니다. 이를 막으려고 기다린 시간만큼 우선순위를 올려 주는 **aging**(에이징) 기법을 씁니다.
 
 :::note[SJF 가 _왜_ 평균 대기 최적인가 — exchange argument]
 SJF 가 평균 대기시간을 최소화한다는 것은 단순한 경험칙이 아니라 짧은 논증으로 증명됩니다. 직관의 핵심은 **앞에 놓인 작업의 길이가 _그 뒤의 모든_ 작업의 대기시간에 더해진다** 는 점입니다. 작업 길이가 `t₁, t₂, …, tₙ` 순서로 실행되면, 두 번째 작업은 `t₁` 만큼, 세 번째는 `t₁+t₂` 만큼… 기다리므로 총 대기시간은 대략 `(n-1)t₁ + (n-2)t₂ + … + tₙ₋₁` 입니다 — 즉 _먼저 놓인 작업일수록 더 많은 횟수로 합산_ 됩니다.

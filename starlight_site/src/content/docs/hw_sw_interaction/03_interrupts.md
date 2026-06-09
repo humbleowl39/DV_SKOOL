@@ -22,8 +22,8 @@ title: "03 — 인터럽트 (level / edge / MSI / doorbell / IPI)"
 
 가속기가 작업을 끝내면 인터럽트를 올려 드라이버를 깨워야 합니다. 두 가지 흔한 사고가 있습니다.
 
-- **사라진 인터럽트(missed)**: 디바이스가 edge(짧은 펄스)로 신호하는데, 마침 그 순간 드라이버가 인터럽트를 마스킹해 두었습니다. status 래치가 없으면 그 펄스는 영영 사라지고, 드라이버는 영원히 완료를 기다립니다.
-- **멈추지 않는 인터럽트(stuck)**: 디바이스가 level(지속 레벨)로 신호하는데, ISR이 디바이스의 INT_STATUS를 acknowledge(클리어)하지 않으면 선이 계속 active로 남아 ISR이 무한 재진입합니다.
+- **사라진 인터럽트(missed)**: 디바이스가 edge(짧은 펄스)로 신호하는데, 마침 그 순간 드라이버가 인터럽트를 마스킹해 두었습니다. status 래치(잠깐 발생한 신호를 비트로 붙잡아 두는 저장 소자)가 없으면 그 펄스는 영영 사라지고, 드라이버는 영원히 완료를 기다립니다.
+- **멈추지 않는 인터럽트(stuck)**: 디바이스가 level(지속 레벨)로 신호하는데, ISR(interrupt service routine — 인터럽트가 들어오면 실행되는 처리 함수, 인터럽트 핸들러)이 디바이스의 INT_STATUS를 acknowledge(클리어)하지 않으면 IRQ(interrupt request — 디바이스가 CPU에 인터럽트를 거는 요청/신호선)가 계속 active로 남아 ISR이 무한 재진입합니다.
 
 두 사고의 뿌리는 똑같습니다 — **트리거 방식(level/edge)과 acknowledge 핸드셰이크를 정확히 이해하지 못한 것**. 검증 엔지니어에게 이것은 RTL의 인터럽트 출력 로직과 INT_STATUS/INT_CLEAR 레지스터의 동작을 검증하는 일이며, 가장 silent하고 위험한 버그가 여기서 나옵니다.
 
@@ -38,7 +38,7 @@ LDD3는 디바이스 쪽 관점으로 같은 것을 말합니다 — "*there mus
 ## 2. Intuition — 초인종 두 종류, 한 장 그림
 
 :::tip[💡 한 줄 비유]
-**Level 트리거** ≈ **누르고 있는 동안 계속 울리는 초인종**. 손을 떼야(=ISR이 원인을 처리·클리어해야) 멈춥니다. 여러 사람이 한 줄(wired-OR)을 공유할 수 있지만, 누가 눌렀는지는 일일이 확인해야 합니다.<br>
+**Level 트리거** ≈ **누르고 있는 동안 계속 울리는 초인종**. 손을 떼야(=ISR이 원인을 처리·클리어해야) 멈춥니다. 여러 사람이 한 줄(wired-OR — 여러 디바이스가 하나의 신호선을 공유해, 누구든 하나라도 활성이면 선이 활성이 되는 결선 방식)을 공유할 수 있지만, 누가 눌렀는지는 일일이 확인해야 합니다.<br>
 **Edge 트리거** ≈ **딩동 한 번 울리고 마는 초인종**. 그 순간을 놓치면(마스킹 중) 래치가 없는 한 영영 못 듣습니다.<br>
 **도어벨** ≈ **반대 방향 초인종** — 이번엔 *소프트웨어가* 하드웨어에게 "일감 있다"고 누릅니다.
 :::
@@ -63,7 +63,7 @@ CPU -> DOORBELL: "writel(tail)"
 DOORBELL -> DEVS: "디바이스 깨움 / 자기 인터럽트"
 ```
 
-핵심: 디바이스는 인터럽트 컨트롤러를 거쳐 CPU에 신호하고(많은 소스 → 적은 코어 입력으로 집약), ISR은 짧게 acknowledge한 뒤 긴 작업은 bottom-half로 넘깁니다. 그리고 **도어벨**은 같은 그림의 *역방향* — 소프트웨어가 하드웨어를 깨우는 알림입니다.
+핵심: 디바이스는 인터럽트 컨트롤러(여러 디바이스의 인터럽트를 모아 CPU 코어의 적은 입력으로 집약·우선순위·라우팅하는 하드웨어; ARM의 GIC, RISC-V의 PLIC, x86의 APIC가 그 예)를 거쳐 CPU에 신호하고(많은 소스 → 적은 코어 입력으로 집약), ISR은 짧게 acknowledge한 뒤 긴 작업은 bottom-half(인터럽트 처리 중 _급하지 않은 긴 일_ 을 나중으로 미뤄 실행하는 부분; 급한 처리는 top-half=ISR 본체에서 함)로 넘깁니다. 그리고 **도어벨**은 같은 그림의 *역방향* — 소프트웨어가 하드웨어를 깨우는 알림입니다.
 
 ---
 
@@ -127,7 +127,7 @@ irqreturn_t my_isr(int irq, void *dev_id) {
 
 ### 4.1 하드웨어 vs 소프트웨어, fault/trap/abort
 
-인터럽트는 하드웨어 소스(외부 디바이스의 IRQ 선 또는 내장 타이머 — CPU 클럭에 비동기, 명령 경계에서만 처리)와 소프트웨어 소스(`int 0x80`/`syscall`/`svc` 같은 명령, 또는 0 나눗셈·페이지 폴트 같은 예외 조건)로 나뉩니다 (Wikipedia, *Interrupt*).
+인터럽트는 하드웨어 소스(외부 디바이스의 IRQ 선 또는 내장 타이머 — CPU 클럭에 비동기, 명령 경계에서만 처리)와 소프트웨어 소스(`int 0x80`/`syscall`/`svc` 같은 명령 — syscall(system call, 응용이 OS 커널 기능을 호출하는 통로)을 일으키는 명령들, 또는 0 나눗셈·page fault(page fault — 접근한 가상 주소가 물리 메모리에 매핑돼 있지 않아 OS가 개입해야 하는 조건) 같은 예외 조건)로 나뉩니다 (Wikipedia, *Interrupt*).
 
 x86은 예외를 셋으로 구분합니다:
 
@@ -166,20 +166,20 @@ ARM의 **GIC ITS(Interrupt Translation Service)** 가 이 라우팅의 구체입
 
 ### 4.3 도어벨 — 인터럽트의 역방향
 
-도어벨은 소프트웨어가 하드웨어에게 일감을 알리는 메커니즘입니다 — "*place data in some well-known ... memory locations and 'ring the doorbell' by writing to a different memory location.*" (Wikipedia, *Interrupt*). 도어벨 영역은 (1) 디바이스가 폴링하는 메모리거나, (2) 실제 레지스터로 write-through되거나, (3) 디바이스 레지스터에 직결되어 디바이스 자체 CPU에 인터럽트를 일으킵니다. NIC/NVMe/RDMA/가속기의 표준 패턴: 호스트가 디스크립터를 DRAM에 큐잉하고 tail 포인터를 도어벨에 씁니다(2장의 디스크립터→도어벨 순서가 여기서 중요).
+도어벨은 소프트웨어가 하드웨어에게 일감을 알리는 메커니즘입니다 — "*place data in some well-known ... memory locations and 'ring the doorbell' by writing to a different memory location.*" (Wikipedia, *Interrupt*). 도어벨 영역은 (1) 디바이스가 폴링하는 메모리거나, (2) 실제 레지스터로 write-through되거나, (3) 디바이스 레지스터에 직결되어 디바이스 자체 CPU에 인터럽트를 일으킵니다. NIC/NVMe(NVM Express, PCIe로 SSD에 붙는 고속 스토리지 프로토콜)/RDMA(Remote Direct Memory Access, 원격 노드의 메모리를 CPU 개입 없이 직접 읽고 쓰는 네트워크 기술)/가속기의 표준 패턴: 호스트가 디스크립터를 DRAM에 큐잉하고 tail 포인터를 도어벨에 씁니다(2장의 디스크립터→도어벨 순서가 여기서 중요).
 
 ### 4.4 마스킹, NMI, 공유, IPI, 스톰
 
 - **마스킹**: mask 레지스터의 각 비트가 한 소스를 disable. disable된 인터럽트는 무시되거나 펜딩으로 보류. **NMI(non-maskable)** 는 마스킹 불가 — 워치독, 전원 손실 경고 등 무시할 수 없는 이벤트.
 - **공유 선**: 다수 디바이스가 한 물리 IRQ를 공유하면 한 디바이스의 spurious가 다른 디바이스에 영향을 주고, ISR 부하가 공유자 수에 비례.
 - **인터럽트 컨트롤러**: ARM GIC / RISC-V PLIC / x86 APIC가 많은 소스를 코어의 1~2 입력으로 집약하고, **IPI(inter-processor interrupt)** 로 한 코어가 다른 코어에 신호하도록 중개.
-- **인터럽트 스톰**: 저부하에서 낮은 latency·오버헤드지만 고율에서 급격히 악화 — "*overall system performance is severely hindered by excessive processing time spent handling interrupts ... an interrupt storm.*" 완화책: **coalescing**(N 이벤트 또는 T μs까지 인터럽트 지연), **RSS**(flow tuple 해시로 코어 분산), 소프트웨어 **RPS/RFS**.
+- **인터럽트 스톰**: 저부하에서 낮은 latency·오버헤드지만 고율에서 급격히 악화 — "*overall system performance is severely hindered by excessive processing time spent handling interrupts ... an interrupt storm.*" 완화책: **coalescing**(인터럽트 병합 — 여러 이벤트를 모아 인터럽트를 한 번만 올려 횟수를 줄임; N 이벤트 또는 T μs까지 인터럽트 지연), **RSS**(receive-side scaling — 들어오는 패킷 흐름을 해시로 여러 코어에 분산해 한 코어 부하 집중을 막음; flow tuple 해시로 코어 분산), 소프트웨어 **RPS/RFS**(RSS를 소프트웨어로 흉내 낸 분산 기법).
 
 ### 4.5 인터럽트 latency — "왜 즉시가 아닌가"의 분해
 
 "디바이스가 인터럽트를 올리면 CPU가 _즉시_ ISR로 간다"는 것은 근사일 뿐입니다. 신호가 도착한 순간과 ISR의 첫 명령이 실행되는 순간 사이에는 여러 단계가 끼며, 그 합이 **interrupt latency** 입니다.
 
-1. **신호 도착 → 명령 경계 대기** — CPU는 _명령 도중_ 에 인터럽트를 받지 않습니다(precise exception 보장을 위해). 현재 실행 중인 명령이 retire될 _명령 경계_ 까지 기다립니다. 긴 명령(다중 사이클 연산)이나 마스킹 구간이면 이 대기가 길어집니다.
+1. **신호 도착 → 명령 경계 대기** — CPU는 _명령 도중_ 에 인터럽트를 받지 않습니다(precise exception — 인터럽트 시점에 "어디까지 완료됐는지"가 정확히 한 명령 경계로 떨어지도록 보장하는 것 — 을 위해). 현재 실행 중인 명령이 retire(명령이 완전히 끝나 그 결과가 공식 상태에 확정 반영되는 것)될 _명령 경계_ 까지 기다립니다. 긴 명령(다중 사이클 연산)이나 마스킹 구간이면 이 대기가 길어집니다.
 2. **파이프라인 drain/flush** — 인터럽트를 수락하면 in-flight 추측 명령들을 정리해야 합니다(예외 명령 이후 추측은 폐기, 이전은 commit). 파이프라인이 깊을수록 이 정리 비용이 큽니다.
 3. **context save** — PC·상태 레지스터(그리고 ABI/HW에 따라 일부 GPR)를 저장해 ISR이 안전하게 돌고 복귀할 수 있게 합니다.
 4. **vector fetch** — 인터럽트 번호로 벡터 테이블을 인덱싱해 핸들러 주소를 얻고, 그 주소로 분기해 ISR 첫 명령을 fetch합니다.
@@ -217,14 +217,14 @@ ARM의 **GIC ITS(Interrupt Translation Service)** 가 이 라우팅의 구체입
 
 | 검증 대상 | 무엇을 확인 | 어떻게 |
 |-----------|-------------|--------|
-| level deassert | acknowledge(INT_CLEAR) 후 IRQ 출력이 내려가는가 | 자극: 인터럽트 유발 → INT_CLEAR write → IRQ 신호 deassert 관찰(SVA) |
+| level deassert | acknowledge(INT_CLEAR) 후 IRQ 출력이 내려가는가 | 자극: 인터럽트 유발 → INT_CLEAR write → IRQ 신호 deassert 관찰(SVA — SystemVerilog Assertion, 신호의 시간적 조건을 명세해 자동 검사하는 구문) |
 | edge 래치 | 마스킹 중 도착한 edge가 INT_STATUS에 남는가 | mask set → edge 유발 → unmask → status 비트 존재 확인 |
 | acknowledge 핸드셰이크 | INT_STATUS read/INT_CLEAR write 동작이 W1C 스펙대로 | RAL access seq + directed: 클리어 후 재발생 시 다시 set |
 | MSI 발행 | 트리거 시 올바른 address/data로 메시지 write | scoreboard가 MSI write 트랜잭션의 payload 검증 |
 | 도어벨 | tail write 시 디바이스가 디스크립터 소비 + 순서 | 디스크립터 자극 → 도어벨 write → 소비된 디스크립터 내용 비교(2장 순서 의존) |
 | 마스킹/NMI | mask된 소스는 IRQ 안 냄, NMI는 mask 무시 | INT_ENABLE 조합 sweep, illegal_bins로 금지 조합 검출 |
 
-인터럽트 출력의 deassert/래치 타이밍은 SVA(SystemVerilog Assertion)로 연속 검증하기에 적합한 대표 대상입니다 — "INT_CLEAR write 후 N 클럭 내 IRQ deassert" 같은 시간 속성이 그 예입니다. 자극 시퀀스·scoreboard·coverage의 조립은 [UVM TLM/Scoreboard/Coverage](../../uvm/05_tlm_scoreboard_coverage/)와 결합됩니다.
+인터럽트 출력의 deassert/래치 타이밍은 SVA로 연속 검증하기에 적합한 대표 대상입니다 — "INT_CLEAR write 후 N 클럭 내 IRQ deassert" 같은 시간 속성이 그 예입니다. 자극 시퀀스·scoreboard·coverage의 조립은 [UVM TLM/Scoreboard/Coverage](../../uvm/05_tlm_scoreboard_coverage/)와 결합됩니다.
 
 ---
 

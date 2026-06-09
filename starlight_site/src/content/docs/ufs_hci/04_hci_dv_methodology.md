@@ -21,13 +21,13 @@ title: "Module 04 — HCI DV Methodology"
 
 ### 1.1 시나리오 — Host-only DV 의 한계
 
-UFS HCI 검증을 host side 만으로 수행했다고 가정해 봅시다. Driver 가 UTRD 를 작성하고 doorbell 을 ring 하면 HCI 가 처리하고 response 가 돌아옵니다. functional test 는 모두 통과합니다. 그런데 silicon 이 나온 뒤, 특정 UPIU malformed 시나리오에서 HCI 가 hang 하는 문제가 발견됩니다. bug 를 추적하면 HCI 가 UPIU header field 의 reserved bit 를 잘못 해석했기 때문임이 밝혀집니다. 이 bug 는 host side test 로는 원천적으로 잡히지 않았습니다. host 는 항상 well-formed UPIU 만 생성하기 때문에, malformed 경로 자체가 자극되지 않았던 것입니다.
+UFS HCI(Host Controller Interface — SW 드라이버와 UFS 하드웨어 사이의 표준 인터페이스) 검증을 host side 만으로 수행했다고 가정해 봅시다. Driver 가 UTRD(명령 한 건의 정보를 담아 메모리에 적어 두는 descriptor) 를 작성하고 doorbell(SW 가 "이제 처리하라"고 HW 에 알리는 register write 신호) 을 ring 하면 HCI 가 처리하고 response 가 돌아옵니다. functional test 는 모두 통과합니다. 그런데 silicon(실제로 제작된 칩) 이 나온 뒤, 특정 UPIU(UFS 의 통신 패킷) 가 malformed(규격을 벗어나 잘못 만들어진) 인 시나리오에서 HCI 가 hang(멈춰서 응답 없음) 하는 문제가 발견됩니다. bug 를 추적하면 HCI 가 UPIU header field 의 reserved bit 를 잘못 해석했기 때문임이 밝혀집니다. 이 bug 는 host side test 로는 원천적으로 잡히지 않았습니다. host 는 항상 well-formed UPIU 만 생성하기 때문에, malformed 경로 자체가 자극되지 않았던 것입니다.
 
-이 사례가 보여주는 것이 바로 **dual-side DV** 의 필요성입니다. host side agent 가 UTRD / doorbell / IRQ 를 담당하는 한편, device side agent 는 정상 UPIU 뿐 아니라 reserved bit 값 변경과 같은 비정상 UPIU 도 생성합니다. dual-side scoreboard 는 양방향 변환에서 발생하는 silent corruption 을 포착합니다.
+이 사례가 보여주는 것이 바로 **dual-side DV**(host·device 양쪽에서 동시에 검증) 의 필요성입니다. host side agent(검증 환경에서 한쪽 인터페이스의 자극 생성과 관찰을 담당하는 UVM 모듈) 가 UTRD / doorbell / IRQ(Interrupt Request — HW 가 완료를 CPU 에 알리는 신호) 를 담당하는 한편, device side agent 는 정상 UPIU 뿐 아니라 reserved bit(미사용으로 예약된 비트) 값 변경과 같은 비정상 UPIU 도 생성합니다. dual-side scoreboard(양쪽에서 본 트랜잭션이 정합하는지 비교하는 검증 컴포넌트) 는 양방향 변환에서 발생하는 silent corruption(조용히 데이터만 틀어지는 손상) 을 포착합니다.
 
 **UFS HCI 검증은 host-device 양방향**으로 이루어져야 합니다. driver-side (register / UTRD) 와 device-side (UPIU / UniPro) 가 동시에 검증되어야만 변환 오류가 잡힙니다. 한쪽만 검증하면 그 사이에서 발생하는 변환 오류는 조용히 통과합니다. 특히 **error 복구 시나리오** (timeout, abort, reset) 는 production silicon 의 robustness 를 좌우하는 영역입니다. happy path 는 대부분 초기 smoke 에서 통과하지만, error path 는 검증 시나리오에 명시적으로 포함하지 않으면 silent bug 의 온상이 됩니다.
 
-이 모듈은 앞 세 모듈에서 정착시킨 어휘 (UTRD, UPIU, doorbell, IRQ, Task Tag) 를 **UVM env / sequence / scoreboard / SVA / coverage** 로 어떻게 매핑하는지 — 즉, _프로토콜 지식 → 검증 인프라_ 의 변환을 다룹니다.
+이 모듈은 앞 세 모듈에서 정착시킨 어휘 (UTRD, UPIU, doorbell, IRQ, Task Tag) 를 **UVM**(Universal Verification Methodology — SystemVerilog 기반 검증 환경을 짜는 표준 방법론·라이브러리) **env**(전체 검증 환경을 묶는 최상위 컨테이너) **/ sequence**(DUT 에 보낼 자극을 만들어내는 시나리오) **/ scoreboard / SVA**(SystemVerilog Assertion — 신호가 지켜야 할 조건을 자동 검사하는 단언문) **/ coverage**(검증이 어떤 경우들을 실제로 자극했는지 측정하는 지표) 로 어떻게 매핑하는지 — 즉, _프로토콜 지식 → 검증 인프라_ 의 변환을 다룹니다.
 
 ---
 
@@ -57,10 +57,10 @@ ENV: "UFS HCI UVM Env" {
 
 ### 왜 이 디자인인가 — Design rationale
 
-**HCI 의 contract 가 "양 끝" 에서 정의** 되기 때문입니다 — SW 가 보는 register / 메모리 layout, device 가 보는 UPIU. DUT 가 그 사이의 변환 책임을 _가운데_ 에서 수행. 그래서 검증도 양 끝에서 zero-redundancy 로 자극과 비교가 들어가야 합니다.
+**HCI 의 contract(SW 와 HW 가 지켜야 할 약속) 가 "양 끝" 에서 정의** 되기 때문입니다 — SW 가 보는 register / 메모리 layout, device 가 보는 UPIU. DUT(Design Under Test — 검증 대상 설계, 여기선 UFS HCI IP) 가 그 사이의 변환 책임을 _가운데_ 에서 수행. 그래서 검증도 양 끝에서 zero-redundancy 로 자극과 비교가 들어가야 합니다.
 
-1. **Host agent** = "SW driver 가 spec 대로 register 만지고 UTRD 메모리에 쓴다" 는 시뮬레이션. AXI/AHB BFM + memory model + ISR.
-2. **Device agent** = "UFS device 가 UPIU 를 spec 대로 응답한다" 는 시뮬레이션. UniPro BFM + SCSI semantics + storage state.
+1. **Host agent** = "SW driver 가 spec 대로 register 만지고 UTRD 메모리에 쓴다" 는 시뮬레이션. AXI/AHB BFM(Bus Functional Model — 실제 버스 프로토콜대로 신호를 주고받는 검증용 모델) + memory model + ISR.
+2. **Device agent** = "UFS device 가 UPIU 를 spec 대로 응답한다" 는 시뮬레이션. UniPro BFM + SCSI(저장장치 명령 표준) semantics + storage state.
 3. **Scoreboard** = 두 끝에서 본 트랜잭션이 _같은 명령에 대한 정합한 변환_ 인지 비교.
 4. **SVA** = register / doorbell / IRQ 의 _순간 timing_ invariant.
 
@@ -70,7 +70,7 @@ ENV: "UFS HCI UVM Env" {
 
 ## 3. 작은 예 — Interrupt aggregation 한 사이클의 검증
 
-가장 단순한 시나리오 한 개를 _시퀀스 → 모니터 캡처 → scoreboard 비교 → SVA → coverage_ 로 끝까지 끌고 갑니다. 시나리오: **Interrupt Aggregation** (UFS 3.x 의 IACR/IATC 설정으로 N 개 완료를 1 IRQ 로 묶음). 32 슬롯에 READ 를 깔고, IACR=4 일 때 IRQ 가 8 번만 발생해야 함.
+가장 단순한 시나리오 한 개를 _시퀀스 → 모니터(monitor — 인터페이스 신호를 관찰해 트랜잭션으로 뽑아내는 컴포넌트) 캡처 → scoreboard 비교 → SVA → coverage_ 로 끝까지 끌고 갑니다. 시나리오: **Interrupt Aggregation**(여러 완료를 하나의 인터럽트로 묶어 IRQ 횟수를 줄이는 기능) (UFS 3.x 의 IACR(Interrupt Aggregation Counter — 몇 개가 쌓이면 IRQ 를 낼지)/IATC(Interrupt Aggregation Timeout Counter — 그 시간 안에 안 차도 IRQ 를 낼 타임아웃) 설정으로 N 개 완료를 1 IRQ 로 묶음). 32 슬롯에 READ 를 깔고, IACR=4 일 때 IRQ 가 8 번만 발생해야 함.
 
 ```d2
 shape: sequence_diagram
@@ -93,6 +93,8 @@ DUT -> HA: "6. IRQ (총 8회)" { style.stroke-dash: 4 }
 
 ### 검증 인프라 매핑
 
+표에 나오는 UVM 용어를 먼저 풀어 둡니다. **config_db**(컴포넌트 간에 설정 값을 전달하는 UVM 의 설정 데이터베이스). **analysis port**(`_ap` — 모니터가 캡처한 트랜잭션을 scoreboard·coverage 로 흘려보내는 단방향 통로). ``uvm_do``(시퀀스 안에서 자극 한 건을 생성·전송하는 UVM 매크로).
+
 | Step | 컴포넌트 | 무엇을 |
 |---|---|---|
 | ① | host_seq | IACR/IATC config_db 로 설정 + register write |
@@ -102,6 +104,8 @@ DUT -> HA: "6. IRQ (총 8회)" { style.stroke-dash: 4 }
 | ⑤ | dev_monitor | UPIU TX 캡처 → upiu_ap |
 | ⑥ | host_monitor | IRQ rising edge 캡처 → irq_ap |
 | ⑦ | scoreboard | (a) Task Tag 매칭, (b) PRDT 데이터 일치, (c) IRQ 횟수 = ⌈32/4⌉ = 8 |
+
+아래 SVA 는 `property`(검사할 시간적 조건)로 "IRQ 횟수 = 완료 수 / IACR" 를 단언하고, coverage 는 `covergroup`(측정 단위) 안의 `coverpoint`(개별 측정 값)들을 `cross`(값들의 조합을 함께 측정)로 교차해 어떤 조합이 실제로 자극됐는지 기록합니다.
 
 ```systemverilog
 // SVA — IRQ 횟수가 IACR 와 정합한지
@@ -163,8 +167,8 @@ endgroup
 
 | Stage | 목적 | 통과 기준 |
 |-------|------|----------|
-| **Smoke** (seed=0, 단일 명령) | 기본 데이터 path 동작 | 1 read + 1 write + 1 query 가 OCS=SUCCESS |
-| **Feature** (CR + 50 seed) | 각 기능의 정확성 | queue depth, multi-LU, TM, error response 모두 통과 |
+| **Smoke**(가장 기본 동작만 확인하는 1차 점검) (seed=0, 단일 명령) | 기본 데이터 path 동작 | 1 read + 1 write + 1 query 가 OCS=SUCCESS |
+| **Feature** (CR(Constrained-Random — 제약 안에서 무작위로 자극을 생성하는 방식) + 50 seed(난수 시드 — 매번 다른 무작위 시퀀스를 만드는 씨앗값)) | 각 기능의 정확성 | queue depth, multi-LU, TM, error response 모두 통과 |
 | **Stress** (random + 500 seed) | corner case 발견 | 32 슬롯 포화 + error inject + abort 혼합 |
 | **Coverage closure** (target seed) | bin 도달 | functional coverage ≥ 95 % |
 
@@ -289,6 +293,8 @@ HCI 초기화는 HCE → UCRDY 폴링 → DME_LINKSTARTUP → UTRLBA 설정 → 
 ```
 
 ### 5.4 Sequence 전략 — 계층적 설계
+
+시퀀스는 단순 동작에서 복합 시나리오까지 계층으로 쌓습니다. 최상위인 **virtual sequence**(vseq — 여러 agent 의 시퀀스를 하나로 조율하는 상위 시퀀스)가 host·device 시퀀스를 묶어 "32 개 READ 후 Abort 2 개 동시 주입" 같은 시나리오를 만듭니다. 시퀀스는 `sequencer`(sqr — 시퀀스가 만든 자극을 driver 로 중계하는 컴포넌트) 위에서 동작합니다.
 
 ```
 계층 구조:
@@ -453,6 +459,8 @@ endclass
 ```
 
 ### 5.6 SVA — HCI 프로토콜
+
+아래 SVA 모듈은 `bind`(DUT 를 수정하지 않고 검증 모듈을 외부에서 붙이는 SystemVerilog 기능)로 DUT 에 비침투적으로 연결되고, 각 `property` 는 `disable iff(!rst_n)`(reset 동안에는 검사를 끔)와 `$rose`(신호가 0→1 로 바뀐 순간을 잡는 함수)로 타이밍 조건을 표현합니다. `generate`(같은 코드를 반복 인스턴스화하는 구문)로 32 슬롯 각각에 같은 assertion 을 펼칩니다.
 
 ```systemverilog
 // UFS HCI 프로토콜 검증 SVA 예시
@@ -743,7 +751,7 @@ Resume:
 **왜 헷갈리는가**: "에러 한 번 = 실패 한 번" 의 직관.
 :::
 :::danger[❓ 오해 5 — 'Device agent 가 spec 그대로면 충분']
-**실제**: spec 안의 _말 안 한 영역_ 이 매우 큽니다. RTT 의 chunk 분할 정책, ACK coalescing 시점, BKOPS 시작 시점, response delay 분포 등은 device 마다 다름. Device agent 에 _config knob_ 으로 이 변동성을 노출해야 우리 IP 가 다양한 device 와 호환됨을 검증 가능.<br>
+**실제**: spec 안의 _말 안 한 영역_ 이 매우 큽니다. RTT 의 chunk(전송을 쪼갠 조각) 분할 정책, ACK coalescing(여러 응답을 한 번에 묶어 보내는 것) 시점, BKOPS(Background Operations — device 가 내부적으로 하는 garbage collection·wear leveling 등 유지보수) 시작 시점, response delay 분포 등은 device 마다 다름. Device agent 에 _config knob_(설정으로 조절 가능한 손잡이 — 동작 변동성을 외부에서 바꿀 수 있게 노출한 파라미터) 으로 이 변동성을 노출해야 우리 IP 가 다양한 device 와 호환됨을 검증 가능.<br>
 **왜 헷갈리는가**: spec 만 따르면 unique 한 device 라는 잘못된 가정.
 :::
 ### DV 디버그 체크리스트 (이 모듈 내용으로 마주칠 첫 실패)

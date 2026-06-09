@@ -11,7 +11,7 @@ title: "Ch02. 세 가지 시뮬레이션 세계 — Digital · SPICE · RNM"
 
 ## 1. 한 장의 비교표
 
-세 가지 시뮬레이션 세계를 처음 접할 때 가장 중요한 질문은 "이것들이 어떻게 다른가"입니다. 신호 표현 방식이 다르고, 시간을 다루는 방법이 다르며, 그 차이가 속도와 정확도의 근본적인 차이로 이어집니다.
+세 가지 시뮬레이션 세계를 처음 접할 때 가장 중요한 질문은 "이것들이 어떻게 다른가"입니다. 세 세계란 **Digital sim**(신호를 0/1로만 다루는 빠른 디지털 시뮬레이션), **SPICE**(트랜지스터 물리를 정밀하게 풀어 실제 전압 파형을 내는 아날로그 시뮬레이션), **RNM**(Real Number Modeling — 디지털 시뮬레이터 안에서 아날로그 동작을 실수 함수로 근사하는 기법)입니다. 신호 표현 방식이 다르고, 시간을 다루는 방법이 다르며, 그 차이가 속도와 정확도의 근본적인 차이로 이어집니다.
 
 | 항목 | Digital sim | SPICE | RNM (Real Number Modeling) |
 |------|------------|-------|---------------------------|
@@ -25,7 +25,7 @@ title: "Ch02. 세 가지 시뮬레이션 세계 — Digital · SPICE · RNM"
 | 메모리 사용 | 작음 | 큼 (노드 수 비례) | 작음 |
 | 도구 종속성 | 낮음 | SPICE engine 필요 | **낮음 (SV 표준 기능)** |
 
-RNM이 단순히 SPICE와 디지털 sim의 중간이 아니라, 산업 표준 위치를 차지하게 된 데에는 두 가지 결정적 이유가 있습니다. 첫째, **별도의 SPICE 엔진 없이 일반 디지털 시뮬레이터만으로 동작**합니다. 둘째, IEEE 1800-2012 표준에 정의된 `nettype` 기능이 기반이므로 **특정 벤더에 종속되지 않습니다**. 이 두 가지가 맞물려 라이센스 비용 없이 nightly 회귀를 수천 시드로 돌릴 수 있는 현실을 만듭니다.
+RNM이 단순히 SPICE와 디지털 sim의 중간이 아니라, 산업 표준 위치를 차지하게 된 데에는 두 가지 결정적 이유가 있습니다. 첫째, **별도의 SPICE 엔진 없이 일반 디지털 시뮬레이터만으로 동작**합니다. 둘째, IEEE 1800-2012(SystemVerilog 표준) 표준에 정의된 `nettype`(net 값의 타입과 다중 드라이버 합성 방식을 사용자가 정의하는 SV 기능) 기능이 기반이므로 **특정 벤더에 종속되지 않습니다**. 이 두 가지가 맞물려 라이센스 비용 없이 **nightly 회귀**(매일 밤 자동으로 대량의 테스트를 재실행하는 것)를 수천 **시드**(seed — 난수 생성의 시작값; 시드를 바꾸면 다른 무작위 자극이 나옴)로 돌릴 수 있는 현실을 만듭니다.
 
 ## 2. 세 세계의 그림 — 한 칩 안에서 어떻게 공존하나
 
@@ -42,13 +42,13 @@ dram_sim: "DRAM 칩 시뮬레이션" {
 }
 ```
 
-대부분의 DRAM 검증은 **위 두 layer**(Digital + RNM)만으로 진행됩니다. SPICE는 sign-off 단계의 corner check.
+위 그림의 용어: **WL driver**(word line driver — 메모리 행을 활성화하는 구동 회로), **BL**(bit line — 셀 데이터를 실어 나르는 배선), **MR**(mode register — 칩 동작 모드를 담는 레지스터), **MC corner**(Monte Carlo corner — 제조 편차를 무작위로 변동시켜 최악 경우를 보는 통계적 시뮬레이션 조건)입니다. 대부분의 DRAM 검증은 **위 두 layer**(Digital + RNM)만으로 진행됩니다. SPICE는 **sign-off**(설계가 양산 기준을 모두 통과했다고 최종 확정하는 단계)의 corner check(최악 조건 점검)에 씁니다.
 
 ## 3. 두 가지 통합 방식 — AMS vs RNM
 
 ### 3.1 AMS (Analog Mixed-Signal Simulation)
 
-AMS는 디지털 시뮬레이터와 SPICE 시뮬레이터를 동시에 실행하면서 두 도메인을 connect module로 연결하는 방식입니다. 디지털 측은 VCS 같은 이벤트 기반 엔진이, 아날로그 측은 FineSim이나 HSPICE 같은 SPICE 엔진이 각자 자신의 영역을 계산하고, 경계에서는 D2A·A2D connect module이 0/1 논리 신호를 실수 전압으로, 또는 그 반대로 변환합니다.
+AMS(Analog Mixed-Signal Simulation)는 디지털 시뮬레이터와 SPICE 시뮬레이터를 동시에 실행하면서 두 도메인을 **connect module**(두 영역의 경계에서 0/1 논리와 실제 전압을 서로 변환하는 어댑터)로 연결하는 방식입니다. 디지털 측은 VCS 같은 이벤트 기반 엔진이, 아날로그 측은 FineSim이나 HSPICE 같은 SPICE 엔진이 각자 자신의 영역을 계산하고, 경계에서는 **D2A·A2D**(Digital-to-Analog / Analog-to-Digital 변환 모듈) connect module이 0/1 논리 신호를 실수 전압으로, 또는 그 반대로 변환합니다.
 
 ```d2
 direction: down
@@ -80,7 +80,7 @@ rnm_env: "RNM Simulation Environment" {
 
 모든 신호가 이벤트 기반으로 처리되므로 SPICE의 수치 적분 오버헤드가 없습니다. 결과적으로 SPICE 대비 1000배 이상 빠른 경우도 있습니다. 정확도는 모델 품질에 달려 있는데, 잘 작성된 RNM 모델은 DRAM sense amp의 동작이나 DLL의 lock 거동을 SPICE 결과와 높은 일치도로 재현할 수 있습니다.
 
-**왜 event-driven 이 "빠르면서 정확" 한가 — 두 엔진의 일하는 단위가 다르다.** SPICE 는 _연속 시간_ 을 작은 timestep 으로 잘라, _매 timestep 마다_ 전체 회로의 비선형 연립방정식을 Newton-Raphson 으로 반복하며 그 안에서 Jacobian 행렬을 분해해 푼다 ([Module 03](../03_spice_fundamentals/)) — 신호가 변하지 않아도 시간이 흐르면 계속 계산한다. 반면 RNM 은 _값이 바뀌는 사건(event)_ 이 있을 때만 동작한다: 어떤 net 의 real 값이 변하면 그 net 에 민감한 process 만 깨어나 _함수를 한 번 평가_ 해 새 값을 내고, 변화가 없으면 아무 연산도 하지 않는다. 즉 SPICE 의 비용은 "timestep 수 × (행렬 해 + Newton 반복)" 인데, RNM 의 비용은 "발생한 event 수 × (함수 1회 평가)" 다 — 행렬 분해도, timestep 마다의 반복도 없다. 안정 구간에서는 event 가 드물어 계산이 거의 0 에 가깝고, 그래서 1000배 이상의 속도가 나온다. 정확도를 잃지 않는 이유는 _전압이라는 실수 값 자체는 그대로 표현_ 하되(digital sim 처럼 0/1 로 뭉개지 않음), 그 값을 _얻는 방법_ 만 "행렬 풀이" 대신 "값 변화 시 함수 평가" 로 바꿨기 때문이다.
+**왜 event-driven 이 "빠르면서 정확" 한가 — 두 엔진의 일하는 단위가 다르다.** SPICE 는 _연속 시간_ 을 작은 timestep(시간을 잘게 나눈 한 계산 단위) 으로 잘라, _매 timestep 마다_ 전체 회로의 비선형 연립방정식을 Newton-Raphson(반복으로 방정식 해를 찾아가는 기법) 으로 반복하며 그 안에서 Jacobian 행렬(연립방정식의 미분 계수들을 모은 행렬) 을 분해해 푼다 ([Module 03](../03_spice_fundamentals/)) — 신호가 변하지 않아도 시간이 흐르면 계속 계산한다. 반면 RNM 은 _값이 바뀌는 사건(event)_ 이 있을 때만 동작한다: 어떤 net 의 real 값이 변하면 그 net 에 민감한 process 만 깨어나 _함수를 한 번 평가_ 해 새 값을 내고, 변화가 없으면 아무 연산도 하지 않는다. 즉 SPICE 의 비용은 "timestep 수 × (행렬 해 + Newton 반복)" 인데, RNM 의 비용은 "발생한 event 수 × (함수 1회 평가)" 다 — 행렬 분해도, timestep 마다의 반복도 없다. 안정 구간에서는 event 가 드물어 계산이 거의 0 에 가깝고, 그래서 1000배 이상의 속도가 나온다. 정확도를 잃지 않는 이유는 _전압이라는 실수 값 자체는 그대로 표현_ 하되(digital sim 처럼 0/1 로 뭉개지 않음), 그 값을 _얻는 방법_ 만 "행렬 풀이" 대신 "값 변화 시 함수 평가" 로 바꿨기 때문이다.
 
 ### 3.3 결정 트리
 
@@ -118,7 +118,7 @@ q3 -> digital: "No"
 | Level 4 | + Noise injection, jitter | 약간 느림 |
 | Level 5 | + Charge conservation (capacitance modeling) | 느림 |
 
-DRAM에서 보통 Level 2~3을 씁니다.
+위 표의 용어: **ramp transition**(신호가 한 값에서 다른 값으로 비스듬히 올라가/내려가는 천이), **hysteresis**(히스테리시스 — 올라갈 때와 내려갈 때 임계값이 다른 성질, 잡음에 둔감해짐), **saturation**(포화 — 출력이 한계에 다다라 더 이상 커지지 않는 상태), **charge conservation**(전하 보존 — 커패시터의 전하량 보존 법칙을 모델에 반영). DRAM에서 보통 Level 2~3을 씁니다.
 
 ## 5. 표준 / 언어 지형
 
@@ -130,6 +130,8 @@ DRAM에서 보통 Level 2~3을 씁니다.
 | **SystemVerilog-AMS** | Accellera draft | SV의 mixed-signal 확장 (널리 안 쓰임) |
 | **`nettype` (SV 2012)** | IEEE 1800-2012 § 6.6.7 | **RNM의 핵심 표준 기능** |
 | **IBIS-AMI** | IBIS 7.x | SerDes RX/TX behavioral model |
+
+위 표의 용어: **Verilog-AMS**(디지털 Verilog에 아날로그 기술을 더한 표준 언어), **electrical**(전압·전류를 갖는 아날로그 노드를 선언하는 discipline 키워드), **`analog begin`**(아날로그 동작 블록을 여는 구문), **`<+`**(아날로그 기여 연산자 — 노드에 전류/전압 방정식을 더하는 기호), **IBIS-AMI**(SerDes 송수신단의 동작을 표준 형식으로 기술한 behavioral model)입니다.
 
 > Verilog-AMS는 2014년의 v2.4 이후 사실상 SystemVerilog와 합쳐지는 흐름. 2023년 VAMS-2023이 Accellera 마지막 메이저 갱신.
 
@@ -172,11 +174,11 @@ DRAM에서 보통 Level 2~3을 씁니다.
 
 ## 7. WREAL vs nettype — 두 real-도메인 net
 
-VAMS 시절엔 `wreal` 한 종류만 있었습니다. SV-2012부터 `nettype`이 들어와 더 유연해졌고, legacy IP가 wreal을 쓸 수 있으니 두 개념을 모두 알아둬야 합니다.
+VAMS(Verilog-AMS) 시절엔 **`wreal`**(wire-real — 값으로 실수 하나를 갖는 Verilog-AMS의 net 타입) 한 종류만 있었습니다. SV-2012부터 `nettype`이 들어와 더 유연해졌고, **legacy IP**(예전에 만들어져 그대로 재사용되는 설계 블록)가 wreal을 쓸 수 있으니 두 개념을 모두 알아둬야 합니다.
 
 | 측면 | `wreal` (Verilog-AMS) | `nettype` (SV-2012) |
 |---|---|---|
-| 표현력 | net 값이 real 1개 | struct payload 가능 (V·I·Z 동시) |
+| 표현력 | net 값이 real 1개 | struct payload 가능 (V·I·Z 동시) — net 하나가 전압·전류·임피던스 묶음을 운반 |
 | Multi-driver | `wreal_resolution` directive로 wired-OR / sum / average 중 택1 | 사용자 정의 resolution function (KCL/KVL 자유롭게) |
 | Simulator | VAMS sim 필요한 경우 多 | 일반 SV simulator로 충분 |
 | 사용처 | legacy IP | 신규 RNM 코드 표준 |
@@ -197,14 +199,14 @@ VAMS 시절엔 `wreal` 한 종류만 있었습니다. SV-2012부터 `nettype`이
 
 ### 문제
 
-100 Gbps PAM4 SerDes를 검증한다고 가정. 다음 7개 시나리오를 어떤 패러다임으로 검증할지 선택하고 이유를 쓰시오.
+100 Gbps **PAM4**(Pulse Amplitude Modulation 4-level — 한 심볼에 4개 전압 레벨로 2비트를 싣는 변조) SerDes를 검증한다고 가정. (용어: **eye opening**은 신호 파형을 겹쳐 그렸을 때 가운데 벌어지는 깨끗한 영역, **CTLE/DFE**는 수신단 파형 보정 회로, **ISI**는 인접 비트 간 간섭, **CDR**은 데이터에서 클럭을 복원하는 회로입니다.) 다음 7개 시나리오를 어떤 패러다임으로 검증할지 선택하고 이유를 쓰시오.
 
-1. Protocol layer의 FEC encoding/decoding 정확성
-2. PMA의 PLL이 100 GHz target에서 lock 하는가?
+1. Protocol layer의 **FEC**(Forward Error Correction, 수신 측 오류 정정) encoding/decoding 정확성
+2. **PMA**(Physical Medium Attachment — 물리 매체에 직접 붙는 아날로그 송수신 계층)의 PLL이 100 GHz target에서 lock 하는가?
 3. TX driver의 eye opening
 4. RX equalizer (CTLE + DFE)가 ISI를 잘 보상하는가?
-5. CDR이 frequency offset ±200 ppm에서 lock 유지하는가?
-6. 한 비트 데이터의 BER (1e-12)
+5. CDR이 frequency offset ±200 **ppm**(parts per million — 100만분의 1 단위의 주파수 오차)에서 lock 유지하는가?
+6. 한 비트 데이터의 **BER**(Bit Error Rate, 비트 오류율 — 전송 비트 중 잘못 수신된 비율) (1e-12)
 7. 전체 protocol layer의 link establishment FSM
 
 ### 풀이
@@ -222,7 +224,7 @@ VAMS 시절엔 `wreal` 한 종류만 있었습니다. SV-2012부터 `nettype`이
 ### 통찰
 
 - 같은 SerDes 안에서 **digital · RNM · IBIS-AMI**가 모두 등장
-- BER 1e-12는 일반 sim으론 도달 불가 → **statistical method** + behavioral model
+- BER 1e-12는 일반 sim으론 도달 불가 → **statistical method**(통계적 기법 — 소수 샘플로 분포를 추정해 극히 드문 오류 확률을 외삽; statistical eye는 이렇게 합성한 아이 다이어그램) + behavioral model
 - 표준화된 vendor model(IBIS-AMI)이 있으면 그대로 활용 — 직접 모델링 안 함
 
 ## 핵심 정리

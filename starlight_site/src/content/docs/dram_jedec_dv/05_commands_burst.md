@@ -65,7 +65,7 @@ Cycle 0 (CA[6:0]):  OPCODE 일부 + 일부 주소
 Cycle 1 (CA[6:0]):  OPCODE 나머지 + 나머지 주소
 ```
 
-CS_n이 LOW인 2 cycles 동안이 하나의 명령입니다. 중요한 예외 케이스가 있는데, DDR5의 2-Cycle Command Cancel(§4.1.1)은 1st cycle 발급 후 2nd cycle의 CS_n도 LOW로 유지되면 명령 자체를 취소하는 메커니즘입니다. 이는 RCD가 CA parity error를 감지했을 때 발동됩니다.
+**CS_n**(chip select, LOW일 때만 그 칩이 명령을 받아들이게 하는 선택 신호)이 LOW인 2 cycles 동안이 하나의 명령입니다. 중요한 예외 케이스가 있는데, DDR5의 2-Cycle Command Cancel(§4.1.1)은 1st cycle 발급 후 2nd cycle의 CS_n도 LOW로 유지되면 명령 자체를 취소하는 메커니즘입니다. 이는 **RCD**(registering clock driver, RDIMM에서 controller의 명령·주소를 받아 여러 DRAM 칩에 되실어 보내는 버퍼 칩)가 **CA parity**(명령·주소 신호의 패리티) error를 감지했을 때 발동됩니다.
 
 :::caution[DV 함정 — DDR5 monitor 설계]
 DDR5 명령은 *2 클럭 윈도우*로 보아야 합니다. monitor가 cycle 0 만 보고 명령을 reconstruct하면 *명령이 부분적*이고 ADDR이 잘못 인코딩됩니다.
@@ -273,6 +273,8 @@ a_pre_to_act: assert property (p_pre_to_act_trp);
 ```
 
 ### 6.3 RD 후 즉시 WR은 *제약 있음*
+
+여기서 **tRTW**(read-to-write, RD 명령에서 WR 명령으로 전환할 때 데이터 버스 방향이 충돌하지 않도록 두는 최소 간격)와 짝이 되는 **tWTR**(write-to-read, WR 후 RD로 전환할 때의 최소 간격)을 알아 둡니다.
 
 ```systemverilog
 // RD에서 WR로 전환 시 최소 latency (tRTW) 보장
@@ -502,6 +504,8 @@ WR과 유사하지만 cycle 1의 CA0~CA4 = `H L H H H` (RD identifier 다름) + 
 | **REFsb** | H | H | L | H | H | CID3 | BA0 | BA1 | V or H | V or H | H | CID0 | CID1 | CID2 |
 | **RFMsb** | H | H | H | L | H | CID3 or DRFM=L | BA0 | BA1 | V or H | H | CID0 | CID1 | CID2 | |
 
+> (위 표의 **RIR** = Refresh Interval Rate indicator, refresh 간격 배율을 알려주는 비트.)
+>
 > NOTE 23: "When the Refresh Management Required bit is '0' (MR58 OP[0]=0), CA9 is only required to be valid ('V') for a REF command, and the DRAM will treat a RFM command as a REF command. If MR58 OP[0]=1, a REF command requires CA9=H."
 
 **Self Refresh Entry / Power Down Entry — 1-cycle**

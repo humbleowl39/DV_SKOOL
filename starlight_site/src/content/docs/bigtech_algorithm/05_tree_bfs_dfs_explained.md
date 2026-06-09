@@ -21,7 +21,7 @@ title: "Module 05 — Tree & BFS/DFS"
 
 ### 1.1 시나리오 — BFS vs DFS _선택의 결정 인자_
 
-같은 그래프 문제도 BFS / DFS 선택이 _정답_ 을 결정합니다:
+먼저 두 핵심 도구를 이름부터 풀면, **BFS**(Breadth-First Search, 너비 우선 탐색 — 시작점에서 가까운 노드부터 거리 순으로 방문; 큐 사용)와 **DFS**(Depth-First Search, 깊이 우선 탐색 — 한 갈래를 끝까지 파고든 뒤 막히면 되돌아가 다음 갈래로; 재귀/스택 사용)입니다. 또 여기서 **graph**(그래프 — 노드들과 그것을 잇는 간선으로 이루어진 자료구조; 트리는 사이클 없는 특수한 그래프)와 **node**(노드 — 그래프/트리의 한 점)라는 단어를 쓰겠습니다. 같은 그래프 문제도 BFS / DFS 선택이 _정답_ 을 결정합니다:
 
 | 문제 | 답 | 이유 |
 |------|---|------|
@@ -31,6 +31,8 @@ title: "Module 05 — Tree & BFS/DFS"
 | **Cycle detection** | DFS | recursion stack 으로 자연스러움 |
 | **Bipartite check** | BFS | level coloring |
 | **Topological sort** | DFS | post-order natural |
+
+표의 문제 유형도 처음 보면 낯설 수 있으니 한 줄씩 풀면 — **최단 경로**(두 노드 사이 간선 수가 가장 적은 길), **DAG**(Directed Acyclic Graph, 방향이 있고 사이클이 없는 그래프 — 의존 관계 모델링에 흔함), **Connected components**(서로 연결된 노드 덩어리들), **Cycle detection**(그래프에 순환 고리가 있는지 검사), **Bipartite check**(노드를 두 색으로 나눠 같은 색끼리 간선이 없게 칠할 수 있는지), **Topological sort**(위상 정렬 — 의존 순서를 어기지 않게 노드를 일렬로 줄 세우기)입니다.
 
 **잘못 선택하면**:
 - 최단 경로에 DFS → 첫 도달 경로가 _최단_ 아닐 수 있음.
@@ -69,7 +71,7 @@ Python: `sys.setrecursionlimit()` 도 가능하지만 OS stack 자체가 한계 
 
 :::tip[💡 한 줄 비유]
 **BFS** ≈ **가까운 사람부터 인사** — 같은 거리(레벨) 의 모두에게 인사한 뒤, 다음 레벨로.<br>
-**DFS** ≈ **한 친구 따라 끝까지 갔다 돌아옴** — 한 자식의 끝까지 깊이 들어가고, 막히면 backtrack 해서 형제 노드로.
+**DFS** ≈ **한 친구 따라 끝까지 갔다 돌아옴** — 한 자식의 끝까지 깊이 들어가고, 막히면 backtrack(되돌아가기 — 막다른 길에서 직전 갈림길로 돌아가 다른 길을 시도) 해서 형제 노드로.
 :::
 ### 한 장 그림 — 같은 트리, 다른 순회 순서
 
@@ -682,7 +684,7 @@ endmodule
 | BST inorder 가 정렬 안 됨 | left → current → right 순서 틀림 | `dfs(left)` 가 `print` 보다 _먼저_ 인지 |
 | Right Side View 가 가운데 노드 출력 | 마지막 노드 = right 라 가정 | 각 레벨의 _마지막 push 된 노드_ 가 가장 right 인지 (level_size 끝 인덱스) |
 | Cycle 있는 그래프에서 무한 루프 | `visited` set 누락 | DFS 진입 시 visited 표시, BFS 도 enqueue 시 표시 |
-| LCA 가 부모 노드를 반환 | postorder 결합 로직 오류 | left/right 모두 찾으면 현재 노드, 아니면 non-null 쪽 |
+| LCA(Lowest Common Ancestor, 최소 공통 조상 — 두 노드를 모두 자손으로 갖는 가장 깊은 노드) 가 부모 노드를 반환 | postorder 결합 로직 오류 | left/right 모두 찾으면 현재 노드, 아니면 non-null 쪽 |
 
 ---
 

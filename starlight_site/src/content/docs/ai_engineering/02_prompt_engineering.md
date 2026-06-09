@@ -21,7 +21,7 @@ title: "Module 02 — Prompt Engineering & In-Context Learning"
 
 ### 1.1 시나리오 — 같은 모델, 다른 답
 
-Claude Sonnet 으로 _SystemVerilog UVM testbench_ 를 만들어야 한다고 합시다. 두 가지 prompt 를 비교합니다.
+Claude Sonnet 으로 _SystemVerilog UVM testbench_ 를 만들어야 한다고 합시다. 여기서 **prompt**(프롬프트 — 모델에 주는 입력 텍스트 전체; 지시·맥락·예시를 담는다)와 **prompt engineering**(같은 모델에서 더 좋은 출력을 얻도록 이 입력을 설계하는 작업)이 이 모듈의 주제입니다. 두 가지 prompt 를 비교합니다.
 
 **Prompt A** (naive): `"UVM 테스트벤치 만들어줘"` (8 token)
 
@@ -45,9 +45,9 @@ class axi_basic_test extends uvm_test;
 endclass
 ```
 
-**결과 차이**: 같은 모델, 같은 temperature, 다른 prompt → _컴파일 통과율_ 30% → 95%. **모델 변경 없이 prompt 만 바꿔서**.
+**결과 차이**: 같은 모델, 같은 temperature(온도 — 다음-토큰 확률 분포를 얼마나 날카롭게/평평하게 만들지 조절하는 값; 0 에 가까울수록 항상 같은 답, 높을수록 다양·창의적; §1 의 LLM 모듈 §5.9), 다른 prompt → _컴파일 통과율_ 30% → 95%. **모델 변경 없이 prompt 만 바꿔서**.
 
-이게 prompt engineering 이 LLM 활용에서 _가장 큰 ROI_ 인 이유. 모든 RAG / Agent / Fine-tune-after-Prompt 워크플로의 _마지막 단_ 은 결국 prompt — 검색을 잘해도, 도구를 잘 정의해도, prompt 가 모호하면 모든 노력이 무산됩니다.
+이게 prompt engineering 이 LLM 활용에서 _가장 큰 ROI_(Return On Investment — 투자 대비 효과; 들인 노력·비용 대비 얻는 이득) 인 이유. 모든 RAG / Agent / Fine-tune-after-Prompt 워크플로의 _마지막 단_ 은 결국 prompt — 검색을 잘해도, 도구를 잘 정의해도, prompt 가 모호하면 모든 노력이 무산됩니다.
 
 이 모듈은 학습자가 "왜 이 prompt 가 더 잘 동작하는지" 를 _가설 → 실험 → 검증_ 사이클로 다룰 수 있게 만듭니다. 다음 모듈 (Embedding, RAG, Agent) 의 모든 LLM 호출 단에서 이 모듈의 패턴이 그대로 재등장합니다.
 
@@ -220,6 +220,8 @@ Fine-tuning 없이, 프롬프트에 예시를 포함시키는 것만으로
 | 데이터 프라이버시 | Context 에만 존재 (유출 위험 낮음) | 모델에 영구 저장 |
 
 ### 4.3 추론 강화의 사다리
+
+사다리에 오르는 각 단계를 먼저 한 줄로 (상세는 §5) — **Zero-shot**(예시 없이 지시만으로 시키기), **Few-shot**(prompt 안에 정답 예시 몇 개를 보여 주고 흉내 내게 하기), **CoT**(Chain-of-Thought, 답 전에 중간 추론 단계를 풀어 쓰게 하기), **Self-Consistency**(같은 질문을 여러 번 풀려 다수결로 답 정하기), **ToT**(Tree-of-Thought, 여러 추론 갈래를 만들어 평가·가지치기하며 탐색), **Prompt Chaining**(한 큰 작업을 여러 prompt 단계로 쪼개 순차 연결).
 
 ```
   Zero-shot   →  Few-shot   →  CoT   →  Self-Consistency  →  ToT  →  Prompt Chaining
@@ -399,6 +401,8 @@ DV 적용:
 ```
 
 ### 5.9 Prompt 품질 측정
+
+표의 지표들을 한 줄씩 — **Pass@k**(k 번 생성해 그중 한 번이라도 정답이면 성공으로 치는 비율; 코드 생성 평가의 표준), **Exact Match**(기대 출력과 글자 그대로 일치하는지), **BLEU/ROUGE**(생성문과 정답문의 단어 n-gram 겹침으로 텍스트 유사도를 재는 지표), **LLM-as-Judge**(사람 대신 다른 LLM 에게 출력 품질을 점수 매기게 하는 평가).
 
 | 메트릭 | 측정 방법 | 적합한 태스크 |
 |--------|----------|-------------|

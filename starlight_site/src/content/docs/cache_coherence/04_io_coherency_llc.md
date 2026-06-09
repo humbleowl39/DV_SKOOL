@@ -20,11 +20,11 @@ title: "Module 04 — IO-Coherency & LLC as Point of Coherence"
 
 ### 1.1 시나리오 — NIC가 stale 패킷을 전송하던 옛날
 
-IO-coherency가 없던 시절의 고전 버그입니다. CPU가 네트워크 패킷을 *자기 캐시에* 준비하고 NIC에 "전송하라"고 명령합니다. NIC는 main DDR에서 패킷을 읽는데, 수정된 패킷은 여전히 CPU 캐시에 dirty로 남아 있으므로 NIC는 *stale 데이터*를 전송합니다. 이를 막으려고 소프트웨어 엔지니어는 NIC를 트리거하기 *전에* 값비싼 cache flush/clean 명령을 직접 실행해야 했습니다.
+**IO-coherency**(DMA·NIC 같은 캐시 없는 장치가 메모리를 접근할 때, 인터커넥트가 CPU 캐시를 대신 snoop해 최신값을 반영해 주는 단방향 coherence)가 없던 시절의 고전 버그입니다. CPU가 네트워크 패킷을 *자기 캐시에* 준비하고 **NIC**(Network Interface Card — 네트워크 송수신을 담당하는 장치)에 "전송하라"고 명령합니다. NIC는 main **DDR**(DRAM의 한 종류로, 여기서는 주 메모리를 가리킴)에서 패킷을 읽는데, 수정된 패킷은 여전히 CPU 캐시에 dirty(캐시본이 메모리보다 최신인 상태)로 남아 있으므로 NIC는 *stale 데이터*(낡아서 더 이상 최신이 아닌 값)를 전송합니다. 이를 막으려고 소프트웨어 엔지니어는 NIC를 트리거하기 *전에* 값비싼 cache flush/clean 명령을 직접 실행해야 했습니다.
 
-**IO-coherent 해법**은 이 부담을 하드웨어로 옮깁니다. NIC를 시스템 인터커넥트의 *IO-coherent 포트*에 연결하면, NIC가 main memory로 read를 보낼 때 인터커넥트가 자동으로 CPU 캐시를 snoop합니다. CPU가 더 최신 패킷을 들고 있으면 하드웨어가 read를 가로채 dirty 데이터를 CPU 캐시에서 꺼내 NIC로 전달합니다. 그 결과 디바이스 드라이버는 cache maintenance를 더 이상 관리할 필요가 없어지고, 성능도 좋아지며 드라이버 코드도 단순해집니다.
+**IO-coherent 해법**은 이 부담을 하드웨어로 옮깁니다. NIC를 시스템 인터커넥트의 *IO-coherent 포트*에 연결하면, NIC가 main memory로 read를 보낼 때 인터커넥트가 자동으로 CPU 캐시를 snoop합니다. CPU가 더 최신 패킷을 들고 있으면 하드웨어가 read를 가로채 dirty 데이터를 CPU 캐시에서 꺼내 NIC로 전달합니다. 그 결과 디바이스 드라이버는 cache maintenance(소프트웨어가 직접 캐시를 flush/clean/invalidate해 메모리와 맞추는 관리 작업)를 더 이상 관리할 필요가 없어지고, 성능도 좋아지며 드라이버 코드도 단순해집니다.
 
-검증 엔지니어에게 이건 매일의 일입니다 — DMA/NIC가 끼는 SoC에서 "패킷이 깨져 나간다"의 1순위 의심은 IO-coherency 경로의 snoop 누락입니다.
+검증 엔지니어에게 이건 매일의 일입니다 — DMA/NIC가 끼는 **SoC**(System on Chip — CPU·캐시·가속기·인터커넥트를 한 칩에 집적한 시스템)에서 "패킷이 깨져 나간다"의 1순위 의심은 IO-coherency 경로의 snoop 누락입니다.
 
 ---
 
@@ -55,9 +55,9 @@ IC -> DDR: "CPU에 없을 때만 fetch" { style.stroke-dash: 4 }
 
 ### 왜 이 디자인인가 — Design rationale
 
-IO-coherency가 *one-way*인 이유는 비캐싱 마스터의 특성에서 나옵니다. NIC/DMA는 자체 캐시를 두지 않으므로, *다른 캐시가 그들의 데이터를 snoop할* 필요가 없습니다(그들은 보유하지 않으니까). 필요한 건 단 하나 — 그들이 메모리를 읽거나 쓸 때, *CPU 캐시의 최신본을 반영*하는 것입니다. 그래서 snoop이 CPU→디바이스 방향으로만 흐릅니다.
+IO-coherency가 *one-way*(한 방향)인 이유는 비캐싱 마스터(자체 캐시가 없는 버스 주체 — DMA·NIC처럼 데이터를 들고 있지 않고 그때그때 메모리만 읽고 쓰는 장치)의 특성에서 나옵니다. NIC/DMA는 자체 캐시를 두지 않으므로, *다른 캐시가 그들의 데이터를 snoop할* 필요가 없습니다(그들은 보유하지 않으니까). 필요한 건 단 하나 — 그들이 메모리를 읽거나 쓸 때, *CPU 캐시의 최신본을 반영*하는 것입니다. 그래서 snoop이 CPU→디바이스 방향으로만 흐릅니다.
 
-이 비대칭성 덕분에 full coherency보다 구현이 가볍고, 비캐싱 가속기를 SoC에 통합하는 비용이 낮아집니다. DMA/NIC/fixed-function 가속기 통합에 IO-coherency가 표준이 된 이유입니다.
+이 비대칭성 덕분에 full coherency(서로의 캐시를 양방향으로 snoop하는 완전 coherence)보다 구현이 가볍고, 비캐싱 가속기를 SoC에 통합하는 비용이 낮아집니다. DMA/NIC/**fixed-function 가속기**(한 가지 고정된 기능만 하드웨어로 수행하는 가속기, 예: 영상 코덱·암호 엔진) 통합에 IO-coherency가 표준이 된 이유입니다.
 
 ---
 
@@ -97,7 +97,7 @@ B1 -> B2 -> B3 -> B4
 | (B) back-invalidation | inclusive LLC eviction 시 상위 L1/L2 강제 무효화 | inclusion 유지, orphan line 방지 (출처 §4) |
 
 :::note[여기서 잡아야 할 핵심]
-inclusive LLC는 "상위 캐시가 가진 line은 LLC에도 있어야 한다"는 invariant를 지킵니다. 그래서 LLC가 victim을 버릴 때 그냥 못 버리고, 상위 캐시에 **back-invalidation**을 보내 해당 사본을 *함께* 버리게 합니다. 이걸 빼먹으면 상위 캐시에 LLC가 추적하지 못하는 **orphan line**이 생기고, 그 line에 대한 coherence가 깨집니다.
+**inclusive**(상위 캐시에 있는 line은 하위 LLC에도 반드시 있어야 한다는 포함 정책) LLC는 "상위 캐시가 가진 line은 LLC에도 있어야 한다"는 invariant(항상 지켜져야 하는 불변 규칙)를 지킵니다. 그래서 LLC가 victim(자리를 비우려고 쫓아낼 대상으로 고른 line)을 버릴 때 그냥 못 버리고, 상위 캐시에 **back-invalidation**(LLC가 evict하는 line을 상위 L1/L2도 함께 버리게 강제하는 무효화)을 보내 해당 사본을 *함께* 버리게 합니다. 이걸 빼먹으면 상위 캐시에 LLC가 추적하지 못하는 **orphan line**(LLC가 더 이상 추적하지 못한 채 상위 캐시에 남은 사본)이 생기고, 그 line에 대한 coherence가 깨집니다.
 :::
 ---
 
@@ -171,7 +171,7 @@ LLC: "**Last Level Cache (LLC / SLC)**" {
 
 ### 4.4 Point of Coherence (PoC)의 의미 — 그리고 PoU와의 구분
 
-PoC는 모든 메모리 observer(CPU, GPU, DMA)가 *같은 갱신 데이터를 보는 것이 보장되는 물리적 지점*입니다. IO-coherent 트래픽과 heterogeneous 트랜잭션에서 LLC가 흔히 이 PoC 역할을 맡아, 트랜잭션이 외부 DRAM에 영구 commit되기 *전에* 모든 관찰자의 뷰를 일치시킵니다. DMA read가 CPU dirty를 끌어오는 본문 §3 (A) 시나리오의 동작이 *어디서* 일어나는가에 대한 답이 바로 PoC=LLC입니다.
+PoC는 모든 메모리 observer(메모리를 읽고 쓰는 주체 — CPU, GPU, DMA 등)가 *같은 갱신 데이터를 보는 것이 보장되는 물리적 지점*입니다. IO-coherent 트래픽과 heterogeneous(서로 다른 종류의 처리 요소가 섞인) 트랜잭션에서 LLC가 흔히 이 PoC 역할을 맡아, 트랜잭션이 외부 DRAM에 영구 commit(메모리에 최종 확정 반영)되기 *전에* 모든 관찰자의 뷰를 일치시킵니다. DMA read가 CPU dirty를 끌어오는 본문 §3 (A) 시나리오의 동작이 *어디서* 일어나는가에 대한 답이 바로 PoC=LLC입니다.
 
 :::note[PoC vs PoU — 두 "통합 지점" 은 무엇이 다른가]
 coherence/cache maintenance 논의에는 비슷해 보이지만 의미가 다른 두 지점이 있습니다.
@@ -188,9 +188,9 @@ coherence/cache maintenance 논의에는 비슷해 보이지만 의미가 다른
 
 ## 5. 디테일 — DV 관점: 무엇을 어떻게 검증하나
 
-IO-coherency와 LLC PoC를 검증하는 환경은 [UVM scoreboard 패턴](../../uvm/05_tlm_scoreboard_coverage/)을 그대로 활용하되, reference model이 *coherence-aware*여야 합니다. 핵심 아이디어는 "어떤 observer가 어느 시점에 무엇을 봐야 하는가"를 reference가 알고, 실제 관찰값과 비교하는 것입니다.
+IO-coherency와 LLC PoC를 검증하는 환경은 [UVM(UVM — SystemVerilog 검증 환경을 짜는 표준 방법론) scoreboard 패턴](../../uvm/05_tlm_scoreboard_coverage/)을 그대로 활용하되, **reference model**(설계가 내야 할 "정답"을 따로 계산해 두는 소프트웨어 모델)이 *coherence-aware*여야 합니다. 핵심 아이디어는 "어떤 observer가 어느 시점에 무엇을 봐야 하는가"를 reference가 알고, 실제 관찰값과 비교하는 것입니다. 이때 **scoreboard**(설계의 실제 출력과 reference의 기대값을 비교해 일치 여부를 판정하는 검증 컴포넌트)가 둘을 맞대 봅니다.
 
-가장 중요한 corner case는 **race**입니다. CPU가 dirty line을 들고 있는 *바로 그 순간* DMA가 같은 주소를 read하면, snoop이 dirty를 끌어와야 합니다. 반대로 DMA write와 CPU read가 겹치면 PoC에서 순서가 결정되어야 합니다. 이런 동시성 race는 directed sequence로 *의도적으로 겹치게* 만들고, scoreboard가 "DMA가 받은 값 == CPU의 최신 dirty 값"을 확인해야 합니다.
+가장 중요한 **corner case**(드물게만 발생해 놓치기 쉬운 경계 상황)는 **race**(둘 이상의 동작이 거의 동시에 일어나 결과 순서가 불확정인 경쟁 상황)입니다. CPU가 dirty line을 들고 있는 *바로 그 순간* DMA가 같은 주소를 read하면, snoop이 dirty를 끌어와야 합니다. 반대로 DMA write와 CPU read가 겹치면 PoC에서 순서가 결정되어야 합니다. 이런 동시성 race는 directed sequence(특정 상황을 노려 일부러 만들어 내는 시험 자극)로 *의도적으로 겹치게* 만들고, scoreboard가 "DMA가 받은 값 == CPU의 최신 dirty 값"을 확인해야 합니다.
 
 back-invalidation은 별도 체커를 요구합니다. inclusive LLC에서 victim eviction이 일어날 때마다 상위 L1/L2의 해당 line이 *실제로* 무효화되는지, dirty victim이면 write-back이 동반되는지를 추적해야 합니다. 이를 빠뜨리면 orphan line이 생겨 *나중에* coherence 버그로 터지는데, 발생 시점과 증상 시점이 멀어 디버그가 어렵습니다 (추론: 검증 전략은 일반 DV 관용).
 

@@ -4,7 +4,7 @@ title: "Hardware Interview Prep"
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-반도체 하드웨어 인터뷰는 단일 전공 지식만으로 통과하기 어렵다. 같은 "CDC 신호를 어떻게 넘기나요?"라는 질문이 RTL 면접에서는 synchronizer 회로로, DV 면접에서는 검증 전략으로, PD 면접에서는 timing constraint로 변주되어 나오기 때문이다. 한 영역만 깊게 파고 나머지를 비워두면, 면접관이 인접 영역으로 한 발만 넘어가도 답이 막히고 "자기 블록만 아는 사람"이라는 인상을 준다.
+반도체 하드웨어 인터뷰는 단일 전공 지식만으로 통과하기 어렵다. 같은 "CDC(Clock Domain Crossing, 서로 다른 클럭 영역 사이로 신호를 넘기는 일) 신호를 어떻게 넘기나요?"라는 질문이 RTL(Register-Transfer Level, 회로를 레지스터 간 데이터 흐름으로 기술하는 설계 층) 면접에서는 synchronizer 회로로, DV(Design Verification, 설계 검증) 면접에서는 검증 전략으로, PD(Physical Design, 물리 설계) 면접에서는 timing constraint로 변주되어 나오기 때문이다. 한 영역만 깊게 파고 나머지를 비워두면, 면접관이 인접 영역으로 한 발만 넘어가도 답이 막히고 "자기 블록만 아는 사람"이라는 인상을 준다.
 
 이 코스는 Digital RTL, DV, Embedded, Architecture, Analog, Physical Design 6대 영역의 빈출 질문을 가로질러, 각 개념의 정의뿐 아니라 *왜 그렇게 되는지*와 *언제 무엇을 선택하는지*까지 답할 수 있도록 설계되었다. 정의 암기에서 멈추지 않고 trade-off와 인과를 말로 설명하는 훈련이 핵심이며, 그것이 면접에서 "외운 사람"과 "이해한 사람"을 가르는 지점이다.
 

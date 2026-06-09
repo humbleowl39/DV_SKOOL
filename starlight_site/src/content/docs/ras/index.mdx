@@ -7,7 +7,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ## 왜 RAS를 배우는가
 
-LLM 학습 클러스터나 HPC 서버는 수천 개의 가속기와 분산 메모리(HBM, DDR5)를 동기화해 돌립니다. 이 규모에서는 단 하나의 SoC 안에서 로컬 SRAM 캐시나 메모리 인터페이스에 정정 불가능한 에러(uncorrectable error) 하나가 발생하는 것만으로도 전체 학습 잡이 무너지고, 체크포인트 복구에 막대한 compute 시간과 비용이 날아갑니다. 게다가 sub-3nm 공정과 2.5D/3D 패키징(CoWoS)으로 실리콘 밀도가 극단적으로 높아진 데다, LLM 워크로드가 가속기를 거의 100% 가동률로 밀어붙이면서 열 스트레스와 전압 droop이 노화(electromigration, thermal cycling)를 가속해 transient/permanent fault 빈도가 치솟습니다. RAS(Reliability, Availability, Serviceability)는 바로 이 문제를 silicon 레벨에서 막는 설계 철학이자 메커니즘 묶음입니다.
+LLM 학습 클러스터나 HPC(High-Performance Computing, 고성능 컴퓨팅) 서버는 수천 개의 가속기와 분산 메모리(HBM, DDR5)를 동기화해 돌립니다. 이 규모에서는 단 하나의 SoC(System on Chip, 한 칩에 통합된 시스템) 안에서 로컬 SRAM(칩 내부 고속 메모리) 캐시나 메모리 인터페이스에 정정 불가능한 에러(uncorrectable error) 하나가 발생하는 것만으로도 전체 학습 잡이 무너지고, 체크포인트 복구에 막대한 compute 시간과 비용이 날아갑니다. 게다가 sub-3nm 공정과 2.5D/3D 패키징(CoWoS)으로 실리콘 밀도가 극단적으로 높아진 데다, LLM 워크로드가 가속기를 거의 100% 가동률로 밀어붙이면서 열 스트레스와 전압 droop이 노화(electromigration, thermal cycling)를 가속해 transient/permanent fault 빈도가 치솟습니다. RAS(Reliability, Availability, Serviceability)는 바로 이 문제를 silicon 레벨에서 막는 설계 철학이자 메커니즘 묶음입니다.
 
 검증 엔지니어가 RAS를 모르면 정작 중요한 순간에 막힙니다. ECC가 1-bit 에러를 정정하고 2-bit 에러를 검출하는 경계를 시뮬레이션에서 어떻게 자극해야 하는지 모르고, poison bit가 버스를 타고 흐르다 소비 지점에서 exception을 일으키는 deferred error 모델을 검증 시나리오로 옮기지 못하며, RAS-node의 `ERR<n>STATUS` 레지스터에 에러가 정확히 기록되고 인터럽트가 올라가는지 확인하는 fault injection 테스트를 설계하지 못합니다. RAS를 배우는 것은 "에러가 없는 칩"이 아니라 "에러를 정직하게 검출·격리·보고하는 칩"을 어떻게 검증하는지를 익히는 과정입니다.
 

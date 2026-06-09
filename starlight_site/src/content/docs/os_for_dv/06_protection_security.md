@@ -20,7 +20,7 @@ title: "Module 06 — 보호 · 보안: Ring · Domain · Access Matrix"
 
 ## 1. Why care? — device 격리(IOMMU)는 access matrix 의 하드웨어판이다
 
-DV 엔지니어가 IOMMU 나 confidential computing·TrustZone 류 격리 기능을 검증할 때, 그 바탕에 깔린 발상은 OS 의 protection 이론과 똑같습니다. "각 device 가 접근할 수 있는 메모리를 가둔다"는 per-device isolation 은 곧 access matrix 의 한 행(domain)을 하드웨어로 구현한 것입니다. M01 의 dual-mode 도 사실 가장 단순한 두 단계 ring, 두 domain 일 뿐입니다.
+DV 엔지니어가 **IOMMU**(I/O memory-management unit, device 가 내는 주소를 번역·보호해 device 가 닿을 메모리를 가두는 하드웨어 — M03)나 **confidential computing**(메모리 내용을 OS·hypervisor 조차 못 들여다보게 하드웨어로 격리·암호화하는 기술)·**TrustZone**(ARM 이 칩을 secure/normal 두 세계로 가르는 격리 기능) 류 격리 기능을 검증할 때, 그 바탕에 깔린 발상은 OS 의 protection 이론과 똑같습니다. "각 device 가 접근할 수 있는 메모리를 가둔다"는 per-device isolation 은 곧 access matrix 의 한 행(domain)을 하드웨어로 구현한 것입니다. M01 의 dual-mode 도 사실 가장 단순한 두 단계 ring, 두 domain 일 뿐입니다.
 
 이 모듈은 그 일반화를 줍니다 — least privilege 가 왜 피해를 제한하는지, ring 이 왜 gate 로만 넘어가야 무결성이 지켜지는지, access matrix 가 정책을 어떻게 표현하는지. 이 틀이 있으면 IOMMU 검증에서 "이 device 가 자기 domain 밖 메모리에 접근하면 막히는가", "권한 상승(privilege escalation)이 차단되는가" 같은 체크포인트가 이론적 근거를 갖습니다.
 
@@ -109,7 +109,7 @@ ring 0 이 모든 특권을 갖고 안쪽일수록 특권이 큽니다. ring 사
 | **ARM** | USR/SVC 모드 출발 → ARMv7 에 신뢰 실행 환경 **TrustZone** 추가 |
 | **ARMv8 (64-bit)** | 네 **exception level**: EL0 user, EL1 kernel, EL2 hypervisor, EL3 secure monitor |
 
-즉 M01 의 dual-mode 가 ring 의 가장 단순한 두 단계이고, hypervisor 가 그보다 높은 ring(-1/EL2)에 앉습니다(M01·가상화와 연결).
+즉 M01 의 dual-mode 가 ring 의 가장 단순한 두 단계이고, **hypervisor**(여러 가상 머신(VM)을 한 물리 머신 위에서 돌리며 그들을 관리·격리하는 계층 — kernel 보다도 높은 특권에 앉음)가 그보다 높은 ring(-1/EL2)에 앉습니다(M01·가상화와 연결).
 
 ### 4.3 Domain 과 access right (Ch.17.4)
 

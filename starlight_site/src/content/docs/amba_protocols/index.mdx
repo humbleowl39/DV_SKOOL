@@ -6,7 +6,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ## 왜 AMBA 프로토콜을 배우는가
 
-현대 SoC는 CPU, GPU, DMA, 메모리 컨트롤러, 수백 개의 주변 장치가 하나의 칩 위에서 공존합니다. 이 컴포넌트들이 서로 데이터를 주고받으려면 공통된 약속, 즉 인터커넥트 프로토콜이 필요합니다. AMBA(APB/AHB/AXI/AXI-Stream)는 ARM이 정의하고 업계 전반이 채택한 사실상의 표준으로, 현재 출하되는 거의 모든 모바일·서버·AI 칩의 내부 버스가 이 프로토콜 위에서 동작합니다.
+현대 SoC(System-on-Chip — 하나의 칩에 CPU·메모리·주변장치를 모두 집적한 시스템)는 CPU, GPU, DMA(CPU 없이 메모리를 직접 옮기는 블록), 메모리 컨트롤러, 수백 개의 주변 장치가 하나의 칩 위에서 공존합니다. 이 컴포넌트들이 서로 데이터를 주고받으려면 공통된 약속, 즉 인터커넥트(칩 내부 블록들을 잇는 공용 배선·중재 회로) 프로토콜이 필요합니다. AMBA(Advanced Microcontroller Bus Architecture — APB/AHB/AXI/AXI-Stream 등을 포함하는 ARM 의 bus 표준 가족)는 ARM이 정의하고 업계 전반이 채택한 사실상의 표준으로, 현재 출하되는 거의 모든 모바일·서버·AI 칩의 내부 버스가 이 프로토콜 위에서 동작합니다.
 
 이 프로토콜을 모르면 검증 엔지니어가 정작 필요한 순간에 막힙니다. 슬레이브가 응답을 늦게 보내는 것이 wait state인지 프로토콜 위반인지 판단하지 못하고, AXI outstanding 트랜잭션에서 scoreboard가 왜 mismatch를 내는지 이해하지 못하며, AXI-Stream 수신 측이 패킷 경계를 어떻게 인식하는지 설명하지 못합니다. AMBA를 배우는 것은 단순히 신호 이름을 외우는 것이 아니라, SoC 내부의 데이터 흐름을 읽고 버그를 빠르게 찾아내는 언어를 익히는 과정입니다.
 

@@ -16,7 +16,7 @@ title: "Module 05 — Quick Reference Card"
 
 ## 1. Why care? — 이 카드가 왜 필요한가
 
-복습 + 인터뷰 / 리뷰 / TARA workshop 직전 _즉시 꺼내볼 수 있는 1-page cheat sheet_ 가 필요합니다. 이 모듈은 학습한 내용을 **머릿속 인덱스** 로 굳히는 역할 — 4 개의 long-form 모듈을 거친 후 _세부는 모두 잊어도 cheat sheet 의 셀 하나만 보면 거기서 출발해 5 분 안에 깊은 답변을 재구성할 수 있는_ 압축 매핑.
+복습 + 인터뷰 / 리뷰 / **TARA**(Threat Analysis & Risk Assessment — 자산·위협·위험을 식별하고 등급을 매겨 대응을 정하는 ISO 21434 활동) workshop 직전 _즉시 꺼내볼 수 있는 1-page cheat sheet_ 가 필요합니다. 이 모듈은 학습한 내용을 **머릿속 인덱스** 로 굳히는 역할 — 4 개의 long-form 모듈을 거친 후 _세부는 모두 잊어도 cheat sheet 의 셀 하나만 보면 거기서 출발해 5 분 안에 깊은 답변을 재구성할 수 있는_ 압축 매핑.
 
 이 카드의 가치는 _Tesla 사례를 읽은 5 분 후, 자기 ECU 의 layer 매핑을 정확히 그릴 수 있는가_ 의 효율로 측정됩니다.
 
@@ -25,7 +25,7 @@ title: "Module 05 — Quick Reference Card"
 ## 2. Intuition — 비유와 한 장 그림
 
 :::tip[💡 한 줄 비유]
-**Automotive Security 마스터** ≈ **4×3 매트릭스를 머릿속에서 즉시 그릴 수 있는 사람**. 4 layer (HSM / SecOC / Gateway / IDS) × 3 surface (OBD / 무선 / 공급망) 의 12 셀 _각각이 어떤 attack 을 차단하는지_ 와 _trade-off 가 무엇인지_ 를 즉답할 수 있는 것이 마스터.
+**Automotive Security 마스터** ≈ **4×3 매트릭스를 머릿속에서 즉시 그릴 수 있는 사람**. 4 layer (**HSM** 키 봉인 보안 칩 / **SecOC** CAN 메시지 인증 계층 / **Gateway** 도메인 격리 중계기 / **IDS** 이상 탐지) × 3 surface (**OBD** 진단 포트 / 무선 / 공급망) 의 12 셀 _각각이 어떤 attack 을 차단하는지_ 와 _trade-off 가 무엇인지_ 를 즉답할 수 있는 것이 마스터.
 :::
 ### 한 장 그림 — 4 layer × 3 surface 인덱스
 
@@ -112,7 +112,7 @@ Step 5: Tesla 사례로 마무리
 | Secure Gateway | 도메인 격리 + 메시지 라우팅/필터 + OBD-II 격리 |
 | TEE (TrustZone) | Secure World 에서 GPS 무결성/키 관리 — Normal World CAN 위조 차단 |
 | IDS | 규칙/주기/ML 기반 CAN 이상 탐지 — 방지가 아닌 탐지 |
-| Tesla FSD 탈옥 | CAN injection (GPS spoofing) + Region Code 변조 — SecOC 부재가 원인 |
+| Tesla FSD (Full Self-Driving — Tesla 의 유료 자율주행 옵션) 탈옥 | CAN injection (GPS spoofing) + Region Code 변조 — SecOC 부재가 원인 |
 | 규제 | UN R155 (CSMS), ISO 21434, 자동차관리법 (2 년 징역 / 2 천만 원) |
 
 ### 4.2 공격/방어 매트릭스
@@ -131,6 +131,8 @@ Step 5: Tesla 사례로 마무리
 | Supply Chain | 공급망 | Secure Boot + FW 서명 | L1 + L5 |
 | Key Fob Relay | RF | UWB ToF | L1 |
 | V2X Sybil | DSRC/C-V2X | SCMS PKI + Misbehavior Detection | L5 + L4 |
+
+위 표의 약어 — **GNSS**(위성 위치측정 시스템 총칭), **OSNMA**(Galileo 위성 신호에 인증 서명을 더한 기능), **UWB ToF**(Ultra-Wideband Time-of-Flight — 신호 비행 시간으로 거리를 재 릴레이 공격을 차단), **DSRC/C-V2X**(V2X 의 두 무선 기술), **SCMS**(V2X 가명 인증서를 발급·폐기하는 PKI 인프라), **PKI**(Public Key Infrastructure — 공개키·인증서로 신원을 관리하는 체계), **Sybil**(한 공격자가 다수의 가짜 신원으로 신뢰 모델을 왜곡하는 공격).
 
 ---
 

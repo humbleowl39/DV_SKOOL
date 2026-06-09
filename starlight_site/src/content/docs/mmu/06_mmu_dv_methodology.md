@@ -22,7 +22,7 @@ title: "Module 06 — MMU DV Methodology"
 
 ### 1.1 시나리오 — 상용 VIP 가 _OOM_
 
-MMU 검증을 시작할 때 가장 먼저 부딪히는 벽은 메모리입니다. 상용 VIP(Cadence / Synopsys)를 그대로 쓰면 4 KB granule × 1 GB address range = 250K page entries 를 처리해야 하는데, VIP 내부 모델이 page entry 당 ~100 byte 의 overhead 를 가집니다. 250K × 100 byte = **25 GB RAM** — 대부분 시뮬레이션 환경의 16 GB/job 한계를 훌쩍 넘어 OOM 으로 job 이 죽습니다.
+MMU 검증을 시작할 때 가장 먼저 부딪히는 벽은 메모리입니다. 상용 **VIP**(Verification IP — 특정 인터페이스를 검증하려고 미리 만들어 파는 검증용 부품; 자극 생성·프로토콜 체크 등을 담당) (Cadence / Synopsys)를 그대로 쓰면 4 KB granule × 1 GB address range = 250K page entries 를 처리해야 하는데, VIP 내부 모델이 page entry 당 ~100 byte 의 overhead 를 가집니다. 250K × 100 byte = **25 GB RAM** — 대부분 시뮬레이션 환경의 16 GB/job 한계를 훌쩍 넘어 **OOM**(Out Of Memory — 메모리 부족으로 프로세스가 강제 종료되는 상황) 으로 job 이 죽습니다.
 
 이 문제를 해결한 것이 **Custom Thin VIP** 입니다. PA, permission flag, LRU info — 검증에 꼭 필요한 정보만 남기면 page entry 당 10 byte 로 충분합니다. 250K × 10 byte = 2.5 GB 이므로 16 GB 제약 안에 안정적으로 들어옵니다.
 
@@ -30,7 +30,7 @@ MMU 검증을 시작할 때 가장 먼저 부딪히는 벽은 메모리입니다
 
 이 Custom + Dual 조합이 MMU DV 의 시그니처 패턴입니다. 상용 VIP 를 직접 쓰면 기능 검증은 가능하지만 stress 환경에서의 안정성과 성능 gap 측정이라는 두 축을 동시에 다루기 어렵습니다.
 
-**MMU 검증은 일반 IP 보다 복잡**합니다 — 기능 정확성 (주소 변환) + 성능 (TLB / throughput) + 프로토콜 (AXI / AXI-S) **3 축** 을 _동시_ 검증해야 하고, 상용 VIP 의 메모리 한계 때문에 large-dataset stress 시뮬에서 OOM 이 발생합니다. **Custom Thin VIP + Dual-Reference Model** 이 이 코스의 시그니처 패턴이며, 이력서 / 면접의 핵심 차별화 요소.
+**MMU 검증은 일반 IP 보다 복잡**합니다 — 기능 정확성 (주소 변환) + 성능 (TLB / throughput) + 프로토콜 (AXI[Advanced eXtensible Interface — ARM 의 표준 온칩 버스 프로토콜] / AXI-S[AXI-Stream — 주소 없이 데이터를 흘려보내는 스트리밍 변형]) **3 축** 을 _동시_ 검증해야 하고, 상용 VIP 의 메모리 한계 때문에 large-dataset stress 시뮬에서 OOM 이 발생합니다. **Custom Thin VIP + Dual-Reference Model** 이 이 코스의 시그니처 패턴이며, 이력서 / 면접의 핵심 차별화 요소.
 
 또한 _스펙 변경이 잦은_ MMU IP 환경에서 **AI-assisted 환경 자동화** 가 검증 일정을 _설계 일정 앞_ 으로 가져오는 핵심 도구가 됩니다 (DAC 2026). 이 모듈을 마치면 _개념_ 에서 _체계_ 로 — 검증 작업의 reproducibility 와 회귀 자동화가 가능해집니다.
 
@@ -78,7 +78,7 @@ SB -> COV
 
 ## 3. 작은 예 — 한 translation 이 driver → DUT → monitor → scoreboard 를 흐르는 경로
 
-가장 단순한 시나리오. UVM `mmu_basic_trans_seq` 가 1개 transaction 을 생성: `va = 0x4000_1000`, `acc_type = READ`, `asid = 5`. DUT 가 처리, 결과가 dual scoreboard 에서 검증되는 _full path_.
+가장 단순한 시나리오. **UVM**(Universal Verification Methodology — 표준 검증 프레임워크) `mmu_basic_trans_seq` 가 1개 transaction(트랜잭션 — 검증 자극 한 건을 추상화한 객체) 을 생성: `va = 0x4000_1000`, `acc_type = READ`, `asid = 5`. DUT 가 처리, 결과가 dual scoreboard 에서 검증되는 _full path_. 이 경로에 등장하는 UVM 컴포넌트는 **Sequence**(자극 시나리오를 만드는 곳), **Driver**(트랜잭션을 실제 핀 신호로 구동), **Monitor**(핀 신호를 엿봐서 트랜잭션으로 복원, RTL 무수정), **Scoreboard**(기준값과 대조)입니다.
 
 ### 단계별 추적
 
@@ -306,6 +306,8 @@ endclass
 
 ### 5.3 Register Model (MMU CSR 검증)
 
+MMU 동작은 여러 제어 레지스터(**CSR** — Control/Status Register)로 설정합니다. 검증 환경에서는 **RAL**(Register Abstraction Layer — UVM 이 제공하는 레지스터 추상화 계층; 레지스터를 객체로 모델링해 읽기/쓰기와 기대값 추적을 자동화)로 이 레지스터들을 다룹니다.
+
 #### MMU 핵심 레지스터
 
 ```
@@ -350,6 +352,8 @@ UVM Register Model 활용:
 ```
 
 ### 5.4 SVA Assertions for MMU
+
+**SVA**(SystemVerilog Assertions — 신호가 시간에 따라 지켜야 할 규칙을 선언적으로 적어 자동 감시하게 하는 문법)는 "이 조건이 성립하면 N 사이클 뒤 저 조건이 반드시 성립해야 한다" 같은 시간적 속성을 검사합니다. 각 `assert`(어겨지면 에러) 에는 짝으로 `cover`(그 상황이 실제로 일어났는지 집계)를 둡니다.
 
 #### TLB 관련 Assertions
 
@@ -435,6 +439,8 @@ c_fault_reported: cover property (p_fault_reported);
 :::
 
 ### 5.5 Constrained Random 전략
+
+**Constrained Random**(제약 랜덤 — 값을 무작위로 뽑되 "page 정렬", "읽기/쓰기만" 같은 제약[constraint]을 걸어 _의미 있는_ 범위 안에서만 랜덤화하는 기법)은 사람이 일일이 케이스를 적지 않고도 다양한 시나리오를 자동 생성하는 핵심 도구입니다.
 
 #### VA Randomization
 

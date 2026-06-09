@@ -23,11 +23,11 @@ title: "Module 13 — Background & Industry Research"
 
 ### 1.1 시나리오 — _작년_ 의 spec 으로 _내년_ 의 chip 을 만든다?
 
-RDMA RTL 을 개발하는 데 보통 2 년이 걸립니다. 그런데 그 2 년 사이에 UEC v1.0 이 multipath/lossy 새 표준으로 등장하고 (2024), Google Falcon 이 programmable CC 를 발표하며 (2023), NVIDIA Connect-X 8 이 800 Gbps + DPU 통합으로 시장에 나오고, AMD 가 Pensando 를 인수해 smartNIC 생태계를 재편합니다. 지금 만들고 있는 chip 이 출시될 시점에 시장은 이미 다른 곳을 바라보고 있을 수 있는 것입니다.
+RDMA RTL 을 개발하는 데 보통 2 년이 걸립니다. 그런데 그 2 년 사이에 UEC v1.0 이 multipath/lossy 새 표준으로 등장하고 (2024), Google Falcon 이 programmable CC 를 발표하며 (2023), NVIDIA Connect-X 8 이 800 Gbps + DPU(Data Processing Unit — 네트워크·스토리지 처리를 CPU 대신 맡는 프로그래머블 프로세서) 통합으로 시장에 나오고, AMD 가 Pensando 를 인수해 smartNIC(연산 능력을 갖춰 패킷 처리를 직접 수행하는 지능형 NIC) 생태계를 재편합니다. 지금 만들고 있는 chip 이 출시될 시점에 시장은 이미 다른 곳을 바라보고 있을 수 있는 것입니다.
 
 해법은 **산업 동향 추적의 시스템화**. 새 spec / 논문 / 산업 발표가 _내 검증 자산_ 에 어떤 영향을 미치는지 _즉시_ 평가 가능한 _지도_ 가 필요. 이게 본 모듈.
 
-RDMA 분야는 **spec 변경 속도가 빠릅니다**. IB Spec 1.4 에서 1.7 로, RoCEv2, UEC v1, Falcon, Programmable CC, packet spraying 같은 변화들이 1~2 년 간격으로 차례로 등장했습니다. 이 흐름을 추적하지 않으면 _현재 사내 IP 가 업계 어느 위치에 있는지_ 파악할 수 없고, 검증 우선순위를 결정할 때 spec 만 보고 판단하는 실수를 하게 됩니다. 예컨대 UEC 의 multipath 가정이 RoCEv2 의 strict in-order 가정과 충돌한다는 사실을 미리 알고 있으면, 지금 짜는 scoreboard 의 ordering 로직을 config 로 분리해두게 됩니다. 모르면 나중에 전부 뜯어고쳐야 합니다.
+RDMA 분야는 **spec 변경 속도가 빠릅니다**. IB Spec 1.4 에서 1.7 로, RoCEv2, UEC v1, Falcon, Programmable CC, packet spraying(한 flow 의 패킷들을 여러 경로에 흩뿌려 부하를 분산하는 multipath 기법) 같은 변화들이 1~2 년 간격으로 차례로 등장했습니다. 이 흐름을 추적하지 않으면 _현재 사내 IP 가 업계 어느 위치에 있는지_ 파악할 수 없고, 검증 우선순위를 결정할 때 spec 만 보고 판단하는 실수를 하게 됩니다. 예컨대 UEC 의 multipath 가정이 RoCEv2 의 strict in-order 가정과 충돌한다는 사실을 미리 알고 있으면, 지금 짜는 scoreboard 의 ordering 로직을 config 로 분리해두게 됩니다. 모르면 나중에 전부 뜯어고쳐야 합니다.
 
 이 모듈은 _학습/연구/검증_ 의 연결 지도입니다. 새로 발견된 spec 변화나 논문 아이디어를 어느 검증 자산에 hook 해야 하는지 즉답할 수 있게 해줍니다.
 
@@ -171,7 +171,7 @@ MPI primer      ────▶ model  ───▶ (UEC SES 매핑)      ──
 
 #### AI Training (RDMA + DL)
 
-- **Fast Distributed Deep Learning over RDMA** (id=240484819) — RDMA 가 DL training step time 에 미치는 영향, parameter server 패턴.
+- **Fast Distributed Deep Learning over RDMA** (id=240484819) — RDMA 가 DL training step time 에 미치는 영향, parameter server(여러 학습 워커가 가중치를 모았다 다시 받아가는 중앙 서버 패턴) 패턴.
 - **NetReduce: RDMA-Compatible In-Network Reduction for Distributed DNN Training Acceleration** (id=240484911) — switch 가 reduce 를 in-network 로 처리해 RDMA 트래픽 줄이기.
 
 #### MultiPathing (multi-path RDMA)
@@ -212,7 +212,7 @@ MPI primer      ────▶ model  ───▶ (UEC SES 매핑)      ──
 
 #### Falcon (Google)
 
-- Hardware-offloaded reliable transport. PSP, swift CC, multipath 를 hardware 통합.
+- Hardware-offloaded reliable transport. PSP(PSP Security Protocol — Google 의 패킷 암호화 프로토콜), swift CC(Google 의 RTT 기반 congestion control 알고리즘), multipath 를 hardware 통합.
 - 의의: RoCEv2 의 *PFC + DCQCN + RC* 스택을 한 단계 추상화. UEC PDS 와도 비교 대상.
 
 #### Programmable CC

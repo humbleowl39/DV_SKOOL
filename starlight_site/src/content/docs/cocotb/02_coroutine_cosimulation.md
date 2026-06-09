@@ -138,7 +138,7 @@ async def basic_test(dut):
 ```
 
 :::note[여기서 잡아야 할 두 가지]
-**(1) sequence가 driver를 *직접 호출*합니다.** `await drive(dut, item)` 한 줄이면 끝입니다. UVM의 `get_next_item`/`item_done` TLM handshake boilerplate가 통째로 사라집니다(`cocotb_note.md` "CocoTB uses a direct call model").<br>
+**(1) sequence가 driver를 *직접 호출*합니다.** `await drive(dut, item)` 한 줄이면 끝입니다. UVM의 `get_next_item`/`item_done` **TLM**(Transaction-Level Modeling — 컴포넌트끼리 비트 신호가 아니라 트랜잭션 객체를 주고받게 하는 UVM의 표준 통신 방식) handshake boilerplate가 통째로 사라집니다(`cocotb_note.md` "CocoTB uses a direct call model").<br>
 **(2) `cocotb.start_soon`은 UVM의 fork에 해당하는 백그라운드 coroutine 기동입니다.** monitor와 scoreboard는 이렇게 띄워 두고, 메인 테스트가 자극을 인가하면 그들이 `await`로 깨어나며 처리합니다 — 그래도 동시에 도는 줄은 하나뿐입니다. 다만 `fork`와 *완전히* 같지는 않습니다. `start_soon`은 *같은 협력 스케줄러* 위에 새 coroutine을 예약할 뿐 진짜 병렬을 만들지 않고, 무엇보다 **호출자가 그 coroutine의 완료를 기다리지 않습니다**(fire-and-forget). 즉 `fork...join`의 join 대기가 없는 셈입니다. 완료를 기다리려면 `await`로 해당 coroutine을 직접 기다려야 하고, 반대로 `start_soon`은 "띄워 놓고 메인은 계속 진행"하는 수명/대기 모델입니다 — monitor·scoreboard처럼 테스트 내내 백그라운드로 도는 것에 맞습니다.
 :::
 ---
@@ -183,7 +183,7 @@ COCO: "cocotb — direct call 모델" {
 }
 ```
 
-UVM은 sequence가 sequencer를 거쳐 driver에게 item을 *밀어 넣는*(push) 모델이라, `get_next_item`/`item_done`이라는 TLM handshake 계약이 반드시 필요합니다. cocotb는 sequence(테스트)가 driver 함수를 *직접 부르는* 모델이라 그 중간 계층과 boilerplate가 전부 사라집니다(`cocotb_note.md` 4.2 직후 "Key architectural difference"). 단순함을 얻는 대신, sequencer가 제공하던 arbitration·grab/lock 같은 기능은 직접 구현해야 합니다.
+UVM은 sequence가 sequencer를 거쳐 driver에게 item을 *밀어 넣는*(push) 모델이라, `get_next_item`/`item_done`이라는 TLM handshake 계약이 반드시 필요합니다. cocotb는 sequence(테스트)가 driver 함수를 *직접 부르는* 모델이라 그 중간 계층과 boilerplate가 전부 사라집니다(`cocotb_note.md` 4.2 직후 "Key architectural difference"). 단순함을 얻는 대신, sequencer가 제공하던 arbitration(여러 sequence가 같은 driver를 동시에 쓰려 할 때 누구 차례인지 정해 주는 중재)·grab/lock(한 sequence가 driver를 잠시 독점하도록 잡아 두는 기능) 같은 기능은 직접 구현해야 합니다.
 
 ---
 
@@ -194,7 +194,7 @@ UVM은 sequence가 sequencer를 거쳐 driver에게 item을 *밀어 넣는*(push
 cocotb는 OS 스레드를 쓰지 않습니다. coroutine들은 *협력적*으로 양보합니다. `await`를 만나야만 다른 coroutine이 돌 기회가 생기고, `await`를 만나기 전까지는 한 coroutine이 제어를 쥐고 끝까지 실행합니다(`cocotb_note.md` "registers a callback ... suspends Python; simulator resumes it on event"). 그래서 다음 규칙이 따라 나옵니다.
 
 - `await RisingEdge(dut.clk)`는 *시뮬레이션 시간을 진행*시키는 유일한 통로다. `await` 없는 무한 루프는 시간을 진행시키지 못하고 hang한다.
-- 어느 순간에도 active coroutine은 하나뿐 → 두 coroutine이 같은 신호를 같은 delta에 건드려도 동작은 결정적이며 SV race와 동일하다.
+- 어느 순간에도 active coroutine은 하나뿐 → 두 coroutine이 같은 신호를 같은 delta(시뮬레이션 시간은 그대로인 채 신호 값만 갱신되는 0-시간 미세 단계 — 같은 시각 안의 "찰나")에 건드려도 동작은 결정적이며 SV race와 동일하다.
 - `cocotb.start_soon(coro)`로 띄운 백그라운드 coroutine도 같은 협력 스케줄러 위에서 돈다 — 진짜 병렬이 아니다.
 
 :::note[콜백이 *어느 시점*에 실행되는가 — race 결정성의 근거]

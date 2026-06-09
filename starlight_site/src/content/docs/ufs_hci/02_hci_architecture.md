@@ -22,7 +22,7 @@ title: "Module 02 — HCI Architecture"
 
 ### 1.1 시나리오 — UTRD _1 bit_ 의 silent corruption
 
-UFS storage 를 검증하는 환경을 상상해 봅시다. Driver 가 UTRD descriptor 에 다음과 같이 data buffer address 를 작성합니다.
+UFS storage 를 검증하는 환경을 상상해 봅시다. Driver 가 UTRD(UTP Transfer Request Descriptor — SW 가 메모리에 적어 두는, 명령 한 건의 정보를 담은 32-byte descriptor) 에 다음과 같이 data buffer address(데이터를 담을 메모리 버퍼의 주소)를 작성합니다.
 
 ```
 UTRD field: data_addr[63:0] = 0x1000_0000_0000_0000
@@ -34,7 +34,7 @@ UTRD field: data_addr[63:0] = 0x1000_0000_0000_0000
 실제 사용: 0x0000_0000_0000_0000
 ```
 
-데이터가 잘못된 물리 주소에 write 되면서 다른 프로세스의 메모리가 조용히 망가집니다. 이 버그는 시뮬레이션에서 test 가 high address 영역을 쓰지 않으면 잡히지 않고, production 에서 수 시간이 지난 뒤에야 발견됩니다. UTRD parsing 한 비트의 오해가 silent corruption 으로 이어지는 것입니다. JEDEC spec 의 모든 필드를 정확히 해석해야만 이런 경로가 차단됩니다.
+데이터가 잘못된 물리 주소에 write 되면서 다른 프로세스의 메모리가 조용히 망가집니다. 이 버그는 시뮬레이션에서 test 가 high address 영역을 쓰지 않으면 잡히지 않고, production 에서 수 시간이 지난 뒤에야 발견됩니다. UTRD parsing(필드 비트를 해석해 의미를 읽어내는 것) 한 비트의 오해가 silent corruption(오류 신고 없이 데이터만 조용히 틀어지는 손상)으로 이어지는 것입니다. JEDEC(반도체 표준을 제정하는 단체로, UFS/UFSHCI 표준의 발행처) spec 의 모든 필드를 정확히 해석해야만 이런 경로가 차단됩니다.
 
 **HCI 는 SW 와 UFS HW 사이의 _표준 contract_** (JEDEC JESD223) 입니다. 어떤 OS, 어떤 driver 를 쓰더라도 이 contract 만 지키면 명령이 통합니다. 그래서 HCI 를 검증한다는 것은 곧 **driver-side (register / UTRD) ↔ device-side (UPIU)** 양방향 contract 를 검증한다는 뜻입니다.
 
@@ -81,7 +81,9 @@ HCI: "UFS HCI" {
 
 ## 3. 작은 예 — UTP transfer cycle 한 건
 
-가장 단순한 시나리오. SW 가 slot=5 에 READ 명령을 발행 → HCI 가 처리 → ISR 에서 회수. 한 cycle 의 모든 register / memory transition 을 추적합니다.
+가장 단순한 시나리오. SW 가 slot=5 에 READ 명령을 발행 → HCI 가 처리 → ISR(Interrupt Service Routine — 인터럽트가 오면 실행되는 SW 처리 함수)에서 회수. 한 cycle 의 모든 register / memory transition 을 추적합니다.
+
+아래 흐름에 나오는 용어를 먼저 풀어 둡니다. **UCD**(UTP Command Descriptor — UTRD 가 가리키는, 실제 Command UPIU·Response 영역·PRDT 를 담은 메모리 블록). **OCS**(Overall Command Status — HCI 가 명령 완료 시 UTRD 에 적는 최종 결과 코드). **W1S/W1C**(Write-1-to-Set / Write-1-to-Clear — 해당 비트에 1 을 써야 set/clear 되고 0 을 쓰면 무시되는 register 동작; 다른 비트를 건드리지 않고 한 비트만 조작하기 위함). **memory barrier**(`mb()`/`wmb()` — 이 지점 이전의 메모리 쓰기가 모두 가시화된 뒤에만 다음 쓰기가 진행되도록 강제하는 명령).
 
 ```d2
 shape: sequence_diagram
@@ -176,6 +178,8 @@ UTRLDBR (32-bit): 각 비트가 하나의 Transfer Request 슬롯
 
 ### 4.3 HCE Enable / Disable 시퀀스
 
+여기서 **HCE**(Host Controller Enable — 1 을 쓰면 컨트롤러를 켜고 내부 reset 을 거쳐 ready 로 만드는 활성화 비트)와 **UTRLRSR**(UTRL Run/Stop Register — 1 이면 HCI 가 새 transfer 요청을 받아들이는 게이트)가 등장합니다. 아래 시퀀스의 폴링 대상인 **UCRDY**(UIC Command Ready — UIC 명령을 받을 준비가 됐다는 상태 비트)와 **DP**(Device Present — device 가 링크에 붙어 있다는 상태 비트)도 HCS register 안의 상태 플래그입니다.
+
 ```
 HCI 활성화 (Power-on → Ready):
 
@@ -207,6 +211,8 @@ HCI 비활성화 (Reset):
 ---
 
 ## 5. 디테일 — UTRD / PRDT / UTMRD / UIC / MCQ
+
+이 절에서 처음 등장하는 두 약어를 풀어 둡니다. **PRDT**(Physical Region Description Table — 데이터를 담을 물리 버퍼들의 (주소, 길이) 목록; scatter/gather DMA 의 근거). **UTMRD**(UTP Task Management Request Descriptor — 명령 중단·LUN reset 같은 *작업 관리* 요청을 담는 descriptor; 데이터를 옮기는 UTRD 와 달리 명령 제어용). 필드 표의 `DW` 는 doubleword(4 byte 단위)를 뜻합니다.
 
 ### 5.1 UTRD 상세 필드 레이아웃
 
@@ -371,7 +377,9 @@ Gear 변경 예시 (HS-G1 → HS-G3):
 
 ### 5.6 MCQ (Multi-Circular Queue) — UFS 4.0+
 
-SDB 와 MCQ 의 차이는 단순한 큐 개수가 아니라 완료 통지 방식까지 바뀐다는 점에 있습니다. SDB 에서는 모든 코어가 단일 Doorbell 레지스터와 IS 를 공유하므로, 큐 깊이가 포화될수록 Lock 경합이 병목이 됩니다. MCQ 는 이 문제를 NVMe 방식으로 해결했습니다. 각 CPU 코어가 자신만의 Submission Queue 와 Completion Queue 쌍을 가지고 독립적으로 처리하기 때문에 Lock 없이도 명령을 병렬로 제출하고 회수할 수 있습니다.
+먼저 약어부터. **SDB**(Single Doorbell — 기존 방식; 하나의 doorbell 레지스터로 32 슬롯을 관리). **MCQ**(Multi-Circular Queue — UFS 4.0+ 에서 도입한, 코어별 독립 큐를 두는 NVMe-style 모델). **SQ/CQ**(Submission Queue / Completion Queue — 명령을 넣는 큐와 완료를 받는 큐의 쌍).
+
+SDB 와 MCQ 의 차이는 단순한 큐 개수가 아니라 완료 통지 방식까지 바뀐다는 점에 있습니다. SDB 에서는 모든 코어가 단일 Doorbell 레지스터와 IS 를 공유하므로, 큐 깊이가 포화될수록 Lock(여러 코어가 같은 자료구조를 동시에 건드리지 못하게 직렬화하는 잠금) 경합이 병목이 됩니다. MCQ 는 이 문제를 NVMe 방식으로 해결했습니다. 각 CPU 코어가 자신만의 Submission Queue 와 Completion Queue 쌍을 가지고 독립적으로 처리하기 때문에 Lock 없이도 명령을 병렬로 제출하고 회수할 수 있습니다.
 
 왜 코어별 큐가 곧 *lock-free* 인가? Lock 이 필요한 근본 이유는 *여러 코어가 같은 자료구조(단일 doorbell · 단일 슬롯 비트맵)를 동시에 건드릴 때* 서로의 갱신을 덮어쓰지 않도록 직렬화해야 하기 때문이다. SDB 에서는 모든 코어가 하나의 UTRLDBR 과 슬롯 풀을 공유하므로, 어느 슬롯이 비었는지 고르고 doorbell 비트를 세우는 동안 다른 코어를 막는 lock 이 필수다. MCQ 에서는 각 큐가 *한 코어 전용* 이라 애초에 공유 자료구조에 대한 경합 자체가 사라진다 — 코어가 자기 큐의 tail 만 전진시키면 되고 다른 코어와 충돌할 지점이 없으므로 lock 이 불필요해진다. 즉 lock-free 는 마법이 아니라 *공유를 없앤 결과* 다.
 
@@ -458,11 +466,11 @@ SDB vs MCQ 비교:
 ### 흔한 오해
 
 :::danger[❓ 오해 1 — 'Doorbell ring 즉시 처리된다']
-**실제**: Doorbell ring 후 HCI 가 해당 슬롯의 UTRD 를 fetch 하고 처리하기까지 **arbitration latency** 가 존재합니다. 다른 슬롯이 진행 중이면 그만큼 지연. ring 시점과 처리 시작 시점은 다른 transaction. SVA 의 timing 도 `##[1:N]` 으로 윈도우를 줘야지 `##1` 로 잡으면 false fail.<br>
+**실제**: Doorbell ring 후 HCI 가 해당 슬롯의 UTRD 를 fetch 하고 처리하기까지 **arbitration latency**(여러 요청 중 누구를 먼저 처리할지 조정하는 데 걸리는 지연)가 존재합니다. 다른 슬롯이 진행 중이면 그만큼 지연. ring 시점과 처리 시작 시점은 다른 transaction. SVA 의 timing 도 `##[1:N]` 으로 윈도우를 줘야지 `##1` 로 잡으면 false fail.<br>
 **왜 헷갈리는가**: "링 = 즉시 시작" 이라는 직관.
 :::
 :::danger[❓ 오해 2 — 'UTRD 작성하고 doorbell 만 누르면 끝']
-**실제**: UTRD ↔ UCD ↔ PRDT 의 **3 단 메모리 구조** 가 모두 visible 해야 합니다. CPU 의 store 가 HCI 의 fetch path 에서 완전히 보이려면 _memory barrier_ 또는 _coherent dma alloc_ 이 필요. write-back cache + non-coherent DMA 환경에서는 cache flush 까지.<br>
+**실제**: UTRD ↔ UCD ↔ PRDT 의 **3 단 메모리 구조** 가 모두 visible 해야 합니다. CPU 의 store 가 HCI 의 fetch path 에서 완전히 보이려면 _memory barrier_ 또는 _coherent dma alloc_(CPU 캐시와 DMA 가 항상 같은 값을 보도록 보장된 메모리 할당)이 필요. write-back cache(쓴 값을 일단 캐시에만 두고 나중에 메모리에 반영하는 캐시 — DMA 가 메모리만 읽으면 옛 값을 볼 수 있음) + non-coherent DMA 환경에서는 cache flush(캐시 내용을 강제로 메모리에 내려보냄)까지.<br>
 **왜 헷갈리는가**: register write 의 instantaneous 한 인상이 메모리 ordering 까지 같은 것처럼 보이게 함.
 :::
 :::danger[❓ 오해 3 — 'IS[UTRCS) 만 보면 어떤 슬롯이 완료됐는지 안다']

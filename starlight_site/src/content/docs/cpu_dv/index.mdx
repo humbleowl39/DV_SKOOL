@@ -9,7 +9,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 프로세서는 검증 대상 중에서도 가장 잔인한 부류에 속합니다. AXI 슬레이브나 DMA 엔진은 "입력을 넣으면 정해진 출력이 나온다"는 비교적 좁은 계약을 가지지만, CPU 는 ISA 라는 거대한 계약 전체를 구현해야 합니다. 명령 하나하나가 architectural state — program counter, 범용 레지스터 파일, CSR(control/status register), privilege mode, 메모리 — 를 정해진 방식으로 바꿔야 하고, 그 상태 공간은 사실상 무한합니다. 게다가 현대 코어는 이 명령들을 파이프라인으로 겹쳐 실행하고, 분기를 추측 실행하며, 예외가 터지면 추측한 것을 모두 되돌려 정확한 상태로 복구해야 합니다. 이 모든 것을 "기능적으로 올바르게" 검증하는 것이 CPU DV 입니다.
 
-이 지식이 없으면 다음 순간에 막힙니다. 단순히 명령 몇 개를 directed test 로 돌려 PASS 를 봤다고 코어가 맞다고 착각하고, 두 register write 의 순서가 어긋난 미묘한 hazard 버그를 scoreboard 가 못 잡으며, CSR side-effect 나 privilege transition 버그가 깊은 실행 경로에서만 드러나는데도 그 경로에 도달하는 자극을 만들지 못합니다. 이 코스는 프로세서 검증의 표준 방법론 — reference model 과의 step-and-compare lockstep, retirement 시점의 commit monitor, ISA coverage — 을 인과의 사슬로 엮어 설명합니다. 구체적인 러닝 예제는 오픈소스 도구가 풍부한 RISC-V 를 쓰지만, 여기서 다루는 방법론은 ARM, MIPS, x86 등 어떤 ISA 의 코어에도 그대로 적용됩니다.
+이 지식이 없으면 다음 순간에 막힙니다. 단순히 명령 몇 개를 directed test(특정 시나리오를 노려 손으로 짠 결정적 테스트) 로 돌려 PASS 를 봤다고 코어가 맞다고 착각하고, 두 register write 의 순서가 어긋난 미묘한 hazard(앞 명령의 결과를 뒤 명령이 너무 일찍 쓰려 해 생기는 파이프라인 충돌) 버그를 scoreboard(DUT 출력과 정답 기대값을 비교하는 검증 컴포넌트) 가 못 잡으며, CSR side-effect 나 privilege transition 버그가 깊은 실행 경로에서만 드러나는데도 그 경로에 도달하는 자극을 만들지 못합니다. 이 코스는 프로세서 검증의 표준 방법론 — reference model 과의 step-and-compare lockstep, retirement 시점의 commit monitor, ISA coverage — 을 인과의 사슬로 엮어 설명합니다. 구체적인 러닝 예제는 오픈소스 도구가 풍부한 RISC-V 를 쓰지만, 여기서 다루는 방법론은 ARM, MIPS, x86 등 어떤 ISA 의 코어에도 그대로 적용됩니다.
 
 ## 학습 목표
 

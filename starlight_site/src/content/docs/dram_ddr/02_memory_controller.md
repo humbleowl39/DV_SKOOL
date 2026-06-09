@@ -72,7 +72,7 @@ CMD -> DEV: "DDR phy / CA bus"
 
 세 가지 동시 요구가 있습니다.
 
-1. **Functional correctness** — 모든 timing constraint (tRCD, tRP, tRAS, tFAW, tREFI ...) 를 위반하지 않아야 한다 → DRAM model 의 contract.
+1. **Functional correctness** — 모든 timing constraint (tRCD = ACT→RD 최소 간격, tRP = PRE→ACT, tRAS = ACT→PRE 최소, **tFAW** = Four Activate Window — 임의의 한 시간 창 안에서 ACT 를 최대 4번으로 제한하는 전류 보호 규칙, tREFI = refresh 주기 ...) 를 위반하지 않아야 한다 → DRAM model(DUT 대신 정답 타이밍/데이터를 흉내 내는 참조 모델)의 contract.
 2. **Maximum throughput** — Row Hit 극대화 + Bank-level Parallelism + tCCD_S 활용 + R/W batching → 효율을 nominal BW 의 80~95% 까지.
 3. **Fairness / QoS** — 어떤 master 도 starvation 되지 않고, 실시간 master (Display) 는 deadline 을 놓치지 않아야 한다.
 
@@ -82,7 +82,7 @@ CMD -> DEV: "DDR phy / CA bus"
 
 ## 3. 작은 예 — 네 개 AXI 요청을 FR-FCFS 로 재배치하기
 
-가장 단순한 시나리오. AXI 4 개의 read request 가 거의 동시에 도착했고, MC 는 FR-FCFS + open-page 정책 (DDR4-3200) 입니다. 현재 bank 상태: Bank 0 에 Row 5 가 open, 나머지 bank 는 idle.
+가장 단순한 시나리오. AXI(AMBA AXI — ARM 이 정의한 SoC 내부 표준 버스 프로토콜로, CPU·GPU 같은 master 가 메모리/주변장치에 read/write 요청을 보내는 통로) 4 개의 read request 가 거의 동시에 도착했고, MC 는 FR-FCFS + open-page 정책 (DDR4-3200) 입니다. 여기서 **master**(마스터)는 메모리를 요청하는 주체(CPU, GPU, DMA 등)를, **AXI ID** 는 같은 요청자가 보낸 트랜잭션을 묶는 식별자를 뜻합니다. 현재 bank 상태: Bank 0 에 Row 5 가 open, 나머지 bank 는 idle.
 
 ### 도착 순서 (AXI ID 순)
 
@@ -151,7 +151,7 @@ function command_t mc_pick_next() {
 | Layer | 책임 | 대표 알고리즘 / 정책 |
 |------|------|---------|
 | **Address Mapping** | 물리주소 → (Rank, BG, Bank, Row, Col) | row:bg:bank:col 등 (§5.7) |
-| **QoS Arbiter** | master 간 priority / fairness / urgency | priority + aging + urgent + BW regulation (§5.4) |
+| **QoS Arbiter** | master 간 priority / fairness / urgency (QoS = Quality of Service, 서비스 품질 — 어떤 master 에게 얼마만큼의 대역폭·우선순위를 보장할지 정하는 규칙) | priority + aging + urgent + BW regulation (§5.4) |
 | **Command Scheduler** | timing-aware 명령 발행 | FR-FCFS / open vs close page / bank parallelism (§5.2) |
 | **Refresh Engine** | tREFI 보장, traffic 회피 | postpone / pull-in / per-bank (§5.6, Module 01 §5.6) |
 | **Power Manager** | idle 시 PD/SR 진입, latency 보전 | active-PD / precharge-PD / self-refresh (§5.9) |

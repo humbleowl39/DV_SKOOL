@@ -22,7 +22,7 @@ title: "Module 04 — DRAM DV Methodology"
 
 ### 1.1 시나리오 — _Silent corruption_ 의 비싼 대가
 
-DRAM 검증은 일반 IP DV 와 _근본적으로_ 다릅니다. 일반 IP:
+DRAM 검증은 일반 IP DV(Design Verification, 설계 검증 — 만든 하드웨어가 명세대로 동작하는지 시뮬레이션으로 확인하는 일)와 _근본적으로_ 다릅니다. 이 모듈에 등장하는 검증 용어를 먼저 풀어 둡니다 — **DUT**(Design Under Test, 검증 대상 설계 = 여기서는 MC+PHY), **TB**(testbench — DUT 에 자극을 주고 결과를 채점하는 검증 환경), **UVM**(Universal Verification Methodology — SystemVerilog 기반의 표준 검증 프레임워크), **scoreboard**(스코어보드 — DUT 출력과 "정답"을 비교해 일치 여부를 판정하는 컴포넌트), **SVA**(SystemVerilog Assertion — "이 조건은 항상 참이어야 한다"를 코드로 박아 위반 즉시 잡아내는 검사문), **behavioral model**(동작 모델 — 실제 DRAM 대신 명세대로 타이밍·데이터를 흉내 내는 참조 모델), **traffic generator**(트래픽 생성기 — 다양한 read/write 패턴을 만들어 DUT 에 흘려보내는 자극원). 일반 IP:
 - Functional test 통과 → silicon 에서도 거의 OK.
 
 DRAM:
@@ -161,7 +161,7 @@ MODEL -> SB { style.stroke-dash: 4 }
 
 ### 4.3 Coverage axis — "무엇이 빠졌는지"
 
-DRAM 의 시나리오 공간은 폭발적입니다 (rank × BG × bank × row × col × command × interleave × refresh state × training × power state). 그래서 **functional coverage 는 cross 형태로 정의되어야** 빠진 영역을 detect 할 수 있습니다 — §5.4.
+DRAM 의 시나리오 공간은 폭발적입니다 (rank × BG × bank × row × col × command × interleave × refresh state × training × power state). 그래서 **functional coverage 는 cross 형태로 정의되어야** 빠진 영역을 detect 할 수 있습니다 — §5.4. (**functional coverage** = 기능 커버리지; "어떤 상황을 실제로 테스트해 봤는지"를 세는 척도. **coverpoint** = 세고 싶은 한 항목(예: 명령 종류), **cross** = 두 항목의 조합(예: 명령 × bank)까지 빠짐없이 봤는지 세는 것.)
 
 ### 4.4 검증 자료의 분류 — TB bug 인가 DUT bug 인가
 
@@ -230,6 +230,8 @@ ENV: "MC / MI UVM Verification Env" {
 | **온도 변화** | DRAM 온도 상승 시뮬레이션 | Refresh Rate 조정, Retraining |
 
 ### 5.3 Coverage Model
+
+아래 모델에 나오는 **RMW** 는 Read-Modify-Write(읽어서 일부만 고쳐 다시 쓰는 접근; 예: 1 바이트만 바꿀 때 워드 전체를 읽고 수정해 되쓰기), **cp_** 접두어는 coverpoint(세는 항목)를 뜻합니다.
 
 ```
 [CG1] Access Pattern Coverage

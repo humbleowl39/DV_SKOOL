@@ -30,6 +30,8 @@ DRAM 검증의 절반은 protocol, 나머지 절반은 timing입니다. Protocol
 
 ## 2. 핵심 Timing 파라미터 — 9가지
 
+아래 표의 단위 **nCK**(number of clock cycles, 클럭 주기의 개수 — 절대 시간이 아니라 "몇 클럭"으로 센 값)와 **tCK**(클럭 한 주기의 시간)을 먼저 알아 둡니다. 타이밍 제약은 보통 "최소 몇 nCK 또는 최소 몇 ns 중 큰 값"으로 규정됩니다.
+
 ### 2.1 Intra-bank (같은 bank 안에서)
 
 | 파라미터 | 의미 | 단위 |
