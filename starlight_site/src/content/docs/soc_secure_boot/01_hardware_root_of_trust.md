@@ -118,7 +118,7 @@ PROV -> BOOT: "chip 출하 후" { style.stroke-dash: 4 }
 | ⑪ | BootROM | match → 다음 검증 단계, mismatch → halt | mismatch 시 fallback 도 OTP 정책에 따라 결정 |
 
 ```c
-// ⑥~⑪ 의 BootROM 측 의사코드. 실제 production 코드는 constant-time 비교 + glitch 이중 검증.
+// ⑥~⑪ 의 BootROM 측 pseudo code. 실제 production 코드는 constant-time 비교 + glitch 이중 검증.
 status_t verify_rotpk(const uint8_t *cert_pk, size_t pk_len) {
     uint8_t h_calc[32];
     uint8_t h_otp[32];

@@ -87,7 +87,7 @@ WAYS -> MISS: "no match"
 | Tag(18 bit) | 그 set 의 4 way tag 와 병렬 비교 | 어느 블록인지 식별 |
 | Hit/Miss | tag 일치+valid → hit | miss 면 하위 계층 fetch + 한 way 에 적재 |
 
-### 비트 계산 의사 코드
+### 비트 계산 pseudo code
 
 ```c
 // 64-byte block, 256 sets, 4-way set-associative, 32-bit addr

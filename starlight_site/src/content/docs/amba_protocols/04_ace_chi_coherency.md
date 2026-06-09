@@ -139,7 +139,7 @@ Data-Value 확인:  GPGPU 가 받은 값 == CPU 가 마지막에 쓴 값 ✓ (DR
 > 핵심은 ④ 와 ⑤ 의 분리입니다. GPGPU 가 받는 데이터의 _출처_ 는 DRAM 이 아니라 **CPU 캐시** 이고(느린 main memory 를 완전히 우회), DRAM 갱신은 별개의 정책 문제입니다. scoreboard 가 "DRAM 값" 을 expected 로 잡으면 mismatch 가 나는 이유가 바로 여기 있습니다.
 
 ```systemverilog
-// coherent read 의 expected 모델 (의사 코드 — scoreboard 관점)
+// coherent read 의 expected 모델 (pseudo code — scoreboard 관점)
 // 주의: 단순히 DRAM 을 expected 로 쓰면 false mismatch.
 function automatic data_t expected_coherent_read(addr_t a);
   // 1) 다른 master 가 a 를 dirty 로 들고 있으면 그 값이 정답
@@ -288,7 +288,7 @@ CHI(Coherent Hub Interface)는 ACE 의 _채널 기반_ 신호 묶음을 **packet
 
 ### 5.6 검증 함정 — non-coherent scoreboard
 
-가장 흔한 함정은 AXI 시절의 scoreboard 를 그대로 가져오는 것입니다. AXI scoreboard 는 "주소 A 의 expected = DRAM 모델의 A" 로 둡니다. ACE 에서는 dirty 를 들고 있는 다른 master 가 있으면 이 expected 가 _틀립니다_. coherent scoreboard 는 **모든 master 의 캐시 상태를 모델링** 하고, read 가 올 때 (1) dirty holder 가 있으면 그 값을, (2) 없으면 DRAM 값을 expected 로 계산해야 합니다(§3 의사 코드 참조).
+가장 흔한 함정은 AXI 시절의 scoreboard 를 그대로 가져오는 것입니다. AXI scoreboard 는 "주소 A 의 expected = DRAM 모델의 A" 로 둡니다. ACE 에서는 dirty 를 들고 있는 다른 master 가 있으면 이 expected 가 _틀립니다_. coherent scoreboard 는 **모든 master 의 캐시 상태를 모델링** 하고, read 가 올 때 (1) dirty holder 가 있으면 그 값을, (2) 없으면 DRAM 값을 expected 로 계산해야 합니다(§3 pseudo code 참조).
 
 ---
 
@@ -357,7 +357,7 @@ CHI(Coherent Hub Interface)는 ACE 의 _채널 기반_ 신호 묶음을 **packet
 
 **원인**: coherent read 의 정답은 dirty holder 의 캐시 값이지 DRAM 값이 아니다(interconnect 가 DRAM 을 우회해 캐시 데이터를 라우팅).
 
-**점검 포인트**: scoreboard 가 (1) 모든 cached master 의 라인 상태를 모델링하고, (2) read 시 dirty holder 우선·없으면 DRAM 으로 expected 를 계산하며, (3) write 시 다른 Shared 사본을 Invalid 로 전이시키는지 확인(§3 의사 코드, §5.5 표).
+**점검 포인트**: scoreboard 가 (1) 모든 cached master 의 라인 상태를 모델링하고, (2) read 시 dirty holder 우선·없으면 DRAM 으로 expected 를 계산하며, (3) write 시 다른 Shared 사본을 Invalid 로 전이시키는지 확인(§3 pseudo code, §5.5 표).
 :::
 ### 7.1 자가 점검
 

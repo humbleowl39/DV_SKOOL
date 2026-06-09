@@ -164,7 +164,7 @@ NVMe는 최대 **64K 큐 × 64K 명령/큐**를 지원합니다. 실제 controll
 큐가 수천 개라도 controller는 각 큐의 doorbell 레지스터를 따로따로 디코딩하지 않습니다. 대신 doorbell 레지스터들이 BAR 공간에 **일정한 간격(stride)으로 연속 배치**되어 있어, host가 `doorbell_base + (큐 index × stride)` 식으로 주소를 *계산*합니다. 그 간격이 바로 doorbell **stride**이고, `CAP` 레지스터가 노출합니다. 이렇게 규칙적으로 배치하기 때문에 controller는 들어온 write 주소만 보고 어느 큐의 doorbell인지 역산할 수 있습니다. 다중 큐인데 한 큐만 동작한다면 이 stride 계산이 어긋났을 가능성이 큽니다.
 :::
 
-### 5.3 doorbell write — 의사 코드
+### 5.3 doorbell write — pseudo code
 
 doorbell은 BAR 공간의 MMIO 레지스터입니다. host가 ring buffer에 SQE를 채운 뒤 새 tail 값을 doorbell에 씁니다. 아래는 검증 환경(C/펌웨어 관점)에서의 전형적 흐름을 보여주는 예시입니다.
 
@@ -206,7 +206,7 @@ int nvme_poll_cq(nvme_cq_t *cq) {
 ```
 
 :::note[검증 환경에서의 위치]
-NRT-TB의 host↔controller 9-step 흐름은 `NRT_TB/docs/img/nvme-sq-cq-flow.svg`에 시각화되어 있습니다. 위 의사 코드는 그 흐름의 ① SQE 작성 → ② doorbell → … → ⑥ head doorbell을 C 관점으로 압축한 것입니다.
+NRT-TB의 host↔controller 9-step 흐름은 `NRT_TB/docs/img/nvme-sq-cq-flow.svg`에 시각화되어 있습니다. 위 pseudo code는 그 흐름의 ① SQE 작성 → ② doorbell → … → ⑥ head doorbell을 C 관점으로 압축한 것입니다.
 :::
 
 ---

@@ -118,7 +118,7 @@ CMD -> DEV: "DDR phy / CA bus"
 | ⑧ | `T=` ...| 전 요청 데이터 회수, AXI ID 순서대로 응답 (A→B→C→D) | AXI ordering rule (같은 ID 안 순서 보존) |
 
 ```c
-// FR-FCFS 의사코드 — 매 cycle 호출
+// FR-FCFS pseudo code — 매 cycle 호출
 function command_t mc_pick_next() {
     // 1. Row Hit 후보 우선 (가장 빠름)
     foreach (req in pending_queue) {

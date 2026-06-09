@@ -7,7 +7,7 @@ title: "Module 01 — APB & AHB"
 
 - **Distinguish** APB와 AHB의 핸드셰이크/성능/용도 차이를 _2-phase vs pipelined_ 관점에서 구분할 수 있다.
 - **Trace** APB 트랜잭션의 SETUP → ACCESS → IDLE 흐름과 AHB의 ADDRESS → DATA 파이프라인을 cycle-by-cycle 로 추적할 수 있다.
-- **Implement** AHB-to-APB Bridge 의 동작 원리를 의사코드로 설명할 수 있다.
+- **Implement** AHB-to-APB Bridge 의 동작 원리를 pseudo code로 설명할 수 있다.
 - **Identify** APB 버전 진화 (APB3 → APB4 → APB5) 에서 추가된 신호와 그 동기를 매핑할 수 있다.
 - **Justify** AHB 의 ERROR 응답이 왜 2-cycle 인지 파이프라인 구조로 설명할 수 있다.
 :::

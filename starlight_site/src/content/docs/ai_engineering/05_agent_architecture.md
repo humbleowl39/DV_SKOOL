@@ -135,7 +135,7 @@ A -> U: "'근본원인: scoreboard.sv:142 의 ==\n가 X 를 mismatch 로 처리 
 | 3 | 결론 도출 | (no tool) | 근본원인 + 수정 + 검증 명령 |
 
 ```python
-# Step 1 의 단순화 의사 코드 (Anthropic Claude tool use)
+# Step 1 의 단순화 pseudo code (Anthropic Claude tool use)
 tools = [{
     "name": "read_file",
     "description": "파일을 읽고 내용을 반환",

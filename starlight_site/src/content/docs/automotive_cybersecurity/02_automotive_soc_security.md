@@ -132,7 +132,7 @@ HSM -> KMS: "⑨ Attestation cert" { style.stroke-dash: 4 }
 | ⑨ | HSM → KMS | Attestation certificate 발급 | 클라우드 측에서 이 ECU 를 신뢰할 수 있는지 검증용 |
 
 ```c
-// Step ⑥ 의 의사 코드 (HSM 내부)
+// Step ⑥ 의 pseudo code (HSM 내부)
 hsm_status_t hsm_burn_efuse_key(uint8_t slot,
                                 const uint8_t *wrapped_key,
                                 size_t len) {

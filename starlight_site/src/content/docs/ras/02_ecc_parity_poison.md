@@ -113,7 +113,7 @@ int parity_check(uint64_t data, int stored_parity) {
     return (p != stored_parity);       // 1이면 에러 검출 (1-bit는 잡힘, 2-bit는 놓침)
 }
 
-// SEC-DED ECC: syndrome으로 1-bit 정정, 2-bit 검출 (개념적 의사 코드)
+// SEC-DED ECC: syndrome으로 1-bit 정정, 2-bit 검출 (개념적 pseudo code)
 typedef enum { ECC_NONE, ECC_CORRECTED, ECC_UNCORRECTABLE } ecc_result_e;
 
 ecc_result_e ecc_decode(uint64_t *data, uint8_t stored_check) {

@@ -136,7 +136,7 @@ RXS -> RXA: "⑧ deliver\nstatus=0x42"
 | ⑧ | RX app | 인증 통과 후 brake-status=0x42 수신 | end-to-end 인증된 메시지 |
 
 ```c
-// Step ③ 의 전형적 SecOC TX path (의사 코드, AUTOSAR 스타일)
+// Step ③ 의 전형적 SecOC TX path (pseudo code, AUTOSAR 스타일)
 SecOC_FreshnessValue_t fv = SecOC_GetFreshness(secoc_id);  // 카운터 증가
 uint8_t  data_to_auth[16];
 memcpy(data_to_auth + 0,  &can_id,  4);

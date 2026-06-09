@@ -124,7 +124,7 @@ F -> S: "⑨ BL2 cert (~1 KB) DMA → SRAM"
 | ⑪ | BL1 | branch BL2_entry | _이 시점부터 BL2 = trusted_ |
 
 ```c
-// ②~⑨ 의 BootROM 측 의사코드. 검증 (⑩) 은 Module 03 verify_bl2_rsa2048 호출.
+// ②~⑨ 의 BootROM 측 pseudo code. 검증 (⑩) 은 Module 03 verify_bl2_rsa2048 호출.
 status_t bl1_load_bl2_from_spi_nor(void) {
     // ② boot mode/device 결정
     boot_cfg_t cfg = otp_read_boot_config();

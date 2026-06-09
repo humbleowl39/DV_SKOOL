@@ -156,7 +156,7 @@ PHY -> IN { style.stroke-dash: 4 }
 | ⑥ | Layer 매핑 (어느 layer 가 책임) | 구현 계획 |
 
 ```python
-# Step ⑤ 의 의사 코드 — Risk 계산 (단순 곱셈 모델)
+# Step ⑤ 의 pseudo code — Risk 계산 (단순 곱셈 모델)
 def risk(impact_score, feasibility_score):
     # impact:      Low=1, Med=2, High=3, Critical=4
     # feasibility: Low=1, Med=2, High=3, Very High=4

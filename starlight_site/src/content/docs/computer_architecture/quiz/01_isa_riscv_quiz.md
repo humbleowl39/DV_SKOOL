@@ -38,7 +38,7 @@ ISA 는 programmer-visible 상태(레지스터·메모리 모델·특권 레벨)
 <details>
 <summary>정답 / 해설</summary>
 
-(1) 산술은 _레지스터에서만_ 일어납니다 — `x1`, `x2` 는 레지스터 파일에서 읽고 결과를 레지스터 `x3` 에 씁니다. 메모리 값을 더하려면 먼저 `LOAD` 로 레지스터에 올려야 합니다(load/store 아키텍처). (2) `x3` 이 `x0` 이면 결과를 폐기해야 합니다(`if (rd != 0)`). 의사 코드로는 `result = rf[rs1] + rf[rs2]; if (rd != 0) rf[rd] = result;` 입니다. 이 두 규칙을 빠뜨리면 가장 흔한 false mismatch 가 발생합니다.
+(1) 산술은 _레지스터에서만_ 일어납니다 — `x1`, `x2` 는 레지스터 파일에서 읽고 결과를 레지스터 `x3` 에 씁니다. 메모리 값을 더하려면 먼저 `LOAD` 로 레지스터에 올려야 합니다(load/store 아키텍처). (2) `x3` 이 `x0` 이면 결과를 폐기해야 합니다(`if (rd != 0)`). pseudo code로는 `result = rf[rs1] + rf[rs2]; if (rd != 0) rf[rd] = result;` 입니다. 이 두 규칙을 빠뜨리면 가장 흔한 false mismatch 가 발생합니다.
 
 </details>
 ## Q4. (Analyze)

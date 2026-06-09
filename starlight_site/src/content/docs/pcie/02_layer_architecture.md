@@ -137,7 +137,7 @@ WIRE -> RX.RXPL
 | ⑬ | TL (rx) | TLP 분해 → memory write 적용, FC credit 반환 | 의도 실현 |
 
 ```c
-// Sender 측 layer wrapper 의 의사코드 — 각 layer 가 자기 책임만
+// Sender 측 layer wrapper 의 pseudo code — 각 layer 가 자기 책임만
 struct tlp build_tlp(struct request *req) {
     return (struct tlp){
         .hdr = encode_header(MWr, req->addr, req->length),

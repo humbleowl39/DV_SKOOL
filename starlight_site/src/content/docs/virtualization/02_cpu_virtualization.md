@@ -130,7 +130,7 @@ HW -> G: "EAX = lo / EDX = hi\n(Guest 는 직접 MSR 읽었다고 믿음)"
 | ⑧ | HW | `VMRESUME` | Guest 는 trap 을 모름 |
 
 ```c
-/* Step ⑤–⑥ 의 의사 코드 — KVM 의 RDMSR exit handler 와 거의 동일 구조 */
+/* Step ⑤–⑥ 의 pseudo code — KVM 의 RDMSR exit handler 와 거의 동일 구조 */
 static int handle_rdmsr(struct vcpu *vcpu) {
     u32 msr = vcpu->arch.regs[VCPU_REGS_RCX];
     u64 val;

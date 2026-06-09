@@ -81,7 +81,7 @@ DEC -> RF -> ALU -> WB
 | ALU | `x1 + x2` 계산 | 단순 연산 = 단일 파이프 스테이지 |
 | WB | `x3` 에 결과 기록 | 32 GPR; 단, `rd=x0` 이면 결과 폐기 |
 
-### 의사 코드로 본 계약
+### pseudo code로 본 계약
 
 ```c
 // RISC-V R-format ADD 의 의미 (ISA 가 정의하는 "정답")

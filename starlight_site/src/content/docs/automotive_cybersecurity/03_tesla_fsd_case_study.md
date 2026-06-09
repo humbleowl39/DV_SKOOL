@@ -130,7 +130,7 @@ FSD -> FSD: "⑩ 비승인 지역에서\n자율주행 동작 시작"
 | ⑩ | FSD | 비승인 지역에서 자율주행 동작 | 비즈니스 모델 자체가 무너지는 결과 |
 
 ```c
-// Step ⑧ 의 추정 의사 코드 (FSD CAN handler — SecOC 미적용 가정)
+// Step ⑧ 의 추정 pseudo code (FSD CAN handler — SecOC 미적용 가정)
 void can_rx_handler(can_frame_t *f) {
     if (f->id == 0x318) {       // GPS frame
         // !!! MAC 검증 없음, FV 검증 없음

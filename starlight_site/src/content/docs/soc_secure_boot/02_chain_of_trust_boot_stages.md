@@ -110,7 +110,7 @@ B -> S: "⑨ SHA-256(BL2 image) 계산"
 | ⑪ | BL1 | branch BL2_entry | _이 시점부터 BL2 가 trusted_ — 다음 link 가 시작 |
 
 ```c
-// ⑦~⑪ 의 BL1 측 의사코드. 실제 production 에서는 단계별 결과를 ❶독립 변수에 저장 +
+// ⑦~⑪ 의 BL1 측 pseudo code. 실제 production 에서는 단계별 결과를 ❶독립 변수에 저장 +
 // ❷ 마지막에 모든 ok 플래그를 한 번에 비교하여 단일 분기 글리치를 방어.
 status_t bl1_verify_bl2(const cert_t *cert, const uint8_t *bl2, size_t bl2_len) {
     bool ok_pk    = (constant_time_memcmp(sha256(cert->pk), otp_rotpk_hash, 32) == 0);

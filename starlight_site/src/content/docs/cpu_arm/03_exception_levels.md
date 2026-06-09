@@ -142,7 +142,7 @@ do_svc:
 ```
 
 ```asm
-// ② HW가 자동으로 하는 일 (의사코드)
+// ② HW가 자동으로 하는 일 (pseudo code)
 //   1. ELR_EL1  ← next PC          // address after SVC
 //   2. SPSR_EL1 ← current PSTATE   // NZCV, DAIF, CurrentEL, SPSel ...
 //   3. ESR_EL1  ← {EC=0x15, ISS=imm16}  // EC=0x15 = SVC from AArch64

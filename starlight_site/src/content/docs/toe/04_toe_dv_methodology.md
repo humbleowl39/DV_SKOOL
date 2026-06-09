@@ -121,7 +121,7 @@ Ref -> SB: "Reference ACK"
 | ⑩ | SVA | `syn_gets_synack` property 가 fire 되고 pass | 시간적 인과 관계 |
 
 ```systemverilog
-// Step ① 의 UVM sequence (의사 코드)
+// Step ① 의 UVM sequence (pseudo code)
 class tcp_connect_seq extends uvm_sequence#(host_descriptor);
   rand bit [31:0] dst_ip;
   rand bit [15:0] dst_port;

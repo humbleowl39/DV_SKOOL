@@ -104,7 +104,7 @@ EP -> RC: "⑦ CplD #4 (Tag=5, ByteCount=128, LowAddr=0x180, 128 B)"
 | ⑨ | RC TL | Tag=5 의 모든 split 받으면 read 완료 통지 | Tag matching |
 
 ```c
-// MRd 측 의사코드 — ReqID/Tag 가 Cpl 매칭의 핵심
+// MRd 측 pseudo code — ReqID/Tag 가 Cpl 매칭의 핵심
 struct tlp build_mrd(uint64_t addr, uint16_t length_dw, uint8_t tag) {
     return (struct tlp){
         .fmt    = 0b01,  // 4DW, no data

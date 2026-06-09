@@ -119,7 +119,7 @@ RESULT: "같은 두 명령,\n다른 마이크로아키텍처 정렬"
 Case A/B/C 모두에서 "결과가 맞는가"를 사람이 판단할 수는 없습니다. 그래서 ISA 를 정확히 구현한 reference model(ISS) 이 같은 명령 스트림을 실행해 expected architectural state 를 산출하고, 코어의 결과와 retire 시점에 비교합니다. 이 메커니즘이 [Module 02 의 step-and-compare](../02_step_and_compare/) 입니다.
 
 ```c
-// 개념적 의사코드 — reference model 이 채점관 역할
+// 개념적 pseudo code — reference model 이 채점관 역할
 // (실제 구현은 Spike 같은 ISS 를 DPI-C 로 연동; Module 04 참조)
 while (rtl_core.has_retired_instruction()) {
     retire_t rtl = rtl_core.get_retired();   // RTL 이 retire 한 명령 + 상태변화

@@ -33,7 +33,7 @@ strongly-ordered 와 weakly-ordered 메모리 모델의 차이를 설명하고, 
 </details>
 ## Q3. (Apply)
 
-compare_and_swap(value, expected, new_value)로 spinlock 의 acquire 를 구현하려 한다. 핵심 로직을 의사코드로 쓰고, 왜 atomic 이어야 하는지 설명하라.
+compare_and_swap(value, expected, new_value)로 spinlock 의 acquire 를 구현하려 한다. 핵심 로직을 pseudo code로 쓰고, 왜 atomic 이어야 하는지 설명하라.
 
 <details>
 <summary>정답 / 해설</summary>

@@ -142,7 +142,7 @@ BUILD -> BOOT: "Flash 에 저장 → 칩 운반"
 | ⑪ | trust 전파 — BL2 가 _trusted_ 로 격상 | _분기 자체_ 가 글리치 surface (Module 05) |
 
 ```c
-// ②~⑪ 의 BootROM 측 의사코드 (단순화). production 코드는 모든 단계의 OK 플래그를
+// ②~⑪ 의 BootROM 측 pseudo code (단순화). production 코드는 모든 단계의 OK 플래그를
 // 마지막에 한 번에 비교해 단일 분기 글리치를 방어 (Module 05 참조).
 status_t verify_bl2_rsa2048(const cert_t *cert, const uint8_t *bl2, size_t bl2_len) {
     uint8_t h_pk[32], h_otp[32], h_body[32], h_image[32], decoded[32 + RSA_PAD_LEN];

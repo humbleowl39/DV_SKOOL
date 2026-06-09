@@ -180,7 +180,7 @@ MIPS 의 delayed branch slot 은 "분기 _직후_ 한 명령은 분기 방향과
 
 ## 5. 디테일 — hazard detection·stall 삽입·branch penalty 정량
 
-### 5.1 hazard detection 과 stall 삽입(개념 의사 코드)
+### 5.1 hazard detection 과 stall 삽입(개념 pseudo code)
 
 forwarding 으로 못 막는 load-use 를 검출하려면, ID 단계에서 "직전 명령이 load 이고 그 목적지가 현재 명령의 소스와 같은가"를 검사해 한 사이클 stall 을 삽입합니다.
 

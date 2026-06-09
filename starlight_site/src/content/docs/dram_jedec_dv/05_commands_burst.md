@@ -367,7 +367,7 @@ CA[6:0]: A0     A1     XX     B0     XX     C0     C1     XX
 
 총 **3개의 명령** (2개의 2-cycle + 1개의 1-cycle)
 
-**Step 3 — Monitor 구현 의사코드**
+**Step 3 — Monitor 구현 pseudo code**
 
 ```systemverilog
 // Monitor — DDR5 command capture

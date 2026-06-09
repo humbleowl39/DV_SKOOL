@@ -175,7 +175,7 @@ AHB 가 가졌던 세 가지 throughput 병목을 한 번에 풀어야 했습니
 ### 코드로 보면
 
 ```systemverilog
-// AXI master 의 read sequence (의사코드)
+// AXI master 의 read sequence (pseudo code)
 task automatic axi_read(input [31:0] addr, input [3:0] id);
   // AR phase
   @(posedge ACLK);

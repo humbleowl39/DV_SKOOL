@@ -128,7 +128,7 @@ RX -> TX: "ACK Seq=13" { style.stroke-dash: 4 }
 | ⑥ | Sender DLL | ACK Seq=13 → Replay Buffer 에서 Seq ≤ 13 retire | 메모리 회수 |
 
 ```c
-// 의사코드 — Sender DLL 의 NAK 처리
+// pseudo code — Sender DLL 의 NAK 처리
 void on_nak(uint16_t bad_seq) {
     // NAK 받으면 그 seq 부터 모두 재송신
     for (uint16_t s = bad_seq; s != next_transmit_seq; s = (s + 1) % 4096) {
