@@ -1,8 +1,8 @@
 ---
-title: "Quiz — Module 05: 성능 법칙 & 이종 SoC/DSA"
+title: "Quiz — Module 13: 성능 법칙 & 이종 SoC/DSA"
 ---
 
-[← Module 05 본문으로 돌아가기](../../05_performance_laws_dsa/)
+[← Module 13 본문으로 돌아가기](../../13_performance_laws_dsa/)
 
 ---
 

@@ -1,8 +1,8 @@
 ---
-title: "Quiz — Module 01: ISA & RISC-V"
+title: "Quiz — Module 05: ISA & RISC-V"
 ---
 
-[← Module 01 본문으로 돌아가기](../../01_isa_riscv/)
+[← Module 05 본문으로 돌아가기](../../05_isa_riscv/)
 
 ---
 

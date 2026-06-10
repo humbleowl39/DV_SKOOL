@@ -1,5 +1,5 @@
 ---
-title: "Module 01 — ISA & RISC-V"
+title: "Module 05 — ISA & RISC-V"
 ---
 
 :::tip[학습 목표]
@@ -14,6 +14,8 @@ title: "Module 01 — ISA & RISC-V"
 :::note[사전 지식]
 - 이진수·레지스터·load/store 에 대한 기초 감각
 - 동기 회로와 클럭 개념
+
+기초가 아직 낯설다면 먼저 **기초 트랙**을 보고 오세요 — [M01 컴퓨터는 무엇으로 계산하는가](../01_what_is_computing/) · [M02 메모리와 레지스터](../02_memory_and_registers/) · [M03 명령 한 줄의 일생](../03_life_of_an_instruction/) · [M04 '빠르다'를 재는 법](../04_measuring_speed/).
 :::
 ---
 
@@ -268,7 +270,7 @@ void exec_load(uint8_t rd, uint8_t rs1, int32_t imm) {
 
 :::caution[실무 주의점]
 - reference model 작성 시 `x0` hardwired zero 와 즉치 sign extension 을 _가장 먼저_ 검증 — 가장 흔한 false mismatch 원인.
-- architectural state 는 명령 _retire_ 시점 기준 — OoO 코어 검증에서 execution 순서와 혼동 금지(M03 에서 다룸).
+- architectural state 는 명령 _retire_ 시점 기준 — OoO 코어 검증에서 execution 순서와 혼동 금지(M08 에서 다룸).
 :::
 ### 7.1 자가 점검
 
@@ -300,6 +302,6 @@ RISC 는 메모리 연산을 LOAD+OP+STORE 로 분해하므로 IC(명령 수)는
 
 ## 다음 모듈
 
-→ [Module 02 — 5-Stage Pipeline & Hazard](../02_pipeline_hazard/): ISA 가 약속한 의미를 보존하면서, 어떻게 여러 명령의 실행을 _조립 라인처럼 겹쳐_ CPI 를 1 에 가깝게 만드는가, 그리고 그 과정에서 생기는 해저드를 어떻게 해소하는가.
+→ [Module 06 — 5-Stage Pipeline & Hazard](../06_pipeline_hazard/): ISA 가 약속한 의미를 보존하면서, 어떻게 여러 명령의 실행을 _조립 라인처럼 겹쳐_ CPI 를 1 에 가깝게 만드는가, 그리고 그 과정에서 생기는 해저드를 어떻게 해소하는가.
 
-[퀴즈 풀어보기 →](../quiz/01_isa_riscv_quiz/)
+[퀴즈 풀어보기 →](../quiz/05_isa_riscv_quiz/)

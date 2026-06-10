@@ -1,8 +1,8 @@
 ---
-title: "Quiz — Module 02: 5-Stage Pipeline & Hazard"
+title: "Quiz — Module 06: 5-Stage Pipeline & Hazard"
 ---
 
-[← Module 02 본문으로 돌아가기](../../02_pipeline_hazard/)
+[← Module 06 본문으로 돌아가기](../../06_pipeline_hazard/)
 
 ---
 

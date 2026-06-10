@@ -31,18 +31,37 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 - **C/어셈블리 감각**: load/store, 레지스터, 분기 — 명령이 무엇을 하는지에 대한 직관
 - **기초 확률/비율**: hit rate, 평균 접근 시간(AMAT) 같은 가중 평균
 
-부족한 부분이 있으면 *Computer Organization and Design* (Patterson & Hennessy) 1–4장을 먼저 보세요.
+위 항목이 낯설어도 괜찮습니다 — **입문 트랙 M01–M04** 가 바로 그 기초(비트·이진수, 메모리·레지스터, 명령 사이클, 성능 측정)를 처음부터 설명합니다. 책으로 보충하려면 *Computer Organization and Design* (Patterson & Hennessy) 1–4장을 참고하세요.
 
 ## 학습 모듈
 
-순서대로 학습을 권장합니다. **기초(M01–M02)** 는 ISA 와 파이프라인이라는 토대를 다지고, **심화(M03–M04)** 는 ILP 와 메모리 계층으로 성능의 두 축을 파고들며, **종합(M05)** 은 성능 법칙으로 전체를 정량화하고 현대 SoC 트렌드로 연결합니다.
+순서대로 학습을 권장합니다. **입문(M01–M04)** 은 비트·메모리·명령·성능이라는 가장 밑바닥 어휘를 비전공/신입 눈높이로 다지고, **기초(M05–M06)** 는 ISA 와 파이프라인이라는 토대를 세우며, **심화(M07–M12)** 는 OoO 실행(M07–M09)과 메모리 계층(M10–M12)으로 성능의 두 축을 파고듭니다. 마지막 **종합(M13)** 은 성능 법칙으로 전체를 정량화하고 현대 SoC 트렌드로 연결합니다.
+
+:::tip[이미 기초가 있다면]
+ISA·파이프라인 개념이 익숙하다면 입문 트랙(M01–M04)을 건너뛰고 [M05 ISA & RISC-V](./05_isa_riscv/)부터 시작해도 됩니다. 반대로 "비트·레지스터·명령이 가물가물"하다면 M01 부터 차근히 보세요 — 이후 모듈이 훨씬 수월해집니다.
+:::
+
+#### 입문 트랙 (M01–M04) — 완전 처음이라면 여기부터
 
 <CardGrid>
-	<LinkCard title="M01 · ISA & RISC-V" href="./01_isa_riscv/" description="기초 — 하드웨어/소프트웨어 계약으로서의 ISA, CISC vs RISC, RISC-V 케이스 스터디, 특권 레벨." />
-	<LinkCard title="M02 · 5-Stage Pipeline & Hazard" href="./02_pipeline_hazard/" description="기초 — IF/ID/EX/MEM/WB, 데이터/제어/구조 해저드, forwarding 과 load-use bubble." />
-	<LinkCard title="M03 · OoO 실행 & 분기 예측" href="./03_ooo_branch_prediction/" description="심화 — Tomasulo(RS/CDB/rename), ROB 와 precise exception, 2-bit/tournament/TAGE 예측, speculation." />
-	<LinkCard title="M04 · 메모리 계층 (Cache & DRAM)" href="./04_memory_hierarchy/" description="심화 — 캐시 조직(set/way/block), 3C miss, write policy, TLB, DRAM row hit/miss." />
-	<LinkCard title="M05 · 성능 법칙 & 이종 SoC/DSA" href="./05_performance_laws_dsa/" description="종합 — Iron Law, Amdahl, Roofline, dark silicon, DSA(TPU/Tensor Core), HBM/PIM." />
+	<LinkCard title="M01 · 컴퓨터는 무엇으로 계산하는가" href="./01_what_is_computing/" description="입문 — 비트·바이트·이진수, 트랜지스터→게이트→레지스터, 클럭과 사이클." />
+	<LinkCard title="M02 · 메모리와 레지스터" href="./02_memory_and_registers/" description="입문 — 주소·저장, 레지스터 vs 메모리, 왜 계산은 레지스터에서만(load/store)." />
+	<LinkCard title="M03 · 명령 한 줄의 일생" href="./03_life_of_an_instruction/" description="입문 — 어셈블리 읽는 법, fetch→decode→execute→write-back, PC." />
+	<LinkCard title="M04 · '빠르다'를 재는 법" href="./04_measuring_speed/" description="입문 — latency vs throughput, 사이클·주파수, CPI/IPC, 성능 3축." />
+</CardGrid>
+
+#### 기초·심화·종합 (M05–M13)
+
+<CardGrid>
+	<LinkCard title="M05 · ISA & RISC-V" href="./05_isa_riscv/" description="기초 — 하드웨어/소프트웨어 계약으로서의 ISA, CISC vs RISC, RISC-V 케이스 스터디, 특권 레벨." />
+	<LinkCard title="M06 · 5-Stage Pipeline & Hazard" href="./06_pipeline_hazard/" description="기초 — IF/ID/EX/MEM/WB, 데이터/제어/구조 해저드, forwarding 과 load-use bubble." />
+	<LinkCard title="M07 · 왜 순서를 바꿔 실행하는가" href="./07_ooo_motivation/" description="심화 — in-order 한계, OoO 동기, dispatch→execute→retire 골격, 명령 윈도우." />
+	<LinkCard title="M08 · Tomasulo & ROB" href="./08_tomasulo_rob/" description="심화 — RS/CDB/register renaming, free list/RAT, LSQ, ROB 와 precise exception." />
+	<LinkCard title="M09 · 분기 예측 & speculation" href="./09_branch_prediction/" description="심화 — 2-bit/tournament/TAGE, BTB/RAS, speculation, Spectre/Meltdown." />
+	<LinkCard title="M10 · 캐시는 왜 존재하는가" href="./10_why_cache/" description="심화 — Memory Wall, 지역성, 계층 피라미드, LLC 와 inclusion policy." />
+	<LinkCard title="M11 · 캐시 조직 & miss" href="./11_cache_organization/" description="심화 — tag/index/offset, 3C miss, write policy, store buffer, MSHR, AMAT." />
+	<LinkCard title="M12 · 가상 메모리 & DRAM" href="./12_vm_and_dram/" description="심화 — TLB/page walk/page fault, VIPT aliasing, DRAM row hit/miss 와 재정렬." />
+	<LinkCard title="M13 · 성능 법칙 & 이종 SoC/DSA" href="./13_performance_laws_dsa/" description="종합 — Iron Law, Amdahl, Roofline, dark silicon, DSA(TPU/Tensor Core), HBM/PIM." />
 </CardGrid>
 
 ## 코스 운영 방식
@@ -74,5 +93,5 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 :::
 
 :::caution[흔한 함정]
-컴퓨터 구조에서 가장 자주 생기는 오개념은 **"OoO 코어는 결과도 순서 없이 내보낸다"**(retirement 는 in-order), **"단일 변수 성능 100% = 시스템 빠름"**(Amdahl 의 직렬 천장), **"row hit/miss 재정렬은 버그"**(정상 최적화)입니다. M03·M05·M04 에서 각각 바로잡습니다.
+컴퓨터 구조에서 가장 자주 생기는 오개념은 **"OoO 코어는 결과도 순서 없이 내보낸다"**(retirement 는 in-order), **"단일 변수 성능 100% = 시스템 빠름"**(Amdahl 의 직렬 천장), **"row hit/miss 재정렬은 버그"**(정상 최적화)입니다. M07·M13·M12 에서 각각 바로잡습니다.
 :::
