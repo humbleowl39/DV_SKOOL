@@ -108,6 +108,7 @@ export default defineConfig({
 						{ label: 'AI Engineering', collapsed: true, items: [{ autogenerate: { directory: 'ai_engineering' } }] },
 						{ label: 'BigTech Algorithm', collapsed: true, items: [{ autogenerate: { directory: 'bigtech_algorithm' } }] },
 						{ label: 'Hardware Interview Prep', collapsed: true, items: [{ autogenerate: { directory: 'hardware_interview' } }] },
+						{ label: 'CPU DV Interview Prep', collapsed: true, items: [{ autogenerate: { directory: 'cpu_dv_interview' } }] },
 					],
 				},
 			],
