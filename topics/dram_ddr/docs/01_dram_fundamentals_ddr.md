@@ -500,23 +500,27 @@ LPDDR5(주축) vs DDR5 vs LPDDR4 vs LPDDR5X 차이:
    | | | | | | | | | | | |
    +-+-+-+-+-+-+-+-+-+-+-+
 
-2. DVFSC (Dynamic Voltage and Frequency Scaling Clock)
-   - 런타임에 동적으로 클럭 주파수와 전압을 변경
-   - 고부하: 최대 속도 → 고성능
-   - 저부하: 낮은 속도 → 저전력
-   - MC가 트래픽 양을 모니터링하여 자동 전환
+2. DVFSC / DVFSQ (Dynamic Voltage & Frequency Scaling) — FSP 기반
+   - DVFSC: 코어(VDD2) 주파수·전압을 FSP(Frequency Set Point, MR16) 단위로 동적 조정
+   - DVFSQ: I/O 전압 VDDQ 를 0.5V ↔ 0.3V 로 스케일링 (DVFSC 와 별개 축; 전환 시 VRCG 로 Vref tracking)
+   - MC가 트래픽 양을 모니터링하여 자동 전환 (Enhanced DVFSC 존재)
 
    전환 단계 예시:
      F0 (최고 성능) → F1 (절전) → F2 (깊은 절전)
-     각 단계에서 WCK:CK 비율과 전압이 함께 조정
+     각 FSP 에서 WCK:CK 비율(2:1/4:1)과 전압이 함께 조정 → gear 전환 시 WCK2CK 재정렬
 
-3. Link ECC (LPDDR5 고유 — DDR5 에 없음)
-   - DQ 전송경로(링크)에서 발생하는 비트 에러를 검출/정정
+3. Data Copy (저전력 인코딩 — LPDDR5 고유, MR21)
+   - 8-Byte 데이터에 같은 패턴이 반복되면 reference data 만 한 DQ link 로 전송
+     → IO/core 전력(IDD4W/R) 절감 (DBI 와 유사한 결; "행간 메모리 복사 엔진"이 아님)
+   - Write/Read 각각 enable. Read Data Copy 활성 시 Read latency 가 늘 수 있음
+
+4. Link ECC (LPDDR5 고유 — DDR5 에 없음)
+   - DQ 전송경로(링크) 비트 에러를 parity 로 보호 (Write Link ECC=MR22 OP[5:4], Read=OP[7:6])
+     → 활성 시 RDQS_t 핀이 write 동안 parity 로 동작
      → On-die ECC(셀 내부 비트 보호)와 보호 대상이 다른 직교 기법
-     → 저전압(VDDQ 0.5V) 고속 전송의 링크 신뢰성 확보
    - On-die ECC 는 셀 누설/미세화 결함, Link ECC 는 채널/SI 결함을 담당
 
-4. 저전력 모드 (DDR5 대비 훨씬 다양)
+5. 저전력 모드 (DDR5 대비 훨씬 다양)
    - Deep Sleep: CK 정지, Self-Refresh 유지
    - Partial Array Self-Refresh (PASR): 사용 중인 array 영역만 Self-Refresh
      → 미사용 영역은 Refresh 생략 → 대폭 전력 절감 (LPDDR 고유, DDR5 에 없음)
