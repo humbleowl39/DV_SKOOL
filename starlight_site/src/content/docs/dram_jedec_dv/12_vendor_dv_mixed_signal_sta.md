@@ -117,7 +117,7 @@ bit-line (BL)   ──────┬──── BLB (bit-line bar, reference)
 
 ### 2.3 SWE 회로 — VPP boosting
 
-Word-line이 VDD가 아닌 VPP(DDR5 기준 1.8V)로 구동되는 데에는 분명한 이유가 있습니다. cell의 access transistor는 NMOS인데, gate에 VDD만 인가하면 source 전압이 (VDD − Vth)까지밖에 올라가지 못해 cell capacitor를 full level로 충전할 수 없습니다. 그래서 word-line을 VDD보다 높은 VPP로 부스팅하여 access transistor를 완전히 켜고, cell이 온전한 1을 저장하도록 보장합니다.
+Word-line이 VDD가 아닌 VPP(DDR5 기준 1.8V; LPDDR5는 VDD1≈1.8V를 word-line boost용 high-rail로 사용)로 구동되는 데에는 분명한 이유가 있습니다. cell의 access transistor는 NMOS인데, gate에 VDD만 인가하면 source 전압이 (VDD − Vth)까지밖에 올라가지 못해 cell capacitor를 full level로 충전할 수 없습니다. 그래서 word-line을 VDD보다 높은 VPP로 부스팅하여 access transistor를 완전히 켜고, cell이 온전한 1을 저장하도록 보장합니다.
 
 - Charge pump가 외부에서 받는 VPP보다 더 높은 내부 전압을 생성합니다.
 - SWE는 row 선택 시 이 VPP로 word-line을 구동합니다.

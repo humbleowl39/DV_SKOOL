@@ -10,16 +10,16 @@ title: "Ch07 퀴즈 — Refresh·tREFI/tRFC·RFM"
 
 ## 객관식
 
-:::tip[Q1. Normal-temperature DRAM의 tREFI 표준 값은? `(Remember)`]
+:::tip[Q1. LPDDR5(및 DDR5)의 normal-temperature all-bank tREFI(REF 명령 평균 간격) 표준 값은? `(Remember)`]
 - A. 1 us
-- B. 3.9 us
+- B. 3.906 us
 - C. 7.8 us
-- D. 32 ms
+- D. 488 ns
 :::
 <details>
-<summary>정답: C</summary>
+<summary>정답: B</summary>
 
-**Why**: 일반 온도 범위에서 tREFI 표준값은 7.8 µs입니다. 온도가 높아지면 커패시터 누설이 빨라져 더 자주 refresh해야 하므로, 확장 온도(extended temperature) 범위에서는 절반인 3.9 µs로 줄어듭니다. A(1 µs)는 어떤 표준에도 해당하지 않는 값이고, B(3.9 µs)는 확장 온도에서의 값이며, D(32 ms)는 DRAM refresh와 무관한 값입니다. DV에서 온도 모드를 전환하는 시나리오를 검증할 때 tREFI가 올바르게 변경되는지 확인하는 것이 중요합니다. (Ch07 §1.1)
+**Why**: tREFI는 REF 명령이 평균적으로 발급되어야 하는 *간격*입니다. LPDDR5와 DDR5의 normal-temperature all-bank tREFI는 **3.906 µs**입니다(DDR4는 7.8 µs였습니다). 온도가 높아지면 커패시터 누설이 빨라져 더 자주 refresh해야 하므로 extended temperature에서는 절반으로 줄어듭니다. A(1 µs)는 표준값이 아니고, C(7.8 µs)는 DDR4의 값이며, D(488 ns)는 LPDDR5의 **per-bank** tREFIpb(tREFIpb ≈ tREFI/8)에 해당하므로 all-bank 기준에는 틀립니다. LPDDR5는 per-bank refresh를 지원하므로 all-bank tREFI와 per-bank tREFIpb를 구분해 모델링해야 합니다. DV에서 온도 모드 전환 시 tREFI가 올바르게 변경되는지 확인하는 것이 중요합니다. (Ch07 §1.1)
 
 </details>
 :::tip[Q2. DDR5의 RFM에서 *RAA*는 무엇의 약어인가? `(Remember)`]
@@ -60,15 +60,17 @@ title: "Ch07 퀴즈 — Refresh·tREFI/tRFC·RFM"
 </details>
 ## 단답형
 
-:::tip[Q5. tRFC = 350 ns, tREFI = 7.8 us 일 때 refresh의 *bandwidth overhead*를 계산하라. Extended temp (tREFI=3.9 us, tRFC 동일) 인 경우도. `(Apply)`]
+:::tip[Q5. LPDDR5에서 tRFC(ab) = 280 ns(밀도 의존 가정값), tREFI = 3.906 us 일 때 refresh의 *bandwidth overhead*를 계산하라. Extended temp (tREFI=1.953 us, tRFC 동일) 인 경우도. `(Apply)`]
 :::
 <details>
 <summary>정답</summary>
 
-- Normal: 350 / 7800 = **4.49%**
-- Extended: 350 / 3900 = **8.97%** (거의 두 배)
+- Normal: 280 / 3906 = **7.17%**
+- Extended: 280 / 1953 = **14.34%** (거의 두 배)
 
-DV 시사점: temperature 모드 전환 시 *bandwidth 가용량*이 줄어듦. 시스템이 bandwidth-bound라면 thermal management 까지 통합 검증 필요. (Ch07 §1.2)
+(tRFC는 밀도 의존 — 단일 고정값이 아니라 density별로 다름. 위는 *연습용 가정값*.)
+
+DV 시사점: temperature 모드 전환 시 *bandwidth 가용량*이 줄어듦. LPDDR5는 per-bank refresh로 일부 bank만 refresh하며 traffic을 겹칠 수 있어 실제 overhead는 더 낮출 수 있음. 시스템이 bandwidth-bound라면 thermal management까지 통합 검증 필요. (Ch07 §1.2)
 
 </details>
 :::tip[Q6. Rowhammer 시나리오에서 *aggressor row*를 100,000번 hammer 하는 stim 후 *victim row 무결성*을 어떻게 검증하나? `(Apply)`]
@@ -97,19 +99,19 @@ covergroup `rowhammer_cg` 에 hammer count bin + RFM 발급 여부 cross. (Ch07 
 
 DRAM controller는 *정확히 tREFI 마다* REF를 발급할 수도 있지만, traffic이 *bursty* 인 경우 일부를 *나중에 모아서* 발급 가능 (spec이 *최대 8 deferred* 허용).
 
-예시 시퀀스:
+예시 시퀀스 (LPDDR5 tREFI=3.906us 기준):
 - t=0: REF (1번)
-- t=7.8us: REF 안 발급 (deferred=1)
-- t=15.6us: deferred=2
+- t=3.906us: REF 안 발급 (deferred=1)
+- t=7.812us: deferred=2
 - ... 8번까지 OK ...
-- t=62.4us: deferred=8 → *반드시 다음 tREFI 안*에 REF 8회 burst
+- t=31.25us: deferred=8 → *반드시 다음 tREFI 안*에 REF 8회 burst
 
 **Step 2 — 9 deferred 시도 시 SVA 동작**
 
 ```systemverilog
 int deferred_ref;
 time last_actual_ref;
-real tREFI_ns = 7800;
+real tREFI_ns = 3906;  // LPDDR5/DDR5 normal-temp all-bank
 
 always @(posedge clk) begin
     time elapsed = $time - last_actual_ref;
@@ -130,7 +132,7 @@ end
 
 **Step 3 — Catch 실패 시 silicon 결과**
 
-9 deferred = 70.2 us 동안 *REF 미발급*. DRAM cell cap이 *너무 오래* refresh 안 됨:
+9 deferred ≈ 35.2 us 동안 *REF 미발급*. DRAM cell cap이 *너무 오래* refresh 안 됨:
 - **Best case**: 일부 cell에서 *bit flip* — soft data corruption
 - **Worst case**: 다수 cell이 *원래 값과 다른* 값을 반환 → 메모리 손상이 *전 영역으로 확산*
 - 시스템은 *불특정 시점에 crash* 또는 *silent data corruption*

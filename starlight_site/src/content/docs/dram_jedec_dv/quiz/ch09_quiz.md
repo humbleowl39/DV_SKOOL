@@ -19,7 +19,7 @@ title: "Ch09 퀴즈 — 신뢰성·ECC·CRC·PPR"
 <details>
 <summary>정답: B</summary>
 
-**Why**: DDR5 Transparency ECC는 DRAM 셀 내부, 즉 커패시터 누설이나 soft error(방사선 입자 등)로 인한 array 내 오류를 정정하는 메커니즘입니다. 컨트롤러에 "투명"하다는 의미는 ECC 동작 자체가 컨트롤러에 보이지 않고 DRAM 내부에서 처리된다는 뜻입니다. A(DRAM↔Controller 링크)는 CRC나 Link ECC가 담당하는 영역이고, C(PCB trace)와 D(외부 cache)는 Transparency ECC의 보호 범위 밖입니다. DV에서는 ECC 동작을 MR 통계 조회로 간접 확인해야 하며, 직접적인 bit flip injection 테스트로 검증합니다. (Ch09 §3.1)
+**Why**: DDR5의 on-die(Transparency) ECC는 DRAM 셀 내부, 즉 커패시터 누설이나 soft error(방사선 입자 등)로 인한 array 내 오류를 정정하는 메커니즘입니다. 컨트롤러에 "투명"하다는 의미는 ECC 동작 자체가 컨트롤러에 보이지 않고 DRAM 내부에서 처리된다는 뜻입니다. A(DRAM↔Controller 링크)는 CRC나 Link ECC가 담당하는 영역이고, C(PCB trace)와 D(외부 cache)는 on-die ECC의 보호 범위 밖입니다. on-die ECC는 **DDR5에서 표준**으로 셀 array를 보호하며, **LPDDR5에서는 device-dependent**(디바이스에 따라 탑재 여부가 다름)라는 점이 차이입니다. DV에서는 ECC 동작을 MR 통계 조회로 간접 확인하고, 직접적인 bit flip injection 테스트로 검증합니다. (Ch09 §3.1)
 
 </details>
 :::tip[Q2. LPDDR5 *Link ECC* 가 보호하는 영역은? `(Understand)`]
@@ -31,7 +31,7 @@ title: "Ch09 퀴즈 — 신뢰성·ECC·CRC·PPR"
 <details>
 <summary>정답: B</summary>
 
-**Why**: LPDDR5 Link ECC는 컨트롤러와 DRAM 사이의 DQ 링크, 즉 물리적 핀 위의 신호를 보호합니다. A(DRAM 셀)는 DDR5 Transparency ECC의 영역이고, C(컨트롤러 내부 cache)와 D(Self Refresh 동안)는 Link ECC의 동작 범위가 아닙니다. 두 메커니즘(DDR5 Transparency ECC와 LPDDR5 Link ECC)이 보호하는 영역이 전혀 다르다는 점이 이 주제의 핵심입니다. DV에서 이 차이를 이해하지 못하면 어느 ECC가 어떤 오류를 잡는지 시나리오 설계가 잘못됩니다. (Ch09 §4.1)
+**Why**: LPDDR5 Link ECC는 컨트롤러와 DRAM 사이의 DQ 링크, 즉 물리적 핀 위의 전송 경로를 보호하며 **LPDDR5 고유 기능(DDR5에는 없음)**입니다. A(DRAM 셀)는 on-die ECC의 영역이고, C(컨트롤러 내부 cache)와 D(Self Refresh 동안)는 Link ECC의 동작 범위가 아닙니다. 두 메커니즘(셀을 보호하는 on-die ECC와 DQ 링크를 보호하는 Link ECC)은 **보호 대상이 직교(orthogonal)** — 같은 ECC가 아니라 서로 다른 오류원을 잡는다는 점이 이 주제의 핵심입니다. Link ECC는 MR22로 enable/설정하며 parity가 RDQS_t를 통해 전달됩니다. DV에서 이 차이를 이해하지 못하면 어느 ECC가 어떤 오류를 잡는지 시나리오 설계가 잘못됩니다. (Ch09 §4.1)
 
 </details>
 :::tip[Q3. *hPPR vs sPPR* 의 핵심 차이는? `(Understand)`]

@@ -34,16 +34,16 @@ title: "Ch04 퀴즈 — Mode Register 깊이 분석"
 **Why**: DDR5에서 처음으로 MRR(Mode Register Read)이 직접 명령으로 지원됩니다. DDR4는 특정 MR 값을 읽으려면 MPR(Multi-Purpose Register)을 경유하는 간접 방식을 사용했기 때문에 A와 B는 틀렸습니다. 흥미롭게도 LPDDR4와 LPDDR5는 DDR5보다 먼저 MRR을 직접 명령으로 채택했으므로 D도 틀립니다. DDR5의 직접 MRR 도입은 runtime MR 상태 조회가 훨씬 단순해졌다는 의미이며, DV에서 RAL의 frontdoor read 경로가 명확해졌습니다. (Ch04 §1.1)
 
 </details>
-:::tip[Q3. RFM 관련 MR로 옳은 것을 모두 고르시오. `(Remember)`]
-- A. MR58 (Refresh Management)
-- B. MR59 (DRFM, ARFM, RFM RAA Counter)
-- C. MR60 (Partial Array Self Refresh)
-- D. MR4 (Refresh Settings)
+:::tip[Q3. Refresh 관련 MR로 옳은 것을 모두 고르시오. `(Remember)`]
+- A. DDR5 MR58 (Refresh Management)
+- B. DDR5 MR59 (DRFM, ARFM, RFM RAA Counter)
+- C. LPDDR5 PASR (Partial Array Self Refresh — LPDDR 고유)
+- D. DDR5 MR4 (Refresh Settings)
 :::
 <details>
 <summary>정답: A, B, C, D</summary>
 
-**Why**: 네 가지 모두 refresh 관련 MR입니다. MR4는 기본 refresh 동작(tREFI 모드, tRFC 선택 등)을 제어하는 전통적인 레지스터이고, MR58(Refresh Management), MR59(RAA counter, DRFM/ARFM 설정), MR60(PASR 관련)은 DDR5에서 Rowhammer 완화와 저전력 refresh를 위해 추가된 레지스터들입니다. 모두 refresh 메커니즘과 직접 연결되어 있으므로 DV에서 refresh coverage를 설계할 때 이 MR들을 빠짐없이 포함시켜야 합니다. (Ch04 §2.2)
+**Why**: 네 가지 모두 refresh 관련 설정입니다. DDR5 MR4는 기본 refresh 동작(tREFI 모드, tRFC 선택 등)을 제어하는 전통적인 레지스터이고, MR58(Refresh Management), MR59(RAA counter, DRFM/ARFM 설정)은 DDR5에서 Rowhammer 완화를 위해 추가된 레지스터들입니다. **PASR**(Partial Array Self Refresh)는 사용하지 않는 array 영역을 self-refresh에서 제외해 전력을 줄이는 **LPDDR 고유** 기능으로(DDR5에는 없음), LPDDR5에서 MR로 array mask를 설정합니다. 모두 refresh 메커니즘과 직접 연결되어 있으므로 DV에서 refresh coverage를 설계할 때 빠짐없이 포함시켜야 합니다. (Ch04 §2.2)
 
 </details>
 :::tip[Q4. *Init-only* MR을 *런타임에 변경*하려는 시도에 대한 적절한 대응은? `(Evaluate)`]

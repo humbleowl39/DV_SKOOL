@@ -19,7 +19,7 @@ title: "Ch02 퀴즈 — 패키지·핀아웃·어드레싱"
 <details>
 <summary>정답: C</summary>
 
-**Why**: DDR5는 device당 8 Bank Group을 가집니다. DDR4가 4 BG였으므로 두 배로 늘어났습니다. A(2)나 B(4)는 DDR4 이전 세대의 값이고, D(16)는 실제 존재하지 않는 선택지입니다. BG 수가 늘어난 이유는 다른 BG로 명령을 분산할 때 더 짧은 tCCD_S 제약을 활용할 수 있어 대역폭 효율이 높아지기 때문입니다. DV 관점에서 BG 수를 잘못 알면 tCCD_L과 tCCD_S가 적용되는 경계를 잘못 모델링하여 timing coverage에 구멍이 생깁니다. (Ch02 §3.4)
+**Why**: DDR5는 device당 8 Bank Group을 가집니다(×4/×8 = 8 BG×4 = 32뱅크). DDR4가 4 BG였으므로 두 배로 늘어났습니다. A(2)나 B(4)는 DDR4 이전 세대의 값이고, D(16)는 DDR5 BG 수가 아닙니다. BG 수가 늘어난 이유는 다른 BG로 명령을 분산할 때 더 짧은 tCCD_S 제약을 활용할 수 있어 대역폭 효율이 높아지기 때문입니다. 참고로 LPDDR5는 BG 수가 고정이 아니라 MR로 BG 모드(4 BG×4=16뱅크)/8B 모드(8뱅크)/16B 모드(16뱅크) 중 하나를 선택합니다. DV 관점에서 BG 수를 잘못 알면 tCCD_L과 tCCD_S가 적용되는 경계를 잘못 모델링하여 timing coverage에 구멍이 생깁니다. (Ch02 §3.4)
 
 </details>
 :::tip[Q2. DDR5의 2-cycle command 에서 CS_n 의 동작 패턴은? `(Understand)`]
@@ -68,49 +68,48 @@ title: "Ch02 퀴즈 — 패키지·핀아웃·어드레싱"
 같은 BG의 명령 간에는 `tCCD_L` (Long) 이, 서로 다른 BG의 명령 간에는 `tCCD_S` (Short) 이 적용. 같은 BG에서 *연속 RD/WR*은 더 긴 대기. DV는 BG-aware command sequencing을 stim에 반영해야 *모든 timing path*를 cover. (Ch02 §2.3)
 
 </details>
-:::tip[Q6. DDR5 16Gb x8 device의 어드레싱이 BG[2:0)+BA[1:0)+ROW[16:0)+COL[9:0) 일 때 총 cell 수와 cache line 단위로 환산했을 때의 총 cache lines를 계산하시오. (BL16, x8 = 16-byte/burst 가정, cache line = 64B) `(Apply)`]
+:::tip[Q6. LPDDR5 16Gb x16 die가 BG mode(BG[1:0)+BA[1:0)=16뱅크)로 동작하고 어드레싱이 BG[1:0)+BA[1:0)+ROW[15:0)+COL[9:0) 일 때 총 addressable beat 수와 cache line 단위 환산값을 계산하시오. (BL16, x16 = 32-byte/burst 가정, cache line = 64B) `(Apply)`]
 :::
 <details>
 <summary>예시 답안</summary>
 
-- 총 addressable beats: 2^3 × 2^2 × 2^17 × 2^10 = 2^32
-- x8 device에서 BL16 한 access = 16 bytes
-- cache line = 64B = 4× one device burst
-- 따라서 device 한 개로 cache line 환산: 2^32 / 4 = 2^30 = **1G cache lines**
-- 총 cell bit 수: 2^32 × 8 = 32 Gbit (가정상)
+- 총 addressable beats: 2^2 × 2^2 × 2^16 × 2^10 = 2^30
+- x16 die에서 BL16 한 access = 32 bytes
+- cache line = 64B = 2× one die burst
+- 따라서 die 한 개로 cache line 환산: 2^30 / 2 = 2^29 = **512M cache lines**
+- 총 cell bit 수: 2^30 × 16 = 16 Gbit (가정상)
 
-(실제 16Gb device 는 capacity 표기 기준. 위는 *어드레싱 계산* 연습.)
+(LPDDR5는 BG/8B/16B 모드를 MR로 선택. 위 계산은 BG mode 기준 *어드레싱 계산* 연습이며, 8B/16B 모드에서는 BG 비트가 BA 비트로 재배치됨.)
 
 </details>
 ## 대표 문제
 
-:::tip[Q7. controller IP가 BL16 burst를 발급하는데, *실제 cycle-by-cycle DQ 동작*을 추적. DDR5-6400, tCK=0.3125ns, CL=46 nCK. cycle 0에 RD 발급 시 BL16 동안 DQ에 데이터가 valid한 *절대 시간*과 *몇 ns 동안*인지 계산. `(Apply)`]
+:::tip[Q7. LPDDR5 controller IP가 BL16 burst를 발급하는데, *실제 DQ 동작*을 추적. WCK:CK=4:1 gear, tWCK=0.3125ns(WCK 기준), CK는 4×느림. CL=46 tCK(여기서 tCK=CK 주기=1.25ns). CK cycle 0에 RD 발급 시 BL16 동안 DQ가 valid한 *절대 시간*과 *몇 ns 동안*인지 계산. `(Apply)`]
 :::
 <details>
-<summary>풀이 (cycle dry-run)</summary>
+<summary>풀이 (WCK/CK dry-run)</summary>
 
 
 **Step 1 — 명령 발급 시점**
-- DDR5 RD는 2-cycle 명령. cycle 0-1에 RD 인코딩 발급
-- 실제 명령 *완료* = cycle 1 끝
+- LPDDR5 명령은 CK(저속, 차동) 기준으로 발급. RD는 CA[6:0] 다중사이클 인코딩
+- 명령 *완료* = RD 인코딩 끝 (CK cycle 0 기준으로 잡음)
 
 **Step 2 — Data 도착 시점**
-- CL = 46 nCK → 명령 발급 후 46 nCK 후 data
-- 첫 beat = cycle 1 + 46 = cycle 47
-- 절대 시간 = 47 × 0.3125ns = **14.6875 ns**
+- CL = 46 tCK(CK 주기) → 명령 발급 후 46 × 1.25ns = **57.5 ns** 후 첫 beat
+- (데이터 전송 자체는 고속 WCK 도메인에서 일어남 — CL은 CK 기준으로 카운트)
 
 **Step 3 — BL16 의 burst 지속 시간**
-- BL16 = 16 beats
-- DDR이므로 each half-clock = 1 beat → 16 beats = 8 nCK = 8 × 0.3125ns = **2.5 ns**
+- BL16 = 16 beats, 데이터는 WCK의 양 edge로 전송 (DDR)
+- 16 beats = 8 WCK cycle = 8 × 0.3125ns = **2.5 ns**
 
 **Step 4 — Burst 종료 시점**
-- 종료 = 14.6875 + 2.5 = **17.1875 ns**
+- 종료 = 57.5 + 2.5 = **60.0 ns**
 
 **Step 5 — DV 시사점**
-- Monitor의 *DQ sample window* = 14.69ns ~ 17.19ns
-- Preamble은 *RD 명령 후 CL 직전*에 (preamble 길이만큼 더 전에 시작)
-- Postamble은 *17.19ns 이후* 1 nCK 정도
-- SVA: `tCL = 46 nCK` 정확히 — controller가 어떤 cycle에 data를 *기대*하는지 정확히 검증 가능
+- Monitor의 *DQ sample window* = 57.5ns ~ 60.0ns, 단 sampling 기준은 **WCK** (CK 아님)
+- WCK는 RD 이전에 toggle 시작해야 함 — WCK preamble/CAS-WCK-Sync 구간이 CL 직전에 존재
+- gear가 WCK:CK=2:1로 바뀌면 같은 BL16이라도 WCK 주기가 달라져 burst 절대 시간이 변함 → DVFSC gear 전환마다 재계산 + WCK2CK 재정렬
+- SVA: WCK가 CK와 정렬(WCK2CK leveling 완료)된 뒤에만 RD data 유효 — gear별로 parameter화
 
 </details>
 ---

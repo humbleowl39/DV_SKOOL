@@ -47,12 +47,13 @@ Refresh가 throughput에 미치는 영향과 완화 기법은?
 <details>
 <summary>정답 / 해설</summary>
 
-**영향**: Refresh 명령이 발행되는 동안 해당 bank(또는 디바이스 전체)에 대한 access가 차단된다. tREFI마다 한 번씩 발생하는 이 stall이 평균 1~2% throughput 손실로 나타나며, 고집적·고온 환경처럼 refresh 빈도가 높아지면 손실이 더 커진다.
+**영향**: Refresh 명령이 발행되는 동안 해당 bank(또는 디바이스 전체)에 대한 access가 차단된다. tREFI(REF 명령의 평균 발행 간격, LPDDR5/DDR5 = 3.9 μs)마다 한 번씩 발생하는 이 stall이 평균 1~2% throughput 손실로 나타나며, 고집적·고온 환경처럼 refresh 빈도가 높아지면 손실이 더 커진다.
 
 **완화**:
-- **Per-bank refresh**: 특정 bank만 refresh 중에도 나머지 bank는 정상 동작하므로 stall 영향을 분산한다.
+- **Per-bank refresh**: 특정 bank만 refresh 중에도 나머지 bank는 정상 동작하므로 stall 영향을 분산한다. LPDDR5와 DDR5 모두 지원한다.
 - **Fine-grain refresh**: refresh를 작은 단위로 쪼개 한 번의 stall 시간을 줄인다. 짧은 stall이 자주 발생하지만 worst-case latency spike를 완화한다.
 - **Postponed refresh**: traffic 집중 구간에 refresh를 잠시 미루고 idle 시 보충한다. 단, JEDEC 규격에서 허용하는 최대 지연 횟수를 초과하면 cell 데이터가 손실되는 retention 위험이 있다.
+- **PASR (Partial Array Self-Refresh)**: LPDDR5 고유 기능으로, 사용하지 않는 배열 구간의 self-refresh를 꺼 idle 전력을 줄인다. DDR5에는 없으며, MC가 사용 중인 영역만 refresh 대상으로 관리해야 한다.
 
 </details>
 ## Q5. (Evaluate)

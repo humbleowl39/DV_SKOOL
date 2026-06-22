@@ -43,7 +43,7 @@ title: "Ch06 퀴즈 — Timing·Preamble·Postamble"
 <details>
 <summary>정답: B</summary>
 
-**Why**: DDR5처럼 데이터 속도가 높아지면 한 비트의 유효 시간이 짧아지고 수신측의 DQS 타이밍 락 여유가 줄어듭니다. 더 긴 preamble을 제공하면 수신측이 DQS를 안정적으로 캡처하는 데 충분한 시간이 생겨 sampling 마진이 확보됩니다. A(보안)·C(대역폭 절약)·D(ECC 강화)는 preamble의 목적과 무관합니다. 오히려 preamble이 길어지면 overhead가 늘어나므로 C와도 반대입니다. DV에서는 preamble 패턴이 스펙에 맞는 bit 시퀀스를 갖는지 monitor가 signal level에서 검증해야 합니다. (Ch06 §4)
+**Why**: DDR5처럼 데이터 속도가 높아지면 한 비트의 유효 시간이 짧아지고 수신측의 strobe 타이밍 락 여유가 줄어듭니다. 더 긴 preamble을 제공하면 수신측이 strobe를 안정적으로 캡처하는 데 충분한 시간이 생겨 sampling 마진이 확보됩니다. A(보안)·C(대역폭 절약)·D(ECC 강화)는 preamble의 목적과 무관합니다. 오히려 preamble이 길어지면 overhead가 늘어나므로 C와도 반대입니다. 참고로 LPDDR5는 데이터 strobe로 DQS가 아니라 **WCK**를 쓰며, RD 직전에 WCK가 toggle을 시작하는 WCK preamble과 CAS-WCK-Sync 구간이 같은 역할을 합니다. DV에서는 preamble 패턴이 스펙에 맞는 bit 시퀀스를 갖는지 monitor가 signal level에서 검증해야 합니다. (Ch06 §4)
 
 </details>
 :::tip[Q4. *Same BG* 의 CAS-to-CAS 제약은? `(Remember)`]
@@ -84,7 +84,7 @@ title: "Ch06 퀴즈 — Timing·Preamble·Postamble"
 </details>
 ## 대표 문제
 
-:::tip[Q7. DDR5-6400, tCK=0.3125ns, tRCD=28 nCK, CL=46 nCK, BL=16. *4 banks 에 back-to-back ACT-RD 시퀀스*를 발급할 때, tFAW=13 ns 가정. 시퀀스가 *spec 안*에 들어가도록 *최소 시간*에 모두 끝나려면 어떻게 schedule해야 하는가? `(Apply, Evaluate)`]
+:::tip[Q7. LPDDR5 BG mode(4 BG), tCK=0.3125ns(편의상 nCK 단위로 계산), tRCD=28 nCK, CL=46 nCK, BL=16. *4 banks 에 back-to-back ACT-RD 시퀀스*를 발급할 때, tFAW=13 ns 가정. 시퀀스가 *spec 안*에 들어가도록 *최소 시간*에 모두 끝나려면 어떻게 schedule해야 하는가? `(Apply, Evaluate)`]
 :::
 <details>
 <summary>풀이 (multi-bank scheduling dry-run)</summary>
@@ -96,7 +96,7 @@ title: "Ch06 퀴즈 — Timing·Preamble·Postamble"
 
 **Step 2 — 다른 BG로 분산해 tRRD_S/tCCD_S 활용**
 - ACT-ACT 다른 BG: tRRD_S 적용 — 보통 tRRD_S < tRRD_L
-- 4 ACTs 가 모두 다른 BG라면? DDR5는 8 BG라 가능 → tRRD_S 만 적용
+- 4 ACTs 가 모두 다른 BG라면? LPDDR5 BG mode는 4 BG라 정확히 4개를 각기 다른 BG에 배치 가능 → tRRD_S 만 적용 (DDR5라면 8 BG라 더 여유)
 - 그러나 *tFAW = 13 ns* 제약이 더 강함
 
 **Step 3 — tFAW 가 binding 제약**

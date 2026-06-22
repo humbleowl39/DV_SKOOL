@@ -70,6 +70,22 @@ Cycle 1 (CA[6:0]):  OPCODE 나머지 + 나머지 주소
 :::caution[DV 함정 — DDR5 monitor 설계]
 DDR5 명령은 *2 클럭 윈도우*로 보아야 합니다. monitor가 cycle 0 만 보고 명령을 reconstruct하면 *명령이 부분적*이고 ADDR이 잘못 인코딩됩니다.
 :::
+
+#### LPDDR5 — 별개의 CA 프로토콜 (DDR5의 변형이 아님)
+
+:::note[LPDDR5 명령은 DDR5와 *다른* 프로토콜 — '더 복잡한 DDR5'가 아니다]
+본 교재의 주축은 LPDDR5입니다. LPDDR5의 command 프로토콜은 DDR5의 2-cycle 인코딩을 그대로 가져와 복잡하게 만든 것이 *아니라*, **별개의 CA 구조**입니다.
+
+| 항목 | DDR5 | **LPDDR5 (주축)** |
+|---|---|---|
+| CA 폭 | CA[13:0] | **CA[6:0]** (좁음) |
+| 신호 방식 | (CA 차동 기준 signaling) | **단일종단(single-ended)** |
+| 명령 길이 | 1-cycle / 2-cycle 혼재 | **multi-cycle** (좁은 CA를 여러 사이클에 분할) |
+| CA training | CA / CS Training | **CBT (Command Bus Training) 필수** — CA[6:0]가 좁고 단일종단이라 |
+| 클럭 | 단일 CK + DQS | **CK(명령, 저속 차동) + WCK(데이터, 고속)** 분리 |
+
+즉 LPDDR5 monitor는 DDR5 monitor를 재사용할 수 없습니다 — CA 폭, 사이클 수, 단일종단 샘플링, WCK 동기화가 모두 다릅니다. (DDR5 §10의 CA[13:0] truth table은 *DDR5 전용*입니다.)
+:::
 ---
 
 ## 2. DDR5 2-Cycle Command 인코딩 — 자세히
@@ -108,12 +124,14 @@ DDR5에서 *NOP*과 *DES (Deselect)* 처럼 1-cycle 인 것과 *ACT/RD/WR/PRE/RE
 
 ### 3.1 Burst Length 옵션
 
-| 표준 | BL 옵션 |
-|---|---|
-| DDR4 | BL8 (default), BC4 (Burst Chop 4) |
-| DDR5 | **BL16 (default), BL32 (optional)** |
-| LPDDR4 | BL16, BL32 |
-| LPDDR5 | BL16, BL32 |
+| 표준 | Prefetch | BL 옵션 |
+|---|---|---|
+| **LPDDR5 (주축)** | **16n** | **BL16, BL32** |
+| DDR5 | 16n | BL16 (default), **BC8** (Burst Chop 8), BL32 (optional) |
+| LPDDR4 | 16n | BL16, BL32 |
+| DDR4 | 8n | BL8 (default), BC4 (Burst Chop 4) |
+
+> **Prefetch / Burst 값 정리**: LPDDR은 LPDDR4부터 **16n prefetch**(BL16 기본), DDR5도 **16n**, DDR4만 **8n**(BL8 기본)입니다. DDR5의 chop은 **BC8**(BL8이 아님 — §10.5 Table 32 참조)이고, DDR4의 chop은 BC4입니다. 혼동 주의.
 
 ### 3.2 DDR5 BL16 동작
 
@@ -140,6 +158,14 @@ RD with BL32:
 ```
 
 BL32를 쓰면 명령 overhead가 줄어든다는 장점이 있습니다. 같은 양의 데이터를 두 번의 BL16 명령으로 전송할 경우 두 번의 명령 overhead가 발생하지만, BL32 하나로 전송하면 명령 1회분의 overhead만 소모합니다. 대용량 sequential read, 예를 들어 DMA copy 같은 워크로드에서 유리합니다. 그러나 burst 도중 다른 bank에 접근하거나 burst를 중단하기가 어렵다는 단점이 있어, latency가 중요하거나 bank 전환이 잦은 경우에는 BL16이 더 적합합니다. DV는 두 모드 모두 coverage에 잡아야 합니다.
+
+:::note[LPDDR5 burst (주축) — BL16/BL32, WCK 기준]
+LPDDR5도 **BL16 / BL32** 를 지원하며 prefetch는 **16n**입니다. 단, 데이터 타이밍 기준이 DDR5와 다릅니다.
+
+- LPDDR5 burst의 beat는 **WCK**(고속 데이터 클럭) 기준으로 토글합니다 — DDR5처럼 CK/DQS 기준이 아닙니다.
+- WCK:CK 비(2:1 또는 4:1)는 **DVFSC gear**에 따라 달라지므로, 같은 BL16이라도 *CK 대비* 데이터 전송에 걸리는 명령 클럭 수가 gear에 따라 변합니다.
+- 따라서 LPDDR5 scoreboard/monitor는 burst beat를 **WCK domain**에서 카운트하고, CAS-WCK Sync(§9)로 WCK가 CK에 정렬돼 있는지 cross-check해야 합니다.
+:::
 
 ### 3.4 Burst Order
 
@@ -659,8 +685,9 @@ a_tppd: assert property (p_tppd);
 ## 11. 핵심 정리 (Key Takeaways)
 
 - DRAM 명령은 본질적으로 7개 (ACT/RD/WR/PRE/REF/MRW/MRR) + 보조 (ZQ, NOP, DES, PDE/PDX).
+- **LPDDR5(주축) 명령 프로토콜은 DDR5와 별개**: **CA[6:0] 단일종단 multi-cycle + CBT 필수 + CK/WCK 분리**. DDR5의 CA[13:0] 2-cycle 인코딩과 다르므로 monitor 재사용 불가 — "더 복잡한 DDR5"가 아니다.
 - DDR5는 *2-cycle command* — CA[13:0]에 2 클럭에 걸쳐 인코딩. **CA1 비트가 1-cycle vs 2-cycle 식별자**. CS_n의 *2-cycle 윈도우*가 핵심.
-- BL16이 default, BL32는 옵션 (sequential 대량 전송 시 유리). **DDR5는 sequential burst 만 지원** (interleaved 폐기).
+- **Prefetch/BL**: LPDDR5=16n(BL16/BL32), DDR5=16n(BL16 기본 +**BC8** chop, BL32 옵션), LPDDR4=16n, DDR4=8n(BL8). LPDDR5 burst beat는 **WCK domain**에서 카운트(gear별 WCK:CK 변동). **DDR5는 sequential burst 만 지원** (interleaved 폐기).
 - DDR5의 **3 PRE 모드**: PREab (All), PREsb (Same Bank), PREpb (Per-Bank). DDR4의 PREsb는 신규.
 - **2-Cycle Command Cancel**: ACT/WRP/WRPA/MRW는 2nd cycle CS_n LOW면 cancel. **tCMD_cancel = 8 nCK** 이후에 다음 명령. 단, cancel 후 *legal sequence*는 host가 보장 (예: ACT cancel 후 PRE 없이 MRR 불가).
 - **NOP vs DES**: NOP는 valid 명령 (timing 제약 적용), DES는 non-command.

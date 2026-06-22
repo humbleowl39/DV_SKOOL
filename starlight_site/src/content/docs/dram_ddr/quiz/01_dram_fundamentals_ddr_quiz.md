@@ -1,5 +1,5 @@
 ---
-title: "Quiz — Module 01: DRAM Fundamentals + DDR4/5"
+title: "Quiz — Module 01: DRAM Fundamentals + LPDDR5"
 ---
 
 [← Module 01 본문으로 돌아가기](../../01_dram_fundamentals_ddr/)
@@ -30,16 +30,18 @@ ACT → RD → PRE 명령 시퀀스에서 각 명령의 역할은?
 </details>
 ## Q3. (Apply)
 
-DDR4 vs DDR5 핵심 차이 4가지를 들어보세요.
+LPDDR5가 직전 세대(LPDDR4)와 서버용 DDR5에 대비해 갖는 핵심 차이 5가지를 들어보세요.
 
 <details>
 <summary>정답 / 해설</summary>
 
-1. **2-channel split**: DDR5는 64-bit 단일 채널을 32-bit 채널 두 개로 분리했다. 이로써 CPU/SoC가 두 채널을 독립적으로 스케줄하면 서버·HPC 환경에서 유효 대역폭을 두 배로 활용할 수 있다.
-2. **Bank Group 확대 (4→8)**: 같은 BG 내 연속 접근에는 tCCD_L, 다른 BG 간에는 짧은 tCCD_S가 적용된다. BG가 8개로 늘면 스케줄러가 다른 BG로 분산할 기회가 넓어져 throughput이 증가한다.
-3. **On-die ECC 표준화**: DDR5는 JEDEC에서 SECDED on-die ECC를 필수로 규정했다. DDR4는 외부 ECC 칩이 선택사항이었지만, DDR5는 DRAM 내부에서 1-bit 오류를 자동 수정하므로 데이터 신뢰도가 높아졌다.
-4. **VDD 인하 (1.2V → 1.1V)**: 셀당 소비 전력이 줄고 발열이 감소한다. 고집적 서버 메모리에서 전력 밀도를 낮추는 데 직접적으로 기여한다.
-5. **Refresh granularity 향상**: tREFI가 DDR4 7.8 μs에서 DDR5 3.9 μs로 짧아졌고, per-bank refresh 지원으로 refresh stall 영향을 분산할 수 있다.
+1. **WCK/CK 분리 클럭**: LPDDR5는 명령/주소용 저속 차동 CK와 데이터용 고속 **WCK**를 분리하고, gear에 따라 WCK:CK = 2:1 또는 4:1로 동작한다. 이는 단일 CK + DQS를 쓰는 DDR5와 구분되는 LPDDR5의 정체성으로, 데이터 idle 구간에 WCK 토글을 멈춰 전력을 절감한다.
+2. **유연한 뱅크 구성**: LPDDR5는 MR(Mode Register)로 뱅크 모드를 선택한다 — **BG 모드(4 BG × 4 = 16뱅크) / 8B 모드(8뱅크) / 16B 모드(16뱅크)**. 직전 세대 LPDDR4는 BG가 없는 8뱅크였고, 서버용 DDR5는 8 BG × 4 = 32뱅크로 고정이다.
+3. **이중 ECC (직교)**: LPDDR5는 셀 내부 비트를 정정하는 **On-die ECC**(디바이스 의존)와, DQ 전송경로를 보호하는 **Link ECC**(LPDDR5 고유, DDR5에는 없음)를 모두 지원한다. 둘은 보호 대상이 달라 서로 직교하므로 함께 쓸 수 있다.
+4. **저전압 IO**: LPDDR5는 VDD1=1.8V, VDD2H≈1.05V, **VDDQ=0.5V**로 IO 전압을 크게 낮춰 모바일 전력 효율을 높였다. 비교로 DDR5는 VDD=1.1V·VPP=1.8V, LPDDR4X는 VDDQ=0.6V다.
+5. **DVFSC + PASR**: LPDDR5는 동적 주파수/전압 gear(F0~F4 등, DVFSC)로 운용 중 주파수를 바꾸며, gear 전환 시 WCK:CK 비가 바뀌어 WCK2CK 재정렬이 필요하다. 또한 **PASR**(Partial Array Self-Refresh)로 사용하지 않는 배열의 refresh를 꺼 self-refresh 전력을 줄인다 — 이는 LPDDR 고유 기능으로 DDR5에는 없다.
+
+(참고) Refresh granularity: tREFI(REF 명령 평균 간격)는 LPDDR5/DDR5 모두 3.9 μs, DDR4는 7.8 μs이며, LPDDR5는 per-bank refresh를 지원한다.
 
 </details>
 ## Q4. (Analyze)
@@ -59,6 +61,34 @@ LPDDR5에서 WCK를 CK와 분리한 동기는?
 <details>
 <summary>정답 / 해설</summary>
 
-**전력 절감**이 핵심 목적이다. LPDDR5의 데이터 레이트는 수 Gbps에 달하지만, 명령/주소 버스(CK)는 그보다 낮은 주파수로도 충분히 동작한다. 만약 단일 클럭을 쓰면 CK도 데이터 속도에 맞춰 고주파로 토글해야 하므로 불필요한 dynamic 전력이 낭비된다. WCK를 분리하면 데이터 전송이 없는 idle 구간에 WCK 토글을 멈출 수 있어, 모바일·엣지 환경에서 중요한 추가 절감 효과를 얻는다.
+**전력 절감**이 핵심 목적이다. LPDDR5의 데이터 레이트는 수 Gbps에 달하지만, 명령/주소 버스(CK)는 그보다 낮은 주파수로도 충분히 동작한다. 만약 단일 클럭을 쓰면 CK도 데이터 속도에 맞춰 고주파로 토글해야 하므로 불필요한 dynamic 전력이 낭비된다. WCK를 분리하면 데이터 전송이 없는 idle 구간에 WCK 토글을 멈출 수 있어, 모바일·엣지 환경에서 중요한 추가 절감 효과를 얻는다. WCK:CK 비는 gear에 따라 2:1 또는 4:1이며, DVFSC로 gear가 바뀌면 이 비도 바뀌어 WCK2CK 재정렬(leveling)이 다시 필요하다.
+
+</details>
+## Q6. (Analyze)
+
+LPDDR5의 뱅크 구성과 prefetch는 직전 세대 LPDDR4 및 서버용 DDR5와 어떻게 다른가?
+
+<details>
+<summary>정답 / 해설</summary>
+
+- **뱅크 구성**: LPDDR5는 MR로 모드를 선택한다 — **BG 모드(4 BG × 4 = 16뱅크), 8B 모드(8뱅크), 16B 모드(16뱅크)**. 동일 BG 내 연속 접근에는 긴 tCCD_L, 다른 BG 간에는 짧은 tCCD_S가 적용되므로, BG 모드는 BG 분산으로 throughput을 높일 수 있는 반면 8B/16B 모드는 BG 제약 없이 단순한 스케줄링을 제공한다. 비교로 LPDDR4는 BG 없는 8뱅크 고정이고, DDR5(×4/×8)는 8 BG × 4 = 32뱅크 고정이다.
+- **Prefetch**: LPDDR5는 **16n prefetch**(BL16), 그리고 BL32 모드를 지원한다. LPDDR4도 이미 16n이며, DDR5도 16n(BL16, +BC8 chop), DDR4는 8n(BL8)이다. 즉 prefetch 16n은 LPDDR4 세대부터의 특징이지 DDR5만의 신규 항목이 아니다.
+
+검증 관점에서는 동작 중 선택된 뱅크 모드에 따라 BG 타이밍(tCCD_L/S) 적용 여부와 bank conflict 시나리오가 달라지므로, 세 모드 각각에 대한 테스트 벡터를 분리해 커버해야 한다.
+
+</details>
+## Q7. (Evaluate)
+
+LPDDR5의 On-die ECC와 Link ECC가 "직교(orthogonal)"하다는 말의 의미는? 둘 중 하나로 다른 하나를 대체할 수 있는가?
+
+<details>
+<summary>정답 / 해설</summary>
+
+대체할 수 **없다**. 둘은 보호 대상이 서로 다르기 때문이다.
+
+- **On-die ECC**: DRAM 다이 내부의 셀 비트 오류(retention 약화, 미세 결함 등)를 정정한다. SECDED 형태로 DRAM 내부에서 투명하게 동작하며, DDR5에서는 표준이고 LPDDR5에서는 디바이스 의존이다. 보호 범위는 셀~센스앰프 경로에 한정된다.
+- **Link ECC**: MC와 DRAM 사이의 **DQ 전송경로**에서 발생하는 비트 오류(채널 노이즈, ISI, crosstalk)를 보호한다. 이는 LPDDR5 고유 기능으로 DDR5에는 없으며, 셀 내부가 아니라 "링크"를 보호한다.
+
+따라서 셀 내부가 완벽해도 채널이 나쁘면 Link ECC가 필요하고, 채널이 완벽해도 셀이 약하면 On-die ECC가 필요하다 — 보호 구간이 겹치지 않으므로 직교적이며, 신뢰도를 위해 둘을 함께 사용한다. 검증에서는 각각에 대해 별도의 error injection 시나리오(셀 비트 fault vs DQ 라인 fault)를 구성해야 한다.
 
 </details>

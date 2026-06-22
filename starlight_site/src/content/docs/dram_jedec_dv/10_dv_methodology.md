@@ -95,8 +95,15 @@ class ddr5_mem_ref_model extends uvm_object;
     bit [127:0] mem[longint];
 
     // Per-bank state — for spec compliance check
+    // NOTE: 배열 크기는 *반드시 parameterize* 할 것. 아래는 DDR5 예시
+    //       (8 BG × 4 BA × 8 ranks = 256)로 *하드코딩하면 LPDDR5에서 틀림*.
+    //   LPDDR5 뱅크 구성은 MR로 모드 선택 — BG 모드(4 BG×4 = 16 banks) /
+    //   8B 모드(8 banks) / 16B 모드(16 banks), 일반적으로 1~2 ranks.
+    //   → NUM_BANKS = (mode==BG ? 16 : mode==B8 ? 8 : 16) × NUM_RANKS 로 산출.
+    //   DDR5(×4/×8) = 8 BG × 4 = 32 banks/rank. spec/density별로 달라지므로
+    //   localparam 또는 config로 받아 sizing 해야 함.
     typedef enum {BANK_IDLE, BANK_ACTIVE, BANK_REFRESH} bank_state_e;
-    bank_state_e bank_st[256];      // 8 BG × 4 BA × 8 ranks = 256
+    bank_state_e bank_st[256];      // (DDR5 예시) 8 BG × 4 BA × 8 ranks = 256
     bit [16:0]   bank_active_row[256];
 
     function new(string name = "ddr5_mem_ref_model");
@@ -104,8 +111,11 @@ class ddr5_mem_ref_model extends uvm_object;
         foreach (bank_st[i]) bank_st[i] = BANK_IDLE;
     endfunction
 
+    // NOTE: index 산식의 상수(32, 4)도 DDR5 가정. LPDDR5 BG 모드는
+    //       rank당 16 banks (4 BG × 4)이고 8B/16B 모드는 BG 개념이 다르므로,
+    //       BANKS_PER_RANK / BANKS_PER_BG 를 param으로 빼서 일반화할 것.
     function int bank_idx(int bg, int ba, int rank);
-        return (rank * 32) + (bg * 4) + ba;
+        return (rank * 32) + (bg * 4) + ba;   // (DDR5 예시) 32 = banks/rank, 4 = banks/BG
     endfunction
 
     // ACT — open row
@@ -141,9 +151,28 @@ class ddr5_mem_ref_model extends uvm_object;
 endclass
 ```
 
+:::caution[LPDDR5 reference model — DDR5 density에 하드코딩하지 말 것]
+위 skeleton은 *DDR5 구성* 예시입니다. LPDDR5로 재사용하려면 **반드시 parameterize** 해야 합니다.
+
+- **Bank 구성**: LPDDR5는 MR로 *모드 선택* — BG 모드(4 BG × 4 = **16 banks**) / 8B 모드(**8 banks**) / 16B 모드(**16 banks**), 일반적으로 **1~2 ranks**. DDR5(8 BG × 4 = 32 banks/rank, 다수 rank)와 다름.
+- `bank_st[256]`, `bank_idx()` 의 상수(256, 32, 4)는 DDR5 전제 — `NUM_RANKS`, `BANKS_PER_RANK`, `BANKS_PER_BG` 를 localparam/config로 받아 산출.
+- 모드 전환(BG↔8B↔16B)은 *재초기화* 가 필요하므로, model도 모드별로 state를 재구성해야 함.
+:::
+
 ### 2.3 Reference model의 위치 — scoreboard 안 또는 별도
 
 권장: *별도 component*. scoreboard는 *비교 전담*, reference model은 *상태 추적 전담*.
+
+### 2.4 LPDDR5 고유 DV 축 — 메서돌로지에 반드시 포함
+
+LPDDR5 검증은 DDR5에 없는 *고유 축* 을 추가로 모델링·검증해야 합니다. 이들은 agent/monitor/scoreboard/SVA 책임 분배에 직접 영향을 줍니다.
+
+| LPDDR5 DV 축 | 무엇 | 검증 책임 |
+|---|---|---|
+| **WCK2CK** | 데이터용 고속 WCK와 명령용 CK의 위상 정렬 (WCK:CK = 2:1/4:1, gear 의존) | monitor가 WCK sync bit 해석, SVA가 정렬 전 RD/WR 금지 검사 |
+| **DVFSC gear** | 동적 주파수/전압 gear(FSP) 전환. gear 변경 시 WCK:CK 비율 변경 → WCK2CK 재정렬 | vseq가 FSP 전환 *원자적* 수행, SVA가 partial-state 금지 검사 |
+| **PASR** | 부분 배열 self-refresh (LPDDR 고유, DDR5에 없음) — 미refresh 영역은 data 손실 허용 | reference model이 PASR 영역 추적, scoreboard가 해당 영역 read를 *don't-compare* |
+| **Link ECC** | DQ 링크 ECC (LPDDR5 고유). DBI와 *순서* 정의됨 | scoreboard가 encode/decode 순서를 정확히 모델링 (Ch09 §4 참조) |
 
 ---
 

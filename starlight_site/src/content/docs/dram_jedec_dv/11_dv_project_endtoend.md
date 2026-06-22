@@ -729,8 +729,9 @@ DDR5 검증 환경을 *parameterize* 해 LPDDR5도 지원하도록:
 | `ddr5_transaction.sv` | CAS WCK Sync bits 필드 추가 |
 | `ddr5_driver.sv` | WCK toggle + WCK2CK Sync 동작 |
 | `ddr5_monitor.sv` | WCK 클럭 도메인 capture |
+| Memory reference model | Bank 배열을 LPDDR5 모드(BG 16 / 8B 8 / 16B 16 banks)로 *parameterize* — DDR5의 32 banks/rank 하드코딩 금지 |
 | Training sequences | CBT Mode1/Mode2 추가, WCK2CK Leveling |
-| Scoreboard | Link ECC encoding/decoding 모델 추가 |
+| Scoreboard | Link ECC encoding/decoding 모델 추가 (LPDDR5 고유, DBI와 순서 정의), PASR 영역 don't-compare |
 | Coverage | DVFS FSP 전환 bin 추가 |
 | SVA | CBT entry-after-traffic 금지 등 |
 

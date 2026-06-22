@@ -34,16 +34,16 @@ title: "Ch03 퀴즈 — 초기화·Reset·Power 시퀀스"
 **Why**: DDR5는 power-up 시퀀스 안에 CS training이 포함되어 있습니다. LPDDR4/5에서는 같은 목적의 교정을 CBT(Command Bus Training)라는 별도의 절차로 수행하므로, CS training이 power-up 안에 내장된 것이 DDR5만의 특징입니다. A(RESET_n LOW), C(CKE HIGH), D(MRW)는 DDR5와 LPDDR4/5가 모두 수행하는 공통 단계여서 "DDR5만 다른 단계"가 아닙니다. DV 관점에서 CS training을 UVM phase에 올바르게 배치하지 않으면 초기화 시퀀스 coverage가 빠집니다. (Ch03 §3.2)
 
 </details>
-:::tip[Q3. LPDDR5의 dual VDD2 rail (Vdd2H/Vdd2L) 의 도입 이유는? `(Understand)`]
+:::tip[Q3. LPDDR5의 전압/주파수 스케일링(DVFSC) 도입 이유는? `(Understand)`]
 - A. 보안 강화
-- B. 전력 효율 (DVFS 지원)
+- B. 전력 효율 (동적 주파수/전압 gear 지원)
 - C. ECC 보호 강화
 - D. PoP 패키지 호환
 :::
 <details>
 <summary>정답: B</summary>
 
-**Why**: LPDDR5의 DVFS는 동작 주파수를 런타임에 전환하는데, 각 주파수 구간에 최적화된 전압 레벨이 다릅니다. Vdd2H(고주파 고전압)와 Vdd2L(저주파 저전압)을 분리하면 주파수 전환 시 필요한 전압 레일만 빠르게 변경할 수 있어 전환 속도와 전력 효율이 모두 향상됩니다. A(보안)·C(ECC)·D(PoP)는 dual VDD2의 도입 이유와 무관합니다. DV에서는 DVFS 전환 시나리오에서 두 전압 레일의 전환 순서와 timing이 올바른지를 반드시 검증해야 합니다. (Ch03 §5.1)
+**Why**: LPDDR5는 **DVFSC**(core 도메인의 동적 주파수/전압 스케일링)로 동작 주파수를 런타임에 gear(F0~F4 등)로 전환하며, 각 gear에 최적화된 전압 레벨이 다릅니다. 주파수가 낮은 gear에서는 전압을 낮춰 전력을 절감하므로 전환 속도와 전력 효율이 모두 향상됩니다. 참고로 LPDDR5 전원은 VDD1=1.8V, VDD2(H)≈1.05V, VDDQ=0.5V이며, 저주파 gear에서 VDD2를 낮춘 레일(VDD2L)을 두는 구현도 있습니다(*디바이스/구현 의존 — 추론*). A(보안)·C(ECC)·D(PoP)는 DVFSC의 도입 이유와 무관합니다. DVFSC와 별개로 VDDQ만 스케일링하는 **DVFSQ**도 있고, gear/전압 조합은 **FSP**(Frequency Set Point)로 관리됩니다. DV에서는 gear 전환 시나리오에서 전압 레일 전환 순서·timing과 WCK2CK 재정렬이 올바른지 검증해야 합니다. (Ch03 §5.1)
 
 </details>
 :::tip[Q4. Power-up 후 CKE=0 상태에서 controller가 MRW를 발급하면? `(Analyze)`]

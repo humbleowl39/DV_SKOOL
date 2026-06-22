@@ -22,16 +22,16 @@ title: "Ch05 퀴즈 — Command·Truth Table·Burst Operation"
 **Why**: CMP(Compare)는 DRAM 명령 집합에 존재하지 않습니다. DRAM의 핵심 명령 7가지는 ACT(Activate), RD(Read), WR(Write), PRE(Precharge), REF(Refresh), MRW(Mode Register Write), MRR(Mode Register Read)입니다. A·B·D는 모두 이 목록에 실제로 존재하는 명령이므로 오답입니다. DV 관점에서 이 7가지 명령에 대한 발급 가능/불가능 상태를 bank FSM과 함께 모델링하는 것이 command coverage의 기초입니다. (Ch05 §1.1)
 
 </details>
-:::tip[Q2. DDR5의 BL16 burst가 BL8 (DDR4) 대비 *2배의 데이터*를 전송하는 동안, *burst 시간*은? `(Apply)`]
+:::tip[Q2. LPDDR5의 BL16 burst가 LPDDR4의 BL16 대비 동일 beat 수를 전송할 때, 같은 데이터 속도라면 *burst 시간*은? `(Apply)`]
 - A. 2배 길음
 - B. 절반
-- C. 거의 같음 (tCK가 절반이므로)
+- C. 거의 같음 (beat 수가 같으므로)
 - D. 4배
 :::
 <details>
 <summary>정답: C</summary>
 
-**Why**: DDR5의 tCK는 DDR4의 약 절반(동작 속도가 두 배)이고, DDR5 BL16은 16 beat = 8 nCK를 차지하며 DDR4 BL8은 8 beat = 4 nCK를 차지합니다. 8 nCK × tCK_DDR5 ≈ 4 nCK × tCK_DDR4이므로 절대 시간은 거의 같습니다. A(2배 길다)는 nCK 수는 두 배지만 tCK가 절반이어서 상쇄된다는 점을 무시한 오답이고, B(절반)·D(4배)는 계산이 맞지 않습니다. 이 개념을 이해하면 DDR5로 전환해도 burst 지속 시간이 늘어나지 않아 시스템 레이턴시에 불이익이 없다는 것을 알 수 있습니다. (Ch05 §3.2)
+**Why**: LPDDR5와 LPDDR4 모두 prefetch 16n / BL16이므로 한 burst의 beat 수(16 beat)가 같습니다. 같은 데이터 전송 속도라면 burst 지속 시간도 같습니다. LPDDR5의 핵심 차이는 burst 길이가 아니라 데이터가 고속 **WCK** 도메인에서 전송된다는 점과, BL32 옵션이 추가됐다는 점입니다. A(2배)·B(절반)·D(4배)는 모두 beat 수가 동일하다는 사실과 맞지 않습니다. 참고로 LPDDR5에서 WCK 주파수를 올리면 같은 BL16이라도 절대 시간이 짧아집니다(DVFSC gear 의존). DV에서 BL과 WCK gear를 혼동하면 DQ sample window를 잘못 잡습니다. (Ch05 §3.2)
 
 </details>
 :::tip[Q3. BL32를 사용하는 *권장 시나리오*는? `(Evaluate)`]
@@ -55,7 +55,7 @@ title: "Ch05 퀴즈 — Command·Truth Table·Burst Operation"
 <details>
 <summary>정답: B</summary>
 
-**Why**: DDR5 2-cycle command를 reconstruct하려면 CS_n이 2 cycles 연속 LOW인 패턴을 감지해야 합니다. 이것이 monitor가 "지금 2-cycle 명령이 진행 중"임을 판단하는 유일한 시그너처입니다. A(CK rising edge만)는 명령 경계를 잡지 못합니다. C(ACT_n 신호)는 DDR4의 핀 신호로 DDR5에는 존재하지 않으며 명령 정보가 CA 버스에 인코딩되어 있습니다. D(ALERT_n)는 error 응답 신호로 명령 디코딩과 무관합니다. CS_n 패턴을 정확히 추적하지 않으면 monitor가 2-cycle 명령의 두 번째 cycle을 별개의 명령으로 잘못 해석할 수 있습니다. (Ch05 §2.2)
+**Why**: DDR5 2-cycle command를 reconstruct하려면 CS_n이 2 cycles 연속 LOW인 패턴을 감지해야 합니다. 이것이 monitor가 "지금 2-cycle 명령이 진행 중"임을 판단하는 유일한 시그너처입니다. A(CK rising edge만)는 명령 경계를 잡지 못합니다. C(ACT_n 신호)는 DDR4의 핀 신호로 DDR5에는 존재하지 않으며 명령 정보가 CA 버스에 인코딩되어 있습니다. D(ALERT_n)는 error 응답 신호로 명령 디코딩과 무관합니다. CS_n 패턴을 정확히 추적하지 않으면 monitor가 2-cycle 명령의 두 번째 cycle을 별개의 명령으로 잘못 해석할 수 있습니다. (참고 — LPDDR5는 CA[6:0]를 여러 CK cycle에 걸쳐 single-ended로 인코딩하므로 명령 경계 판정 로직이 DDR5와 다르며, CA 버스 정렬을 위해 CBT가 필수입니다.) (Ch05 §2.2)
 
 </details>
 ## 단답형

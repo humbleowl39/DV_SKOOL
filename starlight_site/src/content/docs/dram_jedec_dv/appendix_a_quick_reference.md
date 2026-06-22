@@ -32,8 +32,9 @@ title: "부록 A. JEDEC Spec 빠른 참조 (Quick Reference)"
 | **tCCD_L** | CAS-to-CAS Long | RD/WR → 같은 BG의 RD/WR | Ch06 |
 | tCCD_L_WR | CCD_L for Write | DDR5 신규 | Ch06 |
 | tWTR_S / tWTR_L | Write-to-Read Short/Long | WR → RD transition | Ch06 |
-| **tREFI** | Refresh Interval | REF 평균 간격 (~7.8us) | Ch07 |
-| **tRFC** | Refresh Cycle | REF → 다음 명령 가능 | Ch07 |
+| **tREFI** | Refresh Interval | REF *명령* 평균 간격 (LPDDR5/DDR5 = 3.9μs, DDR4 = 7.8μs) | Ch07 |
+| **tRFC** | Refresh Cycle | REF → 다음 명령 가능 (density 의존, ns 단위 — 단일 고정값 아님) | Ch07 |
+| **tWCK2CK** | WCK-to-CK alignment | LPDDR5 WCK2CK leveling 정렬 시간 | Ch08 |
 | CL | CAS Latency | RD 명령 → 첫 data | Ch06 |
 | CWL | CAS Write Latency | WR 명령 → 첫 data drive | Ch06 |
 | tRPRE / tWPRE | Read/Write Preamble | DQS preamble 시간 | Ch06 |
@@ -121,6 +122,7 @@ title: "부록 A. JEDEC Spec 빠른 참조 (Quick Reference)"
 | §7.6.3 | **Frequency Set Point** | Ch08 |
 | §7.6.4~6 | ODT (Data Bus, Command/Address, CS, NT-ODT) | Ch04 |
 | §7.7.1 | **DVFS (DVFSC, Enhanced DVFSC, DVFSQ)** | Ch08 |
+| §7.7.2 | **Data Copy Low Power Function** (8B 반복성 → IO/core 전력 절감, MR21) | Ch07 |
 | §7.7.4 | **Post Package Repair (PPR) + Guard Key** | Ch09 |
 | §7.7.5 | **Refresh Management Command** | Ch07 |
 | §7.7.6 | **ARFM / DRFM** | Ch07 |
@@ -128,6 +130,31 @@ title: "부록 A. JEDEC Spec 빠른 참조 (Quick Reference)"
 | §7.7.8 | **Link ECC** (encode/decode/error report) | Ch09 |
 | §8 | Command Constraint and AC Timing | Ch06 |
 | §9 | AC Timing tables | Ch06 |
+
+---
+
+## A.3b LPDDR5 핵심 수치 빠른 참조 (주축)
+
+> 출처: JESD209-5C. DDR5/LPDDR4 값은 *비교용*.
+
+| 항목 | LPDDR5 | DDR5 (비교) | LPDDR4 (직전) | DDR4 |
+|---|---|---|---|---|
+| **Prefetch** | 16n | 16n | 16n | 8n |
+| **Burst Length** | BL16 / BL32 | BL16 (+BC8 chop) | BL16 / BL32 | BL8 |
+| **Bank 구성** | MR로 모드 선택 — BG 모드(4 BG×4 = **16 banks**) / 8B 모드(**8 banks**) / 16B 모드(**16 banks**), 보통 1~2 ranks | 8 BG × 4 = **32 banks**/rank | BG 없는 **8 banks** | 4 BG × 4 = **16 banks** |
+| **클럭** | CK(명령용 저속, 차동) + **WCK(데이터용 고속)**, **WCK:CK = 2:1 또는 4:1** (gear 의존) | 단일 CK + DQS | CK + DQS | CK + DQS (DLL 필수) |
+| **전압** | VDD1 = 1.7/1.8/1.95V, VDD2H=VDD2L = **1.05V**, VDDQ = **0.5V** (저속 0.3V = DVFSQ) | VDD = 1.1V, VPP = 1.8V | VDDQ = 1.1V (LPDDR4X = 0.6V) | 1.2V |
+| **Prefetch / BL** | **16n(BL16, 16B·BG) 및 32n(BL32, 8B)** — 뱅크 모드 연동 | 16n / BL16(+BC8) | 16n | 8n / BL8 |
+| **tREFI** | REFab **3.906μs** / per-bank **tREFIpb=488ns**, tRFCab 130~380ns(밀도별) | 3.9μs | — | 7.8μs |
+| **Refresh 종류** | per-bank + all-bank + **PASR**(부분배열 self-refresh, LPDDR 고유) + PARC | Same-bank (REFsb) | All-bank / Per-bank | All-bank |
+| **On-die ECC (셀)** | device-dependent (표준 보장 없음) | 표준 (Transparency ECC, MR14~20) | — | — |
+| **Link ECC (링크 DQ)** | **있음 — LPDDR5 고유** (§7.7.8) | — | — | — |
+| **Training** | CBT(Mode1/2) + **WCK2CK Leveling**(고유) + DQ/Write/Read + DCA/DCM, 단계 가장 많음 | CA(CS) Training 중심 | CBT 도입 | Write Leveling 중심 |
+| **CA 버스** | CA[6:0] 단일종단 다중사이클 → **CBT 필수** | CA[13:0] 2-cycle | CA[5:0] | 별도 CA 버스 |
+| **DVFS** | **DVFSC(코어 VDD2) / Enhanced DVFSC / DVFSQ(VDDQ 0.5↔0.3V)** — F0~F4 gear(FSP, MR16), 전환 시 WCK:CK 변경 → WCK2CK 재정렬 | — | FSP (도입) | — |
+| **Data Copy** | **저전력 인코딩(MR21)** — 8B 반복 패턴 시 reference data만 1 DQ link 전송 → IO/core 전력 절감 (memcpy 아님) | — | — | — |
+| **MRR** | 직접 MR 읽기 (LPDDR4가 **먼저 도입**, 2014) | 직접 MR 읽기 (후행, 2020) | 직접 MR 읽기 (최초) | MPR 기반 간접 |
+| **폼팩터/전원** | PoP(SoC 위 적층), **DIMM/PMIC/RCD 없음** — SoC PMIC | DIMM + 온보드 PMIC/RCD | PoP / discrete | DIMM |
 
 ---
 
