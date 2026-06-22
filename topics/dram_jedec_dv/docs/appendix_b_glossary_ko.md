@@ -44,8 +44,16 @@
 <h3 id="bank-group-ko">Bank Group (BG)</h3>
 <p class="glossary-field"><strong>정의.</strong> 특정 timing 제약을 공유하는 *복수 bank의 그룹*. 같은 그룹 내 bank 간 명령은 *더 긴* 제약(tCCD_L)을 받고, 서로 다른 그룹 간 명령은 *더 짧은* 제약(tCCD_S)을 받는다.</p>
 <p class="glossary-field"><strong>출처.</strong> JESD79-4D §2 (DDR4 도입); JESD79-5C.01 §2.7.</p>
-<p class="glossary-field"><strong>관련.</strong> Bank, tCCD_L, tCCD_S</p>
-<p class="glossary-field"><strong>예시.</strong> DDR5는 device당 8 BG, BG당 4 bank.</p>
+<p class="glossary-field"><strong>관련.</strong> Bank, tCCD_L, tCCD_S, Bank Mode</p>
+<p class="glossary-field"><strong>예시.</strong> DDR5는 device당 8 BG, BG당 4 bank; LPDDR5는 BG 모드에서만 Bank Group을 사용한다 (Bank Mode 참조).</p>
+</div>
+
+<div class="glossary-term">
+<h3 id="bank-mode-ko">Bank Mode (LPDDR5)</h3>
+<p class="glossary-field"><strong>정의.</strong> LPDDR5 디바이스의 bank를 세 가지 구성 중 하나로 배치하는, mode register로 선택되는 조직 형태: Bank Group 모드(4 bank group × 4 bank = 총 16 bank), 8-Bank 모드(8 bank), 16-Bank 모드(16 bank).</p>
+<p class="glossary-field"><strong>출처.</strong> JESD209-5C §2.</p>
+<p class="glossary-field"><strong>관련.</strong> Bank, Bank Group</p>
+<p class="glossary-field"><strong>예시.</strong> BG/8B/16B 모드 간 전환은 재초기화가 필요하며 정상 동작 중에는 수행할 수 없다. reference model은 DDR5의 32-bank 구성에 하드코딩하지 말고 parameterize 해야 한다.</p>
 </div>
 
 <div class="glossary-term">
@@ -148,6 +156,14 @@
 </div>
 
 <div class="glossary-term">
+<h3 id="pasr-ko">PASR (Partial Array Self Refresh)</h3>
+<p class="glossary-field"><strong>정의.</strong> DRAM 배열 중 설정된 일부 영역만 refresh하여, refresh되지 않는 영역은 데이터 손실을 허용하는 대신 전력 소비를 줄이는 LPDDR self-refresh 변형.</p>
+<p class="glossary-field"><strong>출처.</strong> JESD209-5C §7.5.5.</p>
+<p class="glossary-field"><strong>관련.</strong> Self Refresh, PARC</p>
+<p class="glossary-field"><strong>예시.</strong> PASR은 LPDDR의 특성이며, DDR5에서는 대응되는 MR60 PASR 기능이 deprecated 되었다 (JESD79-5C v1.30).</p>
+</div>
+
+<div class="glossary-term">
 <h3 id="dfe-ko">DFE (Decision Feedback Equalization)</h3>
 <p class="glossary-field"><strong>정의.</strong> 현재 샘플에서 *과거 결정의 가중합*을 빼서 inter-symbol interference (ISI) 를 보상하는 receiver 측 신호 처리 기법.</p>
 <p class="glossary-field"><strong>출처.</strong> JESD79-5C.01 §3.5.72~ (MR70~); JESD209-5C §7.7.7.</p>
@@ -191,17 +207,34 @@
 </div>
 
 <div class="glossary-term">
+<h3 id="dvfsc-ko">DVFSC (Dynamic Voltage Frequency Scaling — Core)</h3>
+<p class="glossary-field"><strong>정의.</strong> gear/Frequency Set Point 전환으로 코어 공급 전압과 동작 주파수를 런타임에 스케일링하는 LPDDR5 기능으로, gear 전환은 WCK:CK 비율도 변경하므로 WCK2CK 재정렬이 필요하다.</p>
+<p class="glossary-field"><strong>출처.</strong> JESD209-5C §7.7.1.</p>
+<p class="glossary-field"><strong>관련.</strong> DVFS, FSP, WCK2CK Leveling</p>
+<p class="glossary-field"><strong>예시.</strong> LPDDR5는 Enhanced DVFSC 및 DVFSQ(DQ 측) 변형도 정의한다.</p>
+</div>
+
+<div class="glossary-term">
+<h3 id="on-die-ecc-ko">On-die ECC</h3>
+<p class="glossary-field"><strong>정의.</strong> DRAM 디바이스 내부에서 셀 배열에 저장된 데이터를 누설·soft error 등 셀 내부 오류로부터 보호하는 error-correcting code로, DQ 링크를 보호하는 Link ECC와는 직교하며 독립적으로 동작한다.</p>
+<p class="glossary-field"><strong>출처.</strong> JESD79-5C.01 §3.5.16 (DDR5 표준); JESD209-5C (LPDDR5, 디바이스 의존).</p>
+<p class="glossary-field"><strong>관련.</strong> Transparency ECC, Link ECC, ECS</p>
+<p class="glossary-field"><strong>예시.</strong> On-die ECC는 DDR5에서 표준(Transparency ECC)이지만 LPDDR5에서는 디바이스 의존이며, LPDDR5는 그 대신 버스 보호를 위해 Link ECC를 의무화한다.</p>
+</div>
+
+<div class="glossary-term">
 <h3 id="transparency-ecc-ko">Transparency ECC (DDR5 On-die ECC)</h3>
-<p class="glossary-field"><strong>정의.</strong> DRAM 배열 내부의 데이터에 대해 *error correction*을 수행하며, 메모리 컨트롤러에는 *보이지 않지만* 통계는 mode register로 *노출*되는 DDR5 메커니즘.</p>
+<p class="glossary-field"><strong>정의.</strong> DRAM 배열 내부의 데이터에 대해 *error correction*을 수행하며, 메모리 컨트롤러에는 *보이지 않지만* 통계는 mode register로 *노출*되는 DDR5 on-die ECC 메커니즘.</p>
 <p class="glossary-field"><strong>출처.</strong> JESD79-5C.01 §3.5.16 (MR14), §3.5.17 (MR15).</p>
-<p class="glossary-field"><strong>관련.</strong> Link ECC, ECS</p>
+<p class="glossary-field"><strong>관련.</strong> On-die ECC, Link ECC, ECS</p>
 </div>
 
 <div class="glossary-term">
 <h3 id="link-ecc-ko">Link ECC (LPDDR5)</h3>
-<p class="glossary-field"><strong>정의.</strong> 정의된 check matrix를 사용한 인코딩/디코딩으로 *DRAM↔컨트롤러 DQ 링크*의 데이터 무결성을 *보호*하는 LPDDR5 메커니즘.</p>
+<p class="glossary-field"><strong>정의.</strong> 정의된 check matrix를 사용한 인코딩/디코딩으로 *DRAM↔컨트롤러 DQ 링크*의 데이터 무결성을 보호하는, DDR5에 대응물이 없는 LPDDR5 고유 메커니즘.</p>
 <p class="glossary-field"><strong>출처.</strong> JESD209-5C §7.7.8.</p>
-<p class="glossary-field"><strong>관련.</strong> Transparency ECC, DBI</p>
+<p class="glossary-field"><strong>관련.</strong> On-die ECC, Transparency ECC, DBI</p>
+<p class="glossary-field"><strong>예시.</strong> LPDDR5는 on-die ECC를 의무화하지 않으므로 Link ECC가 버스를 보호하는 주 신뢰성 축이며, 두 보호는 보호 대상이 달라 서로 직교한다.</p>
 </div>
 
 <div class="glossary-term">
@@ -244,6 +277,13 @@
 <p class="glossary-field"><strong>정의.</strong> CL, BL, ODT, ECC 등 *런타임 동작*을 설정하기 위해 Mode Register Write (MRW) 명령으로 설정되는 DRAM 내부 제어 레지스터.</p>
 <p class="glossary-field"><strong>출처.</strong> JESD79-5C.01 §3.5.</p>
 <p class="glossary-field"><strong>관련.</strong> MRW, MRR, RAL</p>
+</div>
+
+<div class="glossary-term">
+<h3 id="mrr-ko">MRR (Mode Register Read)</h3>
+<p class="glossary-field"><strong>정의.</strong> 지정된 mode register의 현재 값을 직접 읽는 DRAM 명령으로, LPDDR(LPDDR4, 2014)이 먼저 도입하고 DDR5(2020)가 후행하여 채택했으며, DDR4는 MPR 기반 간접 방식을 사용했다.</p>
+<p class="glossary-field"><strong>출처.</strong> JESD209-4E §6 (LPDDR4); JESD79-5C.01 §3.4.1 (DDR5).</p>
+<p class="glossary-field"><strong>관련.</strong> MR, MRW</p>
 </div>
 
 <div class="glossary-term">

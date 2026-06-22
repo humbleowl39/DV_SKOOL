@@ -64,11 +64,11 @@ nav:
   - "← DV SKOOL": "https://humbleowl39.github.io/DV_SKOOL/"
   - "🏠 코스 홈": index.md
   - "📚 학습 모듈":
-      - "Unit 1: DRAM 기본 원리 + DDR4/5": 01_dram_fundamentals_ddr.md
-      - "Unit 2: Memory Controller 아키텍처": 02_memory_controller.md
-      - "Unit 3: Memory Interface / PHY": 03_memory_interface_phy.md
-      - "Unit 4: DRAM DV 검증 전략": 04_dram_dv_methodology.md
-      - "DRAM Memory Controller & DDR4/5 — Quick Reference Card": 05_quick_reference_card.md
+      - "Unit 1: DRAM 기본 원리 + LPDDR5": 01_dram_fundamentals_ddr.md
+      - "Unit 2: Memory Controller 아키텍처 (LPDDR5)": 02_memory_controller.md
+      - "Unit 3: Memory Interface / PHY (LPDDR5)": 03_memory_interface_phy.md
+      - "Unit 4: LPDDR5 DV 검증 전략": 04_dram_dv_methodology.md
+      - "LPDDR5 — Quick Reference Card": 05_quick_reference_card.md
   - "📋 코스 개요": _legacy_overview.md
   - "📖 용어집": glossary.md
   - "❓ 퀴즈":

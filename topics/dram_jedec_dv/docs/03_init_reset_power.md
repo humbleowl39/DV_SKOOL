@@ -142,7 +142,7 @@ T8    Normal operation
 
 - **Vdd1**: high voltage (~1.8V) — core. DRAM 셀 어레이와 워드라인 드라이버에 공급됩니다.
 - **Vdd2**: low voltage (~1.1V) — periphery. IO 회로와 일부 내부 로직에 공급됩니다.
-- **Vddq**: I/O voltage (~0.6V). 외부 DQ 핀의 기준 전압입니다.
+- **Vddq**: I/O voltage — **LPDDR4 = 1.1V, LPDDR4X = 0.6V**. 외부 DQ 핀의 기준 전압입니다. (LPDDR5는 더 낮은 0.5V로 내려갑니다 — §5.1.)
 
 이 세 전압은 Vdd1이 먼저 ramp되고 그 다음 Vdd2, 마지막으로 Vddq가 올라와야 합니다. 순서를 어기면 device 내부에 비정상적인 전위가 형성되어 damage가 발생할 수 있으므로, controller는 반드시 정해진 순서를 보장해야 합니다. DV에서는 power sequence 시뮬레이션으로 이 순서를 명시적으로 검증하는 것이 중요합니다.
 
@@ -156,9 +156,21 @@ LPDDR5의 결정적 추가는 *Dual VDD2 rail*과 *DVFS sequence*입니다.
 
 ### 5.1 Voltage rail 변화
 
-- **Vdd1**: ~1.8V (unchanged)
-- **Vdd2H** + **Vdd2L**: dual VDD2 rail — MR13 OP[7] 설정에 따라 한쪽 또는 양쪽 사용
-- **Vddq**: 0.5V (LPDDR5) / 0.3V (LPDDR5X)
+> 이 교재의 *주축은 LPDDR5* 입니다. 아래 전원 구조가 모바일/저전력 DRAM의 기준이며, DDR5(§3)는 서버/PC 비교축, LPDDR4(§4)는 직전 세대 비교축으로 봅니다.
+
+- **VDD1**: 1.8V — high voltage rail.
+- **VDD2H**: ≈1.05V — 고주파(고성능) 동작용 main periphery/core rail.
+- **VDDQ**: **0.5V** — DQ I/O 기준 전압.
+- (저주파 절전 시 VDD2 계열을 낮춰 쓰는 dual-rail 운용도 가능 — 세부 rail 분리는 device/구현 의존 *(추론)*.)
+
+!!! note "LPDDR5 전원의 정체성 — SoC-side PMIC (DDR5와 정반대)"
+    DDR5(§3)는 *DIMM 위에 PMIC*가 올라가 12V를 받아 1.1V/1.8V를 *모듈 내부에서* 생성합니다. **LPDDR5는 정반대**입니다.
+
+    - LPDDR5는 **PoP(Package-on-Package)** 으로 SoC 위에 적층되며, **on-package PMIC / DIMM / RCD가 없습니다**.
+    - 전압은 **SoC-side(외부) PMIC가 생성**해 DRAM에 공급합니다. DRAM은 VDD1(1.8V) / VDD2H(≈1.05V) / VDDQ(0.5V)를 *받기만* 합니다.
+    - 따라서 **DVFS(전압/주파수 전환)는 SoC가 주도**합니다 — DRAM이 스스로 rail을 만들지 않으므로, FSP 전환은 SoC PMIC가 rail을 조정하고 host가 MR/training을 재정렬하는 *시스템 측 시퀀스*입니다.
+
+    DV 시사점: LPDDR5 power-sequence 모델은 *외부 PMIC behavioral model* + *SoC-initiated DVFS 트리거*로 구성해야 하며, DDR5처럼 on-module PMIC 상태를 DRAM 초기화에 끼워 넣어서는 안 됩니다.
 
 ### 5.2 Power-up 단계
 
@@ -173,6 +185,15 @@ T7    CA Training (CBT Mode1/Mode2)
 T8    DQ Training (Ch08)
 T9    Normal operation
 ```
+
+!!! note "LPDDR5 init training — CBT + WCK2CK (DDR5와 무엇이 다른가)"
+    LPDDR5 초기화의 training 단계는 DDR5와 *구성 자체가* 다릅니다.
+
+    - **LPDDR5**: **CBT (Command Bus Training, Mode1/Mode2)** + **WCK2CK Leveling** + DQ/Write/Read training. CA 버스가 CA[6:0] 단일종단 다중사이클이라 CBT가 *필수*이고, 데이터용 WCK가 명령용 CK와 별개 클럭이라 **WCK2CK Leveling**(LPDDR5 고유)으로 둘을 정렬해야 합니다. 4 스펙 중 training 단계가 가장 많습니다.
+    - **DDR5**: **CA / CS Training** 중심 (+ on-DIMM PMIC/RCD 고려). 단일 CK + DQS 구조라 WCK2CK 같은 단계가 없습니다.
+    - **DDR4**: Write Leveling 중심.
+
+    DV 시사점: LPDDR5 init vseq는 CBT phase(physical MR 접근)와 WCK2CK leveling phase를 *별도 sub-phase*로 모델링해야 하며, gear(DVFSC) 전환 시 WCK:CK 비가 바뀌므로 **WCK2CK 재정렬**이 다시 일어납니다(§5.3).
 
 ### 5.3 LPDDR5 특유의 단계 — DVFS 진입
 
@@ -302,7 +323,8 @@ endgroup
 
 | 단계 | DDR4 | DDR5 | LPDDR4 | LPDDR5 |
 |---|---|---|---|---|
-| Voltage rails | Vdd, Vddq, Vpp | Vdd, Vddq (PMIC on DIMM) | Vdd1, Vdd2, Vddq | Vdd1, **Vdd2H/L**, Vddq |
+| Voltage rails | Vdd 1.2V, Vddq, Vpp | Vdd 1.1V, Vpp 1.8V (PMIC **on DIMM**) | Vdd1 1.8V, Vdd2 ~1.1V, Vddq (4:1.1V / 4X:0.6V) | VDD1 1.8V, **VDD2H ≈1.05V**, VDDQ **0.5V** |
+| PMIC 위치 | 마더보드 | **on-DIMM PMIC** | SoC-side(외부) | **SoC-side(외부), on-package PMIC 없음** |
 | Reset 방식 | RESET_n (async) | RESET_n (async) | RESET_n | RESET_n |
 | Initial CKE 시점 | tXPR 후 | tXPR 후 | reset deassert 후 | reset deassert 후 |
 | CS Training | — | **CS training 필요** | — | — |
@@ -363,8 +385,9 @@ endgroup
 - DRAM은 RTL reset만으로는 동작 불가. Voltage ramp → RESET → CKE → MR Write → ZQCL → Training 의 전체 시퀀스 필요.
 - DDR4의 MR programming 순서는 *MR3→6→5→4→2→1→0* (spec 규정).
 - DDR5는 *CS training*, *PDA*, *DCA/DFE 초기화*가 추가됨.
-- LPDDR4는 *Vdd1→Vdd2→Vddq* 의 정해진 ramp 순서.
-- LPDDR5는 *Vdd2H/L dual rail* + *WCK2CK Leveling* + *DVFS 기반 FSP 전환* 추가.
+- LPDDR4는 *Vdd1→Vdd2→Vddq* 의 정해진 ramp 순서. VDDQ는 LPDDR4=1.1V, LPDDR4X=0.6V.
+- **LPDDR5(주축)**: 전압은 *SoC-side(외부) PMIC*가 생성 — DRAM은 VDD1(1.8V)/VDD2H(≈1.05V)/VDDQ(0.5V)를 *받기만* 함. **on-package PMIC/DIMM/RCD 없음** (DDR5의 on-DIMM PMIC와 정반대). DVFS는 *SoC 주도*.
+- LPDDR5 init training: **CBT(Mode1/2) + WCK2CK Leveling**(LPDDR5 고유) — DDR5의 CA/CS training과 다른 구성. gear(DVFSC) 전환 시 WCK2CK 재정렬.
 - UVM phase 매핑: pre_reset → reset → post_reset → pre_configure → configure → post_configure → main.
 - CKE=0 상태에서 MRW 같은 위반은 *조용히* 진행되어 후속에서 mismatch — SVA로 *즉시* catch해야 한다.
 

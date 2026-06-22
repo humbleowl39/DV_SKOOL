@@ -38,7 +38,15 @@ Controller.Logic -> DRAM.DQ_IO: "링크 오류 (Link ECC / CRC가 보호)"
 DRAM.DQ_IO -> DRAM.Array: "셀-I/O 사이 (on-die ECC가 보호)"
 ```
 
-같은 "ECC"라는 단어를 쓰더라도 보호 대상이 완전히 다릅니다. DDR5의 Transparency ECC는 셀 내부를 보호하고 controller에게는 투명하게 동작하는 반면, LPDDR5의 Link ECC는 DQ 핀과 controller 사이 링크를 보호합니다. DV는 두 가지를 별도로 설계하고 검증해야 합니다. 한 가지만 검증하고 다른 것을 빠뜨리면 보호되지 않는 오류 경로가 생깁니다.
+같은 "ECC"라는 단어를 쓰더라도 보호 대상이 완전히 다릅니다. LPDDR5의 **Link ECC** 는 DQ 핀과 controller 사이 *링크* 를 보호하며, LPDDR5의 정체성을 규정하는 신뢰성 기능입니다 (DDR5에는 Link ECC가 없습니다). 반면 On-die ECC는 *셀 내부* 를 보호하는데, DDR5에서는 Transparency ECC로 표준화되어 있고 controller에게 투명하게 동작합니다. LPDDR5에서는 on-die ECC가 device-dependent(일부 device에만 탑재, 표준 보장 없음)입니다. DV는 두 가지를 별도로 설계하고 검증해야 합니다. 한 가지만 검증하고 다른 것을 빠뜨리면 보호되지 않는 오류 경로가 생깁니다.
+
+!!! info "On-die ECC vs Link ECC — 두 보호는 *직교(orthogonal)*"
+    두 메커니즘은 *보호 대상이 서로 다른* 독립적 기능입니다 — 하나가 다른 하나를 대체하지 않습니다.
+
+    - **On-die ECC** — 보호 대상은 *DRAM 셀 내부* (capacitor leakage, alpha-particle soft error). DDR5에서는 표준(Transparency ECC, MR14~MR20), **LPDDR5에서는 device-dependent** 이며 표준이 보장하는 동등 기능은 없습니다.
+    - **Link ECC** — 보호 대상은 *DQ 링크* (controller↔DRAM 전송 경로의 ISI/jitter/crosstalk). **LPDDR5 고유** 기능이며 DDR5에는 없습니다. LPDDR5는 on-die ECC를 의무화하지 않는 대신 Link ECC로 *버스* 를 보호합니다.
+
+    따라서 LPDDR5 DV에서 Link ECC는 *주(primary)* 검증 축이고, on-die ECC는 device가 지원하는 경우에 한해 별도로 검증합니다. 셀 보호와 링크 보호 중 하나만 검증하면 나머지 오류 경로가 무방비로 남습니다.
 
 ---
 
@@ -92,9 +100,11 @@ PPR 절차:
 
 ---
 
-## 3. DDR5 Transparency ECC — 가장 중요한 신규 기능
+## 3. On-die ECC (셀 보호) — DDR5 Transparency ECC 사례
 
 > 출처: JESD79-5C.01 v1.31 §3.5.16 (MR14), §3.5.17 (MR15), §3.5.18~3.5.22 (MR16~MR20)
+
+이 절은 *셀 내부* 를 보호하는 on-die ECC를 다룹니다. DDR5에서는 Transparency ECC로 표준화되어 통계 MR까지 정의되어 있어 *가장 완성도 높은 사례* 이므로 이를 기준으로 설명합니다. LPDDR5에서는 on-die ECC가 device-dependent이며, 셀 보호가 필요하면 동일한 검증 원리(syndrome injection + 통계 확인)를 *해당 device가 지원하는 범위* 에서 적용합니다. LPDDR5의 *주* 신뢰성 축인 Link ECC는 §4에서 다룹니다.
 
 ### 3.1 Transparency ECC란
 
@@ -130,13 +140,13 @@ Self Refresh 동안 DRAM이 *내부적*으로 cell을 *스크럽*. soft error를
 
 ---
 
-## 4. LPDDR5 Link ECC — DRAM↔Controller 보호
+## 4. LPDDR5 Link ECC — DRAM↔Controller 링크 보호 (LPDDR5 주 신뢰성 축)
 
 > 출처: JESD209-5C §7.7.8
 
 ### 4.1 Link ECC란
 
-DDR5의 "transparency ECC" 가 *셀 내부* 보호라면, LPDDR5의 **Link ECC** 는 *링크* (DQ pin) 의 SI (Signal Integrity) 보호.
+§3의 on-die ECC가 *셀 내부* 보호라면, LPDDR5의 **Link ECC** 는 *링크* (DQ pin) 의 SI (Signal Integrity) 보호입니다 — 보호 대상이 직교하므로 둘은 별개로 동작·검증합니다. Link ECC는 **LPDDR5 고유** 기능(DDR5에는 없음)으로, on-die ECC를 의무화하지 않는 LPDDR5에서 *버스 전송 무결성* 을 책임지는 핵심 메커니즘이며 LPDDR5 DV의 *최우선* 신뢰성 검증 대상입니다.
 
 ```
 Controller → encoder (ECC) → DQ → DRAM → decoder (ECC) → array (no on-die ECC)
@@ -445,8 +455,8 @@ endgroup
 |---|---|---|---|---|
 | Write CRC | ✓ | ✓ (MR50~52) | (옵션) | (옵션) |
 | CA Parity | ✓ | (다른 방식) | (옵션) | (옵션) |
-| On-die ECC | — | **Transparency ECC** (MR14~20) | — | (있음, 일부 device) |
-| Link ECC | — | — | — | **있음** (§7.7.8) |
+| On-die ECC (셀 보호) | — | **Transparency ECC** (MR14~20, 표준) | — | device-dependent (표준 보장 없음) |
+| Link ECC (링크 보호) | — | — | — | **있음 (LPDDR5 고유)** (§7.7.8) |
 | hPPR | ✓ | ✓ (MR54~57) | ✓ | ✓ (§7.7.4) |
 | sPPR | ✓ | ✓ | — | — |
 | MBIST PPR | ✓ (§4.34) | ✓ | — | — |
@@ -818,7 +828,9 @@ endgroup
 
 ## 13. 핵심 정리 (Key Takeaways)
 
-- 신뢰성 보호는 *두 영역*: 셀 내부(on-die ECC), 링크(Link ECC / CRC).
+- 신뢰성 보호는 *두 영역*이며 서로 **직교**: 셀 내부(on-die ECC), 링크(Link ECC / CRC). 하나가 다른 하나를 대체하지 않음.
+- **LPDDR5 Link ECC** — LPDDR5 고유(DDR5에 없음). *링크* (DQ) 신호 무결성 보호. LPDDR5는 on-die ECC를 의무화하지 않으므로 Link ECC가 *버스* 를 책임지는 주 신뢰성 축. DBI와의 *순서*가 중요.
+- **On-die ECC (셀 보호)** — DDR5는 Transparency ECC로 표준화(MR14~MR20), controller에게 *투명*하지만 통계 조회 가능. **LPDDR5는 device-dependent** (표준 보장 없음).
 - **DDR5 Transparency ECC** — controller에게 *투명*하지만 MR14~MR22로 *통계 조회* 가능.
 - **MR14 정밀**: ECS Mode (OP[7]), Reset Counter (OP[6]), Row/CodeWord Count Mode (OP[5]), CID[3:0] (OP[3:0]) for 3DS.
 - **MR15 정밀**: ETC threshold (OP[2:0], default=256), Auto ECS in Self Refresh (OP[3]), ECS Writeback Suppress (OP[6]), x4 Writes Suppress (OP[7]).
@@ -829,7 +841,6 @@ endgroup
 - **MR23 PPR/MBIST**: hPPR/sPPR/sPPR_Undo_Lock/mPPR/MBIST 중 *동시 단 하나*만 enable. SVA로 위반 검증.
 - **MR24 Guard Key**: PPR 발급 전 *정해진 sequence*로 key write. 잘못된 key 시 PPR 무시 (안전장치).
 - **ECS (Error Check Scrub)**: Self Refresh 중 background에서 cell scan + correct + writeback. ETC threshold 도달 시 *통계 update*.
-- **LPDDR5 Link ECC** — 링크 신호 무결성 보호. DBI와의 *순서*가 중요.
 - **CRC** — write data만 보호. 검증 시 ALERT_n 토글로 응답.
 - DV는 *ECC syndrome injection*, *CRC error injection*, *PPR sequence (정확한 guard key 포함)* 를 *별도 testcase*로 검증.
 - Scoreboard는 *원본 data*, *MR16~MR20 통계 mirror*, *ECC report flag* 를 *모두* 추적해야 함.

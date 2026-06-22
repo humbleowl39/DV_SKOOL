@@ -26,13 +26,14 @@
 <!-- DV-SKOOL-CH-TOC:end -->
 
 !!! objective "학습 목표"
-    이 모듈을 마치면:
+    이 모듈을 마치면 (**LPDDR5 mobile SoC-통합 MC 를 주축**으로, 서버 DDR5 MC 를 비교축으로):
 
     - **Apply** Row Hit / Bank-level parallelism / Bank Group interleaving 개념을 throughput 최적화에 적용할 수 있다.
     - **Design** Read/Write reordering, Write batching, batch drain 의 스케줄러 정책을 설계할 수 있다.
-    - **Plan** Refresh scheduling (per-bank, fine-grain) 으로 tREFI 충족 + 트래픽 영향 최소화 전략을 수립할 수 있다.
-    - **Apply** ECC (SECDED, on-die ECC) 구현 시 코드 종류와 검증 시나리오 매핑을 적용할 수 있다.
-    - **Diagnose** QoS / Aging / Bandwidth Regulation 으로 multi-master starvation 방지 기법을 진단할 수 있다.
+    - **Plan** Refresh scheduling (LPDDR5 per-bank + PASR vs DDR5 same-bank) 으로 tREFI 충족 + 트래픽 영향 최소화 전략을 수립할 수 있다.
+    - **Apply** ECC (on-die ECC + LPDDR5 Link ECC) 구현 시 코드 종류와 검증 시나리오 매핑을 적용할 수 있다.
+    - **Diagnose** QoS / Aging / Bandwidth Regulation 으로 mobile multi-master (Display/ISP) starvation 방지 기법을 진단할 수 있다.
+    - **Compare** mobile LPDDR5 MC 의 DVFSC 전력 gear / Deep Sleep / PASR 를 server DDR5 MC 의 대역폭·Row-Hit 중심 설계와 비교할 수 있다.
 
 !!! info "사전 지식"
     - [Module 01 — DRAM Fundamentals](01_dram_fundamentals_ddr.md) (Row Hit/Miss/Conflict, timing parameter)
@@ -52,6 +53,9 @@ A SoC 는 **FR-FCFS**(First Ready First Come First Served) 정책으로 같은 r
 Module 01 에서 우리는 _하나의 DRAM access_ 가 어떻게 일어나는지 봤습니다. 그러나 실제 SoC 에서는 **CPU + GPU + Display + DMA + ISP** 가 동시에 메모리에 access 하고, 각 요청은 bank conflict, refresh 충돌, R/W turnaround 라는 _시간_ 차원의 충돌을 겪습니다. **Memory Controller (MC) 는 이 모든 충돌을 해소하는 단일 결정자** — SoC 성능의 가장 직접적인 결정자입니다.
 
 이 모듈을 건너뛰면 "왜 같은 IP 에 같은 트래픽을 줘도 BW 가 다른가?" 같은 질문에 답할 수 없고, 검증 시 _기능적 정합성_ 외에 _성능 회귀_ 를 평가할 기준을 잡을 수 없습니다. 잘못된 스케줄링 정책 하나가 BW 50% 저하를 만들 수 있고, refresh 누락은 데이터 손실로 이어집니다. **MC 검증의 핵심은 functional correctness + performance regression 동시 관리**.
+
+!!! info "이 모듈의 주축 — mobile SoC 에 통합된 LPDDR5 MC"
+    이 모듈은 **LPDDR5 를 주축**으로 설명합니다. LPDDR5 의 MC 는 별도 칩이 아니라 **모바일 SoC(AP) 내부에 통합**되어 있고, 메모리는 SoC 위에 PoP 로 적층됩니다(DIMM/PMIC/RCD 없음 — 그건 server DDR5). 따라서 LPDDR5 MC 는 대역폭뿐 아니라 **실시간 QoS(Display/ISP underrun 방지)** 와 **DVFSC 전력 gear** 를 동시에 책임집니다. 서버 DDR5 MC(대역폭·Row-Hit 중심) 는 비교축으로 함께 짚습니다.
 
 ---
 
@@ -195,6 +199,19 @@ function command_t mc_pick_next() {
 
 §3 의 worked example 은 _throughput_ 축을 보여줬습니다. 실 시스템에서는 _fairness_ 축이 아주 자주 throughput 을 제한합니다 — Display 의 Urgent 1번이 큐의 Hit 행렬을 통째로 깨고 들어옵니다.
 
+!!! abstract "비교 — server DDR5 MC vs mobile LPDDR5 MC"
+    같은 스케줄링 골격(FR-FCFS, BG interleaving, refresh engine)을 공유하지만 _무게중심_ 이 다릅니다.
+
+    | 축 | server DDR5 MC | mobile LPDDR5 MC |
+    |---|---|---|
+    | 1차 목표 | 대역폭 / Row-Hit 극대화 | 실시간 QoS + 저전력 |
+    | 결정적 master | CPU/가속기 대량 스트림 | Display / ISP (deadline) |
+    | 전력 관리 | PD / Self-Refresh 중심 | + **DVFSC gear(F0~F4)**, **Deep Sleep**, **PASR** |
+    | refresh | Same-bank(REFsb) | per-bank + **PASR**(부분배열) |
+    | 폼팩터 | DIMM + 온보드 PMIC/RCD | PoP 적층, **DIMM/PMIC/RCD 없음**(SoC PMIC) |
+
+    즉 LPDDR5 MC 는 DDR5 MC 의 throughput 머신에 **realtime QoS 레이어 + DVFSC 전력 레이어**를 얹은 형태로 이해하면 됩니다.
+
 ### 4.3 변형 / Edge case
 
 - **Row buffer thrashing**: 같은 bank 의 multiple-row 동시 access → row conflict 연쇄 → effective BW 50% 미만. 해결: address mapping 에서 hot bit 을 BG 로 옮김.
@@ -217,9 +234,9 @@ MC: "Memory Controller" {
   RQ: "Request Queue (RQ)\n· AXI Read/Write 요청 수신\n· 주소 → Rank/BG/Bank/Row/Col 디코딩"
   ADM: "Address Mapper (Interleaving)\nRow:Bank:Col / Row:BG:Bank:Col 등"
   CS: "Command Scheduler\n· Row Buffer 상태 관리 (Open/Closed per Bank)\n· 타이밍 제약 검사 (tRCD, tRP, tCCD, tRAS, ...)\n· 스케줄링 정책 (FR-FCFS, Open/Close Page, ...)\n· Bank-level Parallelism 활용"
-  REF: "Refresh Engine\n· Periodic REF\n· Postpone/Pull\n· Per-bank (DDR5)"
-  PM: "Power Manager\n· CKE 제어\n· Self-Refresh\n· Power-Down"
-  PHY: "PHY Interface\n· CA Bus 구동\n· DQ/DQS 데이터 버스 제어\n· Training 시퀀스 제어"
+  REF: "Refresh Engine\n· Periodic REF\n· Postpone/Pull\n· Per-bank REF + PASR (LPDDR5)"
+  PM: "Power/DVFSC Manager\n· gear F0~F4 전환\n· Deep Sleep / Self-Refresh\n· WCK on/off"
+  PHY: "PHY Interface\n· CA(저속) + CK/WCK(고속) 구동\n· DQ 데이터 버스 제어\n· Training(CBT/WCK2CK/DQ) 제어"
   RQ -> ADM
   ADM -> CS
   CS -> REF
@@ -254,7 +271,7 @@ Bank 3:          ACT ── RD ── PRE
 
 ### 5.4 QoS (Quality of Service) / Arbitration
 
-실제 SoC 에서는 CPU, GPU, DMA, Display, ISP 같은 여러 마스터가 동시에 메모리를 요청합니다. 그런데 이들의 요구사항은 서로 충돌합니다. CPU 는 캐시 미스 지연을 최소화해야 하므로 낮은 latency 를 원하고, GPU 는 큰 블록을 연속으로 전송해야 하므로 높은 bandwidth 를 원하며, Display 는 1 프레임 단위로 반드시 데이터를 확보해야 하므로 보장된 bandwidth 와 deadline 이 필요합니다. FR-FCFS 같은 스케줄러만으로는 이 다양한 요구를 모두 충족할 수 없습니다 — 우선순위 없이 Row Hit 만 따르면 Display 처럼 랜덤 패턴을 쓰는 마스터가 굶어 죽게(starvation) 되기 때문입니다. 그래서 MC 에는 QoS Arbiter 가 별도로 존재하여 마스터별 우선순위, 대역폭 할당, aging 승격, Urgent 처리를 담당합니다.
+실제 mobile SoC(LPDDR5 가 붙는 환경)에서는 CPU, GPU, DMA, Display, ISP 같은 여러 마스터가 동시에 메모리를 요청합니다. QoS 는 특히 **LPDDR5/mobile 의 핵심 관심사**입니다 — Display 와 ISP 는 프레임/라인 deadline 을 가진 실시간 master 라, MC 가 이를 보장하지 못하면 즉시 화면 깨짐(Display Underrun)이나 카메라 프레임 드롭으로 사용자에게 노출되기 때문입니다. 그런데 이들의 요구사항은 서로 충돌합니다. CPU 는 캐시 미스 지연을 최소화해야 하므로 낮은 latency 를 원하고, GPU 는 큰 블록을 연속으로 전송해야 하므로 높은 bandwidth 를 원하며, Display 는 1 프레임 단위로 반드시 데이터를 확보해야 하므로 보장된 bandwidth 와 deadline 이 필요합니다. FR-FCFS 같은 스케줄러만으로는 이 다양한 요구를 모두 충족할 수 없습니다 — 우선순위 없이 Row Hit 만 따르면 Display 처럼 랜덤 패턴을 쓰는 마스터가 굶어 죽게(starvation) 되기 때문입니다. 그래서 MC 에는 QoS Arbiter 가 별도로 존재하여 마스터별 우선순위, 대역폭 할당, aging 승격, Urgent 처리를 담당합니다.
 
 ```
 문제: SoC에는 여러 마스터(CPU, GPU, DMA, Display, ISP...)가 동시에
@@ -402,18 +419,25 @@ Read-After-Write Hazard:
 
 ### 5.8 Refresh 관리
 
-커패시터가 전하를 잃지 않으려면 tREFI 마다 REF 명령을 발행해야 합니다. 그런데 DDR4 의 All-Bank Refresh 는 하나의 REF 명령이 나가는 동안 모든 Bank 가 tRFC(~350 ns) 동안 완전히 묶입니다. tREFI 는 7.8 µs 이므로 이 비율만 해도 대역폭의 약 4.5% 가 refresh 에 소비됩니다. 게다가 MC 가 트래픽이 바쁠 때 refresh 를 뒤로 미루다(postpone) 가 JEDEC 허용 한도인 8개를 초과하면 한꺼번에 8개의 REF 가 직렬로 발행되는 "refresh storm" 이 발생해 BW 가 절벽처럼 떨어집니다. 이를 완화하기 위해 한가한 시점에 미리 refresh 를 당겨(pull-in) 발행하거나, DDR5 의 Same-Bank Refresh 처럼 특정 Bank 만 refresh 하는 동안 나머지를 계속 사용하는 방식이 도입되었습니다.
+커패시터가 전하를 잃지 않으려면 평균 tREFI 간격마다 REF 명령을 발행해야 합니다(tREFI = REF 명령의 평균 발행 간격 — LPDDR5/DDR5 는 3.9 µs, DDR4 는 7.8 µs). 여기서 tREFI 는 tCK 가 아니라 ns/µs 단위, tRFC 는 밀도에 의존하는 ns 단위임에 주의하세요. 직전 세대 DDR4 의 All-Bank Refresh 는 하나의 REF 명령이 나가는 동안 모든 Bank 가 tRFC(밀도 의존, 수백 ns) 동안 완전히 묶입니다. 게다가 MC 가 트래픽이 바쁠 때 refresh 를 뒤로 미루다(postpone) 가 JEDEC 허용 한도인 8개를 초과하면 한꺼번에 8개의 REF 가 직렬로 발행되는 "refresh storm" 이 발생해 BW 가 절벽처럼 떨어집니다. 이를 완화하는 방향이 세대별로 갈립니다 — **서버 DDR5** 는 Same-Bank Refresh(REFsb) 로 특정 Bank 만 refresh 하는 동안 나머지를 계속 사용하고, **mobile LPDDR5** 는 per-bank refresh 에 더해 **PASR**(Partial Array Self-Refresh) — 실제로 데이터를 담고 있는 뱅크/세그먼트만 self-refresh 하고 빈 영역은 refresh 를 생략 — 로 전력을 절감합니다. PASR 는 LPDDR 계열 고유 기능으로 DDR5 에는 없습니다. 공통적으로 한가한 시점에 미리 refresh 를 당겨(pull-in) 발행하는 기법도 사용합니다.
 
 ```
 문제: Refresh 중 해당 Bank(또는 전체)에 접근 불가 → 성능 저하
+      (tREFI = REF 명령 평균 간격, ns/µs 단위 / tRFC = 밀도 의존 ns 단위)
 
-DDR4 All-Bank Refresh:
-  REF 명령 → 전체 Bank 접근 불가 (tRFC ≈ 350ns)
-  tREFI = 7.8μs마다 → 대역폭의 ~5% 손실
+DDR4 All-Bank Refresh (직전 세대):
+  REF 명령 → 전체 Bank 접근 불가 (tRFC = 밀도 의존, 수백 ns)
+  tREFI = 7.8μs마다 → 대역폭 손실 큼
 
-DDR5 Same-Bank Refresh:
-  REF 명령 → 특정 Bank만 접근 불가
+DDR5 Same-Bank Refresh (server):
+  REFsb 명령 → 특정 Bank만 접근 불가 (tREFI = 3.9μs)
   나머지 Bank는 정상 접근 → 성능 저하 대폭 감소
+
+LPDDR5 per-bank Refresh + PASR (mobile, 주축):
+  per-bank refresh → 한 Bank refresh 동안 나머지 사용 (tREFI = 3.9μs)
+  PASR (Partial Array Self-Refresh):
+    - 데이터가 있는 뱅크/세그먼트만 self-refresh, 빈 영역은 생략
+    - 전력 절감 목적 → LPDDR 고유 (DDR5에는 없음)
 
 MC의 Refresh 최적화:
   - Postpone: 바쁠 때 REF 지연 (최대 8개까지 축적)
@@ -423,7 +447,9 @@ MC의 Refresh 최적화:
 
 ### 5.9 DRAM 초기화 시퀀스
 
-전원을 켠 직후 DRAM 은 사용 가능한 상태가 아닙니다. MC 가 정해진 순서대로 초기화 절차를 밟아야 비로소 첫 번째 ACT 명령을 발행할 수 있습니다. 이 절차는 크게 다섯 단계로 나뉩니다. 먼저 전원이 안정화될 때까지 충분히 기다린 뒤(Phase 1), CKE 를 HIGH 로 올려 DRAM 을 활성화하고 MRS 명령으로 Burst Length, CAS Latency, ODT 등의 동작 파라미터를 프로그래밍합니다(Phase 2). 다음으로 ZQ Calibration 을 통해 출력 임피던스를 초기 보정하고(Phase 3), Write Leveling 부터 VREF Training 까지 전체 training 시퀀스를 실행합니다(Phase 4). 마지막으로 refresh 를 시작하면 DRAM 이 정상 동작 상태에 들어갑니다(Phase 5). MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며 이 순서를 지키지 않으면 DRAM 이 예상치 않은 상태에 빠질 수 있습니다.
+전원을 켠 직후 DRAM 은 사용 가능한 상태가 아닙니다. MC 가 정해진 순서대로 초기화 절차를 밟아야 비로소 첫 번째 ACT 명령을 발행할 수 있습니다. 이 절차는 크게 다섯 단계로 나뉩니다. 먼저 전원이 안정화될 때까지 충분히 기다린 뒤(Phase 1), CKE 를 HIGH 로 올려 DRAM 을 활성화하고 Mode Register 명령으로 Burst Length, CAS Latency, ODT 등의 동작 파라미터를 프로그래밍합니다(Phase 2). 다음으로 (필요 시) 임피던스를 초기 보정하고(Phase 3), training 시퀀스를 실행합니다(Phase 4). 마지막으로 refresh 를 시작하면 DRAM 이 정상 동작 상태에 들어갑니다(Phase 5). Mode Register 설정 순서는 JEDEC 스펙에 명시되어 있으며 이 순서를 지키지 않으면 DRAM 이 예상치 않은 상태에 빠질 수 있습니다.
+
+세대별로 Mode Register 명령과 training 항목이 다릅니다. **mobile LPDDR5(주축)** 는 Mode Register 를 **MRW**(Mode Register Write)/MRR(Mode Register Read) 명령으로 설정하고, training 으로 **CBT(Command Bus Training, Mode1/2)** 와 **WCK2CK leveling**(WCK-CK 위상 정렬, LPDDR5 고유) 을 추가로 수행합니다. 메모리는 SoC 위에 PoP 로 적층되므로 **DIMM 도, 온보드 PMIC/RCD 도 없습니다** — 전원은 SoC 의 PMIC 가 공급합니다. 반면 **server DDR5** 는 MRS 명령 + DIMM 상의 PMIC/RCD(Registering Clock Driver) 와 CA(CS) Training 을 사용합니다. 즉 LPDDR5 초기화는 DIMM 인프라가 없는 대신 training 단계(CBT/WCK2CK 포함) 가 더 많은 형태입니다.
 
 ```
 전원 인가 후 DRAM을 사용하기까지 MC가 수행하는 초기화 절차:
@@ -454,17 +480,25 @@ Phase 3: ZQ Calibration
 Phase 4: Training (BL2에서 수행)
   - Write Leveling → Gate Training → DQ Training
   - → Eye Training → VREF Training
-  - (Unit 3에서 상세 설명)
+  - (Module 03에서 상세 설명)
 
 Phase 5: Refresh 시작
-  - 초기화 완료 후 tREFI 주기로 Refresh 시작
+  - 초기화 완료 후 평균 tREFI 간격으로 Refresh 시작
   - 이제 DRAM 사용 가능
 
-DDR5 초기화 차이:
-  - MPC (Multi-Purpose Command) 추가: 다양한 내부 설정 제어
-  - CS Training 추가: CA 버스 타이밍 정렬
+LPDDR5 초기화 (주축):
+  - Mode Register: MRW(Write)/MRR(Read) 명령 사용
+  - Training: CBT(Command Bus Training, Mode1/2)
+             + WCK2CK leveling (WCK-CK 정렬, LPDDR5 고유)
+             + DQ/Write/Read Training
+  - 폼팩터: PoP 적층 → DIMM/PMIC/RCD 없음, 전원은 SoC PMIC
+  - 단계 수가 가장 많음 (CBT + WCK2CK가 추가되므로)
+
+DDR5 초기화 (server 비교):
+  - MPC (Multi-Purpose Command): 다양한 내부 설정 제어
+  - CA(CS) Training: CA 버스 타이밍 정렬
   - Per-DRAM Addressability: 개별 칩에 독립 MRS
-  - 초기화가 DDR4보다 복잡하고 단계가 많음
+  - DIMM 상의 PMIC/RCD 인프라 사용
 ```
 
 ### 5.10 Power Management — 전력 상태 머신
@@ -502,15 +536,23 @@ SelfRefresh -> Idle: "SRX"
   Self-Refresh (SR):
     - CKE LOW, 내부에서 자체 Refresh 수행
     - 외부 클럭 불필요 → 최대 절전
-    - 복귀 느림 (tXS ≈ tRFC + 10ns)
+    - 복귀 느림 (tXS ≈ tRFC + 마진)
     - 절감: ~90% (vs Active)
-    - LPDDR5: Deep Sleep 모드로 더욱 깊은 절전
+
+  LPDDR5 전력 모드 (주축, mobile 고유):
+    - DVFSC (Dynamic Voltage/Frequency Scaling Control):
+        주파수/전압 gear(F0~F4 등) 를 트래픽에 맞춰 동적 전환
+        gear 전환 시 WCK:CK 비가 바뀌므로 WCK2CK 재정렬 필요
+    - Deep Sleep: SR보다 더 깊은 절전 (컨텍스트 최소 보존)
+    - PASR: 데이터 있는 영역만 self-refresh (빈 영역 생략)
+    → 서버 DDR5에는 DVFSC/Deep Sleep/PASR가 없음
 
 MC의 역할:
   - Idle 시간 모니터링 → 적절한 시점에 PD/SR 진입
   - 요청 도착 시 즉시 복귀 트리거
   - 전력 모드 전환 비용(복귀 Latency)과 절감 효과의 균형
-  - LPDDR5: DVFSC와 연계하여 주파수+전력 동시 조절
+  - LPDDR5(주축): DVFSC와 연계하여 주파수+전압을 동시 조절,
+    gear 전환 후 WCK2CK 재정렬을 PHY와 협조하여 트리거
 ```
 
 ### 5.11 주요 DRAM 명령
@@ -540,7 +582,7 @@ MC의 역할:
 > "SoC의 여러 마스터(CPU, GPU, Display 등)가 동시에 메모리에 접근할 때, AXI QoS 필드를 기반으로 우선순위를 부여한다. Bandwidth Regulation으로 각 마스터의 최소 보장 대역폭을 설정하고, Aging 메커니즘으로 오래 대기한 요청의 우선순위를 승격시켜 Starvation을 방지한다. Display 같은 실시간 마스터는 Urgent 시그널로 즉각 최우선 처리하여 Underrun을 방지한다."
 
 **Q: DRAM 초기화 시퀀스의 핵심 단계는?**
-> "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → MRS 명령으로 Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → ZQ Calibration(임피던스 보정) → Training(WL, DQ, Eye, VREF) → Refresh 시작. 특히 MRS 설정 순서는 JEDEC 스펙에 명시되어 있으며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
+> "전원 안정화(tPW) → RESET 해제 → CKE 활성화 → Mode Register 프로그래밍(BL, CL, CWL, ODT 등) → 임피던스 보정 → Training → Refresh 시작. 세대별로 다른 점: mobile LPDDR5(주축)는 Mode Register를 MRW/MRR 명령으로 설정하고 Training에 CBT + WCK2CK leveling(LPDDR5 고유)이 추가되며 DIMM/PMIC/RCD가 없다(SoC PMIC, PoP 적층). server DDR5는 MRS 명령 + DIMM의 PMIC/RCD + CA(CS) Training을 쓴다. 설정 순서는 JEDEC 스펙에 명시되며, Training은 코드량이 크고 PVT 의존적이어서 BootROM이 아닌 BL2에서 수행한다."
 
 ---
 
@@ -593,8 +635,10 @@ MC의 역할:
 - **Row Hit 극대화**: 같은 row 연속 access 면 PRE/ACT 회피 → throughput ↑ — FR-FCFS 의 핵심.
 - **Bank-level parallelism + BG interleaving**: 다른 bank/BG 에 동시 ACT 가능. tCCD_S 활용으로 latency 겹침.
 - **Write batching + RAW bypass + ROB**: R↔W 전환 비용 회피, 단 latency tail 과의 trade-off.
-- **Refresh scheduling**: tREFI 보장 + traffic 영향 최소화. per-bank / staggering / pull-in.
-- **QoS**: AXI QoS field + Aging + Bandwidth Regulation. Display 같은 실시간 master 는 Urgent 우선.
+- **Refresh scheduling**: 평균 tREFI 보장 + traffic 영향 최소화. mobile LPDDR5 = per-bank + **PASR**(LPDDR 고유), server DDR5 = Same-bank(REFsb).
+- **QoS (mobile LPDDR5 핵심)**: AXI QoS field + Aging + Bandwidth Regulation. Display/ISP 같은 실시간 master 는 Urgent 우선 — underrun 방지.
+- **전력 (mobile LPDDR5)**: PD/SR 위에 **DVFSC gear(F0~F4)** + **Deep Sleep** + **PASR**. gear 전환 시 WCK2CK 재정렬 필요. server DDR5 MC 에는 없는 축.
+- **초기화 차이**: LPDDR5 = MRW + CBT/WCK2CK, DIMM/PMIC/RCD 없음(SoC PMIC) vs server DDR5 = MRS + DIMM PMIC/RCD + CA(CS) Training.
 
 !!! warning "실무 주의점"
     - 평균 BW 가 정상이라도 latency tail / starvation 은 별도로 감시.

@@ -24,6 +24,8 @@ DRAM 검증의 절반은 protocol, 나머지 절반은 timing입니다. Protocol
 
 상용 메모리 controller IP에서 발견되는 대부분의 silicon bug는 timing corner, 특히 speed bin 경계나 back-to-back 명령의 latency에서 발생합니다. DV의 timing checker가 느슨하면, 예를 들어 `tRCD-1`도 통과시키는 SVA를 작성하면, 시뮬레이션은 깨끗하게 통과하지만 silicon에서 간헐적 fail이 나타납니다. timing checker를 spec 수치와 정확하게 일치시키는 것이 중요한 이유입니다.
 
+> **이 챕터의 주축은 LPDDR5**입니다. LPDDR5는 명령용 저속 클럭 `CK`와 데이터용 고속 클럭 `WCK`를 **분리**했기 때문에(WCK:CK = 2:1 또는 4:1, gear 의존), timing 모델이 두 클럭 도메인에 걸쳐 있습니다 — 이는 단일 CK + DQS를 쓰는 DDR5와 구별되는 LPDDR5의 정체성입니다. 아래에서는 LPDDR5를 기준으로 timing을 설명하고, 서버/PC용 DDR5와 직전 세대 DDR4를 *비교*로 곁들입니다.
+
 ---
 
 ## 2. 핵심 Timing 파라미터 — 9가지
@@ -54,10 +56,12 @@ DRAM 검증의 절반은 protocol, 나머지 절반은 timing입니다. Protocol
 
 ### 2.3 Refresh
 
-| 파라미터 | 의미 |
-|---|---|
-| `tREFI` | Refresh 평균 간격 (보통 7.8us @ normal temp) |
-| `tRFC` | REF → 다음 명령 가능 시점 (Refresh Completion) |
+| 파라미터 | 의미 | 단위 |
+|---|---|---|
+| `tREFI` | REF **명령 발급 간격** (평균). LPDDR5/DDR5 = 3.9μs, DDR4 = 7.8μs @ normal temp | ns |
+| `tRFC` | REF → 다음 명령 가능 시점 (Refresh Completion) — **density 의존** (단일 고정값 아님) | ns |
+
+> **단위 주의**: tRCD/tRP/tRAS 등 대부분의 timing은 `tCK` (= nCK) 단위지만, `tREFI`/`tRFC`는 **절대 시간(ns)** 단위입니다. tREFI는 *평균 REF 명령 간격*이고, tRFC는 칩 *density가 클수록 길어집니다* (더 많은 row를 한 번에 refresh). 그래서 tRFC는 하나의 고정 숫자가 아니라 density·spec별 테이블 값입니다. LPDDR5/DDR5는 tREFI가 3.9μs로 DDR4의 7.8μs 대비 절반이라 refresh가 더 자주 발생합니다.
 
 (Refresh 상세는 [Ch07](07_refresh_rfm.md))
 
@@ -80,9 +84,19 @@ DRAM 검증의 절반은 protocol, 나머지 절반은 timing입니다. Protocol
 
 ---
 
-## 3. DDR5 의 timing 변화 — 무엇이 달라졌나
+## 3. 고속화에 따른 timing 변화 — nCK 팽창과 WCK
 
-> 출처: JESD79-5C.01 v1.31 §3.5 (MR), §4 (Command operation)
+> 출처: JESD79-5C.01 v1.31 §3.5 (MR), §4 (Command operation); JESD209-5C §3 (Clocking)
+
+### 3.0 LPDDR5의 WCK — 데이터 timing의 별도 도메인
+
+LPDDR5에서 가장 큰 timing 구조 변화는 **WCK(Write Clock)** 도입입니다. DDR4/DDR5는 단일 CK를 기준으로 명령과 데이터 timing을 모두 표현하지만, LPDDR5는 *명령*은 저속 차동 `CK`로, *데이터*는 고속 `WCK`로 나눕니다.
+
+- **WCK:CK 비율**은 gear(DVFSC frequency set point)에 따라 **2:1 또는 4:1**로 바뀝니다.
+- gear 전환(DVFSC) 시 WCK:CK 비율이 변하므로 **WCK2CK 재정렬(WCK2CK Leveling, [Ch08](08_training.md) 참조)**이 다시 필요합니다.
+- 따라서 LPDDR5 데이터 timing(READ/WRITE latency, WCK-DQ 관계)은 *현재 gear의 WCK:CK*를 알아야 nCK로 환산됩니다 — DV checker는 gear별로 WCK 도메인 timing을 분리해 모델링해야 합니다.
+
+DDR5는 이러한 WCK 분리가 없고 단일 CK + DQS를 사용하므로, 아래 nCK 팽창 논의는 LPDDR5의 CK 도메인과 DDR5에 공통으로 적용됩니다.
 
 ### 3.1 DDR4 vs DDR5 — 동일 절대 시간, 다른 nCK 수
 

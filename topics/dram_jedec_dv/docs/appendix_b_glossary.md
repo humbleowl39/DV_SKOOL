@@ -56,7 +56,15 @@
 <p class="glossary-field"><strong>Definition.</strong> A grouping of multiple banks that share certain timing constraints, where commands to different banks within the same group are subject to longer constraints (tCCD_L) than commands to banks in different groups (tCCD_S).</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-4D §2 (introduced in DDR4); JESD79-5C.01 §2.7.</p>
 <p class="glossary-field"><strong>Related.</strong> [[Bank]], [[tCCD_L]], [[tCCD_S]]</p>
-<p class="glossary-field"><strong>Example.</strong> DDR5 has 8 BGs per device, each containing 4 banks.</p>
+<p class="glossary-field"><strong>Example.</strong> DDR5 has 8 BGs per device, each containing 4 banks; LPDDR5 uses Bank Group only in its BG mode (see [[Bank Mode]]).</p>
+</div>
+
+<div class="glossary-term">
+<h3 id="bank-mode">Bank Mode (LPDDR5)</h3>
+<p class="glossary-field"><strong>Definition.</strong> An LPDDR5 mode-register-selectable organization of the device banks into one of three arrangements: Bank Group mode (4 bank groups of 4 banks, 16 banks total), 8-Bank mode (8 banks), or 16-Bank mode (16 banks).</p>
+<p class="glossary-field"><strong>Source.</strong> JESD209-5C §2.</p>
+<p class="glossary-field"><strong>Related.</strong> [[Bank]], [[Bank Group]]</p>
+<p class="glossary-field"><strong>Example.</strong> Switching between BG/8B/16B modes requires re-initialization and must not occur during normal operation; a reference model must be parameterized accordingly rather than hardcoded to the DDR5 32-bank layout.</p>
 </div>
 
 <div class="glossary-term">
@@ -195,9 +203,10 @@
 
 <div class="glossary-term">
 <h3 id="pasr">PASR (Partial Array Self Refresh)</h3>
-<p class="glossary-field"><strong>Definition.</strong> A self-refresh variant in which only a configured subset of the DRAM array is refreshed, allowing the unrefreshed region to lose data in exchange for reduced power consumption.</p>
+<p class="glossary-field"><strong>Definition.</strong> An LPDDR self-refresh variant in which only a configured subset of the DRAM array is refreshed, allowing the unrefreshed region to lose data in exchange for reduced power consumption.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD209-5C §7.5.5.</p>
 <p class="glossary-field"><strong>Related.</strong> [[Self Refresh]], [[PARC]]</p>
+<p class="glossary-field"><strong>Example.</strong> PASR is characteristic of LPDDR; in DDR5 the corresponding MR60 PASR feature was deprecated (JESD79-5C v1.30).</p>
 </div>
 
 <div class="glossary-term">
@@ -258,17 +267,34 @@
 </div>
 
 <div class="glossary-term">
+<h3 id="dvfsc">DVFSC (Dynamic Voltage Frequency Scaling — Core)</h3>
+<p class="glossary-field"><strong>Definition.</strong> An LPDDR5 capability that scales the core supply and operating frequency at runtime by switching gear/Frequency Set Points, where a gear change also alters the WCK:CK ratio and therefore requires WCK2CK re-alignment.</p>
+<p class="glossary-field"><strong>Source.</strong> JESD209-5C §7.7.1.</p>
+<p class="glossary-field"><strong>Related.</strong> [[DVFS]], [[FSP]], [[WCK2CK Leveling]]</p>
+<p class="glossary-field"><strong>Example.</strong> LPDDR5 also defines Enhanced DVFSC and DVFSQ (DQ-side) variants.</p>
+</div>
+
+<div class="glossary-term">
+<h3 id="on-die-ecc">On-die ECC</h3>
+<p class="glossary-field"><strong>Definition.</strong> An error-correcting code applied inside the DRAM device that protects data stored in the cell array against in-cell errors such as leakage and soft errors, orthogonal to and independent of Link ECC which protects the DQ link.</p>
+<p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 §3.5.16 (DDR5 standard); JESD209-5C (LPDDR5, device-dependent).</p>
+<p class="glossary-field"><strong>Related.</strong> [[Transparency ECC]], [[Link ECC]], [[ECS]]</p>
+<p class="glossary-field"><strong>Example.</strong> On-die ECC is standardized in DDR5 (Transparency ECC) but device-dependent in LPDDR5, which instead mandates Link ECC for bus protection.</p>
+</div>
+
+<div class="glossary-term">
 <h3 id="transparency-ecc">Transparency ECC (DDR5 On-die ECC)</h3>
-<p class="glossary-field"><strong>Definition.</strong> A DDR5 mechanism that performs error correction on data within the DRAM array, invisible to the memory controller but with statistics exposed via mode registers.</p>
+<p class="glossary-field"><strong>Definition.</strong> A DDR5 on-die ECC mechanism that performs error correction on data within the DRAM array, invisible to the memory controller but with statistics exposed via mode registers.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 §3.5.16 (MR14), §3.5.17 (MR15).</p>
-<p class="glossary-field"><strong>Related.</strong> [[Link ECC]], [[ECS]]</p>
+<p class="glossary-field"><strong>Related.</strong> [[On-die ECC]], [[Link ECC]], [[ECS]]</p>
 </div>
 
 <div class="glossary-term">
 <h3 id="link-ecc">Link ECC (LPDDR5)</h3>
-<p class="glossary-field"><strong>Definition.</strong> An LPDDR5 mechanism that protects data integrity on the DQ link between controller and DRAM through encoding and decoding using a defined check matrix.</p>
+<p class="glossary-field"><strong>Definition.</strong> An LPDDR5-specific mechanism that protects data integrity on the DQ link between controller and DRAM through encoding and decoding using a defined check matrix, with no DDR5 equivalent.</p>
 <p class="glossary-field"><strong>Source.</strong> JESD209-5C §7.7.8.</p>
-<p class="glossary-field"><strong>Related.</strong> [[Transparency ECC]], [[DBI]]</p>
+<p class="glossary-field"><strong>Related.</strong> [[On-die ECC]], [[Transparency ECC]], [[DBI]]</p>
+<p class="glossary-field"><strong>Example.</strong> Because LPDDR5 does not mandate on-die ECC, Link ECC is the primary reliability axis protecting the bus; the two protections are orthogonal.</p>
 </div>
 
 <div class="glossary-term">
@@ -329,8 +355,8 @@
 
 <div class="glossary-term">
 <h3 id="mrr">MRR (Mode Register Read)</h3>
-<p class="glossary-field"><strong>Definition.</strong> The DRAM command used to read the current value of a specified mode register, introduced as a direct command in DDR5 (DDR4 used MPR-based indirection).</p>
-<p class="glossary-field"><strong>Source.</strong> JESD79-5C.01 §3.4.1.</p>
+<p class="glossary-field"><strong>Definition.</strong> The DRAM command used to read the current value of a specified mode register directly, pioneered by LPDDR (LPDDR4, 2014) and later adopted by DDR5 (2020), whereas DDR4 used MPR-based indirection.</p>
+<p class="glossary-field"><strong>Source.</strong> JESD209-4E §6 (LPDDR4); JESD79-5C.01 §3.4.1 (DDR5).</p>
 <p class="glossary-field"><strong>Related.</strong> [[MR]], [[MRW]]</p>
 </div>
 
