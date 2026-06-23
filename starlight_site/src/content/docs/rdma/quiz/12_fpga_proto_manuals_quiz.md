@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Quiz — Module 12: FPGA Prototyping & Lab Manuals"
 ---
 

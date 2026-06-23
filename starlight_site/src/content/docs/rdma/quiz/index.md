@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "RDMA 퀴즈"
 ---
 

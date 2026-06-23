@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 02 — TOE Architecture"
 ---
 

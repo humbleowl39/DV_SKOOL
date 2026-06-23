@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Ethernet DCMAC 용어집"
 ---
 

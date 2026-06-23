@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 09 — Quick Reference Card"
 ---
 

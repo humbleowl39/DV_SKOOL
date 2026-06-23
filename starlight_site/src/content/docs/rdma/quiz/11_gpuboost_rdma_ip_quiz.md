@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Quiz — Module 11: GPUBoost / RDMA-IP Hardware Architecture"
 ---
 

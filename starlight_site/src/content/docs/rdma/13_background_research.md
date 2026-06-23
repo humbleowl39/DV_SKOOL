@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 13 — Background & Industry Research"
 ---
 

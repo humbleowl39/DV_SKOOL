@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 01 — Ethernet Fundamentals"
 ---
 

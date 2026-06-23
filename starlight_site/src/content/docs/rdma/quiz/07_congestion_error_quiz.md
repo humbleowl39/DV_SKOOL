@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Quiz — Module 07: Congestion Control & Error Handling"
 ---
 

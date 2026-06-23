@@ -30,6 +30,32 @@ export default defineConfig({
 				{ tag: 'link', attrs: { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: true } },
 				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap' } },
 				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css' } },
+				// Easter egg: on the splash home, clicking the "DV SKOOL" hero title 10x
+				// in a row (<1.5s between clicks) reveals the hidden topics hub (/secret/).
+				{ tag: 'script', content: `
+					(function(){
+						function init(){
+							var base = '/DV_SKOOL/';
+							var p = location.pathname;
+							var atHome = (p === base || p === base.slice(0, -1) || p === base + 'index.html');
+							if (!atHome) return;
+							var target = null, hs = document.querySelectorAll('h1');
+							for (var i = 0; i < hs.length; i++) {
+								if (/DV[ _]?SKOOL/i.test(hs[i].textContent || '')) { target = hs[i]; break; }
+							}
+							if (!target) return;
+							var count = 0, timer = null;
+							target.addEventListener('click', function(){
+								count++;
+								if (timer) clearTimeout(timer);
+								timer = setTimeout(function(){ count = 0; }, 1500);
+								if (count >= 10) { count = 0; window.location.href = base + 'secret/'; }
+							});
+						}
+						if (document.readyState !== 'loading') init();
+						else document.addEventListener('DOMContentLoaded', init);
+					})();
+				` },
 			],
 			expressiveCode: {
 				// `systemverilog`/`sv` fences -> Shiki bundled grammar `system-verilog`
@@ -64,9 +90,8 @@ export default defineConfig({
 						{ label: 'AMBA Protocols', collapsed: true, items: [{ autogenerate: { directory: 'amba_protocols' } }] },
 						{ label: 'PCI Express', collapsed: true, items: [{ autogenerate: { directory: 'pcie' } }] },
 						{ label: 'CXL (Compute Express Link)', collapsed: true, items: [{ autogenerate: { directory: 'cxl' } }] },
-						{ label: 'RDMA (IB & RoCEv2)', collapsed: true, items: [{ autogenerate: { directory: 'rdma' } }] },
-						{ label: 'Ethernet DCMAC', collapsed: true, items: [{ autogenerate: { directory: 'ethernet_dcmac' } }] },
-						{ label: 'TOE', collapsed: true, items: [{ autogenerate: { directory: 'toe' } }] },
+						// 'rdma', 'ethernet_dcmac', 'toe' are intentionally NOT in the sidebar —
+						// hidden easter-egg topics (revealed via the home title 10-click → /secret/).
 						{ label: 'NVMe / NVMe-oF', collapsed: true, items: [{ autogenerate: { directory: 'nvme' } }] },
 						{ label: 'UFS HCI', collapsed: true, items: [{ autogenerate: { directory: 'ufs_hci' } }] },
 						{ label: 'DPU / SmartNIC', collapsed: true, items: [{ autogenerate: { directory: 'dpu' } }] },
@@ -109,6 +134,8 @@ export default defineConfig({
 						{ label: 'BigTech Algorithm', collapsed: true, items: [{ autogenerate: { directory: 'bigtech_algorithm' } }] },
 						{ label: 'Hardware Interview Prep', collapsed: true, items: [{ autogenerate: { directory: 'hardware_interview' } }] },
 						{ label: 'CPU DV Interview Prep', collapsed: true, items: [{ autogenerate: { directory: 'cpu_dv_interview' } }] },
+						// 'dram_dv_interview' is intentionally NOT in the sidebar — it is a hidden
+						// easter-egg topic (see head script). Pages still build but are unlisted.
 					],
 				},
 			],

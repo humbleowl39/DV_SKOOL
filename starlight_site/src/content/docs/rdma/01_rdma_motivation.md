@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 01 — RDMA 동기와 핵심 모델"
 ---
 

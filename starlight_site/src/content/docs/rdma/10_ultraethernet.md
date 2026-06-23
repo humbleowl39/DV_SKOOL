@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 10 — Ultraethernet (UEC)"
 ---
 

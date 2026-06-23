@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "TOE 용어집"
 ---
 

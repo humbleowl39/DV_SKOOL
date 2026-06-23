@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 05 — Memory Model: PD, MR, L_Key/R_Key, IOVA"
 ---
 

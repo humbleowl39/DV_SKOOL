@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Module 08 — RDMA-TB 검증 환경 & DV 전략"
 ---
 

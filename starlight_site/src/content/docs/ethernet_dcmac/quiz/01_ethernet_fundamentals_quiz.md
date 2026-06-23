@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Quiz — Module 01: Ethernet Fundamentals"
 ---
 

@@ -1,0 +1,55 @@
+---
+title: "DRAM DV Interview Prep"
+pagefind: false
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+메모리 회사의 설계검증(DV) 면접은 SoC/IP DV 면접과 결이 다르다. SoC 쪽 면접관은 "프로토콜대로 동작하는가"를 묻지만, DRAM 검증 면접관은 **회로·타이밍·검증 메커니즘이 한 덩어리로 얽힌 도메인**을 전제로 *"이 timing이 왜 그 값이어야 하는가"*, *"refresh를 놓치면 무엇이 깨지는가"*, *"custom 회로의 timing은 어떻게 검증하는가"* 같은 인과를 파고든다. 외운 정의로는 두 번째 꼬리질문에서 막힌다.
+
+이 코스는 **SK하이닉스 DRAM 설계검증 경력 면접**을 목표로, SoC/IP 검증 경험(Secure Boot·MMU·DRAM controller)과 AI 검증 프레임워크 개발 역량을 **DRAM 도메인 면접 문맥으로 재포지셔닝**하고, DRAM 도메인 지식·검증 방법론·프로젝트 심화·AI 자동화·인성 면접까지 *한 줄 정의가 아니라 왜 그렇게 하는가*로 답할 수 있게 설계되었다.
+
+:::caution[개인 학습용 / 비공개 자료]
+이 토픽은 특정 지원자의 실제 경력·프로젝트·전략을 담은 **개인 면접 준비 자료**입니다. 실명·협업사·내부 프로젝트명 등 민감정보가 포함될 수 있으므로 **공개 배포(Public push / Pages deploy) 전에 반드시 일반화·익명화 여부를 확인**하세요.
+:::
+
+## 🎯 학습 목표
+
+이 코스를 마치면 다음을 할 수 있습니다:
+
+- **Analyze (분석)** SK하이닉스 DRAM DV 공고의 요구 역량을 자신의 경력과 대조해 갭을 식별하고 재포지셔닝 전략을 세운다.
+- **Explain (이해)** DRAM 동작·timing parameter·refresh·LPDDR5 특징을 *검증자 관점의 corner*와 함께 자기 언어로 설명한다.
+- **Differentiate (분석)** functional timing(SVA)과 physical timing(STA)을 레이어로 구분하고, custom 회로 검증에서 둘이 어떻게 만나는지 설명한다.
+- **Apply (적용)** UVM·coverage-driven·reference model 방법론을 DRAM 검증 문맥에 적용해 설명한다.
+- **Justify (평가)** 프로젝트 디버깅 경험을 STAR로 구조화하고, 갭(custom STA·Mixed)을 지원동기로 전환해 정당화한다.
+- **Compose (작성)** AI 기반 검증 시스템을 DRAM 검증에 이식하는 구체안을 설계해 제시한다.
+
+## 📋 사전 지식
+
+본 코스는 **UVM/SystemVerilog 실무 경험**과 SoC/IP 검증 경험을 전제합니다.
+
+- **UVM 기본**: component 계층·phase·sequence·RAL — 부족하면 [DV SKOOL — UVM](../uvm/)
+- **DRAM 기본**: cell·bank·command·timing — 깊이는 [DV SKOOL — DRAM / DDR](../dram_ddr/), [DRAM JEDEC Deep-Dive](../dram_jedec_dv/)
+- **선택**: [Mixed-Signal DV](../mixed_signal_dv/), [SoC Secure Boot](../soc_secure_boot/), [MMU](../mmu/)
+
+## 📚 코스 구성
+
+<CardGrid>
+  <LinkCard title="01 — 역할·전략·갭 분석" href="../01_role_and_strategy/" description="SK 공고 분해, 강점·갭 식별, PT 구성과 재포지셔닝 메시지" />
+  <LinkCard title="02 — DRAM 도메인 지식" href="../02_dram_domain/" description="동작·timing param·refresh·LPDDR5·custom 회로·STA vs functional timing" />
+  <LinkCard title="03 — 검증 방법론" href="../03_verification_methodology/" description="UVM·coverage-driven·reference model·sign-off 판단" />
+  <LinkCard title="04 — 프로젝트 심화 & 디버깅" href="../04_project_deepdive/" description="Secure Boot(RoT)·MMU·DRAM 프로젝트, 가장 어려웠던 디버깅 STAR" />
+  <LinkCard title="05 — AI 기반 검증 프레임워크" href="../05_ai_verification/" description="DVCon/DAC, RAG+FAISS, DRAM 적용 구체안, LLM 신뢰성 한계" />
+  <LinkCard title="06 — 인성·컬처핏 면접" href="../06_behavioral_interview/" description="지원동기·이직 사유·갈등·실패·포부, SK 가치 연계, 역질문" />
+  <LinkCard title="용어집" href="../glossary/" description="DRAM·검증·AI 핵심 용어 (ISO 11179)" />
+</CardGrid>
+
+```
+[01 역할·전략·갭 분석]
+      │
+      ├──> [02 DRAM 도메인] ──────┐
+      │                          ├──> [04 프로젝트 심화 & 디버깅]
+      ├──> [03 검증 방법론] ──────┤            │
+      │                          │            └──> [06 인성·컬처핏]
+      └──> [05 AI 검증 프레임워크]┘
+```

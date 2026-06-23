@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Quiz — Module 06: Data Path Operations"
 ---
 

@@ -1,4 +1,5 @@
 ---
+pagefind: false
 title: "Quiz — Module 13: Background & Industry Research"
 ---
 
