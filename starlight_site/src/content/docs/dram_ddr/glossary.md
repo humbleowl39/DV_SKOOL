@@ -12,7 +12,7 @@ title: "DRAM / DDR 용어집"
 
 **Definition.** DRAM의 row 데이터를 sense amplifier로 옮기는 명령으로, 이후 RD/WR가 가능해진다.
 
-**Source.** JEDEC DDR4/5 spec.
+**Source.** JEDEC JESD209-5 (LPDDR5).
 
 **Related.** PRE, tRCD, Bank.
 
@@ -28,11 +28,11 @@ title: "DRAM / DDR 용어집"
 
 **Definition.** DRAM cell의 독립 access 단위로, 동시에 다른 bank를 ACT/RD/WR 가능 → bank-level parallelism의 기반.
 
-**Source.** JEDEC DDR4/5 spec.
+**Source.** JEDEC JESD209-5 (LPDDR5).
 
 **Related.** Bank Group, ACT, BLP.
 
-**Count.** LPDDR5: MR로 모드 선택 — BG 모드(4 BG × 4 = 16) / 8B 모드(8) / 16B 모드(16), 최대 16 banks. DDR5: 32 banks (8 BG × 4). LPDDR4: BG 없는 8 banks. DDR4: 16 banks (4 BG × 4).
+**Count.** LPDDR5는 MR로 bank 모드를 선택한다 — BG 모드(4 BG × 4 = 16) / 8B 모드(8) / 16B 모드(16), 최대 16 banks. 직전 세대 LPDDR4는 BG 없는 8 banks였다.
 
 ### Bank Mode (LPDDR5)
 
@@ -42,15 +42,15 @@ title: "DRAM / DDR 용어집"
 
 **Related.** Bank Group, tCCD_S, tCCD_L.
 
-**Example.** BG 모드는 Bank Group 인터리빙으로 tCCD_S를 활용하고, 16B 모드는 BG 없이 16개 bank의 parallelism을 제공한다. DDR5의 고정 32뱅크(8 BG)와 달리 LPDDR5는 최대 16뱅크다.
+**Example.** BG 모드는 Bank Group 인터리빙으로 tCCD_S를 활용하고, 16B 모드는 BG 없이 16개 bank의 parallelism을 제공한다. LPDDR5는 최대 16뱅크를 지원한다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
 ### Bank Group (BG)
 
-**Definition.** I/O 회로와 데이터 경로 일부를 공유하는 bank들의 논리적 그룹으로, DDR4에서 도입된 JEDEC 개념.
+**Definition.** I/O 회로와 데이터 경로 일부를 공유하는 bank들의 논리적 그룹으로, LPDDR5의 BG 모드에서 사용된다.
 
-**Source.** JEDEC DDR4+.
+**Source.** JEDEC JESD209-5 (LPDDR5).
 
 **Related.** Bank, tCCD_S, tCCD_L, BLP.
 
@@ -70,7 +70,7 @@ title: "DRAM / DDR 용어집"
 
 **Related.** tCAS, CWL (CAS Write Latency).
 
-**Example.** DDR4-3200 CL=22 → 22 cycle 후 첫 data.
+**Example.** CL=n으로 프로그래밍하면 RD 명령 후 n cycle 뒤 첫 data가 나온다. LPDDR5는 gear(DVFSC)마다 CL 값이 달라진다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
@@ -80,11 +80,11 @@ title: "DRAM / DDR 용어집"
 
 ### DDR (Double Data Rate)
 
-**Definition.** 클럭의 상승/하강 엣지 모두에서 데이터를 전송해 동일 클럭 주파수에서 2배 throughput을 제공하는 SDRAM 표준.
+**Definition.** 클럭의 상승/하강 엣지 모두에서 데이터를 전송해 동일 클럭 주파수에서 2배 throughput을 제공하는 SDRAM 전송 방식이다.
 
-**Source.** JEDEC DDR1-5.
+**Source.** JEDEC.
 
-**Related.** SDR, DDR4, DDR5, LPDDR5.
+**Related.** SDR, LPDDR5, WCK.
 
 ### DLL (Delay-Locked Loop)
 
@@ -110,6 +110,20 @@ title: "DRAM / DDR 용어집"
 
 ---
 
+### DFI (DDR PHY Interface)
+
+**Definition.** 메모리 컨트롤러(MC)와 PHY 사이의 신호·타이밍을 규정하는 업계 표준 인터페이스 스펙.
+
+**Source.** DFI Specification (industry standard; 최신 세대가 LPDDR5 지원).
+
+**Related.** PHY, WCK2CK, DVFSC, Controller Update, PHY Update.
+
+**Example.** DFI는 명령/주소·write/read 데이터와 함께 제어 핸드셰이크(dfi_ctrlupd_req/ack, dfi_phyupd_req/ack, dfi_lp_*, dfi_init_start/complete, dfi_freq_fsp)를 정의한다. LPDDR5의 DVFSC gear 전환은 Frequency Change + Controller Update 창에서 WCK2CK 재정렬과 함께 일어나며, `dfi_t*` latency는 gear 의존이라 전환 시 갱신한다.
+
+**See also.** [Module 03](../03_memory_interface_phy/)
+
+---
+
 ## E — ECC
 
 ### ECC (Error Correction Code)
@@ -120,7 +134,7 @@ title: "DRAM / DDR 용어집"
 
 **Related.** SECDED, scrubbing, On-die ECC, Link ECC.
 
-**Example.** SECDED = single-error correct, double-error detect. DDR5/LPDDR5는 on-die ECC + 외부 SECDED 조합이 가능하다.
+**Example.** SECDED = single-error correct, double-error detect. LPDDR5는 on-die ECC(셀 보호) + Link ECC(링크 보호) 조합으로 신뢰성을 확보한다.
 
 **See also.** [Module 02](../02_memory_controller/)
 
@@ -128,17 +142,17 @@ title: "DRAM / DDR 용어집"
 
 **Definition.** DRAM 칩 내부에서 셀에 저장된 워드의 단일 비트 에러를 자동 정정하는 ECC로, 호스트에게 투명하게 동작한다.
 
-**Source.** JEDEC DDR5 / LPDDR5 spec.
+**Source.** JEDEC JESD209-5 (LPDDR5).
 
 **Related.** Link ECC, SECDED, ECC.
 
-**Example.** DDR5 표준이며 LPDDR5도 디바이스에 따라 탑재한다. 워드 내 1-bit만 정정하므로 multi-bit/chipkill은 외부 SECDED가 필요하다. 보호 대상은 셀 내부 비트로, Link ECC(전송경로)와 직교한다.
+**Example.** LPDDR5는 디바이스에 따라 on-die ECC를 탑재한다. 워드 내 1-bit만 정정하므로 multi-bit/chipkill은 외부 SECDED가 필요하다. 보호 대상은 셀 내부 비트로, Link ECC(전송경로)와 직교한다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
 ### Link ECC
 
-**Definition.** DQ 전송경로(링크)에서 발생하는 비트 에러를 검출/정정하는 LPDDR5 고유의 ECC로, DDR5에는 없다.
+**Definition.** DQ 전송경로(링크)에서 발생하는 비트 에러를 검출/정정하는 LPDDR5의 ECC 기능이다.
 
 **Source.** JEDEC JESD209-5 (LPDDR5).
 
@@ -184,7 +198,7 @@ title: "DRAM / DDR 용어집"
 
 **Related.** tREFI, tRFC, retention, PASR.
 
-**Period.** tREFI는 REF 명령의 평균 발행 간격(DDR4 ≈ 7.8 µs, DDR5/LPDDR5 ≈ 3.9 µs)이다. LPDDR5는 per-bank refresh + PASR로 미사용 array 영역의 refresh를 생략한다. DDR5는 same-bank refresh(REFsb), DDR4는 all-bank refresh.
+**Period.** tREFI는 REF 명령의 평균 발행 간격이다. LPDDR5는 all-bank refresh와 per-bank refresh를 모두 지원하며, per-bank refresh + PASR로 미사용 array 영역의 refresh를 생략해 전력을 절감한다.
 
 **See also.** [Module 02](../02_memory_controller/)
 
@@ -196,7 +210,7 @@ title: "DRAM / DDR 용어집"
 
 **Related.** REF, tREFI, Deep Sleep.
 
-**Example.** DDR5에는 없는 LPDDR 고유 기능으로, 모바일 idle 상태에서 retention 전력을 크게 줄인다.
+**Example.** 모바일 idle 상태에서 self-refresh 대상 영역을 줄여 retention 전력을 크게 절감한다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
@@ -208,7 +222,7 @@ title: "DRAM / DDR 용어집"
 
 **Related.** Burst Length, WCK, DQ.
 
-**Example.** LPDDR5·LPDDR4·DDR5는 16n(BL16), DDR4는 8n(BL8)이다. LPDDR은 LPDDR4부터 16n을 채택했고, LPDDR5는 BL16과 BL32를 지원한다.
+**Example.** LPDDR5는 16n prefetch로 BL16과 BL32를 지원한다. 직전 세대 LPDDR4부터 16n을 채택했다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
@@ -252,13 +266,13 @@ title: "DRAM / DDR 용어집"
 
 **Related.** CK, DQ, WCK2CK, DVFSC.
 
-**Example.** WCK:CK 비율은 gear에 따라 2:1 또는 4:1이며, 명령 버스는 저속 CK로 두고 데이터만 고속으로 돌려 전력을 절감한다. DDR5는 단일 CK + DQS 구조로 WCK가 없다.
+**Example.** WCK:CK 비율은 gear에 따라 2:1 또는 4:1이며, 명령 버스는 저속 CK로 두고 데이터만 고속으로 돌려 전력을 절감한다. 직전 세대 LPDDR4는 별도 WCK 없이 DQS 기반으로 동작했다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
 ### WCK2CK (WCK-to-CK Leveling)
 
-**Definition.** LPDDR5에서 WCK와 CK 사이의 위상을 정렬하는 training 단계로, DDR5에는 없는 항목이다.
+**Definition.** LPDDR5에서 WCK와 CK 사이의 위상을 정렬하는 training 단계이다.
 
 **Source.** JEDEC JESD209-5 (LPDDR5).
 
@@ -276,7 +290,7 @@ title: "DRAM / DDR 용어집"
 
 **Related.** CA, Training, WCK2CK, VREF.
 
-**Example.** LPDDR5의 CA 버스는 단일종단 다중사이클이라 CBT(Mode1/2)가 필수이며, 내부 VREF를 사용한다. DDR5는 CA[13:0] 2-cycle 기반의 CA(CS) training을 쓴다.
+**Example.** LPDDR5의 CA 버스는 단일종단 다중사이클이라 CBT(Mode1/2)가 필수이며, 내부 VREF를 사용한다.
 
 **See also.** [Module 01](../01_dram_fundamentals_ddr/)
 
@@ -309,7 +323,7 @@ title: "DRAM / DDR 용어집"
 | **DQS** | Data Strobe | 데이터 sample용 strobe |
 | **CK** | Clock | 시스템 클럭 |
 | **WCK** | Write Clock | LPDDR5의 데이터 전용 클럭 |
-| **WCK2CK** | WCK-to-CK Leveling | LPDDR5 WCK·CK 위상 정렬 (DDR5에 없음) |
+| **WCK2CK** | WCK-to-CK Leveling | LPDDR5 WCK·CK 위상 정렬 |
 | **CBT** | Command Bus Training | LPDDR5 CA 버스 타이밍 정렬 |
 | **DVFSC** | Dynamic Voltage/Freq Scaling Clock | LPDDR5 런타임 gear(F0~F4) 전환 |
 | **PASR** | Partial Array Self-Refresh | 미사용 array만 refresh 생략 (LPDDR 고유) |
