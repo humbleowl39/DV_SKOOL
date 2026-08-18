@@ -1,5 +1,6 @@
 ---
 title: "Module 05 퀴즈 — Adding New Components 4원칙"
+pagefind: false
 ---
 
 본문: [Module 05](../../05_extension_principles/)

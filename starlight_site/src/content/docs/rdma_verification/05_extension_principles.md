@@ -1,5 +1,6 @@
 ---
 title: "Module 05 — Adding New Components: 4원칙"
+pagefind: false
 ---
 
 :::tip[학습 목표]

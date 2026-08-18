@@ -1,5 +1,6 @@
 ---
 title: "Module 01 퀴즈 — TB Overview & Multi-Node 구조"
+pagefind: false
 ---
 
 본문: [Module 01](../../01_tb_overview/)

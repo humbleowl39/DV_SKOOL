@@ -1,5 +1,6 @@
 ---
 title: "Module 08 — Debug Case 1: Data Integrity Error"
+pagefind: false
 ---
 
 :::tip[학습 목표]

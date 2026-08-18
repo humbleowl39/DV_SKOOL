@@ -1,5 +1,6 @@
 ---
 title: "Module 04 — Analysis Port Topology"
+pagefind: false
 ---
 
 :::tip[학습 목표]

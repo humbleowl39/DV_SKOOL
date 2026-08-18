@@ -12,7 +12,7 @@ title: "04 — NVMe-oF over RDMA"
 :::
 :::note[사전 지식]
 - [02 — SQ/CQ 큐 메커니즘](../02_sq_cq_doorbell/), [03 — 커맨드 분류](../03_command_set_admin_io_fabric/)
-- RDMA 기본 — QP(Queue Pair), SEND/RECV, RDMA Read/Write, Memory Region/SGL ([RDMA 코스](../../rdma/))
+- RDMA 기본 — QP(Queue Pair — 송·수신 큐 한 쌍의 통신 단위), SEND/RECV(two-sided), RDMA Read/Write(one-sided), Memory Region/SGL — §1·§2에서 필요한 범위를 본문에서 다시 정의합니다
 - RoCEv2가 Ethernet 위 RDMA transport라는 큰 그림
 :::
 ---
@@ -269,12 +269,12 @@ NVMe-oF target에서 host가 동시에 4개의 NVMe 큐 쌍으로 IO를 한다�
 
 **External**
 - *NVM Express over Fabrics Specification* (transport binding, capsule, SGL) — NVM Express, Inc.
-- RoCEv2 / InfiniBand Architecture — RDMA transport 기반 ([RDMA 코스](../../rdma/))
+- *InfiniBand Architecture Specification* (IBTA) — RoCEv2 Annex 포함, RDMA transport 기반
 
 ---
 
 ## 다음 모듈
 
-이 코스의 마지막 챕터입니다. 배운 용어를 [용어집](../glossary/)에서 ISO 11179 정의로 다시 확인하고, [퀴즈](../quiz/)로 전 챕터 이해도를 점검하세요. 더 넓은 맥락은 transport 기반인 [RDMA 코스](../../rdma/)와 모바일 스토리지 비교 관점의 [UFS/HCI 코스](../../ufs_hci/)로 이어집니다.
+이 코스의 마지막 챕터입니다. 배운 용어를 [용어집](../glossary/)에서 ISO 11179 정의로 다시 확인하고, [퀴즈](../quiz/)로 전 챕터 이해도를 점검하세요. 더 넓은 맥락은 모바일 스토리지 비교 관점의 [UFS/HCI 코스](../../ufs_hci/)로 이어집니다.
 
 [퀴즈 풀어보기 →](../quiz/04_nvmeof_over_rdma_quiz/)

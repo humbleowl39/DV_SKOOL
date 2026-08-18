@@ -1,5 +1,6 @@
 ---
 title: "Module 06 퀴즈 — Error Handling Path"
+pagefind: false
 ---
 
 본문: [Module 06](../../06_error_handling_path/)

@@ -1,5 +1,6 @@
 ---
 title: "Module 08 퀴즈 — Data Integrity Error"
+pagefind: false
 ---
 
 본문: [Module 08](../../08_debug_data_integrity/)

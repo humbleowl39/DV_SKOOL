@@ -1,5 +1,6 @@
 ---
 title: "Module 12 퀴즈 — Debug Cheatsheet"
+pagefind: false
 ---
 
 본문: [Module 12](../../12_debug_cheatsheet/)

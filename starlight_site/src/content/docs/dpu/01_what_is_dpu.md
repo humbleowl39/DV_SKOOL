@@ -31,7 +31,7 @@ title: "Module 01 — DPU란 무엇이며 왜 등장했는가"
 2. **Data copy** — 네트워크 스택은 보통 NIC buffer → 커널 socket buffer → user buffer 로 데이터를 _복사_ 합니다. 이 memcpy 가 패킷 바이트 수에 비례해 CPU cycle 과 메모리 대역폭을 먹습니다 — 100 Gbps 양방향이면 초당 수십 GB 의 복사가 됩니다.
 3. **Context switch** — 인터럽트 처리, 커널/유저 전환, vSwitch·암호화 같은 인프라 스레드 스케줄링이 끊임없이 일어나면, CPU 는 _작업을 바꾸느라_ cache 가 무효화되고 파이프라인이 비워집니다. 이 전환 한 번이 수백 ns~µs 이고, 빈번하면 유효 연산 시간이 잠식됩니다.
 
-이 셋(interrupt 진입·복귀 + byte 비례 copy + 잦은 전환)이 매 패킷마다 쌓이면, "애플리케이션을 돌리라고 산" 코어들이 실제로는 _데이터를 옮기고 전환하는 데_ 시간 대부분을 쓰게 됩니다 — 이것이 코어가 "사라지는" 메커니즘입니다. DPU·TOE(TCP Offload Engine — TCP/IP 처리를 CPU 대신 하드웨어로 떠맡는 엔진)·RDMA(Remote Direct Memory Access — CPU·OS 개입 없이 원격 서버의 메모리를 직접 읽고 쓰는 기술) 의 가치가 모두 _이 세 비용을 호스트 CPU 에서 제거_ 하는 데서 나온다는 점에서 동형입니다 (TOE 의 [Module 01](../../toe/01_tcp_ip_and_toe_concept/), RDMA 의 [Module 01](../../rdma/01_rdma_motivation/) 과 같은 동기).
+이 셋(interrupt 진입·복귀 + byte 비례 copy + 잦은 전환)이 매 패킷마다 쌓이면, "애플리케이션을 돌리라고 산" 코어들이 실제로는 _데이터를 옮기고 전환하는 데_ 시간 대부분을 쓰게 됩니다 — 이것이 코어가 "사라지는" 메커니즘입니다. DPU·TOE(TCP Offload Engine — TCP/IP 처리를 CPU 대신 하드웨어로 떠맡는 엔진)·RDMA(Remote Direct Memory Access — CPU·OS 개입 없이 원격 서버의 메모리를 직접 읽고 쓰는 기술) 의 가치가 모두 _이 세 비용을 호스트 CPU 에서 제거_ 하는 데서 나온다는 점에서 동형입니다 — TOE 는 TCP 상태 머신과 체크섬·재조립을, RDMA 는 copy 와 커널 진입 자체를 걷어내는 방식으로, 서로 다른 층에서 같은 세 비용을 공격합니다.
 :::
 
 DPU는 이 세금을 별도의 프로세서로 옮겨 다음 세 가지를 노립니다. 첫째, **CPU 자원 확보** — 호스트 CPU를 애플리케이션 처리에 더 많이 할당합니다. 둘째, **성능 향상** — 패킷 처리와 암호화 같은 반복 작업을 전용 하드웨어로 가속합니다. 셋째, **격리 강화** — 인프라 서비스를 호스트 OS 및 테넌트 워크로드와 분리합니다.

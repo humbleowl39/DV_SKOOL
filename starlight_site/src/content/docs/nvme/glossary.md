@@ -197,7 +197,7 @@ title: "NVMe / NVMe-oF 용어집"
 
 **Example.** NVMe-oF에서는 RDMA QP 한 쌍이 NVMe 큐 쌍(SQ+CQ) 하나에 매핑된다.
 
-**See also.** [02 — SQ/CQ 큐 메커니즘 & Doorbell](../02_sq_cq_doorbell/) · [RDMA 코스](../../rdma/)
+**See also.** [02 — SQ/CQ 큐 메커니즘 & Doorbell](../02_sq_cq_doorbell/) · [04 — NVMe-oF over RDMA](../04_nvmeof_over_rdma/)
 
 ### Ring Buffer (Circular Queue)
 

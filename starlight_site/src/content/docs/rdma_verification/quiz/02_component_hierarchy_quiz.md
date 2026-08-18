@@ -1,5 +1,6 @@
 ---
 title: "Module 02 퀴즈 — Component 계층"
+pagefind: false
 ---
 
 본문: [Module 02](../../02_component_hierarchy/)

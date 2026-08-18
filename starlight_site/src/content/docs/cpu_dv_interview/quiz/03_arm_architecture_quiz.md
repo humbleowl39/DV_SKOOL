@@ -1,5 +1,6 @@
 ---
 title: "Quiz — 03: ARM 아키텍처"
+pagefind: false
 ---
 
 03장의 ARM(AArch64) 개념과 검증 corner를 점검합니다. 정답은 펼치면 보입니다.

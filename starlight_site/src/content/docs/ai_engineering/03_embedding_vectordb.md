@@ -25,7 +25,7 @@ title: "Module 03 — Embedding & Vector DB"
 
 Claude Sonnet (200K context) 으로 사내 IP 스펙 + 코드 + 디자인 문서를 다루어야 한다고 합시다. 처음 드는 본능은 "모든 걸 prompt 에 넣자" 이지만, 이 전략은 세 가지 이유로 동시에 무너집니다.
 
-첫째, **물리적 한계**입니다. 사내 RDMA-TB 만 해도 ~2M 토큰이고 RTL 까지 합치면 10M+ 에 달해 200K 컨텍스트에 물리적으로 들어가지 않습니다. 둘째, **비용 폭주**입니다. 200K 입력 한 번에 약 $0.6 (Claude 기준) 이므로, 100 호출/day 면 $60/day, $1800/month 가 되고 다중 사용자 환경에서는 _10배_ 까지 불어납니다. 셋째, **Lost in the middle** 입니다. 200K 를 모두 채워도 _중간_ 정보는 모델이 잘 참조하지 않으며 [Liu et al. 2023], 가장 중요한 내용을 중간에 넣어도 답이 깨질 수 있습니다.
+첫째, **물리적 한계**입니다. 중대형 IP 하나의 검증 환경(TB) 만 해도 수백만 토큰 규모이고 RTL 까지 합치면 10M+ 에 달해 200K 컨텍스트에 물리적으로 들어가지 않습니다. 둘째, **비용 폭주**입니다. 200K 입력 한 번에 약 $0.6 (Claude 기준) 이므로, 100 호출/day 면 $60/day, $1800/month 가 되고 다중 사용자 환경에서는 _10배_ 까지 불어납니다. 셋째, **Lost in the middle** 입니다. 200K 를 모두 채워도 _중간_ 정보는 모델이 잘 참조하지 않으며 [Liu et al. 2023], 가장 중요한 내용을 중간에 넣어도 답이 깨질 수 있습니다.
 
 **임베딩 + 벡터 DB 가 외부 메모리** 역할을 합니다. 여기서 **embedding**(임베딩 — 텍스트를 의미가 담긴 고정 길이 실수 벡터로 바꾼 표현; 비슷한 의미일수록 벡터가 가깝다), **vector DB**(벡터 DB — 이 임베딩 벡터들을 저장하고 "가장 가까운 것"을 빠르게 찾아 주는 데이터베이스), **chunk**(청크 — 긴 문서를 검색 단위로 잘게 자른 한 조각)가 핵심 단어입니다. _필요한 chunk 만 골라서_ prompt 에 넣으면:
 
@@ -628,11 +628,8 @@ Top-k=10 이라 _noisy_ chunks 가 LLM context 에 들어감 → "**lost in the 
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `5. KV Caching & VectorDB` (id=613187588)
-- `Design Document of Component/System-Level Benchmarking Tool` (id=613482498)
-
-**External**
+- FAISS / Milvus / Qdrant 공식 문서 — 인덱스 타입·`nprobe`/`efSearch` 파라미터 튜닝
+- *BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models* — Thakur et al., NeurIPS 2021 (검색 품질 벤치마킹 방법론)
 - *MTEB: Massive Text Embedding Benchmark* — Muennighoff et al., 2023
 - *Lost in the Middle: How Language Models Use Long Contexts* — Liu et al., TACL 2023
 - *FAISS: A library for efficient similarity search* — Johnson et al., 2017

@@ -1,5 +1,6 @@
 ---
 title: "Module 07 — H2C / C2H QID Reference"
+pagefind: false
 ---
 
 :::tip[학습 목표]

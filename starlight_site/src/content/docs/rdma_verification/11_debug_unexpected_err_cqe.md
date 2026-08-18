@@ -1,5 +1,6 @@
 ---
 title: "Module 11 — Debug Case 4: Unexpected Error CQE"
+pagefind: false
 ---
 
 :::tip[학습 목표]

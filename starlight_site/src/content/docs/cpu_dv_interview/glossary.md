@@ -1,5 +1,6 @@
 ---
 title: "CPU DV Interview 용어집"
+pagefind: false
 ---
 
 이 페이지는 본 코스에서 사용되는 핵심 용어 정의 모음입니다. 항목은 ISO 11179 형식을 따릅니다 (**Definition / Source / Related / Example / See also**). CPU 코어 검증(ISS step-and-compare·계층 인프라)과 ARM 아키텍처(EL·PSTATE·barrier·MMU)·일관성/메모리 모델·UVM 방법론 용어를 함께 묶었습니다.

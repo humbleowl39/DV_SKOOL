@@ -1,5 +1,6 @@
 ---
 title: "Module 11 퀴즈 — Unexpected Error CQE"
+pagefind: false
 ---
 
 본문: [Module 11](../../11_debug_unexpected_err_cqe/)

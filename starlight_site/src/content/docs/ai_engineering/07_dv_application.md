@@ -490,12 +490,8 @@ Router 로 분기 — 입력에 IP code 포함 시 자동 로컬, 외 API. 이�
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `[Verdi] Useful Verdi Options` (id=943915038) — 시뮬레이터 통합 사례
-- `[VMG SIM Tutorial] Introduction` (id=98467845)
-- Cursor / Claude Code 사내 도입 사례
-
-**External**
+- Synopsys Verdi / VCS 사용자 매뉴얼 — 로그·웨이브폼 툴을 스크립트로 감싸 AI 파이프라인에 연결하는 지점
+- Cursor / Claude Code 공식 문서 — 코드베이스 통합 및 도입 가이드
 - *AI for Hardware Verification* — DAC/DVCon 2024-2025 sessions
 - Synopsys VC SpyGlass AI / Cadence Verisium AI (2024-2025 commercial)
 - *ChipNeMo: Domain-Adapted LLMs for Chip Design* — NVIDIA, 2023

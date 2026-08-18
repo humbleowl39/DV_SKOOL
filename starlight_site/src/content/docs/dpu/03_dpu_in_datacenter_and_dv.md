@@ -12,7 +12,7 @@ title: "Module 03 — 데이터센터에서의 DPU와 DV 연관"
 :::
 :::note[사전 지식]
 - [Module 01](../01_what_is_dpu/), [Module 02](../02_offload_domains/)
-- RDMA / TOE / Ethernet의 대략적 개념 (개별 코스는 [RDMA](../../rdma/), [TOE](../../toe/), [Ethernet](../../ethernet_dcmac/))
+- RDMA(원격 메모리 직접 접근) / TOE(TCP·IP 처리를 NIC 하드웨어로 떠넘긴 엔진) / Ethernet MAC(프레이밍·FCS·flow control)의 대략적 개념 — 세 항목 모두 본문에서 처음 쓰일 때 한 줄 정의를 붙입니다
 :::
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Module 03 퀴즈 — UVM Phase & Test Flow"
+pagefind: false
 ---
 
 본문: [Module 03](../../03_phase_test_flow/)

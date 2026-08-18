@@ -1,5 +1,6 @@
 ---
 title: "02 — CPU 마이크로아키텍처"
+pagefind: false
 ---
 
 :::tip[학습 목표]

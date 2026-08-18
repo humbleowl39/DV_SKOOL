@@ -1,5 +1,6 @@
 ---
 title: "Module 06 — Error Handling Path"
+pagefind: false
 ---
 
 :::tip[학습 목표]

@@ -133,7 +133,7 @@ CP: "**Control Path** 오프로드" {
 - **Match(분류)**: 도착한 패킷에서 헤더 필드들을 뽑아 **flow key**(흐름 식별자 — 같은 통신 흐름에 속한 패킷을 묶어 식별하는 헤더 값들의 조합) 를 만듭니다 (예: src/dst MAC(Media Access Control 주소 — 네트워크 장치마다 부여된 하드웨어 고유 주소), src/dst IP, port, VLAN(Virtual LAN — 하나의 물리 네트워크를 논리적으로 나눈 가상 구획) 등의 조합). 이 key 를 table 의 각 entry 와 비교해 일치하는 규칙을 찾습니다 — "이 패킷이 어떤 흐름(flow — 같은 출발지·목적지를 오가는 일련의 패킷 묶음)에 속하는가" 를 결정하는 단계입니다.
 - **Action(전달/정책)**: 일치한 entry 에 묶인 동작을 실행합니다 — 특정 출력 포트나 VM 으로 전달(forward), 헤더 재작성, 드롭, 카운트, 또는 오버레이 캡슐화 같은 정책 적용입니다.
 
-즉 "flow key → action" 매핑 테이블 하나가 분류·전달·정책을 통합합니다. DPU 에서는 이 테이블 lookup 과 action 실행을 **데이터 패스 가속기** 가 line-rate(라인레이트 — 링크가 낼 수 있는 최대 속도로, 패킷을 느려지게 하지 않고 도착하는 족족 처리해 내는 수준) 로 수행하고(자주·정형적이므로), 새 규칙을 _테이블에 채워 넣는 제어 로직_ 은 프로그래머블 코어가 맡습니다 — §4.1 의 data path/control path 분담이 vSwitch 안에서 그대로 나타납니다. (이 구조는 [TOE 의 connection table lookup](../../toe/02_toe_architecture/) 과 같은 "key→state/action" 패턴입니다.)
+즉 "flow key → action" 매핑 테이블 하나가 분류·전달·정책을 통합합니다. DPU 에서는 이 테이블 lookup 과 action 실행을 **데이터 패스 가속기** 가 line-rate(라인레이트 — 링크가 낼 수 있는 최대 속도로, 패킷을 느려지게 하지 않고 도착하는 족족 처리해 내는 수준) 로 수행하고(자주·정형적이므로), 새 규칙을 _테이블에 채워 넣는 제어 로직_ 은 프로그래머블 코어가 맡습니다 — §4.1 의 data path/control path 분담이 vSwitch 안에서 그대로 나타납니다. (TOE 가 4-tuple(출발지·목적지 IP 와 포트) 로 connection table 을 찾아 해당 연결의 TCP 상태를 꺼내 오는 것도 정확히 같은 "key→state/action" 패턴입니다.)
 :::
 
 :::note[메커니즘 — VXLAN overlay의 encapsulation: 물리망 위에 가상 L2를 얹기]

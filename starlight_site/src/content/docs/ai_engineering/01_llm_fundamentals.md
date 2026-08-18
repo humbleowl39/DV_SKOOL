@@ -748,14 +748,10 @@ LLaMA-2 70B 모델 (80 layers, hidden 8192, fp16) 의 _8K context_ 한 sequence 
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `Understanding LLMs: A Comprehensive Overview from Training to Inference` (id=910786585)
-- `Literature Reviews: LLM Infrastructure and Systems` (id=958005272)
-- `MoE` (id=964100206)
-- `LLM | Inference` (id=996769852)
-- `Cache basic` (id=941817928)
-
-**External**
+- *Efficient Memory Management for Large Language Model Serving with PagedAttention* — Kwon et al., SOSP 2023 (vLLM, KV cache 관리)
+- *Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity* — Fedus et al., JMLR 2022 (MoE)
+- *Mixtral of Experts* — Jiang et al., 2024 (MoE 실배포 사례)
+- *A Survey on Efficient Inference for Large Language Models* — Zhou et al., 2024 (추론 최적화 개괄)
 - *KV Caching Explained* — Hugging Face blog, 2025
 - *KV Cache Optimization* — Introl Blog, 2025 (LLaMA-2 70B 토큰당 ~2.6 MB)
 - *KV Cache Optimization via Multi-Head Latent Attention* — PyImageSearch, 2025 (8× MLA 축소)

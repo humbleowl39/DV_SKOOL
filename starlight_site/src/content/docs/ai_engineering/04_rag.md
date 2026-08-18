@@ -378,11 +378,8 @@ RAG 가 좋은 경우: spec, RTL 코드, 디자인 문서 같은 _변화하는, 
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `5. KV Caching & VectorDB` (id=613187588)
-- `Design Document of Component/System-Level Benchmarking Tool` (id=613482498)
-
-**External**
+- *Dense Passage Retrieval for Open-Domain Question Answering* — Karpukhin et al., EMNLP 2020 (dense retrieval 기반)
+- LangChain / LlamaIndex RAG 공식 가이드 — chunking·retriever·reranker 조립 패턴
 - *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks* — Lewis et al., NeurIPS 2020 (원논문)
 - *Seven Failure Points When Engineering a Retrieval Augmented Generation System* — arXiv:2401.05856 (2024)
 - *RAG Production Guide 2026* — Lushbinary, 2026 (73% failure in retrieval)

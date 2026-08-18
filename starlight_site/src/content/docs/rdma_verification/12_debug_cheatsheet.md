@@ -1,5 +1,6 @@
 ---
 title: "Module 12 — Debug Cheatsheet"
+pagefind: false
 ---
 
 :::tip[학습 목표]

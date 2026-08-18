@@ -574,11 +574,8 @@ Prompt + RAG + FT 모두 사용. _개별_ 효과가 _합산_ 되지 않는 경�
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- 사내 ROI 모델 (RAG vs FT)
-- `Cursor 사용법` (id=935919694) — prompt + tool 의 IDE 통합
-
-**External**
+- 벤더 공개 가격표 (Anthropic / OpenAI pricing docs) — 토큰 단가 기반 TCO·ROI 산정의 입력값
+- Cursor / Claude Code 공식 문서 — prompt + tool 의 IDE 통합 형태
 - *LoRA: Low-Rank Adaptation of Large Language Models* — Hu et al., ICLR 2022
 - *QLoRA: Efficient Finetuning of Quantized LLMs* — Dettmers et al., NeurIPS 2023
 - *RAG vs Fine-tuning* — comparison studies, 2024

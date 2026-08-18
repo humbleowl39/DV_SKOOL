@@ -1,5 +1,6 @@
 ---
 title: "Module 01 — TB Overview & Multi-Node 구조"
+pagefind: false
 ---
 
 :::tip[학습 목표]

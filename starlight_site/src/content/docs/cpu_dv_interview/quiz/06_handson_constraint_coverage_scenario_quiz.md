@@ -1,5 +1,6 @@
 ---
 title: "Quiz — 06: Hands-on 작성"
+pagefind: false
 ---
 
 본문에서 익힌 constraint·coverage·sequence 즉석 작성 능력을 점검한다. 코드를 *읽고 무엇이 깨지는지* 말할 수 있는지가 핵심이다.

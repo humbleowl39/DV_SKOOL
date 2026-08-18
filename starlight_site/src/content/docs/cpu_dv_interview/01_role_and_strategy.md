@@ -1,5 +1,6 @@
 ---
 title: "01 — 역할·전략·갭 분석"
+pagefind: false
 ---
 
 :::tip[학습 목표]

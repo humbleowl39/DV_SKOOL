@@ -1,5 +1,6 @@
 ---
 title: "03 — ARM 아키텍처"
+pagefind: false
 ---
 
 :::tip[학습 목표]

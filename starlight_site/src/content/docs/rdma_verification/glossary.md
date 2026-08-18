@@ -1,5 +1,6 @@
 ---
 title: "용어집 (Glossary)"
+pagefind: false
 ---
 
 ISO 11179 — 단일 문장 정의 + Source + Related + Example + See also

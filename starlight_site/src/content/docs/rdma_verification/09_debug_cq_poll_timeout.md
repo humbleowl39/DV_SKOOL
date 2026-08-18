@@ -1,5 +1,6 @@
 ---
 title: "Module 09 — Debug Case 2: CQ Poll Timeout"
+pagefind: false
 ---
 
 :::tip[학습 목표]

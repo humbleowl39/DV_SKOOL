@@ -1,5 +1,6 @@
 ---
 title: "Module 04 퀴즈 — Analysis Port Topology"
+pagefind: false
 ---
 
 본문: [Module 04](../../04_analysis_port_topology/)

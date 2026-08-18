@@ -1,5 +1,6 @@
 ---
 title: "04 — 일관성·메모리 모델"
+pagefind: false
 ---
 
 :::tip[학습 목표]

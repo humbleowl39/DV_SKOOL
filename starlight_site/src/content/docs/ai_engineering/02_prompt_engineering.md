@@ -239,7 +239,7 @@ Fine-tuning 없이, 프롬프트에 예시를 포함시키는 것만으로
 
 ---
 
-## 5. 디테일 — 기법별 동작 패턴, 평가, 체크리스트, 사내 템플릿
+## 5. 디테일 — 기법별 동작 패턴, 평가, 체크리스트, 재사용 템플릿
 
 ### 5.1 Zero-shot / Few-shot / Many-shot
 
@@ -609,11 +609,8 @@ Single mega-prompt 의 장점: latency (한 번 호출) — _실시간_ 시나�
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `Understanding LLMs: A Comprehensive Overview` (id=910786585)
-- `Cursor 사용법` (id=935919694), `[WG] Cursor Setup` (id=871399489)
-
-**External**
+- *The Prompt Report: A Systematic Survey of Prompting Techniques* — Schulhoff et al., 2024
+- Cursor / Claude Code 공식 문서 — IDE·에이전트 환경의 프롬프트 구성과 컨텍스트 주입
 - *Chain-of-Thought Prompting Elicits Reasoning in Large Language Models* — Wei et al., NeurIPS 2022
 - *In-context Learning and Induction Heads* — Olsson et al., 2022 (mechanism)
 - *Tree of Thoughts* — Yao et al., NeurIPS 2023

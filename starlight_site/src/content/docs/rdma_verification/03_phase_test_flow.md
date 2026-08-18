@@ -1,5 +1,6 @@
 ---
 title: "Module 03 — UVM Phase & Test Flow"
+pagefind: false
 ---
 
 :::tip[학습 목표]

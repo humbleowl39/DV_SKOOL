@@ -1,5 +1,6 @@
 ---
 title: "07 — 코딩·행동·영어 모의면접"
+pagefind: false
 ---
 
 :::tip[학습 목표]

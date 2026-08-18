@@ -1,5 +1,6 @@
 ---
 title: "Module 07 퀴즈 — H2C / C2H QID Reference"
+pagefind: false
 ---
 
 본문: [Module 07](../../07_h2c_c2h_qid_map/)

@@ -299,11 +299,7 @@ Fine-tuning: LoRA / QLoRA (Hugging Face + PEFT)
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `AI Engineering Curriculum` — 모듈 1–7 매핑
-- `Agent Cost Audit` — max-step / budget 정책
-
-**External**
+- *Building Effective Agents* — Anthropic, 2024 (max-step / 비용 상한 설계 근거)
 - *LangChain Documentation* — Agent / RAG 패턴
 - OpenAI *Cookbook* — production guardrails
 

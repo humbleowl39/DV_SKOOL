@@ -1,5 +1,6 @@
 ---
 title: "Module 09 퀴즈 — CQ Poll Timeout"
+pagefind: false
 ---
 
 본문: [Module 09](../../09_debug_cq_poll_timeout/)

@@ -77,7 +77,7 @@ export default defineConfig({
 					items: [
 						{ label: 'UVM', collapsed: true, items: [{ autogenerate: { directory: 'uvm' } }] },
 						{ label: 'Formal Verification', collapsed: true, items: [{ autogenerate: { directory: 'formal_verification' } }] },
-						{ label: 'RDMA Verification', collapsed: true, items: [{ autogenerate: { directory: 'rdma_verification' } }] },
+						// 'rdma_verification' is intentionally NOT in the sidebar — hidden easter-egg topic (see /secret/).
 						{ label: 'Mixed-Signal DV', collapsed: true, items: [{ autogenerate: { directory: 'mixed_signal_dv' } }] },
 						{ label: 'cocotb (Python DV)', collapsed: true, items: [{ autogenerate: { directory: 'cocotb' } }] },
 						{ label: 'OOP & Design Patterns', collapsed: true, items: [{ autogenerate: { directory: 'oop_design_patterns' } }] },
@@ -133,7 +133,7 @@ export default defineConfig({
 						{ label: 'AI Engineering', collapsed: true, items: [{ autogenerate: { directory: 'ai_engineering' } }] },
 						{ label: 'BigTech Algorithm', collapsed: true, items: [{ autogenerate: { directory: 'bigtech_algorithm' } }] },
 						{ label: 'Hardware Interview Prep', collapsed: true, items: [{ autogenerate: { directory: 'hardware_interview' } }] },
-						{ label: 'CPU DV Interview Prep', collapsed: true, items: [{ autogenerate: { directory: 'cpu_dv_interview' } }] },
+						// 'cpu_dv_interview' is intentionally NOT in the sidebar — hidden easter-egg topic (see /secret/).
 						// 'dram_dv_interview' is intentionally NOT in the sidebar — it is a hidden
 						// easter-egg topic (see head script). Pages still build but are unlisted.
 					],

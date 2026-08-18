@@ -1,5 +1,6 @@
 ---
 title: "Quiz — 05: CPU DV 방법론"
+pagefind: false
 ---
 
 05장의 핵심 — UVM 의 CPU 매핑, step-and-compare, divergence 분류, coverage closure, formal — 을 점검합니다. 정답은 펼치면 보입니다.

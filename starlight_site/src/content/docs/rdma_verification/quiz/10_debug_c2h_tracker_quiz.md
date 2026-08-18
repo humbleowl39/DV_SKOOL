@@ -1,5 +1,6 @@
 ---
 title: "Module 10 퀴즈 — C2H Tracker Error"
+pagefind: false
 ---
 
 본문: [Module 10](../../10_debug_c2h_tracker/)

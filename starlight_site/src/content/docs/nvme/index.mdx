@@ -27,7 +27,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 - **PCIe 기본**: NVMe controller는 PCIe 장치이므로 BAR, memory-mapped register, MSI/MSI-X 개념이 필요합니다. [PCIe 코스](../pcie/) 참고.
 - **Ring buffer (circular queue)**: head/tail 포인터, wrap-around, empty/full 판정.
-- **RDMA 기본** (4장에 필요): QP(Queue Pair), SEND/RECV, RDMA Read/Write, Memory Region. [RDMA 코스](../rdma/) 참고.
+- **RDMA 기본** (4장에 필요): QP(Queue Pair — 송신 큐와 수신 큐를 한 쌍으로 묶은 RDMA 통신 단위), SEND/RECV(양쪽이 짝을 맞춰 주고받는 two-sided 연산), RDMA Read/Write(상대 CPU 개입 없이 원격 메모리를 직접 읽고 쓰는 one-sided 연산), Memory Region(원격 접근을 허용하려고 미리 핀·등록해 둔 메모리 영역). 4장 본문에서 다시 정의하므로 용어만 눈에 익혀 두면 됩니다.
 - **메모리-맵 IO**: 레지스터 offset과 doorbell write 의미.
 
 ## 학습 모듈
@@ -57,7 +57,6 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="NVMe / NVMe-oF 핵심 용어 ISO 11179 형식 정의." />
 	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 5–6문항, Bloom 레벨 혼합." />
 	<LinkCard title="UFS / HCI 코스" href="../ufs_hci/" description="모바일 스토리지 — UPIU 커맨드 흐름과 HCI 비교 관점." />
-	<LinkCard title="RDMA 코스" href="../rdma/" description="NVMe-oF의 transport 기반 — QP, SEND/RECV, RDMA Read/Write." />
 </CardGrid>
 
 ## 학습 팁
@@ -65,7 +64,7 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 :::tip[효율적 학습]
 - **큐 모델을 손으로 그려라**: SQ/CQ ring buffer의 head/tail이 어떻게 움직이는지, doorbell이 어느 쪽을 갱신하는지 화이트보드로 그릴 수 있어야 2장 이후가 풀립니다.
 - **PCIe를 먼저**: NVMe는 PCIe 위에 얹힙니다. BAR/MSI가 흐릿하면 [PCIe 코스](../pcie/)를 먼저 보세요.
-- **4장은 RDMA와 함께**: NVMe-oF는 RDMA QP·capsule 개념이 전제입니다. [RDMA 코스](../rdma/)와 교차로 읽으면 이해가 빠릅니다.
+- **4장은 QP를 큐 모델로 환원해서**: NVMe-oF는 RDMA QP·capsule 개념이 전제입니다. QP를 "SQ/CQ의 네트워크 판"으로 놓고 2장의 큐 모델과 겹쳐 읽으면 이해가 빠릅니다.
 :::
 
 :::caution[흔한 함정]

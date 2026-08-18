@@ -1,5 +1,6 @@
 ---
 title: "Module 10 — Debug Case 3: C2H Tracker Error"
+pagefind: false
 ---
 
 :::tip[학습 목표]

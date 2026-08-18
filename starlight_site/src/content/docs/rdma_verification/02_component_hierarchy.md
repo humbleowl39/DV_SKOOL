@@ -1,5 +1,6 @@
 ---
 title: "Module 02 — Component 계층 (`lib/base/component/`)"
+pagefind: false
 ---
 
 :::tip[학습 목표]

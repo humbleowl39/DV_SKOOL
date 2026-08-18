@@ -738,12 +738,9 @@ Multi-agent 가 정당화되는 경우: 단일 agent 의 _system prompt 가 너�
 :::
 ### 7.2 출처
 
-**Internal (Confluence)**
-- `How to run LangGraph` (id=999030785)
-- `[Low-end] AI-Agents` (id=1237811201)
-- `Report: Open-sourced Agent AI Trajectories with Human-in-the-Loop` (id=1214218318)
-
-**External**
+- LangGraph 공식 문서 — stateful agent graph, checkpoint·human-in-the-loop 인터럽트
+- *Building Effective Agents* — Anthropic, 2024 (workflow vs agent, 단순 패턴 우선)
+- *A Survey on Large Language Model based Autonomous Agents* — Wang et al., 2024
 - *ReAct: Synergizing Reasoning and Acting in Language Models* — Yao et al., ICLR 2023
 - *Reflexion: Language Agents with Verbal Reinforcement Learning* — Shinn et al., NeurIPS 2023
 - *Plan-and-Solve Prompting* — Wang et al., ACL 2023

@@ -1,5 +1,6 @@
 ---
 title: "05 — CPU DV 방법론·환경 설계"
+pagefind: false
 ---
 
 :::tip[학습 목표]

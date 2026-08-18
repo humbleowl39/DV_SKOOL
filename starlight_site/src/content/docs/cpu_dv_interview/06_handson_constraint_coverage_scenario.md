@@ -1,5 +1,6 @@
 ---
 title: "06 — Hands-on: Constraint·Coverage·Scenario"
+pagefind: false
 ---
 
 :::tip[학습 목표]
