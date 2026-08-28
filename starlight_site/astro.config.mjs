@@ -103,6 +103,7 @@ export default defineConfig({
 						{ label: 'DRAM / DDR', collapsed: true, items: [{ autogenerate: { directory: 'dram_ddr' } }] },
 						{ label: 'DRAM JEDEC Deep-Dive (DV)', collapsed: true, items: [{ autogenerate: { directory: 'dram_jedec_dv' } }] },
 						{ label: 'HBM 아키텍처 (검증용)', collapsed: true, items: [{ autogenerate: { directory: 'hbm' } }] },
+						{ label: 'HBM 검증 실무', collapsed: true, items: [{ autogenerate: { directory: 'hbm_dv' } }] },
 						{ label: 'Cache Coherence & Consistency', collapsed: true, items: [{ autogenerate: { directory: 'cache_coherence' } }] },
 					],
 				},

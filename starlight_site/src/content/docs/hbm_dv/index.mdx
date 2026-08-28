@@ -1,0 +1,189 @@
+---
+title: "HBM 검증 실무"
+description: HBM Base Die를 UVM으로 검증하기 — Custom Agent, VIP 전략, V-Plan, Assertion, Coverage Closure
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## 이 코스가 시작하는 지점
+
+선행 코스 [HBM 아키텍처](../hbm/)는 HBM을 **검증 대상**으로 이해하는 데 집중했습니다. 그리고 마지막 챕터에서 여섯 챕터에 걸쳐 도출한 검증 문제를 **21개 항목의 표**로 정리하고 멈췄습니다. "무엇이 문제인가"까지만 간 것입니다.
+
+그 표는 이렇게 생겼습니다 — *동시 활성 채널 조합을 coverage 축으로 삼을 것*, *커맨드 타이밍·순서 규칙을 상시 감시할 것*, *scoreboard가 주소 디코드를 독립적으로 재현할 것*, *에러 주입을 시나리오의 독립 축으로 둘 것*, *VIP를 사는지 만드는지 판단할 것*…
+
+전부 "해야 한다"로 끝나 있습니다. **어떻게 하는지는 하나도 적혀 있지 않습니다.**
+
+이 코스가 그 21개를 하나씩 닫습니다. 각 챕터는 담당 항목을 명시하고, 그것을 실제 UVM 코드와 검증 계획으로 옮기는 과정을 보여줍니다. 코스를 마치면 21개 항목 전부가 "이렇게 한다"로 바뀝니다.
+
+## 이 코스의 위치
+
+| 토픽 | 역할 | 다루는 것 |
+|---|---|---|
+| [`hbm`](../hbm/) (선행) | 검증 **대상**을 이해한다 | 스택 구조, DUT 경계, 채널, 프로토콜, Base Die |
+| **`hbm_dv` (이 코스)** | 검증 **실무**를 한다 | Custom Agent, VIP 전략, 환경 계층, V-Plan, Assertion, Coverage |
+
+선행 코스의 각 챕터가 **🔍 이 구조가 만드는 검증 문제**로 끝났다면, 이 코스의 각 챕터는 **🔧 이 문제를 이렇게 푼다**로 끝납니다.
+
+:::caution[선행 코스를 먼저 보세요]
+이 코스는 [HBM 아키텍처](../hbm/)에서 확정한 개념 — **DUT 경계**(RTL로 표현되는 영역), **기능 × 출처 교차표**, **semi-independent 채널 구조**, 네 번의 **"조용한 통과"** — 을 전제로 씁니다. 이 개념들을 다시 설명하지 않으므로, 선행 코스를 건너뛰면 각 챕터의 출발점이 허공에 뜹니다.
+:::
+
+## 학습 목표
+
+코스를 마치면 다음을 할 수 있습니다:
+
+- **Construct** 비표준 인터페이스 스펙으로부터 Custom UVM Agent를 A-to-Z로 설계·구현할 수 있다
+- **Evaluate** 상용 VIP 도입과 자체 개발 사이에서 근거를 갖고 판단할 수 있다
+- **Design** IP → Subsystem → Full-chip으로 이어지는 재사용 가능한 UVM 환경 계층을 설계할 수 있다
+- **Derive** IP 스펙에서 검증 항목을 도출하여 V-Plan을 수립하고 검증 프로세스를 운영할 수 있다
+- **Implement** 프로토콜 규칙을 assertion으로 구현하고 scoreboard가 무엇을 독립 재현해야 하는지 판단할 수 있다
+- **Analyze** 회귀 결과와 커버리지를 분석하여 closure 전략을 세우고 sign-off 기준을 판정할 수 있다
+
+## 사전 지식
+
+| 항목 | 필수 여부 | 참고 |
+|---|---|---|
+| HBM 구조와 DUT 경계 | **필수** | [HBM 아키텍처 코스](../hbm/) |
+| UVM 기초 — phase, agent, sequence, config_db, factory, TLM, RAL | **필수** | [UVM 코스](../uvm/) |
+| SystemVerilog — class, virtual, randomize, covergroup | 필수 | — |
+| DRAM 기본 동작 | 권장 | [DRAM / DDR 코스](../dram_ddr/) |
+| Mixed-Signal 검증 방법론 | Ch05에서만 | [Mixed-Signal DV 코스](../mixed_signal_dv/) |
+| RAS·Fault Injection 일반 | Ch11에서만 | [RAS 코스](../ras/) |
+
+:::note[UVM 기초는 다시 설명하지 않습니다]
+phase가 어떻게 도는지, factory override가 어떻게 동작하는지, config_db 경로가 어떻게 매칭되는지는 [UVM 코스](../uvm/)가 이미 다룹니다. 이 코스는 그것들을 **HBM base die 검증에 어떻게 적용하고 무엇을 판단하는가**만 씁니다. 필요한 지점마다 해당 모듈로 링크합니다.
+:::
+
+## 학습 모듈
+
+<CardGrid>
+	<LinkCard title="Ch01 · 무엇을 검증하는가" href="./01_what_we_verify/" description="DUT 경계 확정, 검증 업무의 한 주기, 관통 사례 hbm_ch_ctrl 소개." />
+	<LinkCard title="Ch02 · Digital IP 검증 & Handoff" href="./02_ip_verification_handoff/" description="in-house와 3rd party에서 무엇이 달라지는가, 통합 검증이라는 별개 항목." />
+	<LinkCard title="Ch03 · Custom UVM Agent A-to-Z" href="./03_custom_uvm_agent/" description="스펙 한 장에서 item·driver·monitor·coverage까지 — 이 코스의 하이라이트." />
+	<LinkCard title="Ch04 · VIP 전략" href="./04_vip_strategy/" description="사느냐 만드느냐, 상용 VIP가 검사해 주는 것과 남는 구멍." />
+	<LinkCard title="Ch05 · Full-Chip Mixed-Level" href="./05_mixed_level/" description="Schematic & RTL을 한 시뮬레이션에서 — 무엇을 어느 수준으로 둘 것인가." />
+	<LinkCard title="Ch06 · UVM 환경 계층" href="./06_env_hierarchy/" description="IP → Subsystem → Full-chip 재사용, 구성값 파라미터화, Test Firmware." />
+	<LinkCard title="Ch07 · V-Plan & 검증 프로세스" href="./07_vplan_process/" description="스펙에서 검증 항목을 도출하고 진행을 추적하는 방법." />
+	<LinkCard title="Ch08 · Test Case & 시나리오" href="./08_testcase_scenarios/" description="directed와 CRT, 에러 주입, 성능 시나리오, mode register 효과 검증." />
+	<LinkCard title="Ch09 · Assertion · Protocol Checker" href="./09_assertion_checker/" description="데이터 비교가 못 잡는 것들 — 타이밍·순서·경합을 상시 감시하기." />
+	<LinkCard title="Ch10 · Coverage Closure & Regression" href="./10_coverage_regression/" description="모델에 무엇이 들어 있는가, merge·exclusion·waiver, sign-off 기준." />
+	<LinkCard title="Ch11 · DFT · MBIST · RAS 연계" href="./11_dft_ras/" description="ECC가 가린 것을 보기, 테스트 모드와 mission 모드의 전이." />
+	<LinkCard title="Ch12 · End-to-End 캡스톤" href="./12_end_to_end/" description="스펙 1장에서 sign-off와 silicon 이슈 대응까지 한 번에 관통." />
+</CardGrid>
+
+## 선행 코스 21항목 → 이 코스의 챕터
+
+[HBM 아키텍처 Ch06](../hbm/06_base_die_soc/)의 종합표가 이 코스의 요구사항 명세서입니다. 어느 챕터가 무엇을 닫는지 미리 밝힙니다.
+
+| # | 검증 항목 (선행 코스에서 제기) | 닫는 챕터 |
+|---|---|---|
+| 1 | 동시 활성 채널 조합을 coverage 축으로 | Ch10 |
+| 2 | 실효 대역폭·스케줄링 효율 측정 (성능 검증) | Ch08 |
+| 3 | 커맨드 타이밍·순서 규칙 상시 감시 | **Ch09** |
+| 4 | 지연과 대역폭을 분리해 계획에 반영 | Ch07 |
+| 5 | 세대 변화의 층위 판정 → TB 재사용 범위 산정 | Ch07 |
+| 6 | 세대 이관 시 coverage 모델이 새 구성을 반영하는지 | Ch10 |
+| 7 | 표준/커스텀 경계 식별 → Custom Agent 구간 확정 | **Ch03** |
+| 8 | 구성값(채널 수·단수·폭·버스트) 전면 파라미터화 | Ch06 |
+| 9 | DUT / 모델 / 범위 밖 경계 문서화 | Ch01 |
+| 10 | 모델의 엄격함 자체를 검증 항목으로 | Ch04 · Ch11 |
+| 11 | Mixed-level 환경을 별도로 구성 | Ch05 |
+| 12 | 자극의 현실성 확보 (VIP/BFM이 실제 호스트를 대변하는가) | Ch06 |
+| 13 | 공유 CA 버스의 경합·중재 규칙 검사 | **Ch09** |
+| 14 | row/column 병렬 흐름 간 순서 규칙 검사 | **Ch09** |
+| 15 | Scoreboard가 주소 디코드를 독립 재현 | **Ch09** |
+| 16 | 에러 주입을 시나리오의 독립 축으로 | Ch08 |
+| 17 | Mode register 설정과 그 **효과**를 분리 검증 | Ch08 |
+| 18 | 저전력·테스트 모드의 상태 전이 커버리지 | Ch10 · Ch11 |
+| 19 | 출처별 검증 전략 분기 (in-house/3rd party/고객) | Ch02 |
+| 20 | VIP를 사느냐 만드느냐 판단 | Ch04 |
+| 21 | 통합 검증을 IP 검증과 별개 항목으로 | Ch02 |
+
+**21항목 전부가 담당 챕터를 갖습니다.** 각 챕터의 🔧 절이 해당 항목을 명시적으로 닫습니다.
+
+표에서 **Ch12만 담당 항목이 없습니다.** 캡스톤이기 때문입니다 — 새 항목을 닫는 대신, 앞의 11챕터가 각자 닫은 것들이 하나의 프로젝트 안에서 실제로 맞물리는지를 확인합니다. 항목별로 닫는 것과 전체가 굴러가는 것은 다른 문제입니다.
+
+가장 많은 항목이 걸린 곳은 **Ch09(4건)** 입니다. 선행 코스가 *"감시 대상 10개 중 데이터 비교로 잡히는 것은 1개뿐"* 이라고 결론냈기 때문입니다 — 나머지를 담당할 수단이 assertion과 독립 재현 scoreboard이고, 그것이 한 챕터에 모였습니다.
+
+## 관통 사례 — `hbm_ch_ctrl`
+
+이 코스는 12챕터 내내 **하나의 IP**를 다룹니다. Base die 안의 채널 컨트롤러와 그 비표준 제어 인터페이스를 상정한 **교육용 가상 IP** `hbm_ch_ctrl`입니다.
+
+스펙을 [부록 A](./appendix_a_hbm_ch_ctrl_spec/)에 직접 작성해 두었고, 챕터가 진행되며 이 하나의 IP를 계속 확장합니다.
+
+```
+Ch03  스펙 → Custom UVM Agent 구현
+Ch08  Agent 위에 시나리오 라이브러리 구축
+Ch09  프로토콜 규칙을 assertion으로 구현
+Ch10  coverage 모델 설계와 closure
+Ch12  스펙 한 장에서 sign-off까지 전 과정 관통
+```
+
+:::caution[가상 IP입니다]
+`hbm_ch_ctrl`은 **학습을 위해 이 코스가 정의한 가상 IP**이며, 실제 제조사의 내부 설계가 아닙니다. 다만 그 구조적 성질 — CA 버스를 공유하는 pseudo-channel, 분리된 row/column 커맨드 흐름, mode register, 오류 검출·보고, 테스트 모드 — 은 선행 코스에서 공개 자료로 근거를 확보한 실제 HBM의 특성을 반영했습니다. 스펙을 우리가 쓰기 때문에 *"스펙에서 검증 항목을 도출하는"* 과정 전체를 보여줄 수 있습니다.
+:::
+
+## 코드에 대하여
+
+이 코스에는 SystemVerilog / UVM 코드가 나옵니다. 다음 규칙을 따릅니다.
+
+- **UVM 버전**: UVM 1.2와 IEEE 1800.2 **양쪽에서 동작하는 교집합**으로 작성합니다. 1.2에서 deprecated된 API도, 1800.2 전용 API도 쓰지 않으므로 어느 환경에서든 그대로 쓸 수 있습니다
+- **리포팅**: `uvm_info` / `uvm_error` / `uvm_fatal`만 사용합니다. `$display` · `$finish` · `$stop`은 쓰지 않습니다
+- **경로·주소**: 하드코딩하지 않고 플레이스홀더나 설정값으로 둡니다
+- **분량**: 발췌가 아니라 **맥락이 이해되는 단위**로 싣습니다
+
+:::note[실행 검증의 범위]
+코드는 컴파일 가능한 수준을 목표로 작성했으나, **시뮬레이터에서의 실행 검증은 이 코스의 범위 밖**입니다. 실제 프로젝트에 옮길 때는 해당 환경의 라이브러리 버전과 코딩 규약에 맞춰 확인하세요.
+:::
+
+## 직무 기술서(JD)와의 매핑
+
+이 코스는 **HBM Digital Design (검증)** 직무를 기준으로 설계되었습니다. 선행 코스가 배경 지식을 다뤘다면, 이 코스는 **업무 수행 방법** 자체에 대응합니다.
+
+| JD 요구사항 | 담당 챕터 |
+|---|---|
+| In-house · 3rd Party **Digital IP 및 Mixed 설계** 검증 | Ch02, **Ch05** |
+| **In-house VIP 개발 + 3rd Party VIP 도입·활용** | **Ch04** |
+| **UVM 기반 검증 환경 구성 및 Test Case 개발** | Ch06, Ch08 |
+| **Regression 통한 Code/Func. Coverage Closure** | **Ch10** |
+| Digital IP **Spec 기반 검증 계획 수립 및 검증 프로세스** | **Ch07** |
+| **신규 Protocol / Custom IP UVM Agent 설계·구현** | **Ch03** |
+| **Spec 기반 Custom UVM Agent A-to-Z** (우대) | **Ch03**, Ch12 |
+| **Full-Chip Mixed-Level (Schematic & RTL) 검증** (우대) | **Ch05** |
+
+## 코스 운영 방식
+
+각 챕터는 다음 순서로 구성됩니다:
+
+1. **학습 목표** — Bloom's Taxonomy 동사
+2. **Why care?** — 실무에서 막히는 상황에서 출발
+3. **직관 → 작은 예 → 일반화 → 디테일** — 순진한 접근이 실패하는 과정을 거쳐 방법에 도달
+4. **흔한 오해**
+5. **🔧 이 문제를 이렇게 푼다** — 선행 코스 21항목 중 담당 항목을 닫는 절
+6. **핵심 정리 + 퀴즈**
+
+본문 중간에는 접힌 정답이 달린 자가 점검 질문이 있습니다. 펼치기 전에 먼저 답을 정해 보세요.
+
+## 관련 자료
+
+<CardGrid>
+	<LinkCard title="부록 A · hbm_ch_ctrl 스펙" href="./appendix_a_hbm_ch_ctrl_spec/" description="관통 사례의 인터페이스·레지스터·동작 규칙 정의." />
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="검증 실무 용어 ISO 11179 형식 정의." />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 6문항, Bloom 레벨 혼합." />
+	<LinkCard title="선행 코스 · HBM 아키텍처" href="../hbm/" description="검증 대상으로서의 HBM — 이 코스의 전제." />
+</CardGrid>
+
+## 학습 팁
+
+:::tip[효율적 학습]
+- **21항목 표를 곁에 두기**: 각 챕터를 읽을 때 "지금 몇 번을 닫고 있나"를 확인하면 코스 전체의 지도가 유지됩니다
+- **`hbm_ch_ctrl` 스펙을 먼저 읽기**: Ch03부터는 이 스펙을 계속 참조합니다. 부록 A를 한 번 훑고 시작하세요
+- **코드는 읽지 말고 따라 쓰기**: Custom Agent는 눈으로 읽으면 이해한 것 같지만 직접 쓰면 막힙니다
+- **UVM 코스를 열어 두기**: 기초가 흔들리면 본문이 겉돕니다. 링크가 나올 때마다 확인하세요
+:::
+
+:::caution[이 코스가 다루지 않는 것]
+**RNM(Real Number Modeling) 방법론** — Ch05는 full-chip mixed-level 운영에 한정하며, RNM 자체는 [Mixed-Signal DV 코스](../mixed_signal_dv/)가 다룹니다.
+**일반 Fault Injection 방법론** — Ch11은 HBM 고유 항목(ECC 마스킹, IEEE 1500 TAP, MBIST-MPPR)에 한정하며, 일반론은 [RAS 코스](../ras/)를 보세요.
+**UVM 기초** — [UVM 코스](../uvm/)가 다룹니다.
+:::
