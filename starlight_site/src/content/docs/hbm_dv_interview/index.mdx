@@ -1,0 +1,120 @@
+---
+title: "HBM DV Interview Prep"
+pagefind: false
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+HBM 검증 면접은 "DRAM을 아느냐"를 묻는 자리가 아니다. 공고를 그대로 읽으면 요구가 전부 **SoC 검증의 언어**로 쓰여 있다 — *SystemVerilog/UVM VIP·Testbench 개발*, *신규 Protocol 또는 Custom IP에 대한 UVM Agent 설계·구현*, *Code/Functional Coverage Closure*. 검증 대상이 DRAM 셀이 아니라 스택 맨 아래 **Base Die 안의 digital·mixed IP**이기 때문이다. 그래서 이 면접에서 갈리는 지점은 DRAM 타이밍 암기가 아니라 *"스펙만 있는 비표준 인터페이스를 받았을 때 Agent를 어떻게 세우는가"*, *"coverage 100%인데 버그가 나왔다면 무엇이 잘못된 것인가"* 같은 **판단의 인과**다.
+
+이 코스는 **SK하이닉스 HBM Digital Design (검증) 경력 면접**을 목표로, 기존 SoC/IP 검증 경험(Secure Boot·MMU·DRAM Controller)과 AI 검증 프레임워크 개발 역량을 **HBM 검증 문맥으로 재포지셔닝**하고, 공고의 필수 4항목·우대 3항목 각각에 대해 *한 줄 정의가 아니라 왜 그렇게 하는가*로 답할 수 있게 설계되었다. 더해서 DV 면접의 변별 구간인 **즉석 작성**(Agent 스켈레톤·SVA·covergroup)과 인성·영어 모의면접까지 다룬다.
+
+:::caution[개인 학습용 / 비공개 자료]
+이 토픽은 특정 지원자의 실제 경력·프로젝트·전략을 담은 **개인 면접 준비 자료**입니다. 사이드바에 노출되지 않으며 검색에서도 제외됩니다. 실명·협업사·내부 프로젝트명 등 민감정보가 포함될 수 있으므로 **공개 공유 전에 반드시 일반화·익명화 여부를 확인**하세요.
+:::
+
+## 🎯 학습 목표
+
+이 코스를 마치면 다음을 할 수 있습니다:
+
+- **Analyze (분석)** HBM 검증 공고의 업무 4·필수 4·우대 3 항목을 실제 업무로 분해하고, 자신의 경력과 대조해 갭을 하나로 좁힌다.
+- **Explain (이해)** HBM 스택·Base Die·pseudo-channel·대역폭 산술을 *검증자 관점의 corner*와 함께 자기 언어로 설명한다.
+- **Create (작성)** 스펙만 주어진 비표준 인터페이스에 대해 UVM Agent를 A-to-Z로 설계하는 과정을 화이트보드에서 순서대로 그려낸다.
+- **Evaluate (평가)** In-house VIP 개발과 3rd Party VIP 도입 사이의 판단 근거를 트레이드오프로 정당화한다.
+- **Justify (평가)** Coverage Closure를 "숫자 100%"가 아니라 *유효 coverage와 check의 결합*으로 방어한다.
+- **Defend (평가)** Mixed-Level 검증 경험 부재를 축소·은폐하지 않고 지원동기로 전환한다.
+- **Apply (적용)** 프로젝트 경험을 STAR로 재구성해 HBM 검증 직무 연결성을 근거와 숫자로 제시한다.
+
+## 📋 사전 지식
+
+본 코스는 **UVM/SystemVerilog 실무 경험 4년 이상**(공고 요건)을 전제하며, HBM 지식 자체는 아래 두 토픽에 위임합니다.
+
+- **HBM 구조**: 스택·Base Die·채널/pseudo-channel — [DV SKOOL — HBM 아키텍처](../hbm/)
+- **HBM 검증 실무**: Custom Agent·VIP 전략·V-Plan·SVA·Coverage — [DV SKOOL — HBM 검증 실무](../hbm_dv/)
+- **UVM 기본**: component 계층·phase·sequence·RAL — 부족하면 [DV SKOOL — UVM](../uvm/)
+- **선택**: [DRAM / DDR](../dram_ddr/), [Mixed-Signal DV](../mixed_signal_dv/)
+
+:::tip[이 코스와 `hbm_dv`의 차이]
+[`hbm_dv`](../hbm_dv/)는 **"무엇을 아는가"** 를, 이 코스는 **"어떻게 말하는가"** 를 다룹니다. 개념 설명은 반복하지 않고 링크로 넘기며, 여기서는 *질문 형태·답변 구조·꼬리질문 방어*에 집중합니다. 개념이 흔들리면 링크를 따라가 채운 뒤 돌아오세요.
+:::
+
+## 📚 코스 구성
+
+```
+[01 역할·전략·갭 분석]
+      │
+      ├──> [02 HBM 도메인 Q&A] ────────┐
+      │                                │
+      ├──> [03 Custom UVM Agent A-to-Z]├──> [07 Hands-on 즉석 작성]
+      │         ★ 최대 변별 구간        │
+      ├──> [04 VIP 전략·환경 구성] ────┤
+      │                                │
+      ├──> [05 V-Plan·프로세스·Coverage]┘
+      │
+      └──> [06 Mixed-Level & 갭 방어]
+
+      [08 프로젝트 재포지셔닝·디버깅 STAR]   [09 인성·SK 가치·영어] (전 과정 병행)
+```
+
+- **01**: 공고를 먼저 분해해야 나머지 8개 챕터가 *왜 그 순서인지* 보인다.
+- **02**: 도메인 질문은 탈락 방지선이지 가산점 구간이 아니다 — 확실히 넘고 지나간다.
+- **03**: 공고의 필수③ + 우대① 이 동시에 가리키는 지점. **여기서 합격이 갈린다**.
+- **04·05**: 업무 문장(In-house VIP·UVM 환경·Regression Coverage)에 직접 대응.
+- **06**: 유일한 실질 갭. 숨기지 않고 다루는 법.
+- **07**: 화이트보드·공유 에디터 즉석 작성.
+- **08·09**: 전 과정과 병행하며 반복 연습.
+
+<CardGrid>
+	<LinkCard title="01 — 역할·전략·갭 분석" href="./01_role_and_strategy/" description="공고 11항목 분해, 경력 매핑, 관통 메시지, 10분 PT, 갭→지원동기" />
+	<LinkCard title="02 — HBM 도메인 Q&A" href="./02_hbm_domain_qna/" description="스택·Base Die·pseudo-channel·대역폭 산술 — 예상 질문과 4단 답변" />
+	<LinkCard title="03 — Custom UVM Agent A-to-Z" href="./03_custom_uvm_agent/" description="스펙→Agent 설계 순서를 화이트보드에서 말로 설명하기 ★" />
+	<LinkCard title="04 — VIP 전략·환경 구성" href="./04_vip_strategy_env/" description="In-house 개발 vs 3rd Party 도입 판단, UVM 환경 계층, Test Case" />
+	<LinkCard title="05 — V-Plan·프로세스·Coverage Closure" href="./05_vplan_process_coverage/" description="Spec 기반 검증계획, Regression, closure 꼬리질문 방어" />
+	<LinkCard title="06 — Mixed-Level 검증 & 갭 방어" href="./06_mixed_level_gap/" description="Schematic & RTL 혼합 검증 최소 지식 + 정직한 갭 전환 전략" />
+	<LinkCard title="07 — Hands-on 즉석 작성" href="./07_handson_writing/" description="Agent 스켈레톤·SVA·covergroup·constraint·virtual sequence" />
+	<LinkCard title="08 — 프로젝트 재포지셔닝 · 디버깅 STAR" href="./08_project_star/" description="Secure Boot·MMU·DRAM ctrl·AI를 HBM 검증 문맥으로 재배치" />
+	<LinkCard title="09 — 인성·컬처핏·영어 모의면접" href="./09_behavioral_english/" description="지원동기·이직 사유·SK 가치·역질문·English Q&A" />
+</CardGrid>
+
+## 코스 자료
+
+<CardGrid>
+	<LinkCard title="용어집 (Glossary)" href="./glossary/" description="HBM·검증·면접 핵심 용어 ISO 11179 정의" />
+	<LinkCard title="퀴즈 (Quizzes)" href="./quiz/" description="챕터별 이해도 점검, Bloom 레벨 혼합" />
+</CardGrid>
+
+## 🗺️ 공고 항목 → 챕터 매핑
+
+면접에서 나올 질문은 결국 공고 문장에서 나온다. 11개 항목이 모두 어디서 준비되는지 미리 확인해 둔다.
+
+| 구분 | 공고 항목 | 준비 챕터 |
+|---|---|---|
+| 업무① | In-house·3rd Party Digital IP 및 **Mixed 설계** 검증 | [06](./06_mixed_level_gap/) |
+| 업무② | **In-house VIP 개발** + 3rd Party VIP 도입·활용 | [04](./04_vip_strategy_env/) |
+| 업무③ | UVM 기반 **검증 환경 구성 및 Test Case 개발** | [04](./04_vip_strategy_env/), [07](./07_handson_writing/) |
+| 업무④ | **Regression** 통한 Code/Func. Coverage Closure | [05](./05_vplan_process_coverage/) |
+| 필수① | SystemVerilog/UVM **VIP·Testbench·Test Case 개발** | [04](./04_vip_strategy_env/), [07](./07_handson_writing/) |
+| 필수② | Digital IP Spec 기반 **검증 계획 수립·프로세스 이해** | [05](./05_vplan_process_coverage/) |
+| 필수③ | 신규 Protocol/Custom IP **UVM Agent 설계·구현** | **[03](./03_custom_uvm_agent/)** ★ |
+| 필수④ | **Code/Functional Coverage Closure** | [05](./05_vplan_process_coverage/) |
+| 우대① | **Spec 기반 Custom UVM Agent A-to-Z 개발 경험** | **[03](./03_custom_uvm_agent/)**, [08](./08_project_star/) ★ |
+| 우대② | **HBM, DDR/LPDDR Memory 검증** | [02](./02_hbm_domain_qna/), [08](./08_project_star/) |
+| 우대③ | **Full-Chip Mixed-Level (Schematic & RTL) 검증** | [06](./06_mixed_level_gap/) |
+
+## 💡 학습 팁
+
+:::tip[면접 답변 4단 구조]
+1. **한 줄 정의** — "X는 ~다." (15초)
+2. **인과** — "왜 그렇게 되는가" (그림/예시, 1분)
+3. **트레이드오프** — "언제 쓰고 언제 안 쓰는가" (30초)
+4. **내 경험 앵커** — "제 프로젝트에서는 ~했습니다" (30초, 가산점 구간)
+
+앞의 3단은 지식이고, 4단이 *경력 면접*을 만든다. 4단이 없으면 신입 면접과 구분되지 않는다.
+:::
+
+:::caution[흔한 실수]
+- **HBM 면접인데 DRAM 셀·타이밍만 준비함** — 실제 DUT는 Base Die의 digital·mixed IP다. [02](./02_hbm_domain_qna/)에서 이 프레임을 먼저 교정한다.
+- **"Custom Agent 만들어봤습니다"까지만 말함** — 면접관은 *왜 만들었는지(상용 VIP를 왜 안 썼는지)* 를 듣고 싶어 한다. [03](./03_custom_uvm_agent/) 참조.
+- **Coverage 질문에 "100% 달성했습니다"로 답함** — 다음 질문은 반드시 "그런데 버그가 났다면?"이다. [05](./05_vplan_process_coverage/) 참조.
+- **갭을 먼저 사과함** — "경험이 부족합니다"는 자살골. [06](./06_mixed_level_gap/)에서 지원동기로 전환하는 문장을 준비한다.
+:::
