@@ -63,16 +63,19 @@ direction: down
 
 L1: "① 전기적 변화\nper-pin 속도 상승\n예: HBM3 → HBM3E (6.4 → 9.6 Gb/s)" {
   style.fill: "#e8f5e9"
+  style.font-color: "#0A0F25"
   impact: "검증 영향: 낮음\nPHY 트레이닝 파라미터 · 타이밍 마진 조정\nTB 골격 재사용 가능"
 }
 
 L2: "② 구조적 변화\n버스 폭 · 채널 수 변경\n예: HBM3E → HBM4 (1024 → 2048-bit, 16 → 32ch)" {
   style.fill: "#fff8e1"
+  style.font-color: "#0A0F25"
   impact: "검증 영향: 중간\n주소맵 · coverage 축 · 동시성 모델 재설계\nTB 골격은 유지, 설정과 모델은 재작업"
 }
 
 L3: "③ 공정 · 아키텍처 변화\nBase Die가 DRAM 공정 → 로직 공정\n예: HBM4 이후, Custom HBM" {
   style.fill: "#ffebee"
+  style.font-color: "#0A0F25"
   impact: "검증 영향: 높음\n검증 대상 자체가 SoC로 전환\n표준 VIP 부재 · Custom Agent 필요"
 }
 

@@ -101,14 +101,16 @@ direction: down
 
 CH: "**Channel** (HBM3 기준 16개)" {
   style.fill: "#bbdefb"
+  style.font-color: "#0A0F25"
   desc: "데이터 I/O 64-bit · 뱅크 분리 · CA 버스 분리\n→ 채널 간에는 독립성이 높다"
 }
 
-PC0: "Pseudo-channel 0\n데이터 32-bit · 뱅크 분리" { style.fill: "#e8f5e9" }
-PC1: "Pseudo-channel 1\n데이터 32-bit · 뱅크 분리" { style.fill: "#e8f5e9" }
+PC0: "Pseudo-channel 0\n데이터 32-bit · 뱅크 분리" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+PC1: "Pseudo-channel 1\n데이터 32-bit · 뱅크 분리" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 
 CA: "**공유 CA 버스**\n커맨드/주소는 한 벌\n각 pc가 개별 decode · 개별 실행" {
   style.fill: "#ffcdd2"
+  style.font-color: "#0A0F25"
 }
 
 CH -> PC0

@@ -249,21 +249,21 @@ direction: right
 
 IB: "IB 컴포넌트 스택" {
   direction: down
-  mgmt: "SM / SA / CM (over MAD)\nSMP / SMA" { style.fill: "#fdecea"; style.stroke: "#c0392b" }
-  lnk: "Link: LRH / VCRC / VL\nIB Flow Control / Link FSM" { style.fill: "#fdecea"; style.stroke: "#c0392b" }
-  net: "Network: GRH" { style.fill: "#fff4e5"; style.stroke: "#e67e22" }
-  tr: "Transport: BTH / xTH\nPSN·ACK·NAK·Retry\nQP FSM / MR·PD·Key / CQ·WQE" { style.fill: "#e6f4ea"; style.stroke: "#137333" }
-  icrc: "ICRC" { style.fill: "#fff4e5"; style.stroke: "#e67e22" }
+  mgmt: "SM / SA / CM (over MAD)\nSMP / SMA" { style.fill: "#fdecea"; style.font-color: "#0A0F25"; style.stroke: "#c0392b" }
+  lnk: "Link: LRH / VCRC / VL\nIB Flow Control / Link FSM" { style.fill: "#fdecea"; style.font-color: "#0A0F25"; style.stroke: "#c0392b" }
+  net: "Network: GRH" { style.fill: "#fff4e5"; style.font-color: "#0A0F25"; style.stroke: "#e67e22" }
+  tr: "Transport: BTH / xTH\nPSN·ACK·NAK·Retry\nQP FSM / MR·PD·Key / CQ·WQE" { style.fill: "#e6f4ea"; style.font-color: "#0A0F25"; style.stroke: "#137333" }
+  icrc: "ICRC" { style.fill: "#fff4e5"; style.font-color: "#0A0F25"; style.stroke: "#e67e22" }
   mgmt -> lnk -> net -> tr -> icrc { style.opacity: 0 }
 }
 
 ROCE: "RoCEv2 의 운명" {
   direction: down
-  r_mgmt: "RDMA-CM over IP/TCP\n(MODIFIED)\nSM/SA = 제거 (NOT-APPLICABLE)" { style.fill: "#fff4e5"; style.stroke: "#e67e22" }
-  r_link: "Ethernet L2 + FCS\nPFC / DSCP\n(NOT-APPLICABLE: 전부 교체)" { style.fill: "#fdecea"; style.stroke: "#c0392b" }
-  r_net: "IPv4 / IPv6 header\n(MODIFIED: GRH→IP)" { style.fill: "#fff4e5"; style.stroke: "#e67e22" }
-  r_tr: "BTH / xTH 그대로\nPSN·ACK·QP·MR·CQ 그대로\n(APPLICABLE ~47% 의 본진)" { style.fill: "#e6f4ea"; style.stroke: "#137333" }
-  r_icrc: "ICRC: 위치 동일,\nmask 규칙만 변형 (MODIFIED)" { style.fill: "#fff4e5"; style.stroke: "#e67e22" }
+  r_mgmt: "RDMA-CM over IP/TCP\n(MODIFIED)\nSM/SA = 제거 (NOT-APPLICABLE)" { style.fill: "#fff4e5"; style.font-color: "#0A0F25"; style.stroke: "#e67e22" }
+  r_link: "Ethernet L2 + FCS\nPFC / DSCP\n(NOT-APPLICABLE: 전부 교체)" { style.fill: "#fdecea"; style.font-color: "#0A0F25"; style.stroke: "#c0392b" }
+  r_net: "IPv4 / IPv6 header\n(MODIFIED: GRH→IP)" { style.fill: "#fff4e5"; style.font-color: "#0A0F25"; style.stroke: "#e67e22" }
+  r_tr: "BTH / xTH 그대로\nPSN·ACK·QP·MR·CQ 그대로\n(APPLICABLE ~47% 의 본진)" { style.fill: "#e6f4ea"; style.font-color: "#0A0F25"; style.stroke: "#137333" }
+  r_icrc: "ICRC: 위치 동일,\nmask 규칙만 변형 (MODIFIED)" { style.fill: "#fff4e5"; style.font-color: "#0A0F25"; style.stroke: "#e67e22" }
   r_mgmt -> r_link -> r_net -> r_tr -> r_icrc { style.opacity: 0 }
 }
 

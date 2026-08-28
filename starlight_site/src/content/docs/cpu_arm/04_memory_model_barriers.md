@@ -51,12 +51,15 @@ WEAK: "**Weakly-Ordered**\n프로그램 순서 ≠ 관측 순서\nLoad/Store 재
 NEED: "**순서가 중요한 순간**\n다른 코어/장치가 내 접근을 관측"
 DMB: "**DMB** — Data Memory Barrier\n관측 순서만 보장\nCPU 멈추지 않음 (가벼움)\nSMP 공유 변수" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 DSB: "**DSB** — Data Sync Barrier\n이전 접근 완료까지 CPU 대기\n비쌈\nMMIO · CMO · TLBI 완료" {
   style.fill: "#fef7e0"
+  style.font-color: "#0A0F25"
 }
 ISB: "**ISB** — Instruction Sync Barrier\n파이프라인 flush + 재-fetch\nSCTLR/TTBR/DAIF 변경 후" {
   style.fill: "#fce8e6"
+  style.font-color: "#0A0F25"
 }
 
 WEAK -> NEED: "그대로 두면 버그"

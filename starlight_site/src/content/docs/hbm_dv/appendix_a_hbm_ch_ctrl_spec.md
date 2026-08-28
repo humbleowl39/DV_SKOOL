@@ -20,17 +20,18 @@ title: "부록 A — hbm_ch_ctrl 스펙"
 ```d2
 direction: right
 
-HOST: "상위 로직 / 호스트 측" { style.fill: "#ffe0b2" }
+HOST: "상위 로직 / 호스트 측" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
 
 DUT: "**hbm_ch_ctrl** (DUT)" {
   style.fill: "#bbdefb"
+  style.font-color: "#0A0F25"
   sched: "요청 큐 · 스케줄러\n뱅크 상태 추적"
   arb: "CA 중재\n(pseudo-channel 공유)"
   csr: "CSR (Mode Register)"
   err: "오류 검출 · 보고"
 }
 
-DRAM: "DRAM (core die)\n— 검증 환경에서는 모델" { style.fill: "#f5f5f5" }
+DRAM: "DRAM (core die)\n— 검증 환경에서는 모델" { style.fill: "#f5f5f5"; style.font-color: "#0A0F25" }
 
 HOST -> DUT: "**CCI**\n비표준 제어 인터페이스\n(상용 VIP 없음 → Custom Agent 대상)"
 DUT -> DRAM: "**DCMD**\nrow / column 커맨드 (분리)\n+ DQ 데이터"

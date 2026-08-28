@@ -73,23 +73,26 @@ DRAM 모델이 타이밍 위반을 검사하고 오류를 내도록 만들면 �
 ```d2
 direction: right
 
-HOST: "호스트 측" { style.fill: "#ffe0b2" }
+HOST: "호스트 측" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
 
 CA: "**CA — 커맨드/주소**\nrow 계열 (activate, precharge)\ncolumn 계열 (read, write)\n→ HBM3는 독립 인터페이스 2벌" {
   style.fill: "#bbdefb"
+  style.font-color: "#0A0F25"
 }
 
 CAP: "**CA parity**\nHBM2E: 커맨드 안에 인코딩\nHBM3: CA 버스의 별도 신호로 분리" {
   style.fill: "#ffcdd2"
+  style.font-color: "#0A0F25"
 }
 
 DQ: "**DQ — 데이터**\n+ DBI(ac) 인코딩\n+ data bus parity" {
   style.fill: "#c8e6c9"
+  style.font-color: "#0A0F25"
 }
 
-CLK: "**클럭 / 스트로브**\n데이터 정렬 기준" { style.fill: "#e1bee7" }
+CLK: "**클럭 / 스트로브**\n데이터 정렬 기준" { style.fill: "#e1bee7"; style.font-color: "#0A0F25" }
 
-BASE: "**Base Die**\n(DUT)" { style.fill: "#90caf9" }
+BASE: "**Base Die**\n(DUT)" { style.fill: "#90caf9"; style.font-color: "#0A0F25" }
 
 HOST -> CA -> BASE
 HOST -> CAP -> BASE

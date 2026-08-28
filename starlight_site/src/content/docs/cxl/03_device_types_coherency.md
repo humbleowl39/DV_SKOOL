@@ -41,12 +41,15 @@ direction: right
 
 T1: "**Type 1**\nSmartNIC / FPGA\nCache only (로컬 메모리 X)\n.io + .cache" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 T2: "**Type 2**\nGPU / AI 가속기\nCache + Device Mem (HDM-D/DB)\nBias coherency\n.io + .cache + .mem" {
   style.fill: "#fde8e8"
+  style.font-color: "#0A0F25"
 }
 T3: "**Type 3**\nMemory Expander\nDevice Mem only (HDM-H)\nHost Managed\n.io + .mem" {
   style.fill: "#e8fde8"
+  style.font-color: "#0A0F25"
 }
 ```
 

@@ -49,7 +49,7 @@ LDD3는 디바이스 쪽 관점으로 같은 것을 말합니다 — "*there mus
 direction: right
 
 DEVS: "**Devices**\n(여러 소스)"
-IC: "**Interrupt Controller**\nGIC / PLIC / APIC\n다수 소스 → 코어의 1~2 입력\nIPI도 중개" { style.fill: "#aed6f1" }
+IC: "**Interrupt Controller**\nGIC / PLIC / APIC\n다수 소스 → 코어의 1~2 입력\nIPI도 중개" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
 CPU: "**CPU core**\n명령 경계에서 수락\n→ ISR 실행"
 ISR: "ISR\n원인 확인 + acknowledge(INT_CLEAR)\nbottom-half로 긴 일 위임"
 
@@ -58,7 +58,7 @@ IC -> CPU: "인터럽트 신호"
 CPU -> ISR: "vector → handler"
 ISR -> DEVS: "acknowledge / INT_CLEAR" { style.stroke-dash: 4 }
 
-DOORBELL: "**Doorbell (역방향)**\nSW가 디바이스에 알림\n디스크립터 준비 후 tail write" { style.fill: "#f9e79f" }
+DOORBELL: "**Doorbell (역방향)**\nSW가 디바이스에 알림\n디스크립터 준비 후 tail write" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
 CPU -> DOORBELL: "writel(tail)"
 DOORBELL -> DEVS: "디바이스 깨움 / 자기 인터럽트"
 ```

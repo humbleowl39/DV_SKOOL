@@ -41,13 +41,16 @@ direction: right
 
 HOST: "Host CPU / VM" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 DPU: "**DPU SoC**" {
   style.fill: "#fef3e8"
+  style.font-color: "#0A0F25"
   HIF: "Host Interface\n(PCIe)"
   CORE: "프로그래머블 코어\n(제어·정책)"
   DP: "**Data Path Engine**\n분류·전달·DMA·큐" {
     style.fill: "#eaf7ea"
+    style.font-color: "#0A0F25"
   }
   ETH: "Ethernet IP"
   TOE: "TOE\n(TCP offload)"
@@ -128,10 +131,12 @@ direction: down
 
 L1: "Layer 1 — IP 단독 (Protocol)\nRDMA / TOE / Ethernet 각자\n프로토콜 준수 검증" {
   style.fill: "#eaf7ea"
+  style.font-color: "#0A0F25"
 }
 L2: "Layer 2 — IP 간 통합 (Data Path)\n데이터 패스 엔진을 통한\n블록 간 연결·전달 검증"
 L3: "Layer 3 — 시스템 계약\n호스트 인터페이스·격리·\n다중 가속기 협력 검증" {
   style.fill: "#fdeaea"
+  style.font-color: "#0A0F25"
 }
 L1 -> L2 -> L3: "통합 범위 확대"
 ```

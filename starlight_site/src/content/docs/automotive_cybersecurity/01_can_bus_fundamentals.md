@@ -216,7 +216,7 @@ bit    A   B   C   bus     판정
 ```d2
 direction: down
 
-INITIAL: "" { shape: circle; style.fill: "#333" }
+INITIAL: "" { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 ErrorActive: "Error Active\n정상 동작\nActive Error Flag (6 dom)\n→ 다른 노드 TX 강제 abort"
 ErrorPassive: "Error Passive\n송신 가능\nPassive Error Flag (6 rec)\n→ 다른 노드 방해 안 함"
 BusOff: "Bus-Off\n통신 완전 차단\n128 × 11 rec 관찰 후 복귀"

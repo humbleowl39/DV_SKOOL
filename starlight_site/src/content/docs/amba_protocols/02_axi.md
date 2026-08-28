@@ -289,7 +289,7 @@ APB/AHB 같은 단일 버스는 모든 transaction 이 한 점을 통과하니 �
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> IDLE
 IDLE -> W_BEAT: "AW handshake 발행"
 W_BEAT -> W_BEAT: "WVALID=1 + WSTRB + WDATA (beat counter ↑)"

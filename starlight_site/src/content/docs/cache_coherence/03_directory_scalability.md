@@ -40,10 +40,12 @@ direction: down
 REQ: "**Requester (Core 7)**\nread miss on line X"
 DIR: "**Directory / Snoop Filter (at LLC)**\nX → {sharers: Core2, owner: Core2}\n장부 조회" {
   style.fill: "#fff4e5"
+  style.font-color: "#0A0F25"
 }
 C2: "**Core 2 cache**\nX: M (dirty)"
 OTHERS: "**Core 0,1,3..63**\n(질문 받지 않음)" {
   style.fill: "#eeeeee"
+  style.font-color: "#0A0F25"
 }
 
 REQ -> DIR: "① request"
@@ -74,12 +76,15 @@ direction: down
 
 S1: "**① Core7 read miss → Directory**\ndir[X] = {owner: Core2(M)}\ntargeted snoop → Core2" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 S2: "**② Core2 → Core7 data forward**\nCore2: M → S (또는 O)\nCore7: I → S\ndir[X] = {sharers: Core2, Core7}" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 S3: "**③ Core7 write X → Directory**\ndir[X] sharer 목록 = {Core2, Core7}\ntargeted invalidate → Core2 (only)\nCore7: S → M, dir[X] = {owner: Core7(M)}" {
   style.fill: "#fff4e5"
+  style.font-color: "#0A0F25"
 }
 S1 -> S2 -> S3
 ```

@@ -85,11 +85,13 @@ direction: right
 
 GDDR: "GDDR 방식\n좁은 버스 · 초고속\n320~384-bit @ 15~20 Gb/s" {
   style.fill: "#fff3e0"
+  style.font-color: "#0A0F25"
   pcb: "PCB 배선 (수 cm)\n→ 비트당 에너지 높음\n→ SI 난이도 높음"
 }
 
 HBM: "HBM 방식\n초광폭 버스 · 중속\n1024~2048-bit @ 6.4~8 Gb/s" {
   style.fill: "#e3f2fd"
+  style.font-color: "#0A0F25"
   tsv: "TSV + 인터포저 (µm 단위)\n→ 비트당 에너지 낮음\n→ 폭으로 대역폭 확보"
 }
 

@@ -184,7 +184,7 @@ SW 만으로 신뢰 체계를 세우면 반드시 "검증자를 누가 검증하
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 DEVELOPMENT: "DEVELOPMENT\n(Secure Boot OFF, JTAG 오픈)"
 PROVISIONING: "PROVISIONING\n(ROTPK 기록, 테스트 키 → 양산 키)"
 PRODUCTION: "PRODUCTION\n(Secure Boot ON, JTAG Locked)"

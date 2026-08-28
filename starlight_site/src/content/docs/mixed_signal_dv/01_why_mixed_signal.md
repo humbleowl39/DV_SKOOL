@@ -50,12 +50,14 @@ direction: right
 
 traditional: "전통적 분리 방식 ✗" {
   style.fill: "#fce4ec"
+  style.font-color: "#0A0F25"
   digital_only: "Digital sim only\n(sense amp 못 검증)"
   spice_only: "SPICE sim only\n(full chip 불가)"
 }
 
 mixed: "Mixed-Signal 방식 ✓" {
   style.fill: "#e8f5e9"
+  style.font-color: "#0A0F25"
   digital_region: "Digital region\n(event-driven)"
   analog_region: "Analog\n(SPICE)"
   connect: "Connect module"

@@ -386,12 +386,15 @@ direction: down
 
 DT: "**Descriptor Table** (Q × 16 byte)\nD[0] D[1] D[2] ... D[Q-1]\n각 entry: addr / len / flags / next\n→ 실제 데이터 버퍼를 가리키는 포인터 배열" {
   style.fill: "#e3f2fd"
+  style.font-color: "#0A0F25"
 }
 AV: "**Available Ring** (driver 소유)\nflags / avail_idx / ring[0..Q-1]\nring[i % Q] = head descriptor index\n→ driver 가 '이거 처리해줘' 라고 올리는 곳" {
   style.fill: "#fff3e0"
+  style.font-color: "#0A0F25"
 }
 US: "**Used Ring** (device 소유)\nflags / used_idx / {id, len}[0..Q-1]\nid = head desc index, len = 사용 byte 수\n→ device 가 '처리 끝났어' 라고 돌려주는 곳" {
   style.fill: "#e8f5e9"
+  style.font-color: "#0A0F25"
 }
 DT -> AV: "driver 가 desc 작성 후\nhead index 를 avail 에 push"
 AV -> US: "device 가 처리 후\n결과를 used 에 push"
@@ -485,7 +488,7 @@ FO: "FEATURES_OK\n(협상 집합 수락)"
 DO: "DRIVER_OK\n(device live — I/O 시작 가능)"
 R -> A -> D -> F -> FO -> DO
 FO -> FAIL: "device 가 clear 하면" { style.stroke-dash: 4 }
-FAIL: "FAILED → RESET 재시작" { style.fill: "#ffcdd2" }
+FAIL: "FAILED → RESET 재시작" { style.fill: "#ffcdd2"; style.font-color: "#0A0F25" }
 ```
 
 `DRIVER_OK` 가 set 되기 _전_ 에 virtqueue 에 I/O 를 올리면 device 가 무시합니다. 검증 시 "init 직후 첫 패킷이 사라진다" 류의 증상은 이 시퀀스의 step 누락 (특히 `FEATURES_OK` 와 `DRIVER_OK` 사이) 을 먼저 의심해야 합니다.

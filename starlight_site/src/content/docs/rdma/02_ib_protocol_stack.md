@@ -488,7 +488,7 @@ PktLen 계산: **(LRH 시작 ~ VCRC 직전 byte 수) / 4**.
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> Down
 Down -> Initialize: "PortInfo NoStateChange"
 Initialize -> Arm: "FC packet exchange"

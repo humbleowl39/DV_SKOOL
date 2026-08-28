@@ -50,15 +50,19 @@ direction: up
 
 EL0: "**EL0** — User / App\n유저 프로세스 · 권한 없음\nSP_EL0, 모든 HW 요청은 SVC 경유" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 EL1: "**EL1** — OS Kernel\nLinux/RTOS · 드라이버\nSCTLR/TTBR/VBAR_EL1, syscall 디스패치" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 EL2: "**EL2** — Hypervisor\nKVM/Xen · stage-2 translation\nHCR_EL2, VTTBR_EL2, VMID" {
   style.fill: "#fef7e0"
+  style.font-color: "#0A0F25"
 }
 EL3: "**EL3** — Secure Monitor\nTrustZone · TF-A · PSCI\nSCR_EL3.NS — 유일한 월드 스위치" {
   style.fill: "#fce8e6"
+  style.font-color: "#0A0F25"
 }
 
 EL0 -> EL1: "SVC #imm (syscall)"

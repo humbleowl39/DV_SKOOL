@@ -83,10 +83,10 @@ HBM3부터 각 DRAM die 내부에 **on-die ECC**가 있습니다. 데이터가 d
 ```d2
 direction: right
 
-DEF: "결함 발생\n(단일 비트 오류)" { style.fill: "#ffcdd2" }
-ECC: "**on-die ECC**\ndie 내부에서 정정" { style.fill: "#fff8e1" }
-DATA: "데이터 경로\n→ 정확한 값\n**결함 흔적 없음**" { style.fill: "#eceff1" }
-TAP: "**IEEE 1500 TAP**\nECC 투명성 레지스터\n→ 정정 발생 기록" { style.fill: "#c8e6c9" }
+DEF: "결함 발생\n(단일 비트 오류)" { style.fill: "#ffcdd2"; style.font-color: "#0A0F25" }
+ECC: "**on-die ECC**\ndie 내부에서 정정" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+DATA: "데이터 경로\n→ 정확한 값\n**결함 흔적 없음**" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
+TAP: "**IEEE 1500 TAP**\nECC 투명성 레지스터\n→ 정정 발생 기록" { style.fill: "#c8e6c9"; style.font-color: "#0A0F25" }
 
 DEF -> ECC
 ECC -> DATA: "가려짐"

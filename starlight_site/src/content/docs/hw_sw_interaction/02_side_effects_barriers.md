@@ -54,11 +54,11 @@ direction: down
 
 SRC: "**소스 코드**\ndesc 기록 → 도어벨 write"
 
-C1: "**위험 1: 캐싱**\nread가 캐시에서 stale 값\nwrite가 캐시에 머물러 디바이스 미도달" { style.fill: "#f5b7b1" }
-C2: "**위험 2: 재정렬**\n컴파일러/CPU가 순서 변경\n도어벨이 디스크립터보다 먼저 도달" { style.fill: "#f5b7b1" }
+C1: "**위험 1: 캐싱**\nread가 캐시에서 stale 값\nwrite가 캐시에 머물러 디바이스 미도달" { style.fill: "#f5b7b1"; style.font-color: "#0A0F25" }
+C2: "**위험 2: 재정렬**\n컴파일러/CPU가 순서 변경\n도어벨이 디스크립터보다 먼저 도달" { style.fill: "#f5b7b1"; style.font-color: "#0A0F25" }
 
-D1: "**방어 1: uncached 매핑**\nioremap → 캐시 우회\n모든 접근이 디바이스에 직접" { style.fill: "#abebc6" }
-D2: "**방어 2: 메모리 배리어**\nwmb() 등으로 순서 고정\n'이 지점 전 write 먼저 완료'" { style.fill: "#abebc6" }
+D1: "**방어 1: uncached 매핑**\nioremap → 캐시 우회\n모든 접근이 디바이스에 직접" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
+D2: "**방어 2: 메모리 배리어**\nwmb() 등으로 순서 고정\n'이 지점 전 write 먼저 완료'" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
 
 SRC -> C1
 SRC -> C2

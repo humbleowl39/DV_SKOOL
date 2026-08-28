@@ -203,7 +203,7 @@ ACK 한 개가 5 대 기능 중 4 개를 동시에 trigger. 이 _공유 trigger_
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> CLOSED
 CLOSED -> LISTEN: "listen()"
 CLOSED -> SYN_SENT: "connect()"
@@ -453,7 +453,7 @@ RX -> TX: "Window Update(window=4096)" { style.stroke-dash: 4 }
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> SlowStart
 SlowStart: "Slow Start\n(cwnd 지수 증가)"
 CongAvoid: "Congestion Avoidance\n(cwnd 선형 증가)"

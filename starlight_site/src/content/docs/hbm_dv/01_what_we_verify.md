@@ -139,14 +139,14 @@ DUT가 아닙니다. 하지만 여기가 함정입니다. 선행 코스 [Ch03](.
 ```d2
 direction: down
 
-S1: "① 스펙 리뷰 · **경계 확정**\n무엇이 DUT이고 무엇이 모델인가" { style.fill: "#e3f2fd" }
-S2: "② V-Plan 수립\n스펙에서 검증 항목 도출" { style.fill: "#e8f5e9" }
-S3: "③ 환경 구축\nAgent · VIP · 환경 계층" { style.fill: "#fff8e1" }
-S4: "④ 시나리오 · Assertion 작성" { style.fill: "#fff8e1" }
-S5: "⑤ 디버그 루프\n실패 → 원인 판정 → 수정" { style.fill: "#ffebee" }
-S6: "⑥ 회귀 · Coverage Closure" { style.fill: "#f3e5f5" }
-S7: "⑦ Sign-off" { style.fill: "#e0f2f1" }
-S8: "⑧ Silicon 이슈 대응" { style.fill: "#eceff1" }
+S1: "① 스펙 리뷰 · **경계 확정**\n무엇이 DUT이고 무엇이 모델인가" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+S2: "② V-Plan 수립\n스펙에서 검증 항목 도출" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+S3: "③ 환경 구축\nAgent · VIP · 환경 계층" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+S4: "④ 시나리오 · Assertion 작성" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+S5: "⑤ 디버그 루프\n실패 → 원인 판정 → 수정" { style.fill: "#ffebee"; style.font-color: "#0A0F25" }
+S6: "⑥ 회귀 · Coverage Closure" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
+S7: "⑦ Sign-off" { style.fill: "#e0f2f1"; style.font-color: "#0A0F25" }
+S8: "⑧ Silicon 이슈 대응" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
 
 S1 -> S2 -> S3 -> S4 -> S5 -> S6 -> S7 -> S8
 S5 -> S4: "시나리오 보강"

@@ -69,9 +69,9 @@ title: "Ch04 — VIP 전략"
 ```d2
 direction: right
 
-REQ: "**① 요구 목록**\n스펙 규칙 R1~R20\n+ 통합 항목 I1~I8\n+ 우리 DUT 고유 규칙" { style.fill: "#e3f2fd" }
-MAP: "**② 커버 매핑**\n후보가 무엇을 검사하는가\n(문서·평가판으로 확인)" { style.fill: "#fff8e1" }
-GAP: "**③ 잔여 처리**\n덮이지 않는 규칙\n→ 자체 assertion (Ch09)\n→ 자체 시나리오 (Ch08)" { style.fill: "#ffcdd2" }
+REQ: "**① 요구 목록**\n스펙 규칙 R1~R20\n+ 통합 항목 I1~I8\n+ 우리 DUT 고유 규칙" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+MAP: "**② 커버 매핑**\n후보가 무엇을 검사하는가\n(문서·평가판으로 확인)" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+GAP: "**③ 잔여 처리**\n덮이지 않는 규칙\n→ 자체 assertion (Ch09)\n→ 자체 시나리오 (Ch08)" { style.fill: "#ffcdd2"; style.font-color: "#0A0F25" }
 
 REQ -> MAP -> GAP
 GAP -> REQ: "잔여가 과도하면\n후보 재검토"

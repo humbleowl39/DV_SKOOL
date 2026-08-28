@@ -214,7 +214,7 @@ hci_writel(BIT(5), UTRLCLR);        // transfer slot cleanup
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> FREE
 FREE -> SUBMITTED: "1. UTRD 작성 + UTRLDBR set"
 SUBMITTED -> IN_FLIGHT: "2. HCI 가 Cmd UPIU 송신"

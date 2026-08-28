@@ -75,12 +75,15 @@ direction: down
 
 S1: "**① Core0: read miss on X**\nBusRd → 다른 캐시 사본 없음\nX 상태: I → E (Exclusive)" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 S2: "**② Core0: write X**\n이미 E(독점)이므로 버스 신호 불필요\nX 상태: E → M (Modified, dirty)" {
   style.fill: "#fff4e5"
+  style.font-color: "#0A0F25"
 }
 S3: "**③ Core1: read miss on X**\nBusRd → Core0이 M(dirty) 보유\nsnoop 응답으로 X 데이터 공급\nCore0: M → S (+메모리 write-back)\nCore1: I → S\n(MOESI면 write-back 생략, Core0: M → O)" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 S1 -> S2 -> S3
 ```

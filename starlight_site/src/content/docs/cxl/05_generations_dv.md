@@ -66,9 +66,11 @@ direction: down
 
 CACHE_SB: "**.cache 읽기 검증**\nD2H Req(RdShared) 모니터\n→ H2D Rsp(GO-S) + H2D Data\n비교: GO 순서 + 데이터\n+ 캐시 상태 전이" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 MEM_SB: "**.mem 읽기 검증**\nM2S Req 모니터\n→ S2M DRS(Data) / NDR\n비교: HDM 메모리 모델 vs 데이터\n+ poison 태그" {
   style.fill: "#e8fde8"
+  style.font-color: "#0A0F25"
 }
 ```
 

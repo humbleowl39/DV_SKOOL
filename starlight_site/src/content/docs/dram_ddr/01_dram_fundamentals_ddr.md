@@ -199,7 +199,7 @@ LPDDR5 예시 (BG 모드): 4 Bank Group · 4 Bank/Group (총 **16 Bank**) · 수
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> POWERUP
 POWERUP -> IDLE: "MRS / ZQ / Init"
 IDLE -> ACTIVE: "ACT (tRCD)"
@@ -277,21 +277,21 @@ DRAM 셀의 구조는 1T1C — 트랜지스터 하나와 커패시터 하나 —
 ```d2
 direction: down
 
-RowDec: "Row Decoder\n(한 번에 word line 1개만 활성화)" { style.fill: "#e8f0fe" }
+RowDec: "Row Decoder\n(한 번에 word line 1개만 활성화)" { style.fill: "#e8f0fe"; style.font-color: "#0A0F25" }
 
-WL0: "Word line 0" { style.fill: "#fff4e5" }
-WL1: "Word line 1" { style.fill: "#fff4e5" }
+WL0: "Word line 0" { style.fill: "#fff4e5"; style.font-color: "#0A0F25" }
+WL1: "Word line 1" { style.fill: "#fff4e5"; style.font-color: "#0A0F25" }
 
 C00: "1T1C"
 C01: "1T1C"
 C10: "1T1C"
 C11: "1T1C"
 
-BL0: "Bit line 0" { style.fill: "#e6f4ea" }
-BL1: "Bit line 1" { style.fill: "#e6f4ea" }
+BL0: "Bit line 0" { style.fill: "#e6f4ea"; style.font-color: "#0A0F25" }
+BL1: "Bit line 1" { style.fill: "#e6f4ea"; style.font-color: "#0A0F25" }
 
-SA0: "Sense Amp 0\n= Row Buffer" { style.fill: "#fce8e6" }
-SA1: "Sense Amp 1\n= Row Buffer" { style.fill: "#fce8e6" }
+SA0: "Sense Amp 0\n= Row Buffer" { style.fill: "#fce8e6"; style.font-color: "#0A0F25" }
+SA1: "Sense Amp 1\n= Row Buffer" { style.fill: "#fce8e6"; style.font-color: "#0A0F25" }
 
 IO: "Column Decoder / MUX → DQ (I/O)"
 

@@ -63,10 +63,10 @@ CPU: "**CPU**\nload/store\n(공통 명령)" {
 
 MEMSPACE: "**통합 주소 공간 (MMIO)**" {
   RAM: "RAM\n0x0000_0000 ~"
-  HOLE: "I/O hole\n디바이스 레지스터 매핑\n(DRAM 불가)" { style.fill: "#f9e79f" }
+  HOLE: "I/O hole\n디바이스 레지스터 매핑\n(DRAM 불가)" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
 }
 
-IOSPACE: "**격리 I/O 공간 (PMIO)**\nport 0x00 ~ 0xFFFF" { style.fill: "#aed6f1" }
+IOSPACE: "**격리 I/O 공간 (PMIO)**\nport 0x00 ~ 0xFFFF" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
 
 DEV: "**Device**\n주소 버스 감시\n자기 주소에 응답"
 

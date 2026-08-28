@@ -379,7 +379,7 @@ LPDDR5 는 Mode Register 를 **MRW**(Mode Register Write)/**MRR**(Mode Register 
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> Active: ""
 Active: "Active\n(정상 동작)"
 PowerDown: "Power-Down (PD)"

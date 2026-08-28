@@ -49,15 +49,19 @@ direction: down
 
 GPR: "**General Purpose (31)**\nX0–X30 (64-bit)\nW0–W30 (하위 32-bit 뷰)\nX30 = LR (return addr)" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 SPEC: "**특수 레지스터**\nSP (stack pointer, EL별 banked)\nPC (branch로만 변경)\nXZR/WZR (읽으면 0, 쓰면 버림)" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 PSTATE: "**PSTATE (실행 중 값)**\nNZCV — 조건 플래그\nDAIF — 인터럽트 마스크\nCurrentEL · SPSel · nRW" {
   style.fill: "#fef7e0"
+  style.font-color: "#0A0F25"
 }
 SYS: "**시스템 레지스터 (EL별 banked)**\nELR_ELx · SPSR_ELx\nESR_ELx · FAR_ELx · VBAR_ELx" {
   style.fill: "#fce8e6"
+  style.font-color: "#0A0F25"
 }
 
 GPR -> SPEC: "함께 데이터패스"

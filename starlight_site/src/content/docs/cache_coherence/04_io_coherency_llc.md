@@ -42,6 +42,7 @@ direction: down
 NIC: "**NIC / DMA (비캐싱 마스터)**\nread packet @addr"
 IC: "**System Interconnect**\nIO-coherent port" {
   style.fill: "#fff4e5"
+  style.font-color: "#0A0F25"
 }
 CPU: "**CPU cache**\npacket @addr: M (dirty)"
 DDR: "**Main Memory (DDR)**\nstale packet"
@@ -70,9 +71,9 @@ IO-coherency가 *one-way*(한 방향)인 이유는 비캐싱 마스터(자체 �
 ```d2
 direction: down
 
-A1: "**① DMA read @X → 인터커넥트**\nIO-coherent port 진입" { style.fill: "#e8f0fe" }
-A2: "**② 인터커넥트가 PoC(LLC) directory 조회**\nX의 owner = CPU(L1, dirty)" { style.fill: "#fff4e5" }
-A3: "**③ CPU L1 snoop → dirty 추출**\nDDR 우회" { style.fill: "#e6f4ea" }
+A1: "**① DMA read @X → 인터커넥트**\nIO-coherent port 진입" { style.fill: "#e8f0fe"; style.font-color: "#0A0F25" }
+A2: "**② 인터커넥트가 PoC(LLC) directory 조회**\nX의 owner = CPU(L1, dirty)" { style.fill: "#fff4e5"; style.font-color: "#0A0F25" }
+A3: "**③ CPU L1 snoop → dirty 추출**\nDDR 우회" { style.fill: "#e6f4ea"; style.font-color: "#0A0F25" }
 A4: "**④ 최신 X를 DMA로 전달**\n드라이버는 flush 불필요"
 A1 -> A2 -> A3 -> A4
 ```
@@ -82,9 +83,9 @@ A1 -> A2 -> A3 -> A4
 ```d2
 direction: down
 
-B1: "**① LLC full, 새 line 위해 victim 선택**\nvictim line Y가 상위 L1/L2에도 존재" { style.fill: "#e8f0fe" }
-B2: "**② inclusive 정책: 상위가 가진 line은\n   LLC에도 반드시 존재해야**\n→ LLC가 Y를 그냥 못 버림" { style.fill: "#fff4e5" }
-B3: "**③ Back-Invalidation 발행**\nL1/L2에 'Y 버려라' 명령\n(dirty면 write-back 동반)" { style.fill: "#fce8e6" }
+B1: "**① LLC full, 새 line 위해 victim 선택**\nvictim line Y가 상위 L1/L2에도 존재" { style.fill: "#e8f0fe"; style.font-color: "#0A0F25" }
+B2: "**② inclusive 정책: 상위가 가진 line은\n   LLC에도 반드시 존재해야**\n→ LLC가 Y를 그냥 못 버림" { style.fill: "#fff4e5"; style.font-color: "#0A0F25" }
+B3: "**③ Back-Invalidation 발행**\nL1/L2에 'Y 버려라' 명령\n(dirty면 write-back 동반)" { style.fill: "#fce8e6"; style.font-color: "#0A0F25" }
 B4: "**④ 상위 캐시 Y 무효화 완료 후\n   LLC가 victim 교체**\norphan(고아) line 방지"
 B1 -> B2 -> B3 -> B4
 ```

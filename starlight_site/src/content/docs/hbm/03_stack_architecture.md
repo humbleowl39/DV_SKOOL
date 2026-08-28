@@ -80,21 +80,24 @@ direction: up
 
 substrate: "패키지 기판 (organic substrate)" {
   style.fill: "#eceff1"
+  style.font-color: "#0A0F25"
 }
 
 interposer: "실리콘 인터포저 (2.5D)\nHBM 스택과 호스트를 µm 거리로 연결" {
   style.fill: "#e0e0e0"
+  style.font-color: "#0A0F25"
 }
 
 base: "**Base Die (Logic Die)**\n채널별 read/write 관리 · refresh 주기 · 트레이닝\nprecharge/activate 발행 · 호스트 인터페이스" {
   style.fill: "#bbdefb"
+  style.font-color: "#0A0F25"
 }
 
-core0: "Core Die 0 (DRAM)" { style.fill: "#f5f5f5" }
-core1: "Core Die 1 (DRAM)" { style.fill: "#f5f5f5" }
-coreN: "… Core Die N-1 (8-high / 12-high)" { style.fill: "#f5f5f5" }
+core0: "Core Die 0 (DRAM)" { style.fill: "#f5f5f5"; style.font-color: "#0A0F25" }
+core1: "Core Die 1 (DRAM)" { style.fill: "#f5f5f5"; style.font-color: "#0A0F25" }
+coreN: "… Core Die N-1 (8-high / 12-high)" { style.fill: "#f5f5f5"; style.font-color: "#0A0F25" }
 
-host: "호스트 (GPU / ASIC)" { style.fill: "#ffe0b2" }
+host: "호스트 (GPU / ASIC)" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
 
 substrate -> interposer
 interposer -> base: "µbump"
@@ -123,6 +126,7 @@ direction: right
 
 TB: "**테스트벤치 (UVM)**" {
   style.fill: "#f3e5f5"
+  style.font-color: "#0A0F25"
   vip: "Host VIP / BFM\n호스트를 흉내 내어 커맨드 발행"
   model: "DRAM Behavioral Model\ncore die를 흉내 내어 응답"
   sb: "Scoreboard · Coverage · SVA"
@@ -130,12 +134,14 @@ TB: "**테스트벤치 (UVM)**" {
 
 DUT: "**DUT — 검증 대상**" {
   style.fill: "#bbdefb"
+  style.font-color: "#0A0F25"
   dig: "Base die Digital IP\n(RTL — 순수 디지털 시뮬레이션)"
   mix: "Base die Mixed IP\n(PHY 등 — mixed-level 검증)"
 }
 
 OUT: "범위 밖" {
   style.fill: "#eceff1"
+  style.font-color: "#0A0F25"
   phys: "인터포저 · 기판 전기 특성\nTSV 전기 특성 · 열 특성\n→ SI/PI · 패키지 해석 영역"
 }
 

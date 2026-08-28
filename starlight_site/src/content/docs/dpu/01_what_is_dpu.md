@@ -53,9 +53,11 @@ direction: right
 
 HOST: "Host CPU\n(애플리케이션 / 테넌트 VM)" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 DPU: "**DPU**\n프로그래머블 코어 + 가속기" {
   style.fill: "#fef3e8"
+  style.font-color: "#0A0F25"
   NET: "Networking\noffload"
   STO: "Storage\noffload"
   SEC: "Security\noffload"

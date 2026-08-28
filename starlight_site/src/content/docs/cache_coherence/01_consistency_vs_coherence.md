@@ -47,12 +47,15 @@ direction: down
 
 PROG: "**Programmer / ISA**\n로드·스토어 순서에 의존\nmemory barrier 사용" {
   style.fill: "#e8f0fe"
+  style.font-color: "#0A0F25"
 }
 CONS: "**Memory Consistency (What)**\n순서 계약 — 가시적(visible)\n모든 주소에 대한 순서 규칙" {
   style.fill: "#fff4e5"
+  style.font-color: "#0A0F25"
 }
 COH: "**Cache Coherence (How)**\n사본 동기화 — 투명(transparent)\n단일 주소(line)만 담당\nSWMR + Data-Value invariant" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 HW: "**Caches / Interconnect**\nL1/L2, snoop, directory, LLC"
 
@@ -81,9 +84,11 @@ direction: down
 A: "**Core A**\nstore X = 1"
 COH_STEP: "**Coherence가 하는 일 (How)**\n① A가 X line을 쓰기 위해\n   write permission 획득\n② peer 캐시(B)의 X 사본 무효화\n③ B가 다음에 X를 읽으면\n   최신값(1)을 받음" {
   style.fill: "#e6f4ea"
+  style.font-color: "#0A0F25"
 }
 CONS_STEP: "**Consistency가 보장하는 것 (What)**\nA가 X=1 쓴 뒤 barrier 실행 →\n그 이후 B의 로드는 1을 본다는\n*순서 계약* (모델에 따라 강/약)" {
   style.fill: "#fff4e5"
+  style.font-color: "#0A0F25"
 }
 A -> COH_STEP: "hardware 자동"
 A -> CONS_STEP: "programmer 가정"

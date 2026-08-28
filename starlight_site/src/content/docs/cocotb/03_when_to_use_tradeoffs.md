@@ -48,8 +48,8 @@ SOC: "대규모 SoC full-sim?"
 VIP: "상용 VIP 필수\n(PCIe Gen5 / DDR)?"
 ASSET: "기존 대규모\nUVM 자산?"
 ALGO: "알고리즘 모델 통합\n(DSP/ML)이 중요?"
-UVM: "**→ UVM**" { style.fill: "#ffe0e0" }
-COCO: "**→ cocotb**" { style.fill: "#e0ffe0" }
+UVM: "**→ UVM**" { style.fill: "#ffe0e0"; style.font-color: "#0A0F25" }
+COCO: "**→ cocotb**" { style.fill: "#e0ffe0"; style.font-color: "#0A0F25" }
 
 Q1 -> SOC
 SOC -> UVM: "예"
@@ -75,8 +75,8 @@ direction: right
 T1: "이미지 필터 IP\n(NumPy 레퍼런스 존재)"
 T2: "PCIe Gen5 SoC 통합\n(상용 VIP 필요)"
 T3: "ML 가속기 PoC\n(라이선스 없는 CI 원함)"
-C: "**cocotb**" { style.fill: "#e0ffe0" }
-U: "**UVM**" { style.fill: "#ffe0e0" }
+C: "**cocotb**" { style.fill: "#e0ffe0"; style.font-color: "#0A0F25" }
+U: "**UVM**" { style.fill: "#ffe0e0"; style.font-color: "#0A0F25" }
 T1 -> C: "IP 레벨 + 알고리즘 통합"
 T2 -> U: "상용 VIP + 대규모"
 T3 -> C: "PoC + 무료 시뮬레이터 CI"

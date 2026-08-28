@@ -78,7 +78,7 @@ Spec 은 Reset → Init → RTR → RTS 를 각각 _별도 Modify 호출_ 로 �
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> Reset
 Reset -> Init: "Modify(Init)"
 Init -> RTR: "Modify(RTR)"
@@ -258,7 +258,7 @@ Q5 -> TCP: "Yes"
 ```d2
 direction: down
 
-INITIAL { shape: circle; style.fill: "#333" }
+INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> Reset
 Reset -> Init: "Modify(Init)"
 Init -> RTR: "Modify(RTR)"

@@ -45,9 +45,9 @@ CPU가 디바이스의 status 레지스터를 준비될 때까지 반복해서 �
 ```d2
 direction: right
 
-POLL: "**폴링**\nstatus 반복 read\n낮은 latency, 높은 CPU\n(busy-wait)" { style.fill: "#aed6f1" }
-INT: "**인터럽트**\nISR 대기\n~0 CPU idle, 고율 스톰 위험" { style.fill: "#abebc6" }
-HYB: "**하이브리드**\n인터럽트로 1회 wake\n→ 큐 빌 때까지 폴링\n(NAPI / NVMe busy-poll)" { style.fill: "#f9e79f" }
+POLL: "**폴링**\nstatus 반복 read\n낮은 latency, 높은 CPU\n(busy-wait)" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
+INT: "**인터럽트**\nISR 대기\n~0 CPU idle, 고율 스톰 위험" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
+HYB: "**하이브리드**\n인터럽트로 1회 wake\n→ 큐 빌 때까지 폴링\n(NAPI / NVMe busy-poll)" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
 
 LOAD: "워크로드"
 LOAD -> POLL: "저지연·예측가능 요구"
