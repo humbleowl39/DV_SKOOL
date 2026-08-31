@@ -50,11 +50,11 @@ direction: down
 
 ENV: "TOE UVM Verification Env" {
   direction: down
-  HA: "**Host Agent**\n(TX/RX 요청)\n데이터 생성\n연결 제어\nAXI 인터페이스"
-  NA: "**Network Agent**\n(Peer TCP 역할)\n패킷 응답\nACK 생성\n패킷 손실 주입\nOOO 주입\nAXI-S 인터페이스"
-  DUT: "**DUT (TOE Engine)**"
-  SB: "**Scoreboard / Protocol Checker**\n데이터 무결성\nTCP 프로토콜 (RFC 793/5681/7323) 준수\nSeq/ACK 정확성\nTCP Reference Model (C/Python)"
-  COV: "**Functional Coverage**"
+  HA: "Host Agent\n(TX/RX 요청)\n데이터 생성\n연결 제어\nAXI 인터페이스"
+  NA: "Network Agent\n(Peer TCP 역할)\n패킷 응답\nACK 생성\n패킷 손실 주입\nOOO 주입\nAXI-S 인터페이스"
+  DUT: "DUT (TOE Engine)"
+  SB: "Scoreboard / Protocol Checker\n데이터 무결성\nTCP 프로토콜 (RFC 793/5681/7323) 준수\nSeq/ACK 정확성\nTCP Reference Model (C/Python)"
+  COV: "Functional Coverage"
   HA -> DUT
   NA -> DUT
   DUT -> SB

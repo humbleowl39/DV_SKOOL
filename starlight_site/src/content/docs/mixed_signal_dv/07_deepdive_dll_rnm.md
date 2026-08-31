@@ -33,26 +33,27 @@ DRAM에서 DLL이 필요한 이유는 이렇습니다. DDR DRAM은 외부 CK 클
 DLL의 동작을 이해하려면 네 블록이 어떻게 협력하는지를 살펴봐야 합니다.
 
 ```d2
-direction: down
+direction: right
 
-g: {
-  grid-rows: 2
-  grid-gap: 60
+g: "DLL — 지연 고정 루프" {
+  style.fill: "#e3f2fd"
+  style.font-color: "#0A0F25"
+
   ref_clk: "REF_CLK"
-  out_clk: "OUT_CLK"
   delay_line: "Delay Line\n(variable)"
   replica: "Replica Delay"
+  out_clk: "OUT_CLK"
+  phase_det: "Phase Detector\n(PD)"
   loop_filter: "Loop Filter"
-  phase_det: "Phase Detector (PD)"
-}
 
-g.ref_clk -> g.delay_line
-g.delay_line -> g.replica: "delay_clk"
-g.replica -> g.out_clk
-g.out_clk -> g.phase_det: "feedback"
-g.ref_clk -> g.phase_det
-g.phase_det -> g.loop_filter: "up/down"
-g.loop_filter -> g.delay_line: "ctrl"
+  ref_clk -> delay_line { style.font-color: "#0A0F25" }
+  delay_line -> replica: "delay_clk" { style.font-color: "#0A0F25" }
+  replica -> out_clk { style.font-color: "#0A0F25" }
+  out_clk -> phase_det: "feedback" { style.font-color: "#0A0F25" }
+  ref_clk -> phase_det: "기준 위상" { style.font-color: "#0A0F25" }
+  phase_det -> loop_filter: "up/down" { style.font-color: "#0A0F25" }
+  loop_filter -> delay_line: "ctrl" { style.font-color: "#0A0F25" }
+}
 ```
 
 **Phase Detector(PD)**는 REF_CLK와 feedback CLK의 위상 차이를 감지하고 up/down 신호를 생성합니다. **Loop Filter(LF)**는 up/down 신호를 누적해 delay control 값을 만드는 적분기 역할을 합니다. **Delay Line(DL)**은 입력 클록을 가변 시간만큼 지연시키는 핵심 소자로, 디지털 제어 코드로 지연량을 조절합니다. **Replica Delay**는 실제 출력 경로 — 데이터를 DQ 핀까지 전달하는 buffer와 배선 — 와 동일한 지연을 모사한 feedback path입니다. DLL은 replica delay를 통해 "출력 경로의 실제 지연이 얼마인지"를 추정하고 그것을 반영한 delay line 설정으로 수렴합니다.

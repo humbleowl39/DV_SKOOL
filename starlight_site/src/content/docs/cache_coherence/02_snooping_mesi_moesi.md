@@ -40,11 +40,11 @@ Module 01의 무한 루프 버그(Core A가 `flag=1`을 썼는데 B가 0을 봄)
 ```d2
 direction: down
 
-BUS: "**Shared Bus / Broadcast Interconnect**\n모든 캐시가 트랜잭션을 snoop"
-C0: "**Core 0 cache**\nline X: M/E/S/I"
-C1: "**Core 1 cache**\nline X: M/E/S/I"
-C2: "**Core 2 cache**\nline X: M/E/S/I"
-MEM: "**Main Memory (DRAM)**"
+BUS: "Shared Bus / Broadcast Interconnect\n모든 캐시가 트랜잭션을 snoop"
+C0: "Core 0 cache\nline X: M/E/S/I"
+C1: "Core 1 cache\nline X: M/E/S/I"
+C2: "Core 2 cache\nline X: M/E/S/I"
+MEM: "Main Memory (DRAM)"
 
 C0 -> BUS: "BusRdX (write 의도)"
 BUS -> C1: "snoop → X 무효화 (→ I)"
@@ -73,15 +73,15 @@ snooping이 답이 되는 이유는 세 요구의 교집합입니다.
 ```d2
 direction: down
 
-S1: "**① Core0: read miss on X**\nBusRd → 다른 캐시 사본 없음\nX 상태: I → E (Exclusive)" {
+S1: "① Core0: read miss on X\nBusRd → 다른 캐시 사본 없음\nX 상태: I → E (Exclusive)" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-S2: "**② Core0: write X**\n이미 E(독점)이므로 버스 신호 불필요\nX 상태: E → M (Modified, dirty)" {
+S2: "② Core0: write X\n이미 E(독점)이므로 버스 신호 불필요\nX 상태: E → M (Modified, dirty)" {
   style.fill: "#fff4e5"
   style.font-color: "#0A0F25"
 }
-S3: "**③ Core1: read miss on X**\nBusRd → Core0이 M(dirty) 보유\nsnoop 응답으로 X 데이터 공급\nCore0: M → S (+메모리 write-back)\nCore1: I → S\n(MOESI면 write-back 생략, Core0: M → O)" {
+S3: "③ Core1: read miss on X\nBusRd → Core0이 M(dirty) 보유\nsnoop 응답으로 X 데이터 공급\nCore0: M → S (+메모리 write-back)\nCore1: I → S\n(MOESI면 write-back 생략, Core0: M → O)" {
   style.fill: "#e6f4ea"
   style.font-color: "#0A0F25"
 }
@@ -130,17 +130,17 @@ MESI에서 ③번처럼 dirty line을 공유하려면 보통 *메모리에 write
 ```d2
 direction: right
 
-MESI: "**MESI: dirty share**" {
+MESI: "MESI: dirty share" {
   direction: down
   m1: "Core0: M"
   wb: "write-back to MEM"
   s1: "Core0: S, Core1: S\n(메모리가 최신)"
   m1 -> wb -> s1
 }
-MOESI: "**MOESI: dirty share (write-back 우회)**" {
+MOESI: "MOESI: dirty share (write-back 우회)" {
   direction: down
   m2: "Core0: M"
-  o2: "Core0: **O** (dirty 보유, owner)\nCore1: S"
+  o2: "Core0: O (dirty 보유, owner)\nCore1: S"
   note: "메모리 갱신은 나중\nowner가 공급 책임"
   m2 -> o2 -> note
 }

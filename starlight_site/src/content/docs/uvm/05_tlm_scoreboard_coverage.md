@@ -57,10 +57,10 @@ TB 의 **검증 가치** 는 두 곳에서 생성됩니다: **비교 (Scoreboard
 direction: right
 
 DUT: "DUT"
-MON: "**Monitor**\nrun_phase\nap.write(item)"
-SB1: "**Scoreboard.write**\n(analysis_imp)\nexpected_queue 와 비교"
-SB2: "**Scoreboard.actual_fifo**\n(analysis_fifo)\nrun_phase task get\n시간 소비 가능 비교"
-COV: "**Coverage.write**\n(uvm_subscriber)\ncg.sample()"
+MON: "Monitor\nrun_phase\nap.write(item)"
+SB1: "Scoreboard.write\n(analysis_imp)\nexpected_queue 와 비교"
+SB2: "Scoreboard.actual_fifo\n(analysis_fifo)\nrun_phase task get\n시간 소비 가능 비교"
+COV: "Coverage.write\n(uvm_subscriber)\ncg.sample()"
 LOG: "Logger /\nProtocol Checker\n_(선택)_"
 DUT -> MON: "vif sampling"
 MON -> SB1: "1:N broadcast"
@@ -90,10 +90,10 @@ MON -> LOG { style.stroke-dash: 4 }
 ```d2
 direction: down
 
-MON: "**Monitor**\n@posedge vif.clk\nif (valid && ready)\n  item.addr / item.data 채움\n① ap.write(item)"
-SB_IMP: "**Scoreboard**\nanalysis_imp.write(item)\n② queue pop\ncompare(exp, act)\nmismatch → `uvm_error"
-SB_FIFO: "**Scoreboard**\nactual_fifo.write(item)\n(큐에 push)\nrun_phase task:\n④ get(actual)\nget(expected)\ncompare"
-COV: "**Coverage**\nsubscriber.write(item)\n③ cg.sample()\ncovergroup bin 카운트 ↑\n⑤ cross-bin 카운트 ↑"
+MON: "Monitor\n@posedge vif.clk\nif (valid && ready)\n  item.addr / item.data 채움\n① ap.write(item)"
+SB_IMP: "Scoreboard\nanalysis_imp.write(item)\n② queue pop\ncompare(exp, act)\nmismatch → `uvm_error"
+SB_FIFO: "Scoreboard\nactual_fifo.write(item)\n(큐에 push)\nrun_phase task:\n④ get(actual)\nget(expected)\ncompare"
+COV: "Coverage\nsubscriber.write(item)\n③ cg.sample()\ncovergroup bin 카운트 ↑\n⑤ cross-bin 카운트 ↑"
 MON -> SB_IMP: "fan-out (1:N broadcast)"
 MON -> SB_FIFO
 MON -> COV

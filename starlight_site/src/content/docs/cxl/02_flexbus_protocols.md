@@ -40,17 +40,17 @@ CXL 가속기를 검증하는 환경을 구축한다고 합시다. "가속기가
 ```d2
 direction: down
 
-TX: "**Transaction Layer**" {
+TX: "Transaction Layer" {
   IO: ".io\n(PCIe TLP)"
   CACHE: ".cache\n(D2H / H2D)"
   MEM: ".mem\n(M2S / S2M)"
 }
-LL: "**Link Layer**" {
+LL: "Link Layer" {
   IOLL: ".io LL\n(PCIe DLL)"
   CMLL: ".cachemem LL\n(68B / 256B Flit)"
 }
-AM: "**ARB / MUX**\nvLSM + Arbiter + Multiplexer\n3 프로토콜 → 1 링크 다중화"
-PHY: "**Physical (PHY)**\nLogical PHY (LTSSM, Flex Bus)\n+ Electrical PHY (PCIe 호환)"
+AM: "ARB / MUX\nvLSM + Arbiter + Multiplexer\n3 프로토콜 → 1 링크 다중화"
+PHY: "Physical (PHY)\nLogical PHY (LTSSM, Flex Bus)\n+ Electrical PHY (PCIe 호환)"
 
 TX -> LL
 LL -> AM
@@ -74,10 +74,10 @@ AM -> PHY
 ```d2
 direction: down
 
-D1: "**Device**\n① D2H Req\n(RdShared, Address)"
-H1: "**Host**\n② Cache/Directory lookup\n+ coherency check\n+ GO 보장 준비"
-H2: "**Host**\n③ H2D Rsp (GO-S: Shared)\n④ H2D Data (Cacheline)"
-D2: "**Device**\n⑤ GO + Data 수신\n→ 캐시에 Shared로 저장"
+D1: "Device\n① D2H Req\n(RdShared, Address)"
+H1: "Host\n② Cache/Directory lookup\n+ coherency check\n+ GO 보장 준비"
+H2: "Host\n③ H2D Rsp (GO-S: Shared)\n④ H2D Data (Cacheline)"
+D2: "Device\n⑤ GO + Data 수신\n→ 캐시에 Shared로 저장"
 
 D1 -> H1: "D2H Req 채널"
 H1 -> H2

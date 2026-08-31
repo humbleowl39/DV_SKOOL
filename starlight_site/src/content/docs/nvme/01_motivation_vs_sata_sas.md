@@ -85,11 +85,11 @@ NVMe의 "multi-GB/s"는 PCIe 링크 구조에서 직접 나옵니다. PCIe는 **
 ```d2
 direction: down
 
-S1: "**① 32 코어가 동시에 read 요청**"
-S2A: "**② SATA**: 단일 큐(깊이 32)에 직렬화\n코어들이 큐 슬롯을 두고 경합\n→ 락 경합 + 컨트롤러 hop"
-S2B: "**② NVMe**: 코어별 SQ에 각자 enqueue\n경합 없음 + PCIe 직결"
-S3A: "**③ SATA**: 매체는 빠른데\n통로가 좁아 IOPS 한계"
-S3B: "**③ NVMe**: 큐 병렬성이\n매체 성능을 그대로 노출"
+S1: "① 32 코어가 동시에 read 요청"
+S2A: "② SATA: 단일 큐(깊이 32)에 직렬화\n코어들이 큐 슬롯을 두고 경합\n→ 락 경합 + 컨트롤러 hop"
+S2B: "② NVMe: 코어별 SQ에 각자 enqueue\n경합 없음 + PCIe 직결"
+S3A: "③ SATA: 매체는 빠른데\n통로가 좁아 IOPS 한계"
+S3B: "③ NVMe: 큐 병렬성이\n매체 성능을 그대로 노출"
 S1 -> S2A -> S3A
 S1 -> S2B -> S3B
 ```

@@ -82,12 +82,12 @@ JIT 컴파일러나 부트로더가 코드 영역을 다시 쓰면 문제가 생
 
 ```d2
 direction: down
-S1: "**① STR w_new, [x_addr]**\n새 명령이 D-cache 에 들어감"
-S2: "**② DC CVAU, x_addr**\nD-cache clean → PoU 로 밀어 I-cache 가 볼 수 있게"
-S3: "**③ DSB ISH**\nclean 완료 대기 (모든 코어)"
-S4: "**④ IC IVAU, x_addr**\nI-cache invalidate → 옛 명령 버림"
-S5: "**⑤ DSB ISH → ⑥ ISB**\ninvalidate 완료 + 파이프라인 flush"
-S6: "**br x_addr**\n이제 새 코드로 안전하게 분기"
+S1: "① STR w_new, [x_addr]\n새 명령이 D-cache 에 들어감"
+S2: "② DC CVAU, x_addr\nD-cache clean → PoU 로 밀어 I-cache 가 볼 수 있게"
+S3: "③ DSB ISH\nclean 완료 대기 (모든 코어)"
+S4: "④ IC IVAU, x_addr\nI-cache invalidate → 옛 명령 버림"
+S5: "⑤ DSB ISH → ⑥ ISB\ninvalidate 완료 + 파이프라인 flush"
+S6: "br x_addr\n이제 새 코드로 안전하게 분기"
 S1 -> S2 -> S3 -> S4 -> S5 -> S6
 ```
 

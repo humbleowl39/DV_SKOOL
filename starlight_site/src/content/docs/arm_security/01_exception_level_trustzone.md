@@ -88,7 +88,7 @@ S: "Secure World" {
   S1 -- S2
 }
 
-EL3: "**EL3 — Secure Monitor (ATF / BL31)**\n유일한 월드 전환 게이트 · 항상 Secure" { style.stroke: "#b8860b"; style.stroke-width: 3 }
+EL3: "EL3 — Secure Monitor (ATF / BL31)\n유일한 월드 전환 게이트 · 항상 Secure" { style.stroke: "#b8860b"; style.stroke-width: 3 }
 
 NS.NS2 -> EL3: "SMC"
 S.S2 -> EL3: "SMC"
@@ -221,10 +221,10 @@ H: "NS — 수평 (월드)" {
 ```d2
 direction: down
 
-EL3: "**EL3 — Secure Monitor**\nATF/BL31, BootROM/BL1\n최고 권한 · 월드 전환 관리\nSMC 로 진입 · 항상 Secure"
-EL2: "**EL2 — Hypervisor**\nVM 관리\nS-EL2 (ARMv8.4+) · NS-EL2 (KVM)"
-EL1: "**EL1 — OS Kernel**\nS-EL1: TEE OS (OP-TEE, Trusty)\nNS-EL1: Linux, Android"
-EL0: "**EL0 — Application**\nS-EL0: Trusted App (결제, DRM, 생체)\nNS-EL0: 일반 앱"
+EL3: "EL3 — Secure Monitor\nATF/BL31, BootROM/BL1\n최고 권한 · 월드 전환 관리\nSMC 로 진입 · 항상 Secure"
+EL2: "EL2 — Hypervisor\nVM 관리\nS-EL2 (ARMv8.4+) · NS-EL2 (KVM)"
+EL1: "EL1 — OS Kernel\nS-EL1: TEE OS (OP-TEE, Trusty)\nNS-EL1: Linux, Android"
+EL0: "EL0 — Application\nS-EL0: Trusted App (결제, DRM, 생체)\nNS-EL0: 일반 앱"
 EL3 -> EL2
 EL2 -> EL1
 EL1 -> EL0
@@ -512,17 +512,17 @@ SW: "Secure side" {
   SP0: "SP0 (TEE)"
   SP1: "SP1 (DRM)"
   SP2: "SP2 (...)"
-  SEL2: "**S-EL2**\nSecure Partition Manager"
+  SEL2: "S-EL2\nSecure Partition Manager"
   SP0 -> SEL2
   SP1 -> SEL2
   SP2 -> SEL2
 }
 NW: "Non-Secure side" {
   VM: "NS-VM (Linux)"
-  NSEL2: "**NS-EL2**\nKVM"
+  NSEL2: "NS-EL2\nKVM"
   VM -> NSEL2
 }
-EL3M: "**EL3 — Secure Monitor**"
+EL3M: "EL3 — Secure Monitor"
 SW.SEL2 -> EL3M
 NW.NSEL2 -> EL3M
 ```

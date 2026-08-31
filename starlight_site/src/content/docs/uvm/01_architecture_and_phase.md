@@ -54,11 +54,11 @@ SystemVerilog 만으로 testbench 를 짠다고 해봅시다. 가장 먼저 검�
 direction: down
 
 TREE: "컴포넌트 트리\n(test→env→agent: drv·mon·sqr, sb)" { style.stroke: "#5f6368"; style.stroke-dash: 2 }
-BUILD: "**build_phase** Top→Down · 자식 create" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-CONNECT: "**connect_phase** Bottom→Up · TLM 연결" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-RUN: "**run_phase** (모든 컴포넌트 병렬)\nraise_objection ··· drop_objection" { style.stroke: "#137333"; style.stroke-width: 3 }
+BUILD: "build_phase Top→Down · 자식 create" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CONNECT: "connect_phase Bottom→Up · TLM 연결" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+RUN: "run_phase (모든 컴포넌트 병렬)\nraise_objection ··· drop_objection" { style.stroke: "#137333"; style.stroke-width: 3 }
 DRAIN: "drain time / phase_ready_to_end (선택)" { shape: oval; style.stroke: "#5f6368"; style.stroke-dash: 4 }
-CLEAN: "**extract→check→report→final** Bottom→Up" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+CLEAN: "extract→check→report→final Bottom→Up" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 
 TREE -> BUILD: { style.stroke-dash: 4 }
 BUILD -> CONNECT
@@ -220,7 +220,7 @@ OBJ_SIDE: "Object Branch" {
   style.stroke-width: 1
   style.stroke-dash: 2
 
-  OBJ: "**uvm_object**\n데이터 · Phase 없음" {
+  OBJ: "uvm_object\n데이터 · Phase 없음" {
     style.stroke: "#1a73e8"
     style.stroke-width: 2
   }
@@ -241,7 +241,7 @@ COMP_SIDE: "Component Branch" {
   style.stroke-width: 1
   style.stroke-dash: 2
 
-  COMP: "**uvm_component**\n인프라 · Phase 있음" {
+  COMP: "uvm_component\n인프라 · Phase 있음" {
     style.stroke: "#137333"
     style.stroke-width: 2
   }

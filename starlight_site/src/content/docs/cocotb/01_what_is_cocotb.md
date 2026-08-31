@@ -46,16 +46,16 @@ direction: right
 
 UVM: "UVM 모델 (single simulation)" {
   SIM1: "HDL Simulator" {
-    TB1: "**UVM TB**\n(SystemVerilog)\nuvm_test / env / driver"
-    DUT1: "**DUT**\n(RTL)"
+    TB1: "UVM TB\n(SystemVerilog)\nuvm_test / env / driver"
+    DUT1: "DUT\n(RTL)"
     TB1 -> DUT1: "vif (내부)"
   }
 }
 
 COCO: "cocotb 모델 (cosimulation)" {
-  PY: "**Python process**\n@cocotb.test()\nasync def ..."
+  PY: "Python process\n@cocotb.test()\nasync def ..."
   SIM2: "HDL Simulator\n(VCS/Questa/Icarus/Verilator)" {
-    DUT2: "**DUT**\n(RTL)"
+    DUT2: "DUT\n(RTL)"
   }
   PY -> SIM2: "VPI interface\n(표준)"
 }
@@ -78,13 +78,13 @@ cocotb라는 이름 자체가 이 프레임워크의 설계를 압축하고 있�
 ```d2
 direction: down
 
-N1: "**CO**routine-based" {
+N1: "COroutine-based" {
   d1: "테스트가 coroutine(async def)\n으로 작성됨 — 중단/재개 가능"
 }
-N2: "**CO**simulation" {
+N2: "COsimulation" {
   d2: "Python(시뮬레이터 밖)이\nHDL 시뮬레이터(안의 DUT)를\nVPI로 함께 구동"
 }
-N3: "**T**est**B**ench" {
+N3: "TestBench" {
   d3: "결국 하는 일은 검증 환경\n— 자극 인가 + 결과 확인"
 }
 N1 -> N2 -> N3: "이름 그대로 읽으면 설계가 보인다"

@@ -41,13 +41,13 @@ title: "04 — NVMe-oF over RDMA"
 ```d2
 direction: right
 
-HOST: "**Host** (initiator)" {
+HOST: "Host (initiator)" {
   HQP: "RDMA QP\n= NVMe 큐 쌍\n(SQ + CQ)"
 }
 
-FABRIC: "**RDMA Fabric**\n(RoCEv2 / Ethernet)"
+FABRIC: "RDMA Fabric\n(RoCEv2 / Ethernet)"
 
-TARGET: "**Target controller**\n(NVMe RDMA Target)" {
+TARGET: "Target controller\n(NVMe RDMA Target)" {
   TQP: "RDMA QP"
   SSD: "NVMe SSD"
   TQP -> SSD
@@ -72,10 +72,10 @@ FABRIC -> HOST.HQP
 ```d2
 direction: down
 
-S1: "**① host**: capsule 구성\nNVMe Write cmd(64B) + write data\n(작으므로 inline = ICD)"
-S2: "**② RDMA SEND**: capsule을\ntarget QP로 전송 (한 번)"
-S3: "**③ target**: capsule 수신\ncmd 디코드 + inline data를\nSSD에 write"
-S4: "**④ target → host**: completion capsule\n(RDMA SEND) → host CQ에 반영"
+S1: "① host: capsule 구성\nNVMe Write cmd(64B) + write data\n(작으므로 inline = ICD)"
+S2: "② RDMA SEND: capsule을\ntarget QP로 전송 (한 번)"
+S3: "③ target: capsule 수신\ncmd 디코드 + inline data를\nSSD에 write"
+S4: "④ target → host: completion capsule\n(RDMA SEND) → host CQ에 반영"
 S1 -> S2 -> S3 -> S4
 ```
 
@@ -106,7 +106,7 @@ direction: right
 CMD: "NVMe command\n(64 bytes)"
 ICD: "+ In-Capsule Data\n(작은 write 데이터, 선택)"
 SGL: "또는 SGL\n(큰 데이터 주소표)"
-CAP: "**Capsule**"
+CAP: "Capsule"
 CMD -> CAP
 ICD -> CAP: "ICD model"
 SGL -> CAP: "Out-of-line model"

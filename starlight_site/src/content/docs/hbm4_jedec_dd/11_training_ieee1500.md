@@ -32,19 +32,19 @@ HBM4의 트레이닝 기능은 독립적이지 않습니다. 규격이 **선후 
 ```d2
 direction: down
 
-RX: "**① Rx Offset Calibration (RXoffC)**\nMR8 OP1 · 선택 기능\nDQ Rx 오프셋 보정\n→ write 캘리브레이션에 영향" {
+RX: "① Rx Offset Calibration (RXoffC)\nMR8 OP1 · 선택 기능\nDQ Rx 오프셋 보정\n→ write 캘리브레이션에 영향" {
   style.fill: "#e3f2fd"; style.font-color: "#0A0F25"
 }
-DCA: "**② DCA / DCM**\nMR11·MR10 (DCA) · MR6 OP[7:6] (DCM)\nWDQS 듀티 사이클 보정·관측" {
+DCA: "② DCA / DCM\nMR11·MR10 (DCA) · MR6 OP[7:6] (DCM)\nWDQS 듀티 사이클 보정·관측" {
   style.fill: "#e8f5e9"; style.font-color: "#0A0F25"
 }
-VREF: "**③ VREFD 트레이닝**\nMR14 · DWORD 입력 기준 전압" {
+VREF: "③ VREFD 트레이닝\nMR14 · DWORD 입력 기준 전압" {
   style.fill: "#fff8e1"; style.font-color: "#0A0F25"
 }
-W2C: "**④ WDQS-to-CK Alignment**\nMR8 OP3 · tDQSS 범위 확보\n(05장)" {
+W2C: "④ WDQS-to-CK Alignment\nMR8 OP3 · tDQSS 범위 확보\n(05장)" {
   style.fill: "#f3e5f5"; style.font-color: "#0A0F25"
 }
-WOSC: "**WOSC (WDQS Interval Oscillator)**\nIEEE1500 WOSC_RUN / WOSC_COUNT\n채널·클럭 무관 · 재트레이닝 필요 판단" {
+WOSC: "WOSC (WDQS Interval Oscillator)\nIEEE1500 WOSC_RUN / WOSC_COUNT\n채널·클럭 무관 · 재트레이닝 필요 판단" {
   style.fill: "#eceff1"; style.font-color: "#0A0F25"
 }
 

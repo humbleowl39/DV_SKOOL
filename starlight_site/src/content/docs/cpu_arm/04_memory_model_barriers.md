@@ -47,17 +47,17 @@ ARM은 **weakly-ordered** 메모리 모델이라, Core 0의 두 store가 **순�
 ```d2
 direction: down
 
-WEAK: "**Weakly-Ordered**\n프로그램 순서 ≠ 관측 순서\nLoad/Store 재정렬 허용 (성능)"
-NEED: "**순서가 중요한 순간**\n다른 코어/장치가 내 접근을 관측"
-DMB: "**DMB** — Data Memory Barrier\n관측 순서만 보장\nCPU 멈추지 않음 (가벼움)\nSMP 공유 변수" {
+WEAK: "Weakly-Ordered\n프로그램 순서 ≠ 관측 순서\nLoad/Store 재정렬 허용 (성능)"
+NEED: "순서가 중요한 순간\n다른 코어/장치가 내 접근을 관측"
+DMB: "DMB — Data Memory Barrier\n관측 순서만 보장\nCPU 멈추지 않음 (가벼움)\nSMP 공유 변수" {
   style.fill: "#e6f4ea"
   style.font-color: "#0A0F25"
 }
-DSB: "**DSB** — Data Sync Barrier\n이전 접근 완료까지 CPU 대기\n비쌈\nMMIO · CMO · TLBI 완료" {
+DSB: "DSB — Data Sync Barrier\n이전 접근 완료까지 CPU 대기\n비쌈\nMMIO · CMO · TLBI 완료" {
   style.fill: "#fef7e0"
   style.font-color: "#0A0F25"
 }
-ISB: "**ISB** — Instruction Sync Barrier\n파이프라인 flush + 재-fetch\nSCTLR/TTBR/DAIF 변경 후" {
+ISB: "ISB — Instruction Sync Barrier\n파이프라인 flush + 재-fetch\nSCTLR/TTBR/DAIF 변경 후" {
   style.fill: "#fce8e6"
   style.font-color: "#0A0F25"
 }
@@ -102,10 +102,10 @@ ARM이 weak memory를 택한 것은 성능을 위해서입니다. 단일 스레�
 ```d2
 direction: down
 
-PROB: "**문제**\nstore data; store ready\n→ 순서 뒤집혀 관측 가능"
-DMBW: "**방법 A — DMB**\nproducer: str data; dmb ishst; str ready\nconsumer: ldr ready; dmb ishld; ldr data\n양방향 차단"
-ACQ: "**방법 B — acquire/release**\nproducer: str data; stlr ready\nconsumer: ldar ready; ldr data\n한 방향만 차단 (더 가벼움)"
-OK: "**보장**\nconsumer가 ready=1을 보면\ndata=42도 반드시 관측"
+PROB: "문제\nstore data; store ready\n→ 순서 뒤집혀 관측 가능"
+DMBW: "방법 A — DMB\nproducer: str data; dmb ishst; str ready\nconsumer: ldr ready; dmb ishld; ldr data\n양방향 차단"
+ACQ: "방법 B — acquire/release\nproducer: str data; stlr ready\nconsumer: ldar ready; ldr data\n한 방향만 차단 (더 가벼움)"
+OK: "보장\nconsumer가 ready=1을 보면\ndata=42도 반드시 관측"
 
 PROB -> DMBW
 PROB -> ACQ

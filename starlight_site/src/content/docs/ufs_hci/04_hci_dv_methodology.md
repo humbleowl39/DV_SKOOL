@@ -43,11 +43,11 @@ direction: down
 
 ENV: "UFS HCI UVM Env" {
   direction: down
-  HA: "**Host Agent**\n(SW Driver 모델)\n· UTRD 작성\n· Doorbell 셋\n· ISR 처리\n· Register R/W"
-  DA: "**Device Agent**\n(UFS Device 모델)\n· UPIU 응답 생성\n· RTT 제어\n· 에러 주입\n· UniPro IF"
-  DUT: "**DUT (UFS HCI IP)**"
-  SCB: "**Scoreboard**\n· UTRD → UPIU 변환 정확성\n· DMA 데이터 무결성 (PRDT)\n· 레지스터 상태 정확성\n· 명령 완료 순서 / 상태"
-  COV: "**Functional Coverage**"
+  HA: "Host Agent\n(SW Driver 모델)\n· UTRD 작성\n· Doorbell 셋\n· ISR 처리\n· Register R/W"
+  DA: "Device Agent\n(UFS Device 모델)\n· UPIU 응답 생성\n· RTT 제어\n· 에러 주입\n· UniPro IF"
+  DUT: "DUT (UFS HCI IP)"
+  SCB: "Scoreboard\n· UTRD → UPIU 변환 정확성\n· DMA 데이터 무결성 (PRDT)\n· 레지스터 상태 정확성\n· 명령 완료 순서 / 상태"
+  COV: "Functional Coverage"
   HA -> DUT: "AHB/AXI"
   DA -> DUT: "UniPro"
   DUT -> SCB
@@ -303,7 +303,7 @@ HCI 초기화는 HCE → UCRDY 폴링 → DME_LINKSTARTUP → UTRLBA 설정 → 
 ```d2
 direction: down
 
-VSEQ: "**Virtual Sequence (vseq)**\n· 여러 Agent의 Sequence를 조율\n· 시나리오 단위:\n'32개 READ 후 Abort 2개 동시 주입'"
+VSEQ: "Virtual Sequence (vseq)\n· 여러 Agent의 Sequence를 조율\n· 시나리오 단위:\n'32개 READ 후 Abort 2개 동시 주입'"
 HSEQ: "Host Sequence"
 DSEQ: "Device Sequence"
 HDRV: "Host Driver"
@@ -386,11 +386,11 @@ Scoreboard의 핵심 역할: Host 측 명령과 Device 측 UPIU의 정합성 검
 ```d2
 direction: down
 
-HM: "**Host Monitor**\n(AHB/AXI 관찰)"
-DM: "**Device Monitor**\n(UniPro IF 관찰)"
-SCB: "**Scoreboard**\n1. UTRD → UPIU 변환 검증\n&nbsp;&nbsp;&nbsp;Host UTRD 캡처 → 예상 UPIU 생성\n&nbsp;&nbsp;&nbsp;Device 실제 UPIU 캡처 → 비교\n&nbsp;&nbsp;&nbsp;(Task Tag, LUN, CDB, Data Length)\n\n2. DMA 데이터 무결성\n&nbsp;&nbsp;&nbsp;WRITE: Host PRDT 데이터 ↔ Data-Out UPIU\n&nbsp;&nbsp;&nbsp;READ: Data-In UPIU ↔ Host PRDT DMA\n\n3. 완료 상태 정합성\n&nbsp;&nbsp;&nbsp;Response Status == UTRD OCS\n&nbsp;&nbsp;&nbsp;Doorbell 비트 클리어 / IS[UTRCS] 발생\n\n4. 순서 검증\n&nbsp;&nbsp;&nbsp;같은 LUN 순서 보장 / 다른 LUN Out-of-Order"
-HM -> SCB: "utrd_ap (analysis port)"
-DM -> SCB: "upiu_ap (analysis port)"
+HM: "Host Monitor\n(AHB/AXI 관찰)"
+DM: "Device Monitor\n(UniPro IF 관찰)"
+SCB: "Scoreboard\n1. UTRD → UPIU 변환 검증\n   Host UTRD 캡처 → 예상 UPIU 생성\n   Device 실제 UPIU 캡처 → 비교\n   (Task Tag, LUN, CDB, Data Length)\n\n2. DMA 데이터 무결성\n   WRITE: Host PRDT 데이터 ↔ Data-Out UPIU\n   READ: Data-In UPIU ↔ Host PRDT DMA\n\n3. 완료 상태 정합성\n   Response Status == UTRD OCS\n   Doorbell 비트 클리어 / IS[UTRCS] 발생\n\n4. 순서 검증\n   같은 LUN 순서 보장 / 다른 LUN Out-of-Order"
+HM -> SCB: "utrd_ap\n(analysis port)"
+DM -> SCB: "upiu_ap\n(analysis port)"
 ```
 
 ```systemverilog

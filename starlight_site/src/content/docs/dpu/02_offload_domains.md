@@ -40,11 +40,11 @@ title: "Module 02 — 오프로드 도메인 4가지"
 direction: down
 
 HOST: "Host CPU\n(애플리케이션)"
-DPU: "**DPU**" {
-  NET: "**Networking**\n가상 스위칭·라우팅\n오버레이·트래픽 정책"
-  STO: "**Storage**\nNVMe-oF·가상 스토리지\n디바이스·암호화"
-  SEC: "**Security**\nIPsec/TLS·접근 제어\n텔레메트리"
-  VIRT: "**Virtualization**\n관리/테넌트 분리\n베어메탈 서비스"
+DPU: "DPU" {
+  NET: "Networking\n가상 스위칭·라우팅\n오버레이·트래픽 정책"
+  STO: "Storage\nNVMe-oF·가상 스토리지\n디바이스·암호화"
+  SEC: "Security\nIPsec/TLS·접근 제어\n텔레메트리"
+  VIRT: "Virtualization\n관리/테넌트 분리\n베어메탈 서비스"
 }
 NETWORK: "Datacenter Network\n+ Remote Storage"
 
@@ -109,10 +109,10 @@ spec §5(주요 활용 사례)를 도메인 축으로 재정리하면 다음과 
 ```d2
 direction: right
 
-DP: "**Data Path** 오프로드" {
+DP: "Data Path 오프로드" {
   d: "패킷 분류·전달, DMA\nNVMe-oF, 암호화\n→ 데이터가 흐르는 경로\n→ 전용 가속기 유리"
 }
-CP: "**Control Path** 오프로드" {
+CP: "Control Path 오프로드" {
   c: "정책 결정, 관리,\n테넌트 격리\n→ '누가 무엇을' 결정\n→ 프로그래머블 코어"
 }
 ```

@@ -83,13 +83,13 @@ back-door 가 zero-time 인 이유는 버스 사이클을 한 번도 돌리지 �
 ```d2
 direction: right
 
-SEQ: "**Register Sequence**\nregmodel.CTRL.write(...)\n(이름 기반, 버스 무관)"
-MODEL: "**Register Model**\nblock / reg / field 계층\nmirror + desired 값 보관"
-ADAPTER: "**uvm_reg_adapter**\nreg2bus / bus2reg\n(추상 ↔ 버스 변환)"
+SEQ: "Register Sequence\nregmodel.CTRL.write(...)\n(이름 기반, 버스 무관)"
+MODEL: "Register Model\nblock / reg / field 계층\nmirror + desired 값 보관"
+ADAPTER: "uvm_reg_adapter\nreg2bus / bus2reg\n(추상 ↔ 버스 변환)"
 SEQR: "Bus Sequencer\n(APB/AHB/AXI)"
 DRV: "Driver"
-DUT: "**DUT**\n물리 레지스터"
-PRED: "**uvm_reg_predictor**\n(explicit prediction)"
+DUT: "DUT\n물리 레지스터"
+PRED: "uvm_reg_predictor\n(explicit prediction)"
 MON: "Bus Monitor"
 
 SEQ -> MODEL: "frontdoor 호출"
@@ -100,7 +100,7 @@ DRV -> DUT: "물리 read/write"
 DUT -> MON: "관찰"
 MON -> PRED: "bus item"
 PRED -> MODEL: "predict() → mirror 갱신" { style.stroke-dash: 4 }
-MODEL -> DUT: "**back-door**\nHDL path 직접 접근" { style.stroke-dash: 2; style.stroke: "#c0392b" }
+MODEL -> DUT: "back-door\nHDL path 직접 접근" { style.stroke-dash: 2; style.stroke: "#c0392b" }
 ```
 
 ### 왜 이 구조인가 — Design rationale
@@ -134,10 +134,10 @@ MODEL -> DUT: "**back-door**\nHDL path 직접 접근" { style.stroke-dash: 2; st
 ```d2
 direction: down
 
-S1: "**① set(0xAB)**\ndesired = 0xAB\nmirror 는 그대로 (예: 0x00)\nDUT 접근 없음 (zero-time)"
-S2: "**② update()**\ndesired(0xAB) ≠ mirror(0x00)?\n→ 다르므로 write 발생"
-S3: "**③ frontdoor write(0xAB)**\nadapter → bus → DUT\n물리 트랜잭션 실행"
-S4: "**④ mirror = 0xAB**\n관찰된 결과로 mirror 갱신\n이제 desired == mirror"
+S1: "① set(0xAB)\ndesired = 0xAB\nmirror 는 그대로 (예: 0x00)\nDUT 접근 없음 (zero-time)"
+S2: "② update()\ndesired(0xAB) ≠ mirror(0x00)?\n→ 다르므로 write 발생"
+S3: "③ frontdoor write(0xAB)\nadapter → bus → DUT\n물리 트랜잭션 실행"
+S4: "④ mirror = 0xAB\n관찰된 결과로 mirror 갱신\n이제 desired == mirror"
 S1 -> S2 -> S3 -> S4
 ```
 
@@ -190,9 +190,9 @@ mirror 를 _누가_ 갱신하느냐에 따라 세 가지 통합 구조가 있습
 ```d2
 direction: down
 
-IMP: "**1. Implicit Prediction**\n모델 ↔ 시퀀서만 연결\n모델이 한 read/write 직후 스스로 mirror 갱신\n→ 가장 단순, 제3 마스터 관찰 불가"
-EXP: "**2. Explicit Prediction** (권장)\n모델 ↔ 시퀀서 + 모니터 + predictor\nset_auto_predict(0)\n→ 모든 버스 트랜잭션 관찰, 정확"
-PAS: "**3. Passive Integration**\n모델 ↔ 모니터만\n모델로 직접 read/write 불가\n→ 추적·검증 전용"
+IMP: "1. Implicit Prediction\n모델 ↔ 시퀀서만 연결\n모델이 한 read/write 직후 스스로 mirror 갱신\n→ 가장 단순, 제3 마스터 관찰 불가"
+EXP: "2. Explicit Prediction (권장)\n모델 ↔ 시퀀서 + 모니터 + predictor\nset_auto_predict(0)\n→ 모든 버스 트랜잭션 관찰, 정확"
+PAS: "3. Passive Integration\n모델 ↔ 모니터만\n모델로 직접 read/write 불가\n→ 추적·검증 전용"
 ```
 
 | 방식 | 연결 | `set_auto_predict` | 언제 |
@@ -213,9 +213,9 @@ explicit prediction 을 쓰면서 `set_auto_predict(0)` 을 호출하지 않으�
 direction: down
 W: "regmodel.CTRL.write(0xAB)"
 B: "버스로 DUT 에 write 실행"
-IMP: "**경로 A — implicit**\n모델이 _자기가 낸_ write 로\nmirror 를 스스로 갱신\n(auto_predict=1 일 때)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
+IMP: "경로 A — implicit\n모델이 자기가 낸 write 로\nmirror 를 스스로 갱신\n(auto_predict=1 일 때)" { style.stroke: "#c0392b"; style.stroke-width: 2 }
 MON: "Bus Monitor 가\n같은 버스 트랜잭션 관찰"
-PRED: "**경로 B — predictor**\nmonitor → predict()\n로 mirror 갱신" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+PRED: "경로 B — predictor\nmonitor → predict()\n로 mirror 갱신" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 M: "mirror"
 W -> B
 B -> IMP

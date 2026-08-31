@@ -41,9 +41,9 @@ direction: right
 
 HOST: "Host"
 
-ADMIN: "**Admin Commands**\nadmin SQ/CQ (qid=0,\nNVMe-oF에선 qid=5)\nIdentify · Get Log Page\nCreate/Delete IO Queue" 
-IO: "**IO Commands**\nIO SQ/CQ (qid≥1)\nNVM Read · NVM Write\nFlush · Write Zeros · Compare"
-FABRIC: "**Fabric Commands**\nopcode 0x7F (marker)\nNVMe-oF 전용\nConnect · Property Get/Set\nAuth · Disconnect"
+ADMIN: "Admin Commands\nadmin SQ/CQ (qid=0,\nNVMe-oF에선 qid=5)\nIdentify · Get Log Page\nCreate/Delete IO Queue" 
+IO: "IO Commands\nIO SQ/CQ (qid≥1)\nNVM Read · NVM Write\nFlush · Write Zeros · Compare"
+FABRIC: "Fabric Commands\nopcode 0x7F (marker)\nNVMe-oF 전용\nConnect · Property Get/Set\nAuth · Disconnect"
 
 HOST -> ADMIN: "controller 설정·관리"
 HOST -> IO: "실제 데이터 전송"
@@ -63,9 +63,9 @@ NRT DV(NVMe-oF over RDMA) 환경의 전형적 bring-up 순서를 봅니다.
 ```d2
 direction: down
 
-S1: "**① Fabric: Connect**\nadmin QP 활성화 (NRT DV: qid=5,\n표준 로컬 NVMe는 qid=0)\n→ admin 큐 쌍 수립"
-S2: "**② Admin: Identify / 설정**\ncontroller·namespace 정보 취득\nIO 큐 생성"
-S3: "**③ IO: Write / Read**\nNVM Write로 데이터 적재\nNVM Read로 검증"
+S1: "① Fabric: Connect\nadmin QP 활성화 (NRT DV: qid=5,\n표준 로컬 NVMe는 qid=0)\n→ admin 큐 쌍 수립"
+S2: "② Admin: Identify / 설정\ncontroller·namespace 정보 취득\nIO 큐 생성"
+S3: "③ IO: Write / Read\nNVM Write로 데이터 적재\nNVM Read로 검증"
 S1 -> S2: "Connect 완료 후 admin cmd 가능"
 S2 -> S3: "IO 큐 생성 후 IO cmd 가능"
 ```
@@ -117,12 +117,12 @@ NRT-TB의 IO 시퀀스는 `lib/vnrttb/include/seq_lib/vnrttb_nvme_io_virtual_seq
 ```d2
 direction: right
 
-SQE: "**64B SQE**\nopcode · NSID · LBA · length\n+ data pointer" {
+SQE: "64B SQE\nopcode · NSID · LBA · length\n+ data pointer" {
   PRP1: "PRP1 / SGL entry0"
   PRP2: "PRP2 / SGL next"
 }
 
-PRP_PATH: "**PRP 방식** (페이지 단위)" {
+PRP_PATH: "PRP 방식 (페이지 단위)" {
   P1: "page (4KB 정렬)"
   PLIST: "PRP list\n(page 주소 배열)"
   P2: "page"
@@ -131,7 +131,7 @@ PRP_PATH: "**PRP 방식** (페이지 단위)" {
   PLIST -> P3
 }
 
-SGL_PATH: "**SGL 방식** ((addr,len) 리스트)" {
+SGL_PATH: "SGL 방식 ((addr,len) 리스트)" {
   D1: "desc: addr0,len0"
   D2: "desc: addr1,len1"
   D3: "desc: → next list"

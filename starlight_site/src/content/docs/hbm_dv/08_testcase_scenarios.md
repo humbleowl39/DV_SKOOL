@@ -65,10 +65,10 @@ V-Plan에 "테스트" 수단을 가진 행이 여러 개 있습니다. 하나씩
 ```d2
 direction: up
 
-A: "**① 원자 시퀀스**\n단일 트랜잭션\nread / write / csr_wr / csr_rd" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
-B: "**② 조합 시퀀스**\n의미 있는 묶음\nwrite-then-read · bank sweep · burst 트래픽" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
-C: "**③ 시나리오 시퀀스**\nV-Plan 항목에 대응\n오류 주입 · 설정 효과 · 성능 부하 · 모드 전이" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
-T: "**테스트 클래스**\n조립만 — 어떤 시나리오를 어떤 순서로" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
+A: "① 원자 시퀀스\n단일 트랜잭션\nread / write / csr_wr / csr_rd" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+B: "② 조합 시퀀스\n의미 있는 묶음\nwrite-then-read · bank sweep · burst 트래픽" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+C: "③ 시나리오 시퀀스\nV-Plan 항목에 대응\n오류 주입 · 설정 효과 · 성능 부하 · 모드 전이" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+T: "테스트 클래스\n조립만 — 어떤 시나리오를 어떤 순서로" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
 
 A -> B -> C -> T
 ```

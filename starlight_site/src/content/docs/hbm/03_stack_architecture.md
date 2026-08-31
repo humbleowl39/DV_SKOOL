@@ -88,7 +88,7 @@ interposer: "실리콘 인터포저 (2.5D)\nHBM 스택과 호스트를 µm 거�
   style.font-color: "#0A0F25"
 }
 
-base: "**Base Die (Logic Die)**\n채널별 read/write 관리 · refresh 주기 · 트레이닝\nprecharge/activate 발행 · 호스트 인터페이스" {
+base: "Base Die (Logic Die)\n채널별 read/write 관리 · refresh 주기 · 트레이닝\nprecharge/activate 발행 · 호스트 인터페이스" {
   style.fill: "#bbdefb"
   style.font-color: "#0A0F25"
 }
@@ -124,7 +124,7 @@ interposer -> host: "인터포저 배선"
 ```d2
 direction: right
 
-TB: "**테스트벤치 (UVM)**" {
+TB: "테스트벤치 (UVM)" {
   style.fill: "#f3e5f5"
   style.font-color: "#0A0F25"
   vip: "Host VIP / BFM\n호스트를 흉내 내어 커맨드 발행"
@@ -132,7 +132,7 @@ TB: "**테스트벤치 (UVM)**" {
   sb: "Scoreboard · Coverage · SVA"
 }
 
-DUT: "**DUT — 검증 대상**" {
+DUT: "DUT — 검증 대상" {
   style.fill: "#bbdefb"
   style.font-color: "#0A0F25"
   dig: "Base die Digital IP\n(RTL — 순수 디지털 시뮬레이션)"

@@ -51,17 +51,17 @@ direction: right
 
 CALLER: {
   label: "Caller (호출자)"
-  args: "**X0–X7**\n인자 1~8\n(초과분은 stack)"
-  cs: "**X19–X28**\ncallee-saved\n호출 후 보존 기대"
+  args: "X0–X7\n인자 1~8\n(초과분은 stack)"
+  cs: "X19–X28\ncallee-saved\n호출 후 보존 기대"
 }
 CALLEE: {
   label: "Callee (피호출자)"
-  ret: "**X0**\n반환값\n(X8 = large struct ptr)"
-  scratch: "**X9–X15**\ncaller-saved\n자유 사용"
+  ret: "X0\n반환값\n(X8 = large struct ptr)"
+  scratch: "X9–X15\ncaller-saved\n자유 사용"
 }
 LRFP: {
-  lr: "**X30 (LR)**\n복귀 주소"
-  fp: "**X29 (FP)**\nframe chain"
+  lr: "X30 (LR)\n복귀 주소"
+  fp: "X29 (FP)\nframe chain"
 }
 
 CALLER.args -> CALLEE: "bl foo\n(인자 전달)"
@@ -99,13 +99,13 @@ add2:
 
 ```d2
 direction: down
-P1: "**①** STP x29,x30,[sp,#-32]!\nFP/LR 저장 + SP 32 감소\n(pre-index)"
-P2: "**②** MOV x29, sp\n새 프레임 포인터 확립"
-P3: "**③** STP x19,x20,[sp,#16]\n쓸 callee-saved 백업"
-BODY: "**body**\n... bl work 등 ..."
-E1: "**④** LDP x19,x20,[sp,#16]\ncallee-saved 복원"
-E2: "**⑤** LDP x29,x30,[sp],#32\nFP/LR 복원 + SP 원복\n(post-index)"
-E3: "**⑥** ret"
+P1: "① STP x29,x30,[sp,#-32]!\nFP/LR 저장 + SP 32 감소\n(pre-index)"
+P2: "② MOV x29, sp\n새 프레임 포인터 확립"
+P3: "③ STP x19,x20,[sp,#16]\n쓸 callee-saved 백업"
+BODY: "body\n... bl work 등 ..."
+E1: "④ LDP x19,x20,[sp,#16]\ncallee-saved 복원"
+E2: "⑤ LDP x29,x30,[sp],#32\nFP/LR 복원 + SP 원복\n(post-index)"
+E3: "⑥ ret"
 P1 -> P2 -> P3 -> BODY -> E1 -> E2 -> E3
 ```
 

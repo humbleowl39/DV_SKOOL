@@ -38,10 +38,10 @@ title: "Module 04 — Mass Storage · I/O 시스템 · DMA"
 ```d2
 direction: right
 
-CPU: "**CPU (host)**\nload/store 로 register 접근"
-CTRL: "**Device Controller**\ndata-in/out · status · control\nregister + FIFO"
+CPU: "CPU (host)\nload/store 로 register 접근"
+CTRL: "Device Controller\ndata-in/out · status · control\nregister + FIFO"
 DEV: "Device\n(disk / NIC / ...)"
-DMA: "**DMA Controller**\ncommand block 으로\nmemory 직접 전송"
+DMA: "DMA Controller\ncommand block 으로\nmemory 직접 전송"
 MEM: "Main Memory"
 
 CPU -> CTRL: "① MMIO (control/data-out write)"

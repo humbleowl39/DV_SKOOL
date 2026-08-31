@@ -50,17 +50,17 @@ SEC-DED ECC(예: 64-bit 데이터 + 8-bit 코드):
 direction: right
 
 WDATA: "Write data\n(64-bit)"
-ENC: "**ECC Encoder**\ndata → check bits 생성\n(64+8 = 72-bit 저장)"
+ENC: "ECC Encoder\ndata → check bits 생성\n(64+8 = 72-bit 저장)"
 MEM: "Memory / Cache\n(72-bit 워드 저장)\n← 여기서 비트 플립 발생"
-DEC: "**ECC Decoder**\nsyndrome 계산"
+DEC: "ECC Decoder\nsyndrome 계산"
 OUT: "Read data\n(정정 후 64-bit)"
 
 WDATA -> ENC -> MEM -> DEC -> OUT
 
 DEC -> CE: "syndrome → 1-bit 위치"
 DEC -> UE: "syndrome → 2-bit 검출"
-CE: "**Corrected Error**\n해당 비트 flip 정정\ndata 정상, 동작 계속"
-UE: "**Uncorrectable Error**\n정정 불가, 검출만\n→ poison 태그 + 보고"
+CE: "Corrected Error\n해당 비트 flip 정정\ndata 정상, 동작 계속"
+UE: "Uncorrectable Error\n정정 불가, 검출만\n→ poison 태그 + 보고"
 ```
 
 ### 왜 이 구조인가 — Design rationale
@@ -82,11 +82,11 @@ UE: "**Uncorrectable Error**\n정정 불가, 검출만\n→ poison 태그 + 보�
 ```d2
 direction: down
 
-S0: "**① write**: data 인코딩\ncheck bits 생성 → 메모리에 data+check 저장"
-S1: "**② 저장 중 비트 플립**\ntransient/노화로 1개 또는 2개 뒤집힘"
-S2: "**③ read**: decoder가 syndrome 계산\nsyndrome = (재계산 check) XOR (저장 check)"
-S3a: "**④a syndrome ≠ 0, 단일 위치 지목**\n→ 1-bit 에러: 그 비트 flip → 정정\n→ Corrected Error(CE), data 정상"
-S3b: "**④b syndrome이 double 패턴**\n→ 2-bit 에러: 정정 불가, 검출만\n→ Uncorrectable Error(UE)"
+S0: "① write: data 인코딩\ncheck bits 생성 → 메모리에 data+check 저장"
+S1: "② 저장 중 비트 플립\ntransient/노화로 1개 또는 2개 뒤집힘"
+S2: "③ read: decoder가 syndrome 계산\nsyndrome = (재계산 check) XOR (저장 check)"
+S3a: "④a syndrome ≠ 0, 단일 위치 지목\n→ 1-bit 에러: 그 비트 flip → 정정\n→ Corrected Error(CE), data 정상"
+S3b: "④b syndrome이 double 패턴\n→ 2-bit 에러: 정정 불가, 검출만\n→ Uncorrectable Error(UE)"
 S0 -> S1 -> S2
 S2 -> S3a
 S2 -> S3b
@@ -224,11 +224,11 @@ UE가 검출되면 즉시 panic하지 않습니다. 데이터에 **Poison Bit** 
 direction: right
 
 MEM: "Memory\nUE 검출"
-TAG: "**Poison 태그**\n데이터에 Poison Bit set"
+TAG: "Poison 태그\n데이터에 Poison Bit set"
 BUS: "Interconnect\n(poison 신호 동반 전파)"
 CONS: "실행 유닛\n(ALU/NPU)"
-EXC: "**소비 시점**\n정밀 exception\n→ 해당 프로세스만 종료"
-NOUSE: "**소비 안 됨**\n→ 아무 일도 안 일어남\n(가용성 유지)"
+EXC: "소비 시점\n정밀 exception\n→ 해당 프로세스만 종료"
+NOUSE: "소비 안 됨\n→ 아무 일도 안 일어남\n(가용성 유지)"
 
 MEM -> TAG -> BUS -> CONS
 CONS -> EXC: "poisoned data 사용 시"

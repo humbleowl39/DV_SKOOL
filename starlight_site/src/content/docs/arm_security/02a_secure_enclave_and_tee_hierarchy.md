@@ -68,11 +68,11 @@ TZASC/SMMU/GIC 가 TZ 의 _경비원_ 이라면, Enclave 는 아예 _별도 건�
 ```d2
 direction: up
 
-REE: "**REE** (Linux/Android, NS-EL0/1)\n최하 — OS 해킹 = 일반 데이터 노출"
-NSEL2: "**Non-Secure EL2** (Hypervisor / KVM)\nVM escape 시 NS world 전체"
-TZ: "**TrustZone** (S-EL0/1)\nTrusted OS + TA\nTZ 뚫리면 Secure World 전체\n(BUT enclave key 는 살아남음)"
-INT: "**Internal Secure Enclave** (on-die)\nApple SEP, Samsung SSP\n전용 processor + RAM\n사이드 채널 / RCE 둘 다 무력"
-EXT: "**External Secure Enclave** (별도 IC)\nTPM, NXP SE050, Infineon SLE97\n최고 — 물리 분리"
+REE: "REE (Linux/Android, NS-EL0/1)\n최하 — OS 해킹 = 일반 데이터 노출"
+NSEL2: "Non-Secure EL2 (Hypervisor / KVM)\nVM escape 시 NS world 전체"
+TZ: "TrustZone (S-EL0/1)\nTrusted OS + TA\nTZ 뚫리면 Secure World 전체\n(BUT enclave key 는 살아남음)"
+INT: "Internal Secure Enclave (on-die)\nApple SEP, Samsung SSP\n전용 processor + RAM\n사이드 채널 / RCE 둘 다 무력"
+EXT: "External Secure Enclave (별도 IC)\nTPM, NXP SE050, Infineon SLE97\n최고 — 물리 분리"
 REE -> NSEL2: "stage 2 격리"
 NSEL2 -> TZ: "NS bit"
 TZ -> INT: "Mailbox + 인증 토큰"
@@ -148,11 +148,11 @@ Module 01 의 두 World (S/NS) 만으로는 부족했습니다. 실제 SoC 는 *
 ```d2
 direction: down
 
-REE: "**REE (Rich EE)**\n일반 OS (Linux, Android) — NS-EL0/NS-EL1\n보안 레벨 최하"
-NSEL2: "**Non-secure EL2 (Hypervisor)**\nVM 관리, VM별 리소스 분리\n여전히 Non-secure"
-TZ: "**Secure (TrustZone)**\nTrusted OS + TA — S-EL0/S-EL1\n키 관리, 인증, FW 검증 (Module 01-02 범위)"
-INT: "**Secure Enclave (SoC Internal)**\n전용 프로세서 + 전용 RAM · CPU 클러스터와 독립\nKey Box + Crypto Accelerator"
-EXT: "**Secure Enclave (External IC)**\n별도 보안 칩 (SPI 연결) · Private Storage\n최상위 Root of Trust"
+REE: "REE (Rich EE)\n일반 OS (Linux, Android) — NS-EL0/NS-EL1\n보안 레벨 최하"
+NSEL2: "Non-secure EL2 (Hypervisor)\nVM 관리, VM별 리소스 분리\n여전히 Non-secure"
+TZ: "Secure (TrustZone)\nTrusted OS + TA — S-EL0/S-EL1\n키 관리, 인증, FW 검증 (Module 01-02 범위)"
+INT: "Secure Enclave (SoC Internal)\n전용 프로세서 + 전용 RAM · CPU 클러스터와 독립\nKey Box + Crypto Accelerator"
+EXT: "Secure Enclave (External IC)\n별도 보안 칩 (SPI 연결) · Private Storage\n최상위 Root of Trust"
 REE -> NSEL2
 NSEL2 -> TZ
 TZ -> INT

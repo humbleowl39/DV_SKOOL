@@ -64,7 +64,7 @@ Base die에 표준 오프칩 인터페이스 IP를 통합하기로 했습니다.
 ```d2
 direction: right
 
-SRC: "**출처**" {
+SRC: "출처" {
   style.fill: "#e8f5e9"
   style.font-color: "#0A0F25"
   a: "in-house"
@@ -72,12 +72,12 @@ SRC: "**출처**" {
   c: "고객 제공"
 }
 
-AX1: "**축 ① IP 내부 기능**\nin-house → 전면 검증\n3rd party → 벤더에 위임 (확인만)\n고객 제공 → 전면 검증" {
+AX1: "축 ① IP 내부 기능\nin-house → 전면 검증\n3rd party → 벤더에 위임 (확인만)\n고객 제공 → 전면 검증" {
   style.fill: "#fff8e1"
   style.font-color: "#0A0F25"
 }
 
-AX2: "**축 ② 통합**\n출처 무관 — **항상 우리 책임**\n연결 · 설정 · 클럭/리셋 · 상호작용" {
+AX2: "축 ② 통합\n출처 무관 — 항상 우리 책임\n연결 · 설정 · 클럭/리셋 · 상호작용" {
   style.fill: "#ffcdd2"
   style.font-color: "#0A0F25"
 }

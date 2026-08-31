@@ -33,9 +33,9 @@ title: "Module 04 — Quick Reference Card"
 ```d2
 direction: down
 
-BODY: "**본문 (Module 01–03)**\nModule 01 : Top vs IP, 5 축\nModule 02 : Common Task, CCTV 매트릭스\nModule 03 : TB Top 자동화, AI 파이프라인"
-CARD: "**이 카드 (Module 04)**\n① 한 줄 요약 + 5 축 + 7 task\n② 코드 패턴 (SVA / MMAP / CCTV)\n③ 매트릭스 / 정량 / 디버그 / 면접"
-USE: "**사용 시점**\n· 디버그 회의 중 '이 증상 어디 보지?'\n· 면접 / 인터뷰 답변\n· 코드 리뷰 — 빠진 카테고리 검토\n· 새 IP release 시 ignore_bins 결정"
+BODY: "본문 (Module 01–03)\nModule 01 : Top vs IP, 5 축\nModule 02 : Common Task, CCTV 매트릭스\nModule 03 : TB Top 자동화, AI 파이프라인"
+CARD: "이 카드 (Module 04)\n① 한 줄 요약 + 5 축 + 7 task\n② 코드 패턴 (SVA / MMAP / CCTV)\n③ 매트릭스 / 정량 / 디버그 / 면접"
+USE: "사용 시점\n· 디버그 회의 중 '이 증상 어디 보지?'\n· 면접 / 인터뷰 답변\n· 코드 리뷰 — 빠진 카테고리 검토\n· 새 IP release 시 ignore_bins 결정"
 BODY -> CARD: "추출 / 압축"
 CARD -> USE: "사용 시점"
 ```

@@ -48,25 +48,25 @@ EL0은 로비(누구나, 권한 없음), EL1은 사무실(직원=커널), EL2는
 ```d2
 direction: up
 
-EL0: "**EL0** — User / App\n유저 프로세스 · 권한 없음\nSP_EL0, 모든 HW 요청은 SVC 경유" {
+EL0: "EL0 — User / App\n유저 프로세스 · 권한 없음\nSP_EL0, 모든 HW 요청은 SVC 경유" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-EL1: "**EL1** — OS Kernel\nLinux/RTOS · 드라이버\nSCTLR/TTBR/VBAR_EL1, syscall 디스패치" {
+EL1: "EL1 — OS Kernel\nLinux/RTOS · 드라이버\nSCTLR/TTBR/VBAR_EL1, syscall 디스패치" {
   style.fill: "#e6f4ea"
   style.font-color: "#0A0F25"
 }
-EL2: "**EL2** — Hypervisor\nKVM/Xen · stage-2 translation\nHCR_EL2, VTTBR_EL2, VMID" {
+EL2: "EL2 — Hypervisor\nKVM/Xen · stage-2 translation\nHCR_EL2, VTTBR_EL2, VMID" {
   style.fill: "#fef7e0"
   style.font-color: "#0A0F25"
 }
-EL3: "**EL3** — Secure Monitor\nTrustZone · TF-A · PSCI\nSCR_EL3.NS — 유일한 월드 스위치" {
+EL3: "EL3 — Secure Monitor\nTrustZone · TF-A · PSCI\nSCR_EL3.NS — 유일한 월드 스위치" {
   style.fill: "#fce8e6"
   style.font-color: "#0A0F25"
 }
 
 EL0 -> EL1: "SVC #imm (syscall)"
-EL1 -> EL2: "HVC #imm (hypercall)"
+EL1 -> EL2: "HVC #imm\n(hypercall)"
 EL0 -> EL3: "SMC #imm (any → EL3)"
 EL1 -> EL0: "ERET (복귀)"
 EL2 -> EL1: "ERET"
@@ -100,11 +100,11 @@ AArch64 가 이 _mode-banked_ 를 _EL-banked_ 로 바꾼 이유는, 격리의 �
 ```d2
 direction: down
 
-USER: "**① EL0 — user**\nx8 = 64 (write 번호)\nx0/x1/x2 = 인자\nsvc #0"
-HW: "**② HW 자동 (예외 진입)**\nELR_EL1 ← svc 다음 PC\nSPSR_EL1 ← PSTATE\nESR_EL1 ← {EC=0x15, ISS=imm16}\nDAIF←1111, SPSel←1, CurrentEL←01\nPC ← VBAR_EL1 + 0x400"
-VEC: "**③ 벡터 엔트리 @ +0x400**\n(Lower EL, AArch64, Sync)\nkernel_entry: X0–X30 스택 저장"
-DISP: "**④ ESR.EC 디코드**\nEC=0x15 → do_svc\nsys_call_table[x8] 호출"
-RET: "**⑤ ret_to_user → ERET**\nELR/SPSR 복원\nPC←ELR_EL1, PSTATE←SPSR_EL1\nEL1 → EL0 복귀"
+USER: "① EL0 — user\nx8 = 64 (write 번호)\nx0/x1/x2 = 인자\nsvc #0"
+HW: "② HW 자동 (예외 진입)\nELR_EL1 ← svc 다음 PC\nSPSR_EL1 ← PSTATE\nESR_EL1 ← {EC=0x15, ISS=imm16}\nDAIF←1111, SPSel←1, CurrentEL←01\nPC ← VBAR_EL1 + 0x400"
+VEC: "③ 벡터 엔트리 @ +0x400\n(Lower EL, AArch64, Sync)\nkernel_entry: X0–X30 스택 저장"
+DISP: "④ ESR.EC 디코드\nEC=0x15 → do_svc\nsys_call_table[x8] 호출"
+RET: "⑤ ret_to_user → ERET\nELR/SPSR 복원\nPC←ELR_EL1, PSTATE←SPSR_EL1\nEL1 → EL0 복귀"
 
 USER -> HW
 HW -> VEC

@@ -48,9 +48,9 @@ LDD3는 디바이스 쪽 관점으로 같은 것을 말합니다 — "*there mus
 ```d2
 direction: right
 
-DEVS: "**Devices**\n(여러 소스)"
-IC: "**Interrupt Controller**\nGIC / PLIC / APIC\n다수 소스 → 코어의 1~2 입력\nIPI도 중개" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
-CPU: "**CPU core**\n명령 경계에서 수락\n→ ISR 실행"
+DEVS: "Devices\n(여러 소스)"
+IC: "Interrupt Controller\nGIC / PLIC / APIC\n다수 소스 → 코어의 1~2 입력\nIPI도 중개" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
+CPU: "CPU core\n명령 경계에서 수락\n→ ISR 실행"
 ISR: "ISR\n원인 확인 + acknowledge(INT_CLEAR)\nbottom-half로 긴 일 위임"
 
 DEVS -> IC: "IRQ 선 / MSI 메시지"
@@ -58,7 +58,7 @@ IC -> CPU: "인터럽트 신호"
 CPU -> ISR: "vector → handler"
 ISR -> DEVS: "acknowledge / INT_CLEAR" { style.stroke-dash: 4 }
 
-DOORBELL: "**Doorbell (역방향)**\nSW가 디바이스에 알림\n디스크립터 준비 후 tail write" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
+DOORBELL: "Doorbell (역방향)\nSW가 디바이스에 알림\n디스크립터 준비 후 tail write" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
 CPU -> DOORBELL: "writel(tail)"
 DOORBELL -> DEVS: "디바이스 깨움 / 자기 인터럽트"
 ```
@@ -74,7 +74,7 @@ DOORBELL -> DEVS: "디바이스 깨움 / 자기 인터럽트"
 ```d2
 direction: down
 
-LEVEL: "**Level 트리거**" {
+LEVEL: "Level 트리거" {
   direction: down
   L1: "① 디바이스가 IRQ 선을 active로 올림\n(완료될 때까지 유지)"
   L2: "② CPU가 명령 경계에서 ISR 진입"
@@ -83,10 +83,10 @@ LEVEL: "**Level 트리거**" {
   L1 -> L2 -> L3 -> L4
 }
 
-EDGE: "**Edge 트리거**" {
+EDGE: "Edge 트리거" {
   direction: down
   E1: "① 디바이스가 펄스(상승/하강 edge) 발생 후 선 해제"
-  E2: "② 펜딩 인터럽트가 status 레지스터에 *래치*됨"
+  E2: "② 펜딩 인터럽트가 status 레지스터에 래치됨"
   E3: "③ ISR이 래치된 status로 원인 확인 → 처리"
   E4: "④ 마스킹 중 도착한 edge도 래치에 남음\n(래치 없으면 분실!)"
   E1 -> E2 -> E3 -> E4
@@ -151,9 +151,9 @@ MSI는 edge처럼 동작합니다(메시지는 순간 이벤트). 인터럽트�
 
 ```d2
 direction: right
-DEV: "**Device**\nMSI capability:\nmsg_addr, msg_data"
+DEV: "Device\nMSI capability:\nmsg_addr, msg_data"
 WR: "memory write\n(addr=msg_addr,\n data=msg_data)"
-IC: "**Interrupt Controller**\n(APIC / GIC ITS)\n그 주소 영역을 디코드\n→ 인터럽트로 해석"
+IC: "Interrupt Controller\n(APIC / GIC ITS)\n그 주소 영역을 디코드\n→ 인터럽트로 해석"
 CPU: "CPU core\n벡터로 ISR 진입"
 DEV -> WR: "인터럽트 발행 =\n그냥 store"
 WR -> IC: "패브릭이 라우팅"

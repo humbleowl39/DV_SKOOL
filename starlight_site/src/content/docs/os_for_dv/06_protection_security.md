@@ -62,8 +62,8 @@ R0 -> R3: "return (낮은 권한으로)"
 ```d2
 direction: down
 
-SEC: "**security = 목표**\n자원이 의도대로만 쓰임"
-PROT: "**protection = 메커니즘**\n그 목표를 떠받침\n(ring, domain, access matrix)"
+SEC: "security = 목표\n자원이 의도대로만 쓰임"
+PROT: "protection = 메커니즘\n그 목표를 떠받침\n(ring, domain, access matrix)"
 SEC -> PROT: "무엇으로 지키나"
 ```
 
@@ -163,7 +163,7 @@ device 마다 접근 가능한 메모리를 가두는 per-device isolation(IOMMU
 ```d2
 direction: right
 DEV: "Device\n(domain D)"
-IOMMU: "**IOMMU**\nper-device page table\n= access right 인코딩"
+IOMMU: "IOMMU\nper-device page table\n= access right 인코딩"
 MEM: "허용된 메모리 영역만"
 DEV -> IOMMU: "device address"
 IOMMU -> MEM: "번역 + 보호 (위반은 차단/fault)"

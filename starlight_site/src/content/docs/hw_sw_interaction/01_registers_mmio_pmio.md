@@ -57,18 +57,18 @@ title: "01 — 디바이스 레지스터 & MMIO / PMIO"
 ```d2
 direction: right
 
-CPU: "**CPU**\nload/store\n(공통 명령)" {
+CPU: "CPU\nload/store\n(공통 명령)" {
   IN: "in/out\n(전용 명령)"
 }
 
-MEMSPACE: "**통합 주소 공간 (MMIO)**" {
+MEMSPACE: "통합 주소 공간 (MMIO)" {
   RAM: "RAM\n0x0000_0000 ~"
   HOLE: "I/O hole\n디바이스 레지스터 매핑\n(DRAM 불가)" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
 }
 
-IOSPACE: "**격리 I/O 공간 (PMIO)**\nport 0x00 ~ 0xFFFF" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
+IOSPACE: "격리 I/O 공간 (PMIO)\nport 0x00 ~ 0xFFFF" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
 
-DEV: "**Device**\n주소 버스 감시\n자기 주소에 응답"
+DEV: "Device\n주소 버스 감시\n자기 주소에 응답"
 
 CPU -> RAM: "load/store"
 CPU -> HOLE: "load/store (uncached)"
@@ -90,7 +90,7 @@ IOSPACE -> DEV: "주소 디코드"
 ```d2
 direction: down
 
-MMIO: "**MMIO 읽기**" {
+MMIO: "MMIO 읽기" {
   direction: down
   A1: "① ioremap(0xFED0_0004) → ptr"
   A2: "② v = readl(ptr)\n→ 평범한 load 명령"
@@ -98,7 +98,7 @@ MMIO: "**MMIO 읽기**" {
   A1 -> A2 -> A3
 }
 
-PMIO: "**PMIO 읽기**" {
+PMIO: "PMIO 읽기" {
   direction: down
   B1: "① port = 0x04 (I/O 공간)"
   B2: "② v = inl(0x04)\n→ 전용 in 명령 (EAX ← port)"

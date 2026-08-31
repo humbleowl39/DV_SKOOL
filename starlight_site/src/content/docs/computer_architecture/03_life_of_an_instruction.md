@@ -52,11 +52,11 @@ ADD   x3,   x1,   x2
 ```d2
 direction: right
 
-PC: "**PC**\n다음 명령 주소"
-F: "**Fetch**\nPC 가 가리키는\n명령을 메모리에서 가져옴"
-D: "**Decode**\n무슨 명령인지 해석\n+ 레지스터 값 읽기"
-E: "**Execute**\nALU 로 실제 연산\n(예: 덧셈)"
-W: "**Write-back**\n결과를 레지스터에 저장"
+PC: "PC\n다음 명령 주소"
+F: "Fetch\nPC 가 가리키는\n명령을 메모리에서 가져옴"
+D: "Decode\n무슨 명령인지 해석\n+ 레지스터 값 읽기"
+E: "Execute\nALU 로 실제 연산\n(예: 덧셈)"
+W: "Write-back\n결과를 레지스터에 저장"
 
 PC -> F -> D -> E -> W
 W -> PC: "PC 증가 → 다음 명령" { style.stroke-dash: 4 }
@@ -79,10 +79,10 @@ W -> PC: "PC 증가 → 다음 명령" { style.stroke-dash: 4 }
 ```d2
 direction: right
 
-F: "**Fetch**\nADD x3,x1,x2"
-D: "**Decode**\nx1=5, x2=7 읽기"
-E: "**Execute**\n5 + 7 = 12"
-W: "**Write-back**\nx3 = 12"
+F: "Fetch\nADD x3,x1,x2"
+D: "Decode\nx1=5, x2=7 읽기"
+E: "Execute\n5 + 7 = 12"
+W: "Write-back\nx3 = 12"
 
 F -> D -> E -> W
 ```
@@ -102,8 +102,8 @@ F -> D -> E -> W
 ```d2
 direction: down
 
-SEQ: "**순차 실행**\nPC += 1 → 다음 명령\n(대부분의 경우)"
-BR: "**분기 (branch)**\n조건이 맞으면\nPC = 점프 목적지"
+SEQ: "순차 실행\nPC += 1 → 다음 명령\n(대부분의 경우)"
+BR: "분기 (branch)\n조건이 맞으면\nPC = 점프 목적지"
 
 SEQ -> BR: "if / loop 를 만나면"
 ```

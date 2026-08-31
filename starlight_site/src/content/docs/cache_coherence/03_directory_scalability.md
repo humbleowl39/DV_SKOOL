@@ -37,13 +37,13 @@ snooping은 우아하지만 한 가지 전제에 의존합니다 — *모든* �
 ```d2
 direction: down
 
-REQ: "**Requester (Core 7)**\nread miss on line X"
-DIR: "**Directory / Snoop Filter (at LLC)**\nX → {sharers: Core2, owner: Core2}\n장부 조회" {
+REQ: "Requester (Core 7)\nread miss on line X"
+DIR: "Directory / Snoop Filter (at LLC)\nX → {sharers: Core2, owner: Core2}\n장부 조회" {
   style.fill: "#fff4e5"
   style.font-color: "#0A0F25"
 }
-C2: "**Core 2 cache**\nX: M (dirty)"
-OTHERS: "**Core 0,1,3..63**\n(질문 받지 않음)" {
+C2: "Core 2 cache\nX: M (dirty)"
+OTHERS: "Core 0,1,3..63\n(질문 받지 않음)" {
   style.fill: "#eeeeee"
   style.font-color: "#0A0F25"
 }
@@ -74,15 +74,15 @@ line X에 대해 Core2가 dirty 보유 중인 상태에서, Core7이 read miss�
 ```d2
 direction: down
 
-S1: "**① Core7 read miss → Directory**\ndir[X] = {owner: Core2(M)}\ntargeted snoop → Core2" {
+S1: "① Core7 read miss → Directory\ndir[X] = {owner: Core2(M)}\ntargeted snoop → Core2" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-S2: "**② Core2 → Core7 data forward**\nCore2: M → S (또는 O)\nCore7: I → S\ndir[X] = {sharers: Core2, Core7}" {
+S2: "② Core2 → Core7 data forward\nCore2: M → S (또는 O)\nCore7: I → S\ndir[X] = {sharers: Core2, Core7}" {
   style.fill: "#e6f4ea"
   style.font-color: "#0A0F25"
 }
-S3: "**③ Core7 write X → Directory**\ndir[X] sharer 목록 = {Core2, Core7}\ntargeted invalidate → Core2 (only)\nCore7: S → M, dir[X] = {owner: Core7(M)}" {
+S3: "③ Core7 write X → Directory\ndir[X] sharer 목록 = {Core2, Core7}\ntargeted invalidate → Core2 (only)\nCore7: S → M, dir[X] = {owner: Core7(M)}" {
   style.fill: "#fff4e5"
   style.font-color: "#0A0F25"
 }
@@ -124,9 +124,9 @@ directory는 line마다 "누가 들고 있나"를 표현해야 하는데, 표현
 ```d2
 direction: right
 
-FULL: "**Full bit-vector**\nline당 N비트 (코어 1개=1비트)\n정확하지만 N 커지면 비쌈"
-LIMITED: "**Limited pointer**\nsharer 몇 개만 포인터로 저장\n초과 시 broadcast로 fallback"
-COARSE: "**Coarse-grained**\n코어 그룹 단위로 추적\n저장 절약, 일부 over-snoop"
+FULL: "Full bit-vector\nline당 N비트 (코어 1개=1비트)\n정확하지만 N 커지면 비쌈"
+LIMITED: "Limited pointer\nsharer 몇 개만 포인터로 저장\n초과 시 broadcast로 fallback"
+COARSE: "Coarse-grained\n코어 그룹 단위로 추적\n저장 절약, 일부 over-snoop"
 ```
 
 | 표현 | 저장 비용 | 정확도 | 단점 |

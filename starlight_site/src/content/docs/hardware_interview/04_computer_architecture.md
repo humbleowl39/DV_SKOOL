@@ -154,16 +154,17 @@ I2: SUB r4, r1, r5       # ID 에서 r1 필요 → I1 의 EX 결과 필요
 
 ```d2
 direction: right
-grid-rows: 3
+
 RS.label: "Reservation Station"
 FU.label: "FU (ALU/Mem/FP)"
 CDB.label: "CDB"
 ROB.label: "ROB (in-order commit)"
+
 Fetch -> Decode -> Rename -> Dispatch
-Dispatch -> RS: "waiting for operands"
+Dispatch -> RS: "waiting for\noperands"
 RS -> FU: "operand ready"
-FU -> CDB: broadcast
-CDB -> ROB
+FU -> CDB: "broadcast"
+CDB -> ROB: "write-back"
 ```
 
 **핵심**:

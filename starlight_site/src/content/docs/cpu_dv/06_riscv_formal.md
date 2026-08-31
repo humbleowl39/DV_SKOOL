@@ -59,13 +59,13 @@ RVFI·riscv-formal 은 RISC-V 생태계 도구입니다. 그러나 "코어가 re
 ```d2
 direction: right
 
-CORE: "**RTL CPU Core**\n(DUT)" {
-  RVFI: "**RVFI 출력**\nrvfi_valid\nrvfi_insn / rvfi_pc\nrvfi_rd_addr/wdata\nrvfi_mem_*"
+CORE: "RTL CPU Core\n(DUT)" {
+  RVFI: "RVFI 출력\nrvfi_valid\nrvfi_insn / rvfi_pc\nrvfi_rd_addr/wdata\nrvfi_mem_*"
 }
-SPEC: "**ISA Formal Model**\n(명령별 spec 인코딩)\n예: ADD 결과 = rs1+rs2"
-CHK: "**Check (assertion)**\nRVFI 출력 == spec 결과?\n(insn_check, pc_fwd, reg, ...)"
-SOLVER: "**SMT Solver**\n(Yosys/SymbiYosys)\nbounded model check"
-RESULT: "**결과**\nPASS(증명)\nor 반례 trace(VCD)"
+SPEC: "ISA Formal Model\n(명령별 spec 인코딩)\n예: ADD 결과 = rs1+rs2"
+CHK: "Check (assertion)\nRVFI 출력 == spec 결과?\n(insn_check, pc_fwd, reg, ...)"
+SOLVER: "SMT Solver\n(Yosys/SymbiYosys)\nbounded model check"
+RESULT: "결과\nPASS(증명)\nor 반례 trace(VCD)"
 
 CORE -> CHK: "retire 정보"
 SPEC -> CHK: "기대값"
@@ -92,10 +92,10 @@ SOLVER -> RESULT
 ```d2
 direction: down
 
-S1: "**① RVFI 관찰**\nrvfi_valid=1\nrvfi_insn=ADD x3,x1,x2\nrvfi_rs1_rdata / rs2_rdata\nrvfi_rd_wdata"
-S2: "**② spec 계산**\nexpected = rs1_rdata + rs2_rdata\n(ISA model 이 정의)"
-S3: "**③ assertion**\nassert(rvfi_rd_wdata == expected)\n(단, rd != x0)"
-S4: "**④ 솔버 탐색**\nk 사이클 내 위반 입력 존재?\n없음 → 증명\n있음 → 반례 VCD"
+S1: "① RVFI 관찰\nrvfi_valid=1\nrvfi_insn=ADD x3,x1,x2\nrvfi_rs1_rdata / rs2_rdata\nrvfi_rd_wdata"
+S2: "② spec 계산\nexpected = rs1_rdata + rs2_rdata\n(ISA model 이 정의)"
+S3: "③ assertion\nassert(rvfi_rd_wdata == expected)\n(단, rd != x0)"
+S4: "④ 솔버 탐색\nk 사이클 내 위반 입력 존재?\n없음 → 증명\n있음 → 반례 VCD"
 S1 -> S2 -> S3 -> S4
 ```
 
@@ -158,12 +158,12 @@ riscv-formal 은 명령 정확성만 보는 게 아니라 여러 _부류_ 의 pr
 ```d2
 direction: down
 
-C1: "**Instruction checks**\n명령별 결과 == ISA spec\n(insns/*.v 모델)"
-C2: "**Register check**\n레지스터 파일 일관성\n(쓴 값이 다음에 그대로 읽힘)"
-C3: "**PC checks**\npc_fwd / pc_bwd\n순차 PC 와 분기 타겟 정확성"
-C4: "**Liveness check**\n코어가 영원히 멈추지 않음\n(retire 가 결국 일어남)"
-C5: "**Memory consistency**\nload/store 주소·값 일관성"
-C6: "**CSR / 기타**\n구현에 따라 추가"
+C1: "Instruction checks\n명령별 결과 == ISA spec\n(insns/*.v 모델)"
+C2: "Register check\n레지스터 파일 일관성\n(쓴 값이 다음에 그대로 읽힘)"
+C3: "PC checks\npc_fwd / pc_bwd\n순차 PC 와 분기 타겟 정확성"
+C4: "Liveness check\n코어가 영원히 멈추지 않음\n(retire 가 결국 일어남)"
+C5: "Memory consistency\nload/store 주소·값 일관성"
+C6: "CSR / 기타\n구현에 따라 추가"
 ```
 
 이들이 합쳐져 "코어가 RISC-V ISA 를 _구조적으로_ 준수하는가"를 다각도로 증명합니다. 명령 결과(C1)만 맞아도 PC 가 틀리거나(C3) 멈춰버리면(C4) 코어는 틀린 것이므로, check 부류를 함께 돌리는 것이 핵심입니다.
@@ -280,9 +280,9 @@ over-constraint: 실제 가능한 입력까지 배제 → 버그 영역이 탐�
 ```d2
 direction: right
 
-PROP: "명령 정확성\nforwarding\nx0/PC 일관성\n→ **Formal**" 
-SIM: "긴 프로그램\nOS 부팅\n인터럽트 폭주\n성능·시스템\n→ **Simulation**"
-SIGN: "**Sign-off**\n둘의 합집합"
+PROP: "명령 정확성\nforwarding\nx0/PC 일관성\n→ Formal" 
+SIM: "긴 프로그램\nOS 부팅\n인터럽트 폭주\n성능·시스템\n→ Simulation"
+SIGN: "Sign-off\n둘의 합집합"
 PROP -> SIGN
 SIM -> SIGN
 ```

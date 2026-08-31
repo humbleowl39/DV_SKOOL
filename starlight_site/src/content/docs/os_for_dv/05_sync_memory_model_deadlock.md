@@ -38,10 +38,10 @@ DV 엔지니어가 멀티코어·DMA·동시 행위자가 같은 메모리를 �
 ```d2
 direction: down
 
-PROB: "**문제**\nrace condition\n(critical-section problem)"
-HW: "**하드웨어 받침**\nmemory barrier (순서)\natomic: test-and-set / CAS"
-TOOL: "**그 위의 도구**\nmutex/spinlock → semaphore → monitor"
-RISK: "**위험**\ndeadlock / starvation / livelock"
+PROB: "문제\nrace condition\n(critical-section problem)"
+HW: "하드웨어 받침\nmemory barrier (순서)\natomic: test-and-set / CAS"
+TOOL: "그 위의 도구\nmutex/spinlock → semaphore → monitor"
+RISK: "위험\ndeadlock / starvation / livelock"
 
 PROB -> HW: "무엇이 막나"
 HW -> TOOL: "재료"

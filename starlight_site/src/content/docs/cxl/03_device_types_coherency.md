@@ -39,15 +39,15 @@ GPU가 CXL로 연결되어 거대 행렬을 자기 로컬 메모리(**HBM**(High
 ```d2
 direction: right
 
-T1: "**Type 1**\nSmartNIC / FPGA\nCache only (로컬 메모리 X)\n.io + .cache" {
+T1: "Type 1\nSmartNIC / FPGA\nCache only (로컬 메모리 X)\n.io + .cache" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-T2: "**Type 2**\nGPU / AI 가속기\nCache + Device Mem (HDM-D/DB)\nBias coherency\n.io + .cache + .mem" {
+T2: "Type 2\nGPU / AI 가속기\nCache + Device Mem (HDM-D/DB)\nBias coherency\n.io + .cache + .mem" {
   style.fill: "#fde8e8"
   style.font-color: "#0A0F25"
 }
-T3: "**Type 3**\nMemory Expander\nDevice Mem only (HDM-H)\nHost Managed\n.io + .mem" {
+T3: "Type 3\nMemory Expander\nDevice Mem only (HDM-H)\nHost Managed\n.io + .mem" {
   style.fill: "#e8fde8"
   style.font-color: "#0A0F25"
 }
@@ -72,9 +72,9 @@ GPU 학습 워크로드 한 사이클에서 Bias가 어떻게 전환되는지 �
 ```d2
 direction: down
 
-S1: "**① Host Bias**\nCPU가 메모리 소유\nCPU가 입력 데이터를\nGPU 메모리에 로드"
-S2: "**② Device Bias**\nGPU가 메모리 소유\nCPU 간섭 없이 직접 연산\n(최고 성능, 최소 지연)"
-S3: "**③ Host Bias**\nCPU가 다시 소유\nCPU가 결과 회수"
+S1: "① Host Bias\nCPU가 메모리 소유\nCPU가 입력 데이터를\nGPU 메모리에 로드"
+S2: "② Device Bias\nGPU가 메모리 소유\nCPU 간섭 없이 직접 연산\n(최고 성능, 최소 지연)"
+S3: "③ Host Bias\nCPU가 다시 소유\nCPU가 결과 회수"
 
 S1 -> S2: "전환 트리거:\nGPU가 Device Bias 요청\n(HDM-DB는 BISnp로\n호스트 캐시 무효화)"
 S2 -> S3: "전환 트리거:\nHost 요청\n(GPU가 소유권 반환)"

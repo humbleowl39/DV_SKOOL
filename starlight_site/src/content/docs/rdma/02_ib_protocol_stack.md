@@ -197,11 +197,11 @@ BTH.OpCode = `0x06` 을 받았습니다. 이게 어떤 service 의 어떤 operat
 ```d2
 direction: down
 
-UP: "**Upper Layer** · User application + Verbs API\nSDP, IPoIB, SRP, NFS-RDMA, MPI, ..."
-TR: "**Transport Layer** · BTH + xTH\nService: RC / UC / UD / RD / XRC\nPSN, ACK/NAK, retry, RDMA semantics"
-NET: "**Network Layer** · GRH (optional)\nGID-based routing across subnets (IPv6-format)"
-LNK: "**Link Layer** · LRH + VCRC + Flow Control\nLID-based routing within subnet\nVL + credit-based flow control\nSL → VL mapping"
-PHY: "**Physical Layer**\n1x / 4x / 12x SerDes\nSDR 2.5 → HDR 50 → NDR 100 Gbps per lane"
+UP: "Upper Layer · User application + Verbs API\nSDP, IPoIB, SRP, NFS-RDMA, MPI, ..."
+TR: "Transport Layer · BTH + xTH\nService: RC / UC / UD / RD / XRC\nPSN, ACK/NAK, retry, RDMA semantics"
+NET: "Network Layer · GRH (optional)\nGID-based routing across subnets (IPv6-format)"
+LNK: "Link Layer · LRH + VCRC + Flow Control\nLID-based routing within subnet\nVL + credit-based flow control\nSL → VL mapping"
+PHY: "Physical Layer\n1x / 4x / 12x SerDes\nSDR 2.5 → HDR 50 → NDR 100 Gbps per lane"
 UP -> TR
 TR -> NET
 NET -> LNK

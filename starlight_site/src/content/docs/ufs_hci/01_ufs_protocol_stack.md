@@ -42,24 +42,36 @@ title: "Module 01 — UFS Protocol Stack"
 
 ```d2
 direction: down
-grid-columns: 2
 
-H_APP: "[Host] App\nREAD 4KB @LBA=0x1000"
-D_PHY: "[Device] M-PHY RX"
-H_UTP: "[Host] UTP / UPIU"
-D_UNI: "[Device] UniPro"
-H_UNI: "[Host] UniPro\nL4/L3/L2/L1.5"
-D_UTP: "[Device] UTP / UPIU 디코드"
-H_PHY: "[Host] M-PHY TX"
-D_MEDIA: "[Device] Storage media\n(NAND read)"
+HOST: "Host" {
+  style.fill: "#e3f2fd"
+  style.font-color: "#0A0F25"
 
-H_APP -> H_UTP: "SCSI CDB\n(16B, opcode=0x28)"
-H_UTP -> H_UNI: "Command UPIU"
-H_UNI -> H_PHY: "DL Frame\nSOF+Hdr+UPIU+CRC+EOF"
-H_PHY -> D_PHY: "TX lane"
-D_PHY -> D_UNI: "M-PHY symbol\n(8b/10b or PWM)"
-D_UNI -> D_UTP: "DL Frame 재조립"
-D_UTP -> D_MEDIA: "SCSI 명령 실행"
+  app: "App\nREAD 4KB @LBA=0x1000"
+  utp: "UTP / UPIU"
+  uni: "UniPro\nL4/L3/L2/L1.5"
+  phy: "M-PHY TX"
+
+  app -> utp: "SCSI CDB\n(16B, opcode=0x28)" { style.font-color: "#0A0F25" }
+  utp -> uni: "Command UPIU" { style.font-color: "#0A0F25" }
+  uni -> phy: "DL Frame\nSOF+Hdr+UPIU+CRC+EOF" { style.font-color: "#0A0F25" }
+}
+
+DEV: "Device" {
+  style.fill: "#e8f5e9"
+  style.font-color: "#0A0F25"
+
+  phy: "M-PHY RX"
+  uni: "UniPro"
+  utp: "UTP / UPIU 디코드"
+  media: "Storage media\n(NAND read)"
+
+  phy -> uni: "M-PHY symbol\n(8b/10b or PWM)" { style.font-color: "#0A0F25" }
+  uni -> utp: "DL Frame 재조립" { style.font-color: "#0A0F25" }
+  utp -> media: "SCSI 명령 실행" { style.font-color: "#0A0F25" }
+}
+
+HOST.phy -> DEV.phy: "TX lane"
 ```
 
 ### 왜 이 디자인인가 — Design rationale
@@ -158,9 +170,9 @@ UFS 는 IB(InfiniBand — 고성능 서버/클러스터용 네트워크 표준) 
 ```d2
 direction: down
 
-APP: "**UFS Application Layer (UTP — UFS Transport Protocol)**\n· SCSI 명령 세트 (READ / WRITE / QUERY)\n· UPIU (UFS Protocol Information Unit) 패킷 구성\n· Task Management (Abort, LUN Reset 등)"
-UNI: "**UniPro (Unified Protocol) — Link Layer**\n· L4: DME (Device Management Entity)\n· L3: N-Layer (Network, 보통 point-to-point)\n· L2: DL (Data Link — CRC, ACK/NAK, Flow Control)\n· L1.5: PHY Adapter (인터페이스 어댑터)"
-PHY: "**M-PHY (MIPI Physical Layer)**\n· HS (High Speed) Gear 1~4: 1.46~11.6 Gbps/lane\n· PWM (저전력 모드): Gear 1~7\n· 1~2 Lane (데이터 레인 수)\n· CDR, Calibration, Power Mode 전환"
+APP: "UFS Application Layer (UTP — UFS Transport Protocol)\n· SCSI 명령 세트 (READ / WRITE / QUERY)\n· UPIU (UFS Protocol Information Unit) 패킷 구성\n· Task Management (Abort, LUN Reset 등)"
+UNI: "UniPro (Unified Protocol) — Link Layer\n· L4: DME (Device Management Entity)\n· L3: N-Layer (Network, 보통 point-to-point)\n· L2: DL (Data Link — CRC, ACK/NAK, Flow Control)\n· L1.5: PHY Adapter (인터페이스 어댑터)"
+PHY: "M-PHY (MIPI Physical Layer)\n· HS (High Speed) Gear 1~4: 1.46~11.6 Gbps/lane\n· PWM (저전력 모드): Gear 1~7\n· 1~2 Lane (데이터 레인 수)\n· CDR, Calibration, Power Mode 전환"
 APP -> UNI: "UPIU"
 UNI -> PHY: "시리얼 데이터"
 ```

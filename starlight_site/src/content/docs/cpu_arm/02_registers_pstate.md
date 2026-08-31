@@ -47,19 +47,19 @@ X0 = 0x0000_0000_0000_0001    // 상위가 날아감
 ```d2
 direction: down
 
-GPR: "**General Purpose (31)**\nX0–X30 (64-bit)\nW0–W30 (하위 32-bit 뷰)\nX30 = LR (return addr)" {
+GPR: "General Purpose (31)\nX0–X30 (64-bit)\nW0–W30 (하위 32-bit 뷰)\nX30 = LR (return addr)" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-SPEC: "**특수 레지스터**\nSP (stack pointer, EL별 banked)\nPC (branch로만 변경)\nXZR/WZR (읽으면 0, 쓰면 버림)" {
+SPEC: "특수 레지스터\nSP (stack pointer, EL별 banked)\nPC (branch로만 변경)\nXZR/WZR (읽으면 0, 쓰면 버림)" {
   style.fill: "#e6f4ea"
   style.font-color: "#0A0F25"
 }
-PSTATE: "**PSTATE (실행 중 값)**\nNZCV — 조건 플래그\nDAIF — 인터럽트 마스크\nCurrentEL · SPSel · nRW" {
+PSTATE: "PSTATE (실행 중 값)\nNZCV — 조건 플래그\nDAIF — 인터럽트 마스크\nCurrentEL · SPSel · nRW" {
   style.fill: "#fef7e0"
   style.font-color: "#0A0F25"
 }
-SYS: "**시스템 레지스터 (EL별 banked)**\nELR_ELx · SPSR_ELx\nESR_ELx · FAR_ELx · VBAR_ELx" {
+SYS: "시스템 레지스터 (EL별 banked)\nELR_ELx · SPSR_ELx\nESR_ELx · FAR_ELx · VBAR_ELx" {
   style.fill: "#fce8e6"
   style.font-color: "#0A0F25"
 }
@@ -88,12 +88,12 @@ PSTATE -> SYS: "예외 진입 시\nSPSR로 저장됨"
 ```d2
 direction: down
 
-ENTER: "**함수 진입**\nX30(LR) = 복귀 주소\nX29(FP) = 호출자 프레임"
-PRO: "**① 프롤로그 stp**\nstp x29, x30, [sp, #-16]!\nSP -= 16, 그 위치에 두 레지스터 저장\n(pre-index)"
-FP: "**② FP 설정**\nmov x29, sp\n현재 프레임 포인터 확정"
-BODY: "**함수 본문**\n(다른 함수 호출 → X30 덮어씀)"
-EPI: "**③ 에필로그 ldp**\nldp x29, x30, [sp], #16\n두 레지스터 복원 후 SP += 16\n(post-index)"
-RET: "**④ ret**\nbranch to X30 (복귀)"
+ENTER: "함수 진입\nX30(LR) = 복귀 주소\nX29(FP) = 호출자 프레임"
+PRO: "① 프롤로그 stp\nstp x29, x30, [sp, #-16]!\nSP -= 16, 그 위치에 두 레지스터 저장\n(pre-index)"
+FP: "② FP 설정\nmov x29, sp\n현재 프레임 포인터 확정"
+BODY: "함수 본문\n(다른 함수 호출 → X30 덮어씀)"
+EPI: "③ 에필로그 ldp\nldp x29, x30, [sp], #16\n두 레지스터 복원 후 SP += 16\n(post-index)"
+RET: "④ ret\nbranch to X30 (복귀)"
 
 ENTER -> PRO
 PRO -> FP

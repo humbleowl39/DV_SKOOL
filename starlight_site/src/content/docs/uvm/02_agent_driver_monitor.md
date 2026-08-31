@@ -49,7 +49,7 @@ AGENT: "Active Agent" {
   MON: "Monitor"
   SQR -> DRV: "seq_item\nget / done"
 }
-VIF: "**virtual my_if vif**\nvalid / ready / data"
+VIF: "virtual my_if vif\nvalid / ready / data"
 DUT: "DUT"
 SB: "Scoreboard / Coverage\n(다음 챕터)"
 TEST -> SQR: "seq"
@@ -163,13 +163,13 @@ SystemVerilog 의 매 시뮬레이션 시각 (time slot) 은 정해진 순서의
 
 ```d2
 direction: right
-PRE: "**Preponed**\nSVA sampling\n(값이 바뀌기 _전_)" { style.stroke: "#8e24aa"; style.stroke-width: 2 }
-ACT: "**Active**\nblocking `=`\nRTL `always`" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-INA: "Inactive\n`#0`"
-NBA: "**NBA**\nnon-blocking `<=`\n갱신 적용" { style.stroke: "#137333"; style.stroke-width: 2 }
+PRE: "Preponed\nSVA sampling\n(값이 바뀌기 전)" { style.stroke: "#8e24aa"; style.stroke-width: 2 }
+ACT: "Active\nblocking =\nRTL always" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+INA: "Inactive\n#0"
+NBA: "NBA\nnon-blocking <=\n갱신 적용" { style.stroke: "#137333"; style.stroke-width: 2 }
 OBS: "Observed\nSVA property 평가"
 REA: "Reactive\nprogram block"
-POST: "Postponed\n`\$monitor` / 최종"
+POST: "Postponed\n\$monitor / 최종"
 PRE -> ACT -> INA -> NBA -> OBS -> REA -> POST
 ```
 

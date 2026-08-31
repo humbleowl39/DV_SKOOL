@@ -71,7 +71,7 @@ renaming 의 매핑을 담는 표가 **RAT(Register Alias Table)** 인데, 고�
 ```d2
 direction: right
 
-ROB: "**ROB (순환 큐)**" {
+ROB: "ROB (순환 큐)" {
   head: "head → retire(in-order)"
   mid: "middle: 실행 완료/진행 중(OoO)"
   tail: "tail ← dispatch(in-order)"

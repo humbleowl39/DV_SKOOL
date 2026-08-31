@@ -109,7 +109,7 @@ CTRL: "인터럽트 / 제어" {
   direction: right
   GIC: "GIC (SPI)\nspi[12] · spi[13] · spi[14]" { style.stroke: "#c5221f"; style.stroke-width: 2 }
   CPU: "CPU (FW)" { style.stroke: "#c5221f"; style.stroke-width: 2 }
-  GIC -> CPU: "④ to CPU0"
+  GIC -> CPU: "④ to\nCPU0"
 }
 
 PWR_CLK: "Power / Clock 도메인" {

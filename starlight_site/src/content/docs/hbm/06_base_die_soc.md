@@ -67,17 +67,17 @@ Controller, PHY, RAS, 전력 관리, DFT처럼 기능으로 분류합니다. 훨
 ```d2
 direction: right
 
-FUNC: "**기능 축**\nController · PHY · RAS\n전력 · DFT · 고객 로직\n→ 검증 *방법*을 정한다" {
+FUNC: "기능 축\nController · PHY · RAS\n전력 · DFT · 고객 로직\n→ 검증 방법을 정한다" {
   style.fill: "#bbdefb"
   style.font-color: "#0A0F25"
 }
 
-SRC: "**출처 축**\nin-house · 3rd party · 고객 제공\n→ 검증 *깊이와 초점*을 정한다" {
+SRC: "출처 축\nin-house · 3rd party · 고객 제공\n→ 검증 깊이와 초점을 정한다" {
   style.fill: "#c8e6c9"
   style.font-color: "#0A0F25"
 }
 
-PLAN: "**검증 접근**\n무엇을 어디까지\n어떤 도구로" {
+PLAN: "검증 접근\n무엇을 어디까지\n어떤 도구로" {
   style.fill: "#fff9c4"
   style.font-color: "#0A0F25"
 }

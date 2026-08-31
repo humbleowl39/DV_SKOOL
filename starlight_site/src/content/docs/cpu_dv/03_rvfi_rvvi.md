@@ -60,11 +60,11 @@ assign retired_val = rvfi_rd_wdata;    // 기록한 값 (architectural, 추측 �
 ```d2
 direction: right
 
-CORE: "**RTL 코어**\n(RVFI 구현)\nretire 시 신호 노출"
-RVFI: "**RVFI 신호**\nrvfi_valid\nrvfi_pc_rdata/wdata\nrvfi_rd_addr/wdata\nrvfi_mem_addr/rdata/wdata\nrvfi_intr / rvfi_trap"
+CORE: "RTL 코어\n(RVFI 구현)\nretire 시 신호 노출"
+RVFI: "RVFI 신호\nrvfi_valid\nrvfi_pc_rdata/wdata\nrvfi_rd_addr/wdata\nrvfi_mem_addr/rdata/wdata\nrvfi_intr / rvfi_trap"
 
-SIM: "**시뮬레이션 흐름**\nretire monitor →\nscoreboard vs ISS\n(Module 02·04)"
-FORMAL: "**형식 검증 흐름**\nriscv-formal\nRVFI ↔ ISA 형식 모델\n(Module 06)"
+SIM: "시뮬레이션 흐름\nretire monitor →\nscoreboard vs ISS\n(Module 02·04)"
+FORMAL: "형식 검증 흐름\nriscv-formal\nRVFI ↔ ISA 형식 모델\n(Module 06)"
 
 CORE -> RVFI: "노출"
 RVFI -> SIM: "같은 신호 재사용"
@@ -92,10 +92,10 @@ RVFI -> FORMAL: "같은 신호 재사용"
 ```d2
 direction: down
 
-S1: "**① RTL retire**\nADDI x5, x5, 1 이 WB 단계 통과\n→ 이 사이클에 rvfi_valid=1"
-S2: "**② RVFI 신호 세팅**\nrvfi_pc_rdata=0x1000\nrvfi_insn=0x00128293\nrvfi_rd_addr=5, rvfi_rd_wdata=0x41\nrvfi_trap=0, rvfi_intr=0"
-S3: "**③ retire monitor 샘플**\n@(posedge clk iff rvfi_valid)\n신호들을 retire_item 으로"
-S4: "**④ analysis port broadcast**\nap.write(retire_item)\n→ scoreboard / coverage 로 fan-out"
+S1: "① RTL retire\nADDI x5, x5, 1 이 WB 단계 통과\n→ 이 사이클에 rvfi_valid=1"
+S2: "② RVFI 신호 세팅\nrvfi_pc_rdata=0x1000\nrvfi_insn=0x00128293\nrvfi_rd_addr=5, rvfi_rd_wdata=0x41\nrvfi_trap=0, rvfi_intr=0"
+S3: "③ retire monitor 샘플\n@(posedge clk iff rvfi_valid)\n신호들을 retire_item 으로"
+S4: "④ analysis port broadcast\nap.write(retire_item)\n→ scoreboard / coverage 로 fan-out"
 
 S1 -> S2 -> S3 -> S4
 ```
@@ -168,10 +168,10 @@ RVFI 가 _코어 한 개_ 의 신호라면, RVVI 는 _검증 서브시스템 전
 ```d2
 direction: down
 
-CORE: "**RTL 코어**\nRVVI-TRACE 로 retire 정보 출력\n(RVFI 와 유사 역할)"
-TRACE: "**RVVI-TRACE**\n표준 트레이스 인터페이스\n어느 코어든 같은 모양"
-REF: "**Reference model API**\n표준 연동 (RVVI-VLG/API)\nISS 를 꽂는 약속"
-HARNESS: "**비교 하네스**\nstep-and-compare\n코어·ISS 교체 가능"
+CORE: "RTL 코어\nRVVI-TRACE 로 retire 정보 출력\n(RVFI 와 유사 역할)"
+TRACE: "RVVI-TRACE\n표준 트레이스 인터페이스\n어느 코어든 같은 모양"
+REF: "Reference model API\n표준 연동 (RVVI-VLG/API)\nISS 를 꽂는 약속"
+HARNESS: "비교 하네스\nstep-and-compare\n코어·ISS 교체 가능"
 
 CORE -> TRACE
 TRACE -> HARNESS

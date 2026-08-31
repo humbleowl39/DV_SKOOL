@@ -91,17 +91,17 @@ CH: "Channel N — 완전 독립\nCK_t/CK_c · R[9:0] · C[7:0] 공유" {
   style.fill: "#e3f2fd"
   style.font-color: "#0A0F25"
 
-  shared: "공유 자원\n· row/column 커맨드 버스\n· CK 입력\n· Mode Register\n· Power-down / Self-refresh" {
+  shared: "공유 자원 — 주소의 PC 비트로 대상 선택\n· row/column 커맨드 버스\n· CK 입력\n· Mode Register\n· Power-down / Self-refresh" {
     style.fill: "#fff8e1"
     style.font-color: "#0A0F25"
   }
 
-  pc0: "**Pseudo Channel 0**\nDWORD0 (DQ[31:0])\n독립 뱅크 집합 · 1 KB page\n256-bit prefetch" {
+  pc0: "Pseudo Channel 0\nDWORD0 (DQ[31:0])\n독립 뱅크 집합 · 1 KB page\n256-bit prefetch" {
     style.fill: "#e8f5e9"
     style.font-color: "#0A0F25"
   }
 
-  pc1: "**Pseudo Channel 1**\nDWORD1 (DQ[63:32])\n독립 뱅크 집합 · 1 KB page\n256-bit prefetch" {
+  pc1: "Pseudo Channel 1\nDWORD1 (DQ[63:32])\n독립 뱅크 집합 · 1 KB page\n256-bit prefetch" {
     style.fill: "#e8f5e9"
     style.font-color: "#0A0F25"
   }
@@ -113,8 +113,8 @@ GLOBAL: "전역 신호 (스택 공통)\nRESET_n · CATTRIP · IEEE1500 테스트
 }
 
 GLOBAL -> CH: "채널 무관"
-CH.shared -> CH.pc0: "커맨드 — 주소 PC 비트로 선택" { style.font-color: "#0A0F25" }
-CH.shared -> CH.pc1: "커맨드 — 주소 PC 비트로 선택" { style.font-color: "#0A0F25" }
+CH.shared -> CH.pc0: "PC = 0" { style.font-color: "#0A0F25" }
+CH.shared -> CH.pc1: "PC = 1" { style.font-color: "#0A0F25" }
 ```
 
 ### 채널 층 — 완전 독립

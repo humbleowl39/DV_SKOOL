@@ -37,11 +37,11 @@ OS 가 하드웨어 위에서 무엇을 하고, user 와 kernel 의 경계를 �
 ```d2
 direction: down
 
-APP: "**User Program**\n(user mode, mode bit=1)\nlibc/glibc API 호출"
-SCI: "**System-Call Interface**\n호출 번호로 테이블 조회"
-TRAP: "**trap**\n(software interrupt)\nmode bit → kernel(0)"
-KERN: "**Kernel**\n(kernel mode, mode bit=0)\nservice routine 실행\nprivileged instruction 허용"
-HW: "**Hardware**\nI/O · timer · interrupt 제어"
+APP: "User Program\n(user mode, mode bit=1)\nlibc/glibc API 호출"
+SCI: "System-Call Interface\n호출 번호로 테이블 조회"
+TRAP: "trap\n(software interrupt)\nmode bit → kernel(0)"
+KERN: "Kernel\n(kernel mode, mode bit=0)\nservice routine 실행\nprivileged instruction 허용"
+HW: "Hardware\nI/O · timer · interrupt 제어"
 
 APP -> SCI: "API (POSIX/Win32)"
 SCI -> TRAP: "syscall 번호"

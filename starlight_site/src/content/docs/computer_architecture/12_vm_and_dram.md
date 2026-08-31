@@ -48,9 +48,9 @@ DRAM 은 각 비트를 capacitor 전하로 저장하며 bank(병렬 활성 가�
 direction: right
 
 REQ: "memory request"
-OPEN: "**row 이미 열림?**"
-HIT: "**Row hit**\nCAS 만 → 빠름 (CL)"
-MISS: "**Row miss**\nprecharge + RAS + CAS\n→ +28–40 ns"
+OPEN: "row 이미 열림?"
+HIT: "Row hit\nCAS 만 → 빠름 (CL)"
+MISS: "Row miss\nprecharge + RAS + CAS\n→ +28–40 ns"
 
 REQ -> OPEN
 OPEN -> HIT: "yes (same row)"

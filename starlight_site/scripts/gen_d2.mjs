@@ -86,6 +86,8 @@ const files = await targets()
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gend2-'))
 let made = 0
 let scanned = 0
+let broken = 0
+const mtimes = new Map()
 
 for (const file of files) {
   const blocks = extractD2Blocks(await fs.readFile(file, 'utf8'))
@@ -93,6 +95,7 @@ for (const file of files) {
   scanned++
   for (const [i, input] of blocks.entries()) {
     const outputPath = outPathFor(file, i)
+    try { mtimes.set(outputPath, (await fs.stat(outputPath)).mtimeMs) } catch {}
     if (checkOnly) { console.log('  would write', path.relative(SITE, outputPath)); continue }
     const src = path.join(tmp, `d-${made}.d2`)
     await fs.writeFile(src, input)
@@ -107,9 +110,32 @@ for (const file of files) {
       outputPath,
     ])
     made++
-    const { size } = await fs.stat(outputPath)
-    console.log('  wrote', path.relative(SITE, outputPath), `(${size} bytes)`)
+    // d2 바이너리는 깊게 중첩된 라벨 컨테이너에서 **조용히 실패**한다 —
+    // exit 0 을 반환하면서 파일을 아예 쓰지 않거나, 도형/글자가 없는 빈 SVG 를 남긴다.
+    // 그대로 두면 옛 파일이 살아남아 "생성됨"으로 오인되므로 여기서 잡는다.
+    const before = mtimes.get(outputPath)
+    let stat = null
+    try { stat = await fs.stat(outputPath) } catch {}
+    if (!stat) {
+      console.log('  ✗ 실패(파일 미생성)', path.relative(SITE, outputPath))
+      broken++
+      continue
+    }
+    if (before !== undefined && stat.mtimeMs === before) {
+      console.log('  ✗ 실패(파일 갱신 안 됨 — d2 가 조용히 no-op)', path.relative(SITE, outputPath))
+      broken++
+      continue
+    }
+    const out = await fs.readFile(outputPath, 'utf8')
+    const nText = (out.match(/<text\b/g) || []).length
+    if (nText === 0) {
+      console.log('  ✗ 실패(글자 없는 빈 SVG)', path.relative(SITE, outputPath))
+      broken++
+      continue
+    }
+    console.log('  wrote', path.relative(SITE, outputPath), `(${stat.size} bytes)`)
   }
 }
 
-console.log(`\n파일 ${scanned}개 · ${checkOnly ? '(check only)' : `다이어그램 ${made}개 생성`}`)
+console.log(`\n파일 ${scanned}개 · ${checkOnly ? '(check only)' : `다이어그램 ${made}개 생성`}${broken ? ` · ⚠ 실패 ${broken}개` : ''}`)
+if (broken) process.exit(1)

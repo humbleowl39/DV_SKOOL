@@ -51,12 +51,12 @@ Fault injection은 "특정 레지스터를 프로그래밍해 runtime에 가짜 
 ```d2
 direction: right
 
-SEQ: "**Fault Inject Sequence**\nral.INJECT.write(err_type)\n→ 다음 접근에 에러 주입"
-RAL: "**RAL reg model**\nERRSTATUS / ERRADDR\nERRCTLR(inject)\n(이름 기반 접근)"
-DUT: "**DUT RAS-node**\n에러 검출 → record 기록\n인터럽트 raise"
+SEQ: "Fault Inject Sequence\nral.INJECT.write(err_type)\n→ 다음 접근에 에러 주입"
+RAL: "RAL reg model\nERRSTATUS / ERRADDR\nERRCTLR(inject)\n(이름 기반 접근)"
+DUT: "DUT RAS-node\n에러 검출 → record 기록\n인터럽트 raise"
 MON: "Bus / IRQ Monitor\n(record + 인터럽트 관찰)"
 PRED: "uvm_reg_predictor\n(mirror 갱신)"
-SB: "**Scoreboard**\n기대 record/IRQ vs 실제"
+SB: "Scoreboard\n기대 record/IRQ vs 실제"
 
 SEQ -> RAL: "frontdoor"
 RAL -> DUT: "adapter → bus"
@@ -88,11 +88,11 @@ UE를 한 번 주입하고, error record가 기록되고, 인터럽트가 올라
 ```d2
 direction: down
 
-S1: "**① INJECT.write(UE, addr=A)**\nDUT에 '다음 접근에서 UE 주입' 프로그래밍\n(시퀀스 레벨, RTL force 아님)"
-S2: "**② 해당 접근 발생 → UE 검출**\nERRSTATUS.UE=1, ERRSTATUS.V=1\nERRADDR=A 캡처"
-S3: "**③ 인터럽트 raise**\nerror IRQ → SCP/BMC\n(telemetry 경로)"
-S4: "**④ STATUS read → 기대값 비교**\nScoreboard: UE=1, addr=A 확인"
-S5: "**⑤ W1C: STATUS.V/UE에 1 write → clear**\n인터럽트 deassert\nrecord 정리"
+S1: "① INJECT.write(UE, addr=A)\nDUT에 '다음 접근에서 UE 주입' 프로그래밍\n(시퀀스 레벨, RTL force 아님)"
+S2: "② 해당 접근 발생 → UE 검출\nERRSTATUS.UE=1, ERRSTATUS.V=1\nERRADDR=A 캡처"
+S3: "③ 인터럽트 raise\nerror IRQ → SCP/BMC\n(telemetry 경로)"
+S4: "④ STATUS read → 기대값 비교\nScoreboard: UE=1, addr=A 확인"
+S5: "⑤ W1C: STATUS.V/UE에 1 write → clear\n인터럽트 deassert\nrecord 정리"
 S1 -> S2 -> S3 -> S4 -> S5
 ```
 

@@ -56,7 +56,7 @@ Sequence의 핵심 가치는 **조합 가능성**에 있습니다. 시나리오 
 direction: down
 
 TEST: "uvm_test\nstart vseq"
-VSEQ: "**Virtual Sequence** 연출가" { style.stroke: "#1a73e8"; style.stroke-width: 3 }
+VSEQ: "Virtual Sequence 연출가" { style.stroke: "#1a73e8"; style.stroke-width: 3 }
 SEQA: "agentA Sequence" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 SEQB: "agentB Sequence" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
 ITA: "Item A · rand+constraint" { style.stroke: "#137333"; style.stroke-width: 2 }
@@ -228,7 +228,7 @@ endclass
 direction: down
 
 TEST: "uvm_test"
-VSEQ: "**Virtual Sequence**\n(시나리오 조합)"
+VSEQ: "Virtual Sequence\n(시나리오 조합)"
 SA: "Agent_A Sequence\n_OTP 설정_"
 SB: "Agent_B Sequence\n_UFS 이미지 로드_"
 SC: "Agent_C Sequence\n_보안 공격_"

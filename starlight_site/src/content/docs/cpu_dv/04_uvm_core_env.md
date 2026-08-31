@@ -50,13 +50,13 @@ title: "Module 04 — UVM 코어 검증 환경"
 ```d2
 direction: right
 
-DUT: "**RTL 코어**\n(DUT)\nRVFI/RVVI retire 신호" {
+DUT: "RTL 코어\n(DUT)\nRVFI/RVVI retire 신호" {
   RVFI: "rvfi_valid\nrvfi_pc/insn\nrvfi_rd_addr/wdata\nrvfi_mem_* / csr"
 }
-MON: "**retire monitor**\n@(rvfi_valid)\nretire_item 생성\nap.write()"
-PRED: "**predictor**\n(reference model)\nDPI-C → ISS 1 step\nexpected_item"
-SB: "**scoreboard**\nstep-and-compare\nRTL vs ISS\nfirst-divergence"
-COV: "**coverage**\ncovergroup.sample()\n명령·privilege·cross"
+MON: "retire monitor\n@(rvfi_valid)\nretire_item 생성\nap.write()"
+PRED: "predictor\n(reference model)\nDPI-C → ISS 1 step\nexpected_item"
+SB: "scoreboard\nstep-and-compare\nRTL vs ISS\nfirst-divergence"
+COV: "coverage\ncovergroup.sample()\n명령·privilege·cross"
 
 DUT -> MON: "RVFI 관찰"
 MON -> PRED: "1:N broadcast"
@@ -84,10 +84,10 @@ PRED -> SB: "expected (ISS)"
 ```d2
 direction: down
 
-S1: "**① retire monitor**\n@(rvfi_valid)\nADDI x5,x5,1\nretire_item{pc,insn,rd,wdata} 생성\nap.write(item)"
-S2: "**② predictor (ISS)**\nitem.pc 의 명령을\nDPI-C 로 ISS 1 step\nexpected{rd=5, wdata=0x41}"
-S3: "**③ scoreboard 비교**\nRTL wdata=0x41\n== ISS wdata=0x41 ✓\n불일치면 first-divergence"
-S4: "**④ coverage sample**\ncg.sample(insn, priv, ...)\nADDI bin ↑, cross ↑"
+S1: "① retire monitor\n@(rvfi_valid)\nADDI x5,x5,1\nretire_item{pc,insn,rd,wdata} 생성\nap.write(item)"
+S2: "② predictor (ISS)\nitem.pc 의 명령을\nDPI-C 로 ISS 1 step\nexpected{rd=5, wdata=0x41}"
+S3: "③ scoreboard 비교\nRTL wdata=0x41\n== ISS wdata=0x41 ✓\n불일치면 first-divergence"
+S4: "④ coverage sample\ncg.sample(insn, priv, ...)\nADDI bin ↑, cross ↑"
 S1 -> S2: "broadcast"
 S1 -> S4: "broadcast"
 S2 -> S3: "expected"
@@ -198,12 +198,12 @@ endclass
 ```d2
 direction: down
 
-ENV: "**core_env**" {
-  AGT: "**core_agent**\n(monitor 중심,\n수동/능동)"
-  PRED: "**predictor**\nreference model(ISS)\nexpected 산출"
-  SB: "**scoreboard**\nactual vs expected\nstep-and-compare"
-  COV: "**coverage collector**\ncovergroup sample"
-  RAL: "**CSR RAL model**\n(uvm_reg)\npredict/mirror"
+ENV: "core_env" {
+  AGT: "core_agent\n(monitor 중심,\n수동/능동)"
+  PRED: "predictor\nreference model(ISS)\nexpected 산출"
+  SB: "scoreboard\nactual vs expected\nstep-and-compare"
+  COV: "coverage collector\ncovergroup sample"
+  RAL: "CSR RAL model\n(uvm_reg)\npredict/mirror"
 }
 ```
 
@@ -222,11 +222,11 @@ ENV: "**core_env**" {
 ```d2
 direction: right
 
-ISG: "**ISG (M05)**\nriscv-dv\nELF 생성"
-DUT: "**RTL 코어 + UVM env**\nretire monitor\npredictor / scoreboard"
-ISS: "**predictor ISS**\n같은 ELF"
-COV: "**coverage (M07)**\n명령·privilege·cross"
-SVA: "**SVA**\nRVFI 프로토콜\n불변식"
+ISG: "ISG (M05)\nriscv-dv\nELF 생성"
+DUT: "RTL 코어 + UVM env\nretire monitor\npredictor / scoreboard"
+ISS: "predictor ISS\n같은 ELF"
+COV: "coverage (M07)\n명령·privilege·cross"
+SVA: "SVA\nRVFI 프로토콜\n불변식"
 
 ISG -> DUT: "ELF load & run"
 ISG -> ISS: "같은 ELF"
@@ -312,7 +312,7 @@ predictor 를 분리(§5.4)하면 actual(monitor)과 expected(predictor)가 _서
 direction: right
 A: "actual queue\n(monitor)"
 E: "expected queue\n(predictor)"
-M: "**매칭기**\norder 가 같은\n쌍을 비교"
+M: "매칭기\norder 가 같은\n쌍을 비교"
 A -> M
 E -> M
 M -> R: "head 쌍 pop →\ncompare → 다음"

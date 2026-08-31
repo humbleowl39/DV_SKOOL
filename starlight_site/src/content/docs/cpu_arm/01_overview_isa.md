@@ -47,11 +47,11 @@ ISA를 "명령어 표"가 아니라 **HW와 SW 사이의 계약**으로 읽으�
 ```d2
 direction: down
 
-SW: "**Software**\nOS · 펌웨어 · 유저 앱\n(컴파일된 AArch64 바이너리)"
-ISA: "**ISA — AArch64 계약**\n명령 집합 · 31 GPR · PSTATE\nEL0–3 · weak memory · 예외 모델"
-UA1: "**μarch A**\nCortex-A53\nin-order, 8-stage"
-UA2: "**μarch B**\nNeoverse V2\nwide OoO, deep pipe"
-HW: "**Silicon**\n게이트 · 캐시 · 인터커넥트"
+SW: "Software\nOS · 펌웨어 · 유저 앱\n(컴파일된 AArch64 바이너리)"
+ISA: "ISA — AArch64 계약\n명령 집합 · 31 GPR · PSTATE\nEL0–3 · weak memory · 예외 모델"
+UA1: "μarch A\nCortex-A53\nin-order, 8-stage"
+UA2: "μarch B\nNeoverse V2\nwide OoO, deep pipe"
+HW: "Silicon\n게이트 · 캐시 · 인터커넥트"
 
 SW -> ISA: "이 계약에만 의존"
 ISA -> UA1: "구현 1"
@@ -83,11 +83,11 @@ ARM은 **Advanced RISC Machines**의 약자이고(1990년 창립, 칩을 직접 
 ```d2
 direction: down
 
-C: "**C 소스**\nint c = a + b;"
-L1: "**① LDR**\nw0 ← [x_a]\n(메모리 → 레지스터)"
-L2: "**② LDR**\nw1 ← [x_b]"
-ADD: "**③ ADD**\nw2 = w0 + w1\n(레지스터끼리 연산)"
-ST: "**④ STR**\nw2 → [x_c]\n(레지스터 → 메모리)"
+C: "C 소스\nint c = a + b;"
+L1: "① LDR\nw0 ← [x_a]\n(메모리 → 레지스터)"
+L2: "② LDR\nw1 ← [x_b]"
+ADD: "③ ADD\nw2 = w0 + w1\n(레지스터끼리 연산)"
+ST: "④ STR\nw2 → [x_c]\n(레지스터 → 메모리)"
 C -> L1
 L1 -> L2
 L2 -> ADD

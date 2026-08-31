@@ -54,11 +54,11 @@ direction: down
 
 HCI: "UFS HCI" {
   direction: down
-  REG: "**Host Controller Registers** (SW Interface · AHB/AXI)\nCAP · HCE · IS · IE\nUTRLBA · UTRLDBR · UTMRLBA"
-  XFER: "**UTP Transfer Request Engine**\n· UTRD 파싱\n· UPIU 생성\n· DMA (PRDT)\n· 완료 처리"
-  TM: "**UTP Task Mgmt Request Engine**\n· UTMRD 파싱\n· Task Mgmt UPIU 생성"
-  UPIU: "**UPIU Engine**\n· UPIU 패킷 조립 / 분해\n· Command / Response / Data 처리"
-  IF: "**UniPro / M-PHY Interface**"
+  REG: "Host Controller Registers (SW Interface · AHB/AXI)\nCAP · HCE · IS · IE\nUTRLBA · UTRLDBR · UTMRLBA"
+  XFER: "UTP Transfer Request Engine\n· UTRD 파싱\n· UPIU 생성\n· DMA (PRDT)\n· 완료 처리"
+  TM: "UTP Task Mgmt Request Engine\n· UTMRD 파싱\n· Task Mgmt UPIU 생성"
+  UPIU: "UPIU Engine\n· UPIU 패킷 조립 / 분해\n· Command / Response / Data 처리"
+  IF: "UniPro / M-PHY Interface"
   REG -> XFER
   REG -> TM
   XFER -> UPIU

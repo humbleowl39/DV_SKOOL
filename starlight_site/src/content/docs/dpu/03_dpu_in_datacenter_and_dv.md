@@ -43,12 +43,12 @@ HOST: "Host CPU / VM" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-DPU: "**DPU SoC**" {
+DPU: "DPU SoC" {
   style.fill: "#fef3e8"
   style.font-color: "#0A0F25"
   HIF: "Host Interface\n(PCIe)"
   CORE: "프로그래머블 코어\n(제어·정책)"
-  DP: "**Data Path Engine**\n분류·전달·DMA·큐" {
+  DP: "Data Path Engine\n분류·전달·DMA·큐" {
     style.fill: "#eaf7ea"
     style.font-color: "#0A0F25"
   }

@@ -293,7 +293,7 @@ INITIAL { shape: circle; style.fill: "#333"; style.font-color: "#FFFFFF" }
 INITIAL -> IDLE
 IDLE -> W_BEAT: "AW handshake 발행"
 W_BEAT -> W_BEAT: "WVALID=1 + WSTRB + WDATA (beat counter ↑)"
-W_BEAT -> W_DONE: "WLAST=1 (AxLEN+1 beats 완료)"
+W_BEAT -> W_DONE: "WLAST=1\n(AxLEN+1 beats 완료)"
 W_DONE -> B_RESP: "BVALID 대기"
 B_RESP -> IDLE: "BVALID && BREADY"
 ```

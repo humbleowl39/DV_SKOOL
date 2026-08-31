@@ -70,9 +70,9 @@ IBTA 는 해법 B 채택. _R_Key 가 없으면_ 외부 노드는 _이름조차 �
 ```d2
 direction: down
 
-PD: "**PD** 보호 도메인"
-MR: "**MR**\n(lkey, rkey, [iova, len], access_flags)\npages pinned + IOVA→PA mapping in HCA's ATS"
-QP: "**QP**\n같은 PD 안에서만 MR 사용 가능"
+PD: "PD 보호 도메인"
+MR: "MR\n(lkey, rkey, [iova, len], access_flags)\npages pinned + IOVA→PA mapping in HCA's ATS"
+QP: "QP\n같은 PD 안에서만 MR 사용 가능"
 PD -> MR: "owns"
 PD -> QP: "owns"
 WR: "incoming RDMA WRITE"
@@ -182,8 +182,8 @@ A 가 1 MB buffer 를 등록하고, B 가 그 영역에 1 KB RDMA WRITE.
 
 ```d2
 direction: down
-PD: "**PD**\nProtection Domain (보호 경계)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
-MR: "**MR** (region)"
+PD: "PD\nProtection Domain (보호 경계)" { style.stroke: "#1a73e8"; style.stroke-width: 2 }
+MR: "MR (region)"
 QPSRQ: "QP / SRQ"
 LK: "L_Key" { style.stroke: "#137333"; style.stroke-width: 2 }
 RK: "R_Key" { style.stroke: "#137333"; style.stroke-width: 2 }

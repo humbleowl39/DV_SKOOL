@@ -517,9 +517,9 @@ GW -- DOMAINS.PT
 GW -- DOMAINS.CH
 GW -- DOMAINS.IN
 DOMAINS.IN.OBD -> DOMAINS.IN.DISP: "통과" { style.stroke-dash: 4 }
-DOMAINS.IN.OBD -> DOMAINS.CH.ADAS: "차단 ✗" { style.stroke: "#c0392b" }
-DOMAINS.IN.OBD -> DOMAINS.CH.ABS: "차단 ✗" { style.stroke: "#c0392b" }
-DOMAINS.IN.OBD -> DOMAINS.PT.ENG: "차단 ✗" { style.stroke: "#c0392b" }
+DOMAINS.IN.OBD -> DOMAINS.CH.ADAS: "✗" { style.stroke: "#c0392b" }
+DOMAINS.IN.OBD -> DOMAINS.CH.ABS: "✗" { style.stroke: "#c0392b" }
+DOMAINS.IN.OBD -> DOMAINS.PT.ENG: "✗ 차단" { style.stroke: "#c0392b" }
 ```
 
 → OBD-II 는 Infotainment 까지만, Chassis/Safety 도메인 접근 차단.

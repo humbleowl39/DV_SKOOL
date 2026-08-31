@@ -57,7 +57,7 @@ SETSIDE: "set → 게시판" {
   style.stroke: "#5f6368"
   style.stroke-dash: 2
 
-  TEST: "**Test (top of TB)**\nconfig_db::set(\nnull, '*.env.agent.*',\n'vif', intf)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  TEST: "Test (top of TB)\nconfig_db::set(\nnull, '*.env.agent.*',\n'vif', intf)" { style.stroke: "#137333"; style.stroke-width: 2 }
   BOARD: "게시판\n(config_db)" { shape: cylinder; style.stroke: "#1a73e8"; style.stroke-width: 3 }
 
   TEST -> BOARD: "(게시판에 부착)"
@@ -67,10 +67,10 @@ GETSIDE: "build → get" {
   style.stroke: "#5f6368"
   style.stroke-dash: 2
 
-  ENV: "**env.build_phase**\nagent = my_agent::type_id::create\n('agent', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  ENV: "env.build_phase\nagent = my_agent::type_id::create\n('agent', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
   FACT: "Factory\noverride 있으면 대체" { shape: cylinder; style.stroke: "#b8860b"; style.stroke-width: 2; style.stroke-dash: 4 }
-  AGENT: "**agent.build_phase**\ndriver = my_driver::type_id::create\n('driver', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
-  DRV: "**driver.build_phase**\nconfig_db::get(this,'','vif',vif)\n→ wildcard 매칭 성공" { style.stroke: "#137333"; style.stroke-width: 2 }
+  AGENT: "agent.build_phase\ndriver = my_driver::type_id::create\n('driver', this)" { style.stroke: "#137333"; style.stroke-width: 2 }
+  DRV: "driver.build_phase\nconfig_db::get(this,'','vif',vif)\n→ wildcard 매칭 성공" { style.stroke: "#137333"; style.stroke-width: 2 }
 
   ENV -- FACT: "factory 카탈로그" { style.stroke-dash: 4 }
   ENV -> AGENT
@@ -245,8 +245,8 @@ drv = my_driver::type_id::create("drv", this);
 
 ```d2
 direction: down
-C: "**create('drv', this)**\nmy_driver 타입 요청"
-L: "factory 테이블 **lookup**\n'my_driver' override 있나?" { style.stroke: "#b8860b"; style.stroke-width: 2 }
+C: "create('drv', this)\nmy_driver 타입 요청"
+L: "factory 테이블 lookup\n'my_driver' override 있나?" { style.stroke: "#b8860b"; style.stroke-width: 2 }
 P1: "override 없음 →\nmy_driver 의 proxy" { style.stroke: "#137333" }
 P2: "override 있음 →\nenhanced_driver 의 proxy" { style.stroke: "#1a73e8" }
 N: "proxy.new() 호출 →\n진짜 객체 생성·반환"

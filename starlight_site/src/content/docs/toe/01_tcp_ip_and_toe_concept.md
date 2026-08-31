@@ -233,10 +233,10 @@ RDMA: "RDMA — TCP 자체 우회" {
 ```d2
 direction: down
 
-L4: "**4. Application Layer**\nHTTP, FTP, SSH, NVMe-oF\n_(사용자 데이터)_"
-L3: "**3. Transport Layer**\nTCP, UDP\n_(신뢰성, 흐름 제어)_\n← TOE 가 Offload 하는 영역"
-L2: "**2. Internet Layer**\nIP, ICMP, ARP\n_(라우팅, 주소)_\n← 일부 Offload (checksum, fragment)"
-L1: "**1. Network Access Layer**\nEthernet (MAC + PHY)\n_(물리 전송)_\n← NIC / DCMAC 이 처리"
+L4: "4. Application Layer\nHTTP, FTP, SSH, NVMe-oF\n_(사용자 데이터)_"
+L3: "3. Transport Layer\nTCP, UDP\n_(신뢰성, 흐름 제어)_\n← TOE 가 Offload 하는 영역"
+L2: "2. Internet Layer\nIP, ICMP, ARP\n_(라우팅, 주소)_\n← 일부 Offload (checksum, fragment)"
+L1: "1. Network Access Layer\nEthernet (MAC + PHY)\n_(물리 전송)_\n← NIC / DCMAC 이 처리"
 L4 -- L3
 L3 -- L2
 L2 -- L1

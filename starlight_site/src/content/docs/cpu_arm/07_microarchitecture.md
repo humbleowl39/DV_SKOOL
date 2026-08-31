@@ -44,14 +44,14 @@ title: "Module 07 — Microarchitecture (Frontend / OoO Backend / LSU)"
 ```d2
 direction: right
 
-BPU: "**BPU**\nTAGE-SC-L + BTB + RAS\n다음 PC 예측"
-FTQ: "**FTQ**\nfetch target queue\n(BPU 가 앞서 달림)"
-IC: "**I-cache + Decode**\nmicro-op crack\nN-wide"
-REN: "**Rename**\nsRAT + free list\nWAR/WAW 제거"
-IQ: "**Issue Queue**\nwakeup-select\n(OoO)"
-EX: "**Execute**\nALU/AGU/FPU"
-LSU: "**LSU**\nLDQ/STQ + STLF\n+ MSHR"
-ROB: "**ROB**\nin-order retire\nprecise exception"
+BPU: "BPU\nTAGE-SC-L + BTB + RAS\n다음 PC 예측"
+FTQ: "FTQ\nfetch target queue\n(BPU 가 앞서 달림)"
+IC: "I-cache + Decode\nmicro-op crack\nN-wide"
+REN: "Rename\nsRAT + free list\nWAR/WAW 제거"
+IQ: "Issue Queue\nwakeup-select\n(OoO)"
+EX: "Execute\nALU/AGU/FPU"
+LSU: "LSU\nLDQ/STQ + STLF\n+ MSHR"
+ROB: "ROB\nin-order retire\nprecise exception"
 
 BPU -> FTQ -> IC -> REN -> IQ -> EX
 IQ -> LSU
@@ -89,8 +89,8 @@ LSU -> ROB
 
 ```d2
 direction: right
-SRAT: "**Speculative RAT**\n(front-end)\nrename 마다 갱신\nin-flight 매핑"
-RRAT: "**Retirement RAT**\n(architectural)\nretire 시에만 갱신\n확정 상태"
+SRAT: "Speculative RAT\n(front-end)\nrename 마다 갱신\nin-flight 매핑"
+RRAT: "Retirement RAT\n(architectural)\nretire 시에만 갱신\n확정 상태"
 SRAT -> RRAT: "retire 시 확정"
 RRAT -> SRAT: "mispredict/exception 시\nrollback (복원)"
 ```

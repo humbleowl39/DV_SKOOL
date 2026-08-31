@@ -54,12 +54,12 @@ RTL 코어(실제 주자)가 한 명령을 retire(한 걸음)하면, ISS(참조 
 ```d2
 direction: right
 
-RTL: "**RTL 코어**\n파이프라인 실행\n명령 retire 시\narchitectural 변화 노출"
-HOOK: "**Retire 사건**\n(rvfi_valid 등)\nPC / rd / CSR 변화"
-ISS: "**ISS (reference)**\nSpike-like\n한 스텝 진행\nISA 정의대로 상태 갱신"
-CMP: "**비교기**\nRTL state == ISS state?"
+RTL: "RTL 코어\n파이프라인 실행\n명령 retire 시\narchitectural 변화 노출"
+HOOK: "Retire 사건\n(rvfi_valid 등)\nPC / rd / CSR 변화"
+ISS: "ISS (reference)\nSpike-like\n한 스텝 진행\nISA 정의대로 상태 갱신"
+CMP: "비교기\nRTL state == ISS state?"
 OK: "일치 → 다음 명령"
-DIV: "불일치 →\n**first divergence flag**\n(즉시 멈춤)"
+DIV: "불일치 →\nfirst divergence flag\n(즉시 멈춤)"
 
 RTL -> HOOK: "retire"
 HOOK -> ISS: "같은 명령으로\n1 스텝 trigger"
@@ -91,10 +91,10 @@ OK -> RTL: "loop" { style.stroke-dash: 4 }
 ```d2
 direction: down
 
-S1: "**① RTL retire**\nADDI x5, x5, 1 retire\nrvfi_valid=1\nrvfi_rd_addr=5, rvfi_rd_wdata=0x41\nrvfi_pc_rdata=0x1000"
-S2: "**② ISS step**\n같은 PC(0x1000) 의\nADDI 를 ISS 가 실행\n→ ISS: x5 = 0x40+1 = 0x41"
-S3: "**③ 비교**\nRTL x5=0x41 == ISS x5=0x41 ✓\nPC next 도 일치 ✓"
-S4: "**④ 다음 명령으로**\n두 모델 동기 유지\n(불일치였다면 flag 후 멈춤)"
+S1: "① RTL retire\nADDI x5, x5, 1 retire\nrvfi_valid=1\nrvfi_rd_addr=5, rvfi_rd_wdata=0x41\nrvfi_pc_rdata=0x1000"
+S2: "② ISS step\n같은 PC(0x1000) 의\nADDI 를 ISS 가 실행\n→ ISS: x5 = 0x40+1 = 0x41"
+S3: "③ 비교\nRTL x5=0x41 == ISS x5=0x41 ✓\nPC next 도 일치 ✓"
+S4: "④ 다음 명령으로\n두 모델 동기 유지\n(불일치였다면 flag 후 멈춤)"
 
 S1 -> S2 -> S3 -> S4
 ```
@@ -158,7 +158,7 @@ direction: right
 
 FETCH: "Fetch"
 EXEC: "Execute\n(추측 포함,\n폐기될 수 있음)"
-RETIRE: "**Retire**\narchitectural\n확정 ✓"
+RETIRE: "Retire\narchitectural\n확정 ✓"
 
 FETCH -> EXEC -> RETIRE
 RETIRE -> CMP: "여기서만 비교"

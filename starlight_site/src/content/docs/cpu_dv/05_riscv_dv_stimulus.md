@@ -57,13 +57,13 @@ add  x6, x5, x7     # 바로 다음 명령이 x5 를 소비 → load-use hazard
 ```d2
 direction: right
 
-CFG: "**생성 설정**\ninstr 분포(weight)\nillegal/HINT 비율\nprivilege 시퀀스\nseed"
-ISG: "**ISG**\n(riscv-dv / force-riscv)\n제약 랜덤 명령 스트림"
-ASM: "**.S 어셈블리**\n+ 부트 코드\n+ 트랩 핸들러"
-ELF: "**ELF / hex**\n(toolchain assemble & link)"
-RTL: "**RTL CPU**\n(DUT, UVM env)"
-ISS: "**ISS reference**\n(Spike 등)"
-CMP: "**Step-and-Compare**\nretire 시점 state 비교"
+CFG: "생성 설정\ninstr 분포(weight)\nillegal/HINT 비율\nprivilege 시퀀스\nseed"
+ISG: "ISG\n(riscv-dv / force-riscv)\n제약 랜덤 명령 스트림"
+ASM: ".S 어셈블리\n+ 부트 코드\n+ 트랩 핸들러"
+ELF: "ELF / hex\n(toolchain assemble & link)"
+RTL: "RTL CPU\n(DUT, UVM env)"
+ISS: "ISS reference\n(Spike 등)"
+CMP: "Step-and-Compare\nretire 시점 state 비교"
 
 CFG -> ISG: "knob 주입"
 ISG -> ASM: "프로그램 생성"
@@ -93,11 +93,11 @@ ISS -> CMP: "golden trace"
 ```d2
 direction: down
 
-S1: "**① 제약 정의**\nload 다음에 임의 ALU 명령 허용\n레지스터 의존 무작위\n(같은 rd 를 다음 rs 로 쓸 수 있음)"
-S2: "**② ISG 생성(seed=N)**\nlw x5,0(x10)\nadd x6,x5,x7\n... 수백 명령"
-S3: "**③ assemble → ELF**\n부트/트랩 핸들러 포함"
-S4: "**④ 공동 실행**\nRTL retire trace\nISS golden trace"
-S5: "**⑤ 비교 + coverage**\nx6 값 일치?\nload-use cross bin ↑"
+S1: "① 제약 정의\nload 다음에 임의 ALU 명령 허용\n레지스터 의존 무작위\n(같은 rd 를 다음 rs 로 쓸 수 있음)"
+S2: "② ISG 생성(seed=N)\nlw x5,0(x10)\nadd x6,x5,x7\n... 수백 명령"
+S3: "③ assemble → ELF\n부트/트랩 핸들러 포함"
+S4: "④ 공동 실행\nRTL retire trace\nISS golden trace"
+S5: "⑤ 비교 + coverage\nx6 값 일치?\nload-use cross bin ↑"
 S1 -> S2 -> S3 -> S4 -> S5
 ```
 
@@ -176,10 +176,10 @@ directed 가 유효성 100% / 다양성 낮음이라면, 순수 무작위는 다
 ```d2
 direction: down
 
-K1: "**명령 분포 knob**\n카테고리별 weight\n(ALU/load/store/branch ratio)\n특정 명령 활성/비활성"
-K2: "**구조 knob**\n프로그램 길이\nsub-program(call/ret) 깊이\nloop 개수·반복"
-K3: "**시스템 knob**\nprivilege 모드 시퀀스\nCSR 접근 비율\nillegal instr / 예외 / 인터럽트 주입"
-K4: "**메모리 knob**\n데이터 페이지 배치\n정렬/비정렬 접근\n(MMU 모드)"
+K1: "명령 분포 knob\n카테고리별 weight\n(ALU/load/store/branch ratio)\n특정 명령 활성/비활성"
+K2: "구조 knob\n프로그램 길이\nsub-program(call/ret) 깊이\nloop 개수·반복"
+K3: "시스템 knob\nprivilege 모드 시퀀스\nCSR 접근 비율\nillegal instr / 예외 / 인터럽트 주입"
+K4: "메모리 knob\n데이터 페이지 배치\n정렬/비정렬 접근\n(MMU 모드)"
 ```
 
 knob 은 곧 _coverage 를 어디로 편향할지_ 의 손잡이입니다. coverage hole 이 "supervisor 모드 진입이 한 번도 없음"으로 나오면 privilege 시퀀스 knob 을 키우고, "비정렬 load 가 없음"이면 메모리 knob 을 조정하는 식입니다. 이 closed loop(생성 → coverage → knob 조정)이 CPU DV 의 일상입니다.

@@ -107,17 +107,17 @@ HBM4 규격은 아예 절 하나를 여기에 씁니다 — **§6.9.5 On-die ECC
 direction: right
 
 DEF: "결함 발생\n(단일 비트 오류)" { style.fill: "#ffcdd2"; style.font-color: "#0A0F25" }
-ECC: "**on-die ECC**\ndie 내부에서 정정" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
-DATA: "DQ 데이터 경로\n→ 정확한 값\n**결함 흔적 없음**" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
-SEV: "**SEV 핀** (PC당 2개)\n실시간 심각도\nNE / CEs / CEm / UE" { style.fill: "#c8e6c9"; style.font-color: "#0A0F25" }
-FILT: "**ERRTH 필터**\nERRCNT <= ERRTH 이면\nCEs를 NE로 보고" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
-TAP: "**IEEE 1500**\nECS_ERROR_LOG WDR\n→ 오류 주소까지 기록" { style.fill: "#c8e6c9"; style.font-color: "#0A0F25" }
+ECC: "on-die ECC\ndie 내부에서 정정" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+DATA: "DQ 데이터 경로\n→ 정확한 값\n결함 흔적 없음" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
+SEV: "SEV 핀 (PC당 2개)\n실시간 심각도\nNE / CEs / CEm / UE" { style.fill: "#c8e6c9"; style.font-color: "#0A0F25" }
+FILT: "ERRTH 필터\nERRCNT <= ERRTH 이면\nCEs를 NE로 보고" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
+TAP: "IEEE 1500\nECS_ERROR_LOG WDR\n→ 오류 주소까지 기록" { style.fill: "#c8e6c9"; style.font-color: "#0A0F25" }
 
 DEF -> ECC
 ECC -> DATA: "가려짐"
 ECC -> FILT
-FILT -> SEV: "**관측 창 1** (in-band)"
-ECC -> TAP: "**관측 창 2** (ECS 시)"
+FILT -> SEV: "관측 창 1 (in-band)"
+ECC -> TAP: "관측 창 2 (ECS 시)"
 ```
 
 > **정의.** 오류 정정 기능이 있는 설계에서는 **데이터 경로 관측만으로 부족**하다. 정정 사실 자체를 읽는 **별도 관측 경로**를 검증 환경이 사용해야 하며, 그 경로의 확보가 검증 항목이다.

@@ -384,15 +384,15 @@ Split ring (v1.0 부터 필수, v1.2 에서도 지배적) 은 queue 하나당 _�
 ```d2
 direction: down
 
-DT: "**Descriptor Table** (Q × 16 byte)\nD[0] D[1] D[2] ... D[Q-1]\n각 entry: addr / len / flags / next\n→ 실제 데이터 버퍼를 가리키는 포인터 배열" {
+DT: "Descriptor Table (Q × 16 byte)\nD[0] D[1] D[2] ... D[Q-1]\n각 entry: addr / len / flags / next\n→ 실제 데이터 버퍼를 가리키는 포인터 배열" {
   style.fill: "#e3f2fd"
   style.font-color: "#0A0F25"
 }
-AV: "**Available Ring** (driver 소유)\nflags / avail_idx / ring[0..Q-1]\nring[i % Q] = head descriptor index\n→ driver 가 '이거 처리해줘' 라고 올리는 곳" {
+AV: "Available Ring (driver 소유)\nflags / avail_idx / ring[0..Q-1]\nring[i % Q] = head descriptor index\n→ driver 가 '이거 처리해줘' 라고 올리는 곳" {
   style.fill: "#fff3e0"
   style.font-color: "#0A0F25"
 }
-US: "**Used Ring** (device 소유)\nflags / used_idx / {id, len}[0..Q-1]\nid = head desc index, len = 사용 byte 수\n→ device 가 '처리 끝났어' 라고 돌려주는 곳" {
+US: "Used Ring (device 소유)\nflags / used_idx / {id, len}[0..Q-1]\nid = head desc index, len = 사용 byte 수\n→ device 가 '처리 끝났어' 라고 돌려주는 곳" {
   style.fill: "#e8f5e9"
   style.font-color: "#0A0F25"
 }
@@ -440,14 +440,14 @@ VirtIO 1.1 은 split ring 의 대안으로 **packed ring** 을 도입했습니�
 ```d2
 direction: right
 
-SPLIT: "**Split Ring** (v1.0)" {
+SPLIT: "Split Ring (v1.0)" {
   D: "Descriptor Table"
   A: "Available Ring"
   U: "Used Ring"
   D -> A: "3개 영역\n별도 cache line"
   A -> U
 }
-PACKED: "**Packed Ring** (v1.1+)" {
+PACKED: "Packed Ring (v1.1+)" {
   P: "단일 Descriptor Array\nflags 안에 AVAIL/USED 상태\n(wrap counter 로 toggle)"
 }
 SPLIT -> PACKED: "DMA 엔진이\n1개 연속 ring 만 읽음\n→ cache locality ↑"

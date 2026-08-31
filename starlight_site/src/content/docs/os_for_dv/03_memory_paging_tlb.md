@@ -39,8 +39,8 @@ DMA 가 어느 주소를 쓰는지(physical 인가 virtual 인가)도 이 모듈
 direction: right
 
 CPU: "CPU\nlogical address\n[ p | d ]"
-TLB: "**TLB**\n(작고 빠른 cache)\nhit → frame 즉시"
-PT: "**Page Table**\n(메모리, PTBR 가 가리킴)\np → frame#"
+TLB: "TLB\n(작고 빠른 cache)\nhit → frame 즉시"
+PT: "Page Table\n(메모리, PTBR 가 가리킴)\np → frame#"
 PHY: "Physical Memory\n[ frame# | d ]"
 
 CPU -> TLB: "page number p"
@@ -113,8 +113,8 @@ D -> E
 
 ```d2
 direction: right
-EXT: "**External fragmentation**\n총량은 충분한데\n연속 자리가 없어 할당 불가\n(50-percent rule: ~1/3 손실)"
-INT: "**Internal fragmentation**\n고정 블록 할당 시\n블록 안에 남는 공간"
+EXT: "External fragmentation\n총량은 충분한데\n연속 자리가 없어 할당 불가\n(50-percent rule: ~1/3 손실)"
+INT: "Internal fragmentation\n고정 블록 할당 시\n블록 안에 남는 공간"
 ```
 
 contiguous allocation 은 빈 공간(**hole**)에 process 를 채울 때 first fit / best fit / worst fit 전략을 쓰지만(Ch.9.2.2), process 가 들고 나기를 반복하면 빈 공간이 조각나는 **external fragmentation** 에 시달립니다(50-percent rule: 메모리의 약 1/3 이 못 쓰게 될 수 있음, Ch.9.2.3). compaction 은 비싸고 execution-time relocation 일 때만 가능합니다. 더 나은 해법이 paging 입니다.

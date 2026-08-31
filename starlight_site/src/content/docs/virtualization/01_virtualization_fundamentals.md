@@ -153,9 +153,9 @@ static inline void load_new_mm_cr3(pgd_t *pgdir) {
 direction: down
 
 V: "Virtualization"
-CPU: "**CPU 가상화**\n특권 명령어\ntrap / emulate\nHW assist (VT-x, ARM)"
-MEM: "**Memory 가상화**\n주소 공간\n2-stage 변환\nshadow PT\n(EPT, NPT)"
-IO: "**I/O 가상화**\n디바이스 접근\nemulation / passthrough\n(SR-IOV, VFIO)"
+CPU: "CPU 가상화\n특권 명령어\ntrap / emulate\nHW assist (VT-x, ARM)"
+MEM: "Memory 가상화\n주소 공간\n2-stage 변환\nshadow PT\n(EPT, NPT)"
+IO: "I/O 가상화\n디바이스 접근\nemulation / passthrough\n(SR-IOV, VFIO)"
 V -> CPU
 V -> MEM
 V -> IO
@@ -272,10 +272,10 @@ Hypervisor 는 HW 와 Guest OS 사이에 위치하여 세 가지 역할을 동�
 direction: down
 
 ROOT: "모든 CPU 명령어"
-PLAIN: "**일반 명령어**\n(ADD, SUB, MOV, ...)\n어떤 권한 레벨이든 실행 가능\nHypervisor 개입 불필요"
-SENS: "**Sensitive 명령어**\nHW 상태를 변경/읽는 명령어"
-PRIV: "**Privileged (특권)**\n비특권 모드에서 실행 시\n자동 trap (예외)\n예: MSR 쓰기, HLT, ERET"
-NONPRIV: "**Non-privileged Sensitive** (문제!)\n비특권 모드에서도 trap 없이 실행\nHW 상태에 영향\n가상화 어려움 (x86 의 역사적 문제)\n예: POPF, SGDT (VT-x 이전)"
+PLAIN: "일반 명령어\n(ADD, SUB, MOV, ...)\n어떤 권한 레벨이든 실행 가능\nHypervisor 개입 불필요"
+SENS: "Sensitive 명령어\nHW 상태를 변경/읽는 명령어"
+PRIV: "Privileged (특권)\n비특권 모드에서 실행 시\n자동 trap (예외)\n예: MSR 쓰기, HLT, ERET"
+NONPRIV: "Non-privileged Sensitive (문제!)\n비특권 모드에서도 trap 없이 실행\nHW 상태에 영향\n가상화 어려움 (x86 의 역사적 문제)\n예: POPF, SGDT (VT-x 이전)"
 ROOT -> PLAIN
 ROOT -> SENS
 SENS -> PRIV

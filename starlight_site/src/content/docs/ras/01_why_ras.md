@@ -62,11 +62,11 @@ title: "Module 01 — 왜 RAS인가"
 ```d2
 direction: down
 
-RAS: "**RAS** — System Dependability"
+RAS: "RAS — System Dependability"
 
-REL: "**Reliability**\n계속 정상 동작\n(에러를 즉시 흡수)"
-AVA: "**Availability**\n결함 속에서도 uptime 유지\n(격리·복구)"
-SER: "**Serviceability**\n결함 진단·위치·수리\n(기록·보고)"
+REL: "Reliability\n계속 정상 동작\n(에러를 즉시 흡수)"
+AVA: "Availability\n결함 속에서도 uptime 유지\n(격리·복구)"
+SER: "Serviceability\n결함 진단·위치·수리\n(기록·보고)"
 
 RAS -> REL
 RAS -> AVA
@@ -102,15 +102,15 @@ SRAM 캐시 한 워드에 비트 플립이 생긴 순간부터 추적해 봅시�
 ```d2
 direction: down
 
-E: "**비트 플립 발생**\nSRAM 워드에 transient fault"
+E: "비트 플립 발생\nSRAM 워드에 transient fault"
 
-CE: "**① 1-bit 플립 → Corrected Error (CE)**\nReliability: ECC가 즉시 정정\n데이터 정상화, 동작 계속\n(선택) CE 카운터 ↑ → 임계 초과 시 보고"
+CE: "① 1-bit 플립 → Corrected Error (CE)\nReliability: ECC가 즉시 정정\n데이터 정상화, 동작 계속\n(선택) CE 카운터 ↑ → 임계 초과 시 보고"
 
-UE: "**② 2-bit 플립 → Uncorrectable Error (UE)**\nReliability로는 정정 불가, 검출만"
+UE: "② 2-bit 플립 → Uncorrectable Error (UE)\nReliability로는 정정 불가, 검출만"
 
-POISON: "**③ Availability: poison 태그**\nUE 데이터를 즉시 panic 시키지 않고\nPoison Bit 달아 버스로 전파\n소비 지점(ALU/NPU)에서 정밀 exception\n→ 해당 프로세스만 종료, 시스템 유지"
+POISON: "③ Availability: poison 태그\nUE 데이터를 즉시 panic 시키지 않고\nPoison Bit 달아 버스로 전파\n소비 지점(ALU/NPU)에서 정밀 exception\n→ 해당 프로세스만 종료, 시스템 유지"
 
-LOG: "**④ Serviceability: 기록 + 알림**\nERR<n>STATUS에 type/addr/timestamp 기록\n비동기 인터럽트 → SCP/BMC\n→ 운영자가 FRU 진단·교체"
+LOG: "④ Serviceability: 기록 + 알림\nERR<n>STATUS에 type/addr/timestamp 기록\n비동기 인터럽트 → SCP/BMC\n→ 운영자가 FRU 진단·교체"
 
 E -> CE: "1-bit"
 E -> UE: "2-bit"

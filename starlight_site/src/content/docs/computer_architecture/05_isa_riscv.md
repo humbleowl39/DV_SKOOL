@@ -42,9 +42,9 @@ ISA 를 모르면 검증 엔지니어는 "DUT 출력이 이상한데, 이게 버
 ```d2
 direction: down
 
-SW: "**Software 측**\ncompiler / OS / app\n(ISA 명령만 사용)"
-ISA: "**ISA = 계약**\nregisters, memory model,\nprivilege levels,\ninstruction encoding & semantics"
-HW: "**Hardware 측**\nmicroarchitecture\n(in-order / OoO / superscalar\n— 구현은 자유)"
+SW: "Software 측\ncompiler / OS / app\n(ISA 명령만 사용)"
+ISA: "ISA = 계약\nregisters, memory model,\nprivilege levels,\ninstruction encoding & semantics"
+HW: "Hardware 측\nmicroarchitecture\n(in-order / OoO / superscalar\n— 구현은 자유)"
 
 SW -> ISA: "이 명령만 쓰겠다"
 ISA -> HW: "이 의미대로 실행하라"
@@ -66,10 +66,10 @@ ISA 라는 추상 경계가 존재하는 이유는 세 가지 요구의 교집�
 ```d2
 direction: down
 
-DEC: "**Decode**\nR-format 인코딩 해석\nopcode=ADD, rd=x3,\nrs1=x1, rs2=x2"
-RF: "**Register File 읽기**\nread x1, x2\n(load/store ISA:\n산술은 레지스터에서만)"
-ALU: "**ALU**\nresult = x1 + x2"
-WB: "**Write Back**\nwrite x3 = result\n(x0 쓰기면 무시 — hardwired zero)"
+DEC: "Decode\nR-format 인코딩 해석\nopcode=ADD, rd=x3,\nrs1=x1, rs2=x2"
+RF: "Register File 읽기\nread x1, x2\n(load/store ISA:\n산술은 레지스터에서만)"
+ALU: "ALU\nresult = x1 + x2"
+WB: "Write Back\nwrite x3 = result\n(x0 쓰기면 무시 — hardwired zero)"
 
 DEC -> RF -> ALU -> WB
 ```
@@ -114,13 +114,13 @@ ISA 는 "프로그래머(컴파일러 포함)가 볼 수 있는 상태"와 그 �
 ```d2
 direction: right
 
-CISC: "**CISC** (VAX, x86)" {
+CISC: "CISC (VAX, x86)" {
   c1: "가변 길이 명령"
   c2: "복잡한 디코더\n(microcode)"
   c3: "메모리 피연산자 직접 연산"
   c4: "파이프라이닝 어려움"
 }
-RISC: "**RISC** (MIPS/ARM/RISC-V)" {
+RISC: "RISC (MIPS/ARM/RISC-V)" {
   r1: "고정 길이 명령"
   r2: "hardwired control\n(no microcode)"
   r3: "load/store — 산술은 레지스터만"
@@ -154,9 +154,9 @@ RISC-V("RISC Five")는 레거시 부담 없이 RISC 원칙을 결정화한 현�
 ```d2
 direction: down
 
-M: "**Machine (M)** — 최고 권한\nFirmware, SEE"
-S: "**Supervisor (S)**\nOS kernel"
-U: "**User (U)** — 최저 권한\nApplication"
+M: "Machine (M) — 최고 권한\nFirmware, SEE"
+S: "Supervisor (S)\nOS kernel"
+U: "User (U) — 최저 권한\nApplication"
 
 U -> S: "특권 명령 시도 → trap"
 S -> M: "특권 명령 시도 → trap"

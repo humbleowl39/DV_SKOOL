@@ -70,9 +70,9 @@ SUB x4, x1, x5   // 다음 사이클 EX 입력으로 x1 필요
 ```d2
 direction: right
 
-ADD: "**ADD x1,x2,x3**\nEX: ALU result(x1)\n생성" 
-FWD: "**Forwarding path**\nEX 출력 → 다음 EX 입력\n(register file 우회)"
-SUB: "**SUB x4,x1,x5**\nEX: x1 을 forwarding 으로\n즉시 받음 → stall 0"
+ADD: "ADD x1,x2,x3\nEX: ALU result(x1)\n생성" 
+FWD: "Forwarding path\nEX 출력 → 다음 EX 입력\n(register file 우회)"
+SUB: "SUB x4,x1,x5\nEX: x1 을 forwarding 으로\n즉시 받음 → stall 0"
 
 ADD -> FWD: "ALU result"
 FWD -> SUB: "bypass"
@@ -113,10 +113,10 @@ forwarding 이 없으면 SUB 는 ADD 가 WB 로 `x1` 을 레지스터 파일에 
 ```d2
 direction: down
 
-H: "**Hazard** — 이상적 CPI=1 을 깨는 것"
-D: "**Data Hazard**\n이전 명령 결과에 의존\nRAW / WAW / WAR"
-C: "**Control Hazard**\n분기 결과 미해결 →\nfetch 한 명령 flush"
-S: "**Structural Hazard**\n같은 사이클 같은 자원 경쟁\n(대개 설계로 회피)"
+H: "Hazard — 이상적 CPI=1 을 깨는 것"
+D: "Data Hazard\n이전 명령 결과에 의존\nRAW / WAW / WAR"
+C: "Control Hazard\n분기 결과 미해결 →\nfetch 한 명령 flush"
+S: "Structural Hazard\n같은 사이클 같은 자원 경쟁\n(대개 설계로 회피)"
 
 H -> D
 H -> C

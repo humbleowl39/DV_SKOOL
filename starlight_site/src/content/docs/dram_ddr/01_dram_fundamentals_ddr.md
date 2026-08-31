@@ -73,11 +73,11 @@ direction: down
 REQ: "요청 도착\n(Bank N, Row R)"
 BANK: "Bank N\nRow Buffer = 현재 open 된 Row (예: Row 5)"
 REQ -> BANK
-HIT: "① R == open Row\n**Row HIT**\ntCL 만 기다리면 데이터 나감\n★ 가장 빠름" { style.stroke-width: 3 }
+HIT: "① R == open Row\nRow HIT\ntCL 만 기다리면 데이터 나감\n★ 가장 빠름" { style.stroke-width: 3 }
 BANK -> HIT
-MISS: "② open Row 없음\n**Row MISS**\nACT(tRCD) → RD(tCL)"
+MISS: "② open Row 없음\nRow MISS\nACT(tRCD) → RD(tCL)"
 BANK -> MISS
-CONF: "③ 다른 R 이 open\n**Row CONFLICT**\nPRE(tRP) → ACT(tRCD) → RD(tCL)\n★ 가장 느림" { style.stroke-width: 3; style.stroke-dash: 4 }
+CONF: "③ 다른 R 이 open\nRow CONFLICT\nPRE(tRP) → ACT(tRCD) → RD(tCL)\n★ 가장 느림" { style.stroke-width: 3; style.stroke-dash: 4 }
 BANK -> CONF
 ```
 

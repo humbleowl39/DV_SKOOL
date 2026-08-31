@@ -52,14 +52,14 @@ JTAG(Joint Test Action Group; 그 이름의 위원회가 만든 IEEE 1149.1 표�
 direction: right
 
 TDI: "TDI →"
-IR: "**Instruction Register (IR)**\n어느 DR을 TDI↔TDO에\n연결할지 선택"
+IR: "Instruction Register (IR)\n어느 DR을 TDI↔TDO에\n연결할지 선택"
 MUX: "선택된 DR"
 BS: "Boundary Scan DR"
 ID: "IDCODE DR"
 BY: "BYPASS DR (1-bit)"
 DAP: "벤더 DR\n(DAP access)"
 TDO: "→ TDO"
-TAP: "**TAP Controller**\n16-state FSM\n(TMS로 구동)"
+TAP: "TAP Controller\n16-state FSM\n(TMS로 구동)"
 
 TDI -> IR: "shift (IR scan)"
 IR -> MUX: "선택"
@@ -91,11 +91,11 @@ TAP -> MUX: "Capture/Shift/Update-DR 제어"
 ```d2
 direction: down
 
-S0: "**① Test-Logic-Reset**\nTMS=1을 5클럭 → 무조건 reset 상태\nIDCODE가 기본 선택됨"
-S1: "**② Run-Test/Idle 경유**\nTMS=0으로 idle 진입"
-S2: "**③ Select-DR → Capture-DR**\nIDCODE 값을 DR에 capture(병렬 로드)"
-S3: "**④ Shift-DR**\nTMS=0 유지하며 32 TCK\nTDO로 IDCODE 비트가 LSB부터 출력"
-S4: "**⑤ Update-DR → Idle**\nDR scan 종료"
+S0: "① Test-Logic-Reset\nTMS=1을 5클럭 → 무조건 reset 상태\nIDCODE가 기본 선택됨"
+S1: "② Run-Test/Idle 경유\nTMS=0으로 idle 진입"
+S2: "③ Select-DR → Capture-DR\nIDCODE 값을 DR에 capture(병렬 로드)"
+S3: "④ Shift-DR\nTMS=0 유지하며 32 TCK\nTDO로 IDCODE 비트가 LSB부터 출력"
+S4: "⑤ Update-DR → Idle\nDR scan 종료"
 S0 -> S1 -> S2 -> S3 -> S4
 ```
 
@@ -127,8 +127,8 @@ IDLE: "Run-Test/Idle"
 SEL_DR: "Select-DR-Scan"
 SEL_IR: "Select-IR-Scan"
 
-DRPATH: "**DR scan 경로**\nCapture-DR → Shift-DR\n→ Exit1-DR → Update-DR"
-IRPATH: "**IR scan 경로**\nCapture-IR → Shift-IR\n→ Exit1-IR → Update-IR"
+DRPATH: "DR scan 경로\nCapture-DR → Shift-DR\n→ Exit1-DR → Update-DR"
+IRPATH: "IR scan 경로\nCapture-IR → Shift-IR\n→ Exit1-IR → Update-IR"
 
 TLR -> IDLE: "TMS=0"
 IDLE -> SEL_DR: "TMS=1"
@@ -203,10 +203,10 @@ Update-IR 순간 IR 값이 확정되고, 그 instruction에 대응하는 DR이 �
 
 ```d2
 direction: right
-JTAG: "**JTAG**\nTCK TMS TDI TDO (+TRSTn)\n4~5핀" {
+JTAG: "JTAG\nTCK TMS TDI TDO (+TRSTn)\n4~5핀" {
   DAP_J: "→ 같은 DAP"
 }
-SWD: "**SWD (Serial Wire Debug)**\nSWCLK + SWDIO\n2핀" {
+SWD: "SWD (Serial Wire Debug)\nSWCLK + SWDIO\n2핀" {
   DAP_S: "→ 같은 DAP"
 }
 ```

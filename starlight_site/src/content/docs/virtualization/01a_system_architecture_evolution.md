@@ -176,11 +176,11 @@ L -- K: { style.stroke-dash: 4 }
 ```d2
 direction: right
 
-S6: "**단계 6**\n현대 SoC"
-IO: "**1. IOMMU**\n디바이스 격리\n(가상화 전제)"
-PE: "**2. PEs**\nGPU / DSP / NPU / DPU\n워크로드 다양성"
-LLC: "**3. LLC**\n컴포넌트 간\n메모리 공유 효율"
-COH: "**4. HW Coherency**\n캐시 일관성 자동화\n(SW flush 제거)"
+S6: "단계 6\n현대 SoC"
+IO: "1. IOMMU\n디바이스 격리\n(가상화 전제)"
+PE: "2. PEs\nGPU / DSP / NPU / DPU\n워크로드 다양성"
+LLC: "3. LLC\n컴포넌트 간\n메모리 공유 효율"
+COH: "4. HW Coherency\n캐시 일관성 자동화\n(SW flush 제거)"
 S6 -> IO
 S6 -> PE
 S6 -> LLC
@@ -605,8 +605,8 @@ HV -> VMx: "3. 전달"
 
 ```d2
 direction: down
-S1: "**Stage 1**\nVA → IPA\n(VMx OS 관리)"
-S2: "**Stage 2**\nIPA → PA\n(Hypervisor 관리)"
+S1: "Stage 1\nVA → IPA\n(VMx OS 관리)"
+S2: "Stage 2\nIPA → PA\n(Hypervisor 관리)"
 DRAM: "DRAM"
 S1 -> S2 -> DRAM
 AX: "AxUSER 신호\nAXI 트랜잭션에 VM 정체성 운반\n→ 올바른 Stage 1/2 PT 선택" { style.stroke: "#5f6368"; style.stroke-dash: 4 }

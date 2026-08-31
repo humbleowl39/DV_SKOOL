@@ -310,12 +310,12 @@ RDMA 가 일반 DMA 와 다른 점은 "원격" 이라는 한 단어에 있습니
 ```d2
 direction: down
 
-PD: "**PD** · Protection Domain\n같은 PD 안에서만 cross-access 허용"
-MR: "**MR** · Memory Region\nDMA 가능 영역 + access flag\nlkey / rkey"
-QP: "**QP** · Queue Pair\nservice: RC / UC / UD / XRC"
-SQ: "**SQ** · Send Queue"
-RQ: "**RQ** · Recv Queue"
-CQ: "**CQ** · Completion Queue"
+PD: "PD · Protection Domain\n같은 PD 안에서만 cross-access 허용"
+MR: "MR · Memory Region\nDMA 가능 영역 + access flag\nlkey / rkey"
+QP: "QP · Queue Pair\nservice: RC / UC / UD / XRC"
+SQ: "SQ · Send Queue"
+RQ: "RQ · Recv Queue"
+CQ: "CQ · Completion Queue"
 WQE: "WQE — operation 디스크립터" { shape: oval }
 WC: "WC — 처리 결과" { shape: oval }
 PD -> MR
@@ -405,9 +405,9 @@ TX -> RX: "wire"
 direction: down
 
 ROOT: "RDMA 패밀리"
-IB: "**InfiniBand (IB)**\n━━━━━━━━━━━━\nIB Link / Net Layer\nIB SerDes (1x..12x)\nHPC, 전용 Fabric\n_IBTA Vol1_"
-IW: "**iWARP**\n━━━━━━━━━━━━\nTCP/IP 위에 RDMA\n표준 IP 인프라\n느림 (TCP overhead)\nLong-distance, WAN\n_IETF spec_"
-ROCE: "**RoCE (v1, v2)**\n━━━━━━━━━━━━\nEthernet 위에 RDMA\nv1: Eth L2 직결\nv2: IP/UDP(4791) + BTH\n데이터센터 표준\n_IBTA Annex A16/A17_"
+IB: "InfiniBand (IB)\n━━━━━━━━━━━━\nIB Link / Net Layer\nIB SerDes (1x..12x)\nHPC, 전용 Fabric\n_IBTA Vol1_"
+IW: "iWARP\n━━━━━━━━━━━━\nTCP/IP 위에 RDMA\n표준 IP 인프라\n느림 (TCP overhead)\nLong-distance, WAN\n_IETF spec_"
+ROCE: "RoCE (v1, v2)\n━━━━━━━━━━━━\nEthernet 위에 RDMA\nv1: Eth L2 직결\nv2: IP/UDP(4791) + BTH\n데이터센터 표준\n_IBTA Annex A16/A17_"
 ROOT -> IB
 ROOT -> IW
 ROOT -> ROCE
@@ -435,8 +435,8 @@ ROOT -> ROCE
 direction: down
 
 APP: "User application"
-LIB: "**libibverbs** (Verbs)\n_OFED user-space lib_"
-KER: "**ib_uverbs / rdma_cm**\n_kernel module_"
+LIB: "libibverbs (Verbs)\n_OFED user-space lib_"
+KER: "ib_uverbs / rdma_cm\n_kernel module_"
 HW: "HCA / RNIC"
 APP -> LIB
 LIB -> KER: "ioctl / uverbs\n(control path)"

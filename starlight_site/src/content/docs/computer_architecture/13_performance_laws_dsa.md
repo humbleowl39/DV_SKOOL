@@ -42,10 +42,10 @@ title: "Module 13 — 성능 법칙 & 이종 SoC/DSA"
 ```d2
 direction: down
 
-PERF: "**성능 질문**"
-IRON: "**Iron Law**\nCPU Time = IC × CPI × Cycle Time\n→ 변화의 원인 축 분해"
-AMDAHL: "**Amdahl's Law**\nSpeedup = 1/((1-f) + f/S)\n→ 병렬화/오프로드 상한"
-ROOF: "**Roofline**\nperf = min(compute roof,\nAI × memory BW)\n→ compute vs memory bound"
+PERF: "성능 질문"
+IRON: "Iron Law\nCPU Time = IC × CPI × Cycle Time\n→ 변화의 원인 축 분해"
+AMDAHL: "Amdahl's Law\nSpeedup = 1/((1-f) + f/S)\n→ 병렬화/오프로드 상한"
+ROOF: "Roofline\nperf = min(compute roof,\nAI × memory BW)\n→ compute vs memory bound"
 
 PERF -> IRON
 PERF -> AMDAHL
@@ -67,9 +67,9 @@ PERF -> ROOF
 ```d2
 direction: right
 
-PROG: "**프로그램**\n95% 병렬(f=0.95)\n5% 직렬(1-f=0.05)"
-ACC: "**가속기**\n병렬 부분 S× 빠르게"
-CAP: "**상한**\nS→∞ 이면\nSpeedup → 1/(1-f) = 20×"
+PROG: "프로그램\n95% 병렬(f=0.95)\n5% 직렬(1-f=0.05)"
+ACC: "가속기\n병렬 부분 S× 빠르게"
+CAP: "상한\nS→∞ 이면\nSpeedup → 1/(1-f) = 20×"
 
 PROG -> ACC -> CAP
 ```
@@ -126,9 +126,9 @@ Amdahl 의 비관적 천장에는 숨은 가정이 있습니다 — **문제 크
 ```d2
 direction: right
 
-LOW: "**낮은 AI**\n(예: memcpy ~0.08 FLOP/byte)\n→ memory bandwidth bound\ncompute 늘려도 무익"
-HIGH: "**높은 AI**\n(예: dense matmul ~N/2)\n→ compute bound\nbandwidth 늘려도 무익"
-ROOF: "**perf = min(compute roof,\nAI × memory BW)**"
+LOW: "낮은 AI\n(예: memcpy ~0.08 FLOP/byte)\n→ memory bandwidth bound\ncompute 늘려도 무익"
+HIGH: "높은 AI\n(예: dense matmul ~N/2)\n→ compute bound\nbandwidth 늘려도 무익"
+ROOF: "perf = min(compute roof,\nAI × memory BW)"
 
 LOW -> ROOF
 HIGH -> ROOF
@@ -164,7 +164,7 @@ TPU 의 "matmul systolic array"가 단지 곱셈기를 많이 모은 것이 아�
 ```d2
 direction: down
 
-SOC: "**Heterogeneous SoC**" {
+SOC: "Heterogeneous SoC" {
   CPU: "CPU Complex\n(C0, C1, ... + L3/LLC)"
   ACC: "Accelerator Cluster\n(NPU, DMA, Crypto)"
 }

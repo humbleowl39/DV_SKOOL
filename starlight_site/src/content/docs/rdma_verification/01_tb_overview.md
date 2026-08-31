@@ -271,31 +271,33 @@ TB 는 `cfg.num_nodes` 만큼 `vrdma_node_env` 를 build 단계에서 생성합�
 ```d2
 direction: down
 
-TOP: "uvm_test_top\n(rdma_basic_test)" {
-  ENV: "env\n(vrdmatb_top_env)" {
-    N0: "node[0]\n(vrdma_node_env)" {
-      H0: "host_env\n(vrdma_host_env)"
-      I0: "ipshell_env\n(vrdma_ipshell_env)"
-      A0: "agent\n(vrdma_agent)" {
-        DRV: "driver\n(vrdma_driver)"
-        SQR: "sequencer\n(vrdma_sequencer)"
-        HND: "handlers\n(cq/send/recv/write/read_handler)"
-      }
+TOP: "uvm_test_top\n(rdma_basic_test)"
+
+ENV: "env\n(vrdmatb_top_env)" {
+  N0: "node[0]\n(vrdma_node_env)" {
+    H0: "host_env\n(vrdma_host_env)"
+    I0: "ipshell_env\n(vrdma_ipshell_env)"
+    A0: "agent\n(vrdma_agent)" {
+      DRV: "driver\n(vrdma_driver)"
+      SQR: "sequencer\n(vrdma_sequencer)"
+      HND: "handlers\n(cq/send/recv/write/read_handler)"
     }
-    N1: "node[1]\n(vrdma_node_env)\n— 동일 구조 —"
-    NTW: "ntw_env\n(vrdma_ntw_env)" {
-      PM: "pkt_monitor[0,1]\n(vrdma_pkt_monitor)"
-    }
-    DATA: "data_env\n(vrdma_data_env)" {
-      CMP: "1side / 2side / imm_compare"
-      DSB: "data_scoreboard\ncqe_validation_checker"
-    }
-    DMA: "dma_env\n(vrdma_dma_env)" {
-      C2H: "c2h_tracker"
-    }
-    VSEQR: "top_vseqr\n(vrdma_top_virtual_sequencer)"
   }
+  N1: "node[1]\n(vrdma_node_env)\n— 동일 구조 —"
+  NTW: "ntw_env\n(vrdma_ntw_env)" {
+    PM: "pkt_monitor[0,1]\n(vrdma_pkt_monitor)"
+  }
+  DATA: "data_env\n(vrdma_data_env)" {
+    CMP: "1side / 2side / imm_compare"
+    DSB: "data_scoreboard\ncqe_validation_checker"
+  }
+  DMA: "dma_env\n(vrdma_dma_env)" {
+    C2H: "c2h_tracker"
+  }
+  VSEQR: "top_vseqr\n(vrdma_top_virtual_sequencer)"
 }
+
+TOP -> ENV
 ```
 
 ---

@@ -85,8 +85,8 @@ FIELDS: "protected/local 필드\n(캡슐화)"
 CB: "virtual do_copy/do_compare\n(다형성 + CAN-DO 콜백)"
 
 OBJ -> ITEM: "extends 체인"
-ITEM -> FIELDS: "내부 상태 은닉"
-ITEM -> CB: "override로 동작 정의"
+ITEM -> FIELDS: "내부 상태\n은닉"
+ITEM -> CB: "override로\n동작 정의"
 ```
 
 ### 단계별 의미

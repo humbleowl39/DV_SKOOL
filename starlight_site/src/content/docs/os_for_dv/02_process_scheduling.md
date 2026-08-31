@@ -112,8 +112,8 @@ process 는 자기 시간을 어디에 쓰느냐에 따라 I/O 를 주로 하는
 ```d2
 direction: down
 
-C: "**concurrency**\n여러 작업이 '진행 중'\n단일 코어면 interleaved\n(번갈아 실행)"
-P: "**parallelism**\n여러 코어에서 '동시에'\n멀티코어라야 가능"
+C: "concurrency\n여러 작업이 '진행 중'\n단일 코어면 interleaved\n(번갈아 실행)"
+P: "parallelism\n여러 코어에서 '동시에'\n멀티코어라야 가능"
 ```
 
 즉 단일 코어에서도 concurrency 는 가능하지만 parallelism 은 멀티코어라야 가능합니다.

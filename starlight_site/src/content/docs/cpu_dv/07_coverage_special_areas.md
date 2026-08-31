@@ -59,11 +59,11 @@ CSR·privilege·exception 의 _이름_(예: `mstatus`, `mcause`)은 RISC-V 사�
 ```d2
 direction: down
 
-L0: "**ISA functional coverage**\n명령 종류 · 레지스터 · 명령 인접(cross/transition)"
-L1: "**상태 영역**\nCSR 접근 · privilege mode 전이\nexception 진입/복귀"
-L2: "**이벤트 영역**\ninterrupt × 명령 경계\nexception × 명령 타입"
-L3: "**메모리 영역**\nMMU/page table · 정렬\nmemory ordering(load/store 관찰 순서)"
-L4: "**동시성 영역**\nOoO retire · multi-hart\nrace · atomic"
+L0: "ISA functional coverage\n명령 종류 · 레지스터 · 명령 인접(cross/transition)"
+L1: "상태 영역\nCSR 접근 · privilege mode 전이\nexception 진입/복귀"
+L2: "이벤트 영역\ninterrupt × 명령 경계\nexception × 명령 타입"
+L3: "메모리 영역\nMMU/page table · 정렬\nmemory ordering(load/store 관찰 순서)"
+L4: "동시성 영역\nOoO retire · multi-hart\nrace · atomic"
 
 L0 -> L1 -> L2 -> L3 -> L4: "위로 갈수록 상호작용·전이가 핵심"
 ```
@@ -87,11 +87,11 @@ L0 -> L1 -> L2 -> L3 -> L4: "위로 갈수록 상호작용·전이가 핵심"
 ```d2
 direction: down
 
-S1: "**① 이벤트 관찰**\nretire monitor 가\nprivilege mode 변화 감지\n(M→S, S→U, trap, mret/sret)"
-S2: "**② coverpoint**\ncp_mode: 현재 privilege\ncp_cause: trap 원인(mcause)"
-S3: "**③ transition bins**\nM=>S, S=>U,\nU=>(trap)=>M, M=>(mret)=>S"
-S4: "**④ cross**\nprivilege 전이 × trap 원인\n(어느 원인이 어느 전이를 유발했나)"
-S5: "**⑤ closure**\n미커버 전이 → M05 knob 로 자극 편향"
+S1: "① 이벤트 관찰\nretire monitor 가\nprivilege mode 변화 감지\n(M→S, S→U, trap, mret/sret)"
+S2: "② coverpoint\ncp_mode: 현재 privilege\ncp_cause: trap 원인(mcause)"
+S3: "③ transition bins\nM=>S, S=>U,\nU=>(trap)=>M, M=>(mret)=>S"
+S4: "④ cross\nprivilege 전이 × trap 원인\n(어느 원인이 어느 전이를 유발했나)"
+S5: "⑤ closure\n미커버 전이 → M05 knob 로 자극 편향"
 S1 -> S2 -> S3 -> S4 -> S5
 ```
 
@@ -215,8 +215,8 @@ memory ordering 은 단일 코어 안에서도(load/store 재정렬), 특히 mul
 
 ```d2
 direction: down
-OOO: "**OoO 코어**\nin-order retire 보장?\nROB·하자드·예외 정밀성(precise exception)"
-MH: "**Multi-hart**\nhart 간 race\natomic(AMO/LR-SC)\n메모리 일관성"
+OOO: "OoO 코어\nin-order retire 보장?\nROB·하자드·예외 정밀성(precise exception)"
+MH: "Multi-hart\nhart 간 race\natomic(AMO/LR-SC)\n메모리 일관성"
 ```
 
 OoO 코어는 내부적으로 명령을 재정렬해도 _architectural 효과는 in-order_ 여야 합니다(precise exception). coverage 는 "재정렬이 실제로 일어났고, 그래도 retire 순서/예외가 정확한가"를 봅니다. multi-hart 는 hart 간 race·atomic(LR/SC = Load-Reserved/Store-Conditional, 짝으로 쪼개지지 않는 갱신을 만드는 명령; AMO = Atomic Memory Operation, 읽기-수정-쓰기를 한 동작으로 처리하는 명령)·일관성이 추가 축입니다. OoO 배경은 [Computer Architecture M03](../../computer_architecture/03_ooo_branch_prediction/)를, scoreboard 의 OoO 매칭은 [UVM M05](../../uvm/05_tlm_scoreboard_coverage/)의 per-key 큐 패턴을 참조하세요.

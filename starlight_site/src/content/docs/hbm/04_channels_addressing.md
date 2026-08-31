@@ -103,7 +103,7 @@ HBM4는 총 폭 **2048-bit**에 **32채널**, 채널당 pseudo-channel **2개**�
 ```d2
 direction: down
 
-CH: "**Channel** (HBM3 기준 16개)" {
+CH: "Channel (HBM3 기준 16개)" {
   style.fill: "#bbdefb"
   style.font-color: "#0A0F25"
   desc: "데이터 I/O 64-bit · 뱅크 분리 · CA 버스 분리\n→ 채널 간에는 독립성이 높다"
@@ -112,7 +112,7 @@ CH: "**Channel** (HBM3 기준 16개)" {
 PC0: "Pseudo-channel 0\n데이터 32-bit · 뱅크 분리" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 PC1: "Pseudo-channel 1\n데이터 32-bit · 뱅크 분리" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 
-SHARED: "**두 pc가 공유하는 것**" {
+SHARED: "두 pc가 공유하는 것" {
   style.fill: "#ffcdd2"
   style.font-color: "#0A0F25"
 

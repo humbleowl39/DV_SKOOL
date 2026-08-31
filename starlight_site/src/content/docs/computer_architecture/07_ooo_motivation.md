@@ -42,12 +42,12 @@ OoO 코어를 검증할 때 가장 흔한 함정은 _실행 순서_ 와 _완료(
 ```d2
 direction: right
 
-FE: "**Front-end**\nfetch / decode\nrename"
-DISP: "**Dispatch (in-order)**\nROB 진입\nRS 배정"
-RS: "**Reservation Stations**\noperand 준비된 것부터\nissue (OoO)"
-FU: "**Functional Units**\nALU / FPU / LSU"
-CDB: "**Common Data Bus**\nresult + tag broadcast"
-ROB: "**ROB**\nretire (in-order)\narchitectural state 갱신"
+FE: "Front-end\nfetch / decode\nrename"
+DISP: "Dispatch (in-order)\nROB 진입\nRS 배정"
+RS: "Reservation Stations\noperand 준비된 것부터\nissue (OoO)"
+FU: "Functional Units\nALU / FPU / LSU"
+CDB: "Common Data Bus\nresult + tag broadcast"
+ROB: "ROB\nretire (in-order)\narchitectural state 갱신"
 
 FE -> DISP -> RS -> FU
 FU -> CDB: "완료 broadcast"
@@ -79,13 +79,13 @@ SUB x6, x3, x7   // x3(ADD 결과)에 의존
 ```d2
 direction: down
 
-INORDER: "**In-order**" {
+INORDER: "In-order" {
   a: "LW (miss) 100 cyc stall"
   b: "ADD 도 함께 멈춤 (독립인데!)"
   c: "SUB 도 멈춤"
   a -> b -> c
 }
-OOO: "**OoO**" {
+OOO: "OoO" {
   x: "LW (miss) → RS 에서 대기"
   y: "ADD: operand 준비됨 → 먼저 issue"
   z: "SUB: ADD 결과(CDB) 받고 issue"

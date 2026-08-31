@@ -270,7 +270,7 @@ ROCE: "RoCEv2 의 운명" {
 IB.mgmt -> ROCE.r_mgmt: "교체/제거"
 IB.lnk -> ROCE.r_link: "제거" { style.stroke: "#c0392b" }
 IB.net -> ROCE.r_net: "매핑"
-IB.tr -> ROCE.r_tr: "**재사용**" { style.stroke: "#137333"; style.stroke-width: 3 }
+IB.tr -> ROCE.r_tr: "재사용" { style.stroke: "#137333"; style.stroke-width: 3 }
 IB.icrc -> ROCE.r_icrc: "재계산"
 ```
 

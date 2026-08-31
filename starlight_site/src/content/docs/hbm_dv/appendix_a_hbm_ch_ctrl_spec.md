@@ -22,7 +22,7 @@ direction: right
 
 HOST: "상위 로직 / 호스트 측" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
 
-DUT: "**hbm_ch_ctrl** (DUT)" {
+DUT: "hbm_ch_ctrl (DUT)" {
   style.fill: "#bbdefb"
   style.font-color: "#0A0F25"
   sched: "요청 큐 · 스케줄러\n뱅크 상태 추적"
@@ -33,8 +33,8 @@ DUT: "**hbm_ch_ctrl** (DUT)" {
 
 DRAM: "DRAM (core die)\n— 검증 환경에서는 모델" { style.fill: "#f5f5f5"; style.font-color: "#0A0F25" }
 
-HOST -> DUT: "**CCI**\n비표준 제어 인터페이스\n(상용 VIP 없음 → Custom Agent 대상)"
-DUT -> DRAM: "**DCMD**\nrow / column 커맨드 (분리)\n+ DQ 데이터"
+HOST -> DUT: "CCI\n비표준 제어 인터페이스\n(상용 VIP 없음 → Custom Agent 대상)"
+DUT -> DRAM: "DCMD\nrow / column 커맨드 (분리)\n+ DQ 데이터"
 ```
 
 **세 인터페이스**

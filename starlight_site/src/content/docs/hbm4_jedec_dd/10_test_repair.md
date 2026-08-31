@@ -50,7 +50,7 @@ NORMAL: "정상 (No Repair)" {
 
 BROKEN: "위치2 불량 → Repair" {
   style.fill: "#ffebee"; style.font-color: "#0A0F25"
-  b: "위치1: R1   위치2: **XX**   위치3: R2   …   위치10: R8   **RA: R9**"
+  b: "위치1: R1   위치2: XX   위치3: R2   …   위치10: R8   RA: R9"
 }
 
 NOTE: "불량 레인의 입력 버퍼는 꺼지고\n여분 범프(RA)의 버퍼가 켜진다\n→ 모든 기능이 보존된다" {

@@ -31,11 +31,11 @@ title: "Module 11 — 캐시 조직 & miss"
 ```d2
 direction: right
 
-ADDR: "**Physical Address (32-bit)**\n[ Tag (18) | Index (8) | Offset (6) ]"
-IDX: "**Index → set 선택**\n256 set 중 하나"
-WAYS: "**그 set 의 4 ways**\n각 way 의 tag 와 비교"
-HIT: "**tag 일치 + valid**\n→ HIT (offset 으로 블록 내 바이트 선택)"
-MISS: "**불일치**\n→ MISS (하위 계층에서 블록 fetch)"
+ADDR: "Physical Address (32-bit)\n[ Tag (18) | Index (8) | Offset (6) ]"
+IDX: "Index → set 선택\n256 set 중 하나"
+WAYS: "그 set 의 4 ways\n각 way 의 tag 와 비교"
+HIT: "tag 일치 + valid\n→ HIT (offset 으로 블록 내 바이트 선택)"
+MISS: "불일치\n→ MISS (하위 계층에서 블록 fetch)"
 
 ADDR -> IDX -> WAYS
 WAYS -> HIT: "match"
@@ -81,9 +81,9 @@ unsigned tag    = addr >> 14;             // [31:14]
 ```d2
 direction: right
 
-C1: "**Compulsory**\n첫 접근(cold)\n불가피"
-C2: "**Capacity**\nworking set > 용량\n→ 용량 늘려야"
-C3: "**Conflict**\n같은 set 충돌·축출 반복\n→ associativity 높이면 감소"
+C1: "Compulsory\n첫 접근(cold)\n불가피"
+C2: "Capacity\nworking set > 용량\n→ 용량 늘려야"
+C3: "Conflict\n같은 set 충돌·축출 반복\n→ associativity 높이면 감소"
 ```
 
 miss 는 세 종류로 분류됩니다. **Compulsory(cold)** 는 블록의 첫 접근으로 피할 수 없습니다. **Capacity** 는 working set 이 캐시 용량을 초과해 생기며, 용량을 늘려야 줄어듭니다. **Conflict** 는 두 블록이 같은 set 에 매핑되어 서로를 반복 축출할 때이며, full associativity 로 제거되고 associativity 를 높이면 감소합니다. 이 분류는 캐시 검증에서 "이 miss 가 정상(cold)인지 설계 부족(conflict)인지"를 가르는 도구입니다.

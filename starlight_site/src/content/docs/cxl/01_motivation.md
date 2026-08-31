@@ -43,7 +43,7 @@ PCIe는 본질적으로 **DMA(producer-consumer) 모델**입니다. 여기서 pr
 direction: down
 
 CPU: "Host CPU\n(+ Home Agent / coherency)"
-PCIe: "**PCIe Physical Layer**\n(slot, pins, electricals)\n공유 물리 계층"
+PCIe: "PCIe Physical Layer\n(slot, pins, electricals)\n공유 물리 계층"
 IO: "CXL.io\n= PCIe TLP\n(enumeration, config, DMA)"
 CACHE: "CXL.cache\nDevice → Host\n호스트 메모리를\n가속기가 일관성 유지하며 캐싱"
 MEM: "CXL.mem\nHost → Device Mem\n외부 메모리를\nLoad/Store로 접근"

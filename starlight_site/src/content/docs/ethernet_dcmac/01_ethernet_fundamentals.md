@@ -81,8 +81,8 @@ L6: "L6 Presentation — TLS, JPEG, UTF-8 (인코딩/암호화/압축)"
 L5: "L5 Session — 세션 수립/유지/종료 (checkpoint)"
 L4: "L4 Transport — TCP/UDP/QUIC (end-to-end, port, 흐름·에러 제어)"
 L3: "L3 Network — IP/ICMP (논리 주소 + routing)"
-L2: "**L2 Data Link — Ethernet (frame, MAC 주소, CRC)**  ← DCMAC"
-L1: "**L1 Physical — bit stream, line coding, SerDes**  ← DCMAC PHY"
+L2: "L2 Data Link — Ethernet (frame, MAC 주소, CRC)  ← DCMAC"
+L1: "L1 Physical — bit stream, line coding, SerDes  ← DCMAC PHY"
 MED: "Physical Medium — 광/구리" { shape: circle }
 L7 -> L6 -> L5 -> L4 -> L3 -> L2 -> L1 -> MED
 ```
@@ -155,10 +155,10 @@ SD -> SD: "⑧ NRZ / PAM4"
 ```d2
 direction: down
 
-MAC: "**MAC (Media Access Control)** — frame 생성/파싱, FCS, 흐름 제어 (Pause/PFC) — ← DCMAC 이 이 계층"
-PCS: "**PCS (Physical Coding Sublayer)** — 인코딩 (64b/66b), Scrambling, Alignment, RS-FEC (100G+), Lane Distribution"
-PMA: "**PMA (Physical Medium Attachment)** — SerDes, CDR, Signal Conditioning"
-PMD: "**PMD (Physical Medium Dependent)** — 광모듈 (QSFP, SFP), 전기 인터페이스"
+MAC: "MAC (Media Access Control) — frame 생성/파싱, FCS, 흐름 제어 (Pause/PFC) — ← DCMAC 이 이 계층"
+PCS: "PCS (Physical Coding Sublayer) — 인코딩 (64b/66b), Scrambling, Alignment, RS-FEC (100G+), Lane Distribution"
+PMA: "PMA (Physical Medium Attachment) — SerDes, CDR, Signal Conditioning"
+PMD: "PMD (Physical Medium Dependent) — 광모듈 (QSFP, SFP), 전기 인터페이스"
 MED: "Physical Medium — 광섬유 / 구리" { shape: circle }
 MAC -> PCS: "MII / XGMII / CGMII / Segmented"
 PCS -> PMA: "PMA Service Interface"
@@ -221,7 +221,7 @@ direction: down
 A: "L7 Data" 
 B: "L4: [TCP hdr | Data]  — segment"
 C: "L3: [IP hdr | TCP hdr | Data]  — packet"
-D: "L2: [Eth hdr (DA/SA/Type) | IP hdr | TCP hdr | Data | FCS]  — **frame**  ← DCMAC payload 는 이 안쪽 전부"
+D: "L2: [Eth hdr (DA/SA/Type) | IP hdr | TCP hdr | Data | FCS]  — frame  ← DCMAC payload 는 이 안쪽 전부"
 E: "L1: 0/1 bit stream → SerDes"
 A -> B: "+TCP header (port)"
 B -> C: "+IP header (addr/route)"
@@ -262,12 +262,12 @@ D -> E: "line coding"
 ```d2
 direction: right
 
-CS: "**Circuit switching**\n(전화망, 1960s)\n회선 독점"
-PS: "**Packet switching**\n(Baran/Davies, 1964-65)\n통계적 다중화"
-ARPA: "**ARPANET**\n(1969)\nIMP = 최초 router"
-TCPIP: "**TCP/IP**\n(1974-83)\nFlag Day 1983.1.1"
-ETH: "**Ethernet**\n(Metcalfe, 1973)\nCSMA/CD → switch"
-DC: "**Datacenter network**\n(2000s~)\nSpine-Leaf, RDMA, DPU"
+CS: "Circuit switching\n(전화망, 1960s)\n회선 독점"
+PS: "Packet switching\n(Baran/Davies, 1964-65)\n통계적 다중화"
+ARPA: "ARPANET\n(1969)\nIMP = 최초 router"
+TCPIP: "TCP/IP\n(1974-83)\nFlag Day 1983.1.1"
+ETH: "Ethernet\n(Metcalfe, 1973)\nCSMA/CD → switch"
+DC: "Datacenter network\n(2000s~)\nSpine-Leaf, RDMA, DPU"
 CS -> PS -> ARPA -> TCPIP
 ARPA -> ETH
 TCPIP -> DC

@@ -175,9 +175,9 @@ asm volatile("smc #0"
 ```d2
 direction: down
 
-A: "**Stage A — Trap**\nSMC instruction\nPSTATE → SPSR_EL3\nPC → ELR_EL3\nPC ← VBAR_EL3 + 0x400"
-B: "**Stage B — Switch**\nSCR_EL3.NS toggle\nContext save (current world)\nContext restore (target world)\n모든 GPR / FP / sysreg"
-C: "**Stage C — Resume**\nERET to target EL\nSPSR_EL3 → PSTATE\nELR_EL3 → PC\noutgoing transaction\nNS attribute 갱신"
+A: "Stage A — Trap\nSMC instruction\nPSTATE → SPSR_EL3\nPC → ELR_EL3\nPC ← VBAR_EL3 + 0x400"
+B: "Stage B — Switch\nSCR_EL3.NS toggle\nContext save (current world)\nContext restore (target world)\n모든 GPR / FP / sysreg"
+C: "Stage C — Resume\nERET to target EL\nSPSR_EL3 → PSTATE\nELR_EL3 → PC\noutgoing transaction\nNS attribute 갱신"
 A -> B
 B -> C
 ```

@@ -48,8 +48,8 @@ MEM: ".mem 트래픽"
 
 VLSM_IO: "vLSM (.io)"
 VLSM_CM: "vLSM (.cachemem)"
-ARB: "**Arbiter**\n프로토콜 간 우선순위\n(Round-robin / WRR)"
-MUX: "**Multiplexer**\nFlit 시분할 실어 송출"
+ARB: "Arbiter\n프로토콜 간 우선순위\n(Round-robin / WRR)"
+MUX: "Multiplexer\nFlit 시분할 실어 송출"
 PHY: "Physical Layer\n(단일 Flex Bus 링크)"
 
 IO -> VLSM_IO
@@ -78,11 +78,11 @@ MUX -> PHY
 ```d2
 direction: down
 
-H1: "**Host**\n① 메모리 부족\n+64GB 요청"
-FM: "**Fabric Manager**\n② Add Capacity\n(Region X, 64GB)"
-DCD: "**DCD Memory**\n③ Region 준비\n+ Add 완료 응답"
-H2: "**Host**\n④ Region X 매핑\n페이지 테이블 갱신\nHDM 영역 확장 → 사용"
-H3: "**Host**\n⑤ Release Region X\n(workload 종료 후)"
+H1: "Host\n① 메모리 부족\n+64GB 요청"
+FM: "Fabric Manager\n② Add Capacity\n(Region X, 64GB)"
+DCD: "DCD Memory\n③ Region 준비\n+ Add 완료 응답"
+H2: "Host\n④ Region X 매핑\n페이지 테이블 갱신\nHDM 영역 확장 → 사용"
+H3: "Host\n⑤ Release Region X\n(workload 종료 후)"
 
 H1 -> FM: "Add mem request"
 FM -> DCD: "Add Capacity"

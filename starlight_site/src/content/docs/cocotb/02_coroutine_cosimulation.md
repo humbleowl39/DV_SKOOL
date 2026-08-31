@@ -44,14 +44,14 @@ cocotb 테스트는 Python 프로세스에서 돌고, DUT는 HDL 시뮬레이터
 ```d2
 direction: down
 
-PY: "**Python (cocotb)**\nasync def test(dut)" {
+PY: "Python (cocotb)\nasync def test(dut)" {
   s1: "① dut.din.value = x\n  (신호 write)"
   s2: "② await RisingEdge(dut.clk)\n  → 콜백 등록 후 Python 중단"
   s5: "⑤ 재개: dut.dout.value 읽기\n  + assert"
   s1 -> s2 -> s5
 }
 
-SIM: "**HDL Simulator**" {
+SIM: "HDL Simulator" {
   s3: "③ 시뮬레이션 시간 진행\n  posedge clk 발생"
   s4: "④ 등록된 콜백 실행\n  → Python coroutine resume"
   s3 -> s4
@@ -74,7 +74,7 @@ UVM의 driver는 `get_next_item` → 신호 구동 → `item_done`을 반복합�
 ```d2
 direction: down
 
-D: "**driver coroutine**\nasync def drive(dut, item)"
+D: "driver coroutine\nasync def drive(dut, item)"
 S1: "① dut.valid.value = 1\n   dut.data.value = item.data\n   (신호 구동)"
 S2: "② await RisingEdge(dut.clk)\n   (한 clock 진행 — Python 중단)"
 S3: "③ while dut.ready.value == 0:\n      await RisingEdge(dut.clk)\n   (handshake 대기)"

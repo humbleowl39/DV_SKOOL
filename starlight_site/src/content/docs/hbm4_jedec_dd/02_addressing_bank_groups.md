@@ -157,9 +157,9 @@ direction: right
 PowerOn: "Power On" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
 Reset: "Reset" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
 Config: "Configure Device\n(MRS)" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
-Idle: "**Bank Idle**" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+Idle: "Bank Idle" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
 Activating: "Activating" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
-BankActive: "**Bank Active**" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+BankActive: "Bank Active" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 Reading: "Reading" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 Writing: "Writing" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 Precharging: "Precharging" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }

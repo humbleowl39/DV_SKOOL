@@ -301,11 +301,11 @@ direction: down
 
 NIC: "Dual-Port 100G NIC (한 silicon)" {
   direction: right
-  PF0: "**PF 0**\nPort 0 (외부망)\nNumVFs=64" {
+  PF0: "PF 0\nPort 0 (외부망)\nNumVFs=64" {
     direction: down
     VF0a: "VF 0..63"
   }
-  PF1: "**PF 1**\nPort 1 (스토리지망)\nNumVFs=64" {
+  PF1: "PF 1\nPort 1 (스토리지망)\nNumVFs=64" {
     direction: down
     VF1a: "VF 0..63"
   }

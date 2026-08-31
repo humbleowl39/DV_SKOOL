@@ -178,13 +178,13 @@ direction: right
 CTRL: "메모리 컨트롤러" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
 FW: "초기화 펌웨어 / 테스트 호스트" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
 
-MRS: "**MRS 커맨드**\ncolumn 커맨드 경로\n§6.3.3.4" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
-IEEE: "**MODE_REGISTER_DUMP_SET**\nIEEE 1500 테스트 포트\n§13.5.13" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
+MRS: "MRS 커맨드\ncolumn 커맨드 경로\n§6.3.3.4" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+IEEE: "MODE_REGISTER_DUMP_SET\nIEEE 1500 테스트 포트\n§13.5.13" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
 
-MR: "**Mode Register 파일**\n20 × 8-bit · MA[4:0]\n채널당 1벌 (두 PC 공유)" { style.fill: "#bbdefb"; style.font-color: "#0A0F25" }
+MR: "Mode Register 파일\n20 × 8-bit · MA[4:0]\n채널당 1벌 (두 PC 공유)" { style.fill: "#bbdefb"; style.font-color: "#0A0F25" }
 
 CTRL -> MRS: "쓰기만"
-FW -> IEEE: "쓰기 + **읽기**"
+FW -> IEEE: "쓰기 + 읽기"
 MRS -> MR
 IEEE -> MR
 ```

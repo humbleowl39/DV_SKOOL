@@ -52,12 +52,12 @@ VA 의 비트를 잘라 각 권(L0~L3)의 색인으로 쓰고, 한 권이 "다�
 ```d2
 direction: right
 
-CPU: "**Load/Store/Fetch**\nVA 발생"
-UTLB: "**μTLB**\n(per-port, FA CAM)\n1-cycle hit"
-MTLB: "**Main TLB**\n(set-assoc SRAM)\n2~4 cycle"
-PWC: "**Page Walk Cache**\n중간 레벨 PTE\n(L0/L1/L2)"
-WALK: "**HW Page Walker**\n4-level walk\nD-cache 통해 PTE fetch"
-PA: "**PA**\n+ attrs (AP, AttrIndx, AF...)"
+CPU: "Load/Store/Fetch\nVA 발생"
+UTLB: "μTLB\n(per-port, FA CAM)\n1-cycle hit"
+MTLB: "Main TLB\n(set-assoc SRAM)\n2~4 cycle"
+PWC: "Page Walk Cache\n중간 레벨 PTE\n(L0/L1/L2)"
+WALK: "HW Page Walker\n4-level walk\nD-cache 통해 PTE fetch"
+PA: "PA\n+ attrs (AP, AttrIndx, AF...)"
 
 CPU -> UTLB: "VA"
 UTLB -> MTLB: "miss" { style.stroke-dash: 4 }
@@ -86,12 +86,12 @@ WALK -> PA: "leaf PTE"
 ```d2
 direction: down
 
-S0: "**VA = 0x0000_8000_0123_4567**\nL0=0x101(257) L1=0 L2=9 L3=0x34(52)\noffset=0x567"
-S1: "**① L0 (PGD)**\nbase = TTBR0_EL1 & ~0xFFF\nL0_table[257] → L1 table base"
-S2: "**② L1 (PUD)**\nL1_table[0] → L2 table base\n(여기서 1GB block 가능)"
-S3: "**③ L2 (PMD)**\nL2_table[9] → L3 table base\n(여기서 2MB block 가능)"
-S4: "**④ L3 (PTE)**\nL3_table[52] → leaf 4KB page descriptor"
-S5: "**⑤ PA**\nPA = (leaf.PA[51:12] << 12) | VA[11:0]\n= page_base | 0x567"
+S0: "VA = 0x0000_8000_0123_4567\nL0=0x101(257) L1=0 L2=9 L3=0x34(52)\noffset=0x567"
+S1: "① L0 (PGD)\nbase = TTBR0_EL1 & ~0xFFF\nL0_table[257] → L1 table base"
+S2: "② L1 (PUD)\nL1_table[0] → L2 table base\n(여기서 1GB block 가능)"
+S3: "③ L2 (PMD)\nL2_table[9] → L3 table base\n(여기서 2MB block 가능)"
+S4: "④ L3 (PTE)\nL3_table[52] → leaf 4KB page descriptor"
+S5: "⑤ PA\nPA = (leaf.PA[51:12] << 12) | VA[11:0]\n= page_base | 0x567"
 S0 -> S1 -> S2 -> S3 -> S4 -> S5
 ```
 

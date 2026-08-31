@@ -53,12 +53,12 @@ csrrw x0, mstatus, x6 # 그 결과를 CSR 에 write — privilege side-effect
 ```d2
 direction: down
 
-CPU: "**CPU DV 난이도**\n= 네 축의 곱(조합)"
+CPU: "CPU DV 난이도\n= 네 축의 곱(조합)"
 
-SS: "**① 상태 공간**\nPC × 32 레지스터 × CSR × 메모리\n→ 사실상 무한"
-PIPE: "**② 파이프라인 정렬**\nstall / forward / flush 의\n타이밍 조합"
-EXC: "**③ 예외 / 인터럽트**\n임의 명령 경계에서 발생\n→ precise 복구 필요"
-ORD: "**④ 메모리 오더링**\nload/store 재정렬,\n멀티코어 일관성"
+SS: "① 상태 공간\nPC × 32 레지스터 × CSR × 메모리\n→ 사실상 무한"
+PIPE: "② 파이프라인 정렬\nstall / forward / flush 의\n타이밍 조합"
+EXC: "③ 예외 / 인터럽트\n임의 명령 경계에서 발생\n→ precise 복구 필요"
+ORD: "④ 메모리 오더링\nload/store 재정렬,\n멀티코어 일관성"
 
 CPU -> SS
 CPU -> PIPE
@@ -69,7 +69,7 @@ SS -> BUG: "조합"
 PIPE -> BUG
 EXC -> BUG
 ORD -> BUG: "조합"
-BUG: "**버그는 네 축의\n특정 _조합_ 에 숨는다**\n→ directed 로는 못 닿음"
+BUG: "버그는 네 축의\n특정 조합에 숨는다\n→ directed 로는 못 닿음"
 ```
 
 ### 왜 이 네 축인가 — Design rationale
@@ -94,9 +94,9 @@ BUG: "**버그는 네 축의\n특정 _조합_ 에 숨는다**\n→ directed 로�
 ```d2
 direction: right
 
-A: "**Case A — 간격 있음**\nlw x5,..\nnop\nadd x6,x5,..\n→ forward 불필요\n(정상 경로)"
-B: "**Case B — 인접**\nlw x5,..\nadd x6,x5,..\n→ load-use forward\n(1-bubble 경로)"
-C: "**Case C — 인접 + stall**\n(앞단 stall 으로\n정렬이 한 칸 밀림)\n→ forward 타이밍 코너"
+A: "Case A — 간격 있음\nlw x5,..\nnop\nadd x6,x5,..\n→ forward 불필요\n(정상 경로)"
+B: "Case B — 인접\nlw x5,..\nadd x6,x5,..\n→ load-use forward\n(1-bubble 경로)"
+C: "Case C — 인접 + stall\n(앞단 stall 으로\n정렬이 한 칸 밀림)\n→ forward 타이밍 코너"
 
 A -> RESULT: "PASS"
 B -> RESULT: "PASS"
@@ -138,11 +138,11 @@ while (rtl_core.has_retired_instruction()) {
 ```d2
 direction: down
 
-L1: "**Level 1 — Sanity / Bring-up**\n부팅, 단순 명령 directed\n→ 기본 데이터패스 살아있나"
-L2: "**Level 2 — Directed ISA test**\n명령별 기능 directed\n→ 각 명령이 단독으로 맞나"
-L3: "**Level 3 — Constrained Random**\nriscv-dv 등으로 명령 stream 랜덤\n→ 조합/정렬 코너 케이스"
-L4: "**Level 4 — Step-and-Compare**\nreference model 과 retire 비교\n→ 모든 명령의 architectural 정합"
-L5: "**Level 5 — Coverage + Formal**\nISA coverage closure + riscv-formal\n→ 닿지 못한 상태까지 증명/측정"
+L1: "Level 1 — Sanity / Bring-up\n부팅, 단순 명령 directed\n→ 기본 데이터패스 살아있나"
+L2: "Level 2 — Directed ISA test\n명령별 기능 directed\n→ 각 명령이 단독으로 맞나"
+L3: "Level 3 — Constrained Random\nriscv-dv 등으로 명령 stream 랜덤\n→ 조합/정렬 코너 케이스"
+L4: "Level 4 — Step-and-Compare\nreference model 과 retire 비교\n→ 모든 명령의 architectural 정합"
+L5: "Level 5 — Coverage + Formal\nISA coverage closure + riscv-formal\n→ 닿지 못한 상태까지 증명/측정"
 
 L1 -> L2 -> L3 -> L4 -> L5
 ```

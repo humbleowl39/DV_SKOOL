@@ -52,13 +52,13 @@ writel(tail, regs + DOORBELL);  /* (3) 도어벨 — "준비됐다" */
 ```d2
 direction: down
 
-SRC: "**소스 코드**\ndesc 기록 → 도어벨 write"
+SRC: "소스 코드\ndesc 기록 → 도어벨 write"
 
-C1: "**위험 1: 캐싱**\nread가 캐시에서 stale 값\nwrite가 캐시에 머물러 디바이스 미도달" { style.fill: "#f5b7b1"; style.font-color: "#0A0F25" }
-C2: "**위험 2: 재정렬**\n컴파일러/CPU가 순서 변경\n도어벨이 디스크립터보다 먼저 도달" { style.fill: "#f5b7b1"; style.font-color: "#0A0F25" }
+C1: "위험 1: 캐싱\nread가 캐시에서 stale 값\nwrite가 캐시에 머물러 디바이스 미도달" { style.fill: "#f5b7b1"; style.font-color: "#0A0F25" }
+C2: "위험 2: 재정렬\n컴파일러/CPU가 순서 변경\n도어벨이 디스크립터보다 먼저 도달" { style.fill: "#f5b7b1"; style.font-color: "#0A0F25" }
 
-D1: "**방어 1: uncached 매핑**\nioremap → 캐시 우회\n모든 접근이 디바이스에 직접" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
-D2: "**방어 2: 메모리 배리어**\nwmb() 등으로 순서 고정\n'이 지점 전 write 먼저 완료'" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
+D1: "방어 1: uncached 매핑\nioremap → 캐시 우회\n모든 접근이 디바이스에 직접" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
+D2: "방어 2: 메모리 배리어\nwmb() 등으로 순서 고정\n'이 지점 전 write 먼저 완료'" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
 
 SRC -> C1
 SRC -> C2
@@ -77,10 +77,10 @@ C2 -> D2: "막음"
 ```d2
 direction: down
 
-S1: "**① 디스크립터 write**\ndesc->addr, desc->len\n(DRAM, cacheable)"
-S2: "**② wmb()**\nwrite barrier\n위의 write들이 *먼저* 가시화되도록 보장"
-S3: "**③ 도어벨 write**\nwritel(tail, DOORBELL)\n(MMIO, uncached)"
-S4: "**④ 디바이스가 도어벨 관찰**\n이제 디스크립터는 *반드시* 유효\n→ 안전하게 DMA"
+S1: "① 디스크립터 write\ndesc->addr, desc->len\n(DRAM, cacheable)"
+S2: "② wmb()\nwrite barrier\n위의 write들이 먼저 가시화되도록 보장"
+S3: "③ 도어벨 write\nwritel(tail, DOORBELL)\n(MMIO, uncached)"
+S4: "④ 디바이스가 도어벨 관찰\n이제 디스크립터는 반드시 유효\n→ 안전하게 DMA"
 S1 -> S2 -> S3 -> S4
 ```
 

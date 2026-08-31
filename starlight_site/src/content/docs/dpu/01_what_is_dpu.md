@@ -55,7 +55,7 @@ HOST: "Host CPU\n(애플리케이션 / 테넌트 VM)" {
   style.fill: "#e8f0fe"
   style.font-color: "#0A0F25"
 }
-DPU: "**DPU**\n프로그래머블 코어 + 가속기" {
+DPU: "DPU\n프로그래머블 코어 + 가속기" {
   style.fill: "#fef3e8"
   style.font-color: "#0A0F25"
   NET: "Networking\noffload"
@@ -148,8 +148,8 @@ CPU 성능만 높여서는 전체 시스템 성능이 같은 비율로 향상되
 direction: right
 
 CPU: "Host CPU\n(애플리케이션)"
-GPU: "**GPU**\n그래픽·병렬 계산 분리"
-DPU: "**DPU**\n네트워크·스토리지·보안·가상화 분리"
+GPU: "GPU\n그래픽·병렬 계산 분리"
+DPU: "DPU\n네트워크·스토리지·보안·가상화 분리"
 
 CPU -> GPU: "계산 워크로드 offload"
 CPU -> DPU: "인프라 워크로드 offload"

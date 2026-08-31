@@ -50,11 +50,11 @@ title: "N03 — Arm ADI(DAP) & CoreSight"
 direction: right
 
 PINS: "JTAG / SWD 핀"
-DP: "**DP (Debug Port)**\n물리 측 인터페이스\nJTAG-DP / SW-DP / SWJ-DP\nSELECT로 AP 지정"
-APMEM: "**MEM-AP**\nCSW / TAR / DRW\n→ 버스 트랜잭션 발행"
-APJTAG: "**JTAG-AP**\n내부 레거시 scan chain"
-BUS: "**Debug Bus**\nAPB / AHB / AXI"
-ROM: "**ROM table**\nMEM-AP base에 위치\n컴포넌트 디렉터리"
+DP: "DP (Debug Port)\n물리 측 인터페이스\nJTAG-DP / SW-DP / SWJ-DP\nSELECT로 AP 지정"
+APMEM: "MEM-AP\nCSW / TAR / DRW\n→ 버스 트랜잭션 발행"
+APJTAG: "JTAG-AP\n내부 레거시 scan chain"
+BUS: "Debug Bus\nAPB / AHB / AXI"
+ROM: "ROM table\nMEM-AP base에 위치\n컴포넌트 디렉터리"
 CS: "CoreSight 레지스터\n+ 시스템 메모리"
 
 PINS -> DP
@@ -84,12 +84,12 @@ DAP의 핵심 동작인 "MEM-AP를 통한 시스템 버스 write"를 단계로 �
 ```d2
 direction: down
 
-S1: "**① DP 선택**\n디버거가 JTAG/SWD로 DP에 접근"
-S2: "**② SELECT write**\n어느 AP + 어느 AP 레지스터 뱅크\n(예: APB-AP)"
-S3: "**③ CSW write**\nsize(워드/하프/바이트)\nauto-increment 설정"
-S4: "**④ TAR write**\nTarget Address Register\n= 목표 CoreSight 레지스터 주소"
-S5: "**⑤ DRW write**\nData Read/Write\n→ MEM-AP가 버스 트랜잭션 발행"
-S6: "**⑥ 버스 트랜잭션**\nAPB/AHB/AXI write가\nCoreSight 레지스터에 도달"
+S1: "① DP 선택\n디버거가 JTAG/SWD로 DP에 접근"
+S2: "② SELECT write\n어느 AP + 어느 AP 레지스터 뱅크\n(예: APB-AP)"
+S3: "③ CSW write\nsize(워드/하프/바이트)\nauto-increment 설정"
+S4: "④ TAR write\nTarget Address Register\n= 목표 CoreSight 레지스터 주소"
+S5: "⑤ DRW write\nData Read/Write\n→ MEM-AP가 버스 트랜잭션 발행"
+S6: "⑥ 버스 트랜잭션\nAPB/AHB/AXI write가\nCoreSight 레지스터에 도달"
 S1 -> S2 -> S3 -> S4 -> S5 -> S6
 ```
 
@@ -166,10 +166,10 @@ CoreSight는 DAP 너머에서 실제로 디버그·trace를 수행하는 IP fami
 ```d2
 direction: right
 
-SRC: "**Trace Source**\nETM (코어별 instruction trace)\nITM/STM (software trace)"
-LINK: "**Trace Link**\nFunnel (병합)\nReplicator (복제)"
-SINK_ON: "**On-chip Sink**\nETB/ETF (SRAM 버퍼)\nETR → 시스템 DRAM(AXI)"
-SINK_OFF: "**Off-chip Sink**\nTPIU (병렬 trace port)\nHSSTP (고속 직렬)"
+SRC: "Trace Source\nETM (코어별 instruction trace)\nITM/STM (software trace)"
+LINK: "Trace Link\nFunnel (병합)\nReplicator (복제)"
+SINK_ON: "On-chip Sink\nETB/ETF (SRAM 버퍼)\nETR → 시스템 DRAM(AXI)"
+SINK_OFF: "Off-chip Sink\nTPIU (병렬 trace port)\nHSSTP (고속 직렬)"
 
 SRC -> LINK: "trace 스트림"
 LINK -> SINK_ON
@@ -200,7 +200,7 @@ CoreSight는 디버그 동작을 네 신호로 게이팅합니다. 각 신호가
 ```d2
 direction: down
 
-SEC: "**보안 정책**\nfuse / lifecycle 상태" {
+SEC: "보안 정책\nfuse / lifecycle 상태" {
   D: "DBGEN → NS halt"
   N: "NIDEN → NS trace"
   SI: "SPIDEN → secure halt"

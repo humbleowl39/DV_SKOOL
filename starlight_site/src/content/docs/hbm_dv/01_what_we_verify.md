@@ -139,7 +139,7 @@ DUT가 아닙니다. 하지만 여기가 함정입니다. 선행 코스 [Ch03](.
 ```d2
 direction: down
 
-S1: "① 스펙 리뷰 · **경계 확정**\n무엇이 DUT이고 무엇이 모델인가" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+S1: "① 스펙 리뷰 · 경계 확정\n무엇이 DUT이고 무엇이 모델인가" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
 S2: "② V-Plan 수립\n스펙에서 검증 항목 도출" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 S3: "③ 환경 구축\nAgent · VIP · 환경 계층" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
 S4: "④ 시나리오 · Assertion 작성" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }

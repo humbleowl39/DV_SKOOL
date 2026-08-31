@@ -45,9 +45,9 @@ CPU가 디바이스의 status 레지스터를 준비될 때까지 반복해서 �
 ```d2
 direction: right
 
-POLL: "**폴링**\nstatus 반복 read\n낮은 latency, 높은 CPU\n(busy-wait)" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
-INT: "**인터럽트**\nISR 대기\n~0 CPU idle, 고율 스톰 위험" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
-HYB: "**하이브리드**\n인터럽트로 1회 wake\n→ 큐 빌 때까지 폴링\n(NAPI / NVMe busy-poll)" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
+POLL: "폴링\nstatus 반복 read\n낮은 latency, 높은 CPU\n(busy-wait)" { style.fill: "#aed6f1"; style.font-color: "#0A0F25" }
+INT: "인터럽트\nISR 대기\n~0 CPU idle, 고율 스톰 위험" { style.fill: "#abebc6"; style.font-color: "#0A0F25" }
+HYB: "하이브리드\n인터럽트로 1회 wake\n→ 큐 빌 때까지 폴링\n(NAPI / NVMe busy-poll)" { style.fill: "#f9e79f"; style.font-color: "#0A0F25" }
 
 LOAD: "워크로드"
 LOAD -> POLL: "저지연·예측가능 요구"
@@ -68,12 +68,12 @@ canonical 폴링 알고리즘은 host와 controller가 레지스터의 네 비�
 ```d2
 direction: down
 
-H1: "**Host ①** busy 비트가 클리어될 때까지 read 루프"
-H2: "**Host ②** command 레지스터에 명령 기록\n(write면 write 비트 set + data-out 채움)"
-H3: "**Host ③** command-ready 비트 set"
-C1: "**Controller ①** command-ready 보이면 busy 비트 set"
-C2: "**Controller ②** 명령 read → write면 data-out을 디바이스로,\nread면 data-in을 디바이스에서 로드"
-C3: "**Controller ③** command-ready clear, error clear, busy clear"
+H1: "Host ① busy 비트가 클리어될 때까지 read 루프"
+H2: "Host ② command 레지스터에 명령 기록\n(write면 write 비트 set + data-out 채움)"
+H3: "Host ③ command-ready 비트 set"
+C1: "Controller ① command-ready 보이면 busy 비트 set"
+C2: "Controller ② 명령 read → write면 data-out을 디바이스로,\nread면 data-in을 디바이스에서 로드"
+C3: "Controller ③ command-ready clear, error clear, busy clear"
 H1 -> H2 -> H3 -> C1 -> C2 -> C3
 C3 -> H1: "다음 명령 (busy 풀림)"
 ```
@@ -192,10 +192,10 @@ busy-wait의 근본 비용은 _코어가 깨어서 계속 status를 읽는_ 전�
 ```d2
 direction: right
 
-REG: "**레지스터 레벨**\nRAL hw_reset / bit_bash / access seq\nside-effect(W1C/RC) directed"
-INTV: "**인터럽트**\nlevel deassert·edge 래치·acknowledge\nMSI payload — SVA + scoreboard"
-POLLV: "**폴링**\nbusy/command-ready/done 핸드셰이크\ndeadlock·timeout directed"
-COVV: "**Coverage**\n레지스터×방향×응답 cross\n인터럽트 모드×부하 시나리오"
+REG: "레지스터 레벨\nRAL hw_reset / bit_bash / access seq\nside-effect(W1C/RC) directed"
+INTV: "인터럽트\nlevel deassert·edge 래치·acknowledge\nMSI payload — SVA + scoreboard"
+POLLV: "폴링\nbusy/command-ready/done 핸드셰이크\ndeadlock·timeout directed"
+COVV: "Coverage\n레지스터×방향×응답 cross\n인터럽트 모드×부하 시나리오"
 
 REG -> COVV
 INTV -> COVV

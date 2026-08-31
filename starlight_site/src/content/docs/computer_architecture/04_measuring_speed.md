@@ -45,8 +45,8 @@ title: "Module 04 — '빠르다'를 재는 법"
 ```d2
 direction: right
 
-LAT: "**Latency**\n작업 하나의\n시작→끝 시간\n(짧을수록 좋음)"
-THR: "**Throughput**\n단위 시간당\n끝낸 작업 수\n(많을수록 좋음)"
+LAT: "Latency\n작업 하나의\n시작→끝 시간\n(짧을수록 좋음)"
+THR: "Throughput\n단위 시간당\n끝낸 작업 수\n(많을수록 좋음)"
 NOTE: "겹쳐 처리(파이프라인)하면\nlatency 그대로,\nthroughput ↑"
 
 LAT -> NOTE
@@ -95,10 +95,10 @@ THR -> NOTE
 ```d2
 direction: right
 
-IC: "**명령 수 (IC)**\n알고리즘·컴파일러·ISA 가 결정"
-CPI: "**CPI**\n파이프라인·캐시·분기예측\n(마이크로아키텍처)이 결정"
-CT: "**사이클당 시간**\n주파수 = 회로·공정이 결정"
-TIME: "**실행 시간**\n= IC × CPI × CycleTime"
+IC: "명령 수 (IC)\n알고리즘·컴파일러·ISA 가 결정"
+CPI: "CPI\n파이프라인·캐시·분기예측\n(마이크로아키텍처)이 결정"
+CT: "사이클당 시간\n주파수 = 회로·공정이 결정"
+TIME: "실행 시간\n= IC × CPI × CycleTime"
 
 IC -> TIME
 CPI -> TIME

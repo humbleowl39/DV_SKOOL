@@ -49,11 +49,11 @@ Module 01 에서 "TOE 는 stateful offload" 라는 한 줄을 잡았습니다. �
 direction: down
 
 HOST: "Host Interface (PCIe / AXI)"
-DMA: "**DMA Engine**\n호스트 메모리 ↔ TOE 버퍼"
-CT: "**Connection Table**\nTCP 연결별 상태\n(seq / ack / window / timer / state)\n수천 ~ 수백만 엔트리"
-TX: "**TX Path**\nSegmentation\nChecksum Gen\nACK Process\nRetx Engine\nWindow Mgmt"
-RX: "**RX Path**\nReassembly\nChecksum Ver\nACK Generate\nFlow Control\nSeq Validate"
-MAC: "**MAC Interface**\nDCMAC / Ethernet MAC\n(Ethernet Frame TX/RX)"
+DMA: "DMA Engine\n호스트 메모리 ↔ TOE 버퍼"
+CT: "Connection Table\nTCP 연결별 상태\n(seq / ack / window / timer / state)\n수천 ~ 수백만 엔트리"
+TX: "TX Path\nSegmentation\nChecksum Gen\nACK Process\nRetx Engine\nWindow Mgmt"
+RX: "RX Path\nReassembly\nChecksum Ver\nACK Generate\nFlow Control\nSeq Validate"
+MAC: "MAC Interface\nDCMAC / Ethernet MAC\n(Ethernet Frame TX/RX)"
 HOST -- DMA
 DMA -- CT
 CT -- TX
@@ -372,15 +372,15 @@ direction: down
 
 SRAM: "On-Chip SRAM — 빠름, 비쌈, 작음" {
   direction: down
-  SR1: "**Connection Table (Hot Entries)**\n활성 연결의 상태 (Seq/ACK/Window/Timer)\n빠른 조회 필수 → SRAM / 레지스터\n예: 활성 1만 × 128B ≈ 1.2 MB"
-  SR2: "**Timer Wheel**\n슬롯 배열 + 포인터 → 소량 SRAM"
-  SR3: "**패킷 버퍼 (Small)**\n현재 처리 중인 패킷 (파이프라인 버퍼)\n수 KB ~ 수십 KB"
+  SR1: "Connection Table (Hot Entries)\n활성 연결의 상태 (Seq/ACK/Window/Timer)\n빠른 조회 필수 → SRAM / 레지스터\n예: 활성 1만 × 128B ≈ 1.2 MB"
+  SR2: "Timer Wheel\n슬롯 배열 + 포인터 → 소량 SRAM"
+  SR3: "패킷 버퍼 (Small)\n현재 처리 중인 패킷 (파이프라인 버퍼)\n수 KB ~ 수십 KB"
 }
 DRAM: "Off-Chip DRAM — 느림, 저렴, 큼" {
   direction: down
-  DR1: "**Connection Table (Cold Entries)**\n비활성 / 대기 연결 → DRAM swap\n예: 전체 100만 × 128B ≈ 128 MB"
-  DR2: "**재전송 버퍼 (TX Retransmit Buffer)**\nACK 대기 중인 세그먼트 사본\n연결별 수 KB ~ 수 MB → 전체 수 GB"
-  DR3: "**RX Reassembly 버퍼**\nOut-of-Order 세그먼트 임시 저장\n연결별 수 KB"
+  DR1: "Connection Table (Cold Entries)\n비활성 / 대기 연결 → DRAM swap\n예: 전체 100만 × 128B ≈ 128 MB"
+  DR2: "재전송 버퍼 (TX Retransmit Buffer)\nACK 대기 중인 세그먼트 사본\n연결별 수 KB ~ 수 MB → 전체 수 GB"
+  DR3: "RX Reassembly 버퍼\nOut-of-Order 세그먼트 임시 저장\n연결별 수 KB"
 }
 SRAM -> DRAM: "Cache / Spill"
 ```

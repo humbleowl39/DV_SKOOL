@@ -51,12 +51,12 @@ title: "N01 — 왜 DFD인가"
 ```d2
 direction: right
 
-DBG: "**External Debugger**\n(host probe)\nGDB / DS-5 등"
-PINS: "**JTAG / SWD 핀**\nTCK TMS TDI TDO\n(또는 SWCLK SWDIO)"
-DAP: "**DAP (ADI)**\nDP + AP\n물리 ↔ 메모리-맵 변환"
-BUS: "**Debug Bus**\nAPB / AHB / AXI\n(MEM-AP가 발행)"
-CS: "**CoreSight**\nETM/CTI/ETB...\n+ 시스템 메모리"
-CORE: "**Cores / System**\n관찰·제어 대상"
+DBG: "External Debugger\n(host probe)\nGDB / DS-5 등"
+PINS: "JTAG / SWD 핀\nTCK TMS TDI TDO\n(또는 SWCLK SWDIO)"
+DAP: "DAP (ADI)\nDP + AP\n물리 ↔ 메모리-맵 변환"
+BUS: "Debug Bus\nAPB / AHB / AXI\n(MEM-AP가 발행)"
+CS: "CoreSight\nETM/CTI/ETB...\n+ 시스템 메모리"
+CORE: "Cores / System\n관찰·제어 대상"
 
 DBG -> PINS: "물리 프로토콜"
 PINS -> DAP: "scan / SWD 패킷"
@@ -84,11 +84,11 @@ CS -> CORE: "halt / trace / PMU"
 ```d2
 direction: down
 
-S1: "**① 디버거가 JTAG 핀 구동**\nTMS로 TAP FSM 이동\nIR에 DAP-access 명령 로드"
-S2: "**② DP가 AP 선택**\nSELECT 레지스터 write\n→ APB-AP(또는 AHB/AXI-AP) 지정"
-S3: "**③ MEM-AP가 버스 트랜잭션 발행**\nTAR=CTI/디버그 레지스터 주소\nCSW=size/auto-increment\nDRW=halt 요청 데이터"
-S4: "**④ CoreSight CTI가 코어 halt**\n코어 실행 정지\n디버그 상태 진입"
-S5: "**⑤ PC 읽기**\n같은 경로로 코어 디버그 레지스터 read\nTDO로 값이 직렬 출력"
+S1: "① 디버거가 JTAG 핀 구동\nTMS로 TAP FSM 이동\nIR에 DAP-access 명령 로드"
+S2: "② DP가 AP 선택\nSELECT 레지스터 write\n→ APB-AP(또는 AHB/AXI-AP) 지정"
+S3: "③ MEM-AP가 버스 트랜잭션 발행\nTAR=CTI/디버그 레지스터 주소\nCSW=size/auto-increment\nDRW=halt 요청 데이터"
+S4: "④ CoreSight CTI가 코어 halt\n코어 실행 정지\n디버그 상태 진입"
+S5: "⑤ PC 읽기\n같은 경로로 코어 디버그 레지스터 read\nTDO로 값이 직렬 출력"
 S1 -> S2 -> S3 -> S4 -> S5
 ```
 
@@ -131,11 +131,11 @@ S1 -> S2 -> S3 -> S4 -> S5
 ```d2
 direction: right
 
-INV: "**Invasive**\n(halt/step/breakpoint)" {
+INV: "Invasive\n(halt/step/breakpoint)" {
   NS_I: "DBGEN\n→ non-secure halt"
   S_I: "SPIDEN\n→ secure halt"
 }
-NONINV: "**Non-invasive**\n(trace/PMU)" {
+NONINV: "Non-invasive\n(trace/PMU)" {
   NS_N: "NIDEN\n→ non-secure trace"
   S_N: "SPNIDEN\n→ secure trace"
 }

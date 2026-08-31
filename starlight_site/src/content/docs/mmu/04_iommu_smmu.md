@@ -475,10 +475,10 @@ address translation 이 현실적으로 가능한 유일한 이유는 거의 모
 direction: down
 
 REQ: "Device DMA\n(StreamID, PASID, IOVA)"
-DC: "**Device / Context cache**\nStreamID→STE, PASID→CD\nidentity resolution 캐싱"
-IOTLB: "**IOTLB (paging cache)**\nIOVA → PA 최종 매핑\nthe hot path"
-PWC: "**PWC (page-walk cache)**\n중간 레벨 descriptor(L4/L3/L2)\nnested walk 부분 재시작"
-ATC: "**ATC (Address Translation Cache)**\ndevice 내부 cache (ATS)\nIOTLB 압력을 endpoint 로 분산"
+DC: "Device / Context cache\nStreamID→STE, PASID→CD\nidentity resolution 캐싱"
+IOTLB: "IOTLB (paging cache)\nIOVA → PA 최종 매핑\nthe hot path"
+PWC: "PWC (page-walk cache)\n중간 레벨 descriptor(L4/L3/L2)\nnested walk 부분 재시작"
+ATC: "ATC (Address Translation Cache)\ndevice 내부 cache (ATS)\nIOTLB 압력을 endpoint 로 분산"
 MEM: "DRAM\n(STE / CD / page tables)" { shape: cylinder }
 
 REQ -> DC: "miss"

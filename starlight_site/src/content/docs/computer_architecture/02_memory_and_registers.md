@@ -40,7 +40,7 @@ title: "Module 02 — 메모리와 레지스터"
 ```d2
 direction: right
 
-MEM: "**Memory (사물함 줄)**" {
+MEM: "Memory (사물함 줄)" {
   a0: "addr 0: 0x00"
   a1: "addr 1: 0xFF"
   a2: "addr 2: 0x3C"
@@ -55,8 +55,8 @@ MEM -> NOTE: ""
 ```d2
 direction: right
 
-REG: "**레지스터**\n책상 위 몇 칸(예: 32개)\n매우 빠름 (~1 cycle)\n여기서만 계산"
-MEM: "**메모리**\n사물함 수십억 칸\n느림 (수십~수백 cycle)\n저장 용도"
+REG: "레지스터\n책상 위 몇 칸(예: 32개)\n매우 빠름 (~1 cycle)\n여기서만 계산"
+MEM: "메모리\n사물함 수십억 칸\n느림 (수십~수백 cycle)\n저장 용도"
 
 REG -> MEM: "store (결과를 넣음)"
 MEM -> REG: "load (필요한 값을 꺼냄)"
@@ -78,10 +78,10 @@ MEM -> REG: "load (필요한 값을 꺼냄)"
 ```d2
 direction: down
 
-L1: "**LOAD** mem[100] → R1"
-L2: "**LOAD** mem[104] → R2"
-ADD: "**ADD** R1 + R2 → R3\n(레지스터끼리만 계산)"
-ST: "**STORE** R3 → mem[108]"
+L1: "LOAD mem[100] → R1"
+L2: "LOAD mem[104] → R2"
+ADD: "ADD R1 + R2 → R3\n(레지스터끼리만 계산)"
+ST: "STORE R3 → mem[108]"
 
 L1 -> L2 -> ADD -> ST
 ```

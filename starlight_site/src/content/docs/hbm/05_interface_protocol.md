@@ -75,30 +75,30 @@ direction: right
 
 HOST: "호스트 측" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
 
-CA: "**CA — 커맨드/주소**\nrow 계열 (activate, precharge)\ncolumn 계열 (read, write)\n→ semi-independent 인터페이스 2벌" {
+CA: "CA — 커맨드/주소\nrow 계열 (activate, precharge)\ncolumn 계열 (read, write)\n→ semi-independent 인터페이스 2벌" {
   style.fill: "#bbdefb"
   style.font-color: "#0A0F25"
 }
 
-CAP: "**CA parity**\nHBM2E: 커맨드 안에 인코딩\nHBM3: CA 버스의 별도 신호로 분리" {
+CAP: "CA parity\nHBM2E: 커맨드 안에 인코딩\nHBM3: CA 버스의 별도 신호로 분리" {
   style.fill: "#ffcdd2"
   style.font-color: "#0A0F25"
 }
 
-DQ: "**DQ — 데이터**\n+ DBI(ac) 인코딩\n+ data bus parity" {
+DQ: "DQ — 데이터\n+ DBI(ac) 인코딩\n+ data bus parity" {
   style.fill: "#c8e6c9"
   style.font-color: "#0A0F25"
 }
 
-CLK: "**클럭 / 스트로브**\nCK_t/CK_c · WDQS · RDQS\n데이터 정렬 기준" { style.fill: "#e1bee7"; style.font-color: "#0A0F25" }
+CLK: "클럭 / 스트로브\nCK_t/CK_c · WDQS · RDQS\n데이터 정렬 기준" { style.fill: "#e1bee7"; style.font-color: "#0A0F25" }
 
-META: "**메타데이터 (HBM4)**\nECC 4 · SEV 4\n오류 심각도를 데이터와 함께 전송" { style.fill: "#fff9c4"; style.font-color: "#0A0F25" }
+META: "메타데이터 (HBM4)\nECC 4 · SEV 4\n오류 심각도를 데이터와 함께 전송" { style.fill: "#fff9c4"; style.font-color: "#0A0F25" }
 
-ERR: "**에러 출력 (HBM4)**\nAERR 1 · DERR 2\n장치 → 호스트 역방향 보고" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
+ERR: "에러 출력 (HBM4)\nAERR 1 · DERR 2\n장치 → 호스트 역방향 보고" { style.fill: "#ffe0b2"; style.font-color: "#0A0F25" }
 
-RED: "**여분 레인 (HBM4)**\nRD[3:0] · 여분 주소 1\nlane repair 대상" { style.fill: "#d7ccc8"; style.font-color: "#0A0F25" }
+RED: "여분 레인 (HBM4)\nRD[3:0] · 여분 주소 1\nlane repair 대상" { style.fill: "#d7ccc8"; style.font-color: "#0A0F25" }
 
-BASE: "**Base Die**\n(DUT)" { style.fill: "#90caf9"; style.font-color: "#0A0F25" }
+BASE: "Base Die\n(DUT)" { style.fill: "#90caf9"; style.font-color: "#0A0F25" }
 
 HOST -> CA -> BASE
 HOST -> CAP -> BASE

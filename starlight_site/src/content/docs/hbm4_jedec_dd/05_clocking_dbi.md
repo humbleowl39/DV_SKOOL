@@ -47,15 +47,15 @@ HBM4에는 **주파수가 다른 두 종류의 클럭**이 있습니다(§6.1).
 ```d2
 direction: right
 
-PLL: "**PLL**\n(공통 소스)" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+PLL: "PLL\n(공통 소스)" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
 
-CK: "**CK_t / CK_c**\n커맨드·주소 (DDR)\n기준 주파수 f" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+CK: "CK_t / CK_c\n커맨드·주소 (DDR)\n기준 주파수 f" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 
-WDQS: "**WDQS_t / WDQS_c**\n쓰기 스트로브\n주파수 **2f**" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+WDQS: "WDQS_t / WDQS_c\n쓰기 스트로브\n주파수 2f" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
 
-DIV: "**reset 타입 분주기**\nWDQS / 2\n→ 내부 회로는 f 로 동작\n위상(0°/90°/180°/270°) 상태를 가짐" { style.fill: "#ffebee"; style.font-color: "#0A0F25" }
+DIV: "reset 타입 분주기\nWDQS / 2\n→ 내부 회로는 f 로 동작\n위상(0°/90°/180°/270°) 상태를 가짐" { style.fill: "#ffebee"; style.font-color: "#0A0F25" }
 
-RDQS: "**RDQS_t / RDQS_c**\n읽기 스트로브\nWDQS에서 생성" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
+RDQS: "RDQS_t / RDQS_c\n읽기 스트로브\nWDQS에서 생성" { style.fill: "#f3e5f5"; style.font-color: "#0A0F25" }
 
 CORE: "DRAM 내부 WDQS 도메인 회로" { style.fill: "#eceff1"; style.font-color: "#0A0F25" }
 

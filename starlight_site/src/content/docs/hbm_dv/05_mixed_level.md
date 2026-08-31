@@ -94,11 +94,11 @@ Base die를 블록으로 나누고, 각 블록이 취할 수 있는 표현 수�
 ```d2
 direction: right
 
-P0: "**P0 — 순수 디지털**\nDigital: RTL\nPHY: 간이 디지털 모델\nDRAM: 상용 VIP\n\n용도: 기능 · 동시성 · 커버리지\n규모: 수천~수만 job" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
+P0: "P0 — 순수 디지털\nDigital: RTL\nPHY: 간이 디지털 모델\nDRAM: 상용 VIP\n\n용도: 기능 · 동시성 · 커버리지\n규모: 수천~수만 job" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 
-P1: "**P1 — PHY 실동작**\nDigital: RTL\nPHY: RNM\nDRAM: 상용 VIP\n\n용도: PHY–디지털 인터페이스\n규모: 수십~수백 job" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
+P1: "P1 — PHY 실동작\nDigital: RTL\nPHY: RNM\nDRAM: 상용 VIP\n\n용도: PHY–디지털 인터페이스\n규모: 수십~수백 job" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
 
-P2: "**P2 — Full Mixed**\nDigital: RTL\nPHY: 회로 수준\nDRAM: 간이 모델\n\n용도: 실회로 정합\n규모: 수~수십 job" { style.fill: "#ffcdd2"; style.font-color: "#0A0F25" }
+P2: "P2 — Full Mixed\nDigital: RTL\nPHY: 회로 수준\nDRAM: 간이 모델\n\n용도: 실회로 정합\n규모: 수~수십 job" { style.fill: "#ffcdd2"; style.font-color: "#0A0F25" }
 
 P0 -> P1: "동일 시나리오 재사용"
 P1 -> P2: "선별된 시나리오만"

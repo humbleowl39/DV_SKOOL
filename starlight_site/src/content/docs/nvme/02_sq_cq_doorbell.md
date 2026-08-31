@@ -42,13 +42,13 @@ NVMe 검증 환경에서 host 모델이 명령(SQE, Submission Queue Entry)을 h
 ```d2
 direction: right
 
-HOST: "**Host** (소프트웨어)" {
-  SQ: "**SQ** (ring buffer)\nhost memory\n← host가 tail 갱신\nSQE 작성"
-  CQ: "**CQ** (ring buffer)\nhost memory\n→ host가 head 갱신\nCQE 소비"
+HOST: "Host (소프트웨어)" {
+  SQ: "SQ (ring buffer)\nhost memory\n← host가 tail 갱신\nSQE 작성"
+  CQ: "CQ (ring buffer)\nhost memory\n→ host가 head 갱신\nCQE 소비"
 }
 
-CTRL: "**Controller** (NVMe device)" {
-  DB: "**Doorbell registers**\n(BAR MMIO)\nSQ tail / CQ head"
+CTRL: "Controller (NVMe device)" {
+  DB: "Doorbell registers\n(BAR MMIO)\nSQ tail / CQ head"
   ENG: "command\nengine"
   DB -> ENG
 }
@@ -72,12 +72,12 @@ HOST.CQ -> CTRL.DB: "④ CQ head doorbell write\n(CQE 소비 완료 신호)"
 ```d2
 direction: down
 
-S1: "**① host**: SQE를 SQ[tail]에 작성\n(host memory 쓰기)"
-S2: "**② host**: SQ tail doorbell write\ntail = tail+1 → controller에 신호"
-S3: "**③ controller**: SQE fetch\n(host memory read)\n명령 실행"
-S4: "**④ controller**: CQE를 CQ[ ]에 작성\nphase bit 토글 + status"
-S5: "**⑤ host**: CQE 인지\n(polling: phase bit 확인 /\ninterrupt: MSI-X)"
-S6: "**⑥ host**: CQ head doorbell write\nhead = head+1 → 슬롯 반환"
+S1: "① host: SQE를 SQ[tail]에 작성\n(host memory 쓰기)"
+S2: "② host: SQ tail doorbell write\ntail = tail+1 → controller에 신호"
+S3: "③ controller: SQE fetch\n(host memory read)\n명령 실행"
+S4: "④ controller: CQE를 CQ[ ]에 작성\nphase bit 토글 + status"
+S5: "⑤ host: CQE 인지\n(polling: phase bit 확인 /\ninterrupt: MSI-X)"
+S6: "⑥ host: CQ head doorbell write\nhead = head+1 → 슬롯 반환"
 S1 -> S2 -> S3 -> S4 -> S5 -> S6
 ```
 
@@ -120,9 +120,9 @@ SQ에서는 host가 Submitter(tail 갱신), controller가 Consumer(SQE를 fetch)
 
 ```d2
 direction: right
-EMPTY: "**Empty**\nHead == Tail\n(채워진 항목 0)"
-SOME: "**일부 채움**\nHead < Tail\n(또는 wrap 상태)"
-FULL: "**Full**\nHead == Tail + 1\n(1 슬롯 비워둠)"
+EMPTY: "Empty\nHead == Tail\n(채워진 항목 0)"
+SOME: "일부 채움\nHead < Tail\n(또는 wrap 상태)"
+FULL: "Full\nHead == Tail + 1\n(1 슬롯 비워둠)"
 EMPTY -> SOME: "submitter가 tail++"
 SOME -> FULL: "계속 적재"
 FULL -> SOME: "consumer가 head++"
