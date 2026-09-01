@@ -1,16 +1,17 @@
 ---
 title: "02 — 주소 체계와 뱅크 그룹"
-description: JESD270-4 §3.2–3.3 · RA/CA/BA/SID 주소 구성, 뱅크 그룹 의존 타이밍, 간이 상태 천이도
+description: JESD270-4 §3.2–3.3 · 주소 매핑 reference model, 무효 조합 검사, 뱅크 그룹 의존 타이밍 coverage
 ---
 
 :::tip[🎯 Learning Objectives]
 이 모듈을 마치면:
 
-- **Interpret** Table 4의 주소 필드 구성과 주석이 강제하는 디코더 제약을 도출한다.
+- **Interpret** Table 4의 주소 필드 구성과 주석에서 **주소 결함의 실패 모드**를 도출한다.
 - **Calculate** 페이지 크기·채널 밀도·뱅크 수를 규격의 관계식으로 검산한다.
 - **Explain** SID가 별도 층 선택 신호가 아니라 **뱅크 주소 확장 비트**로 동작하는 이유를 설명한다.
-- **Design** 뱅크 그룹 판정 로직과 그에 따라 갈리는 타이밍 카운터 선택 경로를 설계한다.
-- **Analyze** 간이 상태도가 **의도적으로 생략한 것**들이 설계에서 어디에 숨는지 식별한다.
+- **Construct** 주소 매핑 reference model에 **왕복 검사**를, 무효 조합에 인터페이스 assertion을 구현한다.
+- **Derive** 뱅크 그룹·SID·page hit/miss에서 coverage 축을 도출하고, 왜 주소 값이 아니라 **선택된 타이밍**을 세야 하는지 설명한다.
+- **Analyze** 간이 상태도의 **생략 목록**을 V-Plan 항목으로 옮기고, 각각이 어느 장에서 자극되는지 대응시킨다.
 :::
 
 :::note[Prerequisites]
@@ -46,17 +47,19 @@ description: JESD270-4 §3.2–3.3 · RA/CA/BA/SID 주소 구성, 뱅크 그룹 
 두 가지가 따라옵니다.
 
 1. **뱅크 인덱스는 `{SID, BA[3:0]}` 의 연접**이다. 그래서 채널당 뱅크 수가 16 → 32 → 48 → 64로 늘어난다.
-2. **타이밍이 SID에 따라 달라질 수 있다.** 물리적으로 다른 die에 있는 뱅크이므로 일부 파라미터가 변형될 수 있다는 뜻이고, 타이밍 체커가 SID를 무시하면 안 된다는 뜻입니다.
+2. **타이밍이 SID에 따라 달라질 수 있다.** 물리적으로 다른 die에 있는 뱅크이므로 일부 파라미터가 변형될 수 있습니다. 곧 **타이밍 checker가 SID를 무시하면 안 되고**, coverage도 SID로 갈라야 한다는 뜻입니다 — 고 SID에서만 나는 위반은 낮은 SID만 자극하는 회귀에서 절대 안 보입니다.
 
 [01장](../01_landscape_organization/)에서 확인한 "4-high를 넘는 die는 채널이 아니라 용량·SID·뱅크를 늘린다"는 조문이 여기서 구체화됩니다.
 
 ### 버스트 순서는 고정이고, 주소로 지정되지 않는다
 
-Table 4 Note 2가 설계에 직접 닿는 조문입니다.
+Table 4 Note 2가 검증에 직접 닿는 조문입니다.
 
 > Read와 Write의 **버스트 순서는 고정**이며, HBM 장치는 BL8 버스트의 **여덟 UI를 구분하는 column 주소 비트를 배정하지 않는다.** 메모리 컨트롤러가 내부적으로 그런 column 주소 비트를 둘 수는 있으나 **그 비트들은 HBM 장치로 전송되지 않는다.** — Note 2 (요약)
 
-즉 컨트롤러가 바이트 단위 주소를 다루더라도, **장치로 나가는 `CA[4:0]`에는 버스트 내 위치 정보가 실리지 않습니다.** 주소 디코더의 하위 비트는 컨트롤러 내부에서 소비되고 절단됩니다. 이것을 모르고 `CA`에 하위 비트를 실으면 엉뚱한 열을 접근합니다.
+즉 컨트롤러가 바이트 단위 주소를 다루더라도, **장치로 나가는 `CA[4:0]`에는 버스트 내 위치 정보가 실리지 않습니다.** 하위 비트는 컨트롤러 내부에서 소비되고 절단됩니다.
+
+이것을 모르고 `CA`에 하위 비트를 실으면 엉뚱한 열을 접근하는데, **증상은 데이터 미스매치로 나타납니다.** scoreboard는 "값이 다르다"고만 말하지 "주소가 틀렸다"고 말해 주지 않습니다. 주소를 데이터와 **분리해서 먼저** 검사해야 하는 이유입니다 — 6.2절.
 
 ## 2. 페이지 크기 — 관계식으로 검산하기
 
@@ -143,8 +146,10 @@ Table 6이 이 장에서 가장 실무적인 표입니다. **같은 그룹 내 �
 
 READ→READ에만 세 번째 값 `tCCDR`이 있는 것도 이 관점에서 읽힙니다 — 읽기 경로에는 그룹 구분과 다른 축의 제약이 하나 더 있다는 뜻이고, 상세는 [07장](../07_column_commands/)에서 다룹니다.
 
-:::caution[성능 설계로 직결된다]
-뱅크 그룹은 단순한 주소 구획이 아니라 **스케줄러 설계 변수**입니다. 컨트롤러가 요청을 재정렬할 때 **그룹을 번갈아 가며** 발행하면 `tCCDS`(짧은 쪽)를 쓸 수 있고, 같은 그룹에 몰아 보내면 `tCCDL`(긴 쪽)에 묶입니다. 같은 대역폭 요구에도 **주소 매핑과 스케줄링 정책에 따라 실효 성능이 갈립니다.**
+:::caution[검증에서는 "확률"이 문제가 된다]
+뱅크 그룹은 단순한 주소 구획이 아니라 **스케줄러의 동작을 가르는 변수**입니다. 그룹을 번갈아 발행하면 `tCCDS`(짧은 쪽), 몰아 보내면 `tCCDL`(긴 쪽)에 묶입니다.
+
+검증에서 이것이 만드는 문제는 **확률**입니다. 64뱅크 구성에서 무작위로 두 뱅크를 고르면 같은 그룹일 확률은 약 **1/8**입니다. 순수 랜덤 자극만 도는 환경은 `tCCDS`·`tRRDS` 쪽에 히트가 몰리고, **긴 쪽 경로는 훨씬 덜 검증됩니다.** 그룹 관계를 자극의 명시적 축으로 올려야 합니다 — 6.4절.
 :::
 
 ## 5. 간이 상태 천이도 — 그리고 그것이 감춘 것
@@ -201,111 +206,240 @@ Precharging -> Idle
 
 그리고 규격은 덧붙입니다 — 장치 동작의 완전한 기술을 위해서는 상태도와 함께 **커맨드 진리표 및 AC 타이밍 규격**을 사용하라고.
 
-:::caution[설계 버그가 사는 곳]
+:::caution[검증 구멍이 사는 곳]
 생략 목록은 그대로 **설계 위험 목록**입니다. 상태 머신을 Figure 3만 보고 구현하면 다음이 전부 빠집니다.
 
-- **다중 뱅크 동시 상태** — 실제로는 뱅크마다 상태가 있고 서로 다른 상태에 있을 수 있습니다. 채널 단위 단일 FSM으로 모델링하면 처음부터 틀립니다.
-- **비동기 리셋 진입** — 임의 상태에서 즉시 reset으로 갈 수 있어야 합니다. FSM의 모든 상태에 그 경로가 있어야 하고, 그 경로는 `RESET_n`과 **IEEE1500 `HBM_RESET`** 양쪽에서 옵니다.
+- **다중 뱅크 동시 상태** — 실제로는 뱅크마다 상태가 있고 서로 다른 상태에 있을 수 있습니다. 채널 단위 단일 FSM으로 모델링하면 **모델이 처음부터 틀립니다.**
+- **비동기 리셋 진입** — 임의 상태에서 즉시 reset으로 갈 수 있어야 합니다. 곧 **모든 상태에서 리셋을 걸어 보는 시나리오**가 필요하고, 그 경로는 `RESET_n`과 **IEEE1500 `HBM_RESET`** 양쪽에서 옵니다.
 - **테스트 모드와 mission mode의 교차** — 규격이 §13.6을 따로 둘 만큼 복잡한 영역입니다.
 - **ECS·DRFM·트레이닝** — 정상 동작 중에 끼어드는 동작들이며, 각각 별도 장에서 다룹니다.
 
-즉 **"간이 상태도"는 뼈대일 뿐이고, 실제 FSM은 이 목록만큼 더 커집니다.**
+즉 **"간이 상태도"는 뼈대일 뿐이고, 실제 검증 대상은 이 목록만큼 더 큽니다.** 6.1절에서 이 목록을 그대로 V-Plan 항목으로 옮깁니다.
 :::
 
-## ⚙️ 설계 적용 (RTL / Front-end)
+## 🔬 검증 적용
 
-### 6.1 주소 디코더 — 컨트롤러 물리 주소에서 장치 필드까지
+### 6.1 무엇이 깨질 수 있는가
 
-컨트롤러는 시스템 물리 주소를 받아 채널·PC·뱅크·행·열로 쪼갭니다. 규격 제약을 반영한 구조는 이렇습니다.
+이 장의 결함에는 공통점이 하나 있습니다 — **주소가 틀리면 데이터 미스매치로 나타납니다.** scoreboard는 "기대값과 다르다"고만 말하고, 원인이 주소 디코드인지 데이터 경로인지 알려주지 않습니다. 그래서 주소는 **별도로, 먼저** 검사해야 합니다.
 
-```systemverilog
-// 파라미터로 구성을 받는다 — 밀도 코드로 런타임 결정 가능 (Table 4 Note 7)
-package hbm4_addr_pkg;
-  localparam int RA_W  = 14;  // RA[13:0]   (RA[13:12]=11 무효)
-  localparam int CA_W  = 5;   // CA[4:0]
-  localparam int BA_W  = 4;   // BA[3:0]
-  localparam int SID_W = 2;   // 구성에 따라 0/1/2 비트 사용
-  localparam int PC_W  = 1;   // PC 선택 비트
-  localparam int CH_W  = 5;   // 최대 32채널
-endpackage
+| 조문 | 위반 형태 | 증상 | 잡히는 시점 |
+|---|---|---|---|
+| Table 4 Note 5 — `RA[13:12] = 11` 무효 | 자극이 그 조합을 생성 | DUT 동작 미정의. 모델은 그럴듯한 값을 돌려주므로 **통과할 수도 있다** | **없음** — 버스에 감시를 두지 않으면 |
+| Note 6·8 — `SID[1:0]=11`, 4Hi의 `SID[0]=1` 무효 | 구성보다 넓은 SID 범위를 랜덤화 | 존재하지 않는 뱅크 접근 | **없음** |
+| Note 2 — BL8 오프셋 비트 **미전송** | 물리 주소 하위 비트를 `CA`에 실음 | 엉뚱한 열 접근 → **데이터 미스매치로 위장** | scoreboard (오진 유발) |
+| Note 3 — 물리 행 2 KB, `RA[13]`이 절반 선택 | 행 히트 판정을 잘못된 층위로 | reference model의 page hit/miss 예측이 어긋남 | 타이밍 checker **false FAIL** |
+| Table 6 — 그룹 의존 타이밍 | 그룹 판정을 PC 통합으로 유지 | `tRRDL`/`tRRDS` 오선택 → false FAIL 또는 **놓친 위반** | 간헐적 |
+| Table 4 Note 4 — SID 연동 타이밍 | checker가 SID를 무시 | 고 SID에서만 나는 타이밍 위반을 못 봄 | **실리콘** |
+| Table 6 — `tCCDR` (세 번째 경우) | RD→RD를 같은 그룹/다른 그룹 2택으로 | 세 번째 경우가 통째로 미검사 | 없음 |
+| §3.3 생략 목록 — 다중 뱅크 천이 | 상태 모델을 채널당 단일 FSM으로 | 뱅크가 서로 다른 상태에 있는 것을 표현 못함 | 모델이 **처음부터 틀림** |
 
-typedef struct packed {
-  logic [CH_W-1:0]  ch;
-  logic             pc;
-  logic [SID_W-1:0] sid;
-  logic [BA_W-1:0]  ba;
-  logic [RA_W-1:0]  ra;
-  logic [CA_W-1:0]  ca;
-} hbm4_addr_t;
-```
+마지막 줄이 가장 무겁습니다. §3.3 Figure 3을 그대로 모델로 옮기면, 규격이 **"그리지 않았다"고 스스로 밝힌 것**을 그대로 빠뜨립니다. 상태 모델은 **뱅크마다 한 벌**이어야 합니다.
 
-두 가지를 지켜야 합니다.
-
-1. **버스트 내 오프셋 비트는 장치로 내보내지 않는다** (Note 2). 물리 주소의 하위 비트는 컨트롤러 내부에서 버스트 정렬에만 쓰고 절단합니다.
-2. **무효 조합을 만들지 않는다** — `RA[13:12] = 11`, `SID[1:0] = 11`, 4Hi에서 `SID[0] = 1`. 디코더가 이 조합을 생성할 수 있는 매핑이면 설계 결함입니다.
-
-```systemverilog
-// 무효 조합은 발생 자체를 막고, 그래도 도달하면 즉시 드러나게 한다
-always_comb begin
-  addr_valid = 1'b1;
-  if (dec.ra[13:12] == 2'b11)                    addr_valid = 1'b0;  // Table 4 Note 5
-  if (SID_USED == 2 && dec.sid == 2'b11)         addr_valid = 1'b0;  // Note 6
-  if (STACK_HIGH == 4 && dec.sid[0])             addr_valid = 1'b0;  // Note 8
-end
-```
-
-### 6.2 뱅크 그룹 판정과 타이밍 선택
-
-Table 5의 배정에서 그룹 인덱스가 곧바로 나옵니다.
-
-```systemverilog
-// 뱅크 인덱스 = {SID, BA}, 그룹은 8뱅크 단위 → 그룹 = 인덱스의 상위 비트
-logic [SID_W+BA_W-1:0] bank_index;
-logic [SID_W:0]        bank_group;
-
-assign bank_index = {dec.sid, dec.ba};
-assign bank_group = bank_index[SID_W+BA_W-1 : 3];   // 하위 3비트가 그룹 내 위치
-```
-
-그리고 타이밍 카운터 선택이 이 판정에 걸립니다.
-
-```systemverilog
-// 직전 접근과 같은 그룹이면 L(Long), 다르면 S(Short)  — Table 6
-wire same_group = (bank_group == last_bank_group_q);
-
-wire [TW-1:0] t_rrd = same_group ? T_RRDL : T_RRDS;   // ACT -> ACT
-wire [TW-1:0] t_ccd = same_group ? T_CCDL : T_CCDS;   // WR -> WR, RD -> RD
-wire [TW-1:0] t_wtr = same_group ? T_WTRL : T_WTRS;   // internal WR -> RD
-```
-
-**주의 두 가지.**
-
-- 이 판정은 **PC별로 따로** 유지해야 합니다. 배열 타이밍이 PC별 개별 계수이기 때문입니다(§3.1.2, [01장](../01_landscape_organization/)).
-- READ→READ에는 `tCCDR`이라는 세 번째 경우가 있습니다(Table 6). 그룹 동일 여부만으로 2택 분기하면 그 경우를 놓칩니다 → [07장](../07_column_commands/).
-
-### 6.3 SID 연동 타이밍
-
-Table 4 Note 4가 "일부 AC 타이밍이 SID에 연동될 수 있다"고 열어 두었으므로, 타이밍 상수를 **SID로 인덱싱 가능한 형태**로 두는 편이 안전합니다.
-
-```systemverilog
-// 벤더·구성에 따라 SID별로 값이 달라질 수 있다 (Table 4 Note 4)
-localparam int T_RCD [0:3] = '{T_RCD_S0, T_RCD_S1, T_RCD_S2, T_RCD_S3};
-wire [TW-1:0] t_rcd_sel = T_RCD[dec.sid];
-```
-
-전 구성에서 값이 같다면 배열의 모든 원소가 같아질 뿐이고, 다른 구성으로 이식할 때 **구조를 바꾸지 않아도 됩니다.**
-
-### 6.4 뱅크 상태 머신의 인스턴스 수
-
-§3.3의 생략 목록 첫 항목("둘 이상의 뱅크가 관여하는 천이")이 여기로 옵니다.
-
-| 계층 | 인스턴스 | 상태 |
+| 계층 | 인스턴스 | 모델이 드는 상태 |
 |---|---|---|
-| 채널 | × 32 | 저전력(PD/SR), MR — **두 PC 공통** |
-| ↳ PC | × 2 | 배열 타이밍 카운터, 마지막 접근 그룹 |
+| 채널 | × 32 | 저전력(PD/SR), Mode Register — **두 PC 공통** |
+| ↳ PC | × 2 | 배열 타이밍 카운터, **마지막 접근 그룹** |
 | ↳↳ 뱅크 | × 16/32/48/64 (밀도별) | Idle / Activating / Active / Reading / Writing / Precharging, 열린 행 주소 |
 
-**설계 결론**: 상태 머신은 **뱅크마다 한 벌**입니다. 채널 단위 단일 FSM은 Figure 3을 그대로 옮긴 것처럼 보이지만, 규격이 명시적으로 "다중 뱅크 천이는 그리지 않았다"고 밝힌 부분을 구현에서 빠뜨린 것입니다.
+**"마지막 접근 그룹"이 PC 계층에 있는 것**이 핵심입니다. 채널 계층에 두면 PC0의 접근이 PC1의 `tRRD` 선택을 오염시킵니다.
+
+:::caution[규격이 밝힌 생략 목록 = 커버리지 구멍 목록]
+§3.3이 "상태도에 그리지 않았다"고 나열한 여덟 항목은, 검증에서는 **자극하지 않으면 절대 안 나오는 시나리오 목록**입니다.
+
+| 생략 항목 | 검증에서의 의미 |
+|---|---|
+| 둘 이상 뱅크가 관여하는 천이 | 다중 뱅크 동시 Active 시나리오 |
+| IEEE1500 MR 적재·테스트 기능 상호작용 | 테스트 모드 × mission mode 교차 ([11장](../11_training_ieee1500/)) |
+| 임의 상태에서 즉시 reset | **모든 상태에서** `RESET_n`·`HBM_RESET` 진입 ([03장](../03_init_reset_power/)) |
+| ECS · ECS 억제 · DRFM · ECC Test Mode | [06장](../06_row_commands/) · [09장](../09_ecc_ecs_sev/) |
+| DCA · DCM | [11장](../11_training_ieee1500/) |
+| Loopback Test Mode | [10장](../10_test_repair/) |
+| WDQS-to-CK Alignment Training | [05장](../05_clocking_dbi/) |
+| Rx Offset Calibration Training | [11장](../11_training_ieee1500/) |
+
+이 목록을 그대로 V-Plan 항목으로 옮기면 됩니다. 규격이 검증 계획의 절반을 대신 써 준 셈입니다.
+:::
+
+### 6.2 어떻게 잡는가 — 수단 선택
+
+| 규칙 | 성격 | 수단 | 이유 |
+|---|---|---|---|
+| 물리 주소 → 장치 필드 매핑 | **함수 정합** | **reference model + 왕복 검사** | 값 하나로 판정되지 않는다. 역변환이 원래 값을 돌려주는지 봐야 한다 |
+| 무효 조합이 버스에 나가지 않음 | **불변식** | **인터페이스 SVA** | 모델이 아니라 **핀에서** 봐야 한다. 모델은 무효 조합에도 답을 만들어 준다 |
+| 그룹 의존 타이밍 선택 | **시간 관계** | **SVA** | 두 커맨드 사이 간격의 국소 판정 |
+| 뱅크 상태 천이 적법성 | **상태** | **shadow model (뱅크당 한 벌)** | 뱅크마다 독립 상태. SVA로 쓰면 뱅크 수만큼 복제된다 |
+
+**① 주소 매핑 — 왕복 검사**
+
+주소 디코더 결함이 데이터 미스매치로 위장하는 문제를 푸는 방법입니다. 인코딩과 디코딩을 **둘 다** 두고, 왕복이 항등이 되는지 봅니다.
+
+```systemverilog
+// 물리 주소 <-> 장치 필드 양방향 모델. 왕복이 항등이어야 한다.
+class hbm4_addr_model extends uvm_object;
+  `uvm_object_utils(hbm4_addr_model)
+
+  hbm4_cfg_t cfg;                       // 구성 (밀도·스택 높이·SID 폭)
+
+  function hbm4_addr_t encode(bit [39:0] pa);
+    // BL8 의 8 UI 를 고르는 하위 비트는 장치로 나가지 않는다 (Table 4 Note 2).
+    // 여기서 절단하는 것이 이 함수의 계약이다.
+    bit [39:0] a = pa >> $clog2(BURST_BYTES);
+    encode.ca  = a[CA_W-1:0];                     a = a >> CA_W;
+    encode.ba  = a[BA_W-1:0];                     a = a >> BA_W;
+    encode.sid = a[cfg.sid_used_bits-1:0];        a = a >> cfg.sid_used_bits;
+    encode.ra  = a[RA_W-1:0];
+  endfunction
+
+  function bit [39:0] decode(hbm4_addr_t f);
+    decode = f.ra;
+    decode = (decode << cfg.sid_used_bits) | f.sid;
+    decode = (decode << BA_W)              | f.ba;
+    decode = (decode << CA_W)              | f.ca;
+    decode = decode << $clog2(BURST_BYTES);       // 절단된 오프셋은 0 으로 복원된다
+  endfunction
+
+  // 왕복 검사 — 버스트 정렬된 주소에 대해 항등이어야 한다
+  function void check_roundtrip(bit [39:0] pa);
+    bit [39:0] aligned = pa & ~((1 << $clog2(BURST_BYTES)) - 1);
+    if (decode(encode(aligned)) !== aligned)
+      `uvm_error("ADDR_MAP", $sformatf(
+        "왕복 불일치: pa=%0h -> %0h. 필드 폭 합이 물리 주소 폭과 어긋난다", aligned,
+        decode(encode(aligned))))
+  endfunction
+endclass
+```
+
+`decode(encode(x)) == x` 가 깨지는 대표 원인은 **필드 폭의 합이 안 맞는 것**입니다. 그리고 그 결함은 데이터 비교만으로는 "가끔 틀린다"로만 보입니다.
+
+**② 무효 조합 — 핀에서 본다**
+
+```systemverilog
+// bind 대상: 채널 인터페이스. 무효 조합은 장치에 도달하면 안 된다 (Table 4 Note 5·6·8).
+module hbm4_addr_legal_chk #(parameter int SID_USED = 2, parameter int STACK_HIGH = 16)
+                           (input logic ck, rst_n, cmd_vld,
+                            input logic [13:0] ra, input logic [1:0] sid);
+  import uvm_pkg::*;
+  `include "uvm_macros.svh"
+
+  a_ra_legal: assert property (@(posedge ck) disable iff (!rst_n)
+      cmd_vld |-> (ra[13:12] != 2'b11))
+    else `uvm_error("ADDR_ILLEGAL", "RA[13:12]=11 은 무효 조합이다 (Table 4 Note 5)")
+
+  a_sid_legal: assert property (@(posedge ck) disable iff (!rst_n)
+      (cmd_vld && SID_USED == 2) |-> (sid != 2'b11))
+    else `uvm_error("ADDR_ILLEGAL", "SID[1:0]=11 은 무효 조합이다 (Note 6)")
+
+  a_sid_4hi: assert property (@(posedge ck) disable iff (!rst_n)
+      (cmd_vld && STACK_HIGH == 4) |-> (sid[0] == 1'b0))
+    else `uvm_error("ADDR_ILLEGAL", "4-high 에서 SID[0]=1 은 무효다 (Note 8)")
+
+  // 유효 경계값에는 실제로 도달했는가 — 안 그러면 위 검사는 무의미하다
+  c_ra_max_legal: cover property (@(posedge ck) cmd_vld && ra[13:12] == 2'b10);
+  c_sid_max_legal: cover property (@(posedge ck) cmd_vld && SID_USED == 2 && sid == 2'b10);
+endmodule
+```
+
+이 검사를 **모델 안**에 두면 안 됩니다. 모델은 무효 조합을 받아도 어떤 답이든 만들어 내므로, 검사가 통과하는 것처럼 보입니다. **핀에서 봐야** 합니다.
+
+**③ 그룹 의존 타이밍**
+
+```systemverilog
+// Table 6 — 같은 그룹이면 tRRDL, 다르면 tRRDS. 판정은 PC 별로 유지한다 (§3.1.2).
+property p_trrd(int pc);
+  logic [2:0] g;
+  @(posedge ck) disable iff (!rst_n)
+    (act_vld && act_pc == pc, g = bank_group)
+      |=> ##[0:$] (act_vld && act_pc == pc)
+          |-> (cycles_since_last_act[pc] >= ((g == last_group[pc]) ? T_RRDL : T_RRDS));
+endproperty
+```
+
+여기서 `last_group` 을 PC로 인덱싱하지 않으면, PC1의 ACTIVATE가 PC0의 그룹 기록을 덮어써서 **잘못된 임계값으로 판정**합니다. 이 결함은 두 PC를 동시에 자극할 때만 나오므로, 단일 PC 테스트만 도는 회귀에서는 영원히 안 보입니다.
+
+### 6.3 무엇을 덮었다고 말할 수 있는가
+
+주소 공간은 넓어서 "전부 자극"이 불가능합니다. 따라서 coverage는 **값**이 아니라 **관계**를 덮어야 합니다.
+
+```systemverilog
+covergroup cg_hbm4_addressing with function sample(
+    hbm4_addr_t a, hbm4_cfg_t cfg, timing_sel_e tsel, page_res_e page);
+  option.per_instance = 1;
+
+  // --- 구조 축 ---------------------------------------------------------
+  cp_bank_group : coverpoint a.bank_group { bins g[] = {[0:7]}; }
+  cp_sid        : coverpoint a.sid iff (cfg.sid_used_bits > 0) {
+    bins s[] = {[0:2]};                     // 3 = 무효 (Note 6)
+    illegal_bins bad = {3};
+  }
+  cp_pc         : coverpoint a.pc { bins pc0 = {0}; bins pc1 = {1}; }
+
+  // RA 의 MSB — 물리 행 2 KB 의 어느 절반인가 (Note 3)
+  cp_row_half   : coverpoint a.ra[13] { bins lower = {0}; bins upper = {1}; }
+  // RA[13:12]=11 은 무효. 나머지 셋에 모두 도달했는가
+  cp_ra_high    : coverpoint a.ra[13:12] { bins ok[] = {2'b00, 2'b01, 2'b10};
+                                           illegal_bins bad = {2'b11}; }
+
+  // --- 관계 축 — 이 장의 핵심 ------------------------------------------
+  // "어떤 타이밍이 실제로 선택되었는가". 값이 아니라 분기를 센다.
+  cp_timing_sel : coverpoint tsel {
+    bins rrd_long  = {T_SEL_RRDL};  bins rrd_short = {T_SEL_RRDS};
+    bins ccd_long  = {T_SEL_CCDL};  bins ccd_short = {T_SEL_CCDS};
+    bins ccd_rd    = {T_SEL_CCDR};             // 세 번째 경우 (Table 6)
+    bins wtr_long  = {T_SEL_WTRL};  bins wtr_short = {T_SEL_WTRS};
+  }
+  cp_page       : coverpoint page { bins hit = {PAGE_HIT}; bins miss = {PAGE_MISS};
+                                    bins conflict = {PAGE_CONFLICT}; }
+
+  // 그룹 의존 타이밍이 두 PC 에서 모두 나왔는가 — 6.2 ③ 의 결함을 잡는 축
+  x_timing_pc   : cross cp_timing_sel, cp_pc;
+  // SID 가 타이밍에 연동될 수 있다 (Note 4) — SID 별로 각 타이밍이 나왔는가
+  x_timing_sid  : cross cp_timing_sel, cp_sid;
+endgroup
+```
+
+세 가지를 지적해 둡니다.
+
+- **`cp_timing_sel` 이 이 장의 중심 축입니다.** 뱅크 그룹 bin이 다 찼다고 해서 `tRRDL`과 `tRRDS`가 **둘 다 선택되었다**는 뜻은 아닙니다. 덮어야 하는 것은 주소가 아니라 **그 주소가 만든 분기**입니다.
+- **`ccd_rd`(`tCCDR`) bin이 비는 것**이 이 장에서 가장 흔한 구멍입니다. RD→RD를 2택으로 이해한 환경은 이 bin을 영원히 못 채웁니다.
+- **`illegal_bins`** 를 쓴 이유 — 무효 조합은 "안 덮인 것"이 아니라 "나오면 안 되는 것"입니다. 자극 쪽 실수를 커버리지 도구가 직접 잡아 줍니다.
+
+### 6.4 어떻게 자극하는가
+
+**① 그룹 관계를 의도적으로 만든다** — 랜덤 주소만으로는 `tRRDL`이 잘 안 나옵니다. 뱅크 64개 중 같은 그룹은 8개뿐이라 확률이 낮기 때문입니다.
+
+```systemverilog
+class seq_bank_group_walk extends uvm_sequence #(hbm4_cmd_item);
+  `uvm_object_utils(seq_bank_group_walk)
+  rand bit same_group;                        // 두 모드를 명시적으로 나눈다
+
+  virtual task body();
+    bit [5:0] b0, b1;
+    b0 = $urandom_range(0, 63);
+    // 같은 그룹 = 상위 비트 동일, 다른 그룹 = 상위 비트 상이
+    b1 = same_group ? {b0[5:3], $urandom_range(0,7)}
+                    : {~b0[5:3], $urandom_range(0,7)};
+    `uvm_do_with(req, { cmd == ACT; bank == b0; })
+    `uvm_do_with(req, { cmd == ACT; bank == b1; })   // 여기서 tRRDL / tRRDS 가 갈린다
+  endtask
+endclass
+```
+
+**② 구성 순회** — SID는 구성마다 유효 범위가 다릅니다(4Hi 0개 · 8Hi 1비트 · 12/16Hi 2비트, 단 `11` 무효). 환경 구성이 하나로 고정되면 `cp_sid` 는 영원히 부분만 찹니다. 구성 프로파일 분리는 [`hbm_dv` Ch06](../../hbm_dv/06_env_hierarchy/).
+
+**③ 무효 조합은 격리된 negative 시퀀스로** — 정상 회귀에서는 자극이 무효 조합을 만들면 안 됩니다(`illegal_bins`). 그러나 컨트롤러의 **방어 로직**을 검증하려면 일부러 만들어 봐야 합니다. 두 목적을 한 시퀀스에 섞으면 정상 회귀가 오염되므로, 별도 테스트로 격리하고 checker를 그때만 비활성화합니다.
+
+**④ 다중 뱅크 동시 Active** — §3.3 생략 목록의 첫 항목입니다. 여러 뱅크를 열어 둔 채로 서로 다른 상태에 놓는 시퀀스가 없으면, 뱅크당 상태 모델을 만들어 놓고도 그 구조를 한 번도 시험하지 않게 됩니다.
+
+```systemverilog
+// tFAW 창 안에서 서로 다른 그룹의 뱅크 넷을 연다 — 그다음 각각 다른 커맨드를 보낸다
+`uvm_do_with(req, { cmd == ACT; bank == 6'h00; })   // Group A
+`uvm_do_with(req, { cmd == ACT; bank == 6'h08; })   // Group B
+`uvm_do_with(req, { cmd == ACT; bank == 6'h10; })   // Group C
+`uvm_do_with(req, { cmd == ACT; bank == 6'h18; })   // Group D
+`uvm_do_with(req, { cmd == RD;  bank == 6'h00; })   // A 는 Reading
+`uvm_do_with(req, { cmd == WR;  bank == 6'h08; })   // B 는 Writing 으로 갈라 놓는다
+```
 
 ## 7. 대표 문제 — dry-run
 
@@ -324,7 +458,7 @@ Page Size = 2^COLBITS × (Prefetch / 8) = 2^5 × (256/8) = 32 × 32 = 1024 B = 1
 
 물리적으로 열리는 행은 **2 KB**이고, **`RA`의 MSB(`RA[13]`)가 그 절반을 선택**한다(Note 3). 따라서 논리 페이지(1 KB)와 물리 행(2 KB)이 **1:2**로 대응한다.
 
-**설계 함의**: 행 버퍼 히트 판정을 `RA[13:0]` 전체로 하면 맞지만, "물리적으로 같은 행"을 기준으로 판정하려면 `RA[12:0]`을 봐야 한다. 두 층위를 섞으면 히트/미스 판정이 어긋난다.
+**검증 함의**: reference model의 page hit/miss 예측을 `RA[13:0]` 전체로 할지 `RA[12:0]`으로 할지가 갈린다. 두 층위를 섞으면 예측이 어긋나고, 그 결과는 **타이밍 checker의 false FAIL**로 나타난다 — 원인이 주소 모델에 있는데 타이밍 버그처럼 보이는 전형적인 오진 경로다.
 </details>
 
 ### 문제 2 — 뱅크 그룹 판정
@@ -363,22 +497,17 @@ Table 5 배정: 뱅크 8–15는 **Group B**, 뱅크 24–31은 **Group D**.
 **함정**: 12-high이므로 SID는 `SID[1:0]`을 쓰되 **`SID[1:0]=11`은 무효**다(Note 6). 따라서 유효 SID 값은 3개이고, 뱅크 수는 3 × 16 = **48뱅크**, 뱅크 그룹은 **6개**(A~F)다. SID 폭이 2비트라고 해서 4개 값을 모두 쓸 수 있는 것이 아니다.
 </details>
 
-## 🔍 검증 연결
-
-- 주소 디코드 오류가 데이터 비교를 통과하는 문제 → [`hbm_dv` Ch09 Assertion·Checker](../../hbm_dv/09_assertion_checker/)
-- 뱅크 그룹을 coverage 축으로 잡는 방법 → [`hbm_dv` Ch10 Coverage·회귀](../../hbm_dv/10_coverage_regression/)
-- 채널·밀도 구성을 설정으로 분리하기 → [`hbm_dv` Ch06 환경 계층](../../hbm_dv/06_env_hierarchy/)
-
 ## 핵심 정리
 
-- 주소 필드는 **`RA[13:0]` · `CA[4:0]` · `BA[3:0]` · `SID[1:0]`**. 무효 조합이 셋 있다 — `RA[13:12]=11`, `SID[1:0]=11`, 4Hi의 `SID[0]=1`.
+- 주소 필드는 **`RA[13:0]` · `CA[4:0]` · `BA[3:0]` · `SID[1:0]`**. 무효 조합이 셋 있다 — `RA[13:12]=11`, `SID[1:0]=11`, 4Hi의 `SID[0]=1`. 셋 다 **핀에서** assertion으로 막고 coverage에서는 `illegal_bins` 로 둔다.
 - **SID는 층 선택 신호가 아니라 뱅크 주소 확장 비트**다(Note 4). 뱅크 인덱스는 `{SID, BA}`이고, **일부 AC 타이밍이 SID에 연동될 수 있다.**
-- **BL8의 8 UI를 구분하는 column 주소 비트는 장치로 전송되지 않는다**(Note 2). 버스트 순서는 고정이다.
+- **BL8의 8 UI를 구분하는 column 주소 비트는 장치로 전송되지 않는다**(Note 2). 이것을 틀리면 **데이터 미스매치로 위장**하므로, 주소는 데이터와 분리해 **왕복 검사**(`decode(encode(x)) == x`)로 먼저 본다.
 - `Page = 2^COLBITS × (Prefetch/8)` = **1 KB**. 물리 행은 **2 KB**이고 **`RA`의 MSB가 절반을 고른다**(Note 3).
 - 뱅크 그룹은 **연속 8뱅크 단위**이고, 그룹 인덱스는 `{SID, BA[3]}` 로 정해진다 [추론].
-- 그룹이 타이밍을 가른다 — **S = 다른 그룹(짧음), L = 같은 그룹(김)**. 스케줄러가 그룹을 번갈아 쓰면 실효 성능이 달라진다.
-- **간이 상태도는 뼈대일 뿐**이다. 규격이 스스로 밝힌 생략 목록(다중 뱅크·IEEE1500 상호작용·즉시 리셋·ECS/DRFM·DCA/DCM·loopback·트레이닝)이 곧 설계 위험 목록이다.
-- 상태 머신은 **뱅크마다 한 벌**이다.
+- 그룹이 타이밍을 가른다 — **S = 다른 그룹(짧음), L = 같은 그룹(김)**. 64뱅크에서 같은 그룹일 확률은 **1/8**이라, 순수 랜덤 자극은 **긴 쪽 경로를 훨씬 덜 덮는다.** 그룹 관계를 자극의 명시 축으로 올려야 한다.
+- **간이 상태도는 뼈대일 뿐**이다. 규격이 스스로 밝힌 생략 목록(다중 뱅크·IEEE1500 상호작용·즉시 리셋·ECS/DRFM·DCA/DCM·loopback·트레이닝)이 **그대로 V-Plan 항목**이 된다 — 규격이 검증 계획의 절반을 대신 써 준 셈이다.
+- 상태 모델은 **뱅크마다 한 벌**, 마지막 접근 그룹은 **PC마다 한 벌**이다. 후자를 채널 계층에 두면 PC0의 접근이 PC1의 `tRRD` 선택을 오염시킨다.
+- coverage는 주소 값이 아니라 **선택된 타이밍**(`tRRDL/S` · `tCCDL/S/R` · `tWTRL/S`)을 센다. `tCCDR` bin이 비는 것이 이 장에서 가장 흔한 구멍이다.
 
 ## Further Reading
 

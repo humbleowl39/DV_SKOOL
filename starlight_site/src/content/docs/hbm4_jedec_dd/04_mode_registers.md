@@ -1,6 +1,6 @@
 ---
 title: "04 — Mode Register"
-description: JESD270-4 §5 · 20개 MR의 기능별 구조, 두 갈래 접근 경로, 프로그래밍 제약과 설계 함의
+description: JESD270-4 §5 · 20개 MR의 기능별 구조, 쓰기·읽기가 갈리는 RAL 구조, "기본값 없음"과 "unspecified operation"이 만드는 검증 부담
 ---
 
 :::tip[🎯 Learning Objectives]
@@ -9,8 +9,9 @@ description: JESD270-4 §5 · 20개 MR의 기능별 구조, 두 갈래 접근 �
 - **Organize** 20개 Mode Register를 기능 축으로 분류하고 각 축이 제어하는 하드웨어를 지목한다.
 - **Calculate** 타이밍 MR 값을 `RU{t/tCK}` 규칙으로 산출한다.
 - **Explain** MR이 두 PC에 공유되면서도 일부 필드가 PC별로 존재하는 구조를 설명한다.
-- **Design** MR 파일 RTL과 설정 변경이 컨트롤러 타이머에 반영되는 경로를 설계한다.
-- **Evaluate** "기본값이 정의되지 않는다"는 조문이 초기화 펌웨어에 부과하는 책임을 판단한다.
+- **Construct** 쓰기와 읽기가 서로 다른 인터페이스를 타는 MR을 RAL map 두 개로 모델링하고, `has_reset(0)`이 왜 필요한지 설명한다.
+- **Derive** "썼다"가 아니라 "그 설정으로 트래픽이 돌았다"를 세는 coverage 축을 도출한다.
+- **Evaluate** "기본값이 정의되지 않는다"와 "unspecified operation" 두 조문이 각각 검증 환경에 부과하는 책임을 판단하고, 후자가 왜 DUT 검증 항목이 될 수 없는지 설명한다.
 :::
 
 :::note[Prerequisites]
@@ -90,7 +91,7 @@ Table 9는 레지스터 번호 순으로 나열하지만, 설계 관점에서는
 
 장치는 정의된 전 범위를 지원할 의무가 없습니다. 예를 들어 `RL`을 30~50만 지원할 수 있습니다. 다만 그 안에 **구멍이 있어서는 안 됩니다** — 30~40과 45~50만 지원하는 식은 금지입니다.
 
-**설계 함의**: 컨트롤러는 장치가 지원하는 범위를 알아야 하고, 그 범위는 `[min, max]` **두 값으로 표현 가능**합니다. 지원 여부를 비트맵으로 관리할 필요가 없습니다.
+**검증 함의**: 지원 범위가 `[min, max]` 연속 구간이므로, 랜덤 제약도 `inside {[min:max]}` 한 줄로 끝납니다. 그리고 **범위 밖 값은 `illegal_bins`** 로 두는 것이 맞습니다 — 자극이 만들면 안 되는 값이지 "아직 안 덮은 값"이 아닙니다.
 :::
 
 :::tip[규칙 2 — 아날로그 값을 클럭으로 올림한 값 이상]
@@ -215,100 +216,276 @@ IEEE -> MR
 
 "unspecified operation"이라는 표현에 주목할 필요가 있습니다 — 오류가 보고되는 것이 아니라 **무슨 일이 일어날지 규격이 보장하지 않는다**는 뜻입니다. 조용히 잘못 동작할 수 있습니다.
 
+검증에서 이 한 단어의 무게가 큽니다. **정답이 존재하지 않으므로 scoreboard가 기대값을 만들 수 없습니다.** 그래서 이 조건은 "DUT가 잘 처리하는지 확인하는 항목"이 아니라 **"자극이 여기 들어가지 않게 막는 항목"** 이 됩니다 — 5.1절에서 자세히 다룹니다.
+
 또한 [01장](../01_landscape_organization/)에서 확인했듯 `MRS`는 **두 PC에 공통인 커맨드**이므로, 발행 시점에 **양쪽 PC 모두**의 타이밍 조건이 충족되어야 합니다(§3.1.2).
 
-## ⚙️ 설계 적용 (RTL / Front-end)
+## 🔬 검증 적용
 
-### 5.1 MR 파일 — 채널당 한 벌
+### 5.1 무엇이 깨질 수 있는가
 
-```systemverilog
-// MR은 두 PC에 공유된다 (§5). 채널당 한 벌이며 PC별로 복제하지 않는다.
-localparam int MR_COUNT = 20;   // MR0 ~ MR19
-localparam int MR_WIDTH = 8;
+Mode Register는 **설정이지 데이터가 아닙니다.** 그래서 결함의 성격이 다릅니다 — 값이 틀렸다는 사실 자체가 아니라, **틀린 설정으로 동작한 그 이후 전부**가 증상으로 나타납니다.
 
-logic [MR_WIDTH-1:0] mr_q [MR_COUNT];
+| 조문 | 위반 형태 | 증상 | 잡히는 시점 |
+|---|---|---|---|
+| §5 **기본값 미정의** | 모델이 리셋 후 기본값을 가정 | 모델과 장치가 갈림. 20개 중 하나라도 안 쓰면 그 필드는 미정의 | **없음** |
+| §5 RFU 비트는 **0으로** | 랜덤화가 RFU를 1로 채움 | unspecified | **없음** |
+| §5 `MRS` 전제조건 (전 뱅크 idle · `tRDMRS`) | 조건 미충족 상태에서 발행 | **unspecified operation** — 오류 보고가 **없다** | **없음** |
+| §5 `MRS`는 **쓰기 전용** | "썼으니 됐다"고 가정 | 반영 여부를 기능 경로로 확인 불가 | — |
+| §3.1.2 MR **공유** | MR을 PC별로 모델링 | PC1이 PC0의 설정으로 동작 | MR을 바꾸는 시퀀스에서만 |
+| `MR10`·`MR11` **PC별 필드** | 상·하위 절반을 교차 배선 | DCA 코드가 반대 PC로 감 | 트레이닝 실패 |
+| §5 `tMOD`·`tMRD` 후 유효 | 모델이 **즉시** 반영 | 전환 구간에서 모델과 DUT가 다른 지연을 씀 | 간헐 미스매치 |
+| Table 13~15 Note 2 `RU{t/tCK}` | 반올림/내림 혼동 | 한 사이클 부족 → 타이밍 위반 | 마진 없는 조건에서만 |
+| MR 이미지의 **주파수 종속** | 클럭 변경 후 재적재 누락 | 이전 주파수 기준 지연으로 동작 | DVFS 시나리오에서만 |
 
-always_ff @(posedge ck) begin
-  if (mrs_valid && (mrs_ma < MR_COUNT))
-    mr_q[mrs_ma] <= mrs_op;
-end
+세 번째 줄이 이 장에서 가장 다루기 까다롭습니다.
+
+:::caution["unspecified operation"은 기대값을 만들 수 없다는 뜻이다]
+§5는 `MRS` 전제조건 위반에 대해 **오류가 보고된다고 말하지 않습니다.** "동작이 규정되지 않는다(unspecified operation)"고 씁니다. 검증에서 이 표현의 의미는 무겁습니다.
+
+- DUT가 **어떻게 반응하든 규격 위반이 아닙니다.** 무시할 수도, 잘못 쓸 수도, 배열을 건드릴 수도 있습니다.
+- 따라서 **scoreboard가 기대값을 만들 수 없습니다.** 비교할 정답이 존재하지 않습니다.
+
+그러므로 이 항목은 **DUT 검증 항목이 아니라 자극 측 제약**입니다. 처리 방식이 셋으로 갈립니다.
+
+| 무엇을 | 어떻게 |
+|---|---|
+| 정상 회귀 | 자극이 **애초에 위반을 만들지 않도록** 제약 + 위반 시 즉시 `uvm_error` (환경 자기 검사) |
+| 컨트롤러 DV | 컨트롤러가 **그런 `MRS`를 내보내지 않는지**가 검증 대상 — 여기서는 DUT 검증이 맞다 |
+| 장치 모델 | 위반 입력에 대해 **모델이 무엇을 하는지 문서화**해 둔다. 그것이 규격은 아니라는 주석과 함께 |
+
+V-Plan에 이 행을 넣을 때 "DUT가 위반을 거부하는지 확인"이라고 쓰면 틀립니다. 규격은 거부를 요구하지 않습니다.
+:::
+
+:::caution[MR을 되읽는 경로가 다른 인터페이스에 있다]
+§5의 두 갈래 접근 경로가 검증 환경 구조를 직접 바꿉니다.
+
+```
+쓰기 : MRS 커맨드        → column 커맨드 경로  (기능 인터페이스)
+읽기 : MODE_REGISTER_DUMP_SET → IEEE 1500 포트 (테스트 인터페이스)
 ```
 
-`MA[4:0]`는 5비트라 32개를 지시할 수 있지만 정의된 것은 20개입니다. **미정의 주소에 대한 쓰기를 무시할지 오류로 처리할지**는 설계 판단이며, 규격이 정하지 않았으므로 컨트롤러 쪽에서 발생 자체를 막는 편이 안전합니다.
+일반적인 레지스터 검증은 **같은 인터페이스로 쓰고 읽어** 왕복을 확인합니다. 여기서는 그것이 **불가능**합니다. 쓰기와 읽기가 물리적으로 다른 포트에 있습니다.
 
-### 5.2 필드 배선 — 채널 전역 vs PC별
+귀결이 셋입니다.
 
-축 ③에서 본 구조를 배선으로 옮기면 이렇습니다.
+1. **RAL 모델이 map 두 개를 든다** — write는 `MRS` map, read는 IEEE1500 map. 하나의 map으로 모델링하면 read가 어디로도 갈 수 없습니다.
+2. **"썼다"의 확인은 비용이 든다** — IEEE1500 포트를 열어야 하므로, 매 `MRS`마다 되읽는 것은 현실적이지 않습니다. **언제 대조할지**가 검증 계획의 항목이 됩니다.
+3. **초기화 중에는 되읽을 수도 없습니다** — IEEE1500 명령은 `tINIT3` 이후에만 쓸 수 있습니다([03장](../03_init_reset_power/)). 그 이전에 발행한 `MRS`는 나중에야 확인 가능합니다.
+:::
+
+### 5.2 어떻게 잡는가 — 수단 선택
+
+| 규칙 | 성격 | 수단 | 이유 |
+|---|---|---|---|
+| MR 값 자체의 정합 | **레지스터 상태** | **RAL (map 2개)** | 표준 레지스터 검증 구조. 단 read/write map이 갈린다 |
+| `MRS` 전제조건 (idle · `tRDMRS`) | **시간·상태 조건** | **SVA** | 발행 시점의 국소 판정 |
+| RFU = 0 | **불변식** | **SVA + `illegal_bins`** | 자극 실수를 두 겹으로 잡는다 |
+| `tMOD` 후 유효화 | **반영 시점** | **reference model의 지연 반영** | 언제 예측을 갱신할지의 문제 |
+| PC별 필드 배선 | **매핑** | **RAL 필드 정의 + 되읽기 대조** | 교차 배선은 값 비교로만 드러난다 |
+
+**① RAL — 쓰기와 읽기가 다른 map을 탄다**
 
 ```systemverilog
-// 채널 전역에 적용되는 필드
-wire capar_en = mr_q[0][6];
-wire wdbi_en  = mr_q[0][1];
-wire rdbi_en  = mr_q[0][0];
+class hbm4_mr_reg extends uvm_reg;
+  `uvm_object_utils(hbm4_mr_reg)
+  rand uvm_reg_field f;                     // 8비트 (§5)
 
-// PC별로 갈라지는 필드 — 같은 레지스터의 상·하위 절반
-wire [3:0] dca_wdqs_pc0 = mr_q[11][3:0];
-wire [3:0] dca_wdqs_pc1 = mr_q[11][7:4];
-wire [3:0] dca_rdqs_pc0 = mr_q[10][3:0];
-wire [3:0] dca_rdqs_pc1 = mr_q[10][7:4];
+  function new(string name = "hbm4_mr_reg");
+    super.new(name, 8, UVM_NO_COVERAGE);
+  endfunction
+
+  virtual function void build();
+    f = uvm_reg_field::type_id::create("f");
+    // 기본값이 정의되지 않는다 (§5) — reset value 를 등록하지 않는다.
+    // has_reset = 0 으로 두면 reset() 후 mirror 가 "모름" 상태로 남고,
+    // 초기화가 값을 쓰기 전에 predict 하려 하면 RAL 이 알려 준다.
+    f.configure(.parent(this), .size(8), .lsb_pos(0), .access("RW"),
+                .volatile(0), .reset(0), .has_reset(0),
+                .is_rand(1), .individually_accessible(0));
+  endfunction
+endclass
+
+class hbm4_mr_block extends uvm_reg_block;
+  `uvm_object_utils(hbm4_mr_block)
+  rand hbm4_mr_reg mr[20];                  // MR0 ~ MR19
+  uvm_reg_map      mrs_map;                 // 쓰기 전용 — MRS 커맨드 경로 (§5)
+  uvm_reg_map      w1500_map;               // 읽기 + 쓰기 — IEEE1500 (§13.5.13)
+
+  virtual function void build();
+    mrs_map   = create_map("mrs_map",   0, 1, UVM_LITTLE_ENDIAN);
+    w1500_map = create_map("w1500_map", 0, 1, UVM_LITTLE_ENDIAN);
+    foreach (mr[i]) begin
+      mr[i] = hbm4_mr_reg::type_id::create($sformatf("mr%0d", i));
+      mr[i].configure(this); mr[i].build();
+      // 같은 레지스터가 두 map 에 다른 권한으로 등록된다
+      mrs_map.add_reg  (mr[i], i, "WO");    // 기능 경로로는 되읽을 수 없다
+      w1500_map.add_reg(mr[i], i, "RW");
+    end
+    lock_model();
+  endfunction
+endclass
 ```
 
-**흔한 실수 둘**: MR 파일을 PC별로 복제하는 것(규격 위반), 그리고 PC별 필드를 구분 없이 양쪽에 배선하는 것(DCA 코드 교차).
+`has_reset(0)` 이 이 모델의 핵심입니다. §5가 "기본 상태가 정의되지 않는다"고 했으므로, **리셋 후 mirror 값은 "0"이 아니라 "모름"** 이어야 합니다. `reset(0)`으로 등록해 두면 초기화가 MR을 쓰지 않고 지나가도 모델은 0을 자신 있게 예측하고, **장치와 갈린 채 회귀가 통과**합니다.
 
-### 5.3 타이밍 값 산출 — `RU{t/tCK}`
+**② `MRS` 전제조건**
 
 ```systemverilog
-// WR/RAS/RTP는 아날로그 값을 클럭으로 올림한 값 이상이어야 한다 (Table 13~15 Note 2)
-// 벤더 데이터시트의 아날로그 값(ps)과 동작 tCK(ps)로 계산한다
-function automatic int mr_cycles(input int t_analog_ps, input int t_ck_ps);
-  return (t_analog_ps + t_ck_ps - 1) / t_ck_ps;   // round up
-endfunction
+// §5 — 전 뱅크 idle, 선행 READ 로부터 tRDMRS 경과. 위반 시 unspecified operation.
+// 이 검사가 잡는 것은 "DUT 버그"가 아니라 "자극이 규격 밖으로 나갔다"는 사실이다.
+property p_mrs_all_banks_idle;
+  @(posedge ck) disable iff (!rst_n)
+    mrs_vld |-> (bank_active_mask == '0);
+endproperty
+a_mrs_idle: assert property (p_mrs_all_banks_idle)
+  else `uvm_error("MRS_PRECOND",
+       $sformatf("뱅크가 열린 채 MRS 발행 (active=%0h). §5 — unspecified operation",
+                 bank_active_mask))
 
-// 예: tWR=15000 ps, tCK=500 ps  ->  30 nCK
-localparam int WR_SETTING = mr_cycles(T_WR_PS, T_CK_PS);
+a_mrs_trdmrs: assert property (@(posedge ck) disable iff (!rst_n)
+    mrs_vld |-> (cycles_since_last_rd >= T_RDMRS))
+  else `uvm_error("MRS_PRECOND", "선행 READ 로부터 tRDMRS 미경과 (§5)")
+
+// RFU 비트는 0 으로 프로그램되어야 한다 (§5)
+a_mr_rfu_zero: assert property (@(posedge ck) disable iff (!rst_n)
+    mrs_vld |-> ((mrs_data & RFU_MASK[mrs_addr]) == '0))
+  else `uvm_error("MRS_RFU", "RFU 비트가 1 로 프로그램되었다 (§5)")
+
+// 전제조건 경계에 실제로 붙어 봤는가 — 안 그러면 위 검사는 여유 구간만 본 것이다
+c_mrs_at_trdmrs_boundary: cover property (@(posedge ck)
+    mrs_vld && (cycles_since_last_rd == T_RDMRS));
 ```
 
-**두 가지를 함께 지켜야 합니다.**
+**③ `tMOD` — 예측을 언제 갱신하는가**
 
-1. 계산 결과가 장치의 **지원 범위 안**에 들어가는지 확인 — 범위는 연속이므로 `[min, max]` 비교로 충분합니다(규칙 1).
-2. 장치가 클럭 단위 MR 정의를 지원하지 않으면 **설정이 무시되므로**, 컨트롤러 내부 타이머도 **동일한 제약을 독립적으로** 지켜야 합니다. MR에만 의존하면 그 장치에서 타이밍 위반이 납니다.
-
-### 5.4 설정 변경이 컨트롤러 타이머에 반영되는 경로
-
-`MRS`로 `RL`·`WL`·`WR`·`RAS`·`RTP`를 바꾸면 컨트롤러의 스케줄링 상수가 함께 바뀌어야 합니다.
+`MRS` 발행 시점과 그 설정이 유효해지는 시점이 다릅니다. 모델이 즉시 갱신하면 **전환 구간에서 DUT와 다른 지연을 기대**합니다.
 
 ```systemverilog
-// MR 갱신 -> 타이밍 상수 재로드. tMOD 등 규정 시간 후에 유효화한다 (§5).
-always_ff @(posedge ck) begin
-  if (mrs_valid) begin
-    mr_update_pending_q <= 1'b1;
-    mr_settle_cnt_q     <= T_MOD;
-  end else if (mr_update_pending_q) begin
-    if (mr_settle_cnt_q == 0) begin
-      rl_q <= decode_rl(mr_q[2]);
-      wl_q <= decode_wl(mr_q[1]);
-      // ...
-      mr_update_pending_q <= 1'b0;
-    end else
-      mr_settle_cnt_q <= mr_settle_cnt_q - 1;
+// MRS 를 관측하면 값은 받아 두되, tMOD 만료 시점에 유효화한다 (§5).
+task automatic on_mrs(int idx, bit [7:0] val);
+  m_mr_pending[idx] = val;
+  fork
+    begin
+      repeat (T_MOD) @(posedge ck);
+      m_mr[idx] = m_mr_pending[idx];
+      recompute_timing_constants();       // RL·WL·WR·RAS·RTP 재산출
+    end
+  join_none
+endtask
+```
+
+전환 구간(`MRS` ~ `tMOD` 만료) 동안 **어느 값을 기대할지**가 애매합니다. 규격은 그 구간에 커맨드를 발행하지 말라고 하므로, 가장 안전한 처리는 **그 구간의 커맨드 발행 자체를 assertion으로 금지**하고 모델은 전환을 원자적으로 다루는 것입니다.
+
+### 5.3 무엇을 덮었다고 말할 수 있는가
+
+MR coverage에서 흔한 실수는 **필드 값을 세는 것**입니다. 8비트 × 20개를 다 채우는 것은 불가능하고 의미도 없습니다. 세야 할 것은 **어떤 설정 조합으로 실제 트래픽이 돌았는가**입니다.
+
+```systemverilog
+covergroup cg_hbm4_mr with function sample(
+    int mr_idx, bit [7:0] val, mr_path_e path, bit readback_ok, mr_ctx_e ctx);
+  option.per_instance = 1;
+
+  // --- 초기화가 20개를 전부 썼는가 (§5 기본값 미정의) --------------------
+  cp_mr_written : coverpoint mr_idx {
+    bins mr[] = {[0:19]};
+    // MR12·MR17 은 벤더 전용이지만 "쓰지 않아도 된다"는 뜻은 아니다
+  }
+
+  // --- 접근 경로 (§5 두 갈래) -------------------------------------------
+  cp_path : coverpoint path {
+    bins mrs_write = {MR_PATH_MRS};          // 기능 경로 — 쓰기만
+    bins w1500_wr  = {MR_PATH_1500_WRITE};
+    bins w1500_rd  = {MR_PATH_1500_READ};    // 되읽기 — 이 bin 이 비면 대조를 안 한 것
+  }
+
+  // --- 설정이 동작에 반영되었는가 ----------------------------------------
+  // "썼다" 가 아니라 "그 설정으로 트래픽이 돌았다" 를 센다
+  cp_ctx : coverpoint ctx {
+    bins init_only   = {MR_CTX_INIT};        // 초기화 때 쓰고 끝
+    bins traffic_ran = {MR_CTX_TRAFFIC};     // 그 설정으로 read/write 를 수행
+    bins reprogram   = {MR_CTX_REPROGRAM};   // 런타임 재프로그램 (DVFS 등)
+  }
+  x_mr_ctx : cross cp_mr_written, cp_ctx;
+
+  // --- 기능 스위치 조합 (MR0) --------------------------------------------
+  cp_capar : coverpoint val[6] iff (mr_idx == 0) { bins off = {0}; bins on = {1}; }
+  cp_wdbi  : coverpoint val[1] iff (mr_idx == 0) { bins off = {0}; bins on = {1}; }
+  cp_rdbi  : coverpoint val[0] iff (mr_idx == 0) { bins off = {0}; bins on = {1}; }
+  // parity × DBI 조합은 데이터 패리티 대상 집합을 바꾼다 ([08장](../08_parity/))
+  x_switches : cross cp_capar, cp_wdbi, cp_rdbi;
+
+  // --- 타이밍 필드는 값이 아니라 경계를 센다 -----------------------------
+  cp_timing_edge : coverpoint val iff (mr_idx inside {1,2,3,4,5}) {
+    bins at_min = {MR_TIMING_MIN};
+    bins mid    = {[MR_TIMING_MIN+1 : MR_TIMING_MAX-1]};
+    bins at_max = {MR_TIMING_MAX};
+    illegal_bins out_of_range = default;     // 지원 범위 밖은 나오면 안 된다
+  }
+
+  // --- 되읽기 대조 --------------------------------------------------------
+  cp_readback : coverpoint readback_ok { bins matched = {1}; }
+endgroup
+```
+
+세 가지가 요점입니다.
+
+- **`x_mr_ctx` 가 이 장의 중심 축입니다.** `cp_mr_written` 만 채우면 "초기화가 20개를 다 썼다"까지만 증명됩니다. `traffic_ran` 과 cross해야 **그 설정으로 실제 동작했다**가 증명됩니다.
+- **`cp_path.w1500_rd` 가 비어 있으면** MR 값을 한 번도 대조하지 않은 것입니다. 쓰기만 하고 확인하지 않은 회귀는 MR 경로 결함을 통과시킵니다.
+- **타이밍 필드는 `at_min`·`at_max` 만 의미가 있습니다.** 중간값은 결함을 드러내지 않습니다.
+
+### 5.4 어떻게 자극하는가
+
+**① 초기화 MR 이미지를 랜덤화한다** — 고정 이미지 하나만 쓰는 것이 가장 흔한 구멍입니다. 20개 전부를 쓰되 값은 합법 범위에서 흔듭니다.
+
+```systemverilog
+class mr_image_cfg extends uvm_object;
+  `uvm_object_utils(mr_image_cfg)
+  rand bit [7:0] mr[20];
+  rand int unsigned t_ck_ps;                 // 동작 주파수 — MR 이미지가 여기 종속된다
+
+  // RFU 비트는 반드시 0 (§5)
+  constraint c_rfu { foreach (mr[i]) (mr[i] & RFU_MASK[i]) == 0; }
+
+  // 타이밍 MR 은 RU{t/tCK} 로 산출한 값 이상이어야 한다 (Table 13~15 Note 2)
+  constraint c_timing {
+    mr[3] >= (T_WR_PS  + t_ck_ps - 1) / t_ck_ps;      // WR
+    mr[4] >= (T_RAS_PS + t_ck_ps - 1) / t_ck_ps;      // RAS
+    mr[5] >= (T_RTP_PS + t_ck_ps - 1) / t_ck_ps;      // RTP
+  }
+  // 경계값에 붙는 빈도를 올린다 — 중간값은 결함을 드러내지 않는다
+  constraint c_edge_bias {
+    mr[2] dist { RL_MIN := 3, [RL_MIN+1 : RL_MAX-1] := 1, RL_MAX := 3 };
+  }
+endclass
+```
+
+`c_timing` 이 **`t_ck_ps` 에 종속**된 것이 핵심입니다. 주파수를 랜덤화하면서 MR 값을 고정하면 `RU{t/tCK}` 규칙을 위반하는 이미지가 생깁니다 — 자극이 스스로 규격을 벗어나는 경우입니다.
+
+**② 되읽기 대조 지점을 정한다** — 매 `MRS`마다 IEEE1500으로 확인하는 것은 비현실적이므로, 대조 시점을 정책으로 정합니다.
+
+- 초기화 완료 직후 **1회 전량 대조** (`tINIT3` 이후여야 가능 — [03장](../03_init_reset_power/))
+- 런타임 재프로그램 **직후 해당 MR만**
+- 테스트 종료 시 **1회 전량 대조** — 도중에 예상치 못한 변경이 없었는지
+
+```systemverilog
+task automatic mr_dump_and_compare();
+  uvm_status_e st; uvm_reg_data_t v;
+  foreach (mr_blk.mr[i]) begin
+    // 되읽기는 IEEE1500 map 으로만 가능하다 (§5, §13.5.13)
+    mr_blk.mr[i].read(st, v, .path(UVM_FRONTDOOR), .map(mr_blk.w1500_map));
+    if (v !== mr_blk.mr[i].get())
+      `uvm_error("MR_MISMATCH", $sformatf("MR%0d 기대 %0h, 실제 %0h", i,
+                                          mr_blk.mr[i].get(), v))
   end
-end
+endtask
 ```
 
-**핵심**: MR 쓰기 시점과 그 값이 유효해지는 시점이 다릅니다. 즉시 반영하면 `tMOD` 구간 동안 잘못된 지연으로 커맨드를 발행하게 됩니다.
+**③ 런타임 재프로그램 — 주파수 전환 시나리오** — MR 이미지가 주파수 종속이므로, 클럭을 바꾸는 시스템은 전환마다 재적재해야 합니다. 이 시퀀스가 없으면 `cp_ctx.reprogram` 이 영원히 빕니다.
 
-### 5.5 초기화 MR 이미지
+**④ `tMOD` 경계** — `MRS` 직후 `tMOD` 만료 **정확히 그 시점**에 커맨드를 발행하는 directed 시퀀스를 둡니다. 항상 여유 있게 기다리는 자극만 돌면, 반영 시점 처리의 오차가 드러나지 않습니다.
 
-"기본값 없음" 조문 때문에, 초기화 펌웨어는 **20개 전부의 값을 갖고 있어야** 합니다.
-
-```
-MR 이미지 = 벤더 데이터시트(아날로그 타이밍)
-          + 동작 주파수 (tCK)
-          + 시스템 정책 (parity on/off, DBI on/off, DRFM on/off)
-          + 벤더 전용 영역 (MR12·MR17 — 데이터시트 참조)
-```
-
-이 이미지가 **주파수 종속**이라는 점이 중요합니다. DVFS로 클럭을 바꾸는 시스템이라면 주파수마다 MR 이미지가 따로 있어야 하고, 전환 시퀀스에서 재적재해야 합니다.
+**⑤ 전제조건 위반은 격리된 negative 테스트로** — 뱅크를 열어 둔 채 `MRS`를 발행하는 시퀀스입니다. 다만 5.1에서 본 대로 **기대값이 존재하지 않으므로**, 이 테스트로 확인할 수 있는 것은 "환경의 checker가 위반을 잡는가"뿐입니다. DUT의 반응을 정답과 비교하려 들면 안 됩니다.
 
 ## 6. 대표 문제 — dry-run
 
@@ -329,7 +506,7 @@ RU{tRAS / tCK} = RU{32 / 0.4} = RU{80} = 80 nCK
 - 이 주파수·타이밍 조합이 해당 장치의 지원 범위를 벗어난다, 또는
 - 장치가 **클럭 사이클 단위 MR 정의를 지원하지 않는** 경우에 해당해 설정이 무시된다(Note 2).
 
-**설계 결론**: MR 값 산출 결과가 필드 범위를 넘는지 반드시 검사해야 한다. 넘는 경우 컨트롤러는 **자체 타이머로 `tRAS`를 강제**하고 MR에 의존하지 않아야 한다. 산출값을 무비판적으로 필드 폭으로 잘라 넣으면(80 → 하위 6비트 = 16) 심각한 타이밍 위반이 된다.
+**검증 결론**: 자극의 MR 이미지 생성 제약에 **범위 검사가 반드시 들어가야 한다.** 산출값을 필드 폭으로 무비판적으로 잘라 넣으면(80 → 하위 6비트 = 16) 자극이 스스로 심각한 타이밍 위반을 만들고, 그 결과는 DUT 버그처럼 보인다. `mr_image_cfg` 의 `c_timing` 제약이 이 계산을 그대로 담는 이유다(5.4 ①).
 </details>
 
 ### 문제 2 — 공유 MR과 PC별 필드
@@ -349,7 +526,7 @@ RU{tRAS / tCK} = RU{32 / 0.4} = RU{80} = 80 nCK
 
 **문제**: 기능 경로(`MRS`)로는 MR을 **되읽을 수 없다**(§5). 따라서 기존 PC1 값을 알려면 ⓐ 컨트롤러가 자신이 쓴 값을 **섀도 카피**로 보관하고 있거나, ⓑ IEEE 1500 `MODE_REGISTER_DUMP_SET`으로 읽어와야 한다.
 
-**설계 결론**: MR 섀도 레지스터를 컨트롤러에 두는 것은 선택이 아니라 **필수**다. 부분 필드 갱신이 필요한 레지스터가 존재하기 때문이다.
+**검증 결론**: RAL 모델이 **필드 단위로 쪼개져 있어야** 한다. 레지스터를 8비트 통짜로 두면 부분 필드 갱신을 예측할 수 없고, 되읽기 대조에서 어느 필드가 틀렸는지도 알 수 없다. 그리고 기능 경로로는 되읽을 수 없으므로(§5) **모델의 섀도가 유일한 기준값**이다 — 그 모델이 틀리면 대조할 것이 없다.
 </details>
 
 ### 문제 3 — 리셋 직후 상태
@@ -363,26 +540,22 @@ RU{tRAS / tCK} = RU{32 / 0.4} = RU{80} = 80 nCK
 
 즉 필드 수준의 (Default) 표기는 **그 값이 권장/기본 설정이라는 의미**이지, **리셋 후 하드웨어가 그 값을 갖는다는 보장이 아니다.** 안전한 해석은 "리셋 후 MR 내용은 미정의"이며, [03장](../03_init_reset_power/) 6단계에서 **모든 MRS를 발행**하는 것이 규격이 요구하는 절차다.
 
-**설계 결론**: 초기화 펌웨어는 20개 MR 전부를 기록한다. 어떤 필드도 "기본값일 것"으로 건너뛰지 않는다.
+**검증 결론**: 초기화 시퀀스가 20개 MR 전부를 기록하는지가 **검사 대상**이다. `cp_mr_written` 의 bin 20개가 다 차지 않으면 그 자체가 결함이며, RAL 쪽은 `has_reset(0)` 으로 "모름" 상태를 유지해 **쓰지 않은 MR을 예측하려 들면 알려 주도록** 만든다(5.2 ①).
 </details>
-
-## 🔍 검증 연결
-
-- MR 쓰기와 "설정 효과 확인"의 구분 → [`hbm_dv` Ch08 시나리오](../../hbm_dv/08_testcase_scenarios/)
-- MR을 RAL로 추상화할 때의 설계 → [`hbm_dv` Ch06 환경 계층](../../hbm_dv/06_env_hierarchy/)
-- 설정 프로파일과 체커의 프로파일 독립성 → [`hbm_dv` Ch06](../../hbm_dv/06_env_hierarchy/)
 
 ## 핵심 정리
 
 - **8비트 MR 20개(`MR0`~`MR19`)**, `MA[4:0]`로 선택. **`MR12`·`MR17`은 벤더 전용**, `MR16`~`MR19`는 **벤더 선택**.
 - **MR은 두 PC에 공유**된다 — 레지스터 인스턴스는 채널당 하나다. 다만 **`MR10`·`MR11`·`MR15`는 하나의 레지스터 안에 PC별 필드**를 갖는다.
-- **기본값이 정의되지 않는다.** 리셋 후 20개 전부를 명시적으로 초기화해야 한다. 필드의 (Default) 표기는 권장값이지 리셋값이 아니다.
+- **기본값이 정의되지 않는다.** 리셋 후 20개 전부를 명시적으로 초기화해야 한다. RAL은 **`has_reset(0)`** 으로 두어 mirror가 "0"이 아니라 **"모름"** 이 되게 한다 — `reset(0)`으로 등록하면 초기화가 빼먹은 MR을 모델이 자신 있게 0으로 예측하고 회귀가 통과한다.
 - 지연 파라미터 범위: `PL` 0–4, `WL` 4–19, **`RL` 17–90**, `WR`·`RAS` 4–63, `RTP` 2–15 nCK.
 - 값은 선택적이나 **지원 범위는 연속**이어야 한다 → `[min, max]` 두 값으로 관리 가능.
 - 타이밍 MR은 **`RU{t/tCK}` 이상**으로 프로그램한다. **주파수 종속**이며, 기준 아날로그 값은 **벤더 데이터시트**에 있다. 장치가 미지원이면 **조용히 무시**되므로 컨트롤러 자체 타이머가 필요하다.
-- **MR을 되읽는 경로는 IEEE 1500 `MODE_REGISTER_DUMP_SET` 뿐**이다. `MRS`는 쓰기 전용.
-- 부분 필드 갱신 때문에 컨트롤러의 **MR 섀도 카피는 필수**다.
-- `MRS`는 **모든 뱅크 idle** + `tRDMRS` 경과가 전제이며, 위반 시 **unspecified operation**(오류 보고 없음).
+- **MR을 되읽는 경로는 IEEE 1500 `MODE_REGISTER_DUMP_SET` 뿐**이다. `MRS`는 쓰기 전용 — RAL이 **map 두 개**(쓰기=MRS, 읽기=IEEE1500)를 들어야 하고, 초기화 중에는 `tINIT3` 전이라 **되읽기 자체가 불가능**하다.
+- 부분 필드 갱신 때문에 **RAL은 필드 단위로 쪼개져 있어야** 한다. 기능 경로로 되읽을 수 없으므로 **모델의 섀도가 유일한 기준값**이다.
+- `MRS`는 **모든 뱅크 idle** + `tRDMRS` 경과가 전제이며, 위반 시 **unspecified operation**(오류 보고 없음). 정답이 없으므로 **scoreboard가 기대값을 만들 수 없다** — 이 항목은 DUT 검증이 아니라 **자극 측 제약**이다.
+- 설정 반영은 `tMOD` 후다. 모델이 **즉시** 갱신하면 전환 구간에서 DUT와 다른 지연을 기대한다.
+- coverage는 "MR을 썼다"가 아니라 **"그 설정으로 트래픽이 돌았다"**(`x_mr_ctx`)를 센다. 타이밍 필드는 **`at_min`·`at_max`** 만 의미가 있다.
 - **`DA Port Lockout`이 MR에 있다** — 테스트 접근을 기능 레지스터로 잠근다.
 
 ## Further Reading

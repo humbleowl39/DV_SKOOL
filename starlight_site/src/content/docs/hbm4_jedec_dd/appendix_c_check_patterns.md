@@ -1,6 +1,6 @@
 ---
-title: "부록 C — RTL 설계 패턴"
-description: 12개 장의 규격 제약을 합성 가능한 SystemVerilog 구조로 옮긴 참조 패턴 모음
+title: "부록 C — 검증 패턴"
+description: 12개 장의 규격 제약을 SVA·covergroup·UVM 시퀀스로 옮긴 참조 패턴 모음
 ---
 
 :::caution[사용 범위]

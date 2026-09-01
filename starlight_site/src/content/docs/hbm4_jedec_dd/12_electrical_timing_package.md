@@ -439,7 +439,7 @@ CA parity도, data parity도, on-die ECC도 **장치는 차단하지 않습니�
 :::tip[다음으로]
 - **검증 실무** — [`hbm_dv`](../../hbm_dv/)가 이 조문들을 V-Plan·Agent·Assertion·Coverage로 옮기는 방법을 다룹니다.
 - **구조 개괄 복습** — [`hbm`](../../hbm/)
-- **빠른 참조** — [부록 A](../appendix_a_quick_reference/) · [용어집](../appendix_b_glossary/) · [RTL 패턴](../appendix_c_rtl_patterns/)
+- **빠른 참조** — [부록 A](../appendix_a_quick_reference/) · [용어집](../appendix_b_glossary/) · [검증 패턴](../appendix_c_check_patterns/)
 :::
 
 ## 핵심 정리
@@ -460,6 +460,6 @@ CA parity도, data parity도, on-die ECC도 **장치는 차단하지 않습니�
 
 - **규격**: JESD270-4 §7 Operating Conditions (Table 86–88) · §8 Electrical Characteristics · §9 IDD · §10 AC Timings (Table 109–110) · §11 Package (Table 111, Bump Map) · §12 Assembly
 - **외부 표준**: JESD402-1B 이상 (동작 접합 온도 범위) · JEP157A (CDM) · JS-001/JS-002 (ESD 측정)
-- **부록**: [A 빠른 참조](../appendix_a_quick_reference/) · [B 용어집](../appendix_b_glossary/) · [C RTL 설계 패턴](../appendix_c_rtl_patterns/)
+- **부록**: [A 빠른 참조](../appendix_a_quick_reference/) · [B 용어집](../appendix_b_glossary/) · [C 검증 패턴](../appendix_c_check_patterns/)
 - **후속 코스**: [HBM 검증 실무](../../hbm_dv/)
 - **이해도 점검**: [퀴즈](../quiz/12_electrical_timing_package_quiz/)

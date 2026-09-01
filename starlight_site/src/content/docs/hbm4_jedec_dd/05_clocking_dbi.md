@@ -1,6 +1,6 @@
 ---
 title: "05 — 클럭킹과 DBIac"
-description: JESD270-4 §6.1–6.2 · WDQS 분주기와 짝수 토글 규칙, WDQS-to-CK 정렬 트레이닝, 바이트 단위 데이터 버스 반전
+description: JESD270-4 §6.1–6.2 · 조용히 통과하는 짝수 토글 위반, 문맥에 따라 의미가 바뀌는 DERR, 순차 함수인 DBIac reference model
 ---
 
 :::tip[🎯 Learning Objectives]
@@ -10,7 +10,9 @@ description: JESD270-4 §6.1–6.2 · WDQS 분주기와 짝수 토글 규칙, WD
 - **Derive** preamble·postamble·트레이닝 토글 수가 **짝수여야 한다**는 규칙의 근거와 위반 결과를 도출한다.
 - **Sequence** WDQS-to-CK 정렬 트레이닝의 7단계를 위상 검출기 출력 해석과 함께 재구성한다.
 - **Apply** DBIac 진리표를 적용해 주어진 데이터 전이 수에 대한 DBI 상태와 반전 여부를 판정한다.
-- **Analyze** 내부 DBIac 상태가 리셋되는 네 조건과 그것이 read 경로 설계에 부과하는 요구를 분석한다.
+- **Construct** DBIac를 **순차** reference model로 구현하고, 경계값 4의 히스테리시스와 네 리셋 조건을 반영한다.
+- **Analyze** 짝수 토글 위반이 왜 기능 검사로 잡히지 않는지 분석하고, 누적 불변식 감시가 유일한 수단인 이유를 설명한다.
+- **Differentiate** `DERR`이 트레이닝 모드와 일반 동작에서 갖는 서로 다른 의미를 구분하고, monitor가 그것을 어떻게 알아야 하는지 결정한다.
 :::
 
 :::note[Prerequisites]
@@ -89,7 +91,7 @@ WDQS -> RDQS: "파생"
 
 문제는 이것이 **즉시 드러나지 않을 수 있다**는 점입니다. 위상이 뒤집혀도 마진이 충분하면 통과하고, 온도·전압이 바뀐 뒤에야 실패합니다. 그리고 원인은 훨씬 앞선 트레이닝 시퀀스에 있습니다.
 
-**설계 규칙**: preamble/postamble 길이와 트레이닝 토글 수를 **컨트롤러가 누적 집계**하고, 각 시퀀스 종료 시 **짝수 불변식(invariant)** 을 확인해야 합니다. 이는 개별 시퀀스마다가 아니라 **합계**에 대한 조건입니다.
+**검증 규칙**: 이 결함은 **기능 검사로 잡을 수 없습니다.** 위상이 뒤집혀도 데이터는 맞기 때문입니다. 잡는 방법은 **불변식을 직접 감시**하는 것뿐이며, 그 불변식은 개별 시퀀스가 아니라 **누적 합**에 대한 조건입니다 — 시퀀스 경계를 넘어 사는 카운터가 필요합니다(5.2 ①).
 :::
 
 ### 그 밖의 클럭 규율
@@ -140,7 +142,7 @@ WDQS -> RDQS: "파생"
 
 refresh는 이 모드에서 **허용되지만 권장되지 않습니다.** 트레이닝이 길어져 refresh를 건너뛸 수 없는 상황이라면 트레이닝 정확도와 데이터 보존 사이에서 선택해야 합니다.
 
-**설계 판단**: 트레이닝 구간을 `tREFI` 안에 끝낼 수 있도록 짧게 나눠 수행하는 편이, 트레이닝 중 refresh를 섞는 것보다 안전합니다.
+**검증 판단**: 규격이 금지하지 않았으므로 DUT는 이 조합에서도 동작해야 하지만, **트레이닝 정확도는 보장되지 않습니다.** 곧 기대값을 세우기 어려운 구간입니다. 트레이닝 중 refresh는 **정상 회귀에서 제외하고 별도 스트레스 테스트로 격리**하는 편이 결과 해석에 유리합니다 — 5.4 ⑤.
 :::
 
 ### 위상 검출기 출력 해석
@@ -152,7 +154,9 @@ Table 31이 판독을 행동으로 옮기는 규칙을 줍니다.
 | **HIGH** | Early | **HIGH** | WDQS 지연을 **늘린다** |
 | **LOW** | Late | **LOW** | WDQS 지연을 **줄인다** |
 
-`DERR` 신호가 여기서 **데이터 오류 신호가 아니라 위상 검출기 출력**으로 재사용된다는 점이 특이합니다 — 트레이닝 모드에서만 성립하는 의미이며, 일반 동작에서의 `DERR` 의미와 혼동하면 안 됩니다.
+`DERR` 신호가 여기서 **데이터 오류 신호가 아니라 위상 검출기 출력**으로 재사용된다는 점이 특이합니다 — 트레이닝 모드에서만 성립하는 의미입니다.
+
+검증에서 이것은 **monitor 설계 문제**가 됩니다. 모드를 모르는 monitor는 트레이닝 내내 `DERR` 상승을 데이터 오류로 보고하고, 로그가 가짜 에러로 뒤덮여 그 안의 진짜 오류를 가립니다 — 5.1절.
 
 ## 4. DBIac — 바이트 단위 데이터 버스 반전
 
@@ -194,7 +198,7 @@ HBM4는 **바이트 단위(byte granular) DBI**를 지원합니다(§6.2.1). `DB
 - **write**: "ECC 입력은 DBIac 기능의 영향을 받지 않는다"
 - **read**: "ECC와 SEV 출력은 DBIac의 영향을 받지 않는다"
 
-즉 DBI는 **DQ 바이트에만** 적용됩니다. ECC/SEV 경로에 반전 로직을 넣으면 데이터가 깨집니다. 그리고 `DPAR`도 별도 취급입니다(아래).
+즉 DBI는 **DQ 바이트에만** 적용됩니다. reference model이 ECC/SEV에 반전을 적용하면 그 경로의 비교가 전부 어긋나고, 증상은 **ECC 로직 버그처럼** 보입니다. 그리고 `DPAR`도 별도 취급입니다(아래).
 :::
 
 ### 내부 DBIac 상태 — 리셋되는 네 조건
@@ -216,7 +220,7 @@ HBM4는 **바이트 단위(byte granular) DBI**를 지원합니다(§6.2.1). `DB
 
 > DBI 리셋 이후 **첫 `READ` 커맨드가 등록되면**, HBM4 DRAM은 **`RDBI`가 활성이든 비활성이든 무관하게** read 데이터 이전에 버스를 **LOW로 프리컨디셔닝**한다. read 버스트의 **마지막 UI에 해당하는 내부 상태 `D7`이 후속 read 버스트의 시드 값으로 내부 저장**된다. — §6.2.1.1 (요약)
 
-**`RDBI` 비활성이어도 프리컨디셔닝이 일어난다**는 점이 중요합니다. DBI 기능을 껐다고 해서 이 동작이 사라지지 않습니다.
+**`RDBI` 비활성이어도 프리컨디셔닝이 일어난다**는 점이 중요합니다. DBI 기능을 껐다고 해서 이 동작이 사라지지 않습니다. DBI를 끈 프로파일로만 도는 회귀가 "DBI 관련 동작은 없다"고 가정하면, 리셋 직후 첫 read에서 모델이 어긋납니다.
 
 그리고 `DPAR`은 예외입니다.
 
@@ -233,113 +237,243 @@ read 버스트가 끝나면 DRAM은 **모든 DQ·DBI·ECC 출력 드라이버를
 | **홀수 바이트** | 명목상 **2 WDQS 사이클** |
 | **짝수 바이트** | 명목상 **1 WDQS 사이클** |
 
-## ⚙️ 설계 적용 (RTL / Front-end)
+## 🔬 검증 적용
 
-### 5.1 짝수 토글 불변식 감시
+### 5.1 무엇이 깨질 수 있는가
 
-가장 중요한 설계 항목입니다. 컨트롤러는 WDQS 토글 수를 **누적**해야 합니다.
+이 장에는 검증에서 가장 다루기 어려운 결함 유형이 둘 모여 있습니다 — **조용히 통과하는 결함**과 **문맥에 따라 의미가 바뀌는 신호**입니다.
+
+| 조문 | 위반 형태 | 증상 | 잡히는 시점 |
+|---|---|---|---|
+| §6.1 **토글 수의 합이 짝수** | 어느 시퀀스가 홀수를 남김 | `WDQS/2` 위상이 뒤집힌 채 지속. **마진이 있으면 통과** | **온도·전압이 바뀐 뒤** — 최악의 유형 |
+| §6.1 비활성 구간 스트로브 **정적** | 자극이 유휴 중 토글 | ISI·오샘플 | 간헐 |
+| §6.1 에지 = **교차점** | checker가 단일 신호 문턱으로 측정 | 타이밍 측정이 미세하게 어긋남 | 마진 없는 조건에서만 |
+| §6.1.1 step 4 — **8펄스 미만은 판독 무효** | 무효 구간의 `DERR`을 사용 | 트레이닝이 잘못된 지연에 수렴 | 없음 |
+| Table 31 — 트레이닝 중 `DERR`은 **위상 검출기 출력** | monitor가 데이터 오류로 해석 | 트레이닝 내내 **가짜 에러 폭주** | 즉시(잘못된 방향으로) |
+| §6.2.1 DBI 판정의 **경계값 4 히스테리시스** | 모델이 직전 상태를 무시 | 전이 수가 정확히 4일 때만 미스매치 | 산발적 |
+| §6.2.1 **ECC·SEV는 DBI 대상 아님** | 모델이 반전을 적용 | 데이터가 깨짐 | DBI가 켜진 경우만 |
+| §6.2.1.1 리셋 조건에 **`MRS` 포함** | MR을 건드리면 DBI 기준점이 사라짐을 놓침 | `MRS` 직후 첫 read 미스매치 | MR을 바꾸는 시퀀스에서만 |
+| §6.2.1.1 **`RDBI` 비활성이어도 프리컨디셔닝** | "껐으니 없다"고 가정 | 첫 read 미스매치 | DBI off 회귀에서만 |
+| §6.2.1.1 `DPAR` 초기 상태 **미정의** | 모델이 특정 값을 가정 | 첫 비교에서 랜덤 실패 | 산발적 |
+
+:::caution[조용히 통과하는 결함 — 짝수 토글 위반]
+첫 줄은 성격이 다릅니다. **잘못된 상태에서도 정상 동작하기 때문**입니다.
+
+`WDQS/2` 위상이 뒤집혀도 셋업/홀드 마진이 충분하면 데이터는 정확히 잡힙니다. 회귀는 통과합니다. 마진이 줄어드는 조건 — 고온, 저전압, 최고 속도 등급 — 에서만 실패하고, 그때 원인은 **훨씬 앞선 트레이닝 시퀀스**에 있습니다.
+
+기능 검사로는 잡을 수 없습니다. 데이터가 맞기 때문입니다. 잡는 방법은 하나뿐입니다 — **불변식을 직접 감시**하는 것.
+
+그리고 이 불변식은 **개별 시퀀스가 아니라 누적 합**에 대한 조건입니다(§6.1). preamble 하나, postamble 하나, 트레이닝 하나가 각각 짝수일 필요는 없고 **합계가 짝수**면 됩니다. 그래서 단일 property로 표현되지 않고, **시퀀스 경계를 가로지르는 카운터**가 필요합니다.
+:::
+
+:::caution[`DERR`은 문맥에 따라 의미가 바뀐다]
+Table 31에서 `DERR0`/`DERR1`이 **위상 검출기 출력**으로 재사용됩니다. 같은 핀이 일반 동작에서는 **데이터 오류 신호**입니다.
+
+monitor가 모드를 모르면 트레이닝 내내 `DERR` 상승을 데이터 오류로 보고합니다. 로그가 에러로 뒤덮이고, 그 안에 진짜 오류가 섞여 있어도 보이지 않습니다.
+
+**monitor는 `MR8`의 `WDQS2CK` 상태를 알고 있어야 합니다.** 이는 monitor가 순수 관측자가 아니라 **설정 상태를 참조하는 구성 요소**가 된다는 뜻입니다 — 그 상태를 어디서 받을지가 환경 설계 항목이 됩니다([`hbm_dv` Ch06](../../hbm_dv/06_env_hierarchy/)).
+
+`DERR`은 세 번째 의미도 갖습니다 — [11장](../11_training_ieee1500/)에서 다룹니다.
+:::
+
+### 5.2 어떻게 잡는가 — 수단 선택
+
+| 규칙 | 성격 | 수단 | 이유 |
+|---|---|---|---|
+| 토글 수 합이 짝수 | **누적 불변식** | **monitor의 누적 카운터 + 체크포인트** | 시퀀스 경계를 넘는 합계. SVA 하나로 표현되지 않는다 |
+| 유휴 구간 스트로브 정적 | **불변식** | **SVA** | 국소 조건 |
+| DBI 판정 | **순차 함수** | **reference model** | 직전 상태에 의존한다. 조합 함수가 아니다 |
+| DBI 상태 리셋 네 조건 | **상태 전이** | **reference model** | 같은 모델 안에서 다뤄야 일관된다 |
+| 트레이닝 7단계 순서·허용 커맨드 | **절차** | **프로토콜 checker** | 명령 순서에 대한 규칙 |
+
+**① 짝수 토글 — 누적 카운터**
 
 ```systemverilog
-// 내부 WDQS/2 위상 유지를 위해 preamble+postamble+트레이닝 토글의 "합"이 짝수여야 한다 (§6.1)
-// 개별 시퀀스가 아니라 누적 합에 대한 조건이므로 패리티 1비트로 충분하다.
-logic wdqs_toggle_parity_q;
+// §6.1 — preamble/postamble 합 + 트레이닝 토글 합이 짝수여야 한다.
+// 개별 시퀀스가 아니라 "합"에 대한 조건이므로 누적해서 센다.
+class wdqs_toggle_tracker extends uvm_component;
+  `uvm_component_utils(wdqs_toggle_tracker)
+  protected int unsigned m_toggles[2];        // DWORD0 / DWORD1
 
-always_ff @(posedge ck or negedge rst_n) begin
-  if (!rst_n)
-    wdqs_toggle_parity_q <= 1'b0;                 // 분주기 리셋 상태와 정렬
-  else if (wdqs_divider_reload)                    // SR exit / power-up / PD exit
-    wdqs_toggle_parity_q <= 1'b0;
-  else if (wdqs_toggle_en)
-    wdqs_toggle_parity_q <= wdqs_toggle_parity_q ^ 1'b1;
-end
+  function void count(int dword, int n);  m_toggles[dword] += n;  endfunction
 
-// 각 시퀀스(트레이닝·버스트) 종료 시점에 짝수인지 확인한다
-`ifndef SYNTHESIS
-  a_wdqs_even: assert property (@(posedge ck) disable iff (!rst_n)
-    seq_done |-> (wdqs_toggle_parity_q == 1'b0))
-    else $error("WDQS toggle count is odd — internal WDQS/2 phase inverted");
-`endif
+  // 체크포인트에서만 판정한다. read/write 직전, 트레이닝 종료 시.
+  function void checkpoint(string where);
+    foreach (m_toggles[d])
+      if (m_toggles[d] % 2 != 0)
+        `uvm_error("WDQS_PARITY", $sformatf(
+          "%s: DWORD%0d 누적 WDQS 토글 %0d 개로 홀수. 내부 WDQS/2 위상이 뒤집힌다 (§6.1)",
+          where, d, m_toggles[d]))
+  endfunction
+
+  // 리셋에서만 0 으로 돌아간다 — 시퀀스마다 지우면 "합" 조건이 아니게 된다
+  function void on_reset();  foreach (m_toggles[d]) m_toggles[d] = 0;  endfunction
+endclass
 ```
 
-**핵심**: 상태는 1비트(패리티)면 충분합니다. 전체 개수를 셀 필요가 없습니다.
+`on_reset()` 에서만 지우는 것이 이 클래스의 계약입니다. 시퀀스마다 카운터를 초기화하면 각 시퀀스는 짝수인데 **합계는 홀수**인 경우를 놓칩니다 — 그리고 그것이 §6.1이 금지하는 바로 그 상황입니다.
 
-그리고 분주기가 재초기화되는 세 시점(**Self Refresh 종료 · 전원 인가 · Power-down 종료**)에 패리티도 함께 리셋해야 합니다 — 그렇지 않으면 컨트롤러의 추적이 장치 실제 상태와 어긋납니다.
-
-### 5.2 스트로브 유휴 상태 구동
+**② 유휴 구간 스트로브**
 
 ```systemverilog
-// 비활성 구간에는 정적 레벨 (§6.1)
-assign wdqs_t_o = wdqs_active ? wdqs_gen_t : 1'b0;   // idle: LOW
-assign wdqs_c_o = wdqs_active ? wdqs_gen_c : 1'b1;   // idle: HIGH
+// §6.1 — 비활성 구간에는 _t 는 LOW, _c 는 HIGH 로 정적이어야 한다
+a_wdqs_idle_static: assert property (@(posedge ck) disable iff (!rst_n)
+    !wdqs_active |-> (wdqs_t == 1'b0 && wdqs_c == 1'b1))
+  else `uvm_error("STROBE", "유휴 구간에 WDQS 가 정적 레벨이 아니다 (§6.1)")
+
+a_rdqs_idle_static: assert property (@(posedge ck) disable iff (!rst_n)
+    !rdqs_active |-> (rdqs_t == 1'b0 && rdqs_c == 1'b1))
+  else `uvm_error("STROBE", "유휴 구간에 RDQS 가 정적 레벨이 아니다 (§6.1)")
 ```
 
-이 규정은 [03장](../03_init_reset_power/)의 초기화 5단계(`R[3:0]` HIGH 시점 또는 그 이전에 `WDQS_t` LOW / `WDQS_c` HIGH 구동)와 같은 요구입니다 — 초기화 때만이 아니라 **모든 유휴 구간**에 적용됩니다.
+**③ DBIac — 순차 reference model**
 
-### 5.3 WDQS-to-CK 트레이닝 시퀀서
-
-7단계를 상태로 옮기되, 두 가지를 반영합니다.
+DBI는 조합 함수가 아닙니다. 직전 상태를 들고 있어야 하고, 그 상태는 네 조건에서만 리셋됩니다.
 
 ```systemverilog
-typedef enum logic [2:0] {
-  W2C_IDLE,
-  W2C_ENTER,      // WDQS2CK=1, tMOD 대기
-  W2C_RUN,        // 양 PC 스트로브 토글, 위상 스윕
-  W2C_SETTLE,     // tWDQS2PD 후 DERR 판독
-  W2C_ADJUST,     // DERR HIGH -> 지연 증가 / LOW -> 지연 감소
-  W2C_ALIGNED,    // early->late 전이 확인
-  W2C_EXIT        // 펄스 수 짝수 확인 후 WDQS2CK=0, tMOD 대기
-} w2c_state_e;
+class dbi_model extends uvm_object;
+  `uvm_object_utils(dbi_model)
+  protected bit [7:0] m_prev_byte[8];      // 바이트별 직전 데이터 (D7 시드)
+  protected bit       m_prev_dbi [8];      // 바이트별 직전 DBI 상태
 
-// 4단계: 최소 8 펄스 이후에만 정지 허용
-wire may_halt = (wdqs_pulse_cnt_q >= 8);
+  // §6.2.1 — 전이 수와 직전 DBI 상태로 판정. 경계값 4 에서 히스테리시스.
+  function void read_beat(input bit [7:0] raw[8], output bit [7:0] bus[8],
+                                                  output bit       dbi[8]);
+    foreach (raw[b]) begin
+      int n = $countones(raw[b] ^ m_prev_byte[b]);
+      unique case (1)
+        (n <= 3) : dbi[b] = 1'b0;
+        (n == 4) : dbi[b] = m_prev_dbi[b];    // ← 직전 상태를 그대로 유지 (히스테리시스)
+        default  : dbi[b] = 1'b1;             // 5 ~ 8
+      endcase
+      bus[b]        = dbi[b] ? ~raw[b] : raw[b];
+      m_prev_byte[b] = bus[b];                // 버스에 실린 값이 다음 비교의 기준
+      m_prev_dbi [b] = dbi[b];
+    end
+  endfunction
 
-// 6단계: 종료 시 펄스 수가 짝수여야 한다
-wire ok_to_exit = may_halt && (wdqs_pulse_cnt_q[0] == 1'b0);
+  // §6.2.1.1 — 내부 DBIac 상태가 LOW 로 리셋되는 네 조건. 그 밖에는 유지된다.
+  function void reset_dbi_state(dbi_reset_cause_e cause);
+    // RESET_n · MRS · write-to-read 턴어라운드 · Self Refresh 종료
+    foreach (m_prev_dbi[b]) begin m_prev_dbi[b] = 1'b0; m_prev_byte[b] = 8'h00; end
+  endfunction
+endclass
 ```
 
-**주의**: 5단계의 판정 기준은 `DERR`의 절대값이 아니라 **"early에서 late로의 전이"** 입니다. 단일 샘플로 판단하면 안 되고, 스윕 과정에서 **전이 지점을 탐색**해야 합니다.
+두 줄이 특히 틀리기 쉽습니다.
 
-### 5.4 DBIac 판정 로직
+- `n == 4` 에서 **`m_prev_dbi[b]` 를 그대로 두는 것**. `1'b0` 으로 쓰면 진리표의 세 번째 행(4 전이 + 직전 HIGH → 반전)이 사라집니다.
+- `m_prev_byte[b] = bus[b]` — **반전된 값**이 다음 비교의 기준입니다. `raw[b]`를 저장하면 이후 전이 수 계산이 전부 어긋납니다.
 
-읽기 방향은 DRAM이 수행하지만, 컨트롤러는 **동일한 판정을 재현**해 수신 데이터를 복원해야 합니다.
+**④ 프리컨디셔닝과 `DPAR` 예외**
 
 ```systemverilog
-// 바이트 단위 전이 수를 세고 진리표를 적용한다 (Table 32)
-function automatic logic dbi_decide(input logic [7:0] cur, prev, input logic prev_dbi);
-  int unsigned n = $countones(cur ^ prev);
-  if (n > 4)              return 1'b1;            // 5~8 : 반전
-  else if (n == 4)        return prev_dbi;        // 4    : 직전 상태 유지 (히스테리시스)
-  else                    return 1'b0;            // 0~3 : 반전 안 함
+// §6.2.1.1 — RDBI 활성 여부와 무관하게 첫 READ 전 버스를 LOW 로 프리컨디셔닝한다.
+// "DBI 를 껐으니 이 동작도 없다" 는 가정이 여기서 깨진다.
+function void on_first_read_after_reset(bit rdbi_en);
+  foreach (m_prev_byte[b]) m_prev_byte[b] = 8'h00;   // rdbi_en 과 무관
+  // DPAR 은 예외 — DBI 계산에 포함되지 않고 프리컨디셔닝되지도 않는다.
+  // 초기 상태가 정의되지 않으므로 모델은 "모름"으로 두고 첫 비교에서 제외한다.
+  m_dpar_known = 1'b0;
 endfunction
-
-// 수신 측 복원 — DBI 신호가 HIGH면 되돌린다
-assign rx_byte = dbi_sig ? ~rx_raw_byte : rx_raw_byte;
 ```
 
-**세 가지를 지켜야 합니다.**
+`DPAR`의 초기 상태가 **정의되지 않는다**는 조문을 모델이 그대로 반영해야 합니다. 특정 값을 가정하면 그 값이 나올 때만 통과하는 **50% 확률의 랜덤 실패**가 됩니다.
 
-1. **ECC·SEV 경로는 이 로직을 통과시키지 않습니다**(§6.2.1). 반전 대상은 DQ 바이트뿐입니다.
-2. **`DPAR`도 제외**이며 초기 상태가 정의되지 않으므로, 프리컨디셔닝 구간의 `DPAR` 값을 신뢰해서는 안 됩니다.
-3. 전이 수 4에서 **직전 DBI 상태를 참조**하므로, 컨트롤러도 그 상태를 추적해야 합니다.
-
-### 5.5 내부 DBI 상태 추적
+### 5.3 무엇을 덮었다고 말할 수 있는가
 
 ```systemverilog
-// 리셋 조건 네 가지 (§6.2.1.1)
-wire dbi_state_reset = reset_n_deassert     // RESET_n 비어서트
-                     | mrs_received          // MRS 수신
-                     | wr_to_rd_turnaround   // write-to-read 턴어라운드
-                     | sref_exit;            // Self Refresh 종료
+covergroup cg_hbm4_clocking_dbi with function sample(
+    int n_trans, bit prev_dbi, bit new_dbi, dbi_reset_cause_e cause,
+    bit rdbi_en, bit wdbi_en, int toggle_parity, train_stage_e stage);
+  option.per_instance = 1;
 
-always_ff @(posedge ck) begin
-  if (dbi_state_reset)
-    dbi_state_q <= 1'b0;                     // LOW로 리셋
-  else if (rd_data_valid)
-    dbi_state_q <= dbi_sig;                  // 마지막 UI(D7)가 다음 버스트의 시드
-end
+  // --- DBI 판정 (§6.2.1 진리표) ------------------------------------------
+  cp_trans : coverpoint n_trans {
+    bins low      = {[0:3]};
+    bins boundary = {4};              // 히스테리시스가 걸리는 유일한 값
+    bins high     = {[5:8]};
+  }
+  cp_prev : coverpoint prev_dbi { bins was_low = {0}; bins was_high = {1}; }
+
+  // 경계값 4 를 직전 상태 양쪽에서 겪었는가 — 진리표의 두 행이 여기 있다
+  x_hysteresis : cross cp_trans, cp_prev {
+    bins b4_prev_low  = binsof(cp_trans.boundary) && binsof(cp_prev.was_low);
+    bins b4_prev_high = binsof(cp_trans.boundary) && binsof(cp_prev.was_high);
+    ignore_bins rest  = binsof(cp_trans.low) || binsof(cp_trans.high);
+  }
+
+  // --- DBI 상태 리셋 네 조건 (§6.2.1.1) ---------------------------------
+  cp_reset_cause : coverpoint cause {
+    bins reset_n   = {DBI_RST_RESET_N};
+    bins mrs       = {DBI_RST_MRS};        // MR 을 건드리면 DBI 기준점이 사라진다
+    bins wr_to_rd  = {DBI_RST_TURNAROUND};
+    bins sref_exit = {DBI_RST_SREF_EXIT};
+  }
+
+  // --- 방향별 활성화 조합 (MR0 OP0/OP1) ---------------------------------
+  cp_rdbi : coverpoint rdbi_en { bins off = {0}; bins on = {1}; }
+  cp_wdbi : coverpoint wdbi_en { bins off = {0}; bins on = {1}; }
+  x_dbi_dir : cross cp_rdbi, cp_wdbi;
+  // RDBI off 에서도 프리컨디셔닝은 일어난다 — 그 조합을 겪었는가
+  x_precond_off : cross cp_rdbi, cp_reset_cause {
+    bins off_after_mrs = binsof(cp_rdbi.off) && binsof(cp_reset_cause.mrs);
+  }
+
+  // --- 짝수 토글 불변식 --------------------------------------------------
+  cp_parity : coverpoint toggle_parity {
+    bins even = {0};
+    illegal_bins odd = {1};          // 체크포인트에서 홀수는 나오면 안 된다
+  }
+
+  // --- 트레이닝 7단계 (§6.1.1) ------------------------------------------
+  cp_train : coverpoint stage { bins s[] = {[1:7]}; }
+endgroup
 ```
 
-**주의**: `MRS`가 리셋 조건에 포함되므로, 설정을 바꾸는 동작이 read 데이터 복원 상태에 영향을 줍니다. MR 갱신 시퀀스와 read 파이프라인이 겹치면 복원이 어긋날 수 있으니, [04장](../04_mode_registers/)에서 본 `tMOD` 대기와 함께 다뤄야 합니다.
+**`x_hysteresis` 가 이 장의 중심 축입니다.** 전이 수가 정확히 4인 경우는 랜덤 데이터에서도 꽤 자주 나오지만(8비트 중 4비트 전이), 그것을 **직전 DBI가 LOW일 때와 HIGH일 때 양쪽에서** 겪었는지는 별개입니다. 두 bin이 다 차야 진리표의 두 행이 검증됩니다.
+
+**`cp_reset_cause.mrs` 와 `x_precond_off.off_after_mrs`** 도 잘 빕니다. MR을 바꾸는 시퀀스가 드물고, DBI를 끈 채로 도는 회귀에서 프리컨디셔닝을 확인하는 경우는 더 드뭅니다.
+
+### 5.4 어떻게 자극하는가
+
+**① 짝수 토글 — 위반을 의도적으로 만든다**
+
+정상 회귀에서는 홀수가 나오면 안 됩니다(`illegal_bins`). 그러나 **불변식 감시가 살아 있는지**는 확인해야 합니다.
+
+```systemverilog
+// negative 테스트 — 트레이닝에서 홀수 개의 WDQS 펄스를 남기고 종료한다.
+// 확인 대상은 DUT 가 아니라 wdqs_toggle_tracker 가 이를 잡는지 여부다.
+class seq_odd_toggle_negative extends uvm_sequence #(hbm4_cmd_item);
+  `uvm_object_utils(seq_odd_toggle_negative)
+  virtual task body();
+    enter_wdqs2ck_training();
+    drive_wdqs_pulses(9);              // §6.1.1 step 6 이 요구하는 짝수를 어긴다
+    exit_wdqs2ck_training();
+    // tracker.checkpoint("post-training") 에서 UVM_ERROR 가 나야 정상
+  endtask
+endclass
+```
+
+**② DBI 경계값을 직전 상태 양쪽에서** — `x_hysteresis` 의 두 bin을 채웁니다. 직전 비트를 먼저 만들어 놓고 그 위에 정확히 4비트 전이를 얹습니다.
+
+```systemverilog
+// 직전 DBI 를 HIGH 로 만든 뒤(전이 5개 이상), 다음 비트에서 정확히 4개만 전이시킨다
+`uvm_do_with(req, { cmd == WR; data[0] == 8'h00; })
+`uvm_do_with(req, { cmd == WR; $countones(data[0] ^ 8'h00) >= 5; })  // prev_dbi <= HIGH
+`uvm_do_with(req, { cmd == WR; $countones(data[0] ^ prev_bus) == 4; })  // 경계값
+```
+
+**③ 네 리셋 조건을 각각** — `RESET_n` · `MRS` · write-to-read 턴어라운드 · Self Refresh 종료. 각각 직후에 **read를 발행**해야 리셋이 실제로 반영됐는지 보입니다. 리셋만 하고 read를 안 하면 모델과 DUT의 차이가 드러나지 않습니다.
+
+**④ `RDBI` 비활성 상태의 첫 read** — DBI를 끈 회귀에서도 프리컨디셔닝이 일어납니다. DBI off 프로파일에서 리셋 직후 첫 read를 반드시 포함시켜야 합니다.
+
+**⑤ 트레이닝 절차의 경계** — §6.1.1의 두 지점이 directed 대상입니다.
+
+- **step 4** — WDQS 펄스 **8개 미만**에서 정지하고 `DERR`을 읽는 시퀀스. 판독이 무효인 구간을 환경이 무효로 다루는지 확인합니다.
+- **step 1** — 트레이닝 모드에서 허용 커맨드(`REFab`·`REFpb`·`RFMab`·`RFMpb`·`RNOP`·`CNOP`·종료 `MRS`) **밖의 커맨드**를 발행하는 negative 시퀀스.
+
+refresh는 이 모드에서 **허용되지만 권장되지 않습니다**(전류 스파이크). 자극 정책을 정해 두어야 합니다 — 권장되지 않는 조합을 회귀에서 돌릴 것인가. 규격이 금지하지 않았으므로 DUT는 동작해야 하지만, 트레이닝 정확도는 보장되지 않습니다. **정상 회귀에서는 제외하고 별도 스트레스 테스트로 두는 편**이 결과 해석에 유리합니다.
 
 ## 6. 대표 문제 — dry-run
 
@@ -393,25 +527,21 @@ Table 32에서 5~8 구간이므로 직전 상태와 무관하게:
 **단, 주의할 것**: 진입·종료마다 `tMOD` 대기가 필요하고(1·7단계), 매 구간의 WDQS 펄스 수가 **짝수**여야 한다(6단계). 분할 횟수가 늘수록 오버헤드와 실수 여지가 커지므로, 분할 단위를 지나치게 잘게 잡지 않는 편이 좋다.
 </details>
 
-## 🔍 검증 연결
-
-- 스트로브·클럭 위상 관계를 assertion으로 감시 → [`hbm_dv` Ch09 Assertion·Checker](../../hbm_dv/09_assertion_checker/)
-- 트레이닝 시퀀스를 시나리오로 구성 → [`hbm_dv` Ch08 시나리오](../../hbm_dv/08_testcase_scenarios/)
-- PHY·스트로브가 mixed 영역인 이유 → [`hbm_dv` Ch05 Mixed-Level](../../hbm_dv/05_mixed_level/)
-
 ## 핵심 정리
 
 - **스트로브 주파수 = 커맨드 클럭의 2배**. 그래서 **WDQS 클럭 트리에 reset 타입 분주기**가 요구되며, 내부 회로는 절반 속도로 동작한다.
 - **CK와 WDQS는 같은 PLL**에서, **RDQS는 WDQS**에서 생성된다. 내부 `WDQS/2` 전이 **방향은 벤더 선택**이다.
-- ⚠️ **preamble + postamble + 트레이닝 토글의 합은 짝수여야 한다.** 그 대가로 HBM4는 **READ/WRITE 전 별도 동기화가 불필요**하다. 위반하면 위상이 뒤집힌 채 남고 **간헐 실패**로 나타난다. 추적은 **패리티 1비트**면 충분하다.
+- ⚠️ **preamble + postamble + 트레이닝 토글의 합은 짝수여야 한다.** 그 대가로 HBM4는 **READ/WRITE 전 별도 동기화가 불필요**하다. 위반해도 **마진이 있으면 데이터는 맞으므로 기능 검사로는 잡히지 않는다** — 불변식을 직접 감시하는 것이 유일한 수단이고, 카운터는 **시퀀스가 아니라 리셋에서만** 지운다.
 - 분주기는 **Self Refresh 종료 · 전원 인가 · Power-down 종료** 시 초기화된다 — 컨트롤러의 패리티도 함께 리셋해야 한다.
 - **비활성 구간 스트로브는 정적**(`_t` LOW, `_c` HIGH)이며, WDQS는 **ISI 저감을 위해 동작 전에 미리 토글**한다.
 - 에지는 **차동 교차점**으로 정의된다.
 - WDQS-to-CK 트레이닝은 **`tDQSS`를 만족하면 불필요**하고, **더 좁히려는 시도는 이득이 없다**. 판정 기준은 절대값이 아니라 **early→late 전이**다.
-- 트레이닝 중 **refresh는 허용되나 전류 스파이크로 결과를 해칠 수 있다.**
-- DBIac은 **바이트 단위**이며 read/write **독립 제어**(`MR0` OP1/OP0)다. 전이 수 **4에서 직전 상태에 따라 갈리는 히스테리시스**가 있다.
+- 트레이닝 중 **refresh는 허용되나 전류 스파이크로 결과를 해칠 수 있다** — 기대값을 세우기 어려우므로 정상 회귀에서 격리한다.
+- 트레이닝 모드의 **`DERR`은 데이터 오류가 아니라 위상 검출기 출력**이다(Table 31). 모드를 모르는 monitor는 가짜 에러로 로그를 덮어 진짜 오류를 가린다.
+- DBIac은 **바이트 단위**이며 read/write **독립 제어**(`MR0` OP1/OP0)다. 전이 수 **4에서 직전 상태에 따라 갈리는 히스테리시스**가 있어 **조합 함수가 아니라 순차 모델**이어야 한다. 다음 비교의 기준은 `raw`가 아니라 **버스에 실린 반전 후 값**이다.
 - **ECC·SEV·`DPAR`은 DBIac 대상이 아니다.** `DPAR`은 프리컨디셔닝도 되지 않고 초기 상태가 미정의다.
 - 내부 DBI 상태는 **`RESET_n` 비어서트 · `MRS` 수신 · write→read 턴어라운드 · Self Refresh 종료**에 LOW로 리셋된다. **`RDBI` 비활성이어도 첫 READ 전 프리컨디셔닝은 수행된다.**
+- 커버리지의 중심은 **전이 수 4 × 직전 DBI 상태**의 cross다. 두 bin이 다 차야 진리표의 두 행이 검증된다. 네 리셋 조건은 각각 **직후에 read를 발행**해야 반영 여부가 드러난다.
 
 ## Further Reading
 
