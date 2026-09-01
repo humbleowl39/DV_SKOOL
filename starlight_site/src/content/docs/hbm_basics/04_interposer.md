@@ -64,7 +64,7 @@ ONINT: "인터포저 위 (2.5D)" {
   CPU: "프로세서 die" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
   HBM: "HBM 스택\n(03장)" { style.fill: "#e8f5e9"; style.font-color: "#0A0F25" }
 
-  CPU -> HBM: "약 3,900 신호 — 여기서 직결"
+  CPU -> HBM: "약 3,900 신호 — 여기서 직결" { style.font-color: "#0A0F25" }
 }
 
 INT: "실리콘 인터포저\n미세 배선 약 1 µm 급 · 자체 TSV 보유" {

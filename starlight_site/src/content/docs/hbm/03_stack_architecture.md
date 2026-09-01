@@ -15,6 +15,7 @@ title: "Ch03 — 스택 구조와 DUT 경계"
 - [Ch01 — 왜 HBM인가](../01_why_hbm/): 폭으로 대역폭을 버는 구조가 왜 3D 적층을 불렀는가
 - [Ch02 — 세대 지형도](../02_generations/): base die가 로직 공정으로 이동한다는 ③ 층위 변화
 - 시뮬레이션 기반 검증의 기본 — DUT, 테스트벤치, behavioral model의 개념
+- **물리 구조가 낯설면** — TSV·마이크로범프·인터포저가 무엇이고 어떻게 동작하는지는 [HBM 기초 Ch03](../../hbm_basics/03_stacking_tsv/)·[Ch04](../../hbm_basics/04_interposer/)에서 다룹니다. 이 장은 그것들을 **DUT 경계를 긋는 재료**로만 씁니다.
 :::
 
 ---

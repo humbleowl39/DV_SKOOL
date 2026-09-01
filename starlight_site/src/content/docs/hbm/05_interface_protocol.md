@@ -14,7 +14,8 @@ title: "Ch05 — 인터페이스 프로토콜"
 :::note[사전 지식]
 - [Ch04 — 채널 · Pseudo-channel · 주소맵](../04_channels_addressing/): CA 버스 공유와 semi-independent 동작
 - [Ch03 — 스택 구조와 DUT 경계](../03_stack_architecture/): 모델의 엄격함이 검증 신뢰도의 상한이라는 원리
-- DRAM 커맨드 기초 — activate / precharge / read / write / refresh의 의미와 순서 제약
+- DRAM 커맨드 기초 — activate / precharge / read / write / refresh의 의미와 순서 제약. 없으면 [HBM 기초 Ch01](../../hbm_basics/01_dram_operation/)을 먼저 보세요 — `ACT`→`tRCD`→`RD`→`PRE`의 순서와 각 대기 시간이 왜 존재하는지 다룹니다.
+- **한 트랜잭션이 스택을 통과하는 전체 경로**가 궁금하면 [HBM 기초 Ch06](../../hbm_basics/06_read_journey/) — 이 장은 그 경로 중 **호스트–장치 인터페이스 구간**만 확대해서 봅니다.
 :::
 
 ---

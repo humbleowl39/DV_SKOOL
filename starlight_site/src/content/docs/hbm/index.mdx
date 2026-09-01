@@ -19,6 +19,7 @@ DV SKOOL의 HBM 자료는 두 토픽으로 나뉩니다.
 
 | 토픽 | 역할 | 다루는 것 |
 |---|---|---|
+| [`hbm_basics`](../hbm_basics/) (선행·선택) | HBM은 **무엇이고 어떻게 동작하는가** | 셀 · TSV · 인터포저 · 스택 · 한 번의 읽기가 지나는 길 |
 | **`hbm` (이 코스)** | 검증 **대상**을 이해한다 | HBM의 구조·동작. 각 챕터 말미에 *"이 구조가 만드는 검증 문제"* 로 착지 |
 | [`hbm_dv`](../hbm_dv/) (후속) | 검증 **실무**를 한다 | Custom Agent, VIP 전략, 환경 계층, V-Plan, Assertion, Coverage |
 | [`hbm4_jedec_dd`](../hbm4_jedec_dd/) (심화) | 규격이 **무엇을 검증하라고 요구하는가** | JESD270-4 조문 · 커맨드·MR·ECC·트레이닝을 **검증 항목**까지 |
@@ -42,11 +43,17 @@ DV SKOOL의 HBM 자료는 두 토픽으로 나뉩니다.
 
 ## 사전 지식
 
-- **DRAM 기본 원리** — 셀 어레이, bank/bank group, activate·precharge·refresh의 의미. [DRAM / DDR 코스](../dram_ddr/) 참고
+- **DRAM 기본 원리** — 셀 어레이, bank/bank group, activate·precharge·refresh의 의미. [HBM 기초 Ch01](../hbm_basics/01_dram_operation/) 또는 [DRAM / DDR 코스](../dram_ddr/) 참고
+- **HBM 물리 구조** (선택) — TSV·마이크로범프·인터포저가 무엇이고 어떻게 동작하는지. [HBM 기초](../hbm_basics/) 참고
 - **JEDEC 스펙 읽기** (선택) — 타이밍 파라미터와 Mode Register의 개념. [DRAM JEDEC Deep-Dive](../dram_jedec_dv/) 참고
 - **검증 기초** (선택) — 본 코스는 검증 문제를 *제기*만 하므로 필수는 아니지만, [UVM 코스](../uvm/)를 알면 각 챕터의 🔍 절이 훨씬 구체적으로 읽힙니다
 
-DRAM 기초가 없다면 [DRAM / DDR 코스](../dram_ddr/)를 먼저 보시길 권합니다. 이 코스는 DRAM 일반론을 반복하지 않고 **HBM이 다른 지점만** 다룹니다.
+배경이 없다면 두 갈래가 있습니다.
+
+- **HBM 쪽 배경이 필요하면** → [HBM 기초](../hbm_basics/). DRAM 셀부터 완성된 스택까지, HBM 이해에 필요한 것만 한 흐름으로 다룹니다.
+- **DRAM 물리를 깊이 보려면** → [DRAM / DDR 코스](../dram_ddr/). 셀의 charge sharing 과 센스앰프 동작을 소자 수준까지 다룹니다.
+
+이 코스는 그 둘을 반복하지 않고 **검증 대상으로서의 HBM**에만 집중합니다.
 
 ## 학습 모듈
 

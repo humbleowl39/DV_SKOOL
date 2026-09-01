@@ -15,6 +15,7 @@ title: "Ch06 — Base Die = 미니 SoC"
 - [Ch03 — 스택 구조와 DUT 경계](../03_stack_architecture/): base die의 digital·mixed IP가 DUT라는 확정
 - [Ch02 — 세대 지형도](../02_generations/): base die가 로직 공정으로 이동하는 ③ 층위 변화
 - [Ch05 — 인터페이스 프로토콜](../05_interface_protocol/): 감시 대상 분류표
+- **base die가 스택에서 하는 일**의 기초는 [HBM 기초 Ch05](../../hbm_basics/05_stack_anatomy/)에 있습니다 — 커맨드 배분·온도 감시, 그리고 규격이 base die를 **요구하지도 금지하지도 않는다**는 사실.
 :::
 
 ---
