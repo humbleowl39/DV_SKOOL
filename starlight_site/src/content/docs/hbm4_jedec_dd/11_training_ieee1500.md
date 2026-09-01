@@ -8,9 +8,10 @@ description: JESD270-4 §6.10–6.12·§13 · WOSC·DCA/DCM·Rx offset의 순서
 
 - **Order** 네 가지 트레이닝의 선후 제약을 규격 근거와 함께 배열한다.
 - **Explain** WOSC가 채널·클럭과 무관하게 동작하는 구조와 정확도 결정 요인을 설명한다.
-- **Interpret** `DERR` 핀이 세 가지 문맥에서 갖는 서로 다른 의미를 구분한다.
+- **Interpret** `DERR` 핀이 세 가지 문맥에서 갖는 서로 다른 의미를 구분하고, monitor의 3-way 분기로 구현한다.
 - **Differentiate** IEEE 1500 포트와 DA 포트의 역할·선택 방식·상호 배타성을 구분한다.
-- **Evaluate** DA Test Port Lockout이 어떤 리셋으로도 해제되지 않는다는 성질의 설계 함의를 판단한다.
+- **Evaluate** DA Test Port Lockout이 어떤 리셋으로도 해제되지 않는다는 성질을 평가하고, **자극 랜덤화가 검증 환경 자신의 관측 경로를 닫을 위험**을 제약으로 막는다.
+- **Construct** 트레이닝 상태 모델을 만들어 앞 단계 재수행 시 **뒤 단계 유효 플래그가 전파 무효화**되도록 구현한다.
 :::
 
 :::note[Prerequisites]
@@ -67,7 +68,7 @@ WOSC -> RX: "재트레이닝 시점 결정"
 - Rx offset은 **수신기의 판정 기준점**을 옮깁니다. 기준점이 바뀌면 그 위에서 잡은 `VREFD`와 위상 정렬이 무의미해집니다.
 - DCA는 **WDQS의 듀티 자체**를 바꿉니다. 듀티가 달라지면 CK 대비 위상 관계도 함께 달라집니다.
 
-**설계 결론**: 초기화 펌웨어의 트레이닝 시퀀스는 순서를 하드코딩해야 하며, 어느 하나를 재수행하면 **그 뒤 단계도 함께 재수행**해야 합니다.
+**검증 결론**: 검사해야 할 것은 "순서를 지켰는가"가 아니라 **"앞 단계를 다시 했을 때 뒤 단계도 다시 했는가"** 입니다. 순서만 보는 checker는 `RXoffC → VREFD → W2C → RXoffC` 를 통과시키는데, 마지막 재수행 때문에 앞의 두 결과가 이미 무효인 상태입니다 — 8.2 ①.
 :::
 
 ## 2. WOSC — 재트레이닝이 필요한지 판단하는 장치
@@ -123,7 +124,7 @@ Accuracy          = 1 − Granularity Error − Matching Error
 :::tip[측정 시간의 트레이드오프]
 짧게 돌리면 부정확하고, 길게 돌리면 정확하지만 오버플로 위험과 측정 지연이 커집니다. 그리고 **matching error는 아무리 길게 돌려도 줄어들지 않습니다** — 정확도에는 상한이 있습니다.
 
-**설계 결론**: 측정 시간을 무작정 늘릴 이유가 없습니다. granularity error가 matching error보다 충분히 작아지는 지점에서 멈추는 것이 합리적이고, matching error 값은 벤더 데이터시트에서 얻어야 합니다.
+**검증 결론**: 측정 시간이 정확도를 정하므로 **자극이 그 값을 흔들어야** 합니다(`cp_wosc`). 짧은 측정만 도는 회귀는 granularity error가 지배하는 구간을 시험하지 못하고, 긴 측정만 도는 회귀는 그 반대입니다. matching error 값은 벤더 데이터시트에서 오므로 **환경 파라미터**입니다.
 :::
 
 ## 3. DCA와 DCM — 듀티를 고치고 관측한다
@@ -148,7 +149,7 @@ WDQS의 **계통적 듀티 사이클 오차**를 보정합니다. 위치가 중�
 :::caution[스텝이 균등하지 않다]
 단일 스텝 크기가 **2~5 ps 범위**로 주어진 것은, 각 스텝이 같은 양을 움직이지 않는다는 뜻입니다(Table 72 Note 3 — *"단일 스텝 크기는 각 스텝의 비선형성을 반영한다"*).
 
-**설계 함의**: 코드 값과 실제 지연 변화가 선형이 아니므로, "몇 ps 옮기고 싶으니 코드를 몇 단계 바꾼다"는 계산이 성립하지 않습니다. **탐색(sweep)으로 목표에 접근**해야 합니다.
+**검증 함의**: 코드 값과 실제 지연 변화가 선형이 아니므로 **자극이 목표 지연을 계산해 한 번에 설정할 수 없습니다.** 트레이닝 시퀀스는 탐색(sweep) 형태여야 하고, 그러면 **종료 조건과 최대 반복 횟수**가 필요합니다 — [10장](../10_test_repair/) Self Repair 루프와 같은 구조입니다.
 :::
 
 그리고 주파수 제약이 있습니다 — DCA는 **선택 기능**이며 **`fCKDCA`보다 낮은 CK 주파수에서는 지원되지 않습니다.** 그 주파수에서는 DCA 코드를 **기본값 `0000`으로 두어 비활성화**해야 합니다.
@@ -310,104 +311,282 @@ IEEE 1500이 `tINIT3` 이후에 열리는 것과 대비됩니다 — **DA 포트
 **주의**: 채널 0 또는 4에만 정의된 비트이므로, MR 이미지를 **전 채널에 동일하게 쓰면** 의도치 않게 잠글 수 있습니다. 반대로 잠그려면 그 두 채널 중 하나에 반드시 써야 합니다.
 :::
 
-## ⚙️ 설계 적용 (RTL / Front-end)
+## 🔬 검증 적용
 
-### 8.1 트레이닝 시퀀서 — 순서와 무효화
+### 8.1 무엇이 깨질 수 있는가
 
-```systemverilog
-// 순서 제약: RXoffC -> (DCA/DCM) -> VREFD -> WDQS-to-CK   (§6.11.1, §6.12.1)
-// 앞 단계를 재수행하면 뒤 단계도 무효가 된다.
-typedef enum logic [2:0] {
-  TR_IDLE, TR_RXOFFC, TR_DCA_DCM, TR_VREFD, TR_W2C, TR_DONE
-} train_state_e;
+이 장에는 이 코스에서 유일한 결함 유형이 하나 있습니다 — **자극이 검증 환경 자신의 관측 경로를 닫아 버리는** 경우입니다.
 
-// 재트레이닝 요청이 오면 해당 단계 이후를 모두 무효화한다
-always_ff @(posedge clk) begin
-  if (retrain_req) begin
-    unique case (retrain_from)
-      TR_RXOFFC : {vrefd_valid_q, w2c_valid_q, dca_valid_q} <= '0;
-      TR_DCA_DCM: w2c_valid_q <= 1'b0;
-      TR_VREFD  : w2c_valid_q <= 1'b0;
-      default   : ;
-    endcase
-  end
-end
+| 조문 | 위반 형태 | 증상 | 잡히는 시점 |
+|---|---|---|---|
+| §13.1.1 — DA Lockout은 **전원 제거로만 해제** | 랜덤 MR 이미지가 `MR8` OP0을 1로 | 그 시뮬 동안 **DA 포트가 영구 잠김** | 잠긴 이후 전부 |
+| §13.1.1 — `MR8` OP0은 **채널 0·4에만 정의** | MR 이미지를 전 채널 동일하게 적용 | **의도치 않은 잠금** | 없음 |
+| §6.11.1/§6.12.1 — 트레이닝 **선후 제약** | 순서 위반 | 앞 결과가 무효인 채 진행 | 없음 |
+| 같은 조문 — 재수행 시 **뒤 단계 무효화** | 앞 단계만 다시 하고 넘어감 | 오래된 뒤 단계 결과를 계속 씀 | 없음 |
+| §6.12.1 — Rx offset 중 **DQ를 float** | 자극이 DQ를 구동한 채 시작 | 보정이 어긋남 | 없음 |
+| §6.11.3 — DCM **히스테리시스 flip** | 한 방향만 측정 | 측정값이 부정확 | 없음 |
+| §6.11 — `fCKDCA` 미만 **미지원** | 저주파 프로파일에서 실행 | 미정의 | 없음 |
+| §5·§6.11.3·§8 — `DERR` **세 문맥** | 모드 미분기 | 가짜 오류 또는 잘못된 판독 | 즉시(잘못된 방향) |
+| — 두 트레이닝 모드 **동시 활성** | `MR8` OP3와 `MR6` OP6을 함께 1 | `DERR` 해석이 모호 | 없음 |
+| §13.1 — `DA12` **상호 배타** | 두 포트가 함께 열려 있다고 가정 | 접근 실패 | 즉시 |
+| §13.1 — DA 활성 시 **`CATTRIP` 무효** | 유효로 읽음 | 가짜 과열 보고 | 산발적 |
+| §13.2 — `WSO`는 **채널별** | 중재가 필요하다고 가정 | 병렬성 미활용(성능만) | — |
+| §13.5 — `DEVICE_ID` **선행 읽기** | 안 읽고 구성 하드코딩 | [02](../02_addressing_bank_groups/)·[06장](../06_row_commands/) 구성이 전부 틀림 | 없음 |
+
+:::caution[자극이 스스로 문을 닫는 경우]
+[04장](../04_mode_registers/)에서 초기화 MR 이미지를 랜덤화하는 `mr_image_cfg` 를 만들었습니다. 그 랜덤화가 `MR8` OP0을 1로 만들면 어떻게 되는가 — **DA 테스트 포트가 그 전원 사이클 내내 잠깁니다.**
+
+§13.1.1이 못 박습니다. `RESET_n`도, IEEE1500 `HBM_RESET`도, `MRS`로 0을 쓰는 것도, `MODE_REGISTER_DUMP_SET`도 **해제하지 못합니다.** 전원 제거만이 유일한 방법입니다.
+
+이 코스에서 본 sticky 상태들과 비교하면 가장 강합니다.
+
+| 상태 | 해제 방법 |
+|---|---|
+| `CATTRIP` ([03장](../03_init_reset_power/)) | 전원 차단 |
+| Auto ECS ([09장](../09_ecc_ecs_sev/)) | 장치 `RESET` |
+| MISR compare sticky ([10장](../10_test_repair/)) | 명시적 클리어 |
+| **DA Port Lockout** | **전원 제거만** |
+
+그리고 함정이 하나 더 있습니다 — 이 비트는 **채널 0 또는 4에만 정의**됩니다. MR 이미지를 전 채널에 동일하게 적용하는 초기화 시퀀스는 그 비트가 **의도치 않게 1로 나가는지** 확인해야 합니다.
+
+검증 환경의 대응은 둘입니다.
+
+1. **랜덤화에서 제외한다** — `mr_image_cfg` 의 제약에 `mr[8][0] == 0` 을 넣습니다. 잠금은 랜덤하게 일어나면 안 되는 사건입니다.
+2. **잠금 테스트는 격리한다** — 잠금 이후에는 DA 경로로 아무것도 확인할 수 없으므로, 그 테스트는 잠금 확인만 하고 끝나야 합니다.
+:::
+
+:::caution[`DERR`의 세 번째 얼굴]
+이 코스에서 `DERR`가 세 번째로 다른 의미를 갖습니다.
+
+```
+MR6 OP6 == 1   →  듀티 사이클 측정 결과 (HIGH = ≥50%)      ← 이 장
+MR8 OP3 == 1   →  위상 검출기 판독 (HIGH = early)          ← 05장
+그 외          →  데이터 패리티 오류                        ← 08장
 ```
 
-### 8.2 WOSC 측정 시간 산정
+monitor가 **두 MR 비트를 함께 보고 3-way 분기**해야 합니다. 그리고 **두 모드를 동시에 켜면 해석이 모호**해지므로, 자극 쪽에서 상호 배타를 보장해야 합니다.
+
+monitor가 설정 레지스터를 참조한다는 것은 [05장](../05_clocking_dbi/)에서 이미 나온 구조인데, 여기서 참조 대상이 **둘로 늘어납니다.** 이 상태를 어디서 받을지가 환경 설계 항목이 됩니다 — RAL 모델을 monitor에 주입하거나, MR 변경을 analysis port로 방송하는 방식이 있습니다([`hbm_dv` Ch06](../../hbm_dv/06_env_hierarchy/)).
+:::
+
+### 8.2 어떻게 잡는가 — 수단 선택
+
+| 규칙 | 성격 | 수단 | 이유 |
+|---|---|---|---|
+| 트레이닝 선후·무효화 전파 | **상태 기계** | **시퀀스 상태 모델** | 유효 플래그가 단계마다 있고 전파된다 |
+| `DERR` 3-way 해석 | **문맥 의존 디코드** | **monitor + 설정 참조** | 값이 아니라 의미가 바뀐다 |
+| DA Lockout | **비가역 상태** | **랜덤화 제약 + 격리 테스트** | 잘못 들어가면 되돌릴 수 없다 |
+| Rx offset 중 DQ float | **자극 조건** | **SVA (자극 측 검사)** | DUT 버그가 아니다 |
+
+**① 트레이닝 순서와 무효화 전파**
+
+핵심은 "순서를 지켰는가"가 아니라 **"앞 단계를 다시 했을 때 뒤 단계도 다시 했는가"** 입니다.
 
 ```systemverilog
-// 오버플로 없는 최장 구간 = 2^24 × tRX_DQS2DQ(min)   (§6.10.1)
-// granularity error가 matching error보다 충분히 작아지는 지점에서 멈춘다.
-localparam int WOSC_MAX_COUNT = (1 << 24) - 1;
+// §6.11.1, §6.12.1 — 앞 단계는 뒤 단계의 전제를 바꾼다.
+// 재수행하면 뒤 단계의 유효 플래그를 무효화해야 한다.
+class training_state_model extends uvm_object;
+  `uvm_object_utils(training_state_model)
+  // 순서: RXoffC → (DCA/DCM) → VREFD → WDQS-to-CK
+  bit valid_rxoff, valid_dca, valid_vrefd, valid_w2c;
 
-// Granularity Error = 2 × WDQS_delay / RunTime
-// 목표: granularity < matching / 4  정도
-function automatic int wosc_run_time_ps(input int wdqs_delay_ps, input int matching_err_ppm);
-  return (2 * wdqs_delay_ps * 4 * 1000000) / matching_err_ppm;
+  function void on_rxoff_done();
+    valid_rxoff = 1;
+    // Rx offset 은 수신기 판정 기준점을 옮긴다 → 그 위에서 잡은 것이 전부 무효
+    valid_vrefd = 0; valid_w2c = 0;
+  endfunction
+
+  function void on_dca_done();
+    valid_dca = 1;
+    valid_w2c = 0;                  // 듀티가 바뀌면 CK 대비 위상 관계도 바뀐다
+  endfunction
+
+  function void on_vrefd_done(); valid_vrefd = 1; valid_w2c = 0; endfunction
+  function void on_w2c_done();   valid_w2c   = 1;                endfunction
+
+  // 정상 동작 진입 전에 확인한다
+  function void check_ready();
+    if (!valid_dca || !valid_vrefd || !valid_w2c)
+      `uvm_error("TRAINING", $sformatf(
+        "트레이닝이 완결되지 않았다 (dca=%0b vrefd=%0b w2c=%0b). "
+      + "앞 단계를 재수행했다면 뒤 단계도 다시 해야 한다 (§6.11.1, §6.12.1)",
+        valid_dca, valid_vrefd, valid_w2c))
+  endfunction
+endclass
+```
+
+`on_rxoff_done()` 이 **뒤 단계 플래그를 내리는 것**이 이 모델의 요점입니다. 순서만 검사하는 checker는 "RXoffC → VREFD → W2C → RXoffC" 를 통과시키는데, 마지막 RXoffC 때문에 앞의 두 결과가 무효가 된 상태입니다.
+
+**② `DERR` 3-way 디코딩**
+
+```systemverilog
+// DERR 은 문맥에 따라 세 가지 의미를 갖는다. monitor 가 MR 상태를 알아야 한다.
+typedef enum {DERR_PARITY, DERR_PHASE, DERR_DUTY} derr_ctx_e;
+
+function automatic derr_ctx_e derr_context(bit mr8_op3, bit mr6_op6);
+  // 두 트레이닝 모드를 동시에 켜면 해석이 모호하다 — 자극 측에서 막아야 한다
+  if (mr8_op3 && mr6_op6)
+    `uvm_error("DERR_CTX",
+      "WDQS2CK 트레이닝과 DCM 을 동시에 활성화했다. DERR 해석이 모호해진다")
+  if (mr6_op6) return DERR_DUTY;      // §6.11.3
+  if (mr8_op3) return DERR_PHASE;     // §6.1.1 ([05장])
+  return DERR_PARITY;                 // §6.4.2 ([08장])
 endfunction
 
-// RESET_n에 의한 중단은 VALID를 0으로 만든다. WRST_n은 영향 없음.
-wire wosc_result_usable = wosc_count_valid_i;   // 오버플로/RESET_n 중단 시 0
+// 문맥 밖에서 DERR 을 패리티 오류로 보고하지 않는지 확인
+a_no_false_parity_err: assert property (@(posedge ck) disable iff (!rst_n)
+    (derr_context(mr8_q[3], mr6_q[6]) != DERR_PARITY) |-> !parity_error_reported)
+  else `uvm_error("DERR_CTX", "트레이닝 모드에서 DERR 을 패리티 오류로 보고했다")
 ```
 
-### 8.3 DCA는 탐색으로 접근
+**③ DA Lockout — 자극 제약이 먼저다**
 
 ```systemverilog
-// 스텝 크기가 비선형(2~5 ps)이므로 코드 계산이 아니라 sweep으로 목표에 접근한다 (Table 72)
-// DCM 결과(DERR)를 피드백으로 사용한다.
-task automatic dca_sweep(input int pc);
-  for (int code = -7; code <= 7; code++) begin
-    set_dca(pc, code);
-    // no-flip 측정
-    set_dcm(1'b1, 1'b0); wait_tdcmm(); r_noflip = read_derr(pc);
-    // flip 측정 — 히스테리시스 상쇄 (§6.11.3)
-    set_dcm(1'b1, 1'b1); wait_tdcmm(); r_flip   = read_derr(pc);
-    set_dcm(1'b0, 1'b0); wait_tmod();
-    if (r_noflip != r_flip) begin                 // 경계 근처 = 듀티 50% 부근
-      best_code[pc] = code; break;
-    end
-  end
-endtask
+// §13.1.1 — MR8 OP0 은 채널 0·4 에만 정의되고, 1 로 쓰면 전원 제거 전까지 풀리지 않는다.
+// 정상 회귀의 MR 이미지 랜덤화에서 반드시 제외한다 ([04장]의 mr_image_cfg 확장).
+class mr_image_cfg_ext extends mr_image_cfg;
+  `uvm_object_utils(mr_image_cfg_ext)
+  rand int unsigned channel;
+
+  // 잠금은 랜덤하게 일어나면 안 되는 사건이다
+  constraint c_no_accidental_lockout { mr[8][0] == 1'b0; }
+
+  // 전 채널에 같은 이미지를 쓰는 시퀀스라면, 채널 0·4 에서 특히 확인한다
+  constraint c_lockout_channels {
+    (channel inside {0, 4}) -> (mr[8][0] == 1'b0);
+  }
+endclass
 ```
 
-**측정 구간 내내 WDQS 펄스가 짝수여야** 하므로([05장](../05_clocking_dbi/)), 각 측정 사이클의 펄스 수를 함께 관리해야 합니다.
+잠금 동작 자체를 검증하려면 **별도 테스트**로 격리합니다. 그리고 그 테스트는 잠금 이후 DA 경로로 아무것도 확인할 수 없으므로, **잠금 확인만 하고 종료**해야 합니다.
 
-### 8.4 `DERR` 모드 디코딩
+**④ Rx offset 중 DQ float — 자극 측 검사**
 
 ```systemverilog
-// DERR는 세 가지 의미를 갖는다 (05·08·11장)
-typedef enum logic [1:0] { DERR_PARITY, DERR_PHASE, DERR_DUTY } derr_mode_e;
-
-wire dcm_on  = mr_q[6][6];      // MR6 OP6
-wire w2c_on  = mr_q[8][3];      // MR8 OP3
-
-assign derr_mode = dcm_on ? DERR_DUTY
-                 : w2c_on ? DERR_PHASE
-                          : DERR_PARITY;
-
-`ifndef SYNTHESIS
-  a_one_training_mode: assert property (@(posedge ck) disable iff (!rst_n)
-    !(dcm_on && w2c_on))
-    else $error("DCM and WDQS-to-CK training enabled simultaneously — DERR ambiguous");
-`endif
+// §6.12.1 — 트레이닝 시작 MRS 시점에 호스트가 DQ 를 float 해야 한다.
+// DUT 버그가 아니라 자극이 지켜야 할 조건이다.
+a_rxoff_dq_float: assert property (@(posedge ck) disable iff (!rst_n)
+    rxoff_training_active |-> (dq_oe === '0))
+  else `uvm_error("RXOFFC", "Rx offset 트레이닝 중 자극이 DQ 를 구동하고 있다 (§6.12.1)")
 ```
 
-### 8.5 부팅 시 `DEVICE_ID` 선행 읽기
+### 8.3 무엇을 덮었다고 말할 수 있는가
 
 ```systemverilog
-// 컨트롤러 설정이 DEVICE_ID에 의존한다 — MR을 쓰기 전에 읽어야 한다
-// (밀도 코드 / RAAIMT·RAAMMT·RAADEC / ARFM / RXoffC)
-typedef enum logic [2:0] {
-  BOOT_INIT,         // tINIT3까지
-  BOOT_OPEN_1500,    // WRST_n HIGH
-  BOOT_READ_DEVID,   // ← MR 이미지 확정에 필요
-  BOOT_LANE_REPAIR,  // 필요 시 (CK 토글 이전)
-  BOOT_MRS,          // 20개 MR 기록
-  BOOT_TRAINING,     // RXoffC -> DCA/DCM -> VREFD -> W2C
-  BOOT_NORMAL
-} boot_state_e;
+covergroup cg_hbm4_training with function sample(
+    train_stage_e stage, bit retrained_downstream, derr_ctx_e dctx,
+    bit dcm_flip, port_sel_e port, bit lockout_tested, int wosc_time);
+  option.per_instance = 1;
+
+  // --- 네 트레이닝을 각각 수행했는가 --------------------------------------
+  cp_stage : coverpoint stage {
+    bins rxoffc = {TRAIN_RXOFFC};      // 선택 기능 — DEVICE_ID 로 지원 확인
+    bins dca    = {TRAIN_DCA};
+    bins dcm    = {TRAIN_DCM};
+    bins vrefd  = {TRAIN_VREFD};
+    bins w2c    = {TRAIN_WDQS2CK};
+  }
+
+  // --- 재수행 시 무효화 전파 — 이 장의 핵심 축 ---------------------------
+  // 앞 단계를 다시 한 뒤 뒤 단계도 다시 했는가
+  cp_retrain : coverpoint retrained_downstream {
+    bins not_applicable = {0};
+    bins propagated     = {1};        // 이 bin 이 비면 무효화 전파는 미검증
+  }
+
+  // --- DERR 세 문맥 -------------------------------------------------------
+  cp_derr : coverpoint dctx {
+    bins parity = {DERR_PARITY};      // [08장]
+    bins phase  = {DERR_PHASE};       // [05장]
+    bins duty   = {DERR_DUTY};        // 이 장
+  }
+
+  // --- DCM 히스테리시스 (§6.11.3) ----------------------------------------
+  // no-flip 과 flip 두 방향을 모두 측정해야 히스테리시스가 상쇄된다
+  cp_dcm_flip : coverpoint dcm_flip { bins no_flip = {0}; bins flipped = {1}; }
+
+  // --- 포트 선택 (§13.1) --------------------------------------------------
+  cp_port : coverpoint port {
+    bins ieee1500  = {PORT_IEEE1500};   // DA12 = LOW (기본, 내부 풀다운)
+    bins da        = {PORT_DA};         // DA12 = HIGH — IEEE1500 비활성
+    bins both_shut = {PORT_NONE};       // DA12 LOW + WRST_n LOW
+  }
+  // DA 활성 중 CATTRIP 은 무효다 — 그 상태를 겪어 봤는가
+  x_da_cattrip : cross cp_port, cp_derr {
+    ignore_bins rest = binsof(cp_port.ieee1500) || binsof(cp_port.both_shut);
+  }
+
+  // --- Lockout — 격리 테스트에서만 -----------------------------------------
+  cp_lockout : coverpoint lockout_tested { bins tested = {1}; }
+
+  // --- WOSC 측정 시간이 정확도를 정한다 (§6.10) ---------------------------
+  cp_wosc : coverpoint wosc_time {
+    bins short  = {[1:99]};      // 짧으면 정확도가 낮다
+    bins normal = {[100:999]};
+    bins long   = {[1000:$]};
+  }
+endgroup
 ```
+
+세 축이 목표입니다.
+
+- **`cp_retrain.propagated`** — 앞 단계 재수행 후 뒤 단계도 다시 했는가. 이 bin이 비면 무효화 전파 로직이 통째로 미검증이고, 순서만 지키는 checker는 그것을 알려 주지 않습니다.
+- **`cp_derr` 세 bin** — 세 문맥을 모두 겪어야 monitor의 3-way 분기가 검증됩니다. 트레이닝을 안 돌리는 회귀는 `parity` 만 차 있습니다.
+- **`cp_dcm_flip` 두 bin** — 히스테리시스 상쇄는 **두 방향 측정이 짝을 이룰 때만** 성립합니다. 한 방향만 돌면 그 보정 자체가 검증되지 않습니다.
+
+### 8.4 어떻게 자극하는가
+
+**① 트레이닝 순서 — 정상과 재수행 두 갈래**
+
+```systemverilog
+// (a) 정상 순서
+run_rxoff_calibration();     // §6.12.1 — VREFD·W2C 보다 먼저
+run_dca();                   // §6.11.1 — W2C 보다 먼저
+run_vrefd_training();
+run_wdqs2ck_alignment();     // [05장]
+
+// (b) 재수행 — 여기가 검사 지점이다
+run_rxoff_calibration();     // 다시 하면 VREFD·W2C 가 무효가 된다
+// 여기서 곧바로 정상 동작에 들어가면 8.2 ① 의 check_ready() 가 잡아야 한다
+run_vrefd_training();        // 올바른 처리 — 뒤 단계를 다시 한다
+run_wdqs2ck_alignment();
+```
+
+(b)의 **중간 지점**이 negative 테스트입니다 — 재수행 후 뒤 단계를 건너뛰고 정상 동작에 진입해 보고, 환경이 그것을 잡는지 확인합니다.
+
+**② `DERR` 세 문맥을 각각** — 각 모드에서 `DERR`를 관측하고, **패리티 오류로 보고되지 않는지** 확인합니다. 이는 DUT가 아니라 **환경의 monitor를 검증**하는 테스트입니다([08장](../08_parity/) 5.4 ⑤와 같은 성격).
+
+그리고 **두 모드 동시 활성** negative — `MR8` OP3와 `MR6` OP6을 함께 1로 써 보고 8.2 ②의 검사가 잡는지 봅니다.
+
+**③ DCM은 반드시 쌍으로** — `MR6` OP7(flip)을 0과 1로 각각 측정하고 `tDCMM` 대기를 지킵니다. 한 방향 측정만으로 결론짓는 시퀀스는 히스테리시스 보정을 건너뛴 것입니다.
+
+**④ DA Lockout 격리 테스트**
+
+```
+① 정상 회귀 : mr_image_cfg 제약으로 MR8 OP0 = 0 강제 (8.2 ③)
+② 격리 테스트 : 채널 0 에 MR8 OP0 = 1 을 쓴다
+   → DA 포트 접근이 실패해야 한다
+   → RESET_n · HBM_RESET · MRS(0) · MODE_REGISTER_DUMP_SET(0) 모두
+      해제하지 못하는지 각각 확인한다  ← 네 경로를 다 시험해야 의미가 있다
+   → 테스트 종료 (이후 DA 경로로는 아무것도 못 한다)
+③ 별도 테스트 : 전 채널 동일 MR 이미지를 쓰는 초기화가
+   채널 0·4 에서 OP0 을 1 로 내보내지 않는지 확인
+```
+
+②의 **네 경로**가 요점입니다. 하나만 시험하면 "리셋으로 안 풀린다"까지만 확인되고, MR에 0을 써도 안 풀린다는 성질은 미검증으로 남습니다.
+
+**⑤ `DEVICE_ID` 선행 읽기를 환경 구성에 넣는다** — [06장](../06_row_commands/)에서 본 순서가 여기서 완성됩니다.
+
+```
+reset → tINIT3 → WRST_n HIGH → DEVICE_ID 읽기
+   → 밀도 코드      → 주소 구성 ([02장])
+   → RAAIMT/MMT/DEC → RAA 모델 ([06장])
+   → ARFM 지원      → MR8 값 결정 ([06장])
+   → RXoffC 지원    → 이 장의 ① 수행 여부
+   → 그 뒤에야 MR 프로그램과 트래픽
+```
+
+`WRST_n` 을 상시 LOW로 두는 프로파일도 규격이 허용하지만([03장](../03_init_reset_power/)), 그 경우 위 값들을 **전부 하드코딩**해야 합니다. 두 프로파일을 모두 돌려야 환경이 양쪽에 대응하는지 확인됩니다.
 
 ## 9. 대표 문제 — dry-run
 
@@ -424,7 +603,7 @@ typedef enum logic [2:0] {
 
 Rx offset은 **수신기의 판정 기준점**을 옮기므로, 그 위에서 잡았던 `VREFD` 값과 위상 정렬이 더 이상 유효하지 않다.
 
-**설계 결론**: 트레이닝 시퀀서는 각 단계의 유효 플래그를 두고, **앞 단계 재수행 시 뒤 단계 플래그를 무효화**해야 한다. Rx offset만 다시 하고 끝내면 잘못된 `VREFD`·위상으로 동작한다.
+**검증 결론**: `training_state_model` 이 각 단계의 유효 플래그를 들고, **앞 단계 재수행 시 뒤 단계 플래그를 무효화**한다(8.2 ①). 그리고 `cp_retrain.propagated` bin이 비어 있으면 이 전파 로직은 **한 번도 시험되지 않은 것**이다.
 </details>
 
 ### 문제 2 — `DERR` 해석
@@ -440,7 +619,7 @@ DCM 활성 시 `DERR1`은 **DWORD1(PC1)의 WDQS 듀티 사이클 측정 결과**
 
 게다가 DCM 모드에서 **허용되는 커맨드는 REFab·REFpb·RFMab·RFMpb·RNOP·CNOP·MRS 뿐**이다(§6.11.3). **write 커맨드 자체가 허용되지 않는다.**
 
-**설계 결론**: 두 가지를 지켜야 한다.
+**검증 결론**: 두 가지를 지켜야 한다.
 1. `DERR` 해석은 `MR6` OP6와 `MR8` OP3를 보고 **모드별로 분기**한다.
 2. 트레이닝 모드 진입 시 **정상 트래픽을 차단**한다. 허용 커맨드 목록 밖의 커맨드가 나가면 그 자체가 규격 위반이다.
 </details>
@@ -467,15 +646,9 @@ DCM 활성 시 `DERR1`은 **DWORD1(PC1)의 WDQS 듀티 사이클 측정 결과**
 **설계 주의**: `MR8` OP0은 **채널 0 또는 4에만 정의**된 비트다. MR 이미지를 전 채널에 동일하게 적용하는 펌웨어라면, 그 비트가 의도치 않게 1로 나가지 않는지 확인해야 한다.
 </details>
 
-## 🔍 검증 연결
-
-- 트레이닝 시퀀스를 시나리오로 구성 → [`hbm_dv` Ch08 시나리오](../../hbm_dv/08_testcase_scenarios/)
-- DFT 경로와 mission mode 교차 → [`hbm_dv` Ch11 DFT·RAS](../../hbm_dv/11_dft_ras/)
-- 트레이닝 수렴이 mixed-level 검증인 이유 → [`hbm_dv` Ch05 Mixed-Level](../../hbm_dv/05_mixed_level/)
-
 ## 핵심 정리
 
-- 트레이닝에는 **순서 제약**이 있다 — **RXoffC → (DCA/DCM) → VREFD → WDQS-to-CK**. 앞 단계를 재수행하면 **뒤 단계도 무효**다.
+- 트레이닝에는 **순서 제약**이 있다 — **RXoffC → (DCA/DCM) → VREFD → WDQS-to-CK**. 앞 단계를 재수행하면 **뒤 단계도 무효**다. 검사할 것은 순서가 아니라 **무효화 전파**이며, `cp_retrain.propagated` 가 비면 그 로직은 미검증이다.
 - **WOSC는 채널·클럭과 무관**하게 동작하며 계수 중 `CK`·`WDQS`·`WRCK`가 필요 없다. **전원 인가 시 기본 비활성**이다.
 - WOSC 결과는 **오버플로**(2²⁴ 이상)나 **`RESET_n` 중단**에서 무효가 된다. **`WRST_n`은 영향이 없다** — 두 리셋의 비대칭이 여기서도 확인된다.
 - 정확도는 **측정 시간이 길수록** 좋아지지만 **matching error(벤더 지정)가 상한**을 만든다. 무작정 길게 돌릴 이유가 없다.
@@ -483,11 +656,12 @@ DCM 활성 시 `DERR1`은 **DWORD1(PC1)의 WDQS 듀티 사이클 측정 결과**
 - DCA·DCM 모두 **`fCKDCA` 미만 주파수에서는 미지원**이며, 그때는 DCA 코드를 **기본값 `0000`** 으로 둔다.
 - DCM은 **히스테리시스 상쇄를 위해 flip 측정을 함께** 수행한다. 측정 구간 내내 **WDQS 펄스가 짝수**여야 한다 — 짝수 규칙의 세 번째 등장.
 - Rx offset 트레이닝은 **호스트가 DQ를 float** 해야 하며, 필요한 부속 기능은 **장치가 자동으로 켜고 끈다**. `tOSCAL` 최대 **6 μs**.
-- **`DERR`는 세 가지 의미**를 갖는다 — 패리티 오류 / 위상 검출기 판독 / 듀티 측정 결과. **모드 디코딩이 필수**이며 두 트레이닝을 동시에 켜면 안 된다.
+- **`DERR`는 세 가지 의미**를 갖는다 — 패리티 오류 / 위상 검출기 판독 / 듀티 측정 결과. monitor가 **`MR8` OP3와 `MR6` OP6을 함께 보고 3-way 분기**해야 하며, 두 모드 동시 활성은 자극 측에서 막는다. 세 문맥을 다 겪지 않은 회귀는 `parity` bin만 차 있다.
 - IEEE 1500은 **`WSO`를 채널마다 복제**해 채널 병렬 실행을 가능하게 한다. **초기화 후 전 생애에 걸쳐**, power-down·self refresh 중에도 사용 가능하다.
-- **테스트 포트는 양산 전용이 아니라 부팅에 필수**다 — `DEVICE_ID`에서 밀도 코드·RAA 문턱값·ARFM/RXoffC 지원 여부를 읽어야 MR 이미지를 확정할 수 있다.
+- **테스트 포트는 양산 전용이 아니라 부팅에 필수**다 — `DEVICE_ID`에서 밀도 코드·RAA 문턱값·ARFM/RXoffC 지원 여부를 읽어야 MR 이미지를 확정할 수 있다. 환경도 같은 순서를 따라야 하고, `WRST_n`을 상시 LOW로 두는 프로파일에서는 그 값들을 **전부 하드코딩**해야 한다 — 두 프로파일을 모두 돌려야 환경이 양쪽에 대응하는지 확인된다.
 - DA 포트는 **`DA12`로 IEEE 1500과 배타 선택**되며, 내부 풀다운으로 **기본은 IEEE 1500** 쪽이다. DA 활성 시 **`CATTRIP` 값은 무시**해야 한다.
 - ⚠️ **DA Port Lockout(`MR8` OP0)은 전원 제거로만 해제된다.** 어떤 리셋으로도, MR에 0을 써도 풀리지 않는다. **채널 0 또는 4에만 정의된 비트**다.
+- 그래서 **MR 이미지 랜덤화에서 이 비트를 제외**해야 한다. 랜덤이 1을 만들면 **자극이 검증 환경 자신의 관측 경로를 영구히 닫는다** — 이 코스에서 유일한 유형의 결함이다. 잠금 검증은 격리된 테스트로 두고, **네 해제 경로(RESET_n · HBM_RESET · MRS(0) · MODE_REGISTER_DUMP_SET(0))를 모두** 시험해야 의미가 있다.
 
 ## Further Reading
 

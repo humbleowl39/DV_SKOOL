@@ -9,8 +9,9 @@ description: JESD270-4 §6.7·6.8·6.13 · Lane remapping 3계층, MISR/LFSR 루
 - **Explain** lane remapping이 시프트 구조로 동작하는 방식과 여분 레인이 하는 역할을 설명한다.
 - **Identify** remapping이 불가능한 신호들을 지목하고 왜 그것들이 제외되는지 판단한다.
 - **Derive** DWORD 40비트·AWORD 38비트 MISR 폭을 신호 수와 샘플링 구조로 유도한다.
-- **Sequence** Self Repair의 self-test → auto-repair 흐름과 채널·SID 순회 요구를 정리한다.
-- **Evaluate** 한 번에 한 레인만 복구 가능하다는 제약이 초기화 펌웨어에 부과하는 절차를 판단한다.
+- **Sequence** Self Repair의 self-test → auto-repair 흐름과 채널·SID 순회 요구를 정리하고, **종료 조건과 최대 시도 횟수**를 갖춘 반복 루프로 구현한다.
+- **Evaluate** 한 번에 한 레인만 복구 가능하다는 제약이 **전류 제약**이라 디지털 시뮬로 검증할 수 없음을 판단하고, 자극 측 프로토콜 검사로 대체한다.
+- **Construct** MISR reference 모델을 만들고, 서명 일치가 왜 무결의 증명이 아닌지 설명한다.
 :::
 
 :::note[Prerequisites]
@@ -255,7 +256,9 @@ Self Repair 횟수가 **SID 수에 비례**합니다. 16-high 구성은 4-high�
 
 [03장](../03_init_reset_power/)에서 초기화 시간을 `tINIT3`(4 ms)가 지배한다고 했는데, **Self Repair를 수행하면 그 위에 self-test + auto-repair 시간이 SID 수만큼 곱해져 얹힙니다.**
 
-그리고 병렬화가 **규격상 금지**되어 있으므로 이 시간을 줄일 방법이 없습니다. 부팅 시간 예산을 잡을 때 스택 높이를 반영해야 합니다.
+그리고 병렬화가 **규격상 금지**되어 있으므로 이 시간을 줄일 방법이 없습니다.
+
+검증에서는 이것이 **회귀 시간 문제**가 됩니다. 전 SID × 전 그룹을 도는 테스트는 스택이 높을수록 느려지고, 그렇다고 생략하면 `cp_sid` 가 부분만 차서 **미복구 SID가 있는 채로 회귀가 통과**합니다. 기능 회귀와 전용 테스트를 나누는 것이 현실적인 해법입니다 — 5.4 ⑥.
 :::
 
 ### 발행 조건과 진행 관측
@@ -278,92 +281,292 @@ Self Repair 횟수가 **SID 수에 비례**합니다. 16-high 구성은 4-high�
 
 3번이 있다는 것은 **한 번의 실행으로 끝나지 않을 수 있다**는 뜻입니다. 초기화 펌웨어는 **반복 실행 루프**를 가져야 하고, 종료 조건과 최대 시도 횟수를 정해야 합니다.
 
-## ⚙️ 설계 적용 (RTL / Front-end)
+## 🔬 검증 적용
 
-### 5.1 Lane repair 시퀀서 — 한 레인씩
+### 5.1 무엇이 깨질 수 있는가
+
+이 장의 기능들은 **정상 동작 경로 밖**에 있습니다. 기능 회귀를 아무리 돌려도 lane repair와 Self Repair는 한 번도 실행되지 않을 수 있고, 그 상태로 "전 항목 통과"가 나옵니다.
+
+| 조문 | 위반 형태 | 증상 | 잡히는 시점 |
+|---|---|---|---|
+| §6.7 — **한 번에 한 레인** (전류 제약) | 여러 복구 벡터를 한 `UpdateWR`로 | **전류 제약 위반 — 디지털 시뮬에 안 나타남** | **디지털 회귀로는 불가** |
+| §6.7.2 — 더블 바이트 **쌍 단위**, 정상 쪽에 `1111b` | 한쪽만 프로그램 | 멀쩡한 레인이 잘못 매핑 | 데이터 미스매치 |
+| §6.7.1/6.7.2 — **복구 불가 신호 목록** | `CK`·스트로브·`AERR`·`PAR`·`DERR`에 복구 시도 | 무시되거나 미정의 | 없음 |
+| §6.7 — 발행은 **CK 토글 이전** | 정상 동작 중 발행 | 미정의 | 없음 |
+| §6.7 — soft(휘발) vs hard(퓨즈) | 구분 없이 처리 | **전원 사이클 후 결과가 다름** | 전원 사이클 시나리오 |
+| §6.7.2 — `RD0`/`RD2` 짝수, `RD1`/`RD3` 홀수 타이밍 | 여분 레인을 일괄 처리 | 복구된 레인만 위상이 어긋남 | 복구 후 데이터 |
+| §6.8 — MISR는 **압축**이다 | 서명 일치를 "무결"로 해석 | aliasing된 오류를 통과 | **원리적 한계** |
+| §6.8 — `READ_LFSR_COMPARE_STICKY` | sticky 성질을 모름 | 이전 테스트의 불일치를 현재 것으로 오독 | 순서 의존 |
+| §6.13 — **병렬 동작 미지원** | 그룹 병렬 시도 | 미정의 | 없음 |
+| §6.13 — `SID 수 × 그룹 수` 순회 | 일부만 수행 | **미복구 영역이 남음** | 없음 |
+| §6.13 — "재실행 필요" 결과 | 반복 루프 없음 | 결함이 남은 채 진행 | 없음 |
+| §6.13 — 폴링 중 **`SELF_REP`이 WIR에 유지** | 다른 명령 발행 | 동작 중단 | 즉시 |
+
+:::caution[디지털 시뮬로 검증할 수 없는 항목 — 두 번째 사례]
+"한 번에 한 레인" 제약의 근거는 **전류**입니다(§6.7). 여러 레인을 동시에 복구하면 관련 회로의 순간 전류가 제약을 넘습니다.
+
+디지털 시뮬레이션에서 이것은 **관측되지 않습니다.** 여러 벡터를 한 번에 시프트 인해도 DUT 모델은 정상적으로 복구를 수행할 것이고, 검사는 통과합니다. [03장](../03_init_reset_power/)의 전원 램프 부등식과 같은 유형입니다.
+
+따라서 이 항목은 **DUT 검증이 아니라 자극 측 프로토콜 검사**입니다. IEEE 1500 명령 스트림을 보고 **`UpdateWR` 사이에 복구 벡터가 하나씩만 들어갔는지**를 확인하는 checker로 잡습니다.
+
+V-Plan에 이 행을 적을 때 "DUT가 다중 복구를 거부하는지 확인"이라고 쓰면 틀립니다. 규격은 거부를 요구하지 않고, 애초에 거부할 수단도 없습니다.
+:::
+
+:::caution[MISR 일치는 무결의 증명이 아니다]
+MISR는 긴 스트림을 고정 폭 서명으로 **압축**합니다. 압축이므로 **서로 다른 입력이 같은 서명을 낼 수 있습니다**(aliasing).
+
+DWORD 40비트 서명 기준으로 무작위 오류가 통과할 확률은 대략 `2⁻⁴⁰`이고, 실용적으로는 충분히 낮습니다. 그러나 검증에서 주의할 것은 무작위 오류가 아니라 **구조적 오류**입니다 — 특정 stuck-at 패턴이나 주기적 오류는 다항식의 성질에 따라 서명에 흔적을 남기지 않을 수 있습니다.
+
+그래서 규격이 **`LFSR Compare mode`** 를 따로 둡니다. 이쪽은 압축이 아니라 **실시간 비교**이고, 결과는 `READ_LFSR_COMPARE_STICKY`로 읽습니다.
+
+| 수단 | 성격 | 강도 |
+|---|---|---|
+| MISR mode | 서명 압축 | 빠르지만 aliasing 가능 |
+| LFSR Compare mode | 실시간 비교 | 강하지만 비교 회로가 필요 |
+
+검증 전략은 **둘을 병행**하는 것입니다. MISR로 빠르게 훑고, 의심 구간은 Compare mode로 확인합니다. **MISR만으로 "링크 무결"을 결론짓지 않습니다.**
+
+그리고 **sticky**라는 이름에 주의하세요 — 한 번 선 불일치는 명시적으로 지우기 전까지 남습니다. 테스트마다 지우지 않으면 **이전 테스트의 실패를 현재 테스트의 것으로 읽게** 됩니다([09장](../09_ecc_ecs_sev/)의 ECS 로그와 같은 유형의 문제입니다).
+:::
+
+### 5.2 어떻게 잡는가 — 수단 선택
+
+| 규칙 | 성격 | 수단 | 이유 |
+|---|---|---|---|
+| 한 레인씩 · 쌍 단위 · 시점 | **명령 스트림 절차** | **프로토콜 checker** | 검증 대상이 펌웨어 절차다 |
+| 복구 불가 신호 목록 | **불변식** | **코드로 고정한 목록 + 검사** | 목록이 흩어지면 반드시 빠진다 |
+| MISR 서명 | **함수** | **reference MISR 모델** | 같은 다항식으로 독립 계산 |
+| Self Repair 순회·종료 | **절차 + 종료 조건** | **시퀀스 + 최대 시도 제한** | 무한 루프 위험이 있다 |
+
+**① Lane repair 절차 — [03장](../03_init_reset_power/) checker의 확장**
 
 ```systemverilog
-// 전류 제약 때문에 한 번에 한 레인만 (§6.7)
-// 다른 모든 레인 설정은 Fh, 각 복구는 별도 UpdateWR 이벤트로.
-typedef struct { logic [5:0] ch; logic [3:0] enc; lane_domain_e dom; } repair_item_t;
+// §6.7 — 복구 벡터는 한 번에 하나. 각각 별도의 UpdateWR 로 개시한다.
+// 다른 레인 설정은 Fh(복구 없음)로 둔다.
+class lane_repair_seq_chk extends uvm_subscriber #(ieee1500_item);
+  `uvm_component_utils(lane_repair_seq_chk)
+  protected int m_pending_repairs;      // 이번 UpdateWR 로 개시될 복구 수
+  protected bit m_ck_toggling;
 
-task automatic apply_lane_repairs(input repair_item_t items[$]);
-  foreach (items[i]) begin
-    set_all_lanes_to_no_repair();            // 전부 4'hF
-    set_lane_repair(items[i].ch, items[i].dom, items[i].enc);
-    pulse_update_wr();                       // ← 여기서 실제 복구
-    wait_t_slrep();                          // tSLREP 등 명령 타이밍 준수
+  function void write(ieee1500_item t);
+    case (t.instr)
+      SOFT_LANE_REPAIR, HARD_LANE_REPAIR : begin
+        // §6.7 — 정상 동작 시작 전에만 발행 가능 (CK 토글 이전)
+        if (m_ck_toggling)
+          `uvm_error("LANE_REPAIR",
+            "CK 토글 이후에 lane repair 명령을 발행했다 (§6.7)")
+        m_pending_repairs = count_non_Fh_fields(t.wdr_data);
+      end
+
+      UPDATE_WR : begin
+        // 전류 제약 때문에 한 번에 하나만 (§6.7).
+        // 디지털 시뮬에서 DUT 는 여러 개도 처리하므로, 잡는 쪽은 여기뿐이다.
+        if (m_pending_repairs > 1)
+          `uvm_error("LANE_REPAIR", $sformatf(
+            "한 UpdateWR 에 복구 벡터 %0d 개. 전류 제약상 하나씩 개시해야 한다 (§6.7)",
+            m_pending_repairs))
+        m_pending_repairs = 0;
+      end
+      default: ;
+    endcase
+  endfunction
+endclass
+```
+
+**② 복구 불가 신호 — 목록을 한곳에 고정한다**
+
+```systemverilog
+// §6.7.1 / §6.7.2 — remapping 대상에서 제외되는 신호.
+// 원리: 자기 자신을 관측·구동하는 데 필요한 신호는 복구 대상이 될 수 없다.
+typedef enum {
+  SIG_CK_T, SIG_CK_C,           // 차동 클럭 쌍 (AWORD)
+  SIG_AERR,                     // 복구 결과를 관측하는 신호 자체
+  SIG_WDQS_T, SIG_WDQS_C,       // 차동 스트로브 쌍 (DWORD)
+  SIG_RDQS_T, SIG_RDQS_C,
+  SIG_PAR, SIG_DERR             // 무결성 판정 경로
+} non_repairable_e;
+
+function automatic bit is_repairable(hbm4_signal_e sig);
+  return !(sig inside {SIG_CK_T, SIG_CK_C, SIG_AERR,
+                       SIG_WDQS_T, SIG_WDQS_C, SIG_RDQS_T, SIG_RDQS_C,
+                       SIG_PAR, SIG_DERR});
+endfunction
+```
+
+이 목록을 checker와 자극 생성기가 **공유**해야 합니다. 자극이 복구 불가 신호를 대상으로 고르면 그 자체가 자극 버그이고, 목록이 두 곳에 있으면 언젠가 갈립니다.
+
+**③ MISR reference 모델**
+
+```systemverilog
+// §6.8 — Galois 형 MISR. 규격의 예시 다항식은 f(x)=X⁴+X³+1 이며
+// 실제 정의는 별도 절에 있다. 폭은 DWORD 40 / AWORD 38.
+class misr_model #(parameter int W = 40) extends uvm_object;
+  `uvm_object_utils(misr_model#(W))
+  protected bit [W-1:0] m_sig;
+  bit [W-1:0]           poly;            // 구성에서 받는다 — 상수로 박지 않는다
+
+  function void reset(); m_sig = '0; endfunction
+
+  function void absorb(bit [W-1:0] data);
+    bit msb = m_sig[W-1];
+    m_sig = (m_sig << 1) ^ data;
+    if (msb) m_sig ^= poly;              // Galois 피드백
+  endfunction
+
+  function bit [W-1:0] signature(); return m_sig; endfunction
+endclass
+```
+
+`poly` 를 **구성에서 받는 것**이 요점입니다. 규격이 제시한 것은 **예시**이고 실제 다항식은 별도 규정이므로, 상수로 박으면 다른 정의에서 전부 틀립니다.
+
+**④ Self Repair 순회 — 종료 조건이 필수다**
+
+```systemverilog
+// §6.13 — SELF_REP_RESULTS 가 "재실행 필요" 를 돌려줄 수 있다.
+// 종료 조건과 최대 시도 횟수가 없으면 테스트가 끝나지 않을 수 있다.
+task automatic run_self_repair_all();
+  foreach (sid_list[s]) begin
+    foreach (group_list[g]) begin        // 병렬 동작은 지원되지 않는다 (§6.13)
+      int attempts = 0;
+      do begin
+        issue_self_rep(sid_list[s], group_list[g]);
+        poll_sr_progress();              // 이 동안 SELF_REP 이 WIR 에 유지되어야 한다
+        attempts++;
+        if (attempts > MAX_SELF_REP_ATTEMPTS) begin
+          `uvm_error("SELF_REPAIR", $sformatf(
+            "SID %0d 그룹 %0d 에서 %0d 회 시도 후에도 재실행 요구가 계속된다",
+            sid_list[s], group_list[g], attempts))
+          break;
+        end
+      end while (read_self_rep_results(sid_list[s]) == SR_RERUN_REQUIRED);
+    end
   end
 endtask
 ```
 
-**흔한 실수**: 여러 레인의 벡터를 한 번에 시프트 인하고 `UpdateWR`를 한 번만 주는 것. 규격 위반이며 전류 제약을 깨뜨립니다.
+### 5.3 무엇을 덮었다고 말할 수 있는가
 
-### 5.2 DWORD는 쌍 단위로 쓴다
+이 장의 coverage는 **"이 기능이 한 번이라도 실행됐는가"** 에서 시작합니다. 기능 회귀만 도는 환경에서는 전부 0입니다.
 
 ```systemverilog
-// 더블 바이트 단위 — 정상인 바이트에도 1111b를 명시해야 한다 (§6.7.2)
-function automatic logic [7:0] dword_repair_pair(
-    input logic [3:0] enc, input logic broken_is_upper);
-  return broken_is_upper ? {enc, 4'hF}    // 상위 바이트가 불량
-                         : {4'hF, enc};   // 하위 바이트가 불량
-endfunction
+covergroup cg_hbm4_test_repair with function sample(
+    repair_layer_e layer, int n_lanes_repaired, int double_byte, int rd_lane,
+    persist_e persist, misr_mode_e mmode, sr_result_e sr, int sid, bit sticky_cleared);
+  option.per_instance = 1;
+
+  // --- 어느 복구 계층을 실행했는가 ---------------------------------------
+  cp_layer : coverpoint layer {
+    bins none        = {REPAIR_NONE};
+    bins aword       = {REPAIR_AWORD};    // 채널당 여분 레인 1개
+    bins dword       = {REPAIR_DWORD};
+    bins self_repair = {REPAIR_ARRAY};    // §6.13 — 배열 결함
+  }
+
+  // --- 한 번에 하나 (§6.7) — 복수 복구를 순차로 처리해 봤는가 -------------
+  cp_n_lanes : coverpoint n_lanes_repaired {
+    bins one  = {1};
+    bins two  = {2};
+    bins many = {[3:$]};                  // N 개면 UpdateWR 도 N 번
+  }
+
+  // --- DWORD 는 더블 바이트 4쌍 (§6.7.2) ---------------------------------
+  cp_double_byte : coverpoint double_byte { bins db[] = {[0:3]}; }
+  // 여분 레인의 타이밍은 물리 바이트의 홀짝을 따른다
+  cp_rd_lane : coverpoint rd_lane {
+    bins even_byte = {0, 2};              // RD0·RD2 — 1 WDQS 사이클 선행
+    bins odd_byte  = {1, 3};              // RD1·RD3 — 2 WDQS 사이클 선행
+  }
+
+  // --- 영속성 (§6.7) ------------------------------------------------------
+  cp_persist : coverpoint persist {
+    bins soft = {REPAIR_SOFT};            // 휘발 — 전원 사이클로 사라진다
+    bins hard = {REPAIR_HARD};            // 퓨즈 — 남는다
+  }
+  // 전원 사이클을 거쳐 두 성질의 차이를 확인했는가
+  x_persist_layer : cross cp_persist, cp_layer {
+    ignore_bins na = binsof(cp_layer.none) || binsof(cp_layer.self_repair);
+  }
+
+  // --- MISR 네 모드 (§6.8) -----------------------------------------------
+  cp_misr_mode : coverpoint mmode {
+    bins lfsr         = {MISR_LFSR};      // 패턴 생성
+    bins register     = {MISR_REGISTER};
+    bins misr         = {MISR_SIGNATURE}; // 서명 압축
+    bins lfsr_compare = {MISR_COMPARE};   // 실시간 비교 — aliasing 없음
+  }
+  // sticky 를 테스트 시작 시 지웠는가 — 안 지우면 이전 결과를 읽는다
+  cp_sticky : coverpoint sticky_cleared { bins cleared = {1}; }
+
+  // --- Self Repair 결과 네 갈래 (§6.13) ----------------------------------
+  cp_sr_result : coverpoint sr {
+    bins clean        = {SR_NO_DEFECT};
+    bins defect_left  = {SR_DEFECT_REMAINS};
+    bins unrepairable = {SR_UNREPAIRABLE};
+    bins rerun        = {SR_RERUN_REQUIRED};   // 반복 루프가 있어야 도달한다
+  }
+  // 전 SID 를 순회했는가 (§6.13 — 한 번에 하나의 SID)
+  cp_sid : coverpoint sid { bins s[] = {[0:3]}; }
+  x_sr_sid : cross cp_sr_result, cp_sid;
+endgroup
 ```
 
-### 5.3 복구 불가 신호 목록을 코드로 고정
+네 가지가 이 장의 목표입니다.
+
+- **`cp_layer` 가 `none` 만 차 있는 것**이 가장 흔한 상태입니다. 복구 기능이 한 번도 실행되지 않았다는 뜻이고, 그런데도 기능 회귀는 전부 통과합니다.
+- **`cp_n_lanes.two` 이상** — 복수 레인 복구를 순차로 처리하는 절차가 검증됩니다. 하나만 복구하는 시나리오는 "한 번에 하나" 제약을 시험하지 못합니다.
+- **`cp_misr_mode.lfsr_compare`** — MISR만 쓰고 Compare mode를 안 쓰면 aliasing 위험이 그대로 남습니다.
+- **`cp_sr_result.rerun`** — "재실행 필요" 결과를 겪어야 반복 루프와 종료 조건이 검증됩니다. 이 bin은 **주입 없이는 나오지 않으므로**, 모델이 그 결과를 낼 수 있어야 합니다.
+
+### 5.4 어떻게 자극하는가
+
+**① 복수 불량 레인 → 순차 복구**
 
 ```systemverilog
-// remapping 불가 (§6.7.1, §6.7.2)
-//   AWORD: CK_t, CK_c, AERR
-//   DWORD: WDQS_t/_c, RDQS_t/_c, PAR, DERR
-// 이 신호들에 대한 복구 요청은 발생 자체를 막는다.
-`ifndef SYNTHESIS
-  a_no_repair_clock: assert property (@(posedge wrck) disable iff (!wrst_n)
-    repair_req |-> !(repair_target inside {SIG_CK_T, SIG_CK_C, SIG_AERR,
-                                           SIG_WDQS_T, SIG_WDQS_C,
-                                           SIG_RDQS_T, SIG_RDQS_C,
-                                           SIG_PAR, SIG_DERR}))
-    else $error("Attempted to remap a non-remappable signal");
-`endif
-```
+// 불량 레인 3개를 주입하고, 절차대로 하나씩 UpdateWR 로 복구한다.
+// 5.2 ① 의 checker 가 "한 번에 하나" 를 감시한다.
+class seq_multi_lane_repair extends uvm_sequence;
+  `uvm_object_utils(seq_multi_lane_repair)
+  rand int unsigned n_faulty;
+  constraint c_n { n_faulty inside {[2:4]}; }   // 1 개면 제약이 시험되지 않는다
 
-### 5.4 MISR 서명 비교
-
-```systemverilog
-// DWORD: 바이트당 40b × 4바이트 × 2 DWORD = 320b
-// AWORD: 38b                                       (§6.8)
-localparam int DWORD_MISR_BITS = 40 * 4 * 2;   // 320
-localparam int AWORD_MISR_BITS = 38;
-
-// 호스트 측에서도 동일한 다항식으로 기대 서명을 계산해 비교한다.
-// aliasing 때문에 서명 일치가 "무오류"를 보장하지는 않는다 -> LFSR Compare Sticky 병행.
-wire misr_match = (dword_misr_read == dword_misr_expected);
-wire link_clean = misr_match && !lfsr_compare_sticky;
-```
-
-**`misr_match`만으로 판정하면 안 됩니다.** 압축 손실로 서로 다른 오류가 같은 서명을 낼 수 있으므로 **sticky 비교 결과를 함께** 봐야 합니다.
-
-### 5.5 Self Repair 순회 루프
-
-```systemverilog
-// SID × 채널 그룹을 순회한다. 병렬 실행은 규격상 금지 (§6.13)
-// 결과가 "다시 실행 필요"이면 반복 — 최대 시도 횟수를 정해야 한다.
-localparam int MAX_SELF_REP_PASSES = 3;
-
-for (int pass = 0; pass < MAX_SELF_REP_PASSES; pass++) begin
-  for (int sid = 0; sid < NUM_SID; sid++) begin
-    for (int grp = 0; grp < NUM_CH_GROUPS; grp++) begin
-      require_all_banks_idle(grp);
-      issue_self_rep(sid, grp, REP_TYPE_SELF_TEST, ref_rate);
-      do poll_sr_progress(); while (!sr_done);   // SELF_REP을 WIR에 유지한 채
+  virtual task body();
+    int faulty[$] = pick_repairable_lanes(n_faulty);   // 복구 불가 신호는 제외
+    read_hard_repair_data();                            // §4.4 — 먼저 읽는다
+    foreach (faulty[i]) begin
+      set_all_fields_to_Fh();                           // 나머지는 "복구 없음"
+      program_repair_vector(faulty[i]);
+      issue_update_wr();                                // 여기서 하나만 개시된다
     end
-  end
-  read_self_rep_results();
-  if (!needs_rerun) break;
-end
+    issue_bypass();                                     // §4.4 — 정상 모드 복귀
+  endtask
+endclass
 ```
 
-**폴링 중 `SELF_REP`을 WIR에 유지**해야 한다는 조건을 놓치면 진행 상태를 읽을 수 없습니다.
+**② 더블 바이트 쌍 단위** — 한 바이트만 복구할 때도 **짝을 이루는 바이트에 `1111b`** 를 함께 씁니다. 이를 빠뜨리면 손대지 않으려던 바이트가 잘못 매핑됩니다. 네 쌍(`cp_double_byte`)을 모두 순회합니다.
+
+**③ soft/hard 차이를 전원 사이클로 확인** — 이 장에서 **두 성질을 구분하는 유일한 방법**입니다.
+
+```
+① soft lane repair 적용 → 동작 확인
+② 전원 사이클 → 복구가 사라져야 한다
+③ hard lane repair 적용 → 동작 확인
+④ 전원 사이클 → 복구가 남아 있어야 한다
+```
+
+②와 ④의 **차이**가 검사 지점입니다. 전원 사이클 없이는 두 명령이 똑같이 보입니다.
+
+**④ MISR와 Compare mode 병행** — 같은 패턴을 두 모드로 돌려 결과가 일치하는지 봅니다. 그리고 각 테스트 **시작 시 sticky를 지웁니다** — 지우지 않으면 이전 테스트의 불일치를 현재 것으로 읽습니다.
+
+**⑤ 복구 불가 신호에 대한 negative** — `CK_t`·`AERR`·`WDQS`·`DERR` 등을 복구 대상으로 지정해 봅니다. 규격이 거부를 요구하지 않으므로 **DUT의 반응을 정답과 비교하면 안 되고**, 확인할 것은 5.2 ②의 목록 검사가 자극을 막는지입니다.
+
+**⑥ Self Repair 전 SID 순회와 시간 예산** — `SID 수 × 그룹 수`만큼 반복해야 하고 **병렬이 금지**되어 있으므로, 16-high 구성은 4-high의 네 배가 걸립니다. 회귀에서는 다음을 나눕니다.
+
+| 테스트 | 범위 |
+|---|---|
+| 기능 회귀 | Self Repair **생략** 또는 1 SID만 |
+| 전용 테스트 | 전 SID × 전 그룹 순회 + 재실행 루프 |
+
+전자만 돌면 `cp_sid` 가 부분만 차고, 미복구 SID가 있는 상태로 회귀가 통과합니다. 후자는 느리므로 회귀 주기를 따로 잡습니다.
 
 ## 6. 대표 문제 — dry-run
 
@@ -449,14 +652,8 @@ AWORD_MISR :                          38 b
 
 **부팅 시간 함의**: 4-high(4회)의 **네 배**다. 각 회차는 self-test + auto-repair 시간을 포함하며, 결과가 "다시 실행 필요"로 나오면 더 반복해야 한다.
 
-**설계 결론**: 부팅 시간 예산은 **스택 높이에 비례**해 잡아야 하고, Self Repair를 **매 부팅마다 할지 특정 조건에서만 할지**가 시스템 설계 판단이 된다. `SELF_REP_RESULTS`의 "초기화 이후 실행되지 않음" 상태가 그 판단을 지원한다.
+**검증 결론**: 이 시간이 **회귀 예산을 지배**한다. 전 SID 순회 테스트는 별도 주기로 돌리고 기능 회귀에서는 축약하되, **축약했다는 사실을 커버리지로 드러내야** 한다(`cp_sid`). 그리고 `SELF_REP_RESULTS`의 "재실행 필요" 결과 때문에 반복 루프가 필요하므로, **최대 시도 횟수 없이 짜면 테스트가 끝나지 않을 수 있다**(5.2 ④).
 </details>
-
-## 🔍 검증 연결
-
-- DFT 경로와 mission mode의 교차 → [`hbm_dv` Ch11 DFT·RAS](../../hbm_dv/11_dft_ras/)
-- 복구 시나리오를 테스트로 구성 → [`hbm_dv` Ch08 시나리오](../../hbm_dv/08_testcase_scenarios/)
-- 테스트 구조가 검증 환경에 요구하는 것 → [`hbm_dv` Ch11](../../hbm_dv/11_dft_ras/)
 
 ## 핵심 정리
 
@@ -465,13 +662,15 @@ AWORD_MISR :                          38 b
 - 계층은 셋 — **AWORD**(채널당 1개, row **또는** column), **DWORD**(더블 바이트당 `RD`), **WSO**(`RM`).
 - **복구할 수 없는 신호**: `CK_t`/`CK_c`, `AERR`, `WDQS_t`/`_c`, `RDQS_t`/`_c`, `PAR`, `DERR`. **자기 자신을 관측·구동하는 신호는 복구 대상이 아니다.**
 - DWORD는 **쌍 단위로 프로그램**한다 — 정상 바이트에도 `1111b`를 명시해야 한다.
-- ⚠️ **한 번에 한 레인만.** 전류 제약 때문이며, N개면 **N번의 `UpdateWR`** 이 필요하다.
-- lane repair는 **CK 토글 이전**, 즉 초기화 중에만 가능하다. `HARD_LANE_REPAIR`는 **전원이 제거되어도 유지**된다.
+- ⚠️ **한 번에 한 레인만.** 근거가 **전류 제약**이라 디지털 시뮬에서는 위반이 관측되지 않는다 — DUT 검증이 아니라 **IEEE1500 명령 스트림을 보는 자극 측 프로토콜 검사**로 잡는다. N개면 **N번의 `UpdateWR`** 이 필요하고, **1개만 복구하는 시나리오는 이 제약을 시험하지 못한다.**
+- lane repair는 **CK 토글 이전**, 즉 초기화 중에만 가능하다. `HARD_LANE_REPAIR`는 **전원이 제거되어도 유지**된다 — soft와 hard의 차이는 **전원 사이클을 거쳐야만** 구분되며, 그 시나리오가 없으면 두 명령이 똑같이 보인다.
 - MISR 폭은 신호 구성에서 유도된다 — **DWORD 바이트 40b**(10 신호 × 4), **AWORD 38b**(19 신호 × 2). **`ARFU`가 포함**된다.
-- 모드는 넷 — **LFSR / Register / MISR / LFSR Compare**. 서명은 **압축 손실(aliasing)** 이 있으므로 `READ_LFSR_COMPARE_STICKY`를 함께 봐야 한다.
+- 모드는 넷 — **LFSR / Register / MISR / LFSR Compare**. **MISR 서명 일치는 무결의 증명이 아니다** — 압축이므로 aliasing이 있고, 특히 구조적 오류에 취약하다. **Compare mode를 병행**하고, sticky는 **테스트 시작 시 지운다**(안 지우면 이전 테스트 결과를 읽는다).
+- MISR 다항식은 규격이 **예시만** 제시한다. 모델의 `poly`는 **구성에서 받아야** 하고 상수로 박으면 다른 정의에서 전부 틀린다.
 - Self Repair는 **self-test → auto-repair** 2단계이며, **패턴과 복구 가능 개수가 벤더 지정**이다.
 - Self Repair는 **SID 하나씩, 채널 그룹 하나씩** 순회한다. **병렬 실행은 규격상 금지**이므로 **부팅 시간이 스택 높이에 비례**한다.
-- `SELF_REP_RESULTS`에 **"다시 실행 필요"** 상태가 있다 — 펌웨어는 **반복 루프와 최대 시도 횟수**를 가져야 한다.
+- `SELF_REP_RESULTS`에 **"다시 실행 필요"** 상태가 있다 — 검증 시퀀스도 **반복 루프와 최대 시도 횟수**를 가져야 하며, 없으면 테스트가 끝나지 않을 수 있다.
+- 이 장의 커버리지는 **"이 기능이 한 번이라도 실행됐는가"** 에서 시작한다. 기능 회귀만 도는 환경은 `cp_layer` 가 `none` 만 차 있고, 그런데도 전 항목이 통과한다.
 
 ## Further Reading
 

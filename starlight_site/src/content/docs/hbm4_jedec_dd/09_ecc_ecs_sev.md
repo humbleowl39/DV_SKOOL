@@ -9,8 +9,10 @@ description: JESD270-4 §6.9 · symbol 기반 ECC 엔진, 자동 스크럽, 실�
 - **Derive** 304비트 codeword의 구성을 데이터·메타데이터·체크비트로 분해한다.
 - **Explain** read 시 정정된 데이터를 배열에 되쓰지 않는 규정과 그것이 ECS를 필수로 만드는 이유를 설명한다.
 - **Decode** `SEV` 핀의 BL8 버스트 위치별 인코딩으로 NE·CEs·CEm·UE를 판정한다.
-- **Analyze** `ERRTH` 임계값이 CEs 보고를 걸러내는 구조와 그 관측상의 함의를 분석한다.
+- **Analyze** `ERRTH` 임계값이 CEs 보고를 걸러내는 구조를 분석하고, **환경이 원리적으로 관측할 수 없는 구간**을 특정한다.
 - **Sequence** Auto ECS의 read-modify-write 다섯 갈래와 설정 동결 규칙을 정리한다.
+- **Construct** 실제 판정과 핀에 나가는 값을 분리한 ECC reference model을 만들고, read 정정이 배열을 고치지 않음을 반영한다.
+- **Evaluate** ECS 상태가 `RESET` 외에 지워지지 않는 성질이 **회귀 구조**에 부과하는 제약을 판단한다.
 :::
 
 :::note[Prerequisites]
@@ -80,7 +82,7 @@ description: JESD270-4 §6.9 · symbol 기반 ECC 엔진, 자동 스크럽, 실�
 
 이것을 막는 유일한 수단이 **ECS(Error Check and Scrub)** 입니다. ECS만이 정정 결과를 **배열에 되씁니다.**
 
-**설계 결론**: ECS는 선택 기능이 아니라 **on-die ECC의 전제 조건**입니다. ECS를 켜지 않으면 ECC는 오류 누적을 막지 못하고, 시간이 지날수록 UE 확률이 올라갑니다.
+**검증 결론**: reference model의 셀 오류 맵을 **read에서 지우면 안 됩니다.** 지우면 두 번째 read에서 `NE`를 예측하는데 실제 장치는 또 정정합니다. 그리고 이 성질은 **같은 주소를 두 번 이상 읽는 자극**이 없으면 검증되지 않습니다 — 한 번만 읽으면 되쓰는 모델과 안 되쓰는 모델이 똑같이 통과합니다(7.4 ①).
 
 동시에 이 구조가 read 경로를 단순하게 유지합니다 — read가 배열 쓰기를 유발하면 타이밍과 전력이 복잡해집니다. **정정은 실시간으로, 복원은 배경 작업으로** 분리한 설계입니다.
 :::
@@ -135,7 +137,7 @@ UE에서 되쓰지 않는 것이 핵심입니다 — 잘못 "정정"한 값을 �
 :::caution[일반 read의 정정은 로그에 남지 않는다]
 정상 동작 중 read에서 발생한 정정은 **실시간으로 `SEV` 핀에 신호될 뿐, 로그에 남지 않습니다.** 기록은 ECS 경로에서만 이뤄집니다.
 
-**설계 함의**: 호스트가 `SEV`를 매 read마다 관측하지 않으면 그 정정 사실은 **사라집니다.** 나중에 IEEE 1500으로 로그를 읽어도 나오지 않습니다.
+**검증 함의**: 환경이 `SEV`를 매 read마다 관측하지 않으면 그 정정 사실은 **사라집니다.** 나중에 IEEE 1500으로 로그를 읽어도 나오지 않습니다. 곧 "로그가 비었으니 오류가 없었다"는 결론이 성립하지 않습니다 — 두 경로를 **모두** 수집해야 합니다(7.2 ③).
 
 즉 오류 관측에는 **두 개의 독립된 경로**가 있고 둘 다 필요합니다.
 - **실시간 경로**: `SEV` 핀 — read마다, 휘발성
@@ -219,7 +221,7 @@ codeword 수는 **구성 의존**이므로, 용량이 클수록 ECS 간격이 �
 :::tip[왜 후반부인가]
 ECC 판정은 codeword 전체를 받아야 가능합니다. BL8의 절반을 받은 시점에는 아직 결론이 없으므로, **후반부에 결과를 실어 보내는 것**이 자연스럽습니다.
 
-**설계 함의**: `SEV` 수신 로직은 버스트 위치를 추적해야 하며, **위치 4~7의 값만 유효**합니다. 전반부를 함께 샘플링해 OR로 판정하면 항상 NE가 나옵니다.
+**검증 함의**: monitor는 버스트 위치를 추적해야 하며 **위치 4~7의 값만 유효**합니다. 전반부를 함께 샘플링해 OR로 판정하면 **항상 `NE`가 나오고**, 그러면 오류 주입 테스트가 전부 "오류 없음"으로 조용히 통과합니다.
 
 그리고 [08장](../08_parity/)에서 본 *"`SEV`는 패리티 계산에서 제외된다"* 는 규정이 여기서 이해됩니다 — `SEV`는 데이터가 아니라 **데이터에 대한 판정 결과**이므로 데이터 패리티의 대상이 아닙니다.
 :::
@@ -248,7 +250,9 @@ Table 68이 정의하는 실제 전송 규칙에 필터가 들어 있습니다.
 
 이것이 [`hbm_dv`](../../hbm_dv/11_dft_ras/)에서 말한 *"ECC가 결함을 가려 조용히 통과한다"* 의 정확한 메커니즘입니다. 가리는 주체가 ECC 정정만이 아니라 **`ERRTH` 필터**이기도 합니다.
 
-**대응**: 기능 검증에서는 ECC를 끄거나, ECS 로그(IEEE 1500 경로)를 확인하거나, `ERRTH`를 넘길 만큼 오류를 주입해야 합니다.
+**대응**: ECS 로그(IEEE 1500 경로)를 확인하거나, `ERRTH`를 넘길 만큼 오류를 주입하거나, ECC Engine Test Mode를 쓰는 세 갈래가 있습니다. 각각 덮는 범위가 다르고 **셋 다 덮지 못하는 영역이 남습니다** — 7.1절에서 정리합니다.
+
+(참고로 **on-die ECC를 끄는 수단은 존재하지 않습니다.** `MR9`의 관련 비트는 ECC **핀**(`MD`)·심각도 신호·엔진 테스트 모드를 제어할 뿐이며, 정정 자체를 비활성화하지 않습니다.)
 :::
 
 CEm과 UE는 필터 없이 항상 보고된다는 점도 함께 기억할 만합니다 — **다중 비트는 그 자체로 이상 신호**이기 때문입니다.
@@ -266,102 +270,286 @@ CEm과 UE는 필터 없이 항상 보고된다는 점도 함께 기억할 만합
 
 패턴 극성이 반대인 두 가지를 제공하는 것은 **stuck-at 양방향**을 모두 시험하기 위해서입니다.
 
-## ⚙️ 설계 적용 (RTL / Front-end)
+## 🔬 검증 적용
 
-### 7.1 `SEV` 디코더
+:::note[이 절과 `hbm_dv` Ch11의 경계]
+이 장이 다루는 것은 **규격이 규정한 관측 수단과 그 한계**입니다 — `SEV` 인코딩, `ERRTH` 필터, ECS 로그의 성질.
 
-```systemverilog
-// SEV는 BL8의 후반부(위치 4~7)에만 유효한 2비트 코드를 싣는다 (Table 67)
-typedef enum logic [1:0] {
-  SEV_NE  = 2'b00,   // {SEV1, SEV0}
-  SEV_CES = 2'b01,
-  SEV_UE  = 2'b10,
-  SEV_CEM = 2'b11
-} sev_e;
+그 수단으로 **TB를 어떻게 구성하고 오류 주입 전략을 어떻게 세우는가**는 [`hbm_dv` Ch11 DFT·RAS](../../hbm_dv/11_dft_ras/)에서 다룹니다. 여기서는 "무엇이 관측 가능하고 무엇이 구조적으로 가려지는가"까지입니다.
+:::
 
-// 버스트 위치를 추적해 후반부만 샘플링한다
-always_ff @(posedge rdqs) begin
-  if (burst_pos_q == 3'd4)                       // 후반부 첫 위치에서 캡처
-    sev_code_q <= {sev_i[1], sev_i[0]};
-  burst_pos_q <= burst_pos_q + 3'd1;
-end
+### 7.1 무엇이 깨질 수 있는가
 
-// 전반부를 함께 OR하면 언제나 NE가 나온다 — 흔한 버그
+RAS 검증의 근본 어려움은 **검증 대상이 오류를 숨기도록 설계되어 있다**는 점입니다. ECC는 정정하고, `ERRTH`는 필터하고, 로그는 읽으면 지워집니다. 셋 다 정상 동작이며 셋 다 검증을 어렵게 합니다.
+
+| 조문 | 위반 형태 | 증상 | 잡히는 시점 |
+|---|---|---|---|
+| Table 68 — **`ERRTH` 이하의 `CEs`는 `NE`로 보고** | `NE`를 "오류 없음"으로 해석 | 정정이 실제로 일어났는데 환경이 못 봄 | **구조적으로 불가** |
+| §6.9.2 — read 정정을 **배열에 되쓰지 않음** | 모델이 "고쳐졌다"고 예측 | 같은 주소 재read에서 예측 어긋남 | 반복 read 시나리오 |
+| §6.9.1 — **오류는 ECS 중에만 기록** | 일반 read 정정을 로그에서 찾음 | 로그가 비어 "오류 없음"으로 결론 | 없음 |
+| Table 67 — `SEV`는 **버스트 후반부만 유효** | 전 구간을 OR로 샘플링 | **항상 `NE`** | 즉시(잘못된 방향) |
+| §6.9.4 — ECS는 **`RESET` 외에 되돌릴 수 없음** | 테스트 간 상태 이월 | 주소 카운터·로그가 누적 → **테스트 독립성 붕괴** | 산발적·순서 의존 |
+| §6.9.4 — `MR9` OP[6:4] **순서·동결** | 순서 위반 또는 시작 후 변경 | "알 수 없는 동작" — 기대값 없음 | 없음 |
+| §6.9.4 — ECS 전에 **배열이 기록되어 있어야** | 미기록 영역에 ECS | 체크비트가 무의미 | 없음 |
+| `ECSRES`·`ECSLOG` — 로그 **self-clearing** | monitor와 checker가 각각 읽음 | 둘 중 하나가 빈 로그를 봄 | 산발적 |
+| §6.9.2 — `MD` off 구간에 쓴 MD는 **무효** | 모델이 유효로 처리 | MD 비교 실패 | MD 토글 시나리오 |
+| §6.9.6 — ECC Test Mode는 **배열 미접근** | 실제 셀 오류로 오해 | 배열 내용 기대값이 어긋남 | 즉시 |
+
+:::caution[`NE`는 "오류 없음"이 아니다]
+Table 68의 필터가 검증에 만드는 구멍이 이 장의 핵심입니다.
+
+```
+실제 on-die ECC 판정      SEV 핀에 실리는 값
+─────────────────────────────────────────
+NE                    →   NE
+CEs, ERRCNT ≤ ERRTH   →   NE      ← 여기
+CEs, ERRCNT > ERRTH   →   CEs
+CEm                   →   CEm
+UE                    →   UE
 ```
 
-### 7.2 두 경로를 모두 수집
+단일 비트 정정이 실제로 일어났는데도 누적 카운트가 `ERRTH` 이하면 **`NE`로 나갑니다.** 그리고 `ERRTH`는 **벤더 지정값**이라 그 아래 구간은 환경이 **원리적으로 관측할 수 없습니다.**
+
+곧 다음 문장이 성립하지 않습니다 — *"`SEV`가 전부 `NE`였으니 오류가 없었다."*
+
+이 구멍을 우회하는 세 방법이 있고, 각각 덮는 범위가 다릅니다.
+
+| 방법 | 덮는 것 | 못 덮는 것 |
+|---|---|---|
+| `ERRTH`를 넘을 만큼 **오류를 몰아 주입** | 임계값 초과 경로, `CEs` 보고 | 임계값 이하의 실제 동작 |
+| **ECS 로그**(IEEE 1500)를 읽는다 | ECS가 정정한 모든 오류 | 일반 read의 정정 — 로그에 안 남는다 |
+| **ECC Engine Test Mode**(§6.9.6) | ECC 엔진의 판정 로직 | 배열·셀 — 엔진만 시험한다 |
+
+세 방법 어느 것도 "일반 read에서 `ERRTH` 이하로 일어난 정정"은 덮지 못합니다. **그것은 규격이 관측 수단을 주지 않은 영역**이며, V-Plan에 그렇게 적어야 합니다.
+:::
+
+:::caution[ECS는 테스트 사이에 상태를 이월한다]
+§6.9.4의 두 조문이 회귀 구조를 건드립니다.
+
+> ECS 동작이 시작되면 Auto ECS를 리셋하는 **유일한 방법은 장치 RESET**이다. 비활성화는 해당 모드의 동작만 중단시킬 뿐 **ECS 주소 카운터나 로그를 리셋하지 않는다.**
+
+보통의 UVM 회귀는 테스트마다 환경을 새로 만들지만, **장치 상태는 그렇게 지워지지 않습니다.** ECS 주소 카운터가 어디까지 갔는지, 로그에 무엇이 쌓였는지가 **이전 테스트에 의존**합니다.
+
+귀결이 둘입니다.
+
+1. **ECS를 켜는 테스트는 device reset으로 시작해야 합니다.** 그렇지 않으면 결과가 실행 순서에 의존하고, 같은 시드가 회귀 위치에 따라 다르게 동작합니다.
+2. **`MR9` OP[6:4]는 첫 ECS 이후 바꿀 수 없으므로**, 한 테스트 안에서 ECS 설정을 바꿔 가며 시험할 수 없습니다. 설정 조합마다 **별도 테스트**가 필요합니다.
+
+그리고 전제가 하나 더 있습니다 — *"DRAM은 ECS 실행 전에 배열 비트가 기록된 경우에만 유효한 ECS 동작을 보장한다"*. 초기화 직후 곧바로 ECS를 켜면 미기록 영역의 체크비트가 무의미합니다. **메모리 전체를 채우는 write가 ECS 활성화보다 앞서야** 합니다.
+:::
+
+### 7.2 어떻게 잡는가 — 수단 선택
+
+| 규칙 | 성격 | 수단 | 이유 |
+|---|---|---|---|
+| `SEV` 인코딩 해석 | **위치 의존 디코드** | **monitor** | 버스트 위치를 추적해야 한다 |
+| 오류 누적 (되쓰지 않음) | **상태** | **reference model의 셀 오류 맵** | 주소별로 오류가 쌓인다 |
+| ECS 설정 순서·동결 | **절차** | **프로토콜 checker** | MRS 순서에 대한 규칙 |
+| 두 관측 경로의 통합 | **수집** | **단일 소유자 collector** | 로그가 self-clearing 이다 |
+
+**① `SEV` 디코더 — 후반부만 본다**
 
 ```systemverilog
-// 실시간 경로: SEV — read마다, 휘발성. 놓치면 사라진다 (§6.9.1, §6.9.5)
-always_ff @(posedge ck) begin
-  if (rd_data_done) begin
-    unique case (sev_code_q)
-      SEV_CES: ce_single_cnt_q <= ce_single_cnt_q + 1;
-      SEV_CEM: ce_multi_cnt_q  <= ce_multi_cnt_q  + 1;
-      SEV_UE : begin
-        ue_cnt_q      <= ue_cnt_q + 1;
-        ue_addr_q     <= rd_addr_q;              // UE는 즉시 상위로 보고
-        ue_report_q   <= 1'b1;
-      end
-      default: ;
-    endcase
-  end
-end
+// Table 67 — 버스트 위치 0~3 은 항상 0, 4~7 에 {SEV[1],SEV[0]} 2비트 코드가 실린다.
+// 전 구간을 OR 로 샘플링하면 항상 NE 가 나온다.
+function automatic sev_e decode_sev(input bit [1:0] sev_by_ui[8]);
+  bit [1:0] code = sev_by_ui[4];          // 후반부. 4~7 은 같은 값을 반복한다.
+  unique case (code)
+    2'b00 : return SEV_NE;
+    2'b01 : return SEV_CES;               // {SEV[1],SEV[0]} = 0,1
+    2'b11 : return SEV_CEM;
+    2'b10 : return SEV_UE;
+  endcase
+endfunction
 
-// 기록 경로: ECS 로그는 IEEE 1500으로 주기적으로 읽어야 한다 (§6.9.5, Table 66)
-// -> 부팅 이후에도 테스트 포트 접근이 필요하다는 뜻 (11장)
+// 전반부가 0 이 아니면 규격 위반이거나 샘플링이 어긋난 것이다 — 둘 다 알아야 한다
+a_sev_first_half_zero: assert property (@(posedge rdqs) disable iff (!rst_n)
+    (burst_pos inside {[0:3]}) |-> (sev == 2'b00))
+  else `uvm_error("SEV", $sformatf(
+       "버스트 위치 %0d 에서 SEV=%b. 전반부는 0 이어야 한다 (Table 67)", burst_pos, sev))
 ```
 
-**두 경로 모두 필요합니다.** `SEV`만 보면 ECS가 발견한 오류의 **주소**를 알 수 없고, ECS 로그만 보면 **일반 read에서 일어난 정정**을 놓칩니다.
-
-### 7.3 초기화 순서 강제
+**② 오류 누적 모델 — 정정은 반환값에만 반영된다**
 
 ```systemverilog
-// MR9 OP[6:4]는 초기화 중에, ECSCEM은 ECSREF/ECSSRF보다 먼저 또는 동시에 (§6.9.4)
-// 그리고 첫 ECS 이후에는 변경 금지.
-typedef enum logic [2:0] {
-  ECS_CFG_IDLE,
-  ECS_CFG_ARRAY_INIT,   // 배열을 먼저 기록해야 유효한 체크비트가 생긴다
-  ECS_CFG_WRITE_CEM,    // MR9 OP6
-  ECS_CFG_WRITE_EN,     // MR9 OP[5:4]
-  ECS_CFG_LOCKED        // 첫 REFab/SRE 이후 — RESET 외에는 해제 불가
-} ecs_cfg_e;
+class ecc_array_model extends uvm_object;
+  `uvm_object_utils(ecc_array_model)
+  // 주소별 주입된 셀 오류. read 정정은 이것을 지우지 않는다 (§6.9.2).
+  protected int m_cell_errors[bit [39:0]];
 
-`ifndef SYNTHESIS
-  a_ecscem_frozen: assert property (@(posedge ck) disable iff (!rst_n)
-    (ecs_cfg_q == ECS_CFG_LOCKED) |-> !mrs_writes_ecscem)
-    else $error("ECSCEM changed after first ECS operation — undefined behavior");
-`endif
+  function bit [255:0] on_read(bit [39:0] a, output sev_e sev);
+    int n = m_cell_errors.exists(a) ? m_cell_errors[a] : 0;
+    // symbol 경계 안의 단일 symbol 이하 오류는 정정된다
+    sev = (n == 0) ? SEV_NE : (n == 1) ? SEV_CES : (n <= SYMBOL_LIMIT) ? SEV_CEM : SEV_UE;
+    // ★ 여기서 m_cell_errors[a] 를 지우지 않는다. read 는 배열을 고치지 않는다.
+    return corrected_data(a);
+  endfunction
+
+  // ECS 만이 배열을 실제로 복원한다 (§6.9.4)
+  function void on_ecs(bit [39:0] a);
+    if (m_cell_errors.exists(a) && m_cell_errors[a] <= SYMBOL_LIMIT)
+      m_cell_errors.delete(a);            // 정정 결과가 배열에 되쓰인다
+  endfunction
+
+  // Table 68 — ERRTH 필터. 모델의 판정과 핀에 나가는 값이 다르다.
+  function sev_e to_pin(sev_e actual, int errcnt, int errth);
+    if (actual == SEV_CES && errcnt <= errth) return SEV_NE;   // 가려진다
+    return actual;
+  endfunction
+endclass
 ```
 
-### 7.4 UE 처리 경로
+`on_read()` 가 `m_cell_errors` 를 **지우지 않는 것**이 이 모델의 계약입니다. 지우면 두 번째 read에서 `NE`를 예측하는데 실제 장치는 또 정정합니다. 그리고 `to_pin()` 이 **모델의 실제 판정과 핀에 보이는 값을 분리**합니다 — 이 분리가 없으면 `ERRTH` 필터를 표현할 수 없습니다.
 
-UE는 정정 불가이므로 **컨트롤러가 상위로 올려야** 합니다.
+**③ 두 경로를 한 소유자가 수집한다**
+
+로그가 self-clearing이므로, **읽는 주체가 둘이면 하나는 빈 값을 봅니다.**
 
 ```systemverilog
-// UE는 ERRTH 필터를 거치지 않고 항상 보고된다 (Table 68)
-// 배열은 손상된 채 남아 있으므로(ECS도 되쓰지 않음), 주소를 기록해 격리해야 한다.
-always_ff @(posedge ck) begin
-  if (ue_report_q) begin
-    poison_addr_fifo.push(ue_addr_q);       // 상위 계층으로 poison 전파
-    ue_sticky_q <= 1'b1;                    // 리셋 전까지 유지
-  end
-end
+// ECS 로그는 읽으면 지워질 수 있다 (ECSLOG / ECSRES).
+// 반드시 한 컴포넌트만 읽고, 나머지는 그 결과를 구독한다.
+class ras_collector extends uvm_component;
+  `uvm_component_utils(ras_collector)
+  uvm_analysis_port #(ras_event_s) ap;
+
+  // 실시간 경로 — read 마다, 휘발성 (§6.9.5)
+  function void on_sev(hbm4_addr_t a, sev_e s);
+    ap.write('{src: SRC_SEV_PIN, addr: a, sev: s});
+  endfunction
+
+  // 기록 경로 — ECS 중에만, 영속 (§6.9.4). 이 태스크만 로그를 읽는다.
+  task read_ecs_log();
+    ecs_log_entry_s e[];
+    ieee1500_read(ECS_ERROR_LOG, e);      // 읽는 순간 지워질 수 있다
+    foreach (e[i]) ap.write('{src: SRC_ECS_LOG, addr: e[i].addr, sev: e[i].sev});
+  endtask
+endclass
 ```
 
-[08장](../08_parity/)의 패리티와 마찬가지로 **장치는 차단하지 않습니다.** UE 데이터도 그대로 반환되며, 그것을 쓸지 버릴지는 호스트 판단입니다.
-
-### 7.5 검증용 ECC 우회 경로
+**④ ECS 설정 순서 checker**
 
 ```systemverilog
-// 기능 검증 중에는 ECC가 결함을 가린다. 세 가지 대응이 있다 (§6.9.5, §6.9.6)
-//  1) ECC Engine Test Mode (MR9 OP2) — 엔진만 시험, 코어는 건드리지 않음
-//  2) ECS 로그를 IEEE1500으로 읽어 정정 발생 자체를 확인
-//  3) ERRTH를 넘길 만큼 오류를 주입해 CEs가 SEV에 나타나게 함
-//
-// 주의: SEV의 NE는 "오류 없음"이 아니라 "ERRTH 이하"일 수 있다.
-wire ecc_masking_risk = (sev_code_q == SEV_NE) && !ecc_disabled;
+// §6.9.4 — ECSCEM(OP6) 은 ECSREF/ECSSRF(OP[5:4]) 보다 먼저 또는 동시에.
+// 첫 ECS 동작 이후에는 변경 금지.
+function void on_mr9_write(bit [7:0] val);
+  bit cem = val[6], ref_en = val[5] | val[4];
+
+  if (ref_en && !m_cem_programmed && cem == 1'b0)
+    `uvm_error("ECS_ORDER",
+      "ECSREF/ECSSRF 를 켜기 전에 ECSCEM 이 프로그램되지 않았다 (§6.9.4)")
+  if (m_ecs_started && (cem != m_cem_value))
+    `uvm_error("ECS_ORDER",
+      "첫 ECS 동작 이후 ECSCEM 을 변경했다. 후속 동작이 미정의가 된다 (§6.9.4)")
+  m_cem_programmed = 1'b1; m_cem_value = cem;
+endfunction
 ```
+
+### 7.3 무엇을 덮었다고 말할 수 있는가
+
+```systemverilog
+covergroup cg_hbm4_ras with function sample(
+    sev_e actual, sev_e on_pin, errth_zone_e zone, ecs_mode_e ecs,
+    bit ecscem, bit md_en, ecc_tm_e tm, int reread_count);
+  option.per_instance = 1;
+
+  // --- 심각도 네 갈래 (Table 67) ------------------------------------------
+  // 모델의 실제 판정과 핀에 나온 값을 따로 센다. 둘이 갈리는 지점이 ERRTH 필터다.
+  cp_actual : coverpoint actual { bins ne = {SEV_NE}; bins ces = {SEV_CES};
+                                  bins cem = {SEV_CEM}; bins ue = {SEV_UE}; }
+  cp_on_pin : coverpoint on_pin { bins ne = {SEV_NE}; bins ces = {SEV_CES};
+                                  bins cem = {SEV_CEM}; bins ue = {SEV_UE}; }
+
+  // --- ERRTH 필터 (Table 68) — 이 장의 중심 축 ---------------------------
+  cp_errth : coverpoint zone {
+    bins below = {ERRTH_BELOW};      // CEs 가 NE 로 가려지는 구간
+    bins at    = {ERRTH_AT};         // 경계
+    bins above = {ERRTH_ABOVE};      // CEs 가 실제로 보고되는 구간
+  }
+  // "정정이 일어났는데 핀에는 NE" 조합을 실제로 만들어 봤는가
+  x_masked_ces : cross cp_actual, cp_on_pin {
+    bins masked = binsof(cp_actual.ces) && binsof(cp_on_pin.ne);   // 가려진 경우
+    bins visible = binsof(cp_actual.ces) && binsof(cp_on_pin.ces); // 보이는 경우
+    ignore_bins rest = binsof(cp_actual.ne) || binsof(cp_actual.cem)
+                    || binsof(cp_actual.ue);
+  }
+
+  // --- read 정정이 배열을 고치지 않음 (§6.9.2) ---------------------------
+  // 같은 주소를 몇 번 다시 읽었는가 — 1 회면 누적 성질이 미검증이다
+  cp_reread : coverpoint reread_count { bins once = {1}; bins twice = {2};
+                                        bins many = {[3:$]}; }
+
+  // --- ECS 모드와 설정 (§6.9.4) ------------------------------------------
+  cp_ecs : coverpoint ecs {
+    bins off       = {ECS_OFF};
+    bins via_refab = {ECS_REFAB};    // MR9 OP4
+    bins via_sref  = {ECS_SREF};     // MR9 OP5
+    bins both      = {ECS_BOTH};
+  }
+  cp_ecscem : coverpoint ecscem { bins off = {0}; bins on = {1}; }
+  x_ecs_cem : cross cp_ecs, cp_ecscem { ignore_bins no_ecs = binsof(cp_ecs.off); }
+
+  // --- ECC Engine Test Mode (§6.9.6) -------------------------------------
+  cp_tm : coverpoint tm {
+    bins normal = {ECC_TM_OFF};
+    bins cw0    = {ECC_TM_CW0};      // 데이터 1 이 오류 비트
+    bins cw1    = {ECC_TM_CW1};      // 데이터 0 이 오류 비트 — stuck-at 양방향
+  }
+
+  // --- MD 토글 (§6.9.2) ---------------------------------------------------
+  cp_md : coverpoint md_en { bins off = {0}; bins on = {1}; }
+endgroup
+```
+
+세 축이 이 장의 목표입니다.
+
+- **`x_masked_ces.masked`** — 정정이 일어났는데 핀에는 `NE`로 나오는 조합. 이 bin이 비면 `ERRTH` 필터의 존재 자체가 미검증입니다. 그리고 이 bin이 **차 있다는 것**은 환경이 "실제 판정"과 "핀 값"을 따로 알고 있다는 뜻이기도 합니다 — 그 분리가 없으면 애초에 샘플할 수 없습니다.
+- **`cp_reread.twice` 이상** — 같은 주소를 두 번 이상 읽어야 §6.9.2의 "되쓰지 않는다"가 검증됩니다. 한 번만 읽는 자극은 되쓰는 모델과 안 되쓰는 모델을 구분하지 못합니다.
+- **`cp_tm.cw0`와 `cw1`** — 극성이 반대인 두 패턴을 모두 돌려야 stuck-at 양방향이 시험됩니다.
+
+### 7.4 어떻게 자극하는가
+
+**① 같은 주소를 반복해서 읽는다** — §6.9.2를 검증하는 유일한 방법입니다.
+
+```systemverilog
+// 오류를 하나 심고 같은 주소를 여러 번 읽는다.
+// 매번 정정된 값이 나오되, SEV 는 매번 오류를 보고해야 한다 (배열이 안 고쳐지므로).
+class seq_read_no_writeback extends uvm_sequence #(hbm4_cmd_item);
+  `uvm_object_utils(seq_read_no_writeback)
+  virtual task body();
+    inject_cell_error(TARGET_ADDR, .n_bits(1));
+    repeat (4) begin
+      `uvm_do_with(req, { cmd == RD; addr == TARGET_ADDR; })
+      // 4 회 모두 동일한 심각도가 나와야 한다. 회를 거듭하며 NE 로 바뀌면
+      // 장치가 되쓰기를 하고 있거나 모델이 오류를 지운 것이다.
+    end
+    // ECS 를 한 번 돌린 뒤 다시 읽으면 이번엔 NE 여야 한다
+    trigger_ecs(TARGET_ADDR);
+    `uvm_do_with(req, { cmd == RD; addr == TARGET_ADDR; })
+  endtask
+endclass
+```
+
+마지막 두 read의 **차이**가 검사 지점입니다 — ECS 전에는 오류가 보고되고 후에는 안 되어야 합니다. 이 대비가 없으면 ECS가 실제로 배열을 고쳤는지 확인할 방법이 없습니다.
+
+**② `ERRTH`를 넘긴다** — `x_masked_ces` 두 bin을 모두 채웁니다.
+
+`ERRTH`는 벤더 지정값이라 환경이 **`DEVICE_ID` 또는 벤더 프로파일에서 받아야** 합니다([06장](../06_row_commands/)의 RAA 문턱과 같은 구조입니다). 그 값을 모르면 "몇 개를 주입해야 넘는지" 알 수 없습니다.
+
+```
+① ERRTH 이하로 주입 → SEV 는 NE 여야 한다 (가려짐 확인)
+② ECS 로그를 읽는다  → 로그에는 남아 있어야 한다 (두 경로의 차이 확인)
+③ ERRTH 초과로 주입 → SEV 가 CEs 로 바뀌어야 한다
+```
+
+②가 핵심입니다. **핀은 `NE`인데 로그에는 있는 상태**가 두 관측 경로가 독립임을 증명합니다.
+
+**③ ECS 설정 조합은 테스트를 나눈다** — `MR9` OP[6:4]는 첫 ECS 이후 변경 불가이므로, 한 테스트에서 조합을 순회할 수 없습니다. `cp_ecs` × `cp_ecscem` 조합마다 **device reset으로 시작하는 별도 테스트**를 둡니다.
+
+그리고 각 테스트는 **메모리를 채우는 write를 먼저** 수행해야 합니다 — 미기록 영역에 ECS를 돌리면 §6.9.4의 전제가 깨집니다.
+
+**④ ECC Engine Test Mode** — `CW0`/`CW1` 두 극성을 모두 돌립니다. 이 모드는 **배열에 접근하지 않으므로**, 테스트 전후로 배열 내용이 변하지 않는 것도 함께 확인합니다. 배열이 바뀌었다면 모드 해석이 틀린 것입니다.
+
+**⑤ ECS 로그 self-clearing 확인** — 로그를 **연속 두 번** 읽습니다. `ECSLOG`가 활성이면 두 번째는 비어야 합니다. 이 성질을 모르는 환경은 monitor와 checker가 각각 읽어 한쪽이 조용히 빈 값을 보게 됩니다.
 
 ## 7. 대표 문제 — dry-run
 
@@ -405,7 +593,7 @@ PC당 DQ가 32개인 것은 [01장](../01_landscape_organization/)의 *"PC 모�
 
 **해소 경로는 ECS 뿐이다.** Auto ECS의 read-modify-write만이 정정 결과를 배열에 되쓴다.
 
-**설계 결론**: ECS를 비활성으로 두면 on-die ECC는 **오류를 숨기기만 하고 제거하지 않는다.** 시간이 지날수록 시스템이 나빠진다. ECS는 ECC의 부속 기능이 아니라 **전제 조건**이다.
+**검증 결론**: ECS 전후로 같은 주소를 읽어 **심각도가 달라지는지**가 검사 지점이다. ECS 전에는 오류가 보고되고 후에는 `NE` 여야 한다. 이 대비가 없으면 ECS가 실제로 배열을 복원했는지 확인할 방법이 없다(7.4 ①).
 </details>
 
 ### 문제 3 — `SEV`의 NE 해석
@@ -431,23 +619,18 @@ PC당 DQ가 32개인 것은 [01장](../01_landscape_organization/)의 *"PC 모�
 **참고**: CEm과 UE는 필터를 거치지 않으므로 다중 비트 결함은 임계값과 무관하게 보고된다.
 </details>
 
-## 🔍 검증 연결
-
-- ECC가 결함을 가리는 문제와 대응 → [`hbm_dv` Ch11 DFT·RAS](../../hbm_dv/11_dft_ras/)
-- 오류 주입 시나리오 설계 → [`hbm_dv` Ch08 시나리오](../../hbm_dv/08_testcase_scenarios/)
-- ECC 원리 자체 → [RAS 코스](../../ras/)
-
 ## 핵심 정리
 
 - codeword는 **256b 데이터 + 16b MD = 272b 데이터워드**에 체크비트를 더해 **최소 304b**다. **H-matrix·symbol 크기·codeword 개수는 구현 의존**이다.
-- ⚠️ **read는 정정해서 반환하지만 배열에 되쓰지 않는다.** 그래서 **오류가 누적**되고, 이를 막는 유일한 수단이 **ECS**다. ECS는 ECC의 **전제 조건**이다.
+- ⚠️ **read는 정정해서 반환하지만 배열에 되쓰지 않는다.** 그래서 **오류가 누적**되고, 이를 막는 유일한 수단이 **ECS**다. 모델의 셀 오류 맵도 read에서 지우면 안 되며, **같은 주소를 두 번 이상 읽는 자극**이 없으면 이 성질은 미검증이다.
 - **UE는 되쓰지 않는다** — 잘못 정정한 값을 심으면 원본이 영구히 사라지기 때문이다.
 - **결함 격리는 물리 설계 요구사항**이다. 흔한 다중 비트 결함이 **한 symbol 안에 갇히도록** 배열을 배치해야 한다.
 - **오류는 ECS 중에만 기록된다.** 일반 read의 정정은 **`SEV`로 실시간 통보될 뿐 로그에 남지 않는다.** 관측 경로가 **둘**이며 둘 다 필요하다.
-- ECS 설정은 **초기화 중**에, **`ECSCEM`을 먼저 또는 동시에**, 첫 ECS 이후 **변경 금지**. 시작되면 **장치 RESET 외에는 되돌릴 수 없다.**
+- ECS 설정은 **초기화 중**에, **`ECSCEM`을 먼저 또는 동시에**, 첫 ECS 이후 **변경 금지**. 시작되면 **장치 RESET 외에는 되돌릴 수 없다** — 곧 ECS 상태가 **테스트 사이에 이월**된다. ECS 테스트는 device reset으로 시작해야 하고, 설정 조합마다 **별도 테스트**가 필요하다.
 - ECS 전에 **배열이 기록되어 있어야** 유효한 체크비트가 생긴다 — 메모리 초기화가 ECS 활성화보다 앞서야 한다.
 - `SEV`는 BL8의 **후반부(위치 4~7)** 에만 유효한 2비트 코드를 싣는다. 전반부를 함께 샘플링하면 항상 NE가 나온다.
-- ⚠️ **`ERRTH` 이하의 CEs는 `SEV`에 NE로 보고된다.** **"NE ≠ 오류 없음"** 이다. CEm과 UE는 필터를 거치지 않는다.
+- ⚠️ **`ERRTH` 이하의 CEs는 `SEV`에 NE로 보고된다.** **"NE ≠ 오류 없음"** 이다. `ERRTH`가 벤더 지정값이라 **그 아래 구간은 원리적으로 관측 불가**이며, V-Plan에 그렇게 적어야 한다. 모델은 **실제 판정과 핀 값을 분리**해 들어야 그 차이를 표현할 수 있다.
+- ECS 로그는 **읽으면 지워질 수 있다**(`ECSLOG`/`ECSRES`). 읽는 주체가 둘이면 하나는 빈 값을 본다 — **단일 소유자**가 읽고 나머지는 구독한다.
 - ECC Engine Test Mode는 **엔진만** 시험하며 코어에 오류를 심지 않는다. 벡터 극성이 **CW0/CW1 두 가지**다.
 
 ## Further Reading
