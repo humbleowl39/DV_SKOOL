@@ -62,10 +62,10 @@ IP: "IP-level env\nDUT: hbm_ch_ctrl\nCCI Agent: ACTIVE\nDRAM: VIP\n\n목적: 스
 
 SUB: "Subsystem env\nDUT: ch_ctrl 다수 + 중재 로직\nCCI Agent: PASSIVE (실제 로직이 구동)\n일부 Agent만 ACTIVE\n\n목적: 블록 간 상호작용, 통합 I1~I8" { style.fill: "#fff8e1"; style.font-color: "#0A0F25" }
 
-TOP: "Full-chip env\nDUT: base die 전체\n자극원: Test Firmware (CPU 실행)\nAgent: 대부분 PASSIVE\n\n목적: 초기화·시스템 시나리오" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
+FULLCHIP: "Full-chip env\nDUT: base die 전체\n자극원: Test Firmware (CPU 실행)\nAgent: 대부분 PASSIVE\n\n목적: 초기화·시스템 시나리오" { style.fill: "#e3f2fd"; style.font-color: "#0A0F25" }
 
 IP -> SUB: "env를 인스턴스로 포함\nconfig만 변경"
-SUB -> TOP: "동일"
+SUB -> FULLCHIP: "동일"
 ```
 
 계층이 올라갈 때 무엇이 바뀌는지 정리하면:

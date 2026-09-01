@@ -467,7 +467,7 @@ direction: down
 ROOT: "Root CA"
 ENR: "Enrollment CA\n차량 초기 등록 인증서 발급"
 PSE: "Pseudonym CA\n가명 인증서 발급\n(20 개씩 로테이션 → 추적 방지)"
-LINK: "Linkage Authority\n부정 차량 식별\n(프라이버시와 추적의 균형)"
+LNKA: "Linkage Authority\n부정 차량 식별\n(프라이버시와 추적의 균형)"
 MIS: "Misbehavior Authority\n악의/고장 차량 인증서 폐기 (CRL)"
 CAR: "차량"
 MSG: "V2V 메시지\n{데이터 + 서명 + 가명 인증서}" { shape: oval }
@@ -475,7 +475,7 @@ RX: "수신 차량\n서명 검증 → 유효? → 신뢰"
 
 ROOT -> ENR
 ROOT -> PSE
-ROOT -> LINK
+ROOT -> LNKA
 ROOT -> MIS
 PSE -> CAR
 CAR -> MSG: "V2V 메시지"

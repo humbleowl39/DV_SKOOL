@@ -271,7 +271,7 @@ TB 는 `cfg.num_nodes` 만큼 `vrdma_node_env` 를 build 단계에서 생성합�
 ```d2
 direction: down
 
-TOP: "uvm_test_top\n(rdma_basic_test)"
+TESTTOP: "uvm_test_top\n(rdma_basic_test)"
 
 ENV: "env\n(vrdmatb_top_env)" {
   N0: "node[0]\n(vrdma_node_env)" {
@@ -297,7 +297,7 @@ ENV: "env\n(vrdmatb_top_env)" {
   VSEQR: "top_vseqr\n(vrdma_top_virtual_sequencer)"
 }
 
-TOP -> ENV
+TESTTOP -> ENV
 ```
 
 ---

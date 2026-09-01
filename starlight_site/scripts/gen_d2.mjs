@@ -83,6 +83,39 @@ function outPathFor(file, index) {
 }
 
 const files = await targets()
+// d2 예약어를 노드 키로 쓰면 **조용히 깨진다** — exit 0, 경고 없음.
+// 리프 노드면 라벨이 사라지고 키워드가 소문자로 표시되며,
+// 컨테이너면 자식 노드가 통째로 없어진다.
+// 실측으로 확인된 위험 키워드만 담았다 (bottom/right/center/style/shape/grid 는 안전).
+const D2_RESERVED_KEYS = new Set(['top', 'left', 'near', 'label', 'class', 'link'])
+
+/** d2 소스에서 예약어를 노드 키로 쓴 줄을 찾는다. 없으면 빈 배열. */
+function findReservedKeys(src) {
+  const found = []
+  src.split('\n').forEach((raw, idx) => {
+    const line = raw.trim()
+    if (!line || line.startsWith('#')) return
+    const decl = line.match(/^([A-Za-z_][\w-]*)\s*:\s*"/) || line.match(/^([A-Za-z_][\w-]*)\s*:?\s*\{/)
+    if (decl && D2_RESERVED_KEYS.has(decl[1].toLowerCase())) {
+      // 컨테이너 안의 `label: "..."` 는 정당한 속성이므로 들여쓰기가 있으면 통과
+      const indented = /^\s/.test(raw)
+      if (!(indented && decl[1].toLowerCase() === 'label')) {
+        found.push({ line: idx + 1, key: decl[1], text: line.slice(0, 60) })
+        return
+      }
+    }
+    for (const m of line.matchAll(/(?:^|\s)([A-Za-z_][\w.-]*)\s*(?:->|--|<->)\s*([A-Za-z_][\w.-]*)/g)) {
+      for (const g of [m[1], m[2]]) {
+        if (D2_RESERVED_KEYS.has(g.split('.')[0].toLowerCase())) {
+          found.push({ line: idx + 1, key: g, text: line.slice(0, 60) })
+          return
+        }
+      }
+    }
+  })
+  return found
+}
+
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gend2-'))
 let made = 0
 let scanned = 0
@@ -95,6 +128,16 @@ for (const file of files) {
   scanned++
   for (const [i, input] of blocks.entries()) {
     const outputPath = outPathFor(file, i)
+    const reserved = findReservedKeys(input)
+    if (reserved.length) {
+      for (const r of reserved) {
+        console.log(`  \u2717 d2 예약어를 노드 키로 사용: '${r.key}' \u2014 ${path.relative(SITE, file)} 블록 ${i} 줄 ${r.line}`)
+        console.log(`      ${r.text}`)
+      }
+      console.log('      \u2192 키 이름을 바꾸세요. 예약어는 조용히 노드를 삼킵니다 (top/left/near/label/class/link)')
+      broken++
+      continue
+    }
     try { mtimes.set(outputPath, (await fs.stat(outputPath)).mtimeMs) } catch {}
     if (checkOnly) { console.log('  would write', path.relative(SITE, outputPath)); continue }
     const src = path.join(tmp, `d-${made}.d2`)

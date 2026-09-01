@@ -102,15 +102,15 @@ SETSIDE.BOARD -> GETSIDE.DRV: "조회" { style.stroke-dash: 4 }
 ```d2
 shape: sequence_diagram
 
-TOP: "tb_top"
+TBTOP: "tb_top"
 TST: uvm_test
 ENV: my_env
 AG: my_agent
 DRV: my_driver
 DB: config_db
 
-TOP -> DB: "① set(null,'*','vif',intf)"
-TOP -> TST: "② run_test()"
+TBTOP -> DB: "① set(null,'*','vif',intf)"
+TBTOP -> TST: "② run_test()"
 TST -> ENV: "③ create('env',this)"
 ENV -> AG: "④ create('agent',this)"
 AG -> DRV: "⑤ create('driver',this)"

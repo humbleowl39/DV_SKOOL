@@ -102,6 +102,7 @@ export default defineConfig({
 					items: [
 						{ label: 'DRAM / DDR', collapsed: true, items: [{ autogenerate: { directory: 'dram_ddr' } }] },
 						{ label: 'DRAM JEDEC Deep-Dive (DV)', collapsed: true, items: [{ autogenerate: { directory: 'dram_jedec_dv' } }] },
+						{ label: 'HBM 기초', collapsed: true, items: [{ autogenerate: { directory: 'hbm_basics' } }] },
 						{ label: 'HBM 아키텍처 (검증용)', collapsed: true, items: [{ autogenerate: { directory: 'hbm' } }] },
 						{ label: 'HBM 검증 실무', collapsed: true, items: [{ autogenerate: { directory: 'hbm_dv' } }] },
 						{ label: 'HBM4 JEDEC Deep-Dive (규격→검증)', collapsed: true, items: [{ autogenerate: { directory: 'hbm4_jedec_dd' } }] },

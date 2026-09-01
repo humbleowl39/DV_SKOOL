@@ -167,13 +167,13 @@ CoreSight는 DAP 너머에서 실제로 디버그·trace를 수행하는 IP fami
 direction: right
 
 SRC: "Trace Source\nETM (코어별 instruction trace)\nITM/STM (software trace)"
-LINK: "Trace Link\nFunnel (병합)\nReplicator (복제)"
+TLINK: "Trace Link\nFunnel (병합)\nReplicator (복제)"
 SINK_ON: "On-chip Sink\nETB/ETF (SRAM 버퍼)\nETR → 시스템 DRAM(AXI)"
 SINK_OFF: "Off-chip Sink\nTPIU (병렬 trace port)\nHSSTP (고속 직렬)"
 
-SRC -> LINK: "trace 스트림"
-LINK -> SINK_ON
-LINK -> SINK_OFF
+SRC -> TLINK: "trace 스트림"
+TLINK -> SINK_ON
+TLINK -> SINK_OFF
 ```
 
 trace 데이터는 source(ETM 등)에서 생성되어, link(Funnel/Replicator)로 병합·복제된 뒤, sink로 버퍼링되거나 off-chip으로 나갑니다. on-chip sink는 ETB/ETF(SRAM 버퍼)와 ETR(AXI 마스터로 시스템 DRAM에 trace를 씀)이고, off-chip은 TPIU(병렬 trace port)나 HSSTP(고속 직렬)입니다. **TMC**는 ETB/ETF/ETR 모드를 구성으로 선택할 수 있는 현대적 블록입니다.

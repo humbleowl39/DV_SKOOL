@@ -191,7 +191,7 @@ W3 -> JB
 ```d2
 direction: right
 
-TOP: "FSD 가 비승인\n지역에서 동작"
+ROOTSYM: "FSD 가 비승인\n지역에서 동작"
 GPS: "GPS 좌표 위조됨"
 REG: "Region Code 변조됨"
 SRV: "서버 검증 우회됨"
@@ -201,9 +201,9 @@ RC2: "설정 frame 인증 없음\n(❶ 와 동일)"
 RC3A: "RC ❸ Heartbeat 부재\n오프라인 시 로컬 캐시"
 RC3B: "텔레메트리 주기적\n→ 실시간 아님"
 
-TOP -> GPS
-TOP -> REG
-TOP -> SRV
+ROOTSYM -> GPS
+ROOTSYM -> REG
+ROOTSYM -> SRV
 GPS -> RC1A
 GPS -> RC1B
 REG -> RC2
