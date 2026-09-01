@@ -1,6 +1,6 @@
 ---
 title: "부록 A — 빠른 참조"
-description: 구성·커맨드·Mode Register·타이밍·신호를 한 곳에 모은 조회용 요약
+description: 구성·커맨드·Mode Register·타이밍·신호와 검증에서 자주 틀리는 항목을 한 곳에 모은 조회용 요약
 ---
 
 :::caution[인용 고지]
@@ -355,20 +355,39 @@ DWORD_MISR 읽기 : 40 × 4바이트 × 2 DWORD       = 320 b
 | Auto ECS 시작 | **장치 RESET** | [09](../09_ecc_ecs_sev/) |
 | **DA Port Lockout** (`MR8` OP0) | **전원 제거만** — 어떤 리셋·MR 쓰기로도 불가 | [11](../11_training_ieee1500/) |
 
-## 17. 자주 틀리는 것 15가지
+## 17. 검증에서 자주 틀리는 것 20가지
 
-1. 커맨드 디코더를 **정수 사이클**로 설계 → ACT 1.5 사이클 표현 불가 · [01](../01_landscape_organization/)
-2. Mode Register를 **PC별로 복제** → 규격 위반 (두 PC 공유) · [04](../04_mode_registers/)
-3. 뱅크 상태 머신을 **채널당 한 벌** → 뱅크마다 필요 · [02](../02_addressing_bank_groups/)
-4. `RA[13:0]` 전체로 행 버퍼 히트 판정 → 물리 행은 2 KB · [02](../02_addressing_bank_groups/)
-5. **전통 라운딩 공식** 사용 → 성능 손실 (또는 `tRP` 예외 누락 시 위반) · [06](../06_row_commands/)
-6. `tCCD`를 **2택**으로 판정 → `tCCDR` 누락, 4-High에서는 재현 안 됨 · [07](../07_column_commands/)
-7. **`ARFU`를 구동/패리티/MISR에서 누락** · [06](../06_row_commands/)·[08](../08_parity/)·[10](../10_test_repair/)
-8. 패리티 비활성화 MRS **직후** 패리티 중단 → `tMOD`까지 유지해야 · [07](../07_column_commands/)
-9. **`SEV` 전반부를 함께 샘플링** → 항상 NE · [09](../09_ecc_ecs_sev/)
-10. **`SEV` NE를 "오류 없음"으로 해석** → `ERRTH` 이하일 수 있음 · [09](../09_ecc_ecs_sev/)
-11. **ECS 미활성** → ECC가 오류를 숨기기만 하고 누적 · [09](../09_ecc_ecs_sev/)
-12. 여러 레인 복구 벡터를 **한 번에** 시프트 인 → 전류 제약 위반 · [10](../10_test_repair/)
-13. **hard repair 병합 없이** soft repair 적용 → 기존 복구 소실 · [03](../03_init_reset_power/)
-14. **`DERR`를 모드 구분 없이** 패리티 오류로 해석 · [11](../11_training_ieee1500/)
-15. **`tRAS`를 최소 제약으로만** 구현 → `9 × tREFI` 최대 누락 · [12](../12_electrical_timing_package/)
+**모델·monitor 쪽**
+
+1. monitor를 **정수 사이클**로 샘플링 → ACT 1.5 사이클을 놓치거나 두 번 셈. 에러 없이 **커버리지만 낮아진다** · [01](../01_landscape_organization/)
+2. Mode Register를 **PC별로 모델링** → 두 PC 공유가 반영 안 됨 · [04](../04_mode_registers/)
+3. 뱅크 상태를 **채널당 한 벌**로 → 뱅크마다 필요. 마지막 접근 그룹은 **PC마다** · [02](../02_addressing_bank_groups/)
+4. RAL을 **`reset(0)`** 으로 등록 → 기본값이 미정의인데 모델이 0을 자신 있게 예측 · [04](../04_mode_registers/)
+5. DBIac을 **조합 함수**로 → 전이 수 4의 히스테리시스가 사라짐. 다음 기준은 `raw`가 아니라 **버스 값** · [05](../05_clocking_dbi/)
+6. ECC 모델이 read에서 **셀 오류를 지움** → 되쓰지 않는다는 §6.9.2가 미반영 · [09](../09_ecc_ecs_sev/)
+7. **`SEV` 전반부를 함께 샘플링** → 항상 NE. 오류 주입이 전부 조용히 통과 · [09](../09_ecc_ecs_sev/)
+8. **`DERR`를 모드 구분 없이** 패리티 오류로 해석 → 트레이닝 중 가짜 에러 폭주 · [11](../11_training_ieee1500/)
+
+**checker 쪽**
+
+9. `tCCD`를 **2택**으로 판정 → 기준을 낮게 잡아 **실제 위반을 통과**. 반대로 WRITE에 `tCCDR`을 쓰면 **false FAIL** · [07](../07_column_commands/)
+10. **`tRAS`를 최소만** 검사 → `9 × tREFI` 최대 누락 · [12](../12_electrical_timing_package/)
+11. **`tINIT6`을 최소로** 오해 → 부등호가 뒤집혀 정상 동작을 FAIL로 보고 · [03](../03_init_reset_power/)
+12. 초기화 검사를 **`@(posedge ck)` SVA**로 → CK가 없는 구간에서 **평가조차 안 되면서 "위반 0건"** · [03](../03_init_reset_power/)
+13. 패리티 활성화 시점을 **한쪽으로 못 박음** → false FAIL 또는 놓친 위반. 구간은 **관대하게** · [08](../08_parity/)
+14. assertion에 **짝 cover property가 없음** → 무해한지 무력한지 구분 불가 · [06](../06_row_commands/)
+15. ECS 로그를 **두 곳에서 읽음** → self-clearing이라 하나가 빈 값을 봄 · [09](../09_ecc_ecs_sev/)
+
+**자극 쪽**
+
+16. **`ARFU`를 구동/패리티/MISR에서 누락** → 패리티가 어긋나고 원인은 패리티 로직처럼 보임 · [06](../06_row_commands/)·[08](../08_parity/)·[10](../10_test_repair/)
+17. 문턱값(`RAAIMT`·`ERRTH`·`tCCDR`·`VSP`)을 **상수로 박음** → 다른 장치에서 조용히 틀린 기준 · [06](../06_row_commands/)·[09](../09_ecc_ecs_sev/)
+18. MR 이미지 랜덤화가 **`MR8` OP0을 1로** → DA 포트가 영구 잠김. 자극이 **관측 경로를 스스로 닫음** · [11](../11_training_ieee1500/)
+19. 채널을 **전부 같은 클럭으로** 자극 → CDC 경로가 통째로 미검증 · [01](../01_landscape_organization/)
+20. 복구 레인 **1개만** 시험 → "한 번에 하나" 제약이 시험되지 않음 · [10](../10_test_repair/)
+
+:::caution[V-Plan에 "범위 밖"으로 적어야 하는 다섯]
+전원 램프 부등식 · lane repair 전류 제약 · `ERRTH` 이하의 실제 정정 · ESD · 변동 계수의 물리적 영향.
+
+디지털 회귀로 검증할 수 없습니다. 적지 않으면 아무도 안 하고, **안 했다는 사실조차 남지 않습니다** · [12장 §4](../12_electrical_timing_package/)
+:::

@@ -1,6 +1,6 @@
 ---
 title: "부록 B — 용어집"
-description: JESD270-4 기반 HBM4 디지털 설계 용어 정의 (ISO 11179 형식)
+description: JESD270-4 기반 HBM4 용어 정의 (ISO 11179 형식)
 ---
 
 각 항목은 ISO 11179 형식을 따릅니다 — **Definition**(개념이 무엇인지 서술하는 한 문장) / **Source**(근거) / **Related**(관련 용어) / **Example**(별도 필드) / **See also**(본문 링크).
